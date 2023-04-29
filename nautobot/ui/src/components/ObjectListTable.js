@@ -14,6 +14,7 @@ import {
     createColumnHelper,
     PlusIcon,
 } from "@nautobot/nautobot-ui";
+import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
 
 import TableItem from "@components/TableItem";
@@ -142,12 +143,12 @@ export default function ObjectListTable({
             </Box>
 
             <TableRenderer table={table} />
-            {/* <Paginator
+            <Paginator
                 url={location.pathname}
                 data_count={totalCount}
                 page_size={page_size}
                 active_page={active_page_number}
-            ></Paginator> */}
+            ></Paginator>
         </Box>
     );
 }

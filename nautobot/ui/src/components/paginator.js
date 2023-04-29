@@ -1,16 +1,39 @@
 import { Frame } from "@nautobot/nautobot-ui";
+import React from "react";
+
 
 import PaginatorForm from "@components/paginator_form";
 
-export default function Paginator({ url, data_count, page_size, active_page }) {
+class Paginator extends React.Component {
+  constructor(props){
+    super(props);
+    this.state = {};
+  }
+
+  onChange(field, value) {
+    // parent class change handler is always called with field name and value
+    this.setState({[field]: value});
+  } 
+
+  render() {
     let num_pages;
-    // Exact page number vs Add one more page for the remainder of the instances
+    let data_count;
+    let page_size;
+    let active_page;
+    data_count = this.props.data_count;
+    active_page = this.props.active_page;
+
+    if (Object.keys(this.state).length === 0) {
+      page_size = this.props.page_size
+    } else {
+      page_size = this.state.page_size;
+    }
+
     if (data_count % page_size === 0) {
         num_pages = data_count / page_size;
     } else {
         num_pages = data_count / page_size + 1;
     }
-
     // convert float to int
     num_pages = ~~num_pages;
     // const pages = [];
@@ -27,37 +50,16 @@ export default function Paginator({ url, data_count, page_size, active_page }) {
         end_range = (active_page + 1) * page_size;
     }
 
-    for (let i = 0; i < num_pages; i++) {
-        // TODO: come up with equivalent nautobot-ui pattern here; the below is from react-bootstrap
-        /*
-    if (i === active_page) {
-      pages.push(<Pagination.Item active key={i} href={list_url + `?limit=${page_size}&offset=${page_size * i}`}>{i + 1}</Pagination.Item>)
-    } else {
-      pages.push(<Pagination.Item key={i} href={list_url + `?limit=${page_size}&offset=${page_size * i}`}>{i + 1}</Pagination.Item>)
-    }
-    */
-    }
-
     return (
         <Frame>
-            <PaginatorForm
-                start={start_range}
-                end={end_range}
-                total_count={data_count}
-            ></PaginatorForm>
-        </Frame>
-        // TODO: come up with equivalent nautobot-ui pattern here; the below is from react-bootstrap
-        /*
-    <Row>
-      <Col sm={9}>
-        <Pagination>
-          <Pagination.First href={list_url + `?limit=${page_size}&offset=${page_size * 0}`} />
-          {pages}
-          <Pagination.Last href={list_url + `?limit=${page_size}&offset=${page_size * (num_pages - 1)}`} />
-        </Pagination>
-      </Col>
-      <PaginatorForm start={start_range} end={end_range} total_count={data_count}></PaginatorForm>
-    </Row>
-    */
-    );
+          <PaginatorForm
+              start={start_range}
+              end={end_range}
+              total_count={data_count}
+              onChange={this.onChange.bind(this)}
+          ></PaginatorForm>
+      </Frame>
+    )
+  }
 }
+export default Paginator;

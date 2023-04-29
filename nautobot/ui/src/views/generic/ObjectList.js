@@ -12,6 +12,8 @@ import {
     getCurrentAppContextSelector,
 } from "@utils/store";
 import { useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
+
 
 export default function GenericObjectListView() {
     const { app_name, model_name } = useParams();
@@ -22,11 +24,9 @@ export default function GenericObjectListView() {
     useEffect(() => {
         dispatch(updateAppCurrentContext(currentAppContext));
     }, [dispatch, currentAppContext]);
-    // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";
-    const { data: listData, isLoading: listDataLoading } = useGetRESTAPIQuery({
-        app_name: app_name,
-        model_name: model_name,
-    });
+
+    let [searchParams, setSearchParams] = useSearchParams();
+
     const { data: headerData, isLoading: headerDataLoading } =
         useGetRESTAPIQuery({
             app_name: app_name,
@@ -34,18 +34,34 @@ export default function GenericObjectListView() {
             schema: true,
         });
 
+    function handleSubmit(event) {
+        event.preventDefault();
+        console.log(event);
+        // The serialize function here would be responsible for
+        // creating an object of { key: value } pairs from the
+        // fields in the form that make up the query.
+        let params = event.target;
+        setSearchParams(params);
+    }
+
     // What page are we on?
     // TODO: Pagination handling should be it's own function so it's testable
-    // let page_size = 50;
-    // let active_page_number = 0;
-    // if (searchParams.get("limit")) {
-    //     list_url += `?limit=${searchParams.get("limit")}`;
-    //     page_size = searchParams.get("limit");
-    // }
-    // if (searchParams.get("offset")) {
-    //     list_url += `&offset=${searchParams.get("offset")}`;
-    //     active_page_number = searchParams.get("offset") / page_size;
-    // }
+    let page_size = 50;
+    let active_page_number = 0;
+    let searchQuery = {
+        app_name: app_name,
+        model_name: model_name,
+    }
+    if (searchParams.get("limit")) {
+        searchQuery.limit = searchParams.get("limit");
+        page_size = searchParams.get("limit");
+    }
+    if (searchParams.get("offset")) {
+        searchQuery.offset = searchParams.get("offset");
+        active_page_number = searchParams.get("offset") / page_size;
+    }
+
+    const { data: listData, isLoading: listDataLoading } = useGetRESTAPIQuery(searchQuery);
 
     if (!app_name || !model_name) {
         return (
@@ -94,9 +110,10 @@ export default function GenericObjectListView() {
                 defaultHeaders={defaultHeaders}
                 tableHeaders={transformedHeaders}
                 totalCount={listData.count}
-                active_page_number={1}
-                page_size={50}
+                active_page_number={active_page_number}
+                page_size={page_size}
                 tableTitle={table_name}
+                onChange={handleSubmit}
             />
         </GenericView>
     );
