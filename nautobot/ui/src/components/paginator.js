@@ -10,11 +10,6 @@ class Paginator extends React.Component {
     this.state = {};
   }
 
-  onChange(field, value) {
-    // parent class change handler is always called with field name and value
-    this.setState({[field]: value});
-  } 
-
   render() {
     let num_pages;
     let data_count;
@@ -56,7 +51,6 @@ class Paginator extends React.Component {
               start={start_range}
               end={end_range}
               total_count={data_count}
-              onChange={this.onChange.bind(this)}
           ></PaginatorForm>
       </Frame>
     )

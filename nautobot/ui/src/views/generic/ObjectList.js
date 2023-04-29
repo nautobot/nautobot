@@ -34,16 +34,6 @@ export default function GenericObjectListView() {
             schema: true,
         });
 
-    function handleSubmit(event) {
-        event.preventDefault();
-        console.log(event);
-        // The serialize function here would be responsible for
-        // creating an object of { key: value } pairs from the
-        // fields in the form that make up the query.
-        let params = event.target;
-        setSearchParams(params);
-    }
-
     // What page are we on?
     // TODO: Pagination handling should be it's own function so it's testable
     let page_size = 50;
@@ -113,7 +103,6 @@ export default function GenericObjectListView() {
                 active_page_number={active_page_number}
                 page_size={page_size}
                 tableTitle={table_name}
-                onChange={handleSubmit}
             />
         </GenericView>
     );
