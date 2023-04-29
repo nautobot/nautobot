@@ -2,7 +2,7 @@ import re
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import BaseValidator, URLValidator, _lazy_re_compile
+from django.core.validators import BaseValidator, RegexValidator, URLValidator, _lazy_re_compile
 
 
 class EnhancedURLValidator(URLValidator):
@@ -41,16 +41,21 @@ class ExclusionValidator(BaseValidator):
         return a in b
 
 
-def validate_regex(value):
+class ValidRegexValidator(RegexValidator):
     """
-    Checks that the value is a valid regular expression. (Don't confuse this with RegexValidator, which *uses* a regex
-    to validate a value.)
+    Checks that the value is a valid regular expression.
+
+    Don't confuse this with `RegexValidator`, which *uses* a regex to validate a value.
     """
-    try:
-        re.compile(value)
-    except re.error:
-        raise ValidationError(f"{value} is not a valid regular expression.")
+
+    message = "%(value)r is not a valid regular expression."
+    code = "regex_invalid"
+
+    def __call__(self, value):
+        try:
+            return re.compile(value)
+        except (re.error, TypeError):
+            raise ValidationError(self.message, code=self.code, params={"value": value})
 
 
-# FIXME(jathan): Mke this a real validator subclass?
-validate_regex.message = "Jathan was here."
+validate_regex = ValidRegexValidator()
