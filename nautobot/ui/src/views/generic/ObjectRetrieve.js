@@ -1,5 +1,10 @@
 import { Card, CardHeader } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
-import { faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+    faCheck,
+    faCalendarPlus,
+    faPencil,
+    faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     Box,
@@ -32,6 +37,7 @@ import AppComponents from "@components/Apps";
 import { LoadingWidget } from "@components/LoadingWidget";
 import GenericView from "@views/generic/GenericView";
 import ObjectListTableNoButtons from "@components/ObjectListTableNoButtons";
+import { humanFriendlyDate } from "@utils/date";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
@@ -236,8 +242,8 @@ export default function ObjectRetrieve({ api_url }) {
                         <Text size="H1" as="h1">
                             {obj.display}
                         </Text>
-                        {obj.status ? (
-                            <Box flexGrow="1">
+                        {obj.status && (
+                            <Box p={2} flexGrow="1">
                                 <Text size="P2">
                                     <ReferenceDataTag
                                         model_name="statuses"
@@ -247,14 +253,25 @@ export default function ObjectRetrieve({ api_url }) {
                                     />
                                 </Text>
                             </Box>
-                        ) : (
-                            <></>
+                        )}
+                        {obj.created && (
+                            <Box p={2} flexGrow="1">
+                                <Text size="P2" color="gray-2">
+                                    <FontAwesomeIcon icon={faCalendarPlus} />
+                                    {humanFriendlyDate(obj.created)}
+                                </Text>
+                            </Box>
+                        )}
+                        {obj.last_updated && (
+                            <Box p={2} flexGrow="1">
+                                <Text size="P2" color="gray-2">
+                                    <FontAwesomeIcon icon={faPencil} />
+                                    {humanFriendlyDate(obj.last_updated)}
+                                </Text>
+                            </Box>
                         )}
                     </Heading>
                     <ButtonGroup alignItems="center">
-                        <UIButton size="sm" variant="secondary">
-                            Filters
-                        </UIButton>
                         <UIButton
                             size="sm"
                             variant="primaryAction"
