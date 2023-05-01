@@ -14,7 +14,6 @@ import {
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 
-
 export default function GenericObjectListView() {
     const { app_name, model_name } = useParams();
     const dispatch = useDispatch();
@@ -25,7 +24,7 @@ export default function GenericObjectListView() {
         dispatch(updateAppCurrentContext(currentAppContext));
     }, [dispatch, currentAppContext]);
 
-    let [searchParams, setSearchParams] = useSearchParams();
+    let [searchParams] = useSearchParams();
 
     const { data: headerData, isLoading: headerDataLoading } =
         useGetRESTAPIQuery({
@@ -41,7 +40,7 @@ export default function GenericObjectListView() {
     let searchQuery = {
         app_name: app_name,
         model_name: model_name,
-    }
+    };
     if (searchParams.get("limit")) {
         searchQuery.limit = searchParams.get("limit");
         page_size = searchParams.get("limit");
@@ -51,7 +50,8 @@ export default function GenericObjectListView() {
         active_page_number = searchParams.get("offset") / page_size;
     }
 
-    const { data: listData, isLoading: listDataLoading } = useGetRESTAPIQuery(searchQuery);
+    const { data: listData, isLoading: listDataLoading } =
+        useGetRESTAPIQuery(searchQuery);
 
     if (!app_name || !model_name) {
         return (
