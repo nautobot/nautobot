@@ -24,7 +24,7 @@ import {
     NtcThumbnailIcon,
 } from "@nautobot/nautobot-ui";
 import { ReferenceDataTag } from "@components/ReferenceDataTag";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import useSWR from "swr";
 import { useRef } from "react";
 // import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
@@ -157,8 +157,11 @@ function RenderRow(props) {
 
 export default function ObjectRetrieve({ api_url }) {
     const { app_name, model_name, object_id } = useParams();
+    const location = useLocation();
+    const isPluginView = location.pathname.includes("/plugins/");
+    const pluginPrefix = isPluginView ? "plugins/" : "";
     if (!!app_name && !!model_name && !!object_id && !api_url) {
-        api_url = `/api/${app_name}/${model_name}/${object_id}/?depth=1`;
+        api_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/?depth=1`;
     }
     const { data: objectData, error } = useSWR(() => api_url, fetcher);
     // const { data: appHTML } = useSWR(
@@ -175,15 +178,15 @@ export default function ObjectRetrieve({ api_url }) {
         () => changelog_url,
         fetcher
     );
-    const changelog_header_url = `/api/${app_name}/${model_name}/changelog-table-fields/`;
+    const changelog_header_url = `/api/${pluginPrefix}${app_name}/${model_name}/changelog-table-fields/`;
     const { data: changelogTableFields, changelog_table_error } = useSWR(
         () => changelog_header_url,
         fetcher
     );
-    const notes_url = `/api/${app_name}/${model_name}/${object_id}/notes/`;
+    const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
     const { data: noteData, note_error } = useSWR(() => notes_url, fetcher);
 
-    const notes_header_url = `/api/${app_name}/${model_name}/note-table-fields/`;
+    const notes_header_url = `/api/${pluginPrefix}${app_name}/${model_name}/note-table-fields/`;
     // Current fetcher allows to be passed multiple endpoints and fetch them at once
     const { data: noteTableFields, note_table_error } = useSWR(
         () => notes_header_url,
@@ -233,16 +236,20 @@ export default function ObjectRetrieve({ api_url }) {
                             {obj.display}
                         </Text>
                     </Heading>
-                    <Box flexGrow="1">
-                        <Text size="P2">
-                            <ReferenceDataTag
-                                model_name="statuses"
-                                id={obj.status.id}
-                                variant="unknown"
-                                size="sm"
-                            />
-                        </Text>
-                    </Box>
+                    {obj.status ? (
+                        <Box flexGrow="1">
+                            <Text size="P2">
+                                <ReferenceDataTag
+                                    model_name="statuses"
+                                    id={obj.status.id}
+                                    variant="unknown"
+                                    size="sm"
+                                />
+                            </Text>
+                        </Box>
+                    ) : (
+                        <></>
+                    )}
 
                     <ButtonGroup alignItems="center">
                         <UIButton size="sm" variant="secondary">
