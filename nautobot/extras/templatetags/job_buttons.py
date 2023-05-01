@@ -144,6 +144,7 @@ def job_buttons(context, obj):
                 "object": obj,
                 "job": jb.job,
                 "hidden_inputs": hidden_inputs,
+                "disabled": "" if context["user"].has_perms(("extras.run_jobbutton", "extras.run_job")) else "disabled",
             }
             try:
                 text_rendered = render_jinja2(jb.text, button_context)
