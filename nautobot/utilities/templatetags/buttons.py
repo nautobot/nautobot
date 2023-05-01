@@ -30,59 +30,57 @@ def clone_button(instance):
 
 
 @register.inclusion_tag("buttons/edit.html")
-def edit_button(instance, use_pk=False, key="slug"):
+def edit_button(instance):
     """
     Render a button to edit a model instance.
 
     Args:
         instance: Model record.
-        use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
-        key: The attribute on the model to use for reverse URL lookup.
     """
     viewname = get_route_for_model(instance, "edit")
 
-    # Assign kwargs
-    if hasattr(instance, key) and not use_pk:
-        kwargs = {key: getattr(instance, key)}
-    else:
-        kwargs = {"pk": instance.pk}
+    # We try different lookups to get a valid reverse url
+    lookups = ["pk", "slug"]
 
-    try:
-        url = reverse(viewname, kwargs=kwargs)
-    except NoReverseMatch:
-        return {"url": None}
+    for lookup in lookups:
+        if hasattr(instance, lookup):
+            kwargs = {lookup: getattr(instance, lookup)}
+        else:
+            continue
+        try:
+            url = reverse(viewname, kwargs=kwargs)
+            return {"url": url}
+        except NoReverseMatch:
+            continue
 
-    return {
-        "url": url,
-    }
+    return {"url": None}
 
 
 @register.inclusion_tag("buttons/delete.html")
-def delete_button(instance, use_pk=False, key="slug"):
+def delete_button(instance):
     """
     Render a button to delete a model instance.
 
     Args:
         instance: Model record.
-        use_pk: If True, use the primary key instead of any specified "key" field. (Deprecated, use `key="pk"` instead)
-        key: The attribute on the model to use for reverse URL lookup.
     """
     viewname = get_route_for_model(instance, "delete")
 
-    # Assign kwargs
-    if hasattr(instance, key) and not use_pk:
-        kwargs = {key: getattr(instance, key)}
-    else:
-        kwargs = {"pk": instance.pk}
+    # We try different lookups to get a valid reverse url
+    lookups = ["pk", "slug"]
 
-    try:
-        url = reverse(viewname, kwargs=kwargs)
-    except NoReverseMatch:
-        return {"url": None}
+    for lookup in lookups:
+        if hasattr(instance, lookup):
+            kwargs = {lookup: getattr(instance, lookup)}
+        else:
+            continue
+        try:
+            url = reverse(viewname, kwargs=kwargs)
+            return {"url": url}
+        except NoReverseMatch:
+            continue
 
-    return {
-        "url": url,
-    }
+    return {"url": None}
 
 
 #
@@ -104,7 +102,6 @@ def add_button(url):
 
 @register.inclusion_tag("buttons/import.html")
 def import_button(url):
-
     return {
         "import_url": url,
     }
