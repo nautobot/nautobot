@@ -2,6 +2,9 @@ import { Card, CardHeader } from "@chakra-ui/react"; // TODO: use nautobot-ui wh
 import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+    Box,
+    Button as UIButton,
+    ButtonGroup,
     Heading,
     Link,
     Tab,
@@ -14,10 +17,13 @@ import {
     Tbody,
     Td,
     Tr,
+    Text,
+    MeatballsIcon,
     NautobotGrid,
     NautobotGridItem,
     NtcThumbnailIcon,
 } from "@nautobot/nautobot-ui";
+import { ReferenceDataTag } from "@components/ReferenceDataTag";
 import { useParams } from "react-router-dom";
 import useSWR from "swr";
 import { useRef } from "react";
@@ -219,125 +225,175 @@ export default function ObjectRetrieve({ api_url }) {
     let obj = objectData;
     const default_view = (
         <GenericView>
-            <Tabs>
-                <Heading display="flex" alignItems="center">
-                    <NtcThumbnailIcon width="25px" height="30px" mr="md" />
-                    {obj.display}
-                </Heading>
-                <br></br>
-                <TabList>
-                    {Object.keys(appConfig).map((key, idx) => (
-                        <Tab>{render_header(key)}</Tab>
-                    ))}
-                    <Tab>Notes</Tab>
-                    <Tab>Change Log</Tab>
-                </TabList>
-                <TabPanels>
-                    {Object.keys(appConfig).map((tab, idx) => (
-                        <TabPanel
-                            key={tab}
-                            eventKey={tab}
-                            title={render_header(tab)}
+            <Box background="white-0" borderRadius="md">
+                <Box display="flex" justifyContent="space-between" padding="md">
+                    <Heading display="flex" alignItems="center" gap="5px">
+                        <NtcThumbnailIcon width="25px" height="30px" />{" "}
+                        <Text size="H1" as="h1">
+                            {obj.display}
+                        </Text>
+                    </Heading>
+                    <Box flexGrow="1">
+                        <Text size="P2">
+                            <ReferenceDataTag
+                                model_name="statuses"
+                                id={obj.status.id}
+                                variant="unknown"
+                                size="sm"
+                            />
+                        </Text>
+                    </Box>
+
+                    <ButtonGroup alignItems="center">
+                        <UIButton size="sm" variant="secondary">
+                            Filters
+                        </UIButton>
+                        <UIButton
+                            size="sm"
+                            variant="primaryAction"
+                            leftIcon={<MeatballsIcon />}
                         >
-                            <Card>
-                                <NautobotGrid row={{ count: 5 }}>
-                                    {Object.keys(appConfig[tab]).map((item) => (
-                                        <NautobotGridItem
-                                            colSpan={
-                                                appConfig[tab][item].colspan
-                                            }
-                                            rowSpan={
-                                                appConfig[tab][item].rowspan
-                                            }
-                                        >
-                                            <Heading
-                                                display="flex"
-                                                alignItems="center"
-                                            >
-                                                <NtcThumbnailIcon
-                                                    width="25px"
-                                                    height="30px"
-                                                />
-                                                &nbsp;
-                                                {render_header(
-                                                    appConfig[tab][item].name
-                                                )}
-                                            </Heading>
-                                            <br />
-                                            <TableContainer>
-                                                <Table>
-                                                    <Tbody>
-                                                        {Object.keys(
+                            Actions
+                        </UIButton>
+                    </ButtonGroup>
+                </Box>
+
+                <Tabs>
+                    <TabList pl="md">
+                        {Object.keys(appConfig).map((key, idx) => (
+                            <Tab>{render_header(key)}</Tab>
+                        ))}
+                        <Tab>Notes</Tab>
+                        <Tab>Change Log</Tab>
+                    </TabList>
+                    <TabPanels>
+                        {Object.keys(appConfig).map((tab, idx) => (
+                            <TabPanel
+                                padding="none"
+                                key={tab}
+                                eventKey={tab}
+                                title={render_header(tab)}
+                            >
+                                <Card>
+                                    <NautobotGrid row={{ count: 5 }}>
+                                        {Object.keys(appConfig[tab]).map(
+                                            (item) => (
+                                                <NautobotGridItem
+                                                    colSpan={
+                                                        appConfig[tab][item]
+                                                            .colspan
+                                                    }
+                                                    rowSpan={
+                                                        appConfig[tab][item]
+                                                            .rowspan
+                                                    }
+                                                >
+                                                    <Heading
+                                                        display="flex"
+                                                        alignItems="center"
+                                                    >
+                                                        <NtcThumbnailIcon
+                                                            width="25px"
+                                                            height="30px"
+                                                        />
+                                                        &nbsp;
+                                                        {render_header(
                                                             appConfig[tab][item]
-                                                                .fields
-                                                        ).map((key, idx) => (
-                                                            <RenderRow
-                                                                identifier={
+                                                                .name
+                                                        )}
+                                                    </Heading>
+                                                    <br />
+                                                    <TableContainer>
+                                                        <Table>
+                                                            <Tbody>
+                                                                {Object.keys(
                                                                     appConfig[
                                                                         tab
                                                                     ][item]
-                                                                        .fields[
-                                                                        key
-                                                                    ]
-                                                                }
-                                                                value={
-                                                                    obj[
-                                                                        appConfig[
-                                                                            tab
-                                                                        ][item]
-                                                                            .fields[
-                                                                            key
-                                                                        ]
-                                                                    ]
-                                                                }
-                                                                advanced={
-                                                                    appConfig[
-                                                                        tab
-                                                                    ][item]
-                                                                        .advanced
-                                                                }
-                                                                key={idx}
-                                                            />
-                                                        ))}
-                                                    </Tbody>
-                                                </Table>
-                                            </TableContainer>
-                                        </NautobotGridItem>
-                                    ))}
-                                </NautobotGrid>
+                                                                        .fields
+                                                                ).map(
+                                                                    (
+                                                                        key,
+                                                                        idx
+                                                                    ) => (
+                                                                        <RenderRow
+                                                                            identifier={
+                                                                                appConfig[
+                                                                                    tab
+                                                                                ][
+                                                                                    item
+                                                                                ]
+                                                                                    .fields[
+                                                                                    key
+                                                                                ]
+                                                                            }
+                                                                            value={
+                                                                                obj[
+                                                                                    appConfig[
+                                                                                        tab
+                                                                                    ][
+                                                                                        item
+                                                                                    ]
+                                                                                        .fields[
+                                                                                        key
+                                                                                    ]
+                                                                                ]
+                                                                            }
+                                                                            advanced={
+                                                                                appConfig[
+                                                                                    tab
+                                                                                ][
+                                                                                    item
+                                                                                ]
+                                                                                    .advanced
+                                                                            }
+                                                                            key={
+                                                                                idx
+                                                                            }
+                                                                        />
+                                                                    )
+                                                                )}
+                                                            </Tbody>
+                                                        </Table>
+                                                    </TableContainer>
+                                                </NautobotGridItem>
+                                            )
+                                        )}
+                                    </NautobotGrid>
+                                </Card>
+                            </TabPanel>
+                        ))}
+                        <TabPanel key="notes" eventKey="notes" title="Notes">
+                            <Card>
+                                <CardHeader>
+                                    <strong>Notes</strong>
+                                </CardHeader>
+                                <ObjectListTableNoButtons
+                                    tableData={noteData.results}
+                                    tableHeader={noteTableFields.data}
+                                    totalCount={noteData.count}
+                                ></ObjectListTableNoButtons>
                             </Card>
                         </TabPanel>
-                    ))}
-                    <TabPanel key="notes" eventKey="notes" title="Notes">
-                        <Card>
-                            <CardHeader>
-                                <strong>Notes</strong>
-                            </CardHeader>
-                            <ObjectListTableNoButtons
-                                tableData={noteData.results}
-                                tableHeader={noteTableFields.data}
-                                totalCount={noteData.count}
-                            ></ObjectListTableNoButtons>
-                        </Card>
-                    </TabPanel>
-                    <TabPanel
-                        key="change_log"
-                        eventKey="change_log"
-                        title="Change Log"
-                    >
-                        <Card>
-                            <CardHeader>
-                                <strong>Change Log</strong>
-                            </CardHeader>
-                            <ObjectListTableNoButtons
-                                tableData={changelogData.results}
-                                tableHeader={changelogTableFields.data}
-                                totalCount={changelogData.count}
-                            ></ObjectListTableNoButtons>
-                        </Card>
-                    </TabPanel>
-                </TabPanels>
-            </Tabs>
+                        <TabPanel
+                            key="change_log"
+                            eventKey="change_log"
+                            title="Change Log"
+                        >
+                            <Card>
+                                <CardHeader>
+                                    <strong>Change Log</strong>
+                                </CardHeader>
+                                <ObjectListTableNoButtons
+                                    tableData={changelogData.results}
+                                    tableHeader={changelogTableFields.data}
+                                    totalCount={changelogData.count}
+                                ></ObjectListTableNoButtons>
+                            </Card>
+                        </TabPanel>
+                    </TabPanels>
+                </Tabs>
+            </Box>
         </GenericView>
     );
     let return_view = default_view;
