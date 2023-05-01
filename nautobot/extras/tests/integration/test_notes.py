@@ -30,8 +30,8 @@ class NoteTestCase(SeleniumTestCase):
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:location", kwargs={"pk": location.pk})}')
 
         # Verify notes tab shows up and click it.
-        self.assertTrue(self.browser.links.find_by_partial_href("/dcim/locations/location-1/notes/"))
-        self.browser.links.find_by_partial_href("/dcim/locations/location-1/notes/").click()
+        self.assertTrue(self.browser.links.find_by_partial_href(f"/dcim/locations/{location.pk}/notes/"))
+        self.browser.links.find_by_partial_href(f"/dcim/locations/{location.pk}/notes/").click()
 
         # Fill out the form.
         self.browser.fill("note", "This is a maintenance notice.")

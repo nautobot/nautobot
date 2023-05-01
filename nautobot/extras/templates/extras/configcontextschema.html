@@ -1,5 +1,20 @@
 {% extends 'generic/object_detail.html' %}
+{% load buttons %}
+{% load plugins %}
 {% load helpers %}
+
+{% block buttons %}
+        {% plugin_buttons object %}
+        {% if perms.extras.add_configcontextschema %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.extras.change_configcontextschema %}
+            {% edit_button object key="pk" %}
+        {% endif %}
+        {% if perms.extras.delete_configcontextschema %}
+            {% delete_button object key="pk" %}
+        {% endif %}
+{% endblock buttons %}
 
 {% block extra_nav_tabs %}
     <li role="presentation"{% if active_tab == 'validation' %} class="active"{% endif %}>
