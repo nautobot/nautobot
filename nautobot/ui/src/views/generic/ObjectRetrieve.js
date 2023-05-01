@@ -236,16 +236,20 @@ export default function ObjectRetrieve({ api_url }) {
                         <Text size="H1" as="h1">
                             {obj.display}
                         </Text>
-                        <Box flexGrow="1">
-                            <Text size="P2">
-                                <ReferenceDataTag
-                                    model_name="statuses"
-                                    id={obj.status.id}
-                                    variant="unknown"
-                                    size="sm"
-                                />
-                            </Text>
-                        </Box>
+                        {obj.status ? (
+                            <Box flexGrow="1">
+                                <Text size="P2">
+                                    <ReferenceDataTag
+                                        model_name="statuses"
+                                        id={obj.status.id}
+                                        variant="unknown"
+                                        size="sm"
+                                    />
+                                </Text>
+                            </Box>
+                        ) : (
+                            <></>
+                        )}
                     </Heading>
                     <ButtonGroup alignItems="center">
                         <UIButton size="sm" variant="secondary">
