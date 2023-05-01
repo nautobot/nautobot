@@ -4,14 +4,19 @@ import platform
 import sys
 
 from django.conf import settings
+from django.forms import fields as form_fields
 from django.http import JsonResponse
 from django.urls import reverse
 from rest_framework import status, serializers
+from rest_framework.fields import empty, CreateOnlyDefault
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
 from nautobot.core.api import exceptions, serializers as nautobot_serializers
+from nautobot.core.models.name_color_content_types import ContentTypeRelatedQuerySet
+from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.extras.api.customfields import CustomFieldsDataField
 
 
 logger = logging.getLogger(__name__)
@@ -364,7 +369,7 @@ class ModelAndFilterSetToUISchema:
         field_name (str): Optional. The name of a specific field to generate the schema for.
         build_for (str): Optional. Generate the schema for a model form or a filter set form (default is "model_form").
     """
-    def __init(self, model, field_name=None, build_for="model_form"):
+    def __init__(self, model, field_name=None, build_for="model_form"):
         self.model = model
         self.field_name = field_name
         self.build_for = build_for
@@ -376,6 +381,9 @@ class ModelAndFilterSetToUISchema:
             serializers.BooleanField: self.boolean_field_schema,
             nautobot_serializers.NautobotPrimaryKeyRelatedField: self.dynamic_model_choice_field_schema,
             serializers.ManyRelatedField: self.dynamic_model_multiple_choice_field_schema,
+            CustomFieldsDataField: self.custom_field_schema,
+            serializers.ChoiceField: self.choice_field_schema,
+            serializers.MultipleChoiceField: self.multiple_field_schema,
             serializers.DateField: self.inheritance_schema_build,
             serializers.DateTimeField: self.inheritance_schema_build,
             serializers.TimeField: self.inheritance_schema_build,
@@ -392,6 +400,7 @@ class ModelAndFilterSetToUISchema:
     def build_filterset_fields_to_ui_schema(self):
         pass
     
+    
     def build_model_fields_to_ui_schema(self):
         """Builds the schema representation for each field of the provided model."""
         serializer = get_serializer_for_model(self.model)(context={"depth": 0})
@@ -407,29 +416,104 @@ class ModelAndFilterSetToUISchema:
             field = serializer.fields[field_name]
             if field.read_only:
                 continue
-            
-            # Get the UI element or just use the class name if not found
-            # TODO: if field class not found in mapping try going down class inheritance till you find one
-            build_schema_func = self.serializer_field_mapping.get(field.__class__, self.inheritance_schema_build)
-            data["fields"][field_name] = build_schema_func(field)
+            data["fields"][field_name] = self.build_fields_schema(field)
         return data
     
+    def build_fields_schema(self, field, field_class=None):
+        field_class = field_class or field.__class__
+        field_schema = {
+            "required": field.required,
+            "help_text": field.help_text,
+            "default": self.get_default_value(field),
+        }
+        field_schema_func = self.serializer_field_mapping.get(field_class, self.inheritance_schema_build)
+        data = field_schema_func(field)
+        field_schema |= data
+        return field_schema
     
-    def inheritance_schema_build(self):
+    def get_default_value(self, field):
+        default = getattr(field, "default", None)
+        if default is empty:
+            return None
+        elif isinstance(default, CreateOnlyDefault):
+            # Perform some logic, to get default value
+            return "CreateOnlyDefault"
+        return default
+    
+    # TODO: if field class not found in mapping try going down class inheritance till you find one
+    def inheritance_schema_build(self, field):
         return {"type": "Inheritance"}
     
-    def char_field_schema(self):
-        return {"type": "CharField"}
+    def char_field_schema(self, field):
+        return {
+            "type": "CharField",
+            "max_length": field.max_length,
+        }
 
-    def integer_field_schema(self):
-        return {"type": "IntegerField"}
+    def integer_field_schema(self, field):
+        return {
+            "type": "IntegerField",
+            "min_value": field.min_value,
+            "max_value": field.max_value,
+        }
     
-    def boolean_field_schema(self):
-        return {"type": "BooleanField"}
+    def boolean_field_schema(self, field):
+        return {
+            "type": "BooleanField",
+        }
     
-    def dynamic_model_choice_field_schema(self):
-        return {"type": "DynamicModelChoiceField"}
-    
-    def dynamic_model_multiple_choice_field_schema(self):
-        return {"type": "DynamicModelMultipleChoiceField"}
+    def dynamic_model_choice_field_schema(self, field):
+        return self.get_dynamic_model_field_data(field.queryset)
 
+    def dynamic_model_multiple_choice_field_schema(self, field):
+        queryset = field.child_relation.queryset
+        return self.get_dynamic_model_field_data(
+            queryset=queryset,
+            choice_type="DynamicModelMultipleChoiceField"
+        )
+    
+    def get_dynamic_model_field_data(self, queryset, choice_type="DynamicModelChoiceField"):
+        route = get_route_for_model(queryset.model, action="list", api=True)
+        endpoint = reverse(route)
+        field_attrs = {
+            "type": choice_type,
+            "data-url": endpoint,
+            "attrs": {"depth": 0},
+        }
+        if isinstance(queryset, ContentTypeRelatedQuerySet):
+            field_attrs["attrs"]["content_types"] = f"{self.model._meta.app_label}.{self.model._meta.model_name}"
+
+        return field_attrs
+
+    def choice_field_schema(self, field):
+        return {
+            "type": "ChoiceField",
+            "choices": field.choices,
+        }
+    
+    def multiple_field_schema(self, field):
+        return {
+            "type": "MultipleChoiceField",
+            "choices": field.choices,
+        }
+    
+    def custom_field_schema(self, field):
+        custom_fields = field._get_custom_fields()
+        form_to_serializer_mapping = {
+            form_fields.CharField: serializers.CharField,
+            form_fields.ChoiceField: serializers.ChoiceField,
+            form_fields.MultipleChoiceField: serializers.MultipleChoiceField,
+        }
+        
+        data = {
+            "extras": {
+                "fields": {}
+            }
+        }
+        
+        for custom_field in custom_fields:
+            form_field = custom_field.to_form_field()
+            serializer_field = form_to_serializer_mapping[form_field.__class__]
+            data["extras"]["fields"][custom_field.key] = self.build_fields_schema(form_field, field_class=serializer_field)
+        
+        return data
