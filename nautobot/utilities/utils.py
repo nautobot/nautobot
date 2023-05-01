@@ -907,14 +907,16 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
 
         form_field = DynamicModelMultipleChoiceField(**form_attr)
     elif isinstance(field, ContentTypeMultipleChoiceFilter):
-        plural_name = model._meta.verbose_name_plural
+        # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
+        # models that have sucha  filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
+        plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:
             # `MultipleContentTypeField` employs `registry["model features"][feature]`, which may
             # result in an error if `feature` is not found in the `registry["model features"]` dict.
             # In this case use queryset
-            queryset_map = {"tags": TaggableClassesQuery, "job hooks": ChangeLoggedModelsQuery}
+            queryset_map = {"tags": TaggableClassesQuery, "job_hooks": ChangeLoggedModelsQuery}
             form_field = MultipleContentTypeField(
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )

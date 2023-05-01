@@ -551,8 +551,8 @@ class JobResult(BaseModel, CustomFieldModel):
         help_text="The object type to which this job result applies",
         on_delete=models.CASCADE,
     )
-    created = models.DateTimeField(auto_now_add=True)
-    completed = models.DateTimeField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
+    completed = models.DateTimeField(null=True, blank=True, db_index=True)
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
@@ -586,6 +586,24 @@ class JobResult(BaseModel, CustomFieldModel):
     class Meta:
         ordering = ["-created"]
         get_latest_by = "created"
+        indexes = [
+            models.Index(
+                name="extras_jobresult_rcreated_idx",
+                fields=["-created"],
+            ),
+            models.Index(
+                name="extras_jr_rcompleted_idx",
+                fields=["-completed"],
+            ),
+            models.Index(
+                name="extras_jr_statrcreate_idx",
+                fields=["status", "-created"],
+            ),
+            models.Index(
+                name="extras_jr_statrcompl_idx",
+                fields=["status", "-completed"],
+            ),
+        ]
 
     def __str__(self):
         return str(self.job_id)

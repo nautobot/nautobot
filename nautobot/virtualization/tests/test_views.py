@@ -49,27 +49,29 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        ClusterType.objects.all().delete()
 
-        ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2")
-        ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3")
-        ClusterType.objects.create(name="Cluster Type 8")
+        # Include quotes in the names as a test for https://github.com/nautobot/nautobot/issues/3083
+        ClusterType.objects.create(name='Cluster Type "1"', slug="cluster-type-1")
+        ClusterType.objects.create(name='Cluster Type "2"', slug="cluster-type-2")
+        ClusterType.objects.create(name='Cluster Type "3"', slug="cluster-type-3")
+        ClusterType.objects.create(name='Cluster Type "8"')
 
         cls.form_data = {
-            "name": "Cluster Type X",
+            "name": 'Cluster Type "X"',
             "slug": "cluster-type-x",
             "description": "A new cluster type",
         }
 
         cls.csv_data = (
             "name,slug,description",
-            "Cluster Type 4,cluster-type-4,Fourth cluster type",
-            "Cluster Type 5,cluster-type-5,Fifth cluster type",
-            "Cluster Type 6,cluster-type-6,Sixth cluster type",
-            "Cluster Type 7,,Seventh cluster type",
+            'Cluster Type ""4"",cluster-type-4,Fourth cluster type',
+            'Cluster Type ""5"",cluster-type-5,Fifth cluster type',
+            'Cluster Type ""6"",cluster-type-6,Sixth cluster type',
+            'Cluster Type ""7"",,Seventh cluster type',
         )
         cls.slug_source = "name"
-        cls.slug_test_object = "Cluster Type 8"
+        cls.slug_test_object = 'Cluster Type "8"'
 
 
 class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
