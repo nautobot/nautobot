@@ -47,6 +47,21 @@ export default function NautobotRouter() {
                     path: "installed-plugins",
                     element: <InstalledApps />,
                 },
+                {
+                    path: ":app_name/:model_name",
+                    element: <ListView />,
+                    children: [],
+                },
+                {
+                    path: ":app_name/:model_name/add",
+                    element: <CreateView />,
+                    children: [],
+                },
+                {
+                    path: ":app_name/:model_name/:object_id",
+                    element: <DetailView />,
+                    children: [],
+                },
             ],
         },
     ]);
