@@ -586,6 +586,32 @@ class JobResult(BaseModel, CustomFieldModel):
     class Meta:
         ordering = ["-created"]
         get_latest_by = "created"
+        indexes = [
+            models.Index(
+                name="extras_jobresult_created_idx",
+                fields=["created"],
+            ),
+            models.Index(
+                name="extras_jobresult_rcreated_idx",
+                fields=["-created"],
+            ),
+            models.Index(
+                name="extras_jobresult_completed_idx",
+                fields=["completed"],
+            ),
+            models.Index(
+                name="extras_jr_rcompleted_idx",
+                fields=["-completed"],
+            ),
+            models.Index(
+                name="extras_jr_statrcreate_idx",
+                fields=["status", "-created"],
+            ),
+            models.Index(
+                name="extras_jr_statrcompl_idx",
+                fields=["status", "-completed"],
+            ),
+        ]
 
     def __str__(self):
         return str(self.job_id)
