@@ -1,1 +1,0 @@
-Added indexes to `JobResult` across common fields: `created`, `completed`, and `status`.

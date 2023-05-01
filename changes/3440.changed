@@ -1,1 +1,0 @@
-Added warning admonitions for Job Hooks and Job Approvals documentation that setting `Meta.approval_required` is ignored on `JobHookReceiver` classes.
