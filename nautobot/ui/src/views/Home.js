@@ -1,7 +1,6 @@
 import {
     AutomationIcon,
     DcimIcon,
-    HistoryIcon,
     IpamIcon,
     NautobotGridItem,
     PlatformIcon,
@@ -21,11 +20,20 @@ import {
     Thead,
     Tr,
 } from "@nautobot/nautobot-ui";
-import GenericView from "@views/generic/GenericView";
+import HomeChangelogPanel from "@components/HomeChangelogPanel";
 import HomePanel from "@components/HomePanel";
 import JobHistoryTable from "@components/JobHistoryTable";
+import { useGetRESTAPIQuery } from "@utils/api";
+import GenericView from "@views/generic/GenericView";
 
 export default function Home() {
+    const { data: jobResultData } = useGetRESTAPIQuery({
+        app_name: "extras",
+        model_name: "job-results",
+        limit: 1,
+        depth: 0,
+    });
+
     return (
         <GenericView columns="1 1 1 1 3 1" gridBackground="white-0">
             <HomePanel
@@ -123,7 +131,9 @@ export default function Home() {
                                             <Tab>
                                                 Job History{" "}
                                                 <Tag size="sm" variant="info">
-                                                    <TagLabel>5</TagLabel>
+                                                    <TagLabel>
+                                                        {jobResultData?.count}
+                                                    </TagLabel>
                                                 </Tag>
                                             </Tab>
                                             <Tab>
@@ -141,40 +151,7 @@ export default function Home() {
                                         </TabList>
                                         <TabPanels>
                                             <TabPanel>
-                                                <JobHistoryTable
-                                                    rows={[
-                                                        {
-                                                            user: "John Smith",
-                                                            completed:
-                                                                "2022-12-19 10:31",
-                                                            job: "Generate Vulnerabilities / We can also put more details here since it's longer / We can also put more details here since it's longer / We can also put more details here since it's longer.",
-                                                        },
-                                                        {
-                                                            user: "John Smith",
-                                                            completed:
-                                                                "2022-12-18 10:31",
-                                                            job: "Generate Vulnerabilities",
-                                                        },
-                                                        {
-                                                            user: "John Smith",
-                                                            completed:
-                                                                "2022-12-17 10:31",
-                                                            job: "Generate Vulnerabilities",
-                                                        },
-                                                        {
-                                                            user: "John Smith",
-                                                            completed:
-                                                                "2022-12-16 10:31",
-                                                            job: "Generate Vulnerabilities",
-                                                        },
-                                                        {
-                                                            user: "John Smith",
-                                                            completed:
-                                                                "2022-12-15 10:31",
-                                                            job: "Generate Vulnerabilities",
-                                                        },
-                                                    ]}
-                                                />
+                                                <JobHistoryTable />
                                             </TabPanel>
                                             <TabPanel></TabPanel>
                                             <TabPanel></TabPanel>
@@ -186,142 +163,7 @@ export default function Home() {
                     </Table>
                 </TableContainer>
             </NautobotGridItem>
-            <NautobotGridItem>
-                <TableContainer>
-                    <Table>
-                        <Thead>
-                            <Tr _hover={{}}>
-                                <Th width="3em">
-                                    <HistoryIcon />
-                                </Th>
-                                <Th colspan={4}>Change Log</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="critical">
-                                        <TagLabel>Error</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>John Smith</Td>
-                                <Td width="3em">
-                                    <AutomationIcon />
-                                </Td>
-                                <Td>2022-12-19 10:31</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    <Tag variant="success">
-                                        <TagLabel>Success</TagLabel>
-                                    </Tag>
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    job - Generate Vulnerabilities
-                                </Td>
-                            </Tr>
-                        </Tbody>
-                    </Table>
-                </TableContainer>
-            </NautobotGridItem>
+            <HomeChangelogPanel />
         </GenericView>
     );
 }

@@ -32,6 +32,13 @@ except ModuleNotFoundError:
     HAS_RICH = False
 
 
+# Base directory path from this file.
+BASE_DIR = os.path.join(os.path.dirname(__file__))
+
+# Base directorh path for Nautobot UI.
+NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "nautobot/ui")
+
+
 def is_truthy(arg):
     """Convert "truthy" strings into Booleans.
 
@@ -56,7 +63,7 @@ namespace.configure(
             "project_name": "nautobot",
             "python_ver": "3.8",
             "local": False,
-            "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
+            "compose_dir": os.path.join(BASE_DIR, "development/"),
             "compose_files": [
                 "docker-compose.yml",
                 "docker-compose.postgres.yml",
@@ -863,14 +870,20 @@ def unittest_ui(
 )
 def prettier(context, autoformat=False):
     """Check Node.JS code style with Prettier."""
+    prettier_command = "npx prettier"
+
     if autoformat:
-        prettier_command = "npx prettier -w"
+        arg = "--write"
     else:
-        prettier_command = "npx prettier -c"
+        arg = "--check"
 
-    command = f"{prettier_command} ."
+    if is_truthy(context.nautobot.local):
+        path = NAUTOBOT_UI_DIR
+    else:
+        path = "."
 
-    run_command(context, command)
+    command = f"{prettier_command} {arg} {path}"
+    run_command(context, command, service="nodejs")
 
 
 @task(
@@ -885,7 +898,12 @@ def eslint(context, autoformat=False):
     if autoformat:
         eslint_command += " --fix"
 
-    command = f"{eslint_command} ."
+    if is_truthy(context.nautobot.local):
+        path = NAUTOBOT_UI_DIR
+    else:
+        path = "."
+
+    command = f"{eslint_command} {path}"
     run_command(context, command, service="nodejs")
 
 

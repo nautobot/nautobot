@@ -2,72 +2,18 @@ from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
-from django.utils.encoding import force_str
-from drf_react_template.schema_form_encoder import ProcessingMixin, SchemaProcessor, SerializerType, UiSchemaProcessor
+import drf_react_template.schema_form_encoder as schema
 from rest_framework import exceptions
 from rest_framework import fields as drf_fields
 from rest_framework import serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
-from nautobot.core.api import ContentTypeField
 
-
-class NautobotMetadataV1(SimpleMetadata):
-    def determine_actions(self, request, view):
-        """
-        Replace the stock determine_actions() method to assess object permissions only
-        when viewing a specific object. This is necessary to support OPTIONS requests
-        with bulk update in place (see #5470).
-        """
-        actions = {}
-        for method in {"PUT", "POST"} & set(view.allowed_methods):
-            view.request = clone_request(request, method)
-            try:
-                # Test global permissions
-                if hasattr(view, "check_permissions"):
-                    view.check_permissions(view.request)
-                # Test object permissions (if viewing a specific object)
-                if method == "PUT" and view.lookup_url_kwarg and hasattr(view, "get_object"):
-                    view.get_object()
-            except (exceptions.APIException, PermissionDenied, Http404):
-                pass
-            else:
-                # If user has appropriate permissions for the view, include
-                # appropriate metadata about the fields that should be supplied.
-                serializer = view.get_serializer()
-                actions[method] = self.get_serializer_info(serializer)
-            finally:
-                view.request = request
-
-        return actions
-
-    def get_field_info(self, field):
-        """
-        Fixup field information:
-
-        - Set choices for ContentTypeField.
-        - Replace DRF choices `display_name` to `display` to match new pattern.
-        """
-        field_info = super().get_field_info(field)
-        for choice in field_info.get("choices", []):
-            choice["display"] = choice.pop("display_name")
-        if hasattr(field, "queryset") and not field_info.get("read_only") and isinstance(field, ContentTypeField):
-            field_info["choices"] = [
-                {
-                    "value": choice_value,
-                    "display": force_str(choice_name, strings_only=True),
-                }
-                for choice_value, choice_name in field.choices.items()
-            ]
-            field_info["choices"].sort(key=lambda item: item["display"])
-        return field_info
-
-
-class NautobotProcessingMixin(ProcessingMixin):
+class NautobotProcessingMixin(schema.ProcessingMixin):
     """Processing mixin  to account for custom field types and behaviors for Nautobot."""
 
-    def _get_type_map_value(self, field: SerializerType):
+    def _get_type_map_value(self, field: schema.SerializerType):
         """Overload default to add "required" as a default mapping."""
         # This adds "required" as a default type mapping compared to drf_react_template core.
         result = {
@@ -85,12 +31,18 @@ class NautobotProcessingMixin(ProcessingMixin):
         return result
 
 
-class NautobotSchemaProcessor(NautobotProcessingMixin, SchemaProcessor):
+class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
     """
     SchemaProcessor to account for custom field types and behaviors for Nautobot.
     """
 
-    def _get_field_properties(self, field: SerializerType, name: str) -> Dict[str, Any]:
+    def _get_field_properties(self, field: schema.SerializerType, name: str) -> Dict[str, Any]:
+        """
+        This method is used to generate the proper schema based on serializer field mappings or
+        per-field attribute markup.
+
+        This has been overloaded with an `elif` to account for `ManyRelatedField`.
+        """
         result = {}
         type_map_obj = self._get_type_map_value(field)
         result["type"] = type_map_obj["type"]
@@ -143,7 +95,7 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, SchemaProcessor):
         return result
 
 
-class NautobotUiSchemaProcessor(NautobotProcessingMixin, UiSchemaProcessor):
+class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcessor):
     """
     UiSchemaProcessor to account for custom field types and behaviors for Nautobot.
     """
@@ -160,6 +112,8 @@ class NautobotUiSchemaProcessor(NautobotProcessingMixin, UiSchemaProcessor):
             fields = self.serializer.get_fields()
 
         field_names = list(fields)
+        # FIXME(jathan): Correct the behavior introduced in #3500 by switching to `__all__` to
+        # assert these get added at the end.
         bottom_fields = ["computed_fields", "custom_fields", "relationships"]
         for field_name in bottom_fields:
             if field_name in field_names:
@@ -201,17 +155,48 @@ class NautobotMetadata(SimpleMetadata):
         """Determine view options that will be used for non-form display metadata."""
         view_options = {}
         list_display = []
-        field_info = self.get_serializer_info(serializer)
+        fields = []
+
+        # FIXME(jathan): This mapping of fields and re-ordering things is currently a hack that MUST
+        # be replaced by a central solution where field order is consistent and defined in one
+        # place. All of the "bottom fields" stuff and coercion of ordering here will go away.
+        processor = schema.ColumnProcessor(serializer, request.parser_context)
+        field_map = dict(processor.fields)
 
         # TODO(jathan): For now, this is defined on the viewset. This is the cleanest since metadata
         # generation always gets the view instance.
+        all_fields = list(field_map)
         list_display_fields = getattr(view, "list_display", None) or []
+
+        # Explicitly order the "big ugly" fields to the bottom.
+        # FIXME(jathan): Correct the behavior introduced in #3500 by switching to `__all__` to
+        # assert these get added at the end.
+        bottom_fields = ["computed_fields", "custom_fields", "relationships"]
+        for field_name in bottom_fields:
+            if field_name in all_fields:
+                all_fields.remove(field_name)
+                all_fields.append(field_name)
+            if field_name in list_display_fields:
+                list_display_fields.remove(field_name)
+                list_display_fields.append(field_name)
+
+        # Process the list_display fields first.
         for field_name in list_display_fields:
-            # This is currently designed around the v2 UI table header format which is a list of
-            # dicts with keys for `name` and `label`.
-            list_display.append({"name": field_name, "label": field_info[field_name]["label"]})
+            field = field_map[field_name]
+            column_data = processor._get_column_properties(field, field_name)
+            list_display.append(column_data)
+            fields.append(column_data)
+
+        # Process the rest of the fields second.
+        for field_name in all_fields:
+            if field_name in list_display_fields:
+                continue
+            field = field_map[field_name]
+            column_data = processor._get_column_properties(field, field_name)
+            fields.append(column_data)
 
         view_options["list_display"] = list_display
+        view_options["fields"] = fields
 
         return view_options
 

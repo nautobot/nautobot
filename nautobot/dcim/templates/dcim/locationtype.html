@@ -1,4 +1,6 @@
 {% extends 'generic/object_detail.html' %}
+{% load buttons %}
+{% load plugins %}
 {% load helpers %}
 
 {% block extra_styles %}
@@ -20,6 +22,19 @@
         <li>{{ ancestor|hyperlinked_object:"name" }}</li>
     {% endfor %}
 {% endblock %}
+
+{% block buttons %}
+        {% plugin_buttons object %}
+        {% if perms.dcim.add_locationtype %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.dcim.change_locationtype %}
+            {% edit_button object key="pk" %}
+        {% endif %}
+        {% if perms.dcim.delete_locationtype %}
+            {% delete_button object key="pk" %}
+        {% endif %}
+{% endblock buttons %}
 
 {% block content_left_page %}
     <div class="panel panel-default">

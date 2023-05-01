@@ -699,47 +699,48 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 
 
 class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
-    """API View that returns the nav-menu content applicable to the requesting user.
-
-    Returns the following simplified data-structure (as not all context in registry["nav_menu"] is relevant to the UI):
-
-    {
-        "Inventory": {
-            "Devices": {
-                "Devices": "/dcim/devices/",
-                "Device Types": "/dcim/device-types/",
-                ...
-                "Connections": {
-                    "Cables": "/dcim/cables/",
-                    "Console Connections": "/dcim/console-connections/",
-                    ...
-                },
-                ...
-            },
-            "Organization": {
-                ...
-            },
-            ...
-        },
-        "Networks": {
-            ...
-        },
-        "Security": {
-            ...
-        },
-        "Automation": {
-            ...
-        },
-        "Platform": {
-            ...
-        },
-    }
-    """
+    """API View that returns the nav-menu content applicable to the requesting user."""
 
     permission_classes = [AllowAny]  # TODO: should be IsAuthenticated but this breaks the landing page if logged out
 
     @extend_schema(exclude=True)
     def get(self, request):
+        """Get the menu data for the requesting user.
+
+        Returns the following data-structure (as not all context in registry["nav_menu"] is relevant to the UI):
+
+        {
+            "Inventory": {
+                "Devices": {
+                    "Devices": "/dcim/devices/",
+                    "Device Types": "/dcim/device-types/",
+                    ...
+                    "Connections": {
+                        "Cables": "/dcim/cables/",
+                        "Console Connections": "/dcim/console-connections/",
+                        ...
+                    },
+                    ...
+                },
+                "Organization": {
+                    ...
+                },
+                ...
+            },
+            "Networks": {
+                ...
+            },
+            "Security": {
+                ...
+            },
+            "Automation": {
+                ...
+            },
+            "Platform": {
+                ...
+            },
+        }
+        """
         base_menu = registry["nav_menu"]
         HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
 

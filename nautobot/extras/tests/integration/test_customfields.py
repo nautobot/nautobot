@@ -45,7 +45,8 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         # Navigate to CustomFields list view
         self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
+        # find_by_partial_text finds both Inventory > Platform as well as the desired top-level Platform menu
+        self.browser.links.find_by_partial_text("Platform")[1].click()
         self.browser.links.find_by_partial_text("Custom Fields").click()
 
         # Click add button
@@ -316,7 +317,8 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("SelectionChoice"))
 
         # Delete the custom field
-        self.browser.links.find_by_partial_text("Extensibility").click()
+        # find_by_partial_text finds both Inventory > Platform as well as the desired top-level Platform menu
+        self.browser.links.find_by_partial_text("Platform")[1].click()
         self.browser.links.find_by_partial_text("Custom Fields").click()
         self.browser.links.find_by_partial_text("Device Selection Field").click()
         self.browser.links.find_by_partial_text("Delete").click()
