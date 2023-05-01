@@ -1,5 +1,5 @@
 import { Card, CardHeader } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
-import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     Box,
@@ -70,12 +70,12 @@ function render_header(value) {
 function Render_value(value) {
     const ref = useRef();
     if (value === undefined) {
-        return <FontAwesomeIcon icon={faMinus} />;
+        return <>&mdash;</>;
     }
     switch (typeof value) {
         case "object":
             return value === null ? (
-                <FontAwesomeIcon icon={faMinus} />
+                <>&mdash;</>
             ) : Array.isArray(value) ? (
                 value.map((v) =>
                     typeof v === "object" && v !== null ? (
@@ -93,6 +93,8 @@ function Render_value(value) {
                     {" "}
                     {value["display"]}{" "}
                 </Link>
+            ) : "label" in value ? (
+                <>{value.label}</>
             ) : (
                 <Table>
                     {Object.entries(value).map(([k, v]) => (
@@ -125,7 +127,7 @@ function Render_value(value) {
                 <FontAwesomeIcon icon={faXmark} />
             );
         default:
-            return value === "" ? <FontAwesomeIcon icon={faMinus} /> : value;
+            return value === "" ? <>&mdash;</> : value;
     }
 }
 
