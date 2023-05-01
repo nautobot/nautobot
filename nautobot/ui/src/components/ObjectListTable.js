@@ -31,14 +31,6 @@ const getTableItemLink = (idx, obj) => {
     // Remove domain + /api prefix
     const url = obj.url.replace(window.location.origin + "/api", "");
 
-    // Statuses and Roles should not be linkable
-    if (
-        ["/extras/statuses", "/extras/roles"].some((prefix) =>
-            url.startsWith(prefix)
-        )
-    ) {
-        return null;
-    }
     return url;
 };
 
