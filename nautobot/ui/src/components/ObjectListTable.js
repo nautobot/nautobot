@@ -16,6 +16,7 @@ import {
     Button,
     EditIcon,
 } from "@nautobot/nautobot-ui";
+import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
 
 import TableItem from "@components/TableItem";
@@ -31,14 +32,6 @@ const getTableItemLink = (idx, obj) => {
     // Remove domain + /api prefix
     const url = obj.url.replace(window.location.origin + "/api", "");
 
-    // Statuses and Roles should not be linkable
-    if (
-        ["/extras/statuses", "/extras/roles"].some((prefix) =>
-            url.startsWith(prefix)
-        )
-    ) {
-        return null;
-    }
     return url;
 };
 
@@ -160,12 +153,12 @@ export default function ObjectListTable({
                 table={table}
                 containerProps={{ overflow: "auto" }}
             />
-            {/* <Paginator
+            <Paginator
                 url={location.pathname}
                 data_count={totalCount}
                 page_size={page_size}
                 active_page={active_page_number}
-            ></Paginator> */}
+            ></Paginator>
         </Box>
     );
 }

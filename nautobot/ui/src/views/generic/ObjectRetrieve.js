@@ -1,7 +1,15 @@
 import { Card, CardHeader } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
-import { faCheck, faMinus, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+    faCheck,
+    faCalendarPlus,
+    faPencil,
+    faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+    Box,
+    Button as UIButton,
+    ButtonGroup,
     Heading,
     Link,
     Tab,
@@ -14,11 +22,14 @@ import {
     Tbody,
     Td,
     Tr,
+    Text,
+    MeatballsIcon,
     NautobotGrid,
     NautobotGridItem,
     NtcThumbnailIcon,
 } from "@nautobot/nautobot-ui";
-import { useParams } from "react-router-dom";
+import { ReferenceDataTag } from "@components/ReferenceDataTag";
+import { useLocation, useParams } from "react-router-dom";
 import useSWR from "swr";
 import { useRef } from "react";
 // import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
@@ -27,6 +38,7 @@ import { LoadingWidget } from "@components/LoadingWidget";
 import { toTitleCase } from "@utils/string";
 import GenericView from "@views/generic/GenericView";
 import ObjectListTableNoButtons from "@components/ObjectListTableNoButtons";
+import { humanFriendlyDate } from "@utils/date";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
@@ -59,12 +71,12 @@ function render_header(value) {
 function Render_value(value) {
     const ref = useRef();
     if (value === undefined) {
-        return <FontAwesomeIcon icon={faMinus} />;
+        return <>&mdash;</>;
     }
     switch (typeof value) {
         case "object":
             return value === null ? (
-                <FontAwesomeIcon icon={faMinus} />
+                <>&mdash;</>
             ) : Array.isArray(value) ? (
                 value.map((v) =>
                     typeof v === "object" && v !== null ? (
@@ -82,6 +94,8 @@ function Render_value(value) {
                     {" "}
                     {value["display"]}{" "}
                 </Link>
+            ) : "label" in value ? (
+                <>{value.label}</>
             ) : (
                 <Table>
                     {Object.entries(value).map(([k, v]) => (
@@ -114,7 +128,7 @@ function Render_value(value) {
                 <FontAwesomeIcon icon={faXmark} />
             );
         default:
-            return value === "" ? <FontAwesomeIcon icon={faMinus} /> : value;
+            return value === "" ? <>&mdash;</> : value;
     }
 }
 
@@ -143,8 +157,11 @@ function RenderRow(props) {
 
 export default function ObjectRetrieve({ api_url }) {
     const { app_name, model_name, object_id } = useParams();
+    const location = useLocation();
+    const isPluginView = location.pathname.includes("/plugins/");
+    const pluginPrefix = isPluginView ? "plugins/" : "";
     if (!!app_name && !!model_name && !!object_id && !api_url) {
-        api_url = `/api/${app_name}/${model_name}/${object_id}/?depth=1`;
+        api_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/?depth=1`;
     }
     const { data: objectData, error } = useSWR(() => api_url, fetcher);
     // const { data: appHTML } = useSWR(
@@ -161,15 +178,15 @@ export default function ObjectRetrieve({ api_url }) {
         () => changelog_url,
         fetcher
     );
-    const changelog_header_url = `/api/${app_name}/${model_name}/changelog-table-fields/`;
+    const changelog_header_url = `/api/${pluginPrefix}${app_name}/${model_name}/changelog-table-fields/`;
     const { data: changelogTableFields, changelog_table_error } = useSWR(
         () => changelog_header_url,
         fetcher
     );
-    const notes_url = `/api/${app_name}/${model_name}/${object_id}/notes/`;
+    const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
     const { data: noteData, note_error } = useSWR(() => notes_url, fetcher);
 
-    const notes_header_url = `/api/${app_name}/${model_name}/note-table-fields/`;
+    const notes_header_url = `/api/${pluginPrefix}${app_name}/${model_name}/note-table-fields/`;
     // Current fetcher allows to be passed multiple endpoints and fetch them at once
     const { data: noteTableFields, note_table_error } = useSWR(
         () => notes_header_url,
@@ -188,7 +205,6 @@ export default function ObjectRetrieve({ api_url }) {
             </GenericView>
         );
     }
-    // if (!objectData) return <GenericView objectData={objectData} />;
 
     if (
         !objectData ||
@@ -211,125 +227,191 @@ export default function ObjectRetrieve({ api_url }) {
     let obj = objectData;
     const default_view = (
         <GenericView>
-            <Tabs>
-                <Heading display="flex" alignItems="center">
-                    <NtcThumbnailIcon width="25px" height="30px" mr="md" />
-                    {obj.display}
-                </Heading>
-                <br></br>
-                <TabList>
-                    {Object.keys(appConfig).map((key, idx) => (
-                        <Tab>{render_header(key)}</Tab>
-                    ))}
-                    <Tab>Notes</Tab>
-                    <Tab>Change Log</Tab>
-                </TabList>
-                <TabPanels>
-                    {Object.keys(appConfig).map((tab, idx) => (
-                        <TabPanel
-                            key={tab}
-                            eventKey={tab}
-                            title={render_header(tab)}
+            <Box background="white-0" borderRadius="md">
+                <Box display="flex" justifyContent="space-between" padding="md">
+                    <Heading display="flex" alignItems="center" gap="5px">
+                        <NtcThumbnailIcon width="25px" height="30px" />{" "}
+                        <Text size="H1" as="h1">
+                            {obj.display}
+                        </Text>
+                        {obj.status && (
+                            <Box p={2} flexGrow="1">
+                                <Text size="P2">
+                                    <ReferenceDataTag
+                                        model_name="statuses"
+                                        id={obj.status.id}
+                                        variant="unknown"
+                                        size="sm"
+                                    />
+                                </Text>
+                            </Box>
+                        )}
+                        {obj.created && (
+                            <Box p={2} flexGrow="1">
+                                <Text size="P2" color="gray-2">
+                                    <FontAwesomeIcon icon={faCalendarPlus} />
+                                    {humanFriendlyDate(obj.created)}
+                                </Text>
+                            </Box>
+                        )}
+                        {obj.last_updated && (
+                            <Box p={2} flexGrow="1">
+                                <Text size="P2" color="gray-2">
+                                    <FontAwesomeIcon icon={faPencil} />
+                                    {humanFriendlyDate(obj.last_updated)}
+                                </Text>
+                            </Box>
+                        )}
+                    </Heading>
+                    <ButtonGroup alignItems="center">
+                        <UIButton
+                            size="sm"
+                            variant="primaryAction"
+                            leftIcon={<MeatballsIcon />}
                         >
-                            <Card>
-                                <NautobotGrid row={{ count: 5 }}>
-                                    {Object.keys(appConfig[tab]).map((item) => (
-                                        <NautobotGridItem
-                                            colSpan={
-                                                appConfig[tab][item].colspan
-                                            }
-                                            rowSpan={
-                                                appConfig[tab][item].rowspan
-                                            }
-                                        >
-                                            <Heading
-                                                display="flex"
-                                                alignItems="center"
-                                            >
-                                                <NtcThumbnailIcon
-                                                    width="25px"
-                                                    height="30px"
-                                                />
-                                                &nbsp;
-                                                {render_header(
-                                                    appConfig[tab][item].name
-                                                )}
-                                            </Heading>
-                                            <br />
-                                            <TableContainer>
-                                                <Table>
-                                                    <Tbody>
-                                                        {Object.keys(
+                            Actions
+                        </UIButton>
+                    </ButtonGroup>
+                </Box>
+
+                <Tabs>
+                    <TabList pl="md">
+                        {Object.keys(appConfig).map((key, idx) => (
+                            <Tab>{render_header(key)}</Tab>
+                        ))}
+                        <Tab>Notes</Tab>
+                        <Tab>Change Log</Tab>
+                    </TabList>
+                    <TabPanels>
+                        {Object.keys(appConfig).map((tab, idx) => (
+                            <TabPanel
+                                padding="none"
+                                key={tab}
+                                eventKey={tab}
+                                title={render_header(tab)}
+                            >
+                                <Card>
+                                    <NautobotGrid row={{ count: 5 }}>
+                                        {Object.keys(appConfig[tab]).map(
+                                            (item) => (
+                                                <NautobotGridItem
+                                                    colSpan={
+                                                        appConfig[tab][item]
+                                                            .colspan
+                                                    }
+                                                    rowSpan={
+                                                        appConfig[tab][item]
+                                                            .rowspan
+                                                    }
+                                                >
+                                                    <Heading
+                                                        display="flex"
+                                                        alignItems="center"
+                                                    >
+                                                        <NtcThumbnailIcon
+                                                            width="25px"
+                                                            height="30px"
+                                                        />
+                                                        &nbsp;
+                                                        {render_header(
                                                             appConfig[tab][item]
-                                                                .fields
-                                                        ).map((key, idx) => (
-                                                            <RenderRow
-                                                                identifier={
+                                                                .name
+                                                        )}
+                                                    </Heading>
+                                                    <br />
+                                                    <TableContainer>
+                                                        <Table>
+                                                            <Tbody>
+                                                                {Object.keys(
                                                                     appConfig[
                                                                         tab
                                                                     ][item]
-                                                                        .fields[
-                                                                        key
-                                                                    ]
-                                                                }
-                                                                value={
-                                                                    obj[
-                                                                        appConfig[
-                                                                            tab
-                                                                        ][item]
-                                                                            .fields[
-                                                                            key
-                                                                        ]
-                                                                    ]
-                                                                }
-                                                                advanced={
-                                                                    appConfig[
-                                                                        tab
-                                                                    ][item]
-                                                                        .advanced
-                                                                }
-                                                                key={idx}
-                                                            />
-                                                        ))}
-                                                    </Tbody>
-                                                </Table>
-                                            </TableContainer>
-                                        </NautobotGridItem>
-                                    ))}
-                                </NautobotGrid>
+                                                                        .fields
+                                                                ).map(
+                                                                    (
+                                                                        key,
+                                                                        idx
+                                                                    ) => (
+                                                                        <RenderRow
+                                                                            identifier={
+                                                                                appConfig[
+                                                                                    tab
+                                                                                ][
+                                                                                    item
+                                                                                ]
+                                                                                    .fields[
+                                                                                    key
+                                                                                ]
+                                                                            }
+                                                                            value={
+                                                                                obj[
+                                                                                    appConfig[
+                                                                                        tab
+                                                                                    ][
+                                                                                        item
+                                                                                    ]
+                                                                                        .fields[
+                                                                                        key
+                                                                                    ]
+                                                                                ]
+                                                                            }
+                                                                            advanced={
+                                                                                appConfig[
+                                                                                    tab
+                                                                                ][
+                                                                                    item
+                                                                                ]
+                                                                                    .advanced
+                                                                            }
+                                                                            key={
+                                                                                idx
+                                                                            }
+                                                                        />
+                                                                    )
+                                                                )}
+                                                            </Tbody>
+                                                        </Table>
+                                                    </TableContainer>
+                                                </NautobotGridItem>
+                                            )
+                                        )}
+                                    </NautobotGrid>
+                                </Card>
+                            </TabPanel>
+                        ))}
+                        <TabPanel key="notes" eventKey="notes" title="Notes">
+                            <Card>
+                                <CardHeader>
+                                    <strong>Notes</strong>
+                                </CardHeader>
+                                <ObjectListTableNoButtons
+                                    tableData={noteData.results}
+                                    tableHeader={noteTableFields.data}
+                                    totalCount={noteData.count}
+                                    page_size={50}
+                                ></ObjectListTableNoButtons>
                             </Card>
                         </TabPanel>
-                    ))}
-                    <TabPanel key="notes" eventKey="notes" title="Notes">
-                        <Card>
-                            <CardHeader>
-                                <strong>Notes</strong>
-                            </CardHeader>
-                            <ObjectListTableNoButtons
-                                tableData={noteData.results}
-                                tableHeader={noteTableFields.data}
-                                totalCount={noteData.count}
-                            ></ObjectListTableNoButtons>
-                        </Card>
-                    </TabPanel>
-                    <TabPanel
-                        key="change_log"
-                        eventKey="change_log"
-                        title="Change Log"
-                    >
-                        <Card>
-                            <CardHeader>
-                                <strong>Change Log</strong>
-                            </CardHeader>
-                            <ObjectListTableNoButtons
-                                tableData={changelogData.results}
-                                tableHeader={changelogTableFields.data}
-                                totalCount={changelogData.count}
-                            ></ObjectListTableNoButtons>
-                        </Card>
-                    </TabPanel>
-                </TabPanels>
-            </Tabs>
+                        <TabPanel
+                            key="change_log"
+                            eventKey="change_log"
+                            title="Change Log"
+                        >
+                            <Card>
+                                <CardHeader>
+                                    <strong>Change Log</strong>
+                                </CardHeader>
+                                <ObjectListTableNoButtons
+                                    tableData={changelogData.results}
+                                    tableHeader={changelogTableFields.data}
+                                    totalCount={changelogData.count}
+                                    page_size={50}
+                                ></ObjectListTableNoButtons>
+                            </Card>
+                        </TabPanel>
+                    </TabPanels>
+                </Tabs>
+            </Box>
         </GenericView>
     );
     let return_view = default_view;

@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { Text } from "@nautobot/nautobot-ui";
 import { useDispatch } from "react-redux";
 
@@ -13,40 +13,50 @@ import {
 } from "@utils/store";
 import { toTitleCase } from "@utils/string";
 import { useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
 
 export default function GenericObjectListView() {
     const { app_name, model_name } = useParams();
     const dispatch = useDispatch();
+    const location = useLocation();
     const currentAppContext = useSelector(
         getCurrentAppContextSelector(app_name, model_name)
     );
+    const isPluginView = location.pathname.includes("/plugins/");
     useEffect(() => {
         dispatch(updateAppCurrentContext(currentAppContext));
     }, [dispatch, currentAppContext]);
+
+    let [searchParams] = useSearchParams();
+
     // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";
-    const { data: listData, isLoading: listDataLoading } = useGetRESTAPIQuery({
-        app_name: app_name,
-        model_name: model_name,
-    });
     const { data: headerData, isLoading: headerDataLoading } =
         useGetRESTAPIQuery({
             app_name: app_name,
             model_name: model_name,
             schema: true,
+            plugin: isPluginView,
         });
 
     // What page are we on?
     // TODO: Pagination handling should be it's own function so it's testable
-    // let page_size = 50;
-    // let active_page_number = 0;
-    // if (searchParams.get("limit")) {
-    //     list_url += `?limit=${searchParams.get("limit")}`;
-    //     page_size = searchParams.get("limit");
-    // }
-    // if (searchParams.get("offset")) {
-    //     list_url += `&offset=${searchParams.get("offset")}`;
-    //     active_page_number = searchParams.get("offset") / page_size;
-    // }
+    let page_size = 50;
+    let active_page_number = 0;
+    let searchQuery = {
+        app_name: app_name,
+        model_name: model_name,
+        plugin: isPluginView,
+    };
+    if (searchParams.get("limit")) {
+        searchQuery.limit = searchParams.get("limit");
+        page_size = searchParams.get("limit");
+    }
+    if (searchParams.get("offset")) {
+        searchQuery.offset = searchParams.get("offset");
+        active_page_number = searchParams.get("offset") / page_size;
+    }
+    const { data: listData, isLoading: listDataLoading } =
+        useGetRESTAPIQuery(searchQuery);
 
     if (!app_name || !model_name) {
         return (
@@ -89,8 +99,8 @@ export default function GenericObjectListView() {
                 defaultHeaders={defaultHeaders}
                 tableHeaders={tableHeaders}
                 totalCount={listData.count}
-                active_page_number={1}
-                page_size={50}
+                active_page_number={active_page_number}
+                page_size={page_size}
                 tableTitle={table_name}
             />
         </GenericView>

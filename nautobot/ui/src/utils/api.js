@@ -46,17 +46,19 @@ export const baseApi = createApi({
                 model_name,
                 uuid = null,
                 schema = false,
+                plugin = false,
                 limit = null,
                 offset = null,
                 depth = 1,
             }) => {
+                const plugin_prefix = plugin ? "plugins/" : "";
                 if (schema) {
                     return {
-                        url: `${app_name}/${model_name}/`,
+                        url: `${plugin_prefix}${app_name}/${model_name}/`,
                         method: "OPTIONS",
                     };
                 }
-                let url = `${app_name}/${model_name}/`;
+                let url = `${plugin_prefix}${app_name}/${model_name}/`;
                 if (uuid) {
                     url += `${uuid}/`;
                 }

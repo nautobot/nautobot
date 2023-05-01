@@ -1,0 +1,1 @@
+Removed misspelled `verison` key from `/api/plugins/installed-plugins` REST API endpoint.
