@@ -6,34 +6,34 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0057_jobbutton'),
+        ("extras", "0057_jobbutton"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='jobresult',
-            name='completed',
+            model_name="jobresult",
+            name="completed",
             field=models.DateTimeField(blank=True, db_index=True, null=True),
         ),
         migrations.AlterField(
-            model_name='jobresult',
-            name='created',
+            model_name="jobresult",
+            name="created",
             field=models.DateTimeField(auto_now_add=True, db_index=True),
         ),
         migrations.AddIndex(
-            model_name='jobresult',
-            index=models.Index(fields=['-created'], name='extras_jobresult_rcreated_idx'),
+            model_name="jobresult",
+            index=models.Index(fields=["-created"], name="extras_jobresult_rcreated_idx"),
         ),
         migrations.AddIndex(
-            model_name='jobresult',
-            index=models.Index(fields=['-completed'], name='extras_jr_rcompleted_idx'),
+            model_name="jobresult",
+            index=models.Index(fields=["-completed"], name="extras_jr_rcompleted_idx"),
         ),
         migrations.AddIndex(
-            model_name='jobresult',
-            index=models.Index(fields=['status', '-created'], name='extras_jr_statrcreate_idx'),
+            model_name="jobresult",
+            index=models.Index(fields=["status", "-created"], name="extras_jr_statrcreate_idx"),
         ),
         migrations.AddIndex(
-            model_name='jobresult',
-            index=models.Index(fields=['status', '-completed'], name='extras_jr_statrcompl_idx'),
+            model_name="jobresult",
+            index=models.Index(fields=["status", "-completed"], name="extras_jr_statrcompl_idx"),
         ),
     ]
