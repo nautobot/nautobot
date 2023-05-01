@@ -11,6 +11,7 @@ import {
     updateAppCurrentContext,
     getCurrentAppContextSelector,
 } from "@utils/store";
+import { toTitleCase } from "@utils/string";
 import { useSelector } from "react-redux";
 
 export default function GenericObjectListView() {
@@ -80,10 +81,7 @@ export default function GenericObjectListView() {
         defaultHeaders = tableHeaders;
     }
 
-    let table_name = model_name
-        .split("-")
-        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
-        .join(" ");
+    let table_name = toTitleCase(model_name, "-");
     return (
         <GenericView>
             <ObjectListTable

@@ -1,3 +1,4 @@
+import itertools
 import logging
 import platform
 from collections import OrderedDict
@@ -10,6 +11,7 @@ from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import NoReverseMatch, reverse as django_reverse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -36,7 +38,8 @@ from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
-from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from nautobot.extras.registry import registry
 from . import serializers
@@ -698,6 +701,11 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return ExecutionResult(errors=[e], invalid=True)
 
 
+#
+# UI Views
+#
+
+
 class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
     """API View that returns the nav-menu content applicable to the requesting user.
 
@@ -775,6 +783,66 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
                         filtered_menu[context][group_name][item_name] = item_details["link"]
 
         return Response(filtered_menu)
+
+
+class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
+    """
+    Enumerate the models listed on the Nautobot home page and return data structure
+    containing verbose_name_plural, url and count.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        object_counts = {
+            "Inventory": [
+                {"model": "dcim.rack"},
+                {"model": "dcim.devicetype"},
+                {"model": "dcim.device"},
+                {"model": "dcim.virtualchassis"},
+                {"model": "dcim.deviceredundancygroup"},
+                {"model": "dcim.cable"},
+            ],
+            "Networks": [
+                {"model": "ipam.vrf"},
+                {"model": "ipam.prefix"},
+                {"model": "ipam.ipaddress"},
+                {"model": "ipam.vlan"},
+            ],
+            "Platform": [
+                {"model": "extras.gitrepository"},
+                {"model": "extras.relationship"},
+                {"model": "extras.computedfield"},
+                {"model": "extras.customfield"},
+                {"model": "extras.customlink"},
+                {"model": "extras.tag"},
+                {"model": "extras.status"},
+                {"model": "extras.role"},
+            ],
+        }
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+
+        for entry in itertools.chain(*object_counts.values()):
+            app_label, model_name = entry["model"].split(".")
+            model = apps.get_model(app_label, model_name)
+            permission = get_permission_for_model(model, "view")
+            if HIDE_RESTRICTED_UI and not request.user.has_perm(permission):
+                continue
+            data = {"name": model._meta.verbose_name_plural}
+            try:
+                data["url"] = django_reverse(get_route_for_model(model, "list"))
+            except NoReverseMatch:
+                pass
+            manager = model.objects
+            if request.user.has_perm(permission):
+                if hasattr(manager, "restrict"):
+                    data["count"] = model.objects.restrict(request.user).count()
+                else:
+                    data["count"] = model.objects.count()
+            entry.update(data)
+
+        return Response(object_counts)
 
 
 #

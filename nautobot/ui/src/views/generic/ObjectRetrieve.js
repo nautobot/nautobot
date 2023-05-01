@@ -24,6 +24,7 @@ import { useRef } from "react";
 // import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
 import AppComponents from "@components/Apps";
 import { LoadingWidget } from "@components/LoadingWidget";
+import { toTitleCase } from "@utils/string";
 import GenericView from "@views/generic/GenericView";
 import ObjectListTableNoButtons from "@components/ObjectListTableNoButtons";
 
@@ -50,14 +51,8 @@ const fetcher = (url) =>
 //     });
 
 function render_header(value) {
-    value = value
-        .split("_")
-        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
-        .join(" ");
-    value = value
-        .split("-")
-        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
-        .join(" ");
+    value = toTitleCase(value, "_");
+    value = toTitleCase(value, "-");
     return value;
 }
 
@@ -137,10 +132,7 @@ function RenderRow(props) {
     if (key[0] === "_") return null;
 
     // "foo_bar" --> "Foo Bar"
-    key = key
-        .split("_")
-        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
-        .join(" ");
+    key = toTitleCase(key, "_");
     return (
         <Tr>
             <Td>{key}</Td>
