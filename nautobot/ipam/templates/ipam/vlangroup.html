@@ -3,19 +3,6 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block buttons %}
-        {% plugin_buttons object %}
-        {% if perms.ipam.add_vlangroup %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.ipam.change_vlangroup %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.ipam.delete_vlangroup %}
-            {% delete_button object %}
-        {% endif %}
-{% endblock buttons %}
-
 {% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">

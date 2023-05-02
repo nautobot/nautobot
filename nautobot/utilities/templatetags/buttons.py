@@ -30,55 +30,55 @@ def clone_button(instance):
 
 
 @register.inclusion_tag("buttons/edit.html")
-def edit_button(instance):
+def edit_button(instance, use_pk=False, key="slug"):
     """
     Render a button to edit a model instance.
 
     Args:
         instance: Model record.
+        Keeping use_pk and key for concerns about breaking API change.
+        They are no-ops
     """
     viewname = get_route_for_model(instance, "edit")
 
     # We try different lookups to get a valid reverse url
-    lookups = ["pk", "slug"]
+    lookups = ["pk", "slug", "key"]
 
     for lookup in lookups:
         if hasattr(instance, lookup):
             kwargs = {lookup: getattr(instance, lookup)}
-        else:
-            continue
-        try:
-            url = reverse(viewname, kwargs=kwargs)
-            return {"url": url}
-        except NoReverseMatch:
-            continue
+            try:
+                url = reverse(viewname, kwargs=kwargs)
+                return {"url": url}
+            except NoReverseMatch:
+                continue
 
     return {"url": None}
 
 
 @register.inclusion_tag("buttons/delete.html")
-def delete_button(instance):
+def delete_button(instance, use_pk=False, key="slug"):
     """
     Render a button to delete a model instance.
 
     Args:
         instance: Model record.
+        Keeping use_pk and key for concerns about breaking API change.
+        They are no-ops
     """
     viewname = get_route_for_model(instance, "delete")
 
     # We try different lookups to get a valid reverse url
-    lookups = ["pk", "slug"]
+    lookups = ["pk", "slug", "key"]
 
     for lookup in lookups:
         if hasattr(instance, lookup):
             kwargs = {lookup: getattr(instance, lookup)}
-        else:
-            continue
-        try:
-            url = reverse(viewname, kwargs=kwargs)
-            return {"url": url}
-        except NoReverseMatch:
-            continue
+            try:
+                url = reverse(viewname, kwargs=kwargs)
+                return {"url": url}
+            except NoReverseMatch:
+                continue
 
     return {"url": None}
 

@@ -2,18 +2,6 @@
 {% load buttons %}
 {% load helpers %}
 
-{% block buttons %}
-        {% if perms.dcim.add_rackgroup %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.dcim.change_rackgroup %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.dcim.delete_rackgroup %}
-            {% delete_button object %}
-        {% endif %}
-{% endblock buttons %}
-
 {% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
