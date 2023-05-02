@@ -1,6 +1,7 @@
-import { useRoutes } from "react-router-dom";
+import { Navigate, useRoutes } from "react-router-dom";
 // import { lazy } from 'react'
 
+import { useGetSessionQuery } from "@utils/api";
 import Home from "@views/Home";
 import CreateView from "@views/generic/ObjectCreate";
 import DetailView from "@views/generic/ObjectRetrieve";
@@ -11,12 +12,10 @@ import Logout from "@views/Logout";
 
 // TODO: Dynamic route injection
 export default function NautobotRouter() {
+    const { data: sessionInfo, isSuccess: sessionLoaded } =
+        useGetSessionQuery();
+
     let element = useRoutes([
-        {
-            path: "/",
-            element: <Home />,
-            children: [],
-        },
         {
             path: "/login/",
             element: <Login />,
@@ -26,41 +25,57 @@ export default function NautobotRouter() {
             element: <Logout />,
         },
         {
-            path: "/:app_name/:model_name",
-            element: <ListView />,
-            children: [],
-        },
-        {
-            path: "/:app_name/:model_name/add",
-            element: <CreateView />,
-            children: [],
-        },
-        {
-            path: "/:app_name/:model_name/:object_id",
-            element: <DetailView />,
-            children: [],
-        },
-        {
-            path: "/plugins/",
+            path: "/",
+            element:
+                sessionLoaded && !sessionInfo.logged_in ? (
+                    <Navigate to="/login/" />
+                ) : (
+                    ""
+                ),
             children: [
                 {
-                    path: "installed-plugins",
-                    element: <InstalledApps />,
+                    path: "",
+                    element: <Home />,
+                    children: [],
                 },
                 {
-                    path: ":app_name/:model_name",
+                    path: "/:app_name/:model_name",
                     element: <ListView />,
                     children: [],
                 },
                 {
-                    path: ":app_name/:model_name/add",
+                    path: "/:app_name/:model_name/add",
                     element: <CreateView />,
                     children: [],
                 },
                 {
-                    path: ":app_name/:model_name/:object_id",
+                    path: "/:app_name/:model_name/:object_id",
                     element: <DetailView />,
                     children: [],
+                },
+                {
+                    path: "/plugins/",
+                    children: [
+                        {
+                            path: "installed-plugins",
+                            element: <InstalledApps />,
+                        },
+                        {
+                            path: ":app_name/:model_name",
+                            element: <ListView />,
+                            children: [],
+                        },
+                        {
+                            path: ":app_name/:model_name/add",
+                            element: <CreateView />,
+                            children: [],
+                        },
+                        {
+                            path: ":app_name/:model_name/:object_id",
+                            element: <DetailView />,
+                            children: [],
+                        },
+                    ],
                 },
             ],
         },

@@ -22,12 +22,12 @@ export default function Logout() {
             .get("/logout/")
             .then(() => {
                 refetchSession().then(() => {
-                    navigate("/");
+                    navigate("/login/");
                 });
             })
             .catch((err) => console.log(err.detail));
     } else {
-        navigate("/");
+        navigate("/login/");
     }
 
     return <span>Logging out...</span>;
