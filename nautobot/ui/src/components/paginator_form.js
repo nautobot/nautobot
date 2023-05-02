@@ -21,6 +21,10 @@ export default function PaginatorForm({ start, end, total_count }) {
                 }
                 onChange={onPageSizeChange}
             >
+                {/*
+                    TODO: we need a REST API endpoint to query get_settings_or_config("PER_PAGE_DEFAULTS")
+                    rather than hard-coding this.
+                */}
                 <option value="50">50</option>
                 <option value="100">100</option>
                 <option value="200">200</option>

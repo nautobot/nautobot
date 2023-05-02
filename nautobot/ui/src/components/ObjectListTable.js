@@ -45,6 +45,7 @@ export default function ObjectListTable({
     page_size,
     gridColumn,
     tableTitle,
+    include_button = true,
 }) {
     let location = useLocation();
     const columnHelper = useMemo(() => createColumnHelper(), []);
@@ -127,26 +128,30 @@ export default function ObjectListTable({
                 >
                     <NtcThumbnailIcon width="25px" height="30px" /> {tableTitle}
                 </Heading>
-                <ButtonGroup pb="sm" alignItems="center">
-                    <UIButton size="sm" variant="secondary">
-                        Filters
-                    </UIButton>
-                    <UIButton
-                        size="sm"
-                        variant="primary"
-                        leftIcon={<MeatballsIcon />}
-                    >
-                        Actions
-                    </UIButton>
-                    <Icon.TbMinusVertical />
-                    <RouterButton
-                        to={`${location.pathname}add`}
-                        size="sm"
-                        leftIcon={<PlusIcon />}
-                    >
-                        Add {tableTitle}
-                    </RouterButton>
-                </ButtonGroup>
+                {!include_button ? (
+                    () => {}
+                ) : (
+                    <ButtonGroup pb="sm" alignItems="center">
+                        <UIButton size="sm" variant="secondary">
+                            Filters
+                        </UIButton>
+                        <UIButton
+                            size="sm"
+                            variant="primary"
+                            leftIcon={<MeatballsIcon />}
+                        >
+                            Actions
+                        </UIButton>
+                        <Icon.TbMinusVertical />
+                        <RouterButton
+                            to={`${location.pathname}add`}
+                            size="sm"
+                            leftIcon={<PlusIcon />}
+                        >
+                            Add {tableTitle}
+                        </RouterButton>
+                    </ButtonGroup>
+                )}
             </Box>
 
             <TableRenderer

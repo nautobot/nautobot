@@ -31,7 +31,8 @@ import { useRef } from "react";
 import AppComponents from "@components/Apps";
 import { LoadingWidget } from "@components/LoadingWidget";
 import GenericView from "@views/generic/GenericView";
-import ObjectListTableNoButtons from "@components/ObjectListTableNoButtons";
+import ObjectListTable from "@components/ObjectListTable";
+import { useGetRESTAPIQuery } from "@utils/api";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
@@ -67,7 +68,7 @@ function render_header(value) {
     return value;
 }
 
-function Render_value(value) {
+function RenderValue(value) {
     const ref = useRef();
     if (value === undefined) {
         return <>&mdash;</>;
@@ -152,7 +153,7 @@ function RenderRow(props) {
     return (
         <Tr>
             <Td>{key}</Td>
-            <Td>{Render_value(value)}</Td>
+            <Td>{RenderValue(value)}</Td>
         </Tr>
     );
 }
@@ -180,11 +181,13 @@ export default function ObjectRetrieve({ api_url }) {
         () => changelog_url,
         fetcher
     );
-    const changelog_header_url = `/api/extras/object-changes/table-fields`;
-    const { data: changelogTableFields, changelog_table_error } = useSWR(
-        () => changelog_header_url,
-        fetcher
-    );
+    const { data: changelogHeaderData, isLoading: changelogHeaderDataLoading } =
+        useGetRESTAPIQuery({
+            app_name: "extras",
+            model_name: "object-changes",
+            schema: true,
+            plugin: isPluginView,
+        });
     const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
     const { data: noteData, note_error } = useSWR(() => notes_url, fetcher);
 
@@ -194,13 +197,15 @@ export default function ObjectRetrieve({ api_url }) {
         () => notes_header_url,
         fetcher
     );
-    if (
-        error ||
-        note_error ||
-        changelog_error ||
-        note_table_error ||
-        changelog_table_error
-    ) {
+    const { data: noteHeaderData, isLoading: notesHeaderDataLoading } =
+        useGetRESTAPIQuery({
+            app_name: "extras",
+            model_name: "notes",
+            schema: true,
+            plugin: isPluginView,
+        });
+
+    if (error || note_error || changelog_error) {
         return (
             <GenericView objectData={objectData}>
                 <div>Failed to load {api_url}</div>
@@ -208,10 +213,7 @@ export default function ObjectRetrieve({ api_url }) {
         );
     }
 
-    if (
-        !objectData ||
-        !extraAppConfig
-    ) {
+    if (!objectData || !extraAppConfig) {
         return (
             <GenericView>
                 <LoadingWidget />
@@ -367,12 +369,20 @@ export default function ObjectRetrieve({ api_url }) {
                                 <CardHeader>
                                     <strong>Notes</strong>
                                 </CardHeader>
-                                <ObjectListTableNoButtons
+                                <ObjectListTable
                                     tableData={noteData.results}
-                                    tableHeader={noteTableFields.data}
-                                    totalCount={noteData.count}
+                                    defaultHeaders={
+                                        noteHeaderData.view_options.list_display
+                                    }
+                                    tableHeaders={
+                                        noteHeaderData.view_options.fields
+                                    }
+                                    totalCount={changelogData.count}
+                                    active_page_number={0}
                                     page_size={50}
-                                ></ObjectListTableNoButtons>
+                                    tableTitle={"Notes"}
+                                    include_button={false}
+                                />
                             </Card>
                         </TabPanel>
                         <TabPanel
@@ -384,12 +394,21 @@ export default function ObjectRetrieve({ api_url }) {
                                 <CardHeader>
                                     <strong>Change Log</strong>
                                 </CardHeader>
-                                <ObjectListTableNoButtons
+                                <ObjectListTable
                                     tableData={changelogData.results}
-                                    tableHeader={changelogTableFields.data}
+                                    defaultHeaders={
+                                        changelogHeaderData.view_options
+                                            .list_display
+                                    }
+                                    tableHeaders={
+                                        changelogHeaderData.view_options.fields
+                                    }
                                     totalCount={changelogData.count}
+                                    active_page_number={0}
                                     page_size={50}
-                                ></ObjectListTableNoButtons>
+                                    tableTitle={"Change Logs"}
+                                    include_button={false}
+                                />
                             </Card>
                         </TabPanel>
                     </TabPanels>

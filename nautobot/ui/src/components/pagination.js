@@ -24,6 +24,12 @@ export default function Pagination({
     }
     function onPageNumberChange(pageNumber) {
         let limit = searchParams.get("limit");
+        {
+            /*
+            TODO: we need a REST API endpoint to query get_settings_or_config("PAGINATE_COUNT")
+            rather than hard-coding this to 50.
+        */
+        }
         setSearchParams({
             offset: pageSize * (pageNumber - 1),
             limit: limit ? limit : 50,
@@ -56,7 +62,8 @@ export default function Pagination({
                         </li>
                     );
                 }
-
+                // pageNumber (starts from 1) is always one greater than the currentPage (starts from 0)
+                // we add one here to make sure that the correct pageNumber is highlighted.
                 if (pageNumber === currentPage + 1) {
                     return (
                         <li

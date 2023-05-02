@@ -1153,6 +1153,7 @@ class NoteViewSet(ModelViewSet, TableFieldsViewSetMixin):
     queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
+    list_display = ["note", "assigned_object_type", "assigned_object_id", "user"]
 
     # Assign user from request
     def perform_create(self, serializer):
@@ -1172,6 +1173,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet, TableFieldsViewSetMixin):
     queryset = ObjectChange.objects.select_related("user")
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
+    list_display = ["changed_object_id", "related_object_id", "related_object_type", "user"]
 
 
 #
