@@ -148,6 +148,33 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.18 (2023-05-01)
+
+### Added
+
+- [#1526](https://github.com/nautobot/nautobot/issues/1526) - Added UI button and REST API to validate a `Secret` can be retrieved.
+- [#3669](https://github.com/nautobot/nautobot/issues/3669) - Added indexes to `JobResult` across common fields: `created`, `completed`, and `status`.
+
+### Changed
+
+- [#2800](https://github.com/nautobot/nautobot/issues/2800) - Add model documentation to navigation panel.
+- [#3440](https://github.com/nautobot/nautobot/issues/3440) - Added warning admonitions for Job Hooks and Job Approvals documentation that setting `Meta.approval_required` is ignored on `JobHookReceiver` classes.
+- [#3602](https://github.com/nautobot/nautobot/issues/3602) - Updated `.gitignore` to not track new UI non-source files.
+- [#3621](https://github.com/nautobot/nautobot/issues/3621) - Changed development Docker compose commands to not leave temporary containers behind.
+- [#3633](https://github.com/nautobot/nautobot/issues/3633) - Changed Custom Validator applicator to not require DB query.
+
+### Fixed
+
+- [#3083](https://github.com/nautobot/nautobot/issues/3083) - Fixed an issue where unit tests might fail erroneously when dealing with objects whose name/display contains characters like `"<>`.
+- [#3533](https://github.com/nautobot/nautobot/issues/3533) - Fixed an issue where sending a PATCH to `/api/dcim/interfaces/(uuid)/` might inadvertently reset the interface's status to `Active`.
+- [#3533](https://github.com/nautobot/nautobot/issues/3533) - Fixed an issue where sending a PATCH to `/api/users/tokens/(uuid)/` might inadvertently change the token's value.
+- [#3612](https://github.com/nautobot/nautobot/issues/3612) - Fixed a 500 error when filtering by `content_type` in Dynamic Groups list view.
+- [#3660](https://github.com/nautobot/nautobot/issues/3660) - Fixed an issue where grouped job buttons would always be disabled due to a template rendering issue.
+
+### Security
+
+- [#3642](https://github.com/nautobot/nautobot/issues/3642) - Updated `sqlparse` to `0.4.4` due to CVE-2023-30608. This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+
 ## v1.5.17 (2023-04-17)
 
 ### Added

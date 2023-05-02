@@ -1,1 +1,0 @@
-Fixed an issue where grouped job buttons would always be disabled due to a template rendering issue.

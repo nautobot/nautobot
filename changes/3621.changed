@@ -1,1 +1,0 @@
-Changed development Docker compose commands to not leave temporary containers behind.
