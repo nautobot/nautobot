@@ -75,8 +75,8 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
 
         return super().to_objectchange(action, related_object=device_type, **kwargs)
 
-    def get_absolute_url(self):
-        return self.device_type.get_absolute_url()
+    def get_absolute_url(self, api=False):
+        return self.device_type.get_absolute_url(api=api)
 
     def instantiate_model(self, model, device, **kwargs):
         """

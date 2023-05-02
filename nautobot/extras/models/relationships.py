@@ -731,8 +731,8 @@ class RelationshipAssociation(BaseModel):
 
         return None
 
-    def get_absolute_url(self):
-        return self.relationship.get_absolute_url()
+    def get_absolute_url(self, api=False):
+        return self.relationship.get_absolute_url(api=api)
 
     def get_source(self):
         """Accessor for self.source - returns None if the object cannot be located."""
