@@ -1,7 +1,6 @@
 import logging
 import uuid
 
-from abc import abstractmethod
 from django.core.exceptions import (
     FieldError,
     MultipleObjectsReturned,
