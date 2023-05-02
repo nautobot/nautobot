@@ -1,6 +1,4 @@
 // import Badge from 'react-bootstrap/Badge';
-import { faMinus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Link } from "@components/RouterLink";
 import { Button } from "@nautobot/nautobot-ui";
 import { calculateLuminance } from "@utils/color";
@@ -34,7 +32,7 @@ function TextOrButton({ obj }) {
 
 function TableColumnDisplay({ obj }) {
     if (!obj) {
-        return <FontAwesomeIcon icon={faMinus} />;
+        return <>&mdash;</>;
     } else if (typeof obj === "object" && !Array.isArray(obj)) {
         return <TextOrButton obj={obj} />;
     } else if (Array.isArray(obj)) {

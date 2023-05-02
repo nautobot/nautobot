@@ -25,9 +25,8 @@ import HomeChangelogPanel from "@components/HomeChangelogPanel";
 import HomePanel from "@components/HomePanel";
 import JobHistoryTable from "@components/JobHistoryTable";
 import { LoadingWidget } from "@components/LoadingWidget";
-import { useGetRESTAPIQuery } from "@utils/api";
+import { useGetObjectCountsQuery, useGetRESTAPIQuery } from "@utils/api";
 import GenericView from "@views/generic/GenericView";
-import { useGetObjectCountsQuery } from "@utils/api";
 
 export default function Home() {
     const { data: jobResultData } = useGetRESTAPIQuery({
@@ -70,6 +69,7 @@ export default function Home() {
                 title="Networks"
                 data={objectCountData["Networks"]}
             />
+            {/*TODO: this should use objectCountData["Security"]*/}
             <HomePanel
                 icon=<SecurityIcon />
                 title="Security"
@@ -88,6 +88,7 @@ export default function Home() {
                 data={objectCountData["Platform"]}
             />
             <NautobotGridItem colSpan="3">
+                {/*TODO: this should probably be extracted to a HomeAutomationPanel component for readability?*/}
                 <TableContainer>
                     <Table>
                         <Thead>

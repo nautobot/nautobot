@@ -24,12 +24,7 @@ export default function Pagination({
     }
     function onPageNumberChange(pageNumber) {
         let limit = searchParams.get("limit");
-        {
-            /*
-            TODO: we need a REST API endpoint to query get_settings_or_config("PAGINATE_COUNT")
-            rather than hard-coding this to 50.
-        */
-        }
+        /* TODO: we need a REST API endpoint to query get_settings_or_config("PAGINATE_COUNT") rather than hard-coding this to 50. */
         setSearchParams({
             offset: pageSize * (pageNumber - 1),
             limit: limit ? limit : 50,

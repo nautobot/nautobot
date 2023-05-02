@@ -808,6 +808,7 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
                 {"model": "ipam.ipaddress"},
                 {"model": "ipam.vlan"},
             ],
+            "Security": [{"model": "extras.secret"}],
             "Platform": [
                 {"model": "extras.gitrepository"},
                 {"model": "extras.relationship"},
@@ -831,7 +832,9 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
             try:
                 data["url"] = django_reverse(get_route_for_model(model, "list"))
             except NoReverseMatch:
-                pass
+                logger = logging.getLogger(__name__)
+                route = get_route_for_model(model, "list")
+                logger.warning(f"Handled expected exception when generating filter field: {route}")
             manager = model.objects
             if request.user.has_perm(permission):
                 if hasattr(manager, "restrict"):
