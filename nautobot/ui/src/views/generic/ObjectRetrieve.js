@@ -69,7 +69,7 @@ function render_header(value) {
     return value;
 }
 
-function RenderValue(value) {
+function DetailFieldValue(value) {
     const ref = useRef();
     if (value === undefined) {
         return <>&mdash;</>;
@@ -151,7 +151,7 @@ function RenderRow(props) {
     return (
         <Tr>
             <Td>{key}</Td>
-            <Td>{RenderValue(value)}</Td>
+            <Td>{DetailFieldValue(value)}</Td>
         </Tr>
     );
 }

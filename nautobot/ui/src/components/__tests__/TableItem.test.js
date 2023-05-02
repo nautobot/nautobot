@@ -4,18 +4,9 @@ import { render, screen } from "@testing-library/react";
 import TableItem from "../TableItem";
 
 describe("TableItem", () => {
-    it("renders minus icon when obj is null", () => {
-        render(<TableItem name="test" obj={null} />);
-        const minusIcon = document.evaluate(
-            "//svg",
-            document,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-        );
-        expect(minusIcon.singleNodeValue.getAttribute("class")).toBe(
-            "svg-inline--fa fa-minus "
-        );
+    it("renders em dash when obj is null", () => {
+        const { container } = render(<TableItem name="test" obj={null} />);
+        expect(container.innerHTML).toBe("—");
     });
 
     it("renders span with className=badge when obj is an array", () => {
@@ -39,17 +30,8 @@ describe("TableItem", () => {
         expect(container.innerHTML).toBe(obj);
     });
 
-    it("renders minus icon when obj is an empty string", () => {
-        render(<TableItem name="test" obj="" />);
-        const minusIcon = document.evaluate(
-            "//svg",
-            document,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-        );
-        expect(minusIcon.singleNodeValue.getAttribute("class")).toBe(
-            "svg-inline--fa fa-minus "
-        );
+    it("renders em dash when obj is an empty string", () => {
+        const { container } = render(<TableItem name="test" obj="" />);
+        expect(container.innerHTML).toBe("—");
     });
 });
