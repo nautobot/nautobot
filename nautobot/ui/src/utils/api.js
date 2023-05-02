@@ -2,6 +2,7 @@
 import { createApi, fetchBaseQuery, retry } from "@reduxjs/toolkit/query/react";
 import {
     API_BASE,
+    API_OBJECT_COUNTS,
     API_USER_SESSION_INFO,
     API_UI_MENU_INFO,
 } from "@constants/apiPath";
@@ -34,6 +35,10 @@ export const baseApi = createApi({
         getUIMenu: builder.query({
             query: () => API_UI_MENU_INFO,
             providesTags: ["AppData"],
+        }),
+        getObjectCounts: builder.query({
+            query: () => API_OBJECT_COUNTS,
+            providesTags: ["ObjectCounts"],
         }),
         getRESTAPI: builder.query({
             query: ({
@@ -79,8 +84,12 @@ export const baseApi = createApi({
 //   baseApi.useGetSessionQuery
 //   // or
 //   baseApi.endpoints.getSession.getQuery
-export const { useGetSessionQuery, useGetUIMenuQuery, useGetRESTAPIQuery } =
-    baseApi;
+export const {
+    useGetSessionQuery,
+    useGetUIMenuQuery,
+    useGetRESTAPIQuery,
+    useGetObjectCountsQuery,
+} = baseApi;
 
 // TODO: Below is a pattern for taking the menu API and building an entire RTK-Query API for it
 // Few things need to be done here:

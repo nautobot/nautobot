@@ -1,4 +1,7 @@
 ---
+- Model/Endpoint: "/api/plugins/installed-plugins"
+  Removed Field: "verison"
+  Comments: "Use `version` instead"
 - Model/Endpoint: "/api/status/"
   Removed Field: "rq-workers-running"
   Comments: "Django-RQ is no longer supported"

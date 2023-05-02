@@ -16,6 +16,7 @@ import {
     TagLabel,
     Tbody,
     Td,
+    Text,
     Th,
     Thead,
     Tr,
@@ -23,8 +24,10 @@ import {
 import HomeChangelogPanel from "@components/HomeChangelogPanel";
 import HomePanel from "@components/HomePanel";
 import JobHistoryTable from "@components/JobHistoryTable";
+import { LoadingWidget } from "@components/LoadingWidget";
 import { useGetRESTAPIQuery } from "@utils/api";
 import GenericView from "@views/generic/GenericView";
+import { useGetObjectCountsQuery } from "@utils/api";
 
 export default function Home() {
     const { data: jobResultData } = useGetRESTAPIQuery({
@@ -33,84 +36,56 @@ export default function Home() {
         limit: 1,
         depth: 0,
     });
+    const {
+        data: objectCountData,
+        isLoading,
+        isError,
+    } = useGetObjectCountsQuery();
+
+    if (isLoading) {
+        return (
+            <GenericView>
+                <LoadingWidget />
+            </GenericView>
+        );
+    }
+
+    if (isError) {
+        return (
+            <GenericView>
+                <Text>Error loading.</Text>
+            </GenericView>
+        );
+    }
 
     return (
         <GenericView columns="1 1 1 1 3 1" gridBackground="white-0">
             <HomePanel
                 icon=<DcimIcon />
                 title="Inventory"
-                data={{
-                    Racks: { app_name: "dcim", model_name: "racks" },
-                    "Device Types": {
-                        app_name: "dcim",
-                        model_name: "device-types",
-                    },
-                    Devices: { app_name: "dcim", model_name: "devices" },
-                    "Virtual Chassis": {
-                        app_name: "dcim",
-                        model_name: "virtual-chassis",
-                    },
-                    "Device Redundancy Groups": {
-                        app_name: "dcim",
-                        model_name: "device-redundancy-groups",
-                    },
-                    Connections: 2618,
-                }}
+                data={objectCountData["Inventory"]}
             />
             <HomePanel
                 icon=<IpamIcon />
                 title="Networks"
-                data={{
-                    VRFs: { app_name: "ipam", model_name: "vrfs" },
-                    Prefixes: { app_name: "ipam", model_name: "prefixes" },
-                    "IP Addresses": {
-                        app_name: "ipam",
-                        model_name: "ip-addresses",
-                    },
-                    VLANs: { app_name: "ipam", model_name: "vlans" },
-                }}
+                data={objectCountData["Networks"]}
             />
             <HomePanel
                 icon=<SecurityIcon />
                 title="Security"
-                data={{
-                    "Menu Item 1": 0,
-                    "Menu Item 2": 0,
-                    "Menu Item 3": 0,
-                    "Menu Item 4": 0,
-                    "Menu Item 5": 0,
-                    "Menu Item 6": 0,
-                }}
+                data={[
+                    { name: "Menu Item 1", count: 0 },
+                    { name: "Menu Item 2", count: 0 },
+                    { name: "Menu Item 3", count: 0 },
+                    { name: "Menu Item 4", count: 0 },
+                    { name: "Menu Item 5", count: 0 },
+                    { name: "Menu Item 6", count: 0 },
+                ]}
             />
             <HomePanel
                 icon=<PlatformIcon />
                 title="Platform"
-                data={{
-                    "Installed Apps/Plugins": 0,
-                    "Git Repositories": {
-                        app_name: "extras",
-                        model_name: "git-repositories",
-                    },
-                    Tags: { app_name: "extras", model_name: "tags" },
-                    Statuses: { app_name: "extras", model_name: "statuses" },
-                    Roles: { app_name: "extras", model_name: "roles" },
-                    Relationships: {
-                        app_name: "extras",
-                        model_name: "relationships",
-                    },
-                    "Computed Fields": {
-                        app_name: "extras",
-                        model_name: "computed-fields",
-                    },
-                    "Custom Fields": {
-                        app_name: "extras",
-                        model_name: "custom-fields",
-                    },
-                    "Custom Links": {
-                        app_name: "extras",
-                        model_name: "custom-links",
-                    },
-                }}
+                data={objectCountData["Platform"]}
             />
             <NautobotGridItem colSpan="3">
                 <TableContainer>

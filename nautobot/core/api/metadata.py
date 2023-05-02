@@ -112,13 +112,6 @@ class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcesso
             fields = self.serializer.get_fields()
 
         field_names = list(fields)
-        # FIXME(jathan): Correct the behavior introduced in #3500 by switching to `__all__` to
-        # assert these get added at the end.
-        bottom_fields = ["computed_fields", "custom_fields", "relationships"]
-        for field_name in bottom_fields:
-            if field_name in field_names:
-                field_names.remove(field_name)
-                field_names.append(field_name)
 
         return field_names
 
@@ -157,32 +150,17 @@ class NautobotMetadata(SimpleMetadata):
         list_display = []
         fields = []
 
-        # FIXME(jathan): This mapping of fields and re-ordering things is currently a hack that MUST
-        # be replaced by a central solution where field order is consistent and defined in one
-        # place. All of the "bottom fields" stuff and coercion of ordering here will go away.
         processor = schema.ColumnProcessor(serializer, request.parser_context)
         field_map = dict(processor.fields)
-
-        # TODO(jathan): For now, this is defined on the viewset. This is the cleanest since metadata
-        # generation always gets the view instance.
         all_fields = list(field_map)
-        list_display_fields = getattr(view, "list_display", None) or []
-
-        # Explicitly order the "big ugly" fields to the bottom.
-        # FIXME(jathan): Correct the behavior introduced in #3500 by switching to `__all__` to
-        # assert these get added at the end.
-        bottom_fields = ["computed_fields", "custom_fields", "relationships"]
-        for field_name in bottom_fields:
-            if field_name in all_fields:
-                all_fields.remove(field_name)
-                all_fields.append(field_name)
-            if field_name in list_display_fields:
-                list_display_fields.remove(field_name)
-                list_display_fields.append(field_name)
+        list_display_fields = getattr(serializer.Meta, "list_display", None) or []
 
         # Process the list_display fields first.
         for field_name in list_display_fields:
-            field = field_map[field_name]
+            try:
+                field = field_map[field_name]
+            except KeyError:
+                continue  # Ignore unknown fields.
             column_data = processor._get_column_properties(field, field_name)
             list_display.append(column_data)
             fields.append(column_data)
@@ -191,7 +169,10 @@ class NautobotMetadata(SimpleMetadata):
         for field_name in all_fields:
             if field_name in list_display_fields:
                 continue
-            field = field_map[field_name]
+            try:
+                field = field_map[field_name]
+            except KeyError:
+                continue  # Ignore unknown fields.
             column_data = processor._get_column_properties(field, field_name)
             fields.append(column_data)
 

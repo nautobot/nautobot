@@ -1,5 +1,10 @@
 import { Card, CardHeader } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
-import { faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+    faCheck,
+    faCalendarPlus,
+    faPencil,
+    faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     Box,
@@ -30,9 +35,11 @@ import { useRef } from "react";
 // import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
 import AppComponents from "@components/Apps";
 import { LoadingWidget } from "@components/LoadingWidget";
+import { toTitleCase } from "@utils/string";
 import GenericView from "@views/generic/GenericView";
 import ObjectListTable from "@components/ObjectListTable";
 import { useGetRESTAPIQuery } from "@utils/api";
+import { humanFriendlyDate } from "@utils/date";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
@@ -57,14 +64,8 @@ const fetcher = (url) =>
 //     });
 
 function render_header(value) {
-    value = value
-        .split("_")
-        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
-        .join(" ");
-    value = value
-        .split("-")
-        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
-        .join(" ");
+    value = toTitleCase(value, "_");
+    value = toTitleCase(value, "-");
     return value;
 }
 
@@ -146,10 +147,7 @@ function RenderRow(props) {
     if (key[0] === "_") return null;
 
     // "foo_bar" --> "Foo Bar"
-    key = key
-        .split("_")
-        .map((x) => (x ? x[0].toUpperCase() + x.slice(1) : ""))
-        .join(" ");
+    key = toTitleCase(key, "_");
     return (
         <Tr>
             <Td>{key}</Td>
@@ -234,21 +232,36 @@ export default function ObjectRetrieve({ api_url }) {
                         <Text size="H1" as="h1">
                             {obj.display}
                         </Text>
-                        <Box flexGrow="1">
-                            <Text size="P2">
-                                <ReferenceDataTag
-                                    model_name="statuses"
-                                    id={obj.status.id}
-                                    variant="unknown"
-                                    size="sm"
-                                />
-                            </Text>
-                        </Box>
+                        {obj.status && (
+                            <Box p={2} flexGrow="1">
+                                <Text size="P2">
+                                    <ReferenceDataTag
+                                        model_name="statuses"
+                                        id={obj.status.id}
+                                        variant="unknown"
+                                        size="sm"
+                                    />
+                                </Text>
+                            </Box>
+                        )}
+                        {obj.created && (
+                            <Box p={2} flexGrow="1">
+                                <Text size="P2" color="gray-2">
+                                    <FontAwesomeIcon icon={faCalendarPlus} />
+                                    {humanFriendlyDate(obj.created)}
+                                </Text>
+                            </Box>
+                        )}
+                        {obj.last_updated && (
+                            <Box p={2} flexGrow="1">
+                                <Text size="P2" color="gray-2">
+                                    <FontAwesomeIcon icon={faPencil} />
+                                    {humanFriendlyDate(obj.last_updated)}
+                                </Text>
+                            </Box>
+                        )}
                     </Heading>
                     <ButtonGroup alignItems="center">
-                        <UIButton size="sm" variant="secondary">
-                            Filters
-                        </UIButton>
                         <UIButton
                             size="sm"
                             variant="primaryAction"

@@ -1,5 +1,4 @@
 import {
-    Link,
     NautobotGridItem,
     Table,
     TableContainer,
@@ -11,46 +10,14 @@ import {
     Thead,
     Tr,
 } from "@nautobot/nautobot-ui";
-import { useGetRESTAPIQuery } from "@utils/api";
+import { RouterLink } from "@components/RouterLink";
+import { toTitleCase } from "@utils/string";
 
-function HomePanelData(attrs) {
-    const { data, isLoading, isError } = useGetRESTAPIQuery({
-        app_name: attrs["app_name"],
-        model_name: attrs["model_name"],
-        limit: 1,
-        depth: 0,
-    });
-
-    if (isLoading) {
-        return (
-            <Tag size="sm" variant="unknown">
-                <TagLabel>Loading...</TagLabel>
-            </Tag>
-        );
-    }
-    if (isError) {
-        return (
-            <Tag size="sm" variant="critical">
-                <TagLabel>Unknown</TagLabel>
-            </Tag>
-        );
-    }
-
-    if (data.count) {
-        return (
-            <Link href={`/${attrs["app_name"]}/${attrs["model_name"]}/`}>
-                <Tag size="sm" variant="info">
-                    <TagLabel>{data.count}</TagLabel>
-                </Tag>
-            </Link>
-        );
-    }
+function HomePanelCountTag(count = 0) {
     return (
-        <Link href={`/${attrs["app_name"]}/${attrs["model_name"]}/`}>
-            <Tag size="sm" variant="unknown">
-                <TagLabel>{data.count}</TagLabel>
-            </Tag>
-        </Link>
+        <Tag size="sm" variant={count ? "info" : "unknown"}>
+            <TagLabel>{count}</TagLabel>
+        </Tag>
     );
 }
 
@@ -67,26 +34,19 @@ export default function HomePanel({ icon, title, data }) {
                         </Tr>
                     </Thead>
                     <Tbody>
-                        {Object.entries(data).map((row) => (
-                            <Tr>
-                                <Td colspan={2}>{row[0]}</Td>
-                                <Td
-                                    width="4em"
-                                    style={{ "text-align": "right" }}
-                                >
-                                    {typeof row[1] === "number" ? (
-                                        row[1] === 0 ? (
-                                            <Tag size="sm" variant="unknown">
-                                                <TagLabel>{row[1]}</TagLabel>
-                                            </Tag>
-                                        ) : (
-                                            <Tag size="sm" variant="info">
-                                                <TagLabel>{row[1]}</TagLabel>
-                                            </Tag>
-                                        )
+                        {data.map((row, idx) => (
+                            <Tr key={idx}>
+                                <Td colspan={2}>
+                                    {row.url ? (
+                                        <RouterLink to={row.url}>
+                                            {toTitleCase(row["name"])}
+                                        </RouterLink>
                                     ) : (
-                                        HomePanelData(row[1])
+                                        toTitleCase(row["name"])
                                     )}
+                                </Td>
+                                <Td width="4em" textAlign="right">
+                                    {HomePanelCountTag(row.count)}
                                 </Td>
                             </Tr>
                         ))}
