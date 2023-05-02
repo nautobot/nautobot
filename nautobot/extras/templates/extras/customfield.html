@@ -2,19 +2,6 @@
 {% load buttons %}
 {% load helpers %}
 
-
-{% block buttons %}
-        {% if object.clone_fields and perms.extras.add_customfield %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.extras.change_customfield %}
-            {% edit_button object key="slug" %}
-        {% endif %}
-        {% if perms.extras.delete_customfield %}
-            {% delete_button object key="slug" %}
-        {% endif %}
-{% endblock buttons %}
-
 {% block content_left_page %}
             <div class="panel panel-default">
                 <div class="panel-heading">
