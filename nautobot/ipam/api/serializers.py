@@ -131,7 +131,38 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Prefix
-        fields = "__all__"
+        fields = [
+            "id",
+            "prefix",
+            "type",
+            "status",
+            # TODO(jathan): This is a "virtual" table field that is a child count. We don't yet have a
+            # solution for non-object fields in table views (utilization is another one). Likely a job
+            # for `opt_in_fields` so that we can request these specifically for Prefix list view.
+            # "children",
+            "family",
+            "vrf",
+            "tenant",
+            "location",
+            "vlan",
+            "role",
+            "rir",
+            "date_allocated",
+            "description",
+            "url",  # Serializer-only field
+        ]
+        list_display = [
+            "id",
+            "prefix",
+            "type",
+            "status",
+            "vrf",
+            "tenant",
+            "location",
+            "vlan",
+            "role",
+            "description",
+        ]
         extra_kwargs = {"family": {"read_only": True}, "prefix_length": {"read_only": True}}
 
 
