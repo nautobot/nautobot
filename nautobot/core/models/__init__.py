@@ -32,15 +32,6 @@ class BaseModel(models.Model):
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
 
-    #: Ordered list of field names that are displayed by default on object list view in the web UI.
-    list_display = None
-
-    #  Ordered list of field names that will be used for display in generic UI elements.
-    # - For list views, this will be the expanded set of fields to select from
-    # - For edit views, this will be the default order of the fields in edit forms.
-    # - For object detail views, this will be the default order in which fields are displayed.
-    field_order = None
-
     @property
     def present_in_database(self):
         """
