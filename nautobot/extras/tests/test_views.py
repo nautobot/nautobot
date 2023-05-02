@@ -1515,7 +1515,6 @@ class JobTestCase(
         }
 
         cls.form_data = {
-            "slug": "custom-job-slug",
             "enabled": True,
             "grouping_override": True,
             "grouping": "Overridden Grouping",
