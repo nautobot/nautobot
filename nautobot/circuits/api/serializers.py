@@ -16,7 +16,6 @@ from nautobot.extras.api.mixins import (
 
 
 class ProviderSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="circuits-api:provider-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -30,8 +29,6 @@ class ProviderSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class ProviderNetworkSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="circuits-api:providernetwork-detail")
-
     class Meta:
         model = ProviderNetwork
         fields = "__all__"
@@ -43,7 +40,6 @@ class ProviderNetworkSerializer(NautobotModelSerializer, TaggedModelSerializerMi
 
 
 class CircuitTypeSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittype-detail")
     circuit_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -52,8 +48,6 @@ class CircuitTypeSerializer(NautobotModelSerializer):
 
 
 class CircuitSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuit-detail")
-
     class Meta:
         model = Circuit
         fields = "__all__"
@@ -64,8 +58,6 @@ class CircuitTerminationSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="circuits-api:circuittermination-detail")
-
     class Meta:
         model = CircuitTermination
         fields = "__all__"

@@ -167,7 +167,6 @@ class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
 
 
 class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("locations").get_query()),
         required=False,
@@ -184,7 +183,6 @@ class LocationSerializer(
     TaggedModelSerializerMixin,
     TreeModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
@@ -216,7 +214,6 @@ class LocationSerializer(
 
 
 class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
     rack_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -244,7 +241,6 @@ class RackSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False)
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
@@ -282,8 +278,6 @@ class RackUnitSerializer(serializers.Serializer):
 
 
 class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackreservation-detail")
-
     class Meta:
         model = RackReservation
         fields = "__all__"
@@ -316,7 +310,6 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
 
 
 class ManufacturerSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:manufacturer-detail")
     device_type_count = serializers.IntegerField(read_only=True)
     inventory_item_count = serializers.IntegerField(read_only=True)
     platform_count = serializers.IntegerField(read_only=True)
@@ -327,7 +320,6 @@ class ManufacturerSerializer(NautobotModelSerializer):
 
 
 class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicetype-detail")
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
 
@@ -353,7 +345,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class ConsolePortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleporttemplate-detail")
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -362,7 +353,6 @@ class ConsolePortTemplateSerializer(NautobotModelSerializer):
 
 
 class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleserverporttemplate-detail")
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -371,7 +361,6 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
 
 
 class PowerPortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerporttemplate-detail")
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -380,7 +369,6 @@ class PowerPortTemplateSerializer(NautobotModelSerializer):
 
 
 class PowerOutletTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlettemplate-detail")
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
 
@@ -390,7 +378,6 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
 
 
 class InterfaceTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfacetemplate-detail")
     type = ChoiceField(choices=InterfaceTypeChoices)
 
     class Meta:
@@ -399,7 +386,6 @@ class InterfaceTemplateSerializer(NautobotModelSerializer):
 
 
 class RearPortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearporttemplate-detail")
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -408,7 +394,6 @@ class RearPortTemplateSerializer(NautobotModelSerializer):
 
 
 class FrontPortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontporttemplate-detail")
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -417,8 +402,6 @@ class FrontPortTemplateSerializer(NautobotModelSerializer):
 
 
 class DeviceBayTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebaytemplate-detail")
-
     class Meta:
         model = DeviceBayTemplate
         fields = "__all__"
@@ -430,7 +413,6 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 
 
 class PlatformSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     device_count = serializers.IntegerField(read_only=True)
     virtual_machine_count = serializers.IntegerField(read_only=True)
 
@@ -440,15 +422,12 @@ class PlatformSerializer(NautobotModelSerializer):
 
 
 class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebay-detail")
-
     class Meta:
         model = DeviceBay
         fields = "__all__"
 
 
 class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     parent_bay = serializers.SerializerMethodField()
 
@@ -507,7 +486,6 @@ class ConsoleServerPortSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleserverport-detail")
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -521,7 +499,6 @@ class ConsolePortSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleport-detail")
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -535,7 +512,6 @@ class PowerOutletSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlet-detail")
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
 
@@ -550,7 +526,6 @@ class PowerPortSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerport-detail")
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -582,7 +557,6 @@ class InterfaceSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     type = ChoiceField(choices=InterfaceTypeChoices)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     ip_address_count = serializers.IntegerField(read_only=True)
@@ -609,7 +583,6 @@ class InterfaceSerializer(
 
 
 class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearport-detail")
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -618,7 +591,6 @@ class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Ca
 
 
 class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontport-detail")
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -630,7 +602,6 @@ class DeviceRedundancyGroupSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
     failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices)
 
     class Meta:
@@ -644,8 +615,6 @@ class DeviceRedundancyGroupSerializer(
 
 
 class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:inventoryitem-detail")
-
     class Meta:
         model = InventoryItem
         fields = "__all__"
@@ -675,7 +644,6 @@ class CableSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_a = serializers.SerializerMethodField(read_only=True)
@@ -723,8 +691,6 @@ class TracedCableSerializer(serializers.ModelSerializer):
     """
     Used only while tracing a cable path.
     """
-
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
 
     class Meta:
         model = Cable
@@ -822,7 +788,6 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
 
 
 class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:virtualchassis-detail")
     member_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -836,7 +801,6 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMix
 
 
 class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerpanel-detail")
     power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -850,7 +814,6 @@ class PowerFeedSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerfeed-detail")
     type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)
     supply = ChoiceField(choices=PowerFeedSupplyChoices, default=PowerFeedSupplyChoices.SUPPLY_AC)
     phase = ChoiceField(choices=PowerFeedPhaseChoices, default=PowerFeedPhaseChoices.PHASE_SINGLE)
