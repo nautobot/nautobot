@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
-from django.http import Http404, JsonResponse
+from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -377,7 +377,7 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
         obj_serializer_class = get_serializer_for_model(obj)
         obj_serializer = obj_serializer_class(data=None)
         response = self.get_detail_view_config(obj_serializer)
-        response = JsonResponse(response)
+        response = Response(response)
         return response
 
     def get_detail_view_config(self, obj_serializer):
