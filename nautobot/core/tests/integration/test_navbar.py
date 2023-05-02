@@ -49,9 +49,7 @@ class NavBarTestCase(SeleniumTestCase):
         for tab_name, groups in self.navbar.items():
             # XPath to find tabs using the tab name
             tab_xpath = f"//*[@id='navbar']//*[contains(text(), '{tab_name}')]"
-            print(tab_xpath)
             tab = self.browser.find_by_xpath(tab_xpath)
-            print(tab)
             tab.click()
             self.assertTrue(bool(tab["aria-expanded"]))
 

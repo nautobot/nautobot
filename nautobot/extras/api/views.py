@@ -191,28 +191,6 @@ class TableFieldsViewSetMixin:
         ]
         return Response({"data": data})
 
-    @action(detail=False, url_path="note-table-fields", methods=["get"])
-    def note_table_fields(self, request):
-        table = get_table_for_model(Note)
-        table_instance = table(user=request.user, data=[])
-        data = [
-            {"name": item[0], "label": item[1]}
-            for item in table_instance.configurable_columns
-            if item[0] in table_instance.visible_columns
-        ]
-        return Response({"data": data})
-
-    @action(detail=False, url_path="changelog-table-fields", methods=["get"])
-    def changelog_table_fields(self, request):
-        table = get_table_for_model(ObjectChange)
-        table_instance = table(user=request.user, data=[])
-        data = [
-            {"name": item[0], "label": item[1]}
-            for item in table_instance.configurable_columns
-            if item[0] in table_instance.visible_columns
-        ]
-        return Response({"data": data})
-
 
 #
 #  Computed Fields
@@ -368,7 +346,7 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
 
         return render(request, "generic/object_retrieve_plugin_full_width.html", {"object": obj})
 
-    @action(detail=True, url_path="detail_view_config")
+    @action(detail=True, url_path="detail-view-config")
     def detail_view_config(self, request, pk):
         """
         Return a JSON of the ObjectDetailView configuration
@@ -1171,7 +1149,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 #
 
 
-class NoteViewSet(ModelViewSet):
+class NoteViewSet(ModelViewSet, TableFieldsViewSetMixin):
     queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -1186,7 +1164,7 @@ class NoteViewSet(ModelViewSet):
 #
 
 
-class ObjectChangeViewSet(ReadOnlyModelViewSet):
+class ObjectChangeViewSet(ReadOnlyModelViewSet, TableFieldsViewSetMixin):
     """
     Retrieve a list of recent changes.
     """

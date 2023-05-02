@@ -26,8 +26,6 @@ export default function GenericObjectListView() {
         dispatch(updateAppCurrentContext(currentAppContext));
     }, [dispatch, currentAppContext]);
 
-    let [searchParams] = useSearchParams();
-
     // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";
     const { data: headerData, isLoading: headerDataLoading } =
         useGetRESTAPIQuery({
@@ -36,6 +34,7 @@ export default function GenericObjectListView() {
             schema: true,
             plugin: isPluginView,
         });
+    let [searchParams] = useSearchParams();
 
     // What page are we on?
     // TODO: Pagination handling should be it's own function so it's testable

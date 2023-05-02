@@ -5,7 +5,6 @@ import { useSearchParams } from "react-router-dom";
 export default function PaginatorForm({ start, end, total_count }) {
     let [searchParams, setSearchParams] = useSearchParams();
     let paginator_string = `Showing ${start} - ${end} of ${total_count}`;
-    // const { setType } = useState("PaginatorForm");
     function onPageSizeChange(event) {
         let offset = searchParams.get("offset");
         setSearchParams({

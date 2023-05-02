@@ -171,7 +171,7 @@ export default function ObjectRetrieve({ api_url }) {
     //     fetcherHTML
     // );
     const ui_url = objectData?.url
-        ? `${objectData.url}/detail_view_config/`
+        ? `${objectData.url}/detail-view-config/`
         : null;
     var { data: extraAppConfig } = useSWR(() => ui_url, fetcher);
 
@@ -180,7 +180,7 @@ export default function ObjectRetrieve({ api_url }) {
         () => changelog_url,
         fetcher
     );
-    const changelog_header_url = `/api/${pluginPrefix}${app_name}/${model_name}/changelog-table-fields/`;
+    const changelog_header_url = `/api/extras/object-changes/table-fields`;
     const { data: changelogTableFields, changelog_table_error } = useSWR(
         () => changelog_header_url,
         fetcher
@@ -188,7 +188,7 @@ export default function ObjectRetrieve({ api_url }) {
     const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
     const { data: noteData, note_error } = useSWR(() => notes_url, fetcher);
 
-    const notes_header_url = `/api/${pluginPrefix}${app_name}/${model_name}/note-table-fields/`;
+    const notes_header_url = `/api/extras/notes/table-fields`;
     // Current fetcher allows to be passed multiple endpoints and fetch them at once
     const { data: noteTableFields, note_table_error } = useSWR(
         () => notes_header_url,
@@ -210,10 +210,6 @@ export default function ObjectRetrieve({ api_url }) {
 
     if (
         !objectData ||
-        !noteData ||
-        !changelogData ||
-        !noteTableFields ||
-        !changelogTableFields ||
         !extraAppConfig
     ) {
         return (
