@@ -134,6 +134,7 @@ export default function GenericView({
                     columns={columns}
                     rows={rows}
                     background={gridBackground}
+                    gridAutoRows="auto"
                 >
                     {children}
                 </NautobotGrid>
