@@ -36,8 +36,8 @@ def edit_button(instance, use_pk=False, key="slug"):
 
     Args:
         instance: Model record.
-        Keeping use_pk and key for concerns about breaking API change.
-        They are no-ops
+        use_pk: Used for backwards compatibility, no-op in this function.
+        key: Used for backwards compatibility, no-op in this function.
     """
     viewname = get_route_for_model(instance, "edit")
 
@@ -63,8 +63,8 @@ def delete_button(instance, use_pk=False, key="slug"):
 
     Args:
         instance: Model record.
-        Keeping use_pk and key for concerns about breaking API change.
-        They are no-ops
+        use_pk: Used for backwards compatibility, no-op in this function.
+        key: Used for backwards compatibility, no-op in this function.
     """
     viewname = get_route_for_model(instance, "delete")
 
