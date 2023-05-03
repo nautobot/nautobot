@@ -174,7 +174,7 @@ export default function ObjectRetrieve({ api_url }) {
 
     // Object Data
     const ui_url = objectData?.url
-        ? `${objectData.url}/detail-view-config/`
+        ? `${objectData.url}detail-view-config/`
         : null;
     var { data: appConfig } = useSWR(() => ui_url, fetcher);
     // ChangeLog Data

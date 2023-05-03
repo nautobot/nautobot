@@ -24,7 +24,7 @@ import TableItem from "@components/TableItem";
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
         // TODO: ui-schema should be providing the name of the field used to describe the object (name)
-        return window.location.pathname + obj.id;
+        return window.location.pathname + obj.id + "/";
     }
     if (typeof obj !== "object" || !obj || !obj.url) {
         return null;
