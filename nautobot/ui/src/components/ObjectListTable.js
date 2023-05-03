@@ -128,9 +128,7 @@ export default function ObjectListTable({
                 >
                     <NtcThumbnailIcon width="25px" height="30px" /> {tableTitle}
                 </Heading>
-                {!include_button ? (
-                    () => {}
-                ) : (
+                {!include_button ? null : (
                     <ButtonGroup pb="sm" alignItems="center">
                         <UIButton size="sm" variant="secondary">
                             Filters

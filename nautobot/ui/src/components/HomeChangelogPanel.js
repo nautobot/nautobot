@@ -38,58 +38,53 @@ export default function HomeChangelogPanel() {
                             <Th width="3em">
                                 <HistoryIcon />
                             </Th>
-                            <Th colspan={4}>Change Log</Th>
+                            <Th colSpan={4}>Change Log</Th>
                         </Tr>
                     </Thead>
                     <Tbody>
-                        {data?.results?.map((objectChange) => (
-                            <>
-                                <Tr>
-                                    <Td width="2em">
-                                        <FontAwesomeIcon icon={faUser} />
-                                    </Td>
-                                    <Td>{objectChange.user_name}</Td>
-                                    <Td width="2em">
-                                        <FontAwesomeIcon icon={faClock} />
-                                    </Td>
-                                    <Td>
-                                        {humanFriendlyDate(objectChange.time)}
-                                    </Td>
-                                    <Td>
-                                        <Tag
-                                            variant={
-                                                objectChange.action.label ===
-                                                "Created"
-                                                    ? "success"
-                                                    : objectChange.action
-                                                          .label === "Deleted"
-                                                    ? "critical"
-                                                    : "info"
-                                            }
-                                        >
-                                            <TagLabel>
-                                                {objectChange.action.label}
-                                            </TagLabel>
-                                        </Tag>
-                                    </Td>
-                                </Tr>
-                                <Tr>
-                                    <Td colspan={2}>
-                                        {objectChange.changed_object_type}
-                                    </Td>
-                                    <Td colspan={3}>
-                                        <Link
-                                            href={
-                                                objectChange.changed_object
-                                                    .web_url
-                                            }
-                                        >
-                                            {objectChange.object_repr}
-                                        </Link>
-                                    </Td>
-                                </Tr>
-                            </>
-                        ))}
+                        {data?.results?.map((objectChange) => [
+                            <Tr key={objectChange.id + "row_1"}>
+                                <Td width="2em">
+                                    <FontAwesomeIcon icon={faUser} />
+                                </Td>
+                                <Td>{objectChange.user_name}</Td>
+                                <Td width="2em">
+                                    <FontAwesomeIcon icon={faClock} />
+                                </Td>
+                                <Td>{humanFriendlyDate(objectChange.time)}</Td>
+                                <Td>
+                                    <Tag
+                                        variant={
+                                            objectChange.action.label ===
+                                            "Created"
+                                                ? "success"
+                                                : objectChange.action.label ===
+                                                  "Deleted"
+                                                ? "critical"
+                                                : "info"
+                                        }
+                                    >
+                                        <TagLabel>
+                                            {objectChange.action.label}
+                                        </TagLabel>
+                                    </Tag>
+                                </Td>
+                            </Tr>,
+                            <Tr key={objectChange.id + "row_2"}>
+                                <Td colSpan={2}>
+                                    {objectChange.changed_object_type}
+                                </Td>
+                                <Td colSpan={3}>
+                                    <Link
+                                        href={
+                                            objectChange.changed_object.web_url
+                                        }
+                                    >
+                                        {objectChange.object_repr}
+                                    </Link>
+                                </Td>
+                            </Tr>,
+                        ])}
                     </Tbody>
                 </Table>
             </TableContainer>

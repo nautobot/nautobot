@@ -79,10 +79,10 @@ function DetailFieldValue(value) {
             return value === null ? (
                 <>&mdash;</>
             ) : Array.isArray(value) ? (
-                value.map((v) =>
+                value.map((v, idx) =>
                     typeof v === "object" && v !== null ? (
                         <div>
-                            <Link ref={ref} href={v["web_url"]}>
+                            <Link ref={ref} href={v["web_url"]} key={idx}>
                                 {v["display"]}
                             </Link>
                         </div>
@@ -99,27 +99,29 @@ function DetailFieldValue(value) {
                 <>{value.label}</>
             ) : (
                 <Table>
-                    {Object.entries(value).map(([k, v]) => (
-                        <Tr>
-                            <Td>
-                                <strong>{k.toString()}</strong>
-                            </Td>
-                            <Td>
-                                {v === null
-                                    ? "None"
-                                    : typeof v === "object" && v !== null
-                                    ? Object.entries(v).map(
-                                          ([json_key, json_value]) => (
-                                              <span>
-                                                  {json_key}
-                                                  {": "} {json_value}
-                                              </span>
+                    <Tbody>
+                        {Object.entries(value).map(([k, v]) => (
+                            <Tr>
+                                <Td>
+                                    <strong>{k.toString()}</strong>
+                                </Td>
+                                <Td>
+                                    {v === null
+                                        ? "None"
+                                        : typeof v === "object" && v !== null
+                                        ? Object.entries(v).map(
+                                              ([json_key, json_value]) => (
+                                                  <span>
+                                                      {json_key}
+                                                      {": "} {json_value}
+                                                  </span>
+                                              )
                                           )
-                                      )
-                                    : v.toString()}
-                            </Td>
-                        </Tr>
-                    ))}
+                                        : v.toString()}
+                                </Td>
+                            </Tr>
+                        ))}
+                    </Tbody>
                 </Table>
             );
         case "boolean":
@@ -268,7 +270,7 @@ export default function ObjectRetrieve({ api_url }) {
                 <Tabs>
                     <TabList pl="md">
                         {Object.keys(appConfig).map((key, idx) => (
-                            <Tab>{render_header(key)}</Tab>
+                            <Tab key={idx}>{render_header(key)}</Tab>
                         ))}
                         <Tab>Notes</Tab>
                         <Tab>Change Log</Tab>
@@ -284,7 +286,7 @@ export default function ObjectRetrieve({ api_url }) {
                                 <Card>
                                     <NautobotGrid row={{ count: 5 }}>
                                         {Object.keys(appConfig[tab]).map(
-                                            (item) => (
+                                            (item, idx) => (
                                                 <NautobotGridItem
                                                     colSpan={
                                                         appConfig[tab][item]
@@ -294,6 +296,7 @@ export default function ObjectRetrieve({ api_url }) {
                                                         appConfig[tab][item]
                                                             .rowspan
                                                     }
+                                                    key={idx}
                                                 >
                                                     <Heading
                                                         display="flex"

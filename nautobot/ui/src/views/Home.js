@@ -94,7 +94,7 @@ export default function Home() {
                         </Thead>
                         <Tbody>
                             <Tr _hover={{}}>
-                                <Td colspan={2}>
+                                <Td colSpan={2}>
                                     <Tabs variant="outline">
                                         <TabList>
                                             <Tab>
