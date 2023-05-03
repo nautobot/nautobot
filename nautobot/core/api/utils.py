@@ -323,7 +323,7 @@ def nested_serializer_factory(relation_info, nested_depth):
 
 def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
     """
-    Return a Primary key for a ForeignKeyField or a list of Primary keys for a ManytoManyField when depth = 0
+    Return a URL for a ForeignKeyField or a list of URLs for a ManytoManyField when depth = 0
     Return a Nested serializer for a ForeignKeyField or a list of Nested serializers for a ManytoManyField when depth > 0
     Args:
         serializer: BaseSerializer
@@ -335,7 +335,9 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
     if obj_related_field.__class__.__name__ == "RelatedManager":
         result = []
         if depth == 0:
-            result = obj_related_field.values_list("pk", flat=True)
+            result = [obj.get_absolute_url(api=True) for obj in obj_related_field.all()]
+            if serializer.context.get("request"):
+                result = [serializer.context.get("request").build_absolute_uri(url) for url in result]
         else:
             for entry in obj_related_field.all():
                 relation_info = get_relation_info_for_nested_serializers(obj, entry, obj_related_field_name)
@@ -346,7 +348,10 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
         return result
     else:
         if depth == 0:
-            return obj_related_field.id
+            result = obj_related_field.get_absolute_url(api=True)
+            if serializer.context.get("request"):
+                result = serializer.context.get("request").build_absolute_uri(result)
+            return result
         else:
             relation_info = get_relation_info_for_nested_serializers(obj, obj_related_field, obj_related_field_name)
             field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)

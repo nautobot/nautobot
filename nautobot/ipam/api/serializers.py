@@ -225,7 +225,11 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             return None
         depth = get_nested_serializer_depth(self)
         data = return_nested_serializer_data_based_on_depth(
-            IPAddressSerializer(nat_outside_list), depth, obj, nat_outside_list, "nat_outside_list"
+            IPAddressSerializer(nat_outside_list, context={"request": self.context.get("request")}),
+            depth,
+            obj,
+            nat_outside_list,
+            "nat_outside_list",
         )
         return data
 
