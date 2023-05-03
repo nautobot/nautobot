@@ -31,7 +31,6 @@ from nautobot.ipam.models import (
 
 
 class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vrf-detail")
     ipaddress_count = serializers.IntegerField(read_only=True)
     prefix_count = serializers.IntegerField(read_only=True)
 
@@ -46,8 +45,6 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:routetarget-detail")
-
     class Meta:
         model = RouteTarget
         fields = "__all__"
@@ -59,7 +56,6 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
 
 
 class RIRSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:rir-detail")
     assigned_prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -73,7 +69,6 @@ class RIRSerializer(NautobotModelSerializer):
 
 
 class VLANGroupSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")
     vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -97,7 +92,6 @@ class VLANGroupSerializer(NautobotModelSerializer):
 
 
 class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
     prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -124,7 +118,6 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
@@ -212,7 +205,6 @@ class AvailablePrefixSerializer(serializers.Serializer):
 
 
 class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
     nat_outside_list = serializers.SerializerMethodField(read_only=True)
@@ -233,7 +225,11 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             return None
         depth = get_nested_serializer_depth(self)
         data = return_nested_serializer_data_based_on_depth(
-            IPAddressSerializer(nat_outside_list), depth, obj, nat_outside_list, "nat_outside_list"
+            IPAddressSerializer(nat_outside_list, context={"request": self.context.get("request")}),
+            depth,
+            obj,
+            nat_outside_list,
+            "nat_outside_list",
         )
         return data
 
@@ -266,7 +262,6 @@ class AvailableIPSerializer(serializers.Serializer):
 
 
 class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:service-detail")
     # TODO #3024 make a backlog item to rip out the choice field.
     protocol = ChoiceField(choices=ServiceProtocolChoices, required=False)
     ports = serializers.ListField(

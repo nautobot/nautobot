@@ -825,12 +825,12 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     #
     # enum=choices is the one that works in the UI as a related field but it
     # includes ALL related objects in the schema.
-    # "NautobotPrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
+    # "NautobotHyperlinkedRelatedField": {"type": "string", "enum": "choices"},
     # readOnly=True disables the fields in the UI; not what we want.
-    # "NautobotPrimaryKeyRelatedField": {"type": "string", "readOnly": True},
+    # "NautobotHyperlinkedRelatedField": {"type": "string", "readOnly": True},
     # type=string results in a free text field; also not what we want. For now,
     # however, this will keep things moving so the unit tests pass.
-    "NautobotPrimaryKeyRelatedField": {"type": "string", "format": "uuid"},
+    "NautobotHyperlinkedRelatedField": {"type": "string", "format": "uuid"},
     "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
     "RelationshipsDataField": {"type": "object"},
     "SlugField": {"type": "string"},

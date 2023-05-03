@@ -40,6 +40,7 @@ import GenericView from "@views/generic/GenericView";
 import ObjectListTable from "@components/ObjectListTable";
 import { useGetRESTAPIQuery } from "@utils/api";
 import { humanFriendlyDate } from "@utils/date";
+import { uiUrl } from "@utils/url";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
@@ -82,18 +83,18 @@ function DetailFieldValue(value) {
                 value.map((v, idx) =>
                     typeof v === "object" && v !== null ? (
                         <div>
-                            <Link ref={ref} href={v["web_url"]} key={idx}>
-                                {v["display"]}
+                            <Link ref={ref} href={uiUrl(v.url)} key={idx}>
+                                {v.display}
                             </Link>
                         </div>
                     ) : (
                         <div>{v}</div>
                     )
                 )
-            ) : "web_url" in value ? (
-                <Link ref={ref} href={value["web_url"]}>
+            ) : "url" in value ? (
+                <Link ref={ref} href={uiUrl(value.url)}>
                     {" "}
-                    {value["display"]}{" "}
+                    {value.display}{" "}
                 </Link>
             ) : "label" in value ? (
                 <>{value.label}</>
@@ -174,7 +175,7 @@ export default function ObjectRetrieve({ api_url }) {
 
     // Object Data
     const ui_url = objectData?.url
-        ? `${objectData.url}/detail-view-config/`
+        ? `${objectData.url}detail-view-config/`
         : null;
     var { data: appConfig } = useSWR(() => ui_url, fetcher);
     // ChangeLog Data

@@ -10,7 +10,6 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 
 
 class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenantgroup-detail")
     tenant_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -19,7 +18,6 @@ class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
 
 
 class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenant-detail")
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     ipaddress_count = serializers.IntegerField(read_only=True)

@@ -1,7 +1,7 @@
 import { SkeletonText, SkeletonCircle } from "@chakra-ui/react";
 import { NautobotGridItem } from "@nautobot/nautobot-ui";
 
-export function ListViewSkeleton({ model_name = "", page_size = 10 }) {
+export function ListViewSkeleton({ model_name = "", page_size = "10" }) {
     return (
         <NautobotGridItem colSpan={3}>
             <h1>Loading {model_name} ...</h1>
