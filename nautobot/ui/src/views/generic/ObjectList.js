@@ -96,7 +96,7 @@ export default function GenericObjectListView() {
     }
 
     let table_name = toTitleCase(model_name, "-");
-    return listData.count !== 0 ? (
+    return (
         <GenericView>
             <ObjectListTable
                 tableData={listData.results}
@@ -107,10 +107,6 @@ export default function GenericObjectListView() {
                 page_size={page_size}
                 tableTitle={table_name}
             />
-        </GenericView>
-    ) : (
-        <GenericView>
-            <h1> No {model_name} available</h1>
         </GenericView>
     );
 }
