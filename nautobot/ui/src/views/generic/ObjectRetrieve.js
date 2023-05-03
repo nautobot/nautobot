@@ -379,7 +379,7 @@ export default function ObjectRetrieve({ api_url }) {
                                         tableData={noteData.results}
                                         defaultHeaders={
                                             noteHeaderData.view_options
-                                                .list_display
+                                                .list_display_fields
                                         }
                                         tableHeaders={
                                             noteHeaderData.view_options.fields
@@ -405,7 +405,7 @@ export default function ObjectRetrieve({ api_url }) {
                                         tableData={changelogData.results}
                                         defaultHeaders={
                                             changelogHeaderData.view_options
-                                                .list_display
+                                                .list_display_fields
                                         }
                                         tableHeaders={
                                             changelogHeaderData.view_options
