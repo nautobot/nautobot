@@ -184,9 +184,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data["prefix"], str(prefixes_to_be_created[i]))
-            self.assertEqual(
-                str(response.data["vrf"]), f"http://nautobot.example.com{prefix.vrf.get_absolute_url(api=True)}"
-            )
+            self.assertEqual(str(response.data["vrf"]), self.absolute_api_url(prefix.vrf))
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more prefix
@@ -279,7 +277,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(str(response.data["vrf"]), f"http://nautobot.example.com{vrf.get_absolute_url(api=True)}")
+            self.assertEqual(str(response.data["vrf"]), self.absolute_api_url(vrf))
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more IP

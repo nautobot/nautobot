@@ -401,9 +401,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(
-            str(response.data["location"]), f"http://nautobot.example.com{self.location1.get_absolute_url(api=True)}"
-        )
+        self.assertEqual(str(response.data["location"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.status, self.statuses.first())
         self.assertEqual(vlan.location, self.location1)
@@ -436,9 +434,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(
-            str(response.data["location"]), f"http://nautobot.example.com{self.location1.get_absolute_url(api=True)}"
-        )
+        self.assertEqual(str(response.data["location"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.location, self.location1)
 

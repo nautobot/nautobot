@@ -9,7 +9,7 @@ from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
 from django.utils.text import slugify
 from netaddr import IPNetwork
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
@@ -213,6 +213,11 @@ class NautobotTestCaseMixin:
     #
     # Convenience methods
     #
+
+    def absolute_api_url(self, obj):
+        """Get the absolute API URL ("http://nautobot.example.com/api/...") for a given object."""
+        request = APIRequestFactory(SERVER_NAME="nautobot.example.com").get("")
+        return request.build_absolute_uri(obj.get_absolute_url(api=True))
 
     def standardize_json(self, data):
         obj = json.loads(data)

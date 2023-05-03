@@ -1172,10 +1172,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(
-            str(response.data["local_config_context_schema"]),
-            f"http://nautobot.example.com{schema.get_absolute_url(api=True)}",
-        )
+        self.assertEqual(str(response.data["local_config_context_schema"]), self.absolute_api_url(schema))
 
     def test_local_config_context_schema_schema_validation_fails(self):
         """

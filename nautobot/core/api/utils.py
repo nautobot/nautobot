@@ -335,7 +335,7 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
     if obj_related_field.__class__.__name__ == "RelatedManager":
         result = []
         if depth == 0:
-            result = [obj.get_absolute_url(api=True) for obj in obj_related_field.all()]
+            result = [entry.get_absolute_url(api=True) for entry in obj_related_field.all()]
             if serializer.context.get("request"):
                 result = [serializer.context.get("request").build_absolute_uri(url) for url in result]
         else:
