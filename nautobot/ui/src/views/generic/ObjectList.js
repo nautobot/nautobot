@@ -1,8 +1,7 @@
 import { useLocation, useParams } from "react-router-dom";
 import { Text } from "@nautobot/nautobot-ui";
 import { useDispatch } from "react-redux";
-
-import { LoadingWidget } from "@components/LoadingWidget";
+import { ListViewSkeleton } from "@components/ListViewSkeleton";
 import ObjectListTable from "@components/ObjectListTable";
 import GenericView from "@views/generic/GenericView";
 import { useGetRESTAPIQuery } from "@utils/api";
@@ -54,21 +53,27 @@ export default function GenericObjectListView() {
         searchQuery.offset = searchParams.get("offset");
         active_page_number = searchParams.get("offset") / page_size;
     }
-    const { data: listData, isLoading: listDataLoading } =
-        useGetRESTAPIQuery(searchQuery);
+    const {
+        data: listData,
+        isLoading: listDataLoading,
+        isFetching: listDataFetching,
+    } = useGetRESTAPIQuery(searchQuery);
 
     if (!app_name || !model_name) {
         return (
             <GenericView>
-                <LoadingWidget />
+                <ListViewSkeleton />
             </GenericView>
         );
     }
 
-    if (listDataLoading || headerDataLoading) {
+    if (listDataLoading || headerDataLoading || listDataFetching) {
         return (
             <GenericView>
-                <LoadingWidget name={model_name} />
+                <ListViewSkeleton
+                    model_name={model_name}
+                    page_size={page_size}
+                />
             </GenericView>
         );
     }
@@ -91,7 +96,7 @@ export default function GenericObjectListView() {
     }
 
     let table_name = toTitleCase(model_name, "-");
-    return (
+    return listData.count !== 0 ? (
         <GenericView>
             <ObjectListTable
                 tableData={listData.results}
@@ -102,6 +107,10 @@ export default function GenericObjectListView() {
                 page_size={page_size}
                 tableTitle={table_name}
             />
+        </GenericView>
+    ) : (
+        <GenericView>
+            <h1> No {model_name} available</h1>
         </GenericView>
     );
 }
