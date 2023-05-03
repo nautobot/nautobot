@@ -24,7 +24,7 @@ import TableItem from "@components/TableItem";
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
         // TODO: ui-schema should be providing the name of the field used to describe the object (name)
-        return window.location.pathname + obj.id;
+        return window.location.pathname + obj.id + "/";
     }
     if (typeof obj !== "object" || !obj || !obj.url) {
         return null;
@@ -128,9 +128,7 @@ export default function ObjectListTable({
                 >
                     <NtcThumbnailIcon width="25px" height="30px" /> {tableTitle}
                 </Heading>
-                {!include_button ? (
-                    () => {}
-                ) : (
+                {!include_button ? null : (
                     <ButtonGroup pb="sm" alignItems="center">
                         <UIButton size="sm" variant="secondary">
                             Filters

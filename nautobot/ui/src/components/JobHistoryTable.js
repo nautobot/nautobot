@@ -51,28 +51,26 @@ export default function JobHistoryTable() {
         <Table>
             <Tbody>
                 {data?.results?.map((result) => {
-                    return (
-                        <>
-                            <Tr>
-                                <Td width="2em">
-                                    <FontAwesomeIcon icon={faUser} />
-                                </Td>
-                                <Td>{result.user?.username}</Td>
-                                <Td width="2em">
-                                    <FontAwesomeIcon icon={faClock} />
-                                </Td>
-                                <Td>{humanFriendlyDate(result.date_done)}</Td>
-                                <Td style={{ "text-align": "right" }}>
-                                    {jobResultStatusTag(result.status.value)}
-                                </Td>
-                            </Tr>
-                            <Tr>
-                                <Td colspan={5}>
-                                    {result.job_model?.display || result.name}
-                                </Td>
-                            </Tr>
-                        </>
-                    );
+                    return [
+                        <Tr key={result.id + "row_1"}>
+                            <Td width="2em">
+                                <FontAwesomeIcon icon={faUser} />
+                            </Td>
+                            <Td>{result.user?.username}</Td>
+                            <Td width="2em">
+                                <FontAwesomeIcon icon={faClock} />
+                            </Td>
+                            <Td>{humanFriendlyDate(result.date_done)}</Td>
+                            <Td textAlign="right">
+                                {jobResultStatusTag(result.status.value)}
+                            </Td>
+                        </Tr>,
+                        <Tr key={result.id + "row_2"}>
+                            <Td colSpan={5}>
+                                {result.job_model?.display || result.name}
+                            </Td>
+                        </Tr>,
+                    ];
                 })}
             </Tbody>
         </Table>

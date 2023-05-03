@@ -30,13 +30,13 @@ export default function HomePanel({ icon, title, data }) {
                     <Thead>
                         <Tr _hover={{}}>
                             <Th width="3em">{icon}</Th>
-                            <Th colspan={2}>{title}</Th>
+                            <Th colSpan={2}>{title}</Th>
                         </Tr>
                     </Thead>
                     <Tbody>
                         {data.map((row, idx) => (
                             <Tr key={idx}>
-                                <Td colspan={2}>
+                                <Td colSpan={2}>
                                     {row.url ? (
                                         <RouterLink to={row.url}>
                                             {toTitleCase(row["name"])}
