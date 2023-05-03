@@ -12,13 +12,21 @@ import Logout from "@views/Logout";
 
 // TODO: Dynamic route injection
 export default function NautobotRouter() {
-    const { data: sessionInfo, isSuccess: sessionLoaded } =
-        useGetSessionQuery();
+    const {
+        data: sessionInfo,
+        isSuccess: sessionLoaded,
+        isError: sessionError,
+    } = useGetSessionQuery();
 
     let element = useRoutes([
         {
             path: "/login/",
-            element: <Login />,
+            element:
+                sessionError || (sessionLoaded && !sessionInfo.logged_in) ? (
+                    <Login />
+                ) : (
+                    <Navigate to="/" />
+                ),
         },
         {
             path: "/logout/",
@@ -27,11 +35,10 @@ export default function NautobotRouter() {
         {
             path: "/",
             element:
-                sessionLoaded && !sessionInfo.logged_in ? (
+                sessionError ||
+                (sessionLoaded && !sessionInfo.logged_in && (
                     <Navigate to="/login/" />
-                ) : (
-                    ""
-                ),
+                )),
             children: [
                 {
                     path: "",

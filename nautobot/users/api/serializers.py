@@ -76,5 +76,5 @@ class UserLoginSerializer(serializers.Serializer):
             password=attrs["password"],
         )
         if not user:
-            raise ValidationError("invalid login detail.")
+            raise ValidationError("Invalid login credentials.")
         return {"user": user}
