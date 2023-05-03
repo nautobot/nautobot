@@ -73,14 +73,7 @@ export default function Home() {
             <HomePanel
                 icon=<SecurityIcon />
                 title="Security"
-                data={[
-                    { name: "Menu Item 1", count: 0 },
-                    { name: "Menu Item 2", count: 0 },
-                    { name: "Menu Item 3", count: 0 },
-                    { name: "Menu Item 4", count: 0 },
-                    { name: "Menu Item 5", count: 0 },
-                    { name: "Menu Item 6", count: 0 },
-                ]}
+                data={objectCountData["Security"]}
             />
             <HomePanel
                 icon=<PlatformIcon />
