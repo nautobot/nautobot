@@ -1,0 +1,1 @@
+Added note to documentation about using `{{ obj.cf }}` to access custom fields in jinja templates.
