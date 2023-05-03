@@ -11,6 +11,7 @@ import { useSelector } from "react-redux";
 import { Link as ReactRouterLink, useLocation } from "react-router-dom";
 
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
+import { uiUrl } from "@utils/url";
 
 // Descend into the menu "data" until we find a leaf whose URL matches "pathname", and return the keys to get there
 function findMenuPathRecursive(pathname, data) {
@@ -57,9 +58,9 @@ function breadcrumbsRecursive(pathToLeaf, data, objectData, depth = 0) {
                 ? [
                       {
                           as: ReactRouterLink,
-                          children: objectData.name,
+                          children: objectData.display,
                           key: `${depth + 1}_${objectData.id}`,
-                          to: `${data[key]}${objectData.id}`,
+                          to: uiUrl(objectData.url),
                           type: "link",
                       },
                   ]

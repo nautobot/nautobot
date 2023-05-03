@@ -220,7 +220,7 @@ export default function ObjectRetrieve({ api_url }) {
     const route_name = `${app_name}:${model_name}`;
     let obj = objectData;
     const default_view = (
-        <GenericView>
+        <GenericView objectData={objectData}>
             <Box background="white-0" borderRadius="md">
                 <Box display="flex" justifyContent="space-between" padding="md">
                     <Heading display="flex" alignItems="center" gap="5px">
