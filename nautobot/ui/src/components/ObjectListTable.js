@@ -43,7 +43,6 @@ export default function ObjectListTable({
     totalCount,
     active_page_number,
     page_size,
-    gridColumn,
     tableTitle,
     include_button = true,
 }) {
@@ -111,24 +110,20 @@ export default function ObjectListTable({
     });
 
     return (
-        <Box
-            background="white-0"
-            borderRadius="md"
-            gridColumn={gridColumn}
-            padding="md"
-        >
-            <Box display="flex" justifyContent="space-between" mb="sm">
-                <Heading
-                    as="h1"
-                    size="H1"
-                    display="flex"
-                    alignItems="center"
-                    gap="5px"
-                    pb="sm"
-                >
-                    <NtcThumbnailIcon width="25px" height="30px" /> {tableTitle}
-                </Heading>
-                {!include_button ? null : (
+        <Box background="white-0" borderRadius="md" padding="md">
+            {!include_button ? null : (
+                <Box display="flex" justifyContent="space-between" mb="sm">
+                    <Heading
+                        as="h1"
+                        size="H1"
+                        display="flex"
+                        alignItems="center"
+                        gap="5px"
+                        pb="sm"
+                    >
+                        <NtcThumbnailIcon width="25px" height="30px" />{" "}
+                        {tableTitle}
+                    </Heading>
                     <ButtonGroup pb="sm" alignItems="center">
                         <UIButton size="sm" variant="secondary">
                             Filters
@@ -149,8 +144,8 @@ export default function ObjectListTable({
                             Add {tableTitle}
                         </RouterButton>
                     </ButtonGroup>
-                )}
-            </Box>
+                </Box>
+            )}
 
             <TableRenderer
                 table={table}

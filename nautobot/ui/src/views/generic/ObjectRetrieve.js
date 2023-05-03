@@ -278,12 +278,7 @@ export default function ObjectRetrieve({ api_url }) {
                     </TabList>
                     <TabPanels>
                         {Object.keys(appConfig).map((tab, idx) => (
-                            <TabPanel
-                                padding="none"
-                                key={tab}
-                                eventKey={tab}
-                                title={render_header(tab)}
-                            >
+                            <TabPanel padding="none" key={tab}>
                                 <Card>
                                     <NautobotGrid row={{ count: 5 }}>
                                         {Object.keys(appConfig[tab]).map(
@@ -358,9 +353,7 @@ export default function ObjectRetrieve({ api_url }) {
                                                                                 ]
                                                                                     .advanced
                                                                             }
-                                                                            key={
-                                                                                idx
-                                                                            }
+                                                                            key={`${tab}_${idx}`}
                                                                         />
                                                                     )
                                                                 )}
@@ -374,7 +367,7 @@ export default function ObjectRetrieve({ api_url }) {
                                 </Card>
                             </TabPanel>
                         ))}
-                        <TabPanel key="notes" eventKey="notes" title="Notes">
+                        <TabPanel key="notes">
                             {noteHeaderDataLoading ? (
                                 <LoadingWidget name={"Notes"} />
                             ) : (
@@ -400,11 +393,7 @@ export default function ObjectRetrieve({ api_url }) {
                                 </Card>
                             )}
                         </TabPanel>
-                        <TabPanel
-                            key="change_log"
-                            eventKey="change_log"
-                            title="Change Log"
-                        >
+                        <TabPanel key="change_log">
                             {changelogHeaderDataLoading ? (
                                 <LoadingWidget name={"Notes"} />
                             ) : (
