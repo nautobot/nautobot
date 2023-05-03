@@ -107,7 +107,14 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
         DRF defaults to '{model_name}-detail' instead of '{app_label}:{model_name}-detail'.
         """
         if "view_name" not in kwargs or (kwargs["view_name"].endswith("-detail") and ":" not in kwargs["view_name"]):
-            kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
+            if "queryset" not in kwargs:
+                logger.warning(
+                    '"view_name=%r" is probably incorrect for this related API field; '
+                    'unable to determine the correct "view_name" as "queryset" wasn\'t specified',
+                    kwargs["view_name"],
+                )
+            else:
+                kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
         super().__init__(*args, **kwargs)
 
 

@@ -1,0 +1,1 @@
+Added optional `api` argument to `BaseModel.get_absolute_url()`.
