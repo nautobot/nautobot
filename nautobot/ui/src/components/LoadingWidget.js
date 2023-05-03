@@ -7,7 +7,7 @@ export function LoadingWidget({ name = "" }) {
     return (
         <div style={{ "text-align": "center", width: "100%" }}>
             <StatusIndicator variant="action" breathe={true} />
-            <Spinner size="lg" />
+            <Spinner size="lg" color="blue.500" />
             <Text ml={1}>Loading{display_name}...</Text>
         </div>
     );
