@@ -1,0 +1,13 @@
+{
+    "location": {
+        "ui:options": {
+          "chakra": {
+            "p": "1rem",
+            "color": "blue.200",
+            "sx": {
+              "margin": "0 auto"
+            }
+          }
+        }
+    }
+}

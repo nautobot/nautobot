@@ -1,0 +1,84 @@
+{
+    "type": "object",
+    "properties": {
+        "Device": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "title": "Name"},
+                "device_role": {"type": "string", "title": "Device Role"}
+            }
+
+        },
+        "Location": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string", "title": "Location"},
+                "rack_group": {"type": "string", "title": "Rack Group"},
+                "rack": {"type": "string", "title": "Rack"},
+                "rack_face": {"type": "string", "title": "Rack Face"},
+                "position": {"type": "string", "title": "Position"}
+            }
+
+        },
+        "Management": {
+            "type": "object",
+            "properties": {
+                "status": {"type": "string", "title": "Status"},
+                "platform": {"type": "string", "title": "Platform"},
+                "secrets_group": {"type": "string", "title": "Secrets Group"},
+                "device_redundancy_group_piority": {"type": "string", "title": "Device Redundancy Group Piority"}
+            }
+        },
+        "Comments": {
+            "type": "object",
+            "properties": {
+                "comments": {"type": "string", "title": "Comments"}
+            }
+        },
+        "Hardware": {
+            "type": "object",
+            "properties": {
+                "manufacturer": {"type": "string", "title": "Manufacturer"},
+                "device_type": {"type": "string", "title": "Device Type"},
+                "serial_number": {"type": "string", "title": "Serial Number"},
+                "assert_tag": {"type": "string", "title": "Assert Tag"}
+            }
+
+        },
+        "Tenancy": {
+            "type": "object",
+            "properties": {
+                "tenant_group": {"type": "string", "title": "Tenant Group"},
+                "tenant": {"type": "string", "title": "Tenant"}
+            }
+        },
+        "Local config context data": {
+            "type": "object",
+            "properties": {
+                "local_context_schema": {"type": "string", "title": "Local Context Schema"},
+                "json_schema": {"type": "string", "title": "JSON Schema"}
+            }
+        },
+        "Virtualizion": {
+            "type": "object",
+            "properties": {
+                "cluster_group": {"type": "string", "title": "Cluster Group"},
+                "cluster": {"type": "string", "title": "Cluster"}
+            }
+        },
+        "Tags": {
+            "type": "object",
+            "properties": {
+                "tags": {
+                    "type": "array", 
+                    "title": "Tags", 
+                    "items": {
+                        "type": "string",
+                        "enum": ["a", "b", "c", "D"]
+                    },
+                    "uniqueItems": true
+                }
+            }
+        }
+    }
+}

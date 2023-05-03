@@ -1,13 +1,37 @@
 import { Card, CardHeader, CardBody } from "@chakra-ui/react"; // TODO import from nautobot-ui when available
-import { Button, Frame } from "@nautobot/nautobot-ui";
+import { Box, Button, Frame, Heading, NtcThumbnailIcon } from "@nautobot/nautobot-ui";
 import Form from "@rjsf/chakra-ui";
+import { ObjectFieldTemplate } from "@rjsf/chakra-ui";
 import validator from "@rjsf/validator-ajv8";
+import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import axios from "axios";
-import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useSWR from "swr";
+import { useEffect, useState } from "react";
 
 import GenericView from "@views/generic/GenericView";
+
+
+let schema_temp = require("./schema_sample.json")
+let ui_schema_temp = require("./ui_schema_sample.json")
+
+const TitleFieldTemplate = (props) => {
+    const { id, required, title } = props;
+    return (
+        <Heading 
+            as="h4"
+            size="H4"
+            display="flex"
+            alignItems="center"
+            gap="5px"
+            id={id}
+            fontWeight={500}
+        >
+            <NtcThumbnailIcon width="25px" height="30px" /> {title}
+        </Heading>
+    );
+}
+
 
 const fetcher = (url) =>
     axios.options(url, { withCredentials: true }).then((res) => res.data);
@@ -74,14 +98,27 @@ export default function GenericObjectCreateView({ list_url }) {
 
     return (
         <GenericView>
-            <Frame>
+            <Box
+                background="white-0"
+                borderRadius="md"
+                padding="md"
+            >
                 <Card>
-                    <CardHeader>Add a new {model_name_title}</CardHeader>
+                    <Heading
+                        as="h1"
+                        size="H1"
+                        display="flex"
+                        alignItems="center"
+                        gap="5px"
+                        pb="sm"
+                    >
+                        <NtcThumbnailIcon width="25px" height="30px" /> Add a new {model_name_title}
+                    </Heading>
                     <CardBody>
                         <Form
                             action={list_url}
-                            schema={post_schema}
-                            uiSchema={ui_schema}
+                            schema={schema_temp}
+                            uiSchema={ui_schema_temp}
                             validator={validator}
                             formData={formData}
                             onChange={(e) => {
@@ -90,12 +127,14 @@ export default function GenericObjectCreateView({ list_url }) {
                             }}
                             onSubmit={onSubmit}
                             extraErrors={extraErrors}
+                            className="nautobot-add-form"
+                            templates={{TitleFieldTemplate}}
                         >
                             <Button type="submit">Create</Button>
                         </Form>
                     </CardBody>
                 </Card>
-            </Frame>
+            </Box>
         </GenericView>
     );
 }

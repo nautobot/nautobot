@@ -1,0 +1,12 @@
+.nautobot-add-form>.form-group>.chakra-form-control>.css-qq8aff {
+    columns: 4;
+    column-gap: 2rem;
+    width: 100%;
+    margin: 0 auto;
+    display: block;
+}
+
+.nautobot-add-form>.form-group>.chakra-form-control>.css-qq8aff>.css-0 {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+}
