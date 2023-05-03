@@ -4,7 +4,7 @@ import Form from "@rjsf/chakra-ui";
 import validator from "@rjsf/validator-ajv8";
 import axios from "axios";
 import { useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import useSWR from "swr";
 
 import { uiUrl } from "@utils/url";
@@ -18,7 +18,6 @@ export default function GenericObjectCreateView({ list_url }) {
     const location = useLocation();
     const [formData, setFormData] = useState(null);
     const [extraErrors, setExtraErrors] = useState({});
-    const navigate = useNavigate();
     const isPluginView = location.pathname.includes("/plugins/");
     const pluginPrefix = isPluginView ? "plugins/" : "";
 
@@ -60,7 +59,7 @@ export default function GenericObjectCreateView({ list_url }) {
             },
         })
             .then(function (res) {
-                navigate(uiUrl(res.data.url));
+                window.location.href = uiUrl(res.data.url);
             })
             .catch((error) => {
                 let errors = Object.fromEntries(
