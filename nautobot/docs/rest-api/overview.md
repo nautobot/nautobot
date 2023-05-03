@@ -24,7 +24,6 @@ curl -s http://nautobot/api/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df
   "display": "10.0.60.39/32",
   "custom_fields": {},
   "notes_url": "http://nautobot/api/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df60/notes/",
-  "web_url": "/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df60/",
   "family": {
     "value": 4,
     "label": "IPv4"

@@ -16,6 +16,7 @@ import {
 } from "@nautobot/nautobot-ui";
 import { useGetRESTAPIQuery } from "@utils/api";
 import { humanFriendlyDate } from "@utils/date";
+import { uiUrl } from "@utils/url";
 
 export default function HomeChangelogPanel() {
     const { data, isError } = useGetRESTAPIQuery({
@@ -76,9 +77,9 @@ export default function HomeChangelogPanel() {
                                 </Td>
                                 <Td colSpan={3}>
                                     <Link
-                                        href={
-                                            objectChange.changed_object.web_url
-                                        }
+                                        href={uiUrl(
+                                            objectChange.changed_object.url
+                                        )}
                                     >
                                         {objectChange.object_repr}
                                     </Link>

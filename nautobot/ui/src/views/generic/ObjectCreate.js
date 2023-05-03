@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useSWR from "swr";
 
+import { uiUrl } from "@utils/url";
 import GenericView from "@views/generic/GenericView";
 
 const fetcher = (url) =>
@@ -59,7 +60,7 @@ export default function GenericObjectCreateView({ list_url }) {
             },
         })
             .then(function (res) {
-                navigate(res.data.web_url);
+                navigate(uiUrl(res.data.url));
             })
             .catch((error) => {
                 let errors = Object.fromEntries(

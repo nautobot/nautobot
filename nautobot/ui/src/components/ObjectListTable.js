@@ -142,7 +142,7 @@ export default function ObjectListTable({
                         </UIButton>
                         <Icon.TbMinusVertical />
                         <RouterButton
-                            to={`${location.pathname}add`}
+                            to={`${location.pathname}add/`}
                             size="sm"
                             leftIcon={<PlusIcon />}
                         >
