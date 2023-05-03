@@ -252,7 +252,10 @@ class APIViewTestCases:
                             self.assertTrue(is_uuid(entry))
                     else:
                         if response_data[field] is not None:
-                            self.assertTrue(is_uuid(response_data[field]))
+                            # The response should be a detail API URL, ending in the UUID of the relevant object
+                            # http://nautobot.example.com/api/circuits/providers/<uuid>/
+                            #                                                    ^^^^^^
+                            self.assertTrue(is_uuid(response_data[field].split("/")[-2]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):

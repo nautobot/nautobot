@@ -39,9 +39,9 @@ class BaseModel(models.Model):
         """
         return not self._state.adding
 
-    def get_absolute_url(self):
+    def get_absolute_url(self, api=False):
         """
-        Return the canonical URL for this object.
+        Return the canonical URL for this object in either the UI or the REST API.
         """
 
         # Iterate the pk-like fields and try to get a URL, or return None.
@@ -53,7 +53,7 @@ class BaseModel(models.Model):
                 continue
 
             for action in actions:
-                route = get_route_for_model(self, action)
+                route = get_route_for_model(self, action, api=api)
 
                 try:
                     return reverse(route, kwargs={field: getattr(self, field)})

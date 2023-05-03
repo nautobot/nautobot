@@ -277,7 +277,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["config_context_schema"], schema.pk)
+        self.assertEqual(response.data["config_context_schema"], self.absolute_api_url(schema))
 
     def test_schema_validation_fails(self):
         """
@@ -1371,10 +1371,7 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["scheduled_job"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
+        self.assertEqual(response.data["scheduled_job"]["url"], self.absolute_api_url(schedule))
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
         # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
         # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
@@ -1574,10 +1571,7 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["scheduled_job"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
+        self.assertEqual(response.data["scheduled_job"]["url"], self.absolute_api_url(schedule))
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
         # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
         # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
@@ -1719,10 +1713,7 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["scheduled_job"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
+        self.assertEqual(response.data["scheduled_job"]["url"], self.absolute_api_url(schedule))
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
         # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
         # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
@@ -2426,10 +2417,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             {
                 self.relationships[0].slug: {
                     "id": str(self.relationships[0].pk),
-                    "url": (
-                        "http://nautobot.example.com"
-                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[0].pk})
-                    ),
+                    "url": self.absolute_api_url(self.relationships[0]),
                     "name": self.relationships[0].name,
                     "type": self.relationships[0].type,
                     "peer": {
@@ -2440,10 +2428,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 },
                 self.relationships[1].slug: {
                     "id": str(self.relationships[1].pk),
-                    "url": (
-                        "http://nautobot.example.com"
-                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[1].pk})
-                    ),
+                    "url": self.absolute_api_url(self.relationships[1]),
                     "name": self.relationships[1].name,
                     "type": self.relationships[1].type,
                     "destination": {
@@ -2459,10 +2444,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 },
                 self.relationships[2].slug: {
                     "id": str(self.relationships[2].pk),
-                    "url": (
-                        "http://nautobot.example.com"
-                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[2].pk})
-                    ),
+                    "url": self.absolute_api_url(self.relationships[2]),
                     "name": self.relationships[2].name,
                     "type": self.relationships[2].type,
                     "destination": {
@@ -2880,13 +2862,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         self.maxDiff = None
         relationship_data = response.data["relationships"][self.relationship.slug]
         self.assertEqual(relationship_data["id"], str(self.relationship.pk))
-        self.assertEqual(
-            relationship_data["url"],
-            (
-                "http://nautobot.example.com"
-                + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationship.pk})
-            ),
-        )
+        self.assertEqual(relationship_data["url"], self.absolute_api_url(self.relationship))
         self.assertEqual(relationship_data["name"], self.relationship.name)
         self.assertEqual(relationship_data["type"], "many-to-many")
         self.assertEqual(relationship_data["destination"]["label"], "devices")
@@ -2895,10 +2871,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         objects = response.data["relationships"][self.relationship.slug]["destination"]["objects"]
         for i, obj in enumerate(objects):
             self.assertEqual(obj["id"], str(self.devices[i].pk))
-            self.assertEqual(
-                obj["url"],
-                ("http://nautobot.example.com" + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[i].pk})),
-            )
+            self.assertEqual(obj["url"], self.absolute_api_url(self.devices[i]))
             self.assertEqual(
                 obj["display"],
                 self.devices[i].display,

@@ -1,7 +1,6 @@
 import logging
 import uuid
 
-from abc import abstractmethod
 from django.core.exceptions import (
     FieldError,
     MultipleObjectsReturned,
@@ -99,11 +98,27 @@ class OptInFieldsMixin:
         return self.__pruned_fields
 
 
-class NautobotPrimaryKeyRelatedField(WritableSerializerMixin, serializers.PrimaryKeyRelatedField):
-    """DRF's built-in PrimaryKeyRelatedField combined with custom to_internal_value() function"""
+class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.HyperlinkedRelatedField):
+    """DRF's built-in HyperlinkedRelatedField combined with custom to_internal_value() function"""
+
+    def __init__(self, *args, **kwargs):
+        """Override DRF's namespace-unaware default view_name logic for HyperlinkedRelatedField.
+
+        DRF defaults to '{model_name}-detail' instead of '{app_label}:{model_name}-detail'.
+        """
+        if "view_name" not in kwargs or (kwargs["view_name"].endswith("-detail") and ":" not in kwargs["view_name"]):
+            if "queryset" not in kwargs:
+                logger.warning(
+                    '"view_name=%r" is probably incorrect for this related API field; '
+                    'unable to determine the correct "view_name" as "queryset" wasn\'t specified',
+                    kwargs["view_name"],
+                )
+            else:
+                kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
+        super().__init__(*args, **kwargs)
 
 
-class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
+class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
 
@@ -116,13 +131,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
     serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
     PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
     which of several possible serializers are in use for a given attribute.
-    - ensures that `url` field has to be explicitly declared with a valid view_name on each serializer subclass.
     - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function to enable the
     dynamic generation of nested serializers.
     """
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
-    serializer_related_field = NautobotPrimaryKeyRelatedField
+    serializer_related_field = NautobotHyperlinkedRelatedField
     object_type = ObjectTypeField()
 
     def __init__(self, *args, **kwargs):
@@ -135,11 +149,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
             # RestAPI serializer is not affected by this because get_serializer_context() is always called
             # and depth is either passed into the request.query_params, or default to 0.
             self.Meta.depth = self.context.get("depth", 1)
-
-    @property
-    @abstractmethod
-    def url(self):  # to be explicitly declared on each serializer subclass
-        raise NotImplementedError(f"{self.__class__.__name__} must declare a url field with a valid view_name")
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
@@ -173,7 +182,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         `Meta.fields` which would surely lead to errors of omission; therefore we have chosen the former approach.
 
         Adds "id" and "display" to the start of `fields` for all models; also appends "created" and "last_updated"
-        to the end of `fields` if they are applicable to this model and this is not a Nested serializer.
+        to the end of `fields` if they are applicable to this model.
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
         self.extend_field_names(fields, "display", at_start=True)
@@ -217,12 +226,19 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
         return super().build_field(field_name, info, model_class, nested_depth)
 
+    def build_relational_field(self, field_name, relation_info):
+        """Override DRF's default relational-field construction to be app-aware."""
+        field_class, field_kwargs = super().build_relational_field(field_name, relation_info)
+        if "view_name" in field_kwargs:
+            field_kwargs["view_name"] = get_route_for_model(relation_info.related_model, "detail", api=True)
+        return field_class, field_kwargs
+
     def build_property_field(self, field_name, model_class):
         """
         Create a property field for model methods and properties.
         """
         if isinstance(getattr(model_class, field_name, None), TagsManager):
-            field_class = NautobotPrimaryKeyRelatedField
+            field_class = NautobotHyperlinkedRelatedField
             field_kwargs = {
                 "queryset": Tag.objects.get_for_model(model_class),
                 "many": True,
@@ -234,6 +250,13 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
 
     def build_nested_field(self, field_name, relation_info, nested_depth):
         return nested_serializer_factory(relation_info, nested_depth)
+
+    def build_url_field(self, field_name, model_class):
+        """Override DRF's default 'url' field construction to be app-aware."""
+        field_class, field_kwargs = super().build_url_field(field_name, model_class)
+        if "view_name" in field_kwargs:
+            field_kwargs["view_name"] = get_route_for_model(model_class, "detail", api=True)
+        return field_class, field_kwargs
 
 
 class TreeModelSerializerMixin(BaseModelSerializer):
