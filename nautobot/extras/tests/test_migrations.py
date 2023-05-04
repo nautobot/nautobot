@@ -12,8 +12,8 @@ from nautobot.extras.choices import CustomFieldTypeChoices
     "mysql does not support rollbacks",
 )
 class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
-    migrate_from = [("extras", "0074_rename_slug_to_key_for_custom_field")]
-    migrate_to = [("extras", "0075_migrate_custom_field_data")]
+    migrate_from = [("extras", "0075_rename_slug_to_key_for_custom_field")]
+    migrate_to = [("extras", "0076_migrate_custom_field_data")]
 
     def populateDataBeforeMigration(self, installed_apps):
         """populate CustomField data pre-migrations"""

@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0068_remove_site_and_region_attributes_from_config_context"),
+        ("extras", "0069_remove_site_and_region_attributes_from_config_context"),
     ]
 
     operations = [

@@ -1,1 +1,0 @@
-Changed Custom Validator applicator to not require DB query.

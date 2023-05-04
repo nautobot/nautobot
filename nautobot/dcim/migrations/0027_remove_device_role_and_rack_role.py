@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
         ("dcim", "0026_rename_device_and_rack_role"),
         ("ipam", "0012_rename_ipam_roles"),
         ("virtualization", "0014_rename_virtualmachine_roles"),
-        ("extras", "0065_rename_configcontext_role"),
+        ("extras", "0066_rename_configcontext_role"),
     ]
 
     operations = [
