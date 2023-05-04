@@ -6,13 +6,8 @@
             "properties": {
                 "name": {"type": "string", "title": "Name"},
                 "device_role": {
-                    "type": "array", 
-                    "title": "Device Role",
-                    "items": {
-                        "type": "string",
-                        "enum": ["A", "B"]
-                    }, 
-                    "uniqueItems": true
+                    "type": "string", 
+                    "title": "Device Role"
                 }
             }
 
@@ -84,13 +79,12 @@
             "type": "object",
             "properties": {
                 "tags": {
-                    "type": "array", 
+                    "type": "string", 
                     "title": "Tags", 
-                    "items": {
-                        "type": "string",
-                        "enum": ["a", "b", "c", "D"]
-                    },
-                    "uniqueItems": true
+                    "additionalProps": {
+                        "app_name": "extras",
+                        "model_name": "tags"
+                    }
                 }
             }
         }

@@ -1,9 +1,7 @@
 import { Card, CardHeader, CardBody } from "@chakra-ui/react"; // TODO import from nautobot-ui when available
 import { Box, Button, Frame, Heading, NtcThumbnailIcon } from "@nautobot/nautobot-ui";
 import Form from "@rjsf/chakra-ui";
-import { ObjectFieldTemplate } from "@rjsf/chakra-ui";
 import validator from "@rjsf/validator-ajv8";
-import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import axios from "axios";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useSWR from "swr";
@@ -132,7 +130,7 @@ export default function GenericObjectCreateView({ list_url }) {
                             className="nautobot-add-form"
                             templates={{TitleFieldTemplate}}
                         >
-                            <Button type="submit">Create</Button>
+                            <Button type="submit" mt="2rem"><NtcThumbnailIcon width="25px" height="30px" />Create</Button>
                         </Form>
                     </CardBody>
                 </Card>
