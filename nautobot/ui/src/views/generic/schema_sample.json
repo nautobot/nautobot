@@ -5,20 +5,34 @@
             "type": "object",
             "properties": {
                 "name": {"type": "string", "title": "Name"},
-                "device_role": {"type": "string", "title": "Device Role"}
+                "device_role": {
+                    "type": "array", 
+                    "title": "Device Role",
+                    "items": {
+                        "type": "string",
+                        "enum": ["A", "B"]
+                    }, 
+                    "uniqueItems": true
+                }
             }
 
         },
         "Location": {
             "type": "object",
             "properties": {
-                "location": {"type": "string", "title": "Location"},
+                "location": {
+                    "type": "string", 
+                    "title": "Location", 
+                    "additionalProps": {
+                        "app_name": "dcim",
+                        "model_name": "locations"
+                    }
+                },
                 "rack_group": {"type": "string", "title": "Rack Group"},
                 "rack": {"type": "string", "title": "Rack"},
                 "rack_face": {"type": "string", "title": "Rack Face"},
                 "position": {"type": "string", "title": "Position"}
             }
-
         },
         "Management": {
             "type": "object",

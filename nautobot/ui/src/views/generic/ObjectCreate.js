@@ -10,10 +10,10 @@ import useSWR from "swr";
 import { useEffect, useState } from "react";
 
 import GenericView from "@views/generic/GenericView";
+import { uiSchema, widget } from "./ui_schema_sample.js";
 
 
 let schema_temp = require("./schema_sample.json")
-let ui_schema_temp = require("./ui_schema_sample.json")
 
 const TitleFieldTemplate = (props) => {
     const { id, required, title } = props;
@@ -31,6 +31,7 @@ const TitleFieldTemplate = (props) => {
         </Heading>
     );
 }
+
 
 
 const fetcher = (url) =>
@@ -118,9 +119,10 @@ export default function GenericObjectCreateView({ list_url }) {
                         <Form
                             action={list_url}
                             schema={schema_temp}
-                            uiSchema={ui_schema_temp}
+                            uiSchema={uiSchema}
                             validator={validator}
                             formData={formData}
+                            widgets={widget}
                             onChange={(e) => {
                                 setFormData(Object.assign(e.formData));
                                 setExtraErrors({});
