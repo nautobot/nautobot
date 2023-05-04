@@ -91,12 +91,12 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
             # Process "format"
             format_ = type_map_obj["format"]
             if format_:
-                result["format"] = True
+                result["format"] = format_
 
             # Process "readOnly"
             read_only = type_map_obj["readOnly"]
             if read_only:
-                result["readOnly"] = True
+                result["readOnly"] = read_only
 
             try:
                 result["default"] = field.get_default()
@@ -141,7 +141,7 @@ class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcesso
             child = field.child
             is_int = isinstance(child, drf_serializers.IntegerField)
             widget = self._get_type_map_value(field=child).get("widget")
-            if not widget and isinstance(child, serializers.ChoiceField):
+            if not widget and isinstance(child, drf_serializers.ChoiceField):
                 widget = "checkbox"
         else:
             widget = self._get_type_map_value(field=field).get("widget")

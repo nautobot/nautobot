@@ -10,6 +10,7 @@ from django.db.models import AutoField
 from rest_framework.exceptions import ValidationError
 
 from nautobot.core.api.utils import dict_to_filter_params
+from nautobot.core.utils.data import is_url
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,12 @@ class WritableSerializerMixin:
         if isinstance(data, dict):
             params = dict_to_filter_params(data)
             return self.remove_non_filter_fields(params)
+
+        # Account for the fact that HyperlinkedIdentityFields might pass in URLs.
+        if is_url(data):
+            # Strip the trailing slash and split on slashes, taking the last value as the PK.
+            data = data.rstrip("/").split("/")[-1]
+
         try:
             # The int case here is taking into account for the User model we inherit from django
             pk = int(data) if isinstance(queryset.model._meta.pk, AutoField) else uuid.UUID(str(data))
