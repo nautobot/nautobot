@@ -108,7 +108,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         # TODO(jathan): These were taken from VLANDetailTable and not VLANTable. Let's make sure
         # these are correct.
         fields = "__all__"
-        list_display_fields = (
+        list_display_fields = [
             "vid",
             "location",
             "vlan_group",
@@ -118,7 +118,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "status",
             "role",
             "description",
-        )
+        ]
         validators = []
 
     def validate(self, data):

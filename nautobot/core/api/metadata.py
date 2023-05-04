@@ -195,7 +195,7 @@ class NautobotMetadata(SimpleMetadata):
     def get_list_display_fields(self, serializer):
         """Try to get the list display fields or default to an empty list."""
         serializer_meta = getattr(serializer, "Meta", None)
-        return getattr(serializer_meta, "list_display_fields", None) or []
+        return list(getattr(serializer_meta, "list_display_fields", []))
 
     def determine_view_options(self, request, serializer):
         """Determine view options that will be used for non-form display metadata."""
