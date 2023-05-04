@@ -1,7 +1,6 @@
 import { useLocation, useParams } from "react-router-dom";
-import { Text } from "@nautobot/nautobot-ui";
+import { NautobotGridItem, Text } from "@nautobot/nautobot-ui";
 import { useDispatch } from "react-redux";
-import { ListViewSkeleton } from "@components/ListViewSkeleton";
 import ObjectListTable from "@components/ObjectListTable";
 import GenericView from "@views/generic/GenericView";
 import { useGetRESTAPIQuery } from "@utils/api";
@@ -59,25 +58,40 @@ export default function GenericObjectListView() {
         isFetching: listDataFetching,
     } = useGetRESTAPIQuery(searchQuery);
 
-    if (!app_name || !model_name) {
+    // TODO when are we going to run into this?
+    // if (!app_name || !model_name) {
+    //     return (
+    //         <GenericView>
+    //             <LoadingWidget />
+    //         </GenericView>
+    //     );
+    // }
+
+    let data_loaded = !(
+        listDataLoading ||
+        headerDataLoading ||
+        listDataFetching
+    );
+
+    let table_name = toTitleCase(model_name, "-");
+    if (!data_loaded) {
         return (
             <GenericView>
-                <ListViewSkeleton />
+                <NautobotGridItem>
+                    <ObjectListTable
+                        tableData={{}}
+                        defaultHeaders={[]}
+                        tableHeaders={[]}
+                        totalCount={0}
+                        active_page_number={active_page_number}
+                        page_size={page_size}
+                        tableTitle={table_name}
+                        data_loaded={data_loaded}
+                    />
+                </NautobotGridItem>
             </GenericView>
         );
     }
-
-    if (listDataLoading || headerDataLoading || listDataFetching) {
-        return (
-            <GenericView>
-                <ListViewSkeleton
-                    model_name={toTitleCase(model_name, "-")}
-                    page_size={page_size}
-                />
-            </GenericView>
-        );
-    }
-
     if (!listData || !headerData) {
         return (
             <GenericView>
@@ -85,7 +99,6 @@ export default function GenericObjectListView() {
             </GenericView>
         );
     }
-
     // tableHeaders = all fields; and defaultHeaders = only the ones we want to see at first.
     const tableHeaders = headerData.view_options.fields;
     let defaultHeaders = headerData.view_options.list_display;
@@ -94,19 +107,20 @@ export default function GenericObjectListView() {
     if (!defaultHeaders.length) {
         defaultHeaders = tableHeaders;
     }
-
-    let table_name = toTitleCase(model_name, "-");
     return (
         <GenericView>
-            <ObjectListTable
-                tableData={listData.results}
-                defaultHeaders={defaultHeaders}
-                tableHeaders={tableHeaders}
-                totalCount={listData.count}
-                active_page_number={active_page_number}
-                page_size={page_size}
-                tableTitle={table_name}
-            />
+            <NautobotGridItem>
+                <ObjectListTable
+                    tableData={listData.results}
+                    defaultHeaders={defaultHeaders}
+                    tableHeaders={tableHeaders}
+                    totalCount={listData.count}
+                    active_page_number={active_page_number}
+                    page_size={page_size}
+                    tableTitle={table_name}
+                    data_loaded={data_loaded}
+                />
+            </NautobotGridItem>
         </GenericView>
     );
 }

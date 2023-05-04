@@ -1,5 +1,5 @@
 import { RouterButton } from "./RouterButton";
-import { ButtonGroup } from "@chakra-ui/react";
+import { ButtonGroup, SkeletonText } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -44,6 +44,7 @@ export default function ObjectListTable({
     active_page_number,
     page_size,
     tableTitle,
+    data_loaded,
     include_button = true,
 }) {
     let location = useLocation();
@@ -147,10 +148,19 @@ export default function ObjectListTable({
                 </Box>
             )}
 
-            <TableRenderer
-                table={table}
-                containerProps={{ overflow: "auto" }}
-            />
+            <SkeletonText
+                endColor="gray.300"
+                noOfLines={parseInt(page_size)}
+                skeletonHeight="25"
+                spacing="3"
+                mt="3"
+                isLoaded={data_loaded}
+            >
+                <TableRenderer
+                    table={table}
+                    containerProps={{ overflow: "auto" }}
+                />
+            </SkeletonText>
             <Paginator
                 url={location.pathname}
                 data_count={totalCount}
