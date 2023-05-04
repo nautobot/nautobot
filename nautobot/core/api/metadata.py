@@ -9,6 +9,8 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
+from nautobot.core.api.serializers import NautobotPrimaryKeyRelatedField
+
 
 class NautobotProcessingMixin(schema.ProcessingMixin):
     """Processing mixin  to account for custom field types and behaviors for Nautobot."""
@@ -47,6 +49,19 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
         type_map_obj = self._get_type_map_value(field)
         result["type"] = type_map_obj["type"]
         result["title"] = self._get_title(field, name)
+
+        if isinstance(field, NautobotPrimaryKeyRelatedField):
+            model = field.queryset.model
+            result["additionalProps"] = {
+                "model_name": model._meta.verbose_name_plural.replace(" ", "-"),
+                "app_label": model._meta.app_label,
+            }
+        elif isinstance(field, drf_serializers.ManyRelatedField):
+            model = field.child_relation.queryset.model
+            result["additionalProps"] = {
+                "model_name": model._meta.verbose_name_plural.replace(" ", "-"),
+                "app_label": model._meta.app_label,
+            }
 
         if isinstance(field, drf_serializers.ListField):
             if field.allow_empty:

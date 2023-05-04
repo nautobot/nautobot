@@ -11,8 +11,8 @@ const colourStyles = {
 
 
 const DynamicChoiceField = ({isMulti, ...props}) => {
-    const {app_name, model_name} = props.schema.additionalProps;
-    let searchQuery = {app_name, model_name, depth: 0};
+    const {app_label, model_name} = props.schema.additionalProps;
+    let searchQuery = {app_name: app_label, model_name, depth: 0};
     let extra_props = {}
     const { data: listData, isLoading: listDataLoading } = useGetRESTAPIQuery(searchQuery);
     
@@ -39,23 +39,23 @@ const DynamicMultipleChoiceField = (props) => {
 }
 
 const uiSchema = {
-    "ui:options": {
-        "style": {
-            "columns": "3",
-            "columnGap": "2rem"
-        }
-    },
-    "Location": {
-        "location": {
-            "ui:widget": "DynamicChoiceField",
-        },
-    }
-    ,
-    "Tags": {
-        "tags": {
-            "ui:widget": "DynamicMultipleChoiceField",
-        },
-    }
+    // "ui:options": {
+    //     "style": {
+    //         "columns": "3",
+    //         "columnGap": "2rem"
+    //     }
+    // },
+    // "Location": {
+    //     "location": {
+    //         "ui:widget": "DynamicChoiceField",
+    //     },
+    // }
+    // ,
+    // "Tags": {
+    //     "tags": {
+    //         "ui:widget": "DynamicMultipleChoiceField",
+    //     },
+    // }
 }
 
 const widget = {

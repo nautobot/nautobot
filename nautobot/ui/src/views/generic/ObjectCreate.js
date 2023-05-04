@@ -11,8 +11,6 @@ import GenericView from "@views/generic/GenericView";
 import { uiSchema, widget } from "./ui_schema_sample.js";
 
 
-let schema_temp = require("./schema_sample.json")
-
 const TitleFieldTemplate = (props) => {
     const { id, required, title } = props;
     return (
@@ -66,7 +64,7 @@ export default function GenericObjectCreateView({ list_url }) {
 
     const post_schema = data.schema;
     // uiSchema is used how the form will be presented.
-    const ui_schema = data.uiSchema.properties;
+    const ui_schema = data.uiSchema;
     const model_name_title = post_schema.title;
 
     // Using axios so that we can do a POST.
@@ -116,8 +114,8 @@ export default function GenericObjectCreateView({ list_url }) {
                     <CardBody>
                         <Form
                             action={list_url}
-                            schema={schema_temp}
-                            uiSchema={uiSchema}
+                            schema={post_schema}
+                            uiSchema={ui_schema}
                             validator={validator}
                             formData={formData}
                             widgets={widget}

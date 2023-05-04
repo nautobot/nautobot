@@ -819,7 +819,7 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     "IPFieldSerializer": {"type": "string"},
     "JSONField": {"type": "string", "widget": "textarea"},
     "MultipleChoiceJSONField": {"type": "array", "required": [], "enum": "choices"},
-    "ManyRelatedField": {"type": "array", "required": []},
+    "ManyRelatedField": {"type": "string", "required": [], 'widget': 'DynamicMultipleChoiceField'},
     #
     # Foreign Key fields
     #
@@ -830,7 +830,7 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     # "NautobotPrimaryKeyRelatedField": {"type": "string", "readOnly": True},
     # type=string results in a free text field; also not what we want. For now,
     # however, this will keep things moving so the unit tests pass.
-    "NautobotPrimaryKeyRelatedField": {"type": "string", "format": "uuid"},
+    "NautobotPrimaryKeyRelatedField": {"type": "string", 'widget': 'DynamicChoiceField'},
     "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
     "RelationshipsDataField": {"type": "object"},
     "SlugField": {"type": "string"},
