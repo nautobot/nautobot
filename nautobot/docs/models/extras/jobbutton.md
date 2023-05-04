@@ -73,6 +73,9 @@ The button will only appear if they have the permission to run jobs.
 
 ![Job Buttons on Site object](../../media/models/site_jobbuttons.png "Job Buttons on Site object")
 
+!!! note
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for a custom field named `color` on `obj`.
+
 ## Job Button Receivers
 
 Job Buttons are only able to initiate a specific type of job called a **Job Button Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](../../additional-features/jobs.md#variables). Job Button Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobButtonReceiver` class only implements one method called `receive_job_button`.
