@@ -71,7 +71,7 @@ export default function GenericObjectListView() {
         return (
             <GenericView>
                 <ListViewSkeleton
-                    model_name={model_name}
+                    model_name={toTitleCase(model_name, "-")}
                     page_size={page_size}
                 />
             </GenericView>
