@@ -18,9 +18,9 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
 
 ## Developer API
 
-The `Device` Django model class supports a method called `create_components()`. This method is normally called during `Device.save()`, which is called whenever you save create a Device via the GUI or the REST API, but if you are working directly in the ORM and encounter one of the two following scenarios, `Device.save()` is not called:
+The `Device` Django model class supports a method called `create_components()`. This method is normally called during `device_instance.save()`, which is called whenever you save create a Device via the GUI or the REST API, but if you are working directly in the ORM and encounter one of the two following scenarios, `device_instance.save()` is not called:
 
-- Usage of `Device.objects.bulk_create()` to perform a bulk creation of Device objects
-- Usage of `Device.save()` during handling of the `nautobot_database_ready` signal (which uses [historical models](https://docs.djangoproject.com/en/3.2/topics/migrations/#historical-models))
+- Usage of `device_instance.objects.bulk_create()` to perform a bulk creation of Device objects
+- Usage of `device_instance.save()` during handling of the `nautobot_database_ready` signal (which uses [historical models](https://docs.djangoproject.com/en/3.2/topics/migrations/#historical-models))
 
-In these cases you will have to manually run `Device.create_components()` in order to instantiate the [device type's](devicetype.md) component templates (interfaces, power ports, etc.).
+In these cases you will have to manually run `device_instance.create_components()` in order to instantiate the [device type's](devicetype.md) component templates (interfaces, power ports, etc.).
