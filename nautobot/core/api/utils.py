@@ -308,6 +308,7 @@ def nested_serializer_factory(relation_info, nested_depth):
         class NautobotNestedSerializer(field):
             class Meta:
                 model = relation_info.related_model
+                is_nested = True
                 depth = nested_depth - 1
                 if hasattr(field.Meta, "fields"):
                     fields = field.Meta.fields

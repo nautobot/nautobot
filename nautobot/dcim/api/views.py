@@ -365,10 +365,13 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "tenant",
         "platform",
         "rack",
+        "location",
         "parent_bay",
         "primary_ip4",
         "primary_ip6",
         "virtual_chassis__master",
+        "device_redundancy_group",
+        "secrets_group",
         "status",
     ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list")
     filterset_class = filters.DeviceFilterSet

@@ -8,6 +8,7 @@ from django.core.exceptions import (
     ValidationError as DjangoValidationError,
 )
 from django.db.models import AutoField, ManyToManyField
+from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
@@ -128,11 +129,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     - ensures that `id` field is always present on the serializer as well.
     - ensures that `created` and `last_updated` fields are always present if applicable to this model and serializer.
     - ensures that `object_type` field is always present on the serializer which represents the content-type of this
-    serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
-    PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
-    which of several possible serializers are in use for a given attribute.
-    - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function to enable the
-    dynamic generation of nested serializers.
+      serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
+      PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
+      which of several possible serializers are in use for a given attribute.
+    - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function
+      to enable the dynamic generation of nested serializers.
     """
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
@@ -142,13 +143,18 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
-        if "Nested" not in self.__class__.__name__:
+        if not self.is_nested:
             # We set our default depth value here to 1 because in OpenAPISchema
             # get_serializer_context() (where we get the depth from self.request.query_params) is not called
             # so in order to have enough information present in the OpenAPISchema, we set depth here to 1
             # RestAPI serializer is not affected by this because get_serializer_context() is always called
             # and depth is either passed into the request.query_params, or default to 0.
             self.Meta.depth = self.context.get("depth", 1)
+
+    @property
+    def is_nested(self):
+        """Return whether this is a nested serializer."""
+        return getattr(self.Meta, "is_nested", False)
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
@@ -194,8 +200,19 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         # This is here for the PolymorphicProxySerializers which
         # are looking for an object_type field (originally on WritableNestedSerializer now BaseModelSerializer)
         self.extend_field_names(fields, "object_type", at_start=True)
-        # Eliminate all field names that start with "_" as those fields are not user-facing
-        fields = [field for field in fields if not field.startswith("_")]
+
+        def filter_field(field):
+            # Eliminate all field names that start with "_" as those fields are not user-facing
+            if field.startswith("_"):
+                return False
+            # These are expensive to calculate and so should not be included on nested serializers
+            if self.is_nested and field in ["computed_fields", "custom_fields", "relationships"]:
+                return False
+            if self.is_nested and isinstance(getattr(self.Meta.model, field, None), ManyToManyDescriptor):
+                return False
+            return True
+
+        fields = [field for field in fields if filter_field(field)]
         return fields
 
     def build_field(self, field_name, info, model_class, nested_depth):
@@ -443,8 +460,9 @@ class CustomFieldModelSerializerMixin(ValidatedModelSerializer):
     def get_field_names(self, declared_fields, info):
         """Ensure that "custom_fields" and "computed_fields" are always included appropriately."""
         fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "custom_fields")
-        self.extend_field_names(fields, "computed_fields", opt_in_only=True)
+        if not self.is_nested:
+            self.extend_field_names(fields, "custom_fields")
+            self.extend_field_names(fields, "computed_fields", opt_in_only=True)
         return fields
 
 
@@ -566,7 +584,8 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
     def get_field_names(self, declared_fields, info):
         """Ensure that "relationships" is always included as an opt-in field."""
         fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "relationships", opt_in_only=True)
+        if not self.is_nested:
+            self.extend_field_names(fields, "relationships", opt_in_only=True)
         return fields
 
 
