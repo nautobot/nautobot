@@ -666,9 +666,12 @@ class JobResult(BaseModel, CustomFieldModel):
     @property
     def related_name(self):
         """
-        Similar to self.name, but if there's an appropriate `related_object`, use its name instead.
-
-        Since this calls related_object, the same potential performance concerns exist. Use with caution.
+        A human-friendlier "name" for the Job Result.
+        
+        This is commonly the name for extras.Job based jobs, but if the definition of the Job
+        or in cases of Git Repositories or other Related Objects there is no Job name definition available.
+        
+        Properly handle those cases.
         """
         if self.job_model:
             # No need to call related_object(), getting the Job class name if we already have a job_model
