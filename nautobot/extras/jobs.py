@@ -486,26 +486,19 @@ class BaseJob(Task):
 
         try:
             job_model = JobModel.objects.get_for_class_path(self.class_path)
-            read_only = job_model.read_only if job_model.read_only_override else self.read_only
             dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else self.dryrun_default
             task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
         except JobModel.DoesNotExist:
             logger.error("No Job instance found in the database corresponding to %s", self.class_path)
-            read_only = self.read_only
             dryrun_default = self.dryrun_default
             task_queues = self.task_queues
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
-        if self.supports_dryrun:
-            if read_only:
-                # Hide the dryrun field for read only jobs
-                form.fields["dryrun"].widget = forms.HiddenInput()
-                form.fields["dryrun"].initial = True
-            elif not initial or "dryrun" not in initial:
-                # Set initial "dryrun" checkbox state based on the Meta parameter
-                form.fields["dryrun"].initial = dryrun_default
+        if self.supports_dryrun and (not initial or "dryrun" not in initial):
+            # Set initial "dryrun" checkbox state based on the Meta parameter
+            form.fields["dryrun"].initial = dryrun_default
         if not settings.DEBUG:
             form.fields["_profile"].widget = forms.HiddenInput()
 

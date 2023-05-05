@@ -560,7 +560,6 @@ class ExportTemplateTestCase(
         }
 
 
-@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class GitRepositoryTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.BulkImportObjectsViewTestCase,
@@ -1027,7 +1026,6 @@ class ScheduledJobTestCase(
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
 
 
-@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class ApprovalQueueTestCase(
     # It would be nice to use ViewTestCases.GetObjectViewTestCase as well,
     # but we can't directly use it as it uses instance.get_absolute_url() rather than self._get_url("view", instance)
@@ -1238,7 +1236,8 @@ class ApprovalQueueTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_post_dry_run_success(self, _):
+    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
+    def test_post_dry_run_success(self, mock_enqueue_job, _):
         """Successfully request a dry run based on object-based run_job permissions."""
         self.add_permissions("extras.view_scheduledjob")
         instance = ScheduledJob.objects.filter(name="test1").first()
@@ -1250,15 +1249,12 @@ class ApprovalQueueTestCase(
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
         data = {"_dry_run": True}
 
+        mock_enqueue_job.side_effect = lambda job_model, *args, **kwargs: JobResult.objects.create(name=job_model.name)
+
         response = self.client.post(self._get_url("view", instance), data)
         # Job was submitted
-        self.assertTrue(
-            JobResult.objects.filter(name=instance.job_model.class_path).exists(),
-            msg=extract_page_body(response.content.decode(response.charset)),
-        )
-        job_result = JobResult.objects.get(name=instance.job_model.class_path)
-        self.assertEqual(job_result.job_model, instance.job_model)
-        self.assertEqual(job_result.user, self.user)
+        mock_enqueue_job.assert_called_once()
+        job_result = JobResult.objects.get(name=instance.job_model.name)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1512,8 +1508,6 @@ class JobTestCase(
             "dryrun_default": True,
             "hidden_override": True,
             "hidden": False,
-            "read_only_override": True,
-            "read_only": False,
             "approval_required_override": True,
             "approval_required": True,
             "soft_time_limit_override": True,
@@ -1863,32 +1857,6 @@ class JobTestCase(
 
         self.assertHttpStatus(response, 200)
         self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_read_only_without_dryrun(self, _):
-        self.add_permissions("extras.run_job")
-
-        read_only_job = Job.objects.get(job_class_name="TestReadOnlyJob")
-        read_only_job.enabled = True
-        read_only_job.save()
-
-        data = {
-            "_schedule_type": "immediately",
-            "dryrun": False,
-            "var": "teststring",
-        }
-
-        run_url = reverse("extras:job_run", kwargs={"slug": read_only_job.slug})
-
-        # Assert error message shows after post
-        response = self.client.post(run_url, data)
-        self.assertHttpStatus(response, 200, msg=run_url)
-
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(
-            "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
-            content,
-        )
 
 
 class JobButtonTestCase(

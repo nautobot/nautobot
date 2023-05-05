@@ -742,7 +742,6 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "hidden",
             "hidden_override",
             "read_only",
-            "read_only_override",
             "soft_time_limit",
             "soft_time_limit_override",
             "time_limit",

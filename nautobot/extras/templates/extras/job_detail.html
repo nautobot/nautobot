@@ -153,7 +153,7 @@
             </tr>
             <tr>
                 <td>Supports Dryrun</td>
-                <td>{{ object.supports_dryrun | render_boolean }}</td>
+                <td colspan="2">{{ object.supports_dryrun | render_boolean }}</td>
             </tr>
             <tr>
                 <td>Default to Dryrun</td>
@@ -173,19 +173,7 @@
             </tr>
             <tr>
                 <td>Read-Only Execution</td>
-                <td>{{ object.read_only | render_boolean }}</td>
-                <td>
-                    {% if object.read_only_override %}
-                        <span class="text-muted">
-                            overridden; default is
-                            {% if object.installed %}
-                                {{ object.job_class.read_only | render_boolean }}
-                            {% else %}
-                                unknown (not currently installed)
-                            {% endif %}
-                        </span>
-                    {% endif %}
-                </td>
+                <td colspan="2">{{ object.read_only | render_boolean }}</td>
             </tr>
             <tr>
                 <td>Hide from Default UI</td>

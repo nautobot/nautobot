@@ -26,7 +26,6 @@ JOB_OVERRIDABLE_FIELDS = (
     "description",
     "dryrun_default",
     "hidden",
-    "read_only",
     "approval_required",
     "soft_time_limit",
     "time_limit",

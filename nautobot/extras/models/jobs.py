@@ -166,7 +166,9 @@ class Job(PrimaryModel):
     dryrun_default = models.BooleanField(
         default=False, help_text="Whether the job defaults to running with dryrun argument set to true"
     )
-    read_only = models.BooleanField(default=False, help_text="Whether the job is only permitted to run with dryrun set")
+    read_only = models.BooleanField(
+        default=False, editable=False, help_text="Set to true if the job does not make any changes to the environment"
+    )
     soft_time_limit = models.FloatField(
         default=0,
         validators=[MinValueValidator(0)],
@@ -187,6 +189,7 @@ class Job(PrimaryModel):
     )
     supports_dryrun = models.BooleanField(
         default=False,
+        editable=False,
         help_text="If supported, allows the job to bypass approval when running with dryrun argument set to true",
     )
 
@@ -212,10 +215,6 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     hidden_override = models.BooleanField(
-        default=False,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
-    )
-    read_only_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
@@ -552,9 +551,9 @@ class JobResult(BaseModel, CustomFieldModel):
         db_index=True,
     )
     worker = models.CharField(max_length=100, default=None, null=True)
-    task_args = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
-    task_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
-    celery_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
+    task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
+    task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+    celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     # TODO(jathan): This field is currently unused for Jobs, but we should coerce it to a JSONField
     # and set a contract that anything returned from a Job task MUST be JSON. In DCR core it is
     # expected to be encoded/decoded using `content_type` and `content_encoding` which we have
@@ -908,7 +907,7 @@ class ScheduledJob(BaseModel):
     interval = models.CharField(choices=JobExecutionType, max_length=255)
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    celery_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
+    celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     queue = models.CharField(
         max_length=200,
         blank=True,

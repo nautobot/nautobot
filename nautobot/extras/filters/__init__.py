@@ -586,7 +586,6 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "description_override",
             "dryrun_default_override",
             "hidden_override",
-            "read_only_override",
             "soft_time_limit_override",
             "time_limit_override",
             "has_sensitive_variables_override",

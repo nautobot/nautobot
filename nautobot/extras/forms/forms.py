@@ -768,8 +768,6 @@ class JobEditForm(NautobotModelForm):
             "dryrun_default",
             "hidden_override",
             "hidden",
-            "read_only_override",
-            "read_only",
             "approval_required_override",
             "approval_required",
             "soft_time_limit_override",

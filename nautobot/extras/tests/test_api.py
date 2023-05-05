@@ -916,10 +916,10 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_git_sync_with_permissions(self, mock_get_worker_count):
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.models.jobs.JOB_LOGS", None)  # TODO: temporary workaround (remove JOB_LOGS db?)
+    def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
-        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
@@ -1128,7 +1128,7 @@ class ImageAttachmentTest(
         )
 
 
-@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
+@mock.patch("nautobot.extras.models.jobs.JOB_LOGS", None)  # TODO: temporary workaround (remove JOB_LOGS db?)
 class JobTest(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
     APIViewTestCases.GetObjectViewTestCase,
@@ -1158,8 +1158,6 @@ class JobTest(
         "dryrun_default": True,
         "hidden_override": True,
         "hidden": True,
-        "read_only_override": True,
-        "read_only": True,
         "soft_time_limit_override": True,
         "soft_time_limit": 350.1,
         "time_limit_override": True,
@@ -1852,27 +1850,6 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
-    def test_run_job_read_only_without_dryrun(self, _):
-        self.add_permissions("extras.run_job")
-        data = {
-            "data": {"dryrun": False, "var": "teststring"},
-        }
-        read_only_job = Job.objects.get_for_class_path("local/test_read_only_job/TestReadOnlyJob")
-        read_only_job.enabled = True
-        read_only_job.validated_save()
-        url = self.get_run_url("local/test_read_only_job/TestReadOnlyJob")
-
-        # Assert error message shows after post
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        # breakpoint()
-        self.assertEqual(
-            response.data["data"]["dryrun"][0],
-            "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
-        )
-
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
     model = JobHook
@@ -2054,7 +2031,7 @@ class JobResultTest(
             date_done=datetime.now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,
-            task_kwargs=None,
+            task_kwargs={},
             scheduled_job=None,
         )
         JobResult.objects.create(
