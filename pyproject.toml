@@ -135,7 +135,7 @@ pyuwsgi = "~2.0.21"
 # YAML parsing and rendering
 PyYAML = "~6.0"
 # Social authentication core
-social-auth-core = {version = "~4.3.0", optional = true, extras = ["openidconnect", "saml"]}
+social-auth-core = {version = "~4.4.0", optional = true, extras = ["openidconnect", "saml"]}
 # Social authentication/registration with support for many auth providers
 social-auth-app-django = "~5.0.0"
 # Rendering of SVG images (for rack elevations, etc.)

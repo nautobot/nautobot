@@ -1,0 +1,1 @@
+Updated `lxml` to `~4.9.2` to address `CVE-2022-2309`. This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
