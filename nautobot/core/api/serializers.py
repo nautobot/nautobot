@@ -201,7 +201,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                 return False
             # These are expensive to look up, so we have decided not to include them on nested serializers
             if self.is_nested and isinstance(getattr(self.Meta.model, field, None), ManyToManyDescriptor):
-                logger.debug("Excluding %s field from %s", field, type(self).__name__)
                 return False
             return True
 
