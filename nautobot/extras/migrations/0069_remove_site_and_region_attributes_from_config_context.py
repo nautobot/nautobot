@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
     dependencies = [
         ("dcim", "0030_migrate_region_and_site_data_to_locations"),
-        ("extras", "0067_created_datetime"),
+        ("extras", "0068_created_datetime"),
     ]
 
     operations = [

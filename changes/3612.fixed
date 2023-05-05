@@ -1,1 +1,0 @@
-Fixed a 500 error when filtering by `content_type` in Dynamic Groups list view.

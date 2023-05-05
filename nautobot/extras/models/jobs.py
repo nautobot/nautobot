@@ -541,8 +541,8 @@ class JobResult(BaseModel, CustomFieldModel):
         null=True,
         blank=True,
     )
-    date_created = models.DateTimeField(auto_now_add=True)
-    date_done = models.DateTimeField(null=True, blank=True)
+    date_created = models.DateTimeField(auto_now_add=True, db_index=True)
+    date_done = models.DateTimeField(null=True, blank=True, db_index=True)
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
@@ -599,6 +599,24 @@ class JobResult(BaseModel, CustomFieldModel):
     class Meta:
         ordering = ["-date_created"]
         get_latest_by = "date_created"
+        indexes = [
+            models.Index(
+                name="extras_jobresult_rcreated_idx",
+                fields=["-date_created"],
+            ),
+            models.Index(
+                name="extras_jr_rdone_idx",
+                fields=["-date_done"],
+            ),
+            models.Index(
+                name="extras_jr_statrcreate_idx",
+                fields=["status", "-date_created"],
+            ),
+            models.Index(
+                name="extras_jr_statrdone_idx",
+                fields=["status", "-date_done"],
+            ),
+        ]
 
     def __str__(self):
         return str(self.task_id)

@@ -11,7 +11,7 @@ import nautobot.extras.utils
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0067_created_datetime"),
+        ("extras", "0068_created_datetime"),
         ("virtualization", "0017_created_datetime"),
     ]
 

@@ -9,10 +9,26 @@ import nautobot.extras.utils
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0065_rename_configcontext_role"),
+        ("extras", "0066_rename_configcontext_role"),
     ]
 
     operations = [
+        migrations.RemoveIndex(
+            model_name="jobresult",
+            name="extras_jobresult_rcreated_idx",
+        ),
+        migrations.RemoveIndex(
+            model_name="jobresult",
+            name="extras_jr_rcompleted_idx",
+        ),
+        migrations.RemoveIndex(
+            model_name="jobresult",
+            name="extras_jr_statrcreate_idx",
+        ),
+        migrations.RemoveIndex(
+            model_name="jobresult",
+            name="extras_jr_statrcompl_idx",
+        ),
         migrations.AlterModelOptions(
             name="jobresult",
             options={"get_latest_by": "date_created", "ordering": ["-date_created"]},
@@ -88,5 +104,21 @@ class Migration(migrations.Migration):
             model_name="jobresult",
             name="status",
             field=models.CharField(db_index=True, default="PENDING", max_length=30),
+        ),
+        migrations.AddIndex(
+            model_name="jobresult",
+            index=models.Index(fields=["-date_created"], name="extras_jobresult_rcreated_idx"),
+        ),
+        migrations.AddIndex(
+            model_name="jobresult",
+            index=models.Index(fields=["-date_done"], name="extras_jr_rdone_idx"),
+        ),
+        migrations.AddIndex(
+            model_name="jobresult",
+            index=models.Index(fields=["status", "-date_created"], name="extras_jr_statrcreate_idx"),
+        ),
+        migrations.AddIndex(
+            model_name="jobresult",
+            index=models.Index(fields=["status", "-date_done"], name="extras_jr_statrdone_idx"),
         ),
     ]

@@ -8,7 +8,7 @@
 {% block buttons %}
     {% plugin_buttons object %}
     {% if user|can_delete:object %}
-        {% delete_button object key='pk' %}
+        {% delete_button object %}
     {% endif %}
 {% endblock buttons %}
 
