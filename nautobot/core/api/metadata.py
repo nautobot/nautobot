@@ -9,6 +9,8 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
+from nautobot.core.utils.lookup import get_table_for_model
+
 
 # FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
 # works reliably.
@@ -195,7 +197,10 @@ class NautobotMetadata(SimpleMetadata):
     def get_list_display_fields(self, serializer):
         """Try to get the list display fields or default to an empty list."""
         serializer_meta = getattr(serializer, "Meta", None)
-        return list(getattr(serializer_meta, "list_display_fields", []))
+        if not serializer_meta:
+            return []
+        table = get_table_for_model( serializer_meta.model)
+        return list(getattr(table.Meta, "default_columns", [])) if table else []
 
     def determine_view_options(self, request, serializer):
         """Determine view options that will be used for non-form display metadata."""

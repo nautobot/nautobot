@@ -70,7 +70,7 @@ export default function Layout({ children }) {
                 </Button>
             </Sidebar>
 
-            <Box flex="1" height="full">
+            <Box flex="1" height="full" sx={{overflowX: "auto"}}>
                 {toRender}
             </Box>
         </Flex>
