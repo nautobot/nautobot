@@ -1,5 +1,1 @@
-Changed Napalm dependency to 4.x release in order to allow Netmiko 4.x to install.
-As a result, Poetry removed the following from the lock file: ciscoconfparse, deprecat, dnspython, loguru, toml, and win32-setctime.
-As a result, Poetry changed the following in the lock file: netmiko, ntc-templates, paramiko, pyyaml, scp, textfsm, and wrapt.
-As a result, Poetry added the following: netutils, ttp, ttp-templates, and typing-extensions.
-
+Changed `napalm` dependency to 4.x release in order to allow Netmiko 4.x to install. Dependency resolution resulted in removing the following packages: `ciscoconfparse`, `deprecat`, `dnspython`, `loguru`, `toml`, `win32-setctime`.
