@@ -13,3 +13,7 @@ export function calculateLuminance(hex_color) {
     var [R, G, B] = hexToRgb(hex_color);
     return (R + R + R + B + G + G + G + G + G + G) / 10;
 }
+
+export function getContrastColor(hex_color){
+    return calculateLuminance(hex_color) > 186 ? "#000000" : "#ffffff"
+}

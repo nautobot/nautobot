@@ -92,7 +92,7 @@ export default function GenericObjectCreateView({ list_url }) {
                 setExtraErrors(errors);
             });
     };
-
+// utilis/color.js
     return (
         <GenericView>
             <Box
