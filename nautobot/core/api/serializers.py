@@ -19,6 +19,7 @@ from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
+from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.mixins import WritableSerializerMixin
 from nautobot.core.api.utils import (
     dict_to_filter_params,
@@ -136,7 +137,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     serializer_related_field = NautobotHyperlinkedRelatedField
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
-    object_type = serializers.SerializerMethodField(read_only=True, help_text="Content type string for this model")
+    object_type = ObjectTypeField(read_only=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -160,11 +161,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         Return either the `display` property of the instance or `str(instance)`
         """
         return getattr(instance, "display", str(instance))
-
-    @extend_schema_field(serializers.CharField)
-    def get_object_type(self, instance):
-        """Return the content-type of the instance as a string, e.g. 'dcim.device'."""
-        return instance._meta.label_lower
 
     def extend_field_names(self, fields, field_name, at_start=False, opt_in_only=False):
         """Prepend or append the given field_name to `fields` and optionally self.Meta.opt_in_fields as well."""
@@ -192,6 +188,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         by default for performance or data exposure reasons.
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
+        self.extend_field_names(fields, "object_type", at_start=True)
         # Since we use HyperlinkedModelSerializer as our base class, "url" is auto-included by "__all__" but "id" isn't.
         self.extend_field_names(fields, "id", at_start=True)
 
