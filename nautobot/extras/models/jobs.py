@@ -667,10 +667,10 @@ class JobResult(BaseModel, CustomFieldModel):
     def related_name(self):
         """
         A human-friendlier "name" for the Job Result.
-        
+
         This is commonly the name for extras.Job based jobs, but if the definition of the Job
         or in cases of Git Repositories or other Related Objects there is no Job name definition available.
-        
+
         Properly handle those cases.
         """
         if self.job_model:
