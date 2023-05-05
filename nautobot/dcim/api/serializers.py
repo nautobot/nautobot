@@ -450,6 +450,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = ["name", "status", "tenant", "location", "rack", "role", "device_type", "primary_ip"]
         validators = []
+        extra_kwargs = {"parent_bay": {"read_only": True}}
 
     def get_field_names(self, declared_fields, info):
         fields = list(super().get_field_names(declared_fields, info))
