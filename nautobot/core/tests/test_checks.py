@@ -6,13 +6,6 @@ from nautobot.core import checks
 
 class CheckCoreSettingsTest(TestCase):
     @override_settings(
-        CACHEOPS_DEFAULTS={"timeout": 0},
-    )
-    def test_check_cache_timeout(self):
-        """Error if CACHEOPS_DEFAULTS['timeout'] is 0."""
-        self.assertEqual(checks.check_cache_timeout(None), [checks.E001])
-
-    @override_settings(
         AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.ModelBackend"],
     )
     def test_check_object_permissions_backend(self):

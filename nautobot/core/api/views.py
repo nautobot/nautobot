@@ -172,8 +172,6 @@ class BulkDestroyModelMixin:
 
 
 class ModelViewSetMixin:
-    # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
-    # select_related
     logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than

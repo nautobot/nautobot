@@ -15,7 +15,6 @@ This will run the following management commands with default settings, in order:
 - collectstatic
 - remove_stale_contenttypes
 - clearsessions
-- invalidate all
 """
 
 
@@ -49,13 +48,6 @@ class Command(BaseCommand):
             dest="collectstatic",
             default=True,
             help="Do not automatically collect static files into a single location.",
-        )
-        parser.add_argument(
-            "--no-invalidate-all",
-            action="store_false",
-            dest="invalidate_all",
-            default=True,
-            help="Do not automatically invalidate cache for entire application.",
         )
         parser.add_argument(
             "--no-migrate",
@@ -119,10 +111,4 @@ class Command(BaseCommand):
         if options.get("clearsessions"):
             self.stdout.write("Removing expired sessions...")
             call_command("clearsessions")
-            self.stdout.write()
-
-        # Run invalidate all
-        if options.get("invalidate_all"):
-            self.stdout.write("Invalidating cache...")
-            call_command("invalidate", "all")
             self.stdout.write()

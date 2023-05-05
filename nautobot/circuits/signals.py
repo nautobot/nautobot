@@ -1,4 +1,3 @@
-from cacheops import invalidate_obj
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Q
@@ -29,7 +28,6 @@ def rebuild_paths_circuits(obj):
 
     with transaction.atomic():
         for cp in cable_paths:
-            invalidate_obj(cp.origin)
             cp.delete()
             # Prevent looping back to rebuild_paths during the atomic transaction.
             create_cablepath(cp.origin, rebuild=False)

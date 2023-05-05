@@ -244,6 +244,12 @@ The "Container" status will be removed and all prefixes will be migrated to the 
 
 Support for `?brief` REST API query parameter and `Nested*Serializers` have been removed in Nautobot v2.X. They are replaced by the new [`?depth` query parameter](../rest-api/overview.md/#depth-query-parameter).
 
+#### Removed `django-cacheops` ([#1721](https://github.com/nautobot/nautobot/issues/1721))
+
+Nautobot no longer uses `django-cacheops` for caching of database queries or other information. In some cases this has been replaced by the use of Django's native Redis caching capabilities.
+
+The configuration settings `CACHEOPS`, `CACHEOPS_DEFAULTS`, `CACHEOPS_DEGRADE_ON_FAILURE`, `CACHEOPS_ENABLED`, `CACHEOPS_HEALTH_CHECK_ENABLED`, `CACHEOPS_REDIS`, etc. are now unused by Nautobot and may be removed from your configuration.
+
 #### Removed Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 As a part of breaking changes made in v2.X, shadowed filter/filterset fields are being removed throughout Nautobot.

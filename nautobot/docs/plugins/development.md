@@ -151,7 +151,6 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | Name | Default | Description |
 | ---- | ------- | ----------- |
 | `base_url` | Same as specified `name` | Base path to use for app URLs |
-| `caching_config` | `{"*":{"ops":"all"}}` | App-specific [query caching configuration](https://github.com/Suor/django-cacheops#setup) |
 | `config_view_name` | `None` | [URL name](#adding-links-to-the-installed-apps-view) for a "configuration" view defined by this app |
 | `default_settings` | `{}` | A dictionary of configuration parameters and their default values |
 | `home_view_name` | `None` | [URL name](#adding-links-to-the-installed-apps-view) for a "home" or "dashboard" view defined by this app |
@@ -166,6 +165,9 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 
 +++ 2.0.0
     Support for the `searchable_models` and `constance_config` attributes were added.
+
+--- 2.0.0
+    Support for `caching_config` was removed with the removal of `django-cacheops`.
 
 !!! note
     All `required_settings` must be configured in `PLUGINS_CONFIG` in `nautobot_config.py` before the app can be used.

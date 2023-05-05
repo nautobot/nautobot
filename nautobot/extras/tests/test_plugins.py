@@ -186,20 +186,6 @@ class PluginTest(TestCase):
         with self.assertRaises(PluginImproperlyConfigured):
             ExampleConfigWithMiddleware.validate({}, settings.VERSION)
 
-    def test_caching_config(self):
-        """
-        Check that plugin caching configuration is registered and valid.
-        """
-        self.assertIn("example_plugin.*", settings.CACHEOPS)
-
-        # Establish example config to have invalid cache_config (list)
-        class ExampleConfigWithBadCacheConfig(example_config):
-            caching_config = []
-
-        # Validation should fail when a caching_config is not a dict
-        with self.assertRaises(PluginImproperlyConfigured):
-            ExampleConfigWithBadCacheConfig.validate({}, settings.VERSION)
-
     def test_min_version(self):
         """
         Check enforcement of minimum Nautobot version.

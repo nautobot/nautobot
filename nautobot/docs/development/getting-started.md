@@ -469,7 +469,7 @@ A newly created configuration includes sane defaults. If you need to customize t
 
 * [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
 * [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
-* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis). The defaults should be fine for development.
+* **Redis settings**: Redis configuration requires multiple settings. The defaults should be fine for development.
 * [`DEBUG`](../configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
 * [`EXTRA_INSTALLED_APPS`](../configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
 

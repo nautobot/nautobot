@@ -25,7 +25,7 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #             "NAUTOBOT_CACHES_BACKEND",
 #             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
 #         ),
-#         "LOCATION": parse_redis_connection(redis_database=0),
+#         "LOCATION": parse_redis_connection(redis_database=1),
 #         "TIMEOUT": 300,
 #         "OPTIONS": {
 #             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -33,10 +33,6 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #         },
 #     }
 # }
-
-# Redis connection to use for caching.
-#
-# CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 
 # Celery broker URL used to tell workers where queues are located
 #
@@ -247,18 +243,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     "docs": os.getenv("NAUTOBOT_BRANDING_URLS_DOCS", None),
 #     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 # }
-
-# Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
-#
-# CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
-
-# Set to True to enable caching with cacheops. (Default: False)
-#
-# CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
-
-# Set to True to enable periodic health checks for the Redis server connection used by cacheops.
-#
-# CACHEOPS_HEALTH_CHECK_ENABLED = False
 
 # Options to pass to the Celery broker transport, for example when using Celery with Redis Sentinel.
 #

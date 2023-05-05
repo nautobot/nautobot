@@ -153,42 +153,6 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ---
 
-## CACHEOPS_DEFAULTS
-
-Default: `{'timeout': 900}` (15 minutes, in seconds)
-
-Environment Variable: `NAUTOBOT_CACHEOPS_TIMEOUT` (timeout value only)
-
-!!! warning
-    It is an error to set the timeout value to `0`. If you wish to disable caching, please use [`CACHEOPS_ENABLED`](#cacheops_enabled).
-
-Various defaults for caching, the most important of which being the cache timeout. The `timeout` is the number of seconds that cache entries will be retained before expiring.
-
----
-
-## CACHEOPS_ENABLED
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_CACHEOPS_ENABLED`
-
-A boolean that turns on/off caching.
-
-!!! check "Changed in 1.5.0"
-    Cachopes is disabled by default and will be removed entirely in a future release.
-
-If set to `False`, all caching is bypassed and Nautobot operates as if there is no cache.
-
----
-
-## CACHEOPS_HEALTH_CHECK_ENABLED
-
-Default: `False`
-
-A boolean that turns on/off health checks for the Redis server connection utilized by Cacheops. Most deployments share a Redis server with `django-redis` as such we only need to check the health of Redis one time.  If you are using a separate Redis deployment for Cacheops, please consider enabling this to monitor that Redis deployment.  Keep in mind the more health checks enabled the longer the health checks will take and timeouts might need to be increased.
-
----
-
 ## CELERY_BROKER_TRANSPORT_OPTIONS
 
 Default: `{}`

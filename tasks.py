@@ -481,7 +481,6 @@ def post_upgrade(context):
     - collectstatic
     - remove_stale_contenttypes
     - clearsessions
-    - invalidate all
     """
     command = "nautobot-server post_upgrade"
 

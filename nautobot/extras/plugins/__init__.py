@@ -76,11 +76,6 @@ class NautobotAppConfig(NautobotConfig):
     # along with the plugin.
     installed_apps = []
 
-    # Cacheops configuration. Cache all operations by default.
-    caching_config = {
-        "*": {"ops": "all"},
-    }
-
     # Default constance configuration parameters
     constance_config = {}
 
@@ -244,7 +239,6 @@ class NautobotAppConfig(NautobotConfig):
         # TODO(jathan): This is fine for now, but as we expand the functionality
         # of plugins, we'll need to consider something like pydantic or attrs.
         setting_validations = {
-            "caching_config": dict,
             "default_settings": dict,
             "installed_apps": list,
             "middleware": list,
