@@ -38,6 +38,30 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
     SchemaProcessor to account for custom field types and behaviors for Nautobot.
     """
 
+    def _get_all_field_properties(self):
+        """Override to enforce serializer schema/field order if provided"""
+        field_properties = super()._get_all_field_properties()
+        field_order = getattr(self.serializer.Meta, "field_order", None)
+        if not field_order:
+            return field_properties
+
+        # TODO:
+        #  1: Fix CustomFields Field
+        #  2: Decide on wherever to discard fields not defined in the field_order, 
+        #       or just add the rest fields after field_order fields
+        
+        grouping = {}
+        
+        for group_name, fields in field_order.items():
+            fields_data = {name: field_properties.get(name) for name in fields}
+            # Some fields on the field_order might not be on the serializer fields; Skip those fields
+            if any(fields_data.values()):
+                grouping[group_name] = {
+                     "type": "object",
+                      "properties": fields_data
+                }
+        return grouping
+
     def _get_field_properties(self, field: schema.SerializerType, name: str) -> Dict[str, Any]:
         """
         This method is used to generate the proper schema based on serializer field mappings or
@@ -114,28 +138,61 @@ class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcesso
     """
     UiSchemaProcessor to account for custom field types and behaviors for Nautobot.
     """
+    
+    def _field_order(self):
+        field_order = super()._field_order()
+        serializer_field_order = getattr(self.serializer.Meta, "field_order", None)
+        return serializer_field_order.keys() if serializer_field_order else field_order
 
-    def _field_order(self) -> List[str]:
-        """
-        Overload the base which just returns `Meta.fields` and doesn't play nicely with "__all__".
-
-        This instead calls `get_fields()` and returns the keys.
-        """
-        if self._is_list_serializer(self.serializer):
-            fields = self.serializer.child.get_fields()
+    
+    def get_ui_schema(self):
+        ui_schema = super().get_ui_schema()
+        serializer_ui_options = getattr(self.serializer.Meta, "ui_options", None)
+        if not serializer_ui_options:
+            return ui_schema
+        
+        if ui_schema.get("items"):
+            ui_schema["items"]["ui:options"] = serializer_ui_options
         else:
-            fields = self.serializer.get_fields()
+            ui_schema["ui:options"] = serializer_ui_options
+        return ui_schema
+        
+        
+    def _get_all_ui_properties(self):
+        ui_properties = super()._get_all_ui_properties()
+        field_order = getattr(self.serializer.Meta, "field_order", None)
+        if not field_order:
+            return ui_properties
 
-        field_names = list(fields)
-        # FIXME(jathan): Correct the behavior introduced in #3500 by switching to `__all__` to
-        # assert these get added at the end.
-        bottom_fields = ["computed_fields", "custom_fields", "relationships"]
-        for field_name in bottom_fields:
-            if field_name in field_names:
-                field_names.remove(field_name)
-                field_names.append(field_name)
+        grouping = {}
+        for group_name, fields in field_order.items():
+            fields_data = {name: ui_properties.get(name) for name in fields}
+            if any(fields_data.values()):
+                grouping[group_name] = fields_data
+        return grouping
 
-        return field_names
+    # Commented Out for now
+    # def _field_order(self) -> List[str]:
+    #     """
+    #     Overload the base which just returns `Meta.fields` and doesn't play nicely with "__all__".
+
+    #     This instead calls `get_fields()` and returns the keys.
+    #     """
+    #     if self._is_list_serializer(self.serializer):
+    #         fields = self.serializer.child.get_fields()
+    #     else:
+    #         fields = self.serializer.get_fields()
+
+    #     field_names = list(fields)
+    #     # FIXME(jathan): Correct the behavior introduced in #3500 by switching to `__all__` to
+    #     # assert these get added at the end.
+    #     bottom_fields = ["computed_fields", "custom_fields", "relationships"]
+    #     for field_name in bottom_fields:
+    #         if field_name in field_names:
+    #             field_names.remove(field_name)
+    #             field_names.append(field_name)
+
+    #     return field_names
 
 
 class NautobotMetadata(SimpleMetadata):

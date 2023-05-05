@@ -338,6 +338,22 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = [UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "model"))]
+        field_order = {
+            "Device Type": ["manufacturer", "model", "slug", "part_number", "u_height"],
+            "Rack Images": ["front_image", "rear_image"],
+            # I think Notes, Tags and Comments could be abstracted form this list since they mostly appear on all Serializers/Models
+            # Same with CustomFields and Relationships(to be determined)
+            "Notes": ["notes"],
+            "Tags": ["tags"],
+            "Comments": ["comments"],
+        }
+        # As of now just hardcode your options, In the future we could use a more structured pattern
+        ui_options = {
+            "style": {
+                "columns": 2,
+                "columnGap": "2rem"
+            }
+        }
 
     def validate(self, data):
         # Validate uniqueness of (manufacturer, slug) since we omitted the automatically-created validator from Meta.
