@@ -2,7 +2,7 @@ import { RouterButton } from "./RouterButton";
 import { ButtonGroup, SkeletonText } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Box,
     Heading,
@@ -50,20 +50,22 @@ export default function ObjectListTable({
 }) {
     let location = useLocation();
     const columnHelper = useMemo(() => createColumnHelper(), []);
-    let defaultNames = defaultHeaders.map((e) => e.key);
-    let allNames = tableHeaders.map((e) => e.key);
 
-    if (defaultNames.length === 0) {
-        defaultNames = allNames;
-    }
+    const [columnVisibility, setColumnVisibility] = useState({});
+    useEffect(() => {
+        let defaultNames = defaultHeaders.map((e) => e.key);
+        let allNames = tableHeaders.map((e) => e.key);
 
-    let disabledNames = allNames.filter((v) => !defaultNames.includes(v));
-    const columnState = {};
-    for (const key of disabledNames) {
-        columnState[key] = false;
-    }
-
-    const [columnVisibility, setColumnVisibility] = useState(columnState);
+        if (defaultNames.length === 0) {
+            defaultNames = allNames;
+        }
+        let disabledNames = allNames.filter((v) => !defaultNames.includes(v));
+        let columnState = {};
+        for (const key of disabledNames) {
+            columnState[key] = false;
+        }
+        setColumnVisibility(columnState);
+    }, [defaultHeaders, tableHeaders]);
     const columns = useMemo(
         () =>
             tableHeaders.map(({ key, title }, idx) =>
