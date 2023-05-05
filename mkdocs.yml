@@ -184,6 +184,7 @@ nav:
           - Overview: "rest-api/overview.md"
           - Filtering: "rest-api/filtering.md"
           - Authentication: "rest-api/authentication.md"
+          - UI Endpoints: "rest-api/ui-related-endpoints.md"
       - GraphQL API:
           - Overview: "additional-features/graphql.md"
       - Installing and Using Plugins: "plugins/index.md"

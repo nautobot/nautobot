@@ -183,6 +183,81 @@ def rest_api_server_error(request, *args, **kwargs):
     return JsonResponse(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
+def format_output(field, field_value):
+    """TODO: docstring required."""
+    data = {
+        "field_name": field,  # Form field placeholder
+        "type": "others",  # Param type e.g select field, char field, datetime field etc.
+        "choices": [],  # Param choices for select fields
+        "help_text": None,  # Form field placeholder
+        "label": None,  # Form field placeholder
+        "required": False,  # Form field placeholder
+    }
+    # TODO: fix these local imports if at all possible
+    from nautobot.core.api import WritableNestedSerializer
+    from rest_framework.fields import CharField
+    from rest_framework.fields import IntegerField
+    from rest_framework.serializers import ListSerializer
+    from nautobot.core.api import ChoiceField
+
+    kwargs = {}
+    if isinstance(field_value, (WritableNestedSerializer, ListSerializer)):
+        kwargs = {
+            "type": "dynamic-choice-field",
+        }
+        extra_kwargs = {}
+
+        if isinstance(field_value, WritableNestedSerializer):
+            extra_kwargs = {
+                "label": getattr(field_value, "label", None) or field,
+                "required": field_value.required,
+                "help_text": field_value.help_text,
+            }
+        elif isinstance(field_value, ListSerializer):
+            extra_kwargs = {
+                "label": "Tags",
+                "required": False,
+            }
+        kwargs.update(extra_kwargs)
+    elif isinstance(field_value, ChoiceField):
+        kwargs = {
+            "type": "choice-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+            "choices": field_value.choices.items(),
+        }
+    elif isinstance(field_value, CharField):
+        kwargs = {
+            "type": "char-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+        }
+    elif isinstance(field_value, IntegerField):
+        kwargs = {
+            "type": "integer-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+        }
+    data.update(kwargs)
+    return data
+
+
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
+def get_data_for_serializer_parameter(model):
+    """TODO: docstring."""
+    serializer = get_serializer_for_model(model)
+    writeable_fields = {
+        field_name: format_output(field_name, field_value)
+        for field_name, field_value in serializer().get_fields().items()
+        if not field_value.read_only
+    }
+    return writeable_fields
+
+
 def get_relation_info_for_nested_serializers(model_class, related_model, field_name):
     """Get the DRF RelationInfo object needed for build_nested_field()"""
     relation_info = RelationInfo(

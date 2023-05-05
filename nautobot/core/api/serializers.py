@@ -193,6 +193,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         """
         Return a two tuple of (cls, kwargs) to build a serializer field with.
         """
+        request = self.context.get("request")
+        # Make sure that PATCH/POST/PUT method response serializers are consistent
+        # with depth of 0
+        if request is not None and request.method != "GET":
+            nested_depth = 0
         # For tags field, DRF does not recognize the relationship between tags and the model itself (?)
         # so instead of calling build_nested_field() it will call build_property_field() which
         # makes the field impervious to the `?depth` parameter.
@@ -216,10 +221,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.ModelSerializer):
         """
         Create a property field for model methods and properties.
         """
-        if field_name == "tags":
+        if isinstance(getattr(model_class, field_name, None), TagsManager):
             field_class = NautobotPrimaryKeyRelatedField
             field_kwargs = {
                 "queryset": Tag.objects.get_for_model(model_class),
+                "many": True,
                 "required": False,
             }
 
@@ -580,3 +586,15 @@ class NautobotModelSerializer(
 
     Can also be used for models derived from BaseModel, so long as they support custom fields, notes, and relationships.
     """
+
+    web_url = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.URLField())
+    def get_web_url(self, obj):
+        return obj.get_absolute_url()
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "web_url" field is always present."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "web_url")
+        return fields

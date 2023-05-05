@@ -13,6 +13,7 @@ from django.test import TestCase as _TestCase
 from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import urlencode
+from django.utils.html import escape
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
@@ -174,7 +175,7 @@ class ViewTestCases:
             response_body = testing.extract_page_body(response.content.decode(response.charset))
 
             # The object's display name or string representation should appear in the response
-            self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
+            self.assertIn(escape(getattr(instance, "display", str(instance))), response_body, msg=response_body)
 
             # If any Relationships are defined, they should appear in the response
             if self.relationships is not None:
@@ -182,13 +183,13 @@ class ViewTestCases:
                     content_type = ContentType.objects.get_for_model(instance)
                     if content_type == relationship.source_type:
                         self.assertIn(
-                            relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_SOURCE),
+                            escape(relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_SOURCE)),
                             response_body,
                             msg=response_body,
                         )
                     if content_type == relationship.destination_type:
                         self.assertIn(
-                            relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_DESTINATION),
+                            escape(relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_DESTINATION)),
                             response_body,
                             msg=response_body,
                         )
@@ -196,12 +197,14 @@ class ViewTestCases:
             # If any Custom Fields are defined, they should appear in the response
             if self.custom_fields is not None:
                 for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
-                    self.assertIn(str(custom_field), response_body, msg=response_body)
+                    self.assertIn(escape(str(custom_field)), response_body, msg=response_body)
                     if custom_field.type == extras_choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
                         for value in instance.cf.get(custom_field.key):
-                            self.assertIn(str(value), response_body, msg=response_body)
+                            self.assertIn(escape(str(value)), response_body, msg=response_body)
                     else:
-                        self.assertIn(str(instance.cf.get(custom_field.key) or ""), response_body, msg=response_body)
+                        self.assertIn(
+                            escape(str(instance.cf.get(custom_field.key) or "")), response_body, msg=response_body
+                        )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):
@@ -656,8 +659,8 @@ class ViewTestCases:
             content = testing.extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
-                self.assertRegex(content, r">\s*" + re.escape(instance1.name) + r"\s*<", msg=content)
-                self.assertNotRegex(content, r">\s*" + re.escape(instance2.name) + r"\s*<", msg=content)
+                self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
+                self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
             try:
                 self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
                 self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)

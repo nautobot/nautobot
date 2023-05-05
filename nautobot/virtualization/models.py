@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.urls import reverse
 
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.models import BaseManager
@@ -53,9 +52,6 @@ class ClusterType(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("virtualization:clustertype", args=[self.pk])
-
     def to_csv(self):
         return (
             self.name,
@@ -87,9 +83,6 @@ class ClusterGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("virtualization:clustergroup", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -155,9 +148,6 @@ class Cluster(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("virtualization:cluster", args=[self.pk])
 
     def clean(self):
         super().clean()
@@ -299,9 +289,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("virtualization:virtualmachine", args=[self.pk])
-
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a VM assigned to the same Cluster and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
@@ -432,9 +419,6 @@ class VMInterface(PrimaryModel, BaseInterface):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("virtualization:vminterface", kwargs={"pk": self.pk})
 
     def to_csv(self):
         return (

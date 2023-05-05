@@ -164,8 +164,8 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, **kwargs):
-    """Wrapper to run a command locally or inside the nautobot container."""
+def run_command(context, command, service="nautobot", **kwargs):
+    """Wrapper to run a command locally or inside the provided container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
         if "hide" not in kwargs:
@@ -175,10 +175,10 @@ def run_command(context, command, **kwargs):
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
-        if "nautobot" in results.stdout:
-            compose_command = f"exec nautobot {command}"
+        if service in results.stdout:
+            compose_command = f"exec {service} {command}"
         else:
-            compose_command = f"run --entrypoint '{command}' nautobot"
+            compose_command = f"run --rm --entrypoint '{command}' {service}"
 
         docker_compose(context, compose_command, pty=True)
 
@@ -432,7 +432,10 @@ def nbshell(context):
 @task(help={"service": "Name of the service to shell into"})
 def cli(context, service="nautobot"):
     """Launch a bash shell inside the running Nautobot (or other) Docker container."""
-    docker_compose(context, f"exec {service} bash", pty=True)
+    context.nautobot.local = False
+    command = "bash"
+
+    run_command(context, command, service=service, pty=True)
 
 
 @task(
@@ -617,7 +620,7 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
+    command = "markdownlint --ignore nautobot/project-static --ignore nautobot/ui/node_modules --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
     run_command(context, command)
 
 
@@ -838,6 +841,55 @@ def performance_test(
 
 @task(
     help={
+        "label": "Specify a directory to test instead of running all Nautobot UI tests.",
+    },
+)
+def unittest_ui(
+    context,
+    label=None,
+):
+    """Run Nautobot UI unit tests."""
+    command = "npm run test -- --watchAll=false"
+    if label:
+        command += f" {label}"
+    run_command(context, command, service="nodejs")
+
+
+@task(
+    help={
+        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
+    }
+)
+def prettier(context, autoformat=False):
+    """Check Node.JS code style with Prettier."""
+    if autoformat:
+        prettier_command = "npx prettier -w"
+    else:
+        prettier_command = "npx prettier -c"
+
+    command = f"{prettier_command} ."
+
+    run_command(context, command)
+
+
+@task(
+    help={
+        "autoformat": "Apply some recommendations automatically, rather than failing if formatting is incorrect. Not all issues can be fixed automatically.",
+    }
+)
+def eslint(context, autoformat=False):
+    """Check for ESLint rule compliance and other style issues."""
+    eslint_command = "npx eslint --max-warnings 0"
+
+    if autoformat:
+        eslint_command += " --fix"
+
+    command = f"{eslint_command} ."
+    run_command(context, command)
+
+
+@task(
+    help={
         "lint-only": "Only run linters; unit tests will be excluded.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
     }
@@ -846,6 +898,8 @@ def tests(context, lint_only=False, keepdb=False):
     """Run all linters and unit tests."""
     black(context)
     flake8(context)
+    prettier(context)
+    eslint(context)
     hadolint(context)
     markdownlint(context)
     yamllint(context)
@@ -855,3 +909,18 @@ def tests(context, lint_only=False, keepdb=False):
     build_and_check_docs(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)
+
+
+@task(help={"version": "The version number or the rule to update the version."})
+def version(context, version=None):  # pylint: disable=redefined-outer-name
+    """
+    Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is
+    provided.
+
+    The version number or rules are those supported by `poetry version`.
+    """
+    if version is None:
+        version = ""
+
+    run_command(context, f"poetry version --short {version}")
+    run_command(context, f"npm --prefix nautobot/ui version {version}")

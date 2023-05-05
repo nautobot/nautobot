@@ -8,7 +8,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-from django.urls import reverse
 from django.utils.functional import cached_property
 
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
@@ -321,9 +320,6 @@ class DynamicGroup(OrganizationalModel):
     def count(self):
         """Return the number of member objects in this group."""
         return self.members.count()
-
-    def get_absolute_url(self):
-        return reverse("extras:dynamicgroup", kwargs={"pk": self.pk})
 
     def get_group_members_url(self):
         """Get URL to group members."""
