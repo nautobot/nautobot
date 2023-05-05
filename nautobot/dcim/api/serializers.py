@@ -176,6 +176,7 @@ class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     class Meta:
         model = LocationType
         fields = "__all__"
+        list_display_fields = ["name", "nestable", "content_types", "description"]
 
 
 class LocationSerializer(
@@ -195,6 +196,7 @@ class LocationSerializer(
         model = Location
         fields = "__all__"
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
+        list_display_fields = ["name", "status", "parent", "tenant", "description", "tags"]
         validators = []
 
     def validate(self, data):
@@ -219,6 +221,7 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     class Meta:
         model = RackGroup
         fields = "__all__"
+        list_display_fields = ["name", "location", "rack_count", "description"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (location, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
@@ -250,6 +253,7 @@ class RackSerializer(
     class Meta:
         model = Rack
         fields = "__all__"
+        list_display_fields = ["name", "location", "rack_group", "status", "facility_id", "tenant", "role", "u_height"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
         # This prevents facility_id from being interpreted as a required field.
         validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
@@ -281,6 +285,7 @@ class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMi
     class Meta:
         model = RackReservation
         fields = "__all__"
+        list_display_fields = ["pk", "rack", "units", "user", "description"]
 
 
 class RackElevationDetailFilterSerializer(serializers.Serializer):
@@ -317,6 +322,7 @@ class ManufacturerSerializer(NautobotModelSerializer):
     class Meta:
         model = Manufacturer
         fields = "__all__"
+        list_display_fields = ["name", "device_type_count", "platform_count", "description"]
 
 
 class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -326,6 +332,7 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = DeviceType
         fields = "__all__"
+        list_display_fields = ["model", "manufacturer", "part_number", "u_height", "is_full_depth", "device_count"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
@@ -419,6 +426,14 @@ class PlatformSerializer(NautobotModelSerializer):
     class Meta:
         model = Platform
         fields = "__all__"
+        list_display_fields = [
+            "name",
+            "manufacturer",
+            "device_count",
+            "virtual_machine_count",
+            "napalm_driver",
+            "description",
+        ]
 
 
 class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -434,6 +449,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Device
         fields = "__all__"
+        list_display_fields = ["name", "status", "tenant", "location", "rack", "role", "device_type", "primary_ip"]
         validators = []
 
     def validate(self, data):
@@ -564,6 +580,7 @@ class InterfaceSerializer(
     class Meta:
         model = Interface
         fields = "__all__"
+        list_display_fields = ["device", "name", "status", "label", "enabled", "type", "description"]
 
     def validate(self, data):
         # Validate many-to-many VLAN assignments
@@ -607,6 +624,7 @@ class DeviceRedundancyGroupSerializer(
     class Meta:
         model = DeviceRedundancyGroup
         fields = "__all__"
+        list_display_fields = ["name", "status", "failover_strategy", "device_count"]
 
 
 #
@@ -653,6 +671,13 @@ class CableSerializer(
     class Meta:
         model = Cable
         fields = "__all__"
+        list_display_fields = [
+            "label",
+            "termination_a",
+            "termination_b",
+            "status",
+            "type",
+        ]
 
     def _get_termination(self, obj, side):
         """
@@ -793,6 +818,7 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     class Meta:
         model = VirtualChassis
         fields = "__all__"
+        list_display_fields = ["name", "domain", "master", "member_count"]
 
 
 #
