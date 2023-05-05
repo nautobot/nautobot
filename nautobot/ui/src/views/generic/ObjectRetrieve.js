@@ -11,7 +11,6 @@ import {
     Button as UIButton,
     ButtonGroup,
     Heading,
-    Link,
     Tab,
     Tabs,
     TabList,
@@ -24,6 +23,11 @@ import {
     Tr,
     Text,
     MeatballsIcon,
+    Modal,
+    ModalBody,
+    ModalCloseButton,
+    ModalContent,
+    ModalOverlay,
     NautobotGrid,
     NautobotGridItem,
     NtcThumbnailIcon,
@@ -40,6 +44,8 @@ import ObjectListTable from "@components/ObjectListTable";
 import { useGetRESTAPIQuery } from "@utils/api";
 import { humanFriendlyDate } from "@utils/date";
 import { uiUrl } from "@utils/url";
+import RouterLink from "@components/RouterLink";
+import { useDisclosure } from "@chakra-ui/react";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
@@ -82,19 +88,19 @@ function DetailFieldValue(value) {
                 value.map((v, idx) =>
                     typeof v === "object" && v !== null ? (
                         <div>
-                            <Link ref={ref} href={uiUrl(v.url)} key={idx}>
+                            <RouterLink ref={ref} to={uiUrl(v.url)} key={idx}>
                                 {v.display}
-                            </Link>
+                            </RouterLink>
                         </div>
                     ) : (
                         <div>{v}</div>
                     )
                 )
             ) : "url" in value ? (
-                <Link ref={ref} href={uiUrl(value.url)}>
+                <RouterLink ref={ref} to={uiUrl(value.url)}>
                     {" "}
                     {value.display}{" "}
-                </Link>
+                </RouterLink>
             ) : "label" in value ? (
                 <>{value.label}</>
             ) : (
@@ -160,6 +166,7 @@ function RenderRow(props) {
 
 export default function ObjectRetrieve({ api_url }) {
     const { app_name, model_name, object_id } = useParams();
+    const { isOpen, onClose, onOpen } = useDisclosure();
     const location = useLocation();
     const isPluginView = location.pathname.includes("/plugins/");
     const pluginPrefix = isPluginView ? "plugins/" : "";
@@ -182,14 +189,18 @@ export default function ObjectRetrieve({ api_url }) {
         : null;
     var { data: appConfig } = useSWR(() => ui_url, fetcher);
     // ChangeLog Data
-    const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}`;
+    const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}&depth=1`;
     const {
         data: changelogData,
         isError: changelog_error,
         isLoading: changelogDataLoading,
         isFetching: changelogDataFetching,
     } = useSWR(() => changelog_url, fetcher);
-    const { data: changelogHeaderData } = useGetRESTAPIQuery({
+    const {
+        data: changelogHeaderData,
+        isFetching: changelogHeaderDataFetching,
+        isLoading: changelogHeaderDataLoading,
+    } = useGetRESTAPIQuery({
         app_name: "extras",
         model_name: "object-changes",
         schema: true,
@@ -203,7 +214,11 @@ export default function ObjectRetrieve({ api_url }) {
         isLoading: noteDataLoading,
         isFetching: noteDataFetching,
     } = useSWR(() => notes_url, fetcher);
-    const { data: noteHeaderData } = useGetRESTAPIQuery({
+    const {
+        data: noteHeaderData,
+        isFetching: noteHeaderDataFetching,
+        isLoading: noteHeaderDataLoading,
+    } = useGetRESTAPIQuery({
         app_name: "extras",
         model_name: "notes",
         schema: true,
@@ -233,8 +248,12 @@ export default function ObjectRetrieve({ api_url }) {
     }
     const route_name = `${app_name}:${model_name}`;
     let obj = objectData;
-    let changelogDataLoaded = !(changelogDataLoading || changelogDataFetching);
-    let noteDataLoaded = !(noteDataLoading || noteDataFetching);
+    let changelogDataLoaded =
+        !(changelogDataLoading || changelogDataFetching) &&
+        !(changelogHeaderDataLoading || changelogHeaderDataFetching);
+    let noteDataLoaded =
+        !(noteDataLoading || noteDataFetching) &&
+        !(noteHeaderDataLoading || noteHeaderDataFetching);
     const default_view = (
         <GenericView objectData={objectData}>
             <Box background="white-0" borderRadius="md">
@@ -278,9 +297,20 @@ export default function ObjectRetrieve({ api_url }) {
                             size="sm"
                             variant="primaryAction"
                             leftIcon={<MeatballsIcon />}
+                            onClick={onOpen}
                         >
                             Actions
                         </UIButton>
+
+                        <Modal isOpen={isOpen} onClose={onClose}>
+                            <ModalOverlay />
+
+                            <ModalContent>
+                                <ModalCloseButton />
+
+                                <ModalBody>To be implemented!</ModalBody>
+                            </ModalContent>
+                        </Modal>
                     </ButtonGroup>
                 </Box>
 

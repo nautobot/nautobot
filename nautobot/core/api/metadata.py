@@ -204,7 +204,7 @@ class NautobotMetadata(SimpleMetadata):
         fields = []
 
         processor = NautobotColumnProcessor(serializer, request.parser_context)
-        field_map = dict(processor.fields)
+        field_map = dict(serializer.fields)
         all_fields = list(field_map)
 
         # Explicitly order the "big ugly" fields to the bottom.

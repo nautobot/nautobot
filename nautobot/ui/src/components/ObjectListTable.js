@@ -15,6 +15,7 @@ import {
     PlusIcon,
     Button,
     EditIcon,
+    useToast,
 } from "@nautobot/nautobot-ui";
 import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
@@ -51,6 +52,11 @@ export default function ObjectListTable({
     const columnHelper = useMemo(() => createColumnHelper(), []);
     let defaultNames = defaultHeaders.map((e) => e.key);
     let allNames = tableHeaders.map((e) => e.key);
+
+    if (defaultNames.length === 0) {
+        defaultNames = allNames;
+    }
+
     let disabledNames = allNames.filter((v) => !defaultNames.includes(v));
     const columnState = {};
     for (const key of disabledNames) {
@@ -110,6 +116,15 @@ export default function ObjectListTable({
         actionMenu: ActionMenu,
     });
 
+    const toast = useToast({
+        duration: 5000,
+        isClosable: true,
+        position: "top-right",
+        status: "success",
+        description: "You have successfully made toast.",
+        title: "Ta da!",
+    });
+
     return (
         <Box background="white-0" borderRadius="md" padding="md">
             {!include_button ? null : (
@@ -126,7 +141,7 @@ export default function ObjectListTable({
                         {tableTitle}
                     </Heading>
                     <ButtonGroup pb="sm" alignItems="center">
-                        <UIButton size="sm" variant="secondary">
+                        <UIButton size="sm" variant="secondary" onClick={toast}>
                             Filters
                         </UIButton>
                         <UIButton
@@ -137,6 +152,7 @@ export default function ObjectListTable({
                             Actions
                         </UIButton>
                         <Icon.TbMinusVertical />
+
                         <RouterButton
                             to={`${location.pathname}add/`}
                             size="sm"
