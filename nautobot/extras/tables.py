@@ -97,7 +97,7 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 <button type="button"
         onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
         title="Dry Run"
-        class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+        class="btn btn-primary btn-xs"{% if not perms.extras.run_job or not record.job_model.supports_dryrun %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-play"></i>
 </button>
 <button type="button"
@@ -518,7 +518,7 @@ class JobTable(BaseTable):
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
     description = tables.Column(accessor="description_first_line")
-    commit_default = BooleanColumn()
+    dryrun_default = BooleanColumn()
     hidden = BooleanColumn()
     read_only = BooleanColumn()
     approval_required = BooleanColumn()
@@ -556,7 +556,7 @@ class JobTable(BaseTable):
             "enabled",
             "has_sensitive_variables",
             "description",
-            "commit_default",
+            "dryrun_default",
             "hidden",
             "read_only",
             "is_job_hook_receiver",

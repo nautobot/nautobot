@@ -116,6 +116,8 @@
     var requires_approval = {{ job_model.approval_required|yesno:"true,false" }};
     var run_now_text;
     var schedule_text;
+    var dry_run_text = "Run Job Now (DRYRUN)";
+    var schedule_dry_run_text = "Schedule Job (DRYRUN)";
 
     if (requires_approval) {
         run_now_text = "Request to Run Job Now";
@@ -130,10 +132,21 @@
          * Toggle form elements based on the job execution type.
          * If the type is `immediately` (the default), don't show
          * any of the scheduling related elements, else, show them.
+         * If dryrun is selected, the job may run without approval.
          **/
+        var dryrun = false;
+        if ($("#id_dryrun").prop("type") === "checkbox") {
+            dryrun = $("#id_dryrun").prop("checked")
+        } else if ($("#id_dryrun").prop("type") === "hidden") {
+            dryrun = ($("#id_dryrun").val() === "True")
+        }
         if ($("#id__schedule_type").val() == "immediately") {
             // Toggle run button
-            $("#id__run").html('<i class="mdi mdi-play"></i> ' + run_now_text);
+            if (dryrun){
+                $("#id__run").html('<i class="mdi mdi-play"></i> ' + dry_run_text);
+            } else {
+                $("#id__run").html('<i class="mdi mdi-play"></i> ' + run_now_text);
+            }
             $("#id__run").addClass("btn-primary");
             $("#id__run").removeClass("btn-warning");
 
@@ -143,7 +156,11 @@
             $("#id__schedule_start_time").parent().parent().hide();
         } else {
             // Toggle run button
-            $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_text);
+            if (dryrun){
+                $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_dry_run_text);
+            } else {
+                $("#id__run").html('<i class="mdi mdi-clock"></i> ' + schedule_text);
+            }
             $("#id__run").addClass("btn-warning");
             $("#id__run").removeClass("btn-primary");
 
@@ -163,11 +180,12 @@
     $(document).ready(function() {
         {% if not job_model.has_sensitive_variables %}
             $("#id__schedule_type").change(toggleExecutionType);
-            toggleExecutionType();
         {% else %}
             $("#id__schedule_type").val("immediately");
             $(".job_execution").hide();
         {% endif %}
+        $("#id_dryrun").change(toggleExecutionType);
+        toggleExecutionType();
     });
 </script>
 {% endblock %}

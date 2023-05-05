@@ -788,17 +788,26 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"job_class_name": "TestPass", "enabled": False}
         self.assertTrue(self.filterset(params, self.queryset).qs.exists())
 
-    def test_commit_default(self):
-        params = {"commit_default": False}
+    def test_dryrun_default(self):
+        params = {"dryrun_default": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_hidden(self):
         params = {"hidden": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
+    def test_read_only(self):
+        params = {"read_only": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(read_only=True)
+        )
+
     def test_approval_required(self):
         params = {"approval_required": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(approval_required=True),
+        )
 
     def test_search(self):
         params = {"q": "file"}

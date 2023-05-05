@@ -119,7 +119,7 @@
               <strong>User Inputs</strong>
           </div>
           <table class="table table-hover panel-body attr-table">
-              {% for key, value in object.kwargs.data.items %}
+              {% for key, value in object.kwargs.items %}
               <tr>
                 <td>{{ labels|get_item:key }}</td>
                 <td>{% if value is None %}–{% else %}<code>{{ value }}</code>{% endif %}</td>

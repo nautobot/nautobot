@@ -161,18 +161,16 @@ class Job(PrimaryModel):
     approval_required = models.BooleanField(
         default=False, help_text="Whether the job requires approval from another user before running"
     )
-    commit_default = models.BooleanField(
-        default=True, help_text="Whether the job defaults to committing changes when run, or defaults to a dry-run"
-    )
     hidden = models.BooleanField(
         default=False,
         db_index=True,
         help_text="Whether the job defaults to not being shown in the UI",
     )
     # Job.Meta.field_order is not overridable in this model
-    read_only = models.BooleanField(
-        default=False, help_text="Whether the job is prevented from making lasting changes to the database"
+    dryrun_default = models.BooleanField(
+        default=False, help_text="Whether the job defaults to running with dryrun argument set to true"
     )
+    read_only = models.BooleanField(default=False, help_text="Whether the job is only permitted to run with dryrun set")
     soft_time_limit = models.FloatField(
         default=0,
         validators=[MinValueValidator(0)],
@@ -191,6 +189,10 @@ class Job(PrimaryModel):
         blank=True,
         help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
     )
+    supports_dryrun = models.BooleanField(
+        default=False,
+        help_text="If supported, allows the job to bypass approval when running with dryrun argument set to true",
+    )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     grouping_override = models.BooleanField(
@@ -205,12 +207,11 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured description will remain even if the underlying Job source code changes",
     )
-
     approval_required_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    commit_default_override = models.BooleanField(
+    dryrun_default_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )

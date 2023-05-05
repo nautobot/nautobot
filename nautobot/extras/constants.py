@@ -24,7 +24,7 @@ JOB_OVERRIDABLE_FIELDS = (
     "grouping",
     "name",
     "description",
-    "commit_default",
+    "dryrun_default",
     "hidden",
     "read_only",
     "approval_required",

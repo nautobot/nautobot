@@ -115,16 +115,19 @@ Default: `False`
 
 A boolean that will mark this job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
-#### `commit_default`
+#### `dryrun_default`
 
-Default: `True`
++/- 2.0.0
+    The `commit_default` field was renamed to `dryrun_default` and the default value was changed from `True` to `False`.
 
-The checkbox to commit database changes when executing a job is checked by default in the Nautobot UI. You can set `commit_default` to `False` under the `Meta` class if you want this option to instead be unchecked by default.
+Default: `False`
+
+The checkbox to enable dryrun when executing a job is unchecked by default in the Nautobot UI. You can set `dryrun_default` to `True` under the `Meta` class if you want this option to instead be checked by default.
 
 ```python
 class MyJob(Job):
     class Meta:
-        commit_default = False
+        dryrun_default = True
 ```
 
 #### `field_order`
@@ -168,7 +171,7 @@ Important notes about hidden jobs:
 
 Default: `False`
 
-A boolean that designates whether the job is able to make changes to data in the database. The value defaults to `False` but when set to `True`, any data modifications executed from the job's code will be automatically aborted at the end of the job. The job input form is also modified to remove the `commit` checkbox as it is irrelevant for read-only jobs. When a job is marked as read-only, log messages that are normally automatically emitted about the DB transaction state are not included because no changes to data are allowed. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
+A boolean that when set will only allow the job to run when the `dryrun` argument is set to `True`. The job input form is also modified to remove the `dryrun` checkbox as it is irrelevant for read-only jobs. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 #### `soft_time_limit`
 
@@ -188,7 +191,7 @@ class ExampleJobWithSoftTimeLimit(Job):
         description = "Set a soft time limit of 10 seconds`"
         soft_time_limit = 10
 
-    def run(self, data, commit):
+    def run(self):
         try:
             # code which might take longer than 10 seconds to run
             job_code()
@@ -253,7 +256,7 @@ class ExampleJobWithHardTimeLimit(Job):
         description = "Set a hard time limit of 10 seconds`"
         time_limit = 10
 
-    def run(self, data, commit):
+    def run(self):
         # code which might take longer than 10 seconds to run
         # this code will fail silently if the time_limit is exceeded
         job_code()
@@ -274,7 +277,7 @@ class CreateDevices(Job):
     var2 = IntegerVar(...)
     var3 = ObjectVar(...)
 
-    def run(self, data, commit):
+    def run(self):
         ...
 ```
 
@@ -314,6 +317,10 @@ Stores a numeric integer. Options include:
 #### `BooleanVar`
 
 A true/false flag. This field has no options beyond the defaults listed above.
+
+#### `DryRunVar`
+
+A true/false flag with special handling for jobs that require approval. If `dryrun = DryRunVar()` is declared on a job class, approval may be bypassed if `dryrun` is set to `True` on job execution.
 
 #### `ChoiceVar`
 
@@ -410,10 +417,7 @@ An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two a
 
 ### The `run()` Method
 
-The `run()` method, if you choose to implement it, should accept two arguments:
-
-1. `data` - A dictionary which will contain all of the variable data passed in by the user (via the web UI or REST API)
-2. `commit` - A boolean indicating whether database changes should be committed. If this is `False`, even if your Job attempts to make database changes, they will be automatically rolled back when the Job completes.
+The `run()` method must be implemented. After the `self` argument, it should accept keyword arguments for any variables defined on the job:
 
 ```python
 from nautobot.extras.jobs import Job, StringVar, IntegerVar, ObjectVar
@@ -423,20 +427,11 @@ class CreateDevices(Job):
     var2 = IntegerVar(...)
     var3 = ObjectVar(...)
 
-    def run(self, data, commit):
+    def run(self, var1, var2, var3):
         ...
 ```
 
-Again, defining user variables is totally optional; you may create a job with just a `run()` method if no user input is needed, in which case `data` will be an empty dictionary.
-
-!!! note
-    The `test_*()` and `post_run()` methods do not accept any arguments; if you need to access user `data` or the `commit` flag, your `run()` method is responsible for storing these values in the job instance, such as:
-
-    ```
-    def run(self, data, commit):
-        self.data = data
-        self.commit = commit
-    ```
+Again, defining user variables is totally optional; you may create a job with a `run()` method with only the `self` argument if no user input is needed.
 
 !!! warning
     When writing Jobs that create and manipulate data it is recommended to make use of the `validated_save()` convenience method which exists on all core models. This method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../development/best-practices.md).
@@ -444,15 +439,8 @@ Again, defining user variables is totally optional; you may create a job with ju
 !!! warning
     The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
 
-### The `test_*()` Methods
-
-If your job class defines any number of methods whose names begin with `test_`, these will be automatically invoked after the `run()` method (if any) completes. These methods must take no arguments (other than `self`).
-
-Log messages generated by any of these methods will be automatically grouped together by the test method they were invoked from, which can be helpful for readability.
-
-### The `post_run()` Method
-
-If your job class implements a `post_run()` method (which must take no arguments other than `self`), this method will be automatically invoked after the `run()` and `test_*()` methods (if any). It will be called even if one of the other methods raises an exception, so this method can be used to handle any necessary cleanup or final events (such as sending an email or triggering a webhook). The status of the overall job is available at this time as `self.failed` and the associated [`JobResult`](../models/extras/jobresult.md) `data` field is available as `self.results`.
+--- 2.0.0
+    The Netbox backwards compatible `test_*()` and `post_run()` methods have been removed.
 
 ### Logging
 
@@ -523,7 +511,7 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `name`
 * `description`
 * `approval_required`
-* `commit_default`
+* `dryrun_default`
 * `has_sensitive_variables`
 * `hidden`
 * `read_only`
@@ -571,9 +559,9 @@ Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md)
 
 ### Via the API
 
-To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to set the `commit` flag, specify any required user input `data`, optional `task_queue`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to specify any required user input `data`, optional `task_queue`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
-For example, to run a job with no user inputs and without committing any anything to the database:
+For example, to run a job with no user inputs:
 
 ```no-highlight
 curl -X POST \
@@ -583,7 +571,7 @@ curl -X POST \
 http://nautobot/api/extras/jobs/$JOB_ID/run/
 ```
 
-Or to run a job that expects user inputs, and commit changes to the database:
+Or to run a job that expects user inputs:
 
 ```no-highlight
 curl -X POST \
@@ -591,7 +579,7 @@ curl -X POST \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=1.3; indent=4" \
 http://nautobot/api/extras/jobs/$JOB_ID/run/ \
---data '{"data": {"string_variable": "somevalue", "integer_variable": 123}, "commit": true}'
+--data '{"data": {"string_variable": "somevalue", "integer_variable": 123}}'
 ```
 
 When providing input data, it is possible to specify complex values contained in `ObjectVar`s, `MultiObjectVar`s, and `IPAddressVar`s.
@@ -602,7 +590,7 @@ When providing input data, it is possible to specify complex values contained in
 
 #### Jobs with Files
 
-To run a job that contains `FileVar` inputs via the REST API, you must use `multipart/form-data` content type requests instead of `application/json`. This also requires a slightly different request payload than the example above. The `commit`, `task_queue`, and `schedule` data are flattened and prefixed with underscore to differentiate them from job-specific data. Job specific data is also flattened and not located under the top-level `data` dictionary key.
+To run a job that contains `FileVar` inputs via the REST API, you must use `multipart/form-data` content type requests instead of `application/json`. This also requires a slightly different request payload than the example above. The `task_queue` and `schedule` data are flattened and prefixed with underscore to differentiate them from job-specific data. Job specific data is also flattened and not located under the top-level `data` dictionary key.
 
 An example of running a job with both `FileVar` (named `myfile`) and `StringVar` (named `interval`) input:
 
@@ -612,7 +600,6 @@ curl -X POST \
 -H 'Content-Type: multipart/form-data' \
 -H "Accept: application/json; version=1.3; indent=4" \
 'http://nautobot/api/extras/jobs/$JOB_ID/run/' \
--F '_commit="true"' \
 -F '_schedule_interval="immediately"' \
 -F '_schedule_start_time="2022-10-18T17:31:23.698Z"' \
 -F 'interval="3"' \
@@ -624,7 +611,7 @@ curl -X POST \
 Jobs can be run from the CLI by invoking the management command:
 
 ```no-highlight
-nautobot-server runjob [--username <username>] [--commit] [--local] [--data <data>] <class_path>
+nautobot-server runjob [--username <username>] [--local] [--data <data>] <class_path>
 ```
 
 !!! note
@@ -642,7 +629,7 @@ nautobot-server runjob --username myusername local/example/MyJobWithNoVars
 ```
 
 !!! warning
-    The `--username <username>` parameter can be used to specify the user that will be identified as the requester of the job. It is optional if the job will not be modifying the database, but is mandatory if you are running with `--commit`, as the specified user will own any resulting database changes.
+    The `--username <username>` must be supplied to specify the user that will be identified as the requester of the job.
 
     Note that `nautobot-server` commands, like all management commands and other direct interactions with the Django database, are not gated by the usual Nautobot user authentication flow. It is possible to specify any existing `--username` with the `nautobot-server runjob` command in order to impersonate any defined user in Nautobot. Use this power wisely and be cautious who you allow to access it.
 
@@ -675,17 +662,16 @@ class MyJobTestCase(TransactionTestCase):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
         job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
-        job_result = run_job_for_testing(job, data={}, commit=False)
+        job_result = run_job_for_testing(job, var1="abc", var2=123)
 
-        # Since we ran with commit=False, any database changes made by the job won't persist,
-        # but we can still inspect the logs created by running the job
+        # Inspect the logs created by running the job
         log_entries = JobLogEntry.objects.filter(job_result=job_result)
         for log_entry in log_entries:
             self.assertEqual(log_entry.message, "...")
 ```
 
 !!! tip
-    For more advanced examples (such as testing jobs executed with `commit=True`, for example) refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
+    For more advanced examples refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
 
 ### Nautobot 1.3.2 and earlier (including 1.2)
 
@@ -704,27 +690,41 @@ if "job_logs" in settings.DATABASES:
 Replicate the behavior of `run_job_for_testing` manually so that your test execution most closely resembles the way the celery worker would run the test:
 
 ```python
-import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.jobs import run_job
-from nautobot.extras.models import JobResult, Job
+from nautobot.extras.models import JobResult
 
-def run_job_for_testing(job, data=None, commit=True, username="test-user"):
-    if data is None:
-        data = {}
-    user_model = get_user_model()
-    user, _ = user_model.objects.get_or_create(username=username, is_superuser=True, password="password")
-    job_result = JobResult.objects.create(
-        name=job.class_path,
-        obj_type=ContentType.objects.get_for_model(Job),
-        user=user,
-        task_id=uuid.uuid4(),
+User = get_user_model()
+
+def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
+    """
+    Provide a common interface to run Nautobot jobs as part of unit tests.
+
+    Args:
+      job (Job): Job model instance (not Job class) to run
+      username (str): Username of existing or to-be-created User account to own the JobResult.
+      profile (bool): Whether to profile the job execution.
+      **kwargs: Input keyword arguments for Job run method.
+
+    Returns:
+      JobResult: representing the executed job
+    """
+    # Enable the job if it wasn't enabled before
+    if not job.enabled:
+        job.enabled = True
+        job.validated_save()
+
+    user_instance, _ = User.objects.get_or_create(
+        username=username, defaults={"is_superuser": True, "password": "password"}
     )
-    with web_request_context(user=user) as request:
-        run_job(data=data, request=request, commit=commit, job_result_pk=job_result.pk)
+    # Run the job synchronously in the current thread as if it were being executed by a worker
+    job_result = JobResult.execute_job(
+        job_model=job,
+        user=user_instance,
+        profile=profile,
+        **kwargs,
+    )
     return job_result
 ```
 
@@ -817,13 +817,13 @@ class NewBranch(Job):
         }
     )
 
-    def run(self, data, commit):
+    def run(self, site_name, switch_count, switch_model):
         STATUS_PLANNED = Status.objects.get(name='Planned')
 
         # Create the new site
         site = Site(
-            name=data['site_name'],
-            slug=slugify(data['site_name']),
+            name=site_name,
+            slug=slugify(site_name),
             status=STATUS_PLANNED,
         )
         site.validated_save()
@@ -833,9 +833,9 @@ class NewBranch(Job):
         device_ct = ContentType.objects.get_for_model(Device)
         switch_role = Role.objects.get(name='Access Switch')
         switch_role.content_types.add(device_ct)
-        for i in range(1, data['switch_count'] + 1):
+        for i in range(1, switch_count + 1):
             switch = Device(
-                device_type=data['switch_model'],
+                device_type=switch_model,
                 name=f'{site.slug}-switch{i}',
                 site=site,
                 status=STATUS_PLANNED,

@@ -1149,13 +1149,20 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
+        elif job_model.supports_dryrun and job_model.read_only and request.POST.get("dryrun", False) is not True:
+            messages.error(
+                request,
+                "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
+            )
+
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             task_queue = job_form.cleaned_data.get("_task_queue", None)
+            dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+            if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                 crontab = ""
 
                 if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
@@ -1261,7 +1268,7 @@ class JobApprovalRequestView(generic.ObjectView):
     job's execution, rather than initial job form input.
     """
 
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    queryset = ScheduledJob.objects.needs_approved()
     template_name = "extras/job_approval_request.html"
     additional_permissions = ("extras.view_job",)
 
@@ -1280,8 +1287,8 @@ class JobApprovalRequestView(generic.ObjectView):
 
         if job_class is not None:
             # Render the form with all fields disabled
-            initial = instance.kwargs.get("data", {})
-            initial["_commit"] = instance.kwargs.get("commit", True)
+            initial = instance.kwargs
+            initial["_task_queue"] = instance.queue
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
             job_form = None
@@ -1317,10 +1324,13 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job cannot be run at this time")
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")
+            elif not job_model.job_class.supports_dryrun:
+                messages.error(request, "This job does not support dryrun")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view
                 job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
-                celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
+                job_kwargs["dryrun"] = True
+                celery_kwargs = {"queue": scheduled_job.queue}
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,

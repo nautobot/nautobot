@@ -213,6 +213,20 @@ class JobTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
+    def test_read_only_no_dryrun_field(self):
+        """
+        Assert that dryrun form field is not shown when a job is set as read only.
+        """
+        module = "test_read_only_job"
+        name = "TestReadOnlyJob"
+        job_class = get_job(f"local/{module}/{name}")
+
+        form = job_class().as_form()
+        self.assertInHTML(
+            "<input id='id_dryrun' name='dryrun' type='hidden' value='True'>",
+            form.as_table(),
+        )
+
     def test_ip_address_vars(self):
         """
         Test that IPAddress variable fields behave as expected.
@@ -393,6 +407,23 @@ class JobTest(TransactionTestCase):
             form.as_table(),
         )
 
+    def test_supports_dryrun(self):
+        """
+        Test job class supports_dryrun field and job model supports_dryrun field
+        """
+
+        module = "test_dry_run"
+        name = "TestDryRun"
+        job_class, job_model = get_job_class_and_model(module, name)
+        self.assertTrue(job_class.supports_dryrun)
+        self.assertTrue(job_model.supports_dryrun)
+
+        module = "test_pass"
+        name = "TestPass"
+        job_class, job_model = get_job_class_and_model(module, name)
+        self.assertFalse(job_class.supports_dryrun)
+        self.assertFalse(job_model.supports_dryrun)
+
     def test_job_profiling(self):
         module = "test_profiling"
         name = "TestProfilingJob"
@@ -409,6 +440,25 @@ class JobTest(TransactionTestCase):
         profiling_result = Path(f"/tmp/nautobot-jobresult-{job_result.pk}.pstats")
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
+
+    def test_dryrun_default(self):
+        """Test that dryrun_default is reflected in job form."""
+        module = "test_dry_run"
+        name = "TestDryRun"
+        job_class, job_model = get_job_class_and_model(module, name)
+
+        # not overridden on job model, initial form field value should match job class
+        job_model.dryrun_default_override = False
+        job_model.save()
+        form = job_class().as_form()
+        self.assertEqual(form.fields["dryrun"].initial, job_class.dryrun_default)
+
+        # overridden on job model, initial form field value should match job model
+        job_model.dryrun_default_override = True
+        job_model.dryrun_default = not job_class.dryrun_default
+        job_model.save()
+        form = job_class().as_form()
+        self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -763,7 +813,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         for i in range(1, 7):
             ScheduledJob.objects.create(
                 name=f"test{i}",
-                task="nautobot.extras.jobs.scheduled_job_handler",
+                task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
                 job_class="local/test_pass/TestPass",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
@@ -773,7 +823,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         ScheduledJob.objects.create(
             name="test7",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
@@ -802,7 +852,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = ScheduledJob.objects.create(
             name="weekly_interval",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,

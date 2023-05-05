@@ -764,8 +764,8 @@ class JobEditForm(NautobotModelForm):
             "grouping",
             "description_override",
             "description",
-            "commit_default_override",
-            "commit_default",
+            "dryrun_default_override",
+            "dryrun_default",
             "hidden_override",
             "hidden",
             "read_only_override",
@@ -808,7 +808,7 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
     )
-    commit_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    dryrun_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(
         initial=False,
         required=False,

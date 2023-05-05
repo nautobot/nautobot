@@ -1,5 +1,6 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 from collections import OrderedDict
+import functools
 import inspect
 import json
 import logging
@@ -25,7 +26,6 @@ from django.utils.functional import classproperty
 import netaddr
 import yaml
 
-from nautobot.core.celery import nautobot_task
 from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -43,7 +43,6 @@ from nautobot.extras.models import (
     JobHook,
     JobResult,
     ObjectChange,
-    ScheduledJob,
 )
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import ChangeLoggedModelsQuery, jobs_in_directory, task_queues_as_choices
@@ -193,6 +192,8 @@ class BaseJob(Task):
         Returns:
             None: The return value of this handler is ignored.
         """
+        self.clear_cache()
+
         self.active_test = "initialization"
         try:
             self.job_result
@@ -200,18 +201,18 @@ class BaseJob(Task):
             raise RunJobTaskFailed(f"Unable to find associated job result for job {task_id}") from err
 
         try:
-            job_model = self.job_model
+            self.job_model
         except ObjectDoesNotExist as err:
             raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
 
-        if not job_model.enabled:
+        if not self.job_model.enabled:
             self.log_failure(
-                message=f"Job {job_model} is not enabled to be run!",
-                obj=job_model,
+                message=f"Job {self.job_model} is not enabled to be run!",
+                obj=self.job_model,
             )
 
-        soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
-        time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
+        soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+        time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
         if time_limit <= soft_time_limit:
             self.log_warning(
                 f"The hard time limit of {time_limit} seconds is less than "
@@ -379,8 +380,8 @@ class BaseJob(Task):
         return ""
 
     @classproperty
-    def commit_default(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "commit_default", True)
+    def dryrun_default(cls):  # pylint: disable=no-self-argument
+        return getattr(cls.Meta, "dryrun_default", False)
 
     @classproperty
     def hidden(cls):  # pylint: disable=no-self-argument
@@ -409,6 +410,10 @@ class BaseJob(Task):
     @classproperty
     def has_sensitive_variables(cls):  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "has_sensitive_variables", True)
+
+    @classproperty
+    def supports_dryrun(cls):  # pylint: disable=no-self-argument
+        return isinstance(getattr(cls, "dryrun", None), DryRunVar)
 
     @classproperty
     def task_queues(cls):  # pylint: disable=no-self-argument
@@ -484,12 +489,28 @@ class BaseJob(Task):
 
         form = self.as_form_class()(data, files, initial=initial)
 
-        job_model = JobModel.objects.get_for_class_path(self.class_path)
-        task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
+        try:
+            job_model = JobModel.objects.get_for_class_path(self.class_path)
+            read_only = job_model.read_only if job_model.read_only_override else self.read_only
+            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else self.dryrun_default
+            task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
+        except JobModel.DoesNotExist:
+            logger.error("No Job instance found in the database corresponding to %s", self.class_path)
+            read_only = self.read_only
+            dryrun_default = self.dryrun_default
+            task_queues = self.task_queues
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
+        if self.supports_dryrun:
+            if read_only:
+                # Hide the dryrun field for read only jobs
+                form.fields["dryrun"].widget = forms.HiddenInput()
+                form.fields["dryrun"].initial = True
+            elif not initial or "dryrun" not in initial:
+                # Set initial "dryrun" checkbox state based on the Meta parameter
+                form.fields["dryrun"].initial = dryrun_default
         if not settings.DEBUG:
             form.fields["_profile"].widget = forms.HiddenInput()
 
@@ -504,11 +525,25 @@ class BaseJob(Task):
 
         return form
 
-    @property
+    def clear_cache(self):
+        """
+        Clear all cached properties on this instance without accessing them. This is required because
+        celery reuses task instances for multiple runs.
+        """
+        try:
+            del self.job_result
+        except AttributeError:
+            pass
+        try:
+            del self.job_model
+        except AttributeError:
+            pass
+
+    @functools.cached_property
     def job_model(self):
         return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__)
 
-    @property
+    @functools.cached_property
     def job_result(self):
         return JobResult.objects.get(task_id=self.request.id)
 
@@ -881,6 +916,23 @@ class BooleanVar(ScriptVariable):
         self.field_attrs["required"] = False
 
 
+class DryRunVar(BooleanVar):
+    """
+    Special boolean variable that bypasses approval requirements if this is set to True on job execution.
+    """
+
+    description = "Check to run job in dryrun mode."
+
+    def __init__(self, *args, **kwargs):
+        # Default must be false unless overridden through `dryrun_default` meta attribute
+        kwargs["default"] = False
+
+        # Default description if one was not provided
+        kwargs.setdefault("description", self.description)
+
+        super().__init__(*args, **kwargs)
+
+
 class ChoiceVar(ScriptVariable):
     """
     Select one of several predefined static choices, passed as a list of two-tuples. Example:
@@ -1226,26 +1278,6 @@ def get_job(class_path):
 
     jobs = get_jobs()
     return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
-
-
-# TODO: this probably goes away
-@nautobot_task
-def scheduled_job_handler(*args, **kwargs):
-    """
-    A thin wrapper around JobResult.enqueue_job() that allows for it to be called as an async task
-    for the purposes of enqueuing scheduled jobs at their recurring intervals. Thus, JobResult.enqueue_job()
-    is responsible for enqueuing the actual job for execution and this method is the task executed
-    by the scheduler to kick off the job execution on a recurring interval.
-    """
-
-    user_pk = kwargs.pop("user")
-    user = User.objects.get(pk=user_pk)
-    kwargs.pop("name")
-    scheduled_job_pk = kwargs.pop("scheduled_job_pk")
-    celery_kwargs = kwargs.pop("celery_kwargs", {})
-    schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
-
-    JobResult.enqueue_job(schedule.job_model, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs)
 
 
 def enqueue_job_hooks(object_change):

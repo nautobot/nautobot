@@ -737,8 +737,8 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "has_sensitive_variables_override",
             "approval_required",
             "approval_required_override",
-            "commit_default",
-            "commit_default_override",
+            "dryrun_default",
+            "dryrun_default_override",
             "hidden",
             "hidden_override",
             "read_only",
@@ -943,7 +943,6 @@ class JobHookSerializer(NautobotModelSerializer):
 
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
-    commit = serializers.BooleanField(required=False, default=None)
     schedule = NestedScheduledJobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
 
@@ -951,7 +950,6 @@ class JobInputSerializer(serializers.Serializer):
 class JobMultiPartInputSerializer(serializers.Serializer):
     """JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer for use with multipart/form-data submissions which only accept key-value pairs"""
 
-    _commit = serializers.BooleanField(required=False, default=None)
     _schedule_name = serializers.CharField(max_length=255, required=False)
     _schedule_start_time = serializers.DateTimeField(format=None, required=False)
     _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)

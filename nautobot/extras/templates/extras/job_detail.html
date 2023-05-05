@@ -152,30 +152,18 @@
                 </td>
             </tr>
             <tr>
-                <td>Default to Committing Changes</td>
-                <td>{{ object.commit_default | render_boolean }}</td>
-                <td>
-                    {% if object.commit_default_override %}
-                        <span class="text-muted">
-                            overridden; default is
-                            {% if object.installed %}
-                                {{ object.job_class.commit_default | render_boolean }}
-                            {% else %}
-                                unknown (not currently installed)
-                            {% endif %}
-                        </span>
-                    {% endif %}
-                </td>
+                <td>Supports Dryrun</td>
+                <td>{{ object.supports_dryrun | render_boolean }}</td>
             </tr>
             <tr>
-                <td>Hide from Default UI</td>
-                <td>{{ object.hidden | render_boolean }}</td>
+                <td>Default to Dryrun</td>
+                <td>{{ object.dryrun_default | render_boolean }}</td>
                 <td>
-                    {% if object.hidden_override %}
+                    {% if object.dryrun_default_override %}
                         <span class="text-muted">
                             overridden; default is
                             {% if object.installed %}
-                                {{ object.job_class.hidden | render_boolean }}
+                                {{ object.job_class.dryrun_default | render_boolean }}
                             {% else %}
                                 unknown (not currently installed)
                             {% endif %}
@@ -192,6 +180,22 @@
                             overridden; default is
                             {% if object.installed %}
                                 {{ object.job_class.read_only | render_boolean }}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Hide from Default UI</td>
+                <td>{{ object.hidden | render_boolean }}</td>
+                <td>
+                    {% if object.hidden_override %}
+                        <span class="text-muted">
+                            overridden; default is
+                            {% if object.installed %}
+                                {{ object.job_class.hidden | render_boolean }}
                             {% else %}
                                 unknown (not currently installed)
                             {% endif %}
