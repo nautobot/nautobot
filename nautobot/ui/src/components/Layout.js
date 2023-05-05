@@ -31,6 +31,7 @@ export default function Layout({ children }) {
 
     let toRender = children;
 
+    // TODO: showing the loading widget while the menu is loading is breaking the login route if not logged into the backend server
     if (!sessionLoaded || !menuLoaded || sessionInfo === undefined)
         toRender = <LoadingWidget name="application" />;
 
