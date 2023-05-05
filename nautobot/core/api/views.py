@@ -706,7 +706,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
     """API View that returns the nav-menu content applicable to the requesting user."""
 
-    permission_classes = [AllowAny]  # TODO: should be IsAuthenticated but this breaks the landing page if logged out
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(exclude=True)
     def get(self, request):

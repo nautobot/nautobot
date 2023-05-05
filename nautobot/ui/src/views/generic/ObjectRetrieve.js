@@ -1,4 +1,4 @@
-import { Card, CardHeader } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
+import { Card, CardHeader, SkeletonText } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
 import {
     faCheck,
     faCalendarPlus,
@@ -34,7 +34,6 @@ import useSWR from "swr";
 import { useRef } from "react";
 // import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
 import AppComponents from "@components/Apps";
-import { LoadingWidget } from "@components/LoadingWidget";
 import { toTitleCase } from "@utils/string";
 import GenericView from "@views/generic/GenericView";
 import ObjectListTable from "@components/ObjectListTable";
@@ -167,40 +166,49 @@ export default function ObjectRetrieve({ api_url }) {
     if (!!app_name && !!model_name && !!object_id && !api_url) {
         api_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/?depth=1`;
     }
-    const { data: objectData, error } = useSWR(() => api_url, fetcher);
     // const { data: appHTML } = useSWR(
     //     () => (api_url ? api_url + "app_full_width_fragment/" : null),
     //     fetcherHTML
     // );
 
     // Object Data
+    const {
+        data: objectData,
+        isError: error,
+        isLoading: objectDataLoading,
+    } = useSWR(() => api_url, fetcher);
     const ui_url = objectData?.url
         ? `${objectData.url}detail-view-config/`
         : null;
     var { data: appConfig } = useSWR(() => ui_url, fetcher);
     // ChangeLog Data
     const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}`;
-    const { data: changelogData, changelog_error } = useSWR(
-        () => changelog_url,
-        fetcher
-    );
-    const { data: changelogHeaderData, isLoading: changelogHeaderDataLoading } =
-        useGetRESTAPIQuery({
-            app_name: "extras",
-            model_name: "object-changes",
-            schema: true,
-            plugin: isPluginView,
-        });
+    const {
+        data: changelogData,
+        isError: changelog_error,
+        isLoading: changelogDataLoading,
+        isFetching: changelogDataFetching,
+    } = useSWR(() => changelog_url, fetcher);
+    const { data: changelogHeaderData } = useGetRESTAPIQuery({
+        app_name: "extras",
+        model_name: "object-changes",
+        schema: true,
+        plugin: isPluginView,
+    });
     // Note Data
     const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
-    const { data: noteData, note_error } = useSWR(() => notes_url, fetcher);
-    const { data: noteHeaderData, isLoading: noteHeaderDataLoading } =
-        useGetRESTAPIQuery({
-            app_name: "extras",
-            model_name: "notes",
-            schema: true,
-            plugin: isPluginView,
-        });
+    const {
+        data: noteData,
+        isError: note_error,
+        isLoading: noteDataLoading,
+        isFetching: noteDataFetching,
+    } = useSWR(() => notes_url, fetcher);
+    const { data: noteHeaderData } = useGetRESTAPIQuery({
+        app_name: "extras",
+        model_name: "notes",
+        schema: true,
+        plugin: isPluginView,
+    });
 
     if (error || note_error || changelog_error) {
         return (
@@ -210,15 +218,23 @@ export default function ObjectRetrieve({ api_url }) {
         );
     }
 
-    if (!objectData || !appConfig) {
+    if (objectDataLoading || !objectData || !appConfig) {
         return (
             <GenericView>
-                <LoadingWidget />
+                <SkeletonText
+                    endColor="gray.300"
+                    noOfLines={10}
+                    skeletonHeight="25"
+                    spacing="3"
+                    mt="3"
+                ></SkeletonText>
             </GenericView>
         );
     }
     const route_name = `${app_name}:${model_name}`;
     let obj = objectData;
+    let changelogDataLoaded = !(changelogDataLoading || changelogDataFetching);
+    let noteDataLoaded = !(noteDataLoading || noteDataFetching);
     const default_view = (
         <GenericView objectData={objectData}>
             <Box background="white-0" borderRadius="md">
@@ -368,57 +384,70 @@ export default function ObjectRetrieve({ api_url }) {
                             </TabPanel>
                         ))}
                         <TabPanel key="notes">
-                            {noteHeaderDataLoading ? (
-                                <LoadingWidget name={"Notes"} />
-                            ) : (
-                                <Card>
-                                    <CardHeader>
-                                        <strong>Notes</strong>
-                                    </CardHeader>
-                                    <ObjectListTable
-                                        tableData={noteData.results}
-                                        defaultHeaders={
-                                            noteHeaderData.view_options
-                                                .list_display_fields
-                                        }
-                                        tableHeaders={
-                                            noteHeaderData.view_options.fields
-                                        }
-                                        totalCount={changelogData.count}
-                                        active_page_number={0}
-                                        page_size={50}
-                                        tableTitle={"Notes"}
-                                        include_button={false}
-                                    />
-                                </Card>
-                            )}
+                            <Card>
+                                <CardHeader>
+                                    <Heading
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="5px"
+                                    >
+                                        <NtcThumbnailIcon
+                                            width="25px"
+                                            height="30px"
+                                        />{" "}
+                                        Notes
+                                    </Heading>
+                                </CardHeader>
+                                <ObjectListTable
+                                    tableData={noteData.results}
+                                    defaultHeaders={
+                                        noteHeaderData.view_options
+                                            .list_display_fields
+                                    }
+                                    tableHeaders={
+                                        noteHeaderData.view_options.fields
+                                    }
+                                    totalCount={noteData.count}
+                                    active_page_number={0}
+                                    page_size={50}
+                                    tableTitle={"Notes"}
+                                    include_button={false}
+                                    data_loaded={noteDataLoaded}
+                                />
+                            </Card>
                         </TabPanel>
                         <TabPanel key="change_log">
-                            {changelogHeaderDataLoading ? (
-                                <LoadingWidget name={"Notes"} />
-                            ) : (
-                                <Card>
-                                    <CardHeader>
-                                        <strong>Change Log</strong>
-                                    </CardHeader>
-                                    <ObjectListTable
-                                        tableData={changelogData.results}
-                                        defaultHeaders={
-                                            changelogHeaderData.view_options
-                                                .list_display_fields
-                                        }
-                                        tableHeaders={
-                                            changelogHeaderData.view_options
-                                                .fields
-                                        }
-                                        totalCount={changelogData.count}
-                                        active_page_number={0}
-                                        page_size={50}
-                                        tableTitle={"Change Logs"}
-                                        include_button={false}
-                                    />
-                                </Card>
-                            )}
+                            <Card>
+                                <CardHeader>
+                                    <Heading
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="5px"
+                                    >
+                                        <NtcThumbnailIcon
+                                            width="25px"
+                                            height="30px"
+                                        />{" "}
+                                        Change Log
+                                    </Heading>
+                                </CardHeader>
+                                <ObjectListTable
+                                    tableData={changelogData.results}
+                                    defaultHeaders={
+                                        changelogHeaderData.view_options
+                                            .list_display_fields
+                                    }
+                                    tableHeaders={
+                                        changelogHeaderData.view_options.fields
+                                    }
+                                    totalCount={changelogData.count}
+                                    active_page_number={0}
+                                    page_size={50}
+                                    tableTitle={"Change Logs"}
+                                    include_button={false}
+                                    data_loaded={changelogDataLoaded}
+                                />
+                            </Card>
                         </TabPanel>
                     </TabPanels>
                 </Tabs>
