@@ -673,7 +673,7 @@ class JobResult(BaseModel, CustomFieldModel):
         if self.job_model:
             # No need to call related_object(), getting the Job class name if we already have a job_model
             return self.job_model.name
-        elif not self.job_model and self.obj_type == get_job_content_type():
+        elif self.obj_type == get_job_content_type():
             # Related object is an extras.Job subclass but the Job Model has been deleted
             # Calling self.related_object will call ensure_git_repository() but will ultimately return None
             return self.name
