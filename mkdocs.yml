@@ -123,7 +123,7 @@ nav:
           - Nautobot Shell: "administration/nautobot-shell.md"
           - Permissions: "administration/permissions.md"
           - Replicating Nautobot: "administration/replicating-nautobot.md"
-          - Task Queues: 'administration/celery-queues.md'
+          - Task Queues: "administration/celery-queues.md"
       - User Guides:
           - Creating Devices: "user-guides/getting-started/creating-devices.md"
           - Custom Fields: "user-guides/custom-fields.md"
@@ -284,7 +284,8 @@ nav:
       - Best Practices: "development/best-practices.md"
       - Style Guide: "development/style-guide.md"
       - Extending Models: "development/extending-models.md"
-      - Testing: 'development/testing.md'
+      - Generic Views: "development/generic-views.md"
+      - Testing: "development/testing.md"
       - Application Registry: "development/application-registry.md"
       - Page Templates: "development/templates.md"
       - Navigation Menu: "development/navigation-menu.md"
