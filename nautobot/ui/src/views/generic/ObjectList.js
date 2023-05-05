@@ -13,6 +13,7 @@ import {
 import { toTitleCase } from "@utils/string";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
+import { NautobotGridItem } from "@nautobot/nautobot-ui";
 
 export default function GenericObjectListView() {
     const { app_name, model_name } = useParams();
@@ -97,16 +98,18 @@ export default function GenericObjectListView() {
 
     let table_name = toTitleCase(model_name, "-");
     return (
-        <GenericView>
-            <ObjectListTable
-                tableData={listData.results}
-                defaultHeaders={defaultHeaders}
-                tableHeaders={tableHeaders}
-                totalCount={listData.count}
-                active_page_number={active_page_number}
-                page_size={page_size}
-                tableTitle={table_name}
-            />
+        <GenericView columns={1}>
+            <NautobotGridItem>
+                <ObjectListTable
+                    tableData={listData.results}
+                    defaultHeaders={defaultHeaders}
+                    tableHeaders={tableHeaders}
+                    totalCount={listData.count}
+                    active_page_number={active_page_number}
+                    page_size={page_size}
+                    tableTitle={table_name}
+                />
+            </NautobotGridItem>
         </GenericView>
     );
 }
