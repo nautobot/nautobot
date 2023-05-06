@@ -22,6 +22,7 @@ class NautobotFilterBackend(DjangoFilterBackend):
             "include",  # used to include computed fields (excluded by default)
             "limit",  # pagination
             "offset",  # pagination
+            "ordering",  # ordering of results
         ):
             data.pop(non_filter_param, None)
 

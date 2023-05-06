@@ -181,7 +181,10 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
-    "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
+    "DEFAULT_FILTER_BACKENDS": (
+        "nautobot.core.api.filter_backends.NautobotFilterBackend",
+        "rest_framework.filters.OrderingFilter",
+    ),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),

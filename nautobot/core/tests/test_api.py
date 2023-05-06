@@ -488,3 +488,33 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+
+
+class APIOrderingTestCase(testing.APITestCase):
+    """
+    Testing integration with DRF's OrderingFilter.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse("circuits-api:provider-list")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ascending_sort(self):
+        """Tests that results are returned in the expected ascending order."""
+        response = self.client.get(f"{self.url}?ordering=name&limit=10", **self.header)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(
+            list(map(lambda p: p["name"], response.data["results"])),
+            list(Provider.objects.order_by("name").values_list("name", flat=True)[:10]),
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_descending_sort(self):
+        """Tests that results are returned in the expected descending order."""
+        response = self.client.get(f"{self.url}?ordering=-name&limit=10", **self.header)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(
+            list(map(lambda p: p["name"], response.data["results"])),
+            list(Provider.objects.order_by("-name").values_list("name", flat=True)[:10]),
+        )
