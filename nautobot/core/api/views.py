@@ -33,6 +33,7 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.config import get_settings_or_config
@@ -262,6 +263,22 @@ class ModelViewSetMixin:
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
             self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
+
+    def list(self, request, *args, **kwargs):
+        if not isinstance(request.accepted_renderer, NautobotCSVRenderer):
+            return super().list(request, *args, format=format, **kwargs)
+
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({"queryset": queryset, "serializer": serializer})
+
+    def retrieve(self, request, *args, **kwargs):
+        if not isinstance(request.accepted_renderer, NautobotCSVRenderer):
+            return super().retrieve(request, *args, format=format, **kwargs)
+
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({"instance": instance, "serializer": serializer})
 
 
 class ModelViewSet(

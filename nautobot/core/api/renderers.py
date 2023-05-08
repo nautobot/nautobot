@@ -3,10 +3,13 @@ from io import StringIO
 import logging
 from uuid import UUID
 
+from rest_framework import serializers
 from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 
+from nautobot.core.api.serializers import NautobotHyperlinkedRelatedField
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
+from nautobot.extras.models import CustomField
 
 
 logger = logging.getLogger(__name__)
@@ -49,38 +52,33 @@ class NautobotCSVRenderer(BaseRenderer):
     def render(self, data, accepted_media_type=None, renderer_context=None):
         """
         Render the provided data to CSV format.
+
+        Unlike other DRF Renderers, `data` should be a dict with key "serializer" (the instantiated serializer for
+        this view) and either of the keys "instance" (for a single object) or "queryset" (for a list of objects).
         """
         if not data:
             return ''
 
-        logger.info("renderer_context: %s", renderer_context)
-        view = renderer_context.get("view", None)
-        queryset = getattr(view, "queryset", None)
-        logger.info("queryset: %s", queryset)
-        serializer_class = getattr(view, "serializer_class", None)
+        if not isinstance(data, dict) or "serializer" not in data:
+            raise ValueError("data should be a dict with the keys 'serializer' and either 'instance' or 'queryset'.")
 
-        if isinstance(data, dict) and "results" in data and "next" in data and "previous" in data:
-            # TODO: currently list data is wrapped by nautobot.core.api.pagination.OptionalLimitOffsetPagination.
-            #       We **probably** want to use a different (or none) paginator for CSV export?
-            #       Might be feasible by replacing `data` with a data set generated from renderer_context["view"]?
-            data = data.get("results", [])
-        elif not isinstance(data, (list, tuple)):
-            # Single object being serialized
-            data = [data]
+        objects = data.get("queryset", [data["instance"]])
+        serializer = data["serializer"]
 
-        headers = self.get_headers(data)
+        headers = self.get_headers(serializer)
 
         buffer = StringIO()
         writer = csv.writer(buffer)
         writer.writerow(headers)
-        for row in data:
-            writer.writerow(self.format_row(row, headers=headers, queryset=queryset, serializer_class=serializer_class))
+        for obj in objects:
+            writer.writerow(self.format_row(obj, headers=headers, serializer=serializer))
 
         return buffer.getvalue()
 
-    def get_headers(self, data):
-        """Identify the appropriate CSV headers for this data."""
-        base_headers = list(data[0].keys())
+    def get_headers(self, serializer):
+        """Identify the appropriate CSV headers corresponding to the given serializer."""
+        base_headers = list(serializer.fields)
+        logger.info("base_headers from %s: %s", type(serializer).__name__, base_headers)
 
         # Remove specific headers that we know are irrelevant
         for undesired_header in [
@@ -97,32 +95,38 @@ class NautobotCSVRenderer(BaseRenderer):
             if header.endswith("_count"):
                 base_headers.remove(header)
 
-        # Add headers for each custom field. We check all rows in `data` in case some objects are missing a field.
-        cf_headers = set()
-        for row in data:
-            cf_headers.update([f"cf_{key}" for key in row.get("custom_fields", {})])
+        if "custom_fields" in serializer.fields:
+            cf_keys = CustomField.objects.get_for_model(serializer.Meta.model).values_list("key", flat=True)
+            cf_headers = sorted([f"cf_{key}" for key in cf_keys])
 
         # TODO: relationships? computed fields?
 
-        headers = base_headers + sorted(cf_headers)
+        headers = base_headers + cf_headers
 
         logger.info("Headers are: %s", headers)
         return headers
 
-    def format_row(self, row, *, headers, queryset, serializer_class):
+    def format_row(self, obj, *, headers, serializer):
         for key in headers:
             if key.startswith("cf_"):
-                value = row.get("custom_fields", {}).get(key[3:], None)
-            else:
-                value = row[key]
-
-            if isinstance(value, UUID):
+                value = obj._custom_field_data.get(key[3:], None)
+            elif isinstance(serializer.fields[key], NautobotHyperlinkedRelatedField):
+                # We use this workaround because for a HyperlinkedRelatedField,
+                # field.get_attribute(obj) returns only the PK of the object, instead of the entire related object.
+                # Calling the superclass get_attribute() gives us the actual related object.
+                related_object = serializers.Field.get_attribute(serializer.fields[key], obj)
                 try:
-                    related_model = getattr(queryset.model, key)
-                    logger.info("related_model: %s", related_model)
-                    value = related_model.objects.get(value).natural_key()
-                except:
-                    pass
+                    value = related_object.natural_key()
+                except NotImplementedError:
+                    logger.error("related_object %s doesn't implement natural_key()", type(related_object).__name__)
+                    value = None
+            elif key == "tags":
+                tags = serializers.Field.get_attribute(serializer.fields[key], obj)
+                value = [tag.name for tag in tags.all()]
+            else:
+                value = serializer.data[key]
+
+            logger.info("Initial value for %s on %s: %s (%s)", key, obj, value, type(value))
 
             if value is None:
                 value = ""
@@ -131,6 +135,6 @@ class NautobotCSVRenderer(BaseRenderer):
             else:
                 value = str(value)
 
-            logger.info("value for %s : %s", key, value)
+            logger.info("CSV-compatible value for %s on %s: %s", key, obj, value)
 
             yield value
