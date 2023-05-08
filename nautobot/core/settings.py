@@ -188,6 +188,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": (
         "nautobot.core.api.renderers.NautobotJSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
+        "nautobot.core.api.renderers.NautobotCSVRenderer",
     ),
     "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
     "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
