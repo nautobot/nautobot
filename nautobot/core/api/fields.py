@@ -116,12 +116,12 @@ class ObjectTypeField(serializers.CharField):
     def get_attribute(self, _instance):
         """Get the content-type of this serializer's model."""
         model = self.parent.Meta.model
-        return f"{model._meta.app_label}.{model._meta.model_name}"
+        return model._meta.label_lower
 
     def to_representation(self, _value):
         """Get the content-type of this serializer's model."""
         model = self.parent.Meta.model
-        return f"{model._meta.app_label}.{model._meta.model_name}"
+        return model._meta.label_lower
 
 
 class SerializedPKRelatedField(PrimaryKeyRelatedField):

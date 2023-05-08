@@ -453,6 +453,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         extra_kwargs = {"parent_bay": {"read_only": True}}
 
     def get_field_names(self, declared_fields, info):
+        """As parent_bay is the reverse side of a OneToOneField, DRF can handle it but it isn't auto-included."""
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "parent_bay")
         return fields

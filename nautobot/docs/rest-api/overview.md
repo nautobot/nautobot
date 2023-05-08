@@ -563,6 +563,9 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
 }
 ```
 
+!!! note
+    As previously explained, note that the `status` nested object included in this response does not include the `content_types` many-to-many relation that exists on all Status objects. If this information is needed, you would need to directly query the URL of the status object itself (above, `http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/`) to get a fully detailed response. Similarly, the `parent` and `tenant` nested objects do not include their `tags` relations, the `parent` object does not include its derived `tree_depth` and related object counters, and the `tags` nested object list does not include the `content_types` for each `Tag`.
+
 #### ?depth=2 and beyond
 
 A higher `depth` parameter in the query presents you with more insight to the object and can be useful in situations that demand information of an indirectly related field of the object.
