@@ -30,7 +30,8 @@ function TextOrButton({ obj }) {
     return obj;
 }
 
-function TableColumnDisplay({ obj }) {
+export function TableColumnDisplay({ obj }) {
+    // { }
     if (!obj) {
         return <>&mdash;</>;
     } else if (typeof obj === "object" && !Array.isArray(obj)) {

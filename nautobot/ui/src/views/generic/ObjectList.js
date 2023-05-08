@@ -104,7 +104,7 @@ export default function GenericObjectListView() {
     let defaultHeaders = headerData.view_options.list_display;
 
     // If list_display is not defined or empty, default to showing all headers.
-    if (!defaultHeaders.length) {
+    if (!defaultHeaders?.length) {
         defaultHeaders = tableHeaders;
     }
     return (

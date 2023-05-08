@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
+from django.db.models import ManyToManyField
 from django.http import Http404
 import drf_react_template.schema_form_encoder as schema
 from rest_framework import exceptions
@@ -180,6 +181,96 @@ class NautobotMetadata(SimpleMetadata):
         view_options["fields"] = fields
 
         return view_options
+    
+    def get_detail_view_field_link(self, instance):
+        return {
+            "app_label": instance._meta.app_label,
+            "model_name": instance._meta.model_name,
+            "id":  instance.pk,
+        }
+
+    def build_detail_view_field_for_list(self, model_instance, field_name):
+        field = model_instance._meta.get_field(field_name)
+        field_verbose_name = field.verbose_name
+        field_label = field_verbose_name.capitalize() if field_verbose_name.islower() else field_verbose_name
+        field_value = getattr(model_instance, field_name, None)
+        link = None
+        color = None
+
+        is_related_field = field.is_relation
+        if is_related_field:
+            if isinstance(field, ManyToManyField):
+                # TODO: Account for M2M fields
+                pass
+            elif field_value:
+                link = self.get_detail_view_field_link(field_value)
+                color = getattr(field_value, "color", None)
+                field_value = getattr(field_value, "display", str(field_value))
+
+        return {
+            "label": field_label,
+            "value": field_value,
+            "link": link,
+            "color": color
+        }
+    
+    def build_detail_view_field_for_table(self, model_instance, table_props):
+        pass
+    
+    def build_detail_view_field_for_box(self, model_instance, field_name):
+        return getattr(model_instance, field_name, None) 
+    
+    def build_detail_view_group_data(self, data, model_instance):
+        template = data.get("template", "list")
+        group_data = {
+            "template": template,
+            "template_actions": data.get("template_actions", []),
+        }
+        
+        if template == "list":
+            group_data["fields"] = [
+                self.build_detail_view_field_for_list(model_instance, field_name) for field_name in data["fields"]
+            ]
+        elif template == "table":
+            group_data["table_data"] = self.build_detail_view_field_for_table(model_instance, data["table"])
+        else:
+            group_data["field"] = self.build_detail_view_field_for_box(model_instance, data["field"])
+    
+        return group_data
+
+    def build_detail_view_columns(self, model_instance, grouping_data, column):
+        return {
+            "col": column,
+            "groups": {
+                group_name: self.build_detail_view_group_data(group_data, model_instance)
+                for group_name, group_data in grouping_data.items()
+                if group_data.get("col") == column
+            },
+        }
+
+    def determine_detail_view_schema(self, request, view, serializer):
+        """Build Schema for UI detail view"""
+        schema = {}
+        # Todo: Account for models without a detail schema set on the serializer
+        detail_view_schema = getattr(serializer.Meta, "detail_view_schema", None)
+        if not detail_view_schema:
+            return schema
+
+        model = getattr(serializer.Meta, "model", None)
+        query_filter_params = request.parser_context["kwargs"]
+        try:
+            model_instance = model.objects.get(**query_filter_params)
+        except model.DoesNotExist:
+            return schema
+
+        columns = detail_view_schema.get("columns", 1)
+        schema["column_no"] = columns
+        grouping_data = detail_view_schema.get("grouping", {})
+        schema["columns"] = {
+            col_no + 1: self.build_detail_view_columns(model_instance, grouping_data, col_no+1)
+            for col_no in range(columns)
+        }
+        return schema
 
     def determine_metadata(self, request, view):
         """This is the metadata that gets returned on an `OPTIONS` request."""
@@ -195,6 +286,7 @@ class NautobotMetadata(SimpleMetadata):
                 }
             )
 
-        metadata["view_options"] = self.determine_view_options(request, view, serializer)
+            metadata["view_options"] = self.determine_view_options(request, view, serializer)
+            metadata["detail_view_schema"] = self.determine_detail_view_schema(request, view, serializer)
 
         return metadata

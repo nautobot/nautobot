@@ -1,4 +1,4 @@
-import { Card, CardHeader, SkeletonText } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
+import { Button, Card, CardHeader, SkeletonText } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
 import {
     faCheck,
     faCalendarPlus,
@@ -27,6 +27,10 @@ import {
     NautobotGrid,
     NautobotGridItem,
     NtcThumbnailIcon,
+    Thead,
+    Th,
+    Tag,
+    TagLabel,
 } from "@nautobot/nautobot-ui";
 import { ReferenceDataTag } from "@components/ReferenceDataTag";
 import { useLocation, useParams } from "react-router-dom";
@@ -40,28 +44,14 @@ import ObjectListTable from "@components/ObjectListTable";
 import { useGetRESTAPIQuery } from "@utils/api";
 import { humanFriendlyDate } from "@utils/date";
 import { uiUrl } from "@utils/url";
+import axios from "axios";
+import TableItem from "@components/TableItem";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
         res.ok ? res.json() : null
     );
-// const fetcherHTML = (url) =>
-//     fetch(url, { credentials: "include" }).then((res) =>
-//         res.ok ? res.text() : null
-//     );
-// const fetcherTabs = (url) =>
-//     fetch(url, { credentials: "include" }).then((res) => {
-//         return res.json().then((data) => {
-//             let tabs = data.tabs.map((tab_top) =>
-//                 Object.keys(tab_top).map(function (tab_key) {
-//                     let tab = tab_top[tab_key];
-//                     let tab_component = create_app_tab({ tab: tab });
-//                     return tab_component;
-//                 })
-//             );
-//             return tabs;
-//         });
-//     });
+const optionFetcher = (url) => axios.options(url, { withCredentials: true }).then((res) => res.data);
 
 function render_header(value) {
     value = toTitleCase(value, "_");
@@ -158,85 +148,114 @@ function RenderRow(props) {
     );
 }
 
-export default function ObjectRetrieve({ api_url }) {
-    const { app_name, model_name, object_id } = useParams();
-    const location = useLocation();
-    const isPluginView = location.pathname.includes("/plugins/");
-    const pluginPrefix = isPluginView ? "plugins/" : "";
-    if (!!app_name && !!model_name && !!object_id && !api_url) {
-        api_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/?depth=1`;
-    }
-    // const { data: appHTML } = useSWR(
-    //     () => (api_url ? api_url + "app_full_width_fragment/" : null),
-    //     fetcherHTML
-    // );
+// Make this a global component for all Title with NautobotTitleIcon; revise the fontSize
+function TitleWithNautobotIcon({as, title}){
+    return (
+        <Heading as={as} display="flex" gap="5px" alignItems="center" fontSize={"medium"} mb="2">
+            <NtcThumbnailIcon width="25px" height="30px" />{" "} {title}
+        </Heading>
+    )
+}
 
-    // Object Data
-    const {
-        data: objectData,
-        isError: error,
-        isLoading: objectDataLoading,
-    } = useSWR(() => api_url, fetcher);
-    const ui_url = objectData?.url
-        ? `${objectData.url}detail-view-config/`
-        : null;
-    var { data: appConfig } = useSWR(() => ui_url, fetcher);
-    // ChangeLog Data
-    const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}`;
-    const {
-        data: changelogData,
-        isError: changelog_error,
-        isLoading: changelogDataLoading,
-        isFetching: changelogDataFetching,
-    } = useSWR(() => changelog_url, fetcher);
-    const { data: changelogHeaderData } = useGetRESTAPIQuery({
-        app_name: "extras",
-        model_name: "object-changes",
-        schema: true,
-        plugin: isPluginView,
-    });
-    // Note Data
-    const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
-    const {
-        data: noteData,
-        isError: note_error,
-        isLoading: noteDataLoading,
-        isFetching: noteDataFetching,
-    } = useSWR(() => notes_url, fetcher);
-    const { data: noteHeaderData } = useGetRESTAPIQuery({
-        app_name: "extras",
-        model_name: "notes",
-        schema: true,
-        plugin: isPluginView,
-    });
-
-    if (error || note_error || changelog_error) {
-        return (
-            <GenericView objectData={objectData}>
-                <div>Failed to load {api_url}</div>
-            </GenericView>
-        );
+function RenderFieldValue({value, link, color}){
+    let field_value = value;
+    
+    if (color) {
+        field_value = (
+            <Button size="xs" px="3">
+                {value}
+            </Button>
+        )
     }
-
-    if (objectDataLoading || !objectData || !appConfig) {
-        return (
-            <GenericView>
-                <SkeletonText
-                    endColor="gray.300"
-                    noOfLines={10}
-                    skeletonHeight="25"
-                    spacing="3"
-                    mt="3"
-                ></SkeletonText>
-            </GenericView>
-        );
+    if (link){
+        field_value = <Link to="">{field_value}</Link>
     }
-    const route_name = `${app_name}:${model_name}`;
-    let obj = objectData;
-    let changelogDataLoaded = !(changelogDataLoading || changelogDataFetching);
-    let noteDataLoaded = !(noteDataLoading || noteDataFetching);
-    const default_view = (
-        <GenericView objectData={objectData}>
+    return field_value
+}
+
+function RenderList({fields, template_actions, ...props}) {
+    return (
+        <TableContainer>
+            <Table>
+                <Tbody>
+                    {
+                        fields.map((field, i) => {
+                            // TODO: create/get a util function that converts {app_name, model, id} to url path
+                            let link_path = field.link ? "/" : null;
+                            let field_data = {...field, label: field.value};
+                            if(!field.link && !field.color){
+                                field_data = field.value;
+                            }
+                            return (
+                                <Tr>
+                                    <Td>{field.label}</Td>
+                                    <Td><TableItem obj={field_data} url={link_path} /></Td>
+                                </Tr>
+                            )
+                        })
+                    }
+                </Tbody>
+            </Table>
+        </TableContainer>
+    )
+}
+
+function RenderFullBox({field}) {
+    return (
+        <TableContainer>
+            <Table>
+                <Tbody>
+                    <Tr>
+                        <Td>
+
+                            {/* TEXT IS NOT BREAKING {field} */}
+                        </Td>
+                    </Tr>
+                </Tbody>
+            </Table>
+        </TableContainer>
+    )
+}
+
+function RenderTable(props) {
+    return <>TABLE</>
+}
+
+function RenderRowV2({title, data, ...props}){
+    return (
+        <Card mb="5" border={1}>
+            <TitleWithNautobotIcon title={title} as="h3" />
+            {
+                data.template === "list" ? 
+                    <RenderList {...data} />
+                : 
+                data.template === "table" ?
+                    <RenderTable {...data} />
+                :
+                    <RenderFullBox {...data} />
+            }
+        </Card>
+    )
+}
+
+
+function RenderColumn({data, colSpan, ...props}){
+    return (
+        <NautobotGridItem colSpan={colSpan} {...props}>
+            {
+                Object.entries(data.groups).map(([group_title, group_data], idx) => {
+                    return <RenderRowV2 title={group_title} data={group_data} {...props} key={idx} />;
+                })
+            }
+        </NautobotGridItem>
+
+    )
+}
+
+function RenderDefaultView({obj, appConfig, schemaData}) {
+    const { detail_view_schema: schema } = schemaData
+    return (
+        <GenericView objectData={obj}>
             <Box background="white-0" borderRadius="md">
                 <Box display="flex" justifyContent="space-between" padding="md">
                     <Heading display="flex" alignItems="center" gap="5px">
@@ -293,174 +312,90 @@ export default function ObjectRetrieve({ api_url }) {
                         <Tab>Change Log</Tab>
                     </TabList>
                     <TabPanels>
-                        {Object.keys(appConfig).map((tab, idx) => (
-                            <TabPanel padding="none" key={tab}>
-                                <Card>
-                                    <NautobotGrid row={{ count: 5 }}>
-                                        {Object.keys(appConfig[tab]).map(
-                                            (item, idx) => (
-                                                <NautobotGridItem
-                                                    colSpan={
-                                                        appConfig[tab][item]
-                                                            .colspan
-                                                    }
-                                                    rowSpan={
-                                                        appConfig[tab][item]
-                                                            .rowspan
-                                                    }
-                                                    key={idx}
-                                                >
-                                                    <Heading
-                                                        display="flex"
-                                                        alignItems="center"
-                                                    >
-                                                        <NtcThumbnailIcon
-                                                            width="25px"
-                                                            height="30px"
-                                                        />
-                                                        &nbsp;
-                                                        {render_header(
-                                                            appConfig[tab][item]
-                                                                .name
-                                                        )}
-                                                    </Heading>
-                                                    <br />
-                                                    <TableContainer>
-                                                        <Table>
-                                                            <Tbody>
-                                                                {Object.keys(
-                                                                    appConfig[
-                                                                        tab
-                                                                    ][item]
-                                                                        .fields
-                                                                ).map(
-                                                                    (
-                                                                        key,
-                                                                        idx
-                                                                    ) => (
-                                                                        <RenderRow
-                                                                            identifier={
-                                                                                appConfig[
-                                                                                    tab
-                                                                                ][
-                                                                                    item
-                                                                                ]
-                                                                                    .fields[
-                                                                                    key
-                                                                                ]
-                                                                            }
-                                                                            value={
-                                                                                obj[
-                                                                                    appConfig[
-                                                                                        tab
-                                                                                    ][
-                                                                                        item
-                                                                                    ]
-                                                                                        .fields[
-                                                                                        key
-                                                                                    ]
-                                                                                ]
-                                                                            }
-                                                                            advanced={
-                                                                                appConfig[
-                                                                                    tab
-                                                                                ][
-                                                                                    item
-                                                                                ]
-                                                                                    .advanced
-                                                                            }
-                                                                            key={`${tab}_${idx}`}
-                                                                        />
-                                                                    )
-                                                                )}
-                                                            </Tbody>
-                                                        </Table>
-                                                    </TableContainer>
-                                                </NautobotGridItem>
-                                            )
-                                        )}
-                                    </NautobotGrid>
-                                </Card>
-                            </TabPanel>
-                        ))}
-                        <TabPanel key="notes">
+                        <TabPanel key={1}>
                             <Card>
-                                <CardHeader>
-                                    <Heading
-                                        display="flex"
-                                        alignItems="center"
-                                        gap="5px"
-                                    >
-                                        <NtcThumbnailIcon
-                                            width="25px"
-                                            height="30px"
-                                        />{" "}
-                                        Notes
-                                    </Heading>
-                                </CardHeader>
-                                <ObjectListTable
-                                    tableData={noteData.results}
-                                    defaultHeaders={
-                                        noteHeaderData.view_options.list_display
+                                <NautobotGrid columns={schema.column_no}>
+                                    {
+                                        // for some reason NautobotGrid columns is always 4 regardless of what value you pass
+                                        // For that reason we would need to calculate the colSpan for each column
+                                        // colSpan = 4 / no of col # Should be floor
+                                        Array.from({length: schema.column_no}, (_, i) => i+1).map((col_no, idx) => {
+                                            const colSpan = Math.floor(4 / parseInt(schema.column_no))
+                                            return (
+                                            <RenderColumn key={idx} colSpan={colSpan} data={schema.columns[col_no]} />
+                                        )})
                                     }
-                                    tableHeaders={
-                                        noteHeaderData.view_options.fields
-                                    }
-                                    totalCount={noteData.count}
-                                    active_page_number={0}
-                                    page_size={50}
-                                    tableTitle={"Notes"}
-                                    include_button={false}
-                                    data_loaded={noteDataLoaded}
-                                />
-                            </Card>
-                        </TabPanel>
-                        <TabPanel key="change_log">
-                            <Card>
-                                <CardHeader>
-                                    <Heading
-                                        display="flex"
-                                        alignItems="center"
-                                        gap="5px"
-                                    >
-                                        <NtcThumbnailIcon
-                                            width="25px"
-                                            height="30px"
-                                        />{" "}
-                                        Change Log
-                                    </Heading>
-                                </CardHeader>
-                                <ObjectListTable
-                                    tableData={changelogData.results}
-                                    defaultHeaders={
-                                        changelogHeaderData.view_options
-                                            .list_display
-                                    }
-                                    tableHeaders={
-                                        changelogHeaderData.view_options.fields
-                                    }
-                                    totalCount={changelogData.count}
-                                    active_page_number={0}
-                                    page_size={50}
-                                    tableTitle={"Change Logs"}
-                                    include_button={false}
-                                    data_loaded={changelogDataLoaded}
-                                />
+                                    
+                                </NautobotGrid>
                             </Card>
                         </TabPanel>
                     </TabPanels>
                 </Tabs>
             </Box>
+            
         </GenericView>
-    );
-    let return_view = default_view;
-    if (
-        AppComponents.CustomViews?.[route_name] &&
-        "retrieve" in AppComponents.CustomViews?.[route_name]
-    ) {
-        const CustomView = AppComponents.CustomViews[route_name].retrieve;
-        return_view = <CustomView {...obj} />;
-    }
+    )
+}
 
-    return return_view;
+
+// TODO: Extract into a standalone component
+function RenderLoadingScreen(){
+    return (
+        <GenericView>
+            <SkeletonText
+                    endColor="gray.300"
+                    noOfLines={10}
+                    skeletonHeight="25"
+                    spacing="3"
+                    mt="3"
+                ></SkeletonText>
+        </GenericView>
+    )
+}
+
+// TODO: Move to utils.js
+function removeURLParameter(url, parameter) {
+    const url_parts = url.split('?');   
+    if (url_parts.length >= 2) {
+        const prefix = encodeURIComponent(parameter) + '=';
+        const pars = url_parts[1].split(/[&;]/g);
+        for (let i = pars.length; i-- > 0;) {    
+            if (pars[i].lastIndexOf(prefix, 0) !== -1) {  
+                pars.splice(i, 1);
+            }
+        }
+        return url_parts[0] + (pars.length > 0 ? '?' + pars.join('&') : '');
+    }
+    return url;
+}
+
+
+export default function ObjectRetrieve({ api_url }) {
+    const { app_name, model_name, object_id } = useParams();
+    const location = useLocation();
+    const isPluginView = location.pathname.includes("/plugins/");
+    const pluginPrefix = isPluginView ? "plugins/" : "";
+    if (!!app_name && !!model_name && !!object_id && !api_url) {
+        api_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/?depth=1`;
+    }
+    
+    const { data: objectData, isError: error } = useSWR(() => api_url, fetcher);
+    const ui_url = objectData?.url ? `${objectData.url}detail-view-config/` : null;
+    const { data: appConfig, isError: appConfigError } = useSWR(() => ui_url, fetcher);
+    // Options do not work with query params; Hence removal of query params
+    const optionsUrl = removeURLParameter(api_url, "depth")
+    const { data: schemaData, isError: schemaError } = useSWR(() => optionsUrl, optionFetcher);
+
+    // If Possible move appconfig over to schema, maybe appConfigSchema
+    if (error || appConfigError || schemaError) {
+        return (
+            <GenericView>
+                <div>Failed to load {api_url}</div>
+            </GenericView>
+        )
+    }
+    else if (objectData && appConfig && schemaData){
+        return <RenderDefaultView obj={objectData} appConfig={appConfig} schemaData={schemaData} />
+    }
+    return <RenderLoadingScreen />;
 }

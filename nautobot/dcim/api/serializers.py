@@ -435,6 +435,46 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         model = Device
         fields = "__all__"
         validators = []
+        detail_view_schema = {
+            "columns": 2,
+            "grouping": {
+                "Device": { 
+                    "fields": ["location", "rack", "position", "tenant", "device_type", "serial", "asset_tag"],
+                    "col": 1,
+                    "template": "list"
+                },
+                "Management": { 
+                    "fields": ["role", "platform", "status", "primary_ip4", "primary_ip6", "secrets_group", "device_redundancy_group"],
+                    "col": 1,
+                    "template": "list"
+                },
+                # Add Custom Fields, Tags Automatically
+                "Comments": { 
+                    "field": "comments",
+                    "col": 1,
+                    "template": "box_full"
+                },
+                "Services": { 
+                    "table": {
+                        "table_class": "TableClass",  # This class should be able to build the table schema
+                        "actions": ["changelogs", "edit", "delete"],
+                        "field": "services"
+                    },
+                    "col": 2,
+                    "template": "table",
+                    "template_actions": ["add"]
+                },
+                "Services": { 
+                    "table": {
+                        "table_class": "TableClass",  # This class should be able to build the table schema
+                        "actions": ["changelogs", "edit", "delete"]
+                    },
+                    "col": 2,
+                    "template": "table",
+                    "template_actions": ["add"]
+                },
+            }
+        }
 
     def validate(self, data):
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
