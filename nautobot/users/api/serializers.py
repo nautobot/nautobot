@@ -17,7 +17,7 @@ class UserSerializer(ValidatedModelSerializer):
     class Meta:
         model = get_user_model()
         exclude = ["user_permissions"]
-        extra_kwargs = {"password": {"write_only": True}}
+        extra_kwargs = {"password": {"write_only": True, "required": False}}
 
     def create(self, validated_data):
         """

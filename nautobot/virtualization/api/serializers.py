@@ -89,6 +89,7 @@ class VMInterfaceSerializer(
 ):
     url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
+    mac_address = serializers.CharField(allow_blank=True, allow_null=True, required=False)
 
     class Meta:
         model = VMInterface
