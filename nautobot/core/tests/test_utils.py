@@ -1,4 +1,5 @@
 import pickle
+import uuid
 
 from django import forms as django_forms
 from django.contrib.auth.models import Group
@@ -713,3 +714,24 @@ class FieldNameToDisplayTest(TestCase):
             # This shouldn't ever be an input because get_filter_field_label
             # will use the label from the custom field instead of the field name
             self.assertEqual(filtering._field_name_to_display("cr_sister_sites__peer"), "Cr_sister_sites peer")
+
+
+class IsFooTest(TestCase):
+    def test_is_url(self):
+        """Validate the operation of `is_url()`."""
+        with self.subTest("Test a valid URL."):
+            self.assertTrue(
+                data_utils.is_url("http://localhost:3000/api/extras/statuses/3256ead7-0745-432a-a031-3928c9b7d075/")
+            )
+        with self.subTest("Test an nvalid URL."):
+            self.assertFalse(data_utils.is_url("pizza"))
+
+    def test_is_uuid(self):
+        """Validate the operation of `is_uuid()`."""
+        with self.subTest("Test valid UUID."):
+            self.assertTrue(data_utils.is_uuid(uuid.uuid4()))
+            self.assertTrue(data_utils.is_uuid(str(uuid.uuid4())))
+        with self.subTest("Test invalid UUID."):
+            self.assertFalse(data_utils.is_uuid(None))
+            self.assertFalse(data_utils.is_uuid(1))
+            self.assertFalse(data_utils.is_uuid("abc123"))

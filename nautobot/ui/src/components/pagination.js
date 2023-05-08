@@ -38,7 +38,7 @@ export default function Pagination({
 
     const ul_css = {
         display: "flex",
-        "list-style-type": "none",
+        listStyleType: "none",
     };
     const li_css = {
         padding: "2px",

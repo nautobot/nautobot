@@ -41,11 +41,6 @@ export default function GenericObjectCreateView({ list_url }) {
 
     if (!data) return <GenericView />;
 
-    const post_schema = data.schema;
-    // uiSchema is used how the form will be presented.
-    const ui_schema = data.uiSchema.properties;
-    const model_name_title = post_schema.title;
-
     // Using axios so that we can do a POST.
     const onSubmit = ({ formData }) => {
         setExtraErrors({});
@@ -76,12 +71,12 @@ export default function GenericObjectCreateView({ list_url }) {
         <GenericView>
             <Frame>
                 <Card>
-                    <CardHeader>Add a new {model_name_title}</CardHeader>
+                    <CardHeader>Add a new {data.schema.title}</CardHeader>
                     <CardBody>
                         <Form
                             action={list_url}
-                            schema={post_schema}
-                            uiSchema={ui_schema}
+                            schema={data.schema}
+                            uiSchema={data.uiSchema}
                             validator={validator}
                             formData={formData}
                             onChange={(e) => {

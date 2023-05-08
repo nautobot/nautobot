@@ -101,9 +101,9 @@ export default function GenericObjectListView() {
     }
     // tableHeaders = all fields; and defaultHeaders = only the ones we want to see at first.
     const tableHeaders = headerData.view_options.fields;
-    let defaultHeaders = headerData.view_options.list_display;
+    let defaultHeaders = headerData.view_options.list_display_fields;
 
-    // If list_display is not defined or empty, default to showing all headers.
+    // If list_display_fields is not defined or empty, default to showing all headers.
     if (!defaultHeaders.length) {
         defaultHeaders = tableHeaders;
     }

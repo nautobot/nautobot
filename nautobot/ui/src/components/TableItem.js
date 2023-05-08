@@ -1,6 +1,6 @@
 // import Badge from 'react-bootstrap/Badge';
 import { Link } from "@components/RouterLink";
-import { Button } from "@nautobot/nautobot-ui";
+import { Button, CheckIcon, CloseIcon } from "@nautobot/nautobot-ui";
 import { calculateLuminance } from "@utils/color";
 
 function TextOrButton({ obj }) {
@@ -31,7 +31,7 @@ function TextOrButton({ obj }) {
 }
 
 function TableColumnDisplay({ obj }) {
-    if (!obj) {
+    if (obj === undefined || obj === null || obj === "") {
         return <>&mdash;</>;
     } else if (typeof obj === "object" && !Array.isArray(obj)) {
         return <TextOrButton obj={obj} />;
@@ -46,6 +46,12 @@ function TableColumnDisplay({ obj }) {
             );
         } else {
             return obj.join(", ");
+        }
+    } else if (typeof obj === "boolean") {
+        if (obj === true) {
+            return <CheckIcon />;
+        } else {
+            return <CloseIcon />;
         }
     } else {
         return obj;

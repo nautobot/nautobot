@@ -37,6 +37,7 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = VRF
         fields = "__all__"
+        list_display_fields = ["name", "rd", "tenant", "description"]
 
 
 #
@@ -48,6 +49,7 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
     class Meta:
         model = RouteTarget
         fields = "__all__"
+        list_display_fields = ["name", "tenant", "description"]
 
 
 #
@@ -61,6 +63,12 @@ class RIRSerializer(NautobotModelSerializer):
     class Meta:
         model = RIR
         fields = "__all__"
+        list_display_fields = [
+            "name",
+            "is_private",
+            "assigned_prefix_count",
+            "description",
+        ]
 
 
 #
@@ -74,6 +82,7 @@ class VLANGroupSerializer(NautobotModelSerializer):
     class Meta:
         model = VLANGroup
         fields = "__all__"
+        list_display_fields = ["name", "location", "vlan_count", "description"]
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         validators = []
 
@@ -96,7 +105,20 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = VLAN
+        # TODO(jathan): These were taken from VLANDetailTable and not VLANTable. Let's make sure
+        # these are correct.
         fields = "__all__"
+        list_display_fields = [
+            "vid",
+            "location",
+            "vlan_group",
+            "name",
+            "prefixes",
+            "tenant",
+            "status",
+            "role",
+            "description",
+        ]
         validators = []
 
     def validate(self, data):
@@ -124,28 +146,8 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Prefix
-        fields = [
-            "id",
-            "prefix",
-            "type",
-            "status",
-            # TODO(jathan): This is a "virtual" table field that is a child count. We don't yet have a
-            # solution for non-object fields in table views (utilization is another one). Likely a job
-            # for `opt_in_fields` so that we can request these specifically for Prefix list view.
-            # "children",
-            "family",
-            "vrf",
-            "tenant",
-            "location",
-            "vlan",
-            "role",
-            "rir",
-            "date_allocated",
-            "description",
-            "url",  # Serializer-only field
-        ]
-        list_display = [
-            "id",
+        fields = "__all__"
+        list_display_fields = [
             "prefix",
             "type",
             "status",
@@ -156,7 +158,10 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "role",
             "description",
         ]
-        extra_kwargs = {"family": {"read_only": True}, "prefix_length": {"read_only": True}}
+        extra_kwargs = {
+            "family": {"read_only": True},
+            "prefix_length": {"read_only": True},
+        }
 
 
 class PrefixLengthSerializer(serializers.Serializer):
@@ -212,6 +217,15 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = IPAddress
         fields = "__all__"
+        list_display_fields = [
+            "address",
+            "vrf",
+            "status",
+            "role",
+            "tenant",
+            "dns_name",
+            "description",
+        ]
         extra_kwargs = {
             "family": {"read_only": True},
             "prefix_length": {"read_only": True},
@@ -268,9 +282,14 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         child=serializers.IntegerField(
             min_value=constants.SERVICE_PORT_MIN,
             max_value=constants.SERVICE_PORT_MAX,
-        )
+        ),
     )
 
     class Meta:
         model = Service
         fields = "__all__"
+        # TODO(jathan): We need to account for the "parent" field from the `ServiceTable` which is
+        # an either/or column for `device` or `virtual_machine`. For now it's hard-coded to
+        # `device`.
+        # list_display_fields = ["name", "parent", "protocol", "ports", "description"]
+        list_display_fields = ["name", "device", "protocol", "ports", "description"]

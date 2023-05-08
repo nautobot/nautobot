@@ -10,8 +10,13 @@ from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
 
+# FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
+# works reliably.
+BOTTOM_FIELDS = ["computed_fields", "custom_fields", "relationships"]
+
+
 class NautobotProcessingMixin(schema.ProcessingMixin):
-    """Processing mixin  to account for custom field types and behaviors for Nautobot."""
+    """Processing mixin to account for custom field types and behaviors for Nautobot."""
 
     def _get_type_map_value(self, field: schema.SerializerType):
         """Overload default to add "required" as a default mapping."""
@@ -30,11 +35,19 @@ class NautobotProcessingMixin(schema.ProcessingMixin):
                 result[k] = result_default[k]
         return result
 
+    def order_fields(self, fields):
+        """Explicitly order the "big ugly" fields to the bottom."""
+        # FIXME(jathan): Correct the behavior introduced in #3500 by switching to `__all__` to
+        # assert these get added at the end.
+        for field_name in BOTTOM_FIELDS:
+            if field_name in fields:
+                fields.remove(field_name)
+                fields.append(field_name)
+        return fields
+
 
 class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
-    """
-    SchemaProcessor to account for custom field types and behaviors for Nautobot.
-    """
+    """SchemaProcessor to account for custom field types and behaviors for Nautobot."""
 
     def _get_field_properties(self, field: schema.SerializerType, name: str) -> Dict[str, Any]:
         """
@@ -96,9 +109,7 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
 
 
 class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcessor):
-    """
-    UiSchemaProcessor to account for custom field types and behaviors for Nautobot.
-    """
+    """UiSchemaProcessor to account for custom field types and behaviors for Nautobot."""
 
     def _field_order(self) -> List[str]:
         """
@@ -111,9 +122,46 @@ class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcesso
         else:
             fields = self.serializer.get_fields()
 
-        field_names = list(fields)
+        field_names = self.order_fields(list(fields))
 
         return field_names
+
+    def _get_ui_field_properties(self, field: schema.SerializerType, name: str) -> Dict[str, Any]:
+        """
+        We had to overload this here to make it so that array types with children validate properly
+        and to also use `NautobotUiSchemaProcessor` over the default.
+        """
+        data_index = self._generate_data_index(name)
+        result = {}
+        is_list = False
+        if self._is_field_serializer(field):
+            return NautobotUiSchemaProcessor(field, self.renderer_context, prefix=data_index).get_ui_schema()
+        elif isinstance(field, drf_serializers.ListField):
+            is_list = True
+            child = field.child
+            is_int = isinstance(child, drf_serializers.IntegerField)
+            widget = self._get_type_map_value(field=child).get("widget")
+            if not widget and isinstance(child, drf_serializers.ChoiceField):
+                widget = "checkbox"
+        else:
+            widget = self._get_type_map_value(field=field).get("widget")
+        help_text = field.help_text
+        if widget:
+            if is_list and is_int:
+                if "items" not in result:
+                    result["items"] = {}
+                result["items"]["ui:widget"] = widget
+            else:
+                result["ui:widget"] = widget
+        if help_text:
+            result["ui:help"] = help_text
+        result.update(self._get_style_dict(field))
+        result = self._set_validation_properties(field, result)
+        return result
+
+
+class NautobotColumnProcessor(NautobotProcessingMixin, schema.ColumnProcessor):
+    """ColumnProcessor to account for custom field types and behaviors for Nautobot."""
 
 
 class NautobotMetadata(SimpleMetadata):
@@ -144,16 +192,25 @@ class NautobotMetadata(SimpleMetadata):
                 view.request = request
         return actions
 
-    def determine_view_options(self, request, view, serializer):
+    def get_list_display_fields(self, serializer):
+        """Try to get the list display fields or default to an empty list."""
+        serializer_meta = getattr(serializer, "Meta", None)
+        return list(getattr(serializer_meta, "list_display_fields", []))
+
+    def determine_view_options(self, request, serializer):
         """Determine view options that will be used for non-form display metadata."""
         view_options = {}
         list_display = []
         fields = []
 
-        processor = schema.ColumnProcessor(serializer, request.parser_context)
-        field_map = dict(processor.fields)
+        processor = NautobotColumnProcessor(serializer, request.parser_context)
+        field_map = dict(serializer.fields)
         all_fields = list(field_map)
-        list_display_fields = getattr(serializer.Meta, "list_display", None) or []
+
+        # Explicitly order the "big ugly" fields to the bottom.
+        processor.order_fields(all_fields)
+
+        list_display_fields = self.get_list_display_fields(serializer)
 
         # Process the list_display fields first.
         for field_name in list_display_fields:
@@ -167,6 +224,7 @@ class NautobotMetadata(SimpleMetadata):
 
         # Process the rest of the fields second.
         for field_name in all_fields:
+            # Don't process list display fields twice.
             if field_name in list_display_fields:
                 continue
             try:
@@ -176,7 +234,7 @@ class NautobotMetadata(SimpleMetadata):
             column_data = processor._get_column_properties(field, field_name)
             fields.append(column_data)
 
-        view_options["list_display"] = list_display
+        view_options["list_display_fields"] = list_display
         view_options["fields"] = fields
 
         return view_options
@@ -188,13 +246,21 @@ class NautobotMetadata(SimpleMetadata):
         # If there's a serializer, do the needful to bind the schema/uiSchema.
         if hasattr(view, "get_serializer"):
             serializer = view.get_serializer()
+            # TODO(jathan): Bit of a WIP here. Will likely refactor. There might be cases where we
+            # want to explicitly override the UI field ordering, but that's not yet accounted for
+            # here. For now the assertion is always put the `list_display_fields` first, and then
+            # include the rest in whatever order.
+            # See: https://rjsf-team.github.io/react-jsonschema-form/docs/usage/objects#specifying-property-order
+            ui_schema = NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema()
+            ui_schema["ui:order"] = self.get_list_display_fields(serializer) + ["*"]
             metadata.update(
                 {
                     "schema": NautobotSchemaProcessor(serializer, request.parser_context).get_schema(),
-                    "uiSchema": NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema(),
+                    # "uiSchema": NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema(),
+                    "uiSchema": ui_schema,
                 }
             )
 
-        metadata["view_options"] = self.determine_view_options(request, view, serializer)
+            metadata["view_options"] = self.determine_view_options(request, serializer)
 
         return metadata
