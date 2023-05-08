@@ -195,8 +195,8 @@ class LocationSerializer(
     class Meta:
         model = Location
         fields = "__all__"
-        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         list_display_fields = ["name", "status", "parent", "tenant", "description", "tags"]
+        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
 
     def validate(self, data):
