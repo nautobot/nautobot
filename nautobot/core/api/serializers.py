@@ -126,18 +126,20 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     Namely, it:
 
     - defines the `display` field which exposes a human friendly value for the given object.
+    - ensures that `id` field is always present on the serializer as well.
+    - ensures that `created` and `last_updated` fields are always present if applicable to this model and serializer.
     - ensures that `object_type` field is always present on the serializer which represents the content-type of this
       serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
       PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
       which of several possible serializers are in use for a given attribute.
-    - ensures that `id` field is always present on the serializer as well.
     - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function
+      to enable the dynamic generation of nested serializers.
     """
 
     serializer_related_field = NautobotHyperlinkedRelatedField
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
-    object_type = ObjectTypeField(read_only=True)
+    object_type = ObjectTypeField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -612,8 +614,9 @@ class NotesSerializerMixin(BaseModelSerializer):
     def get_field_names(self, declared_fields, info):
         """Ensure that fields includes "notes_url" field if applicable."""
         fields = list(super().get_field_names(declared_fields, info))
-        # Make sure the field is at the end of fields, instead of the beginning
-        self.extend_field_names(fields, "notes_url")
+        if hasattr(self.Meta.model, "notes"):
+            # Make sure the field is at the end of fields, instead of the beginning
+            self.extend_field_names(fields, "notes_url")
         return fields
 
     @extend_schema_field(serializers.URLField())
