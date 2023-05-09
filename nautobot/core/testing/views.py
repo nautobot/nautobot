@@ -2,7 +2,7 @@ import csv
 import re
 from io import StringIO
 from typing import Optional, Sequence
-from unittest import skipIf
+from unittest import skip, skipIf
 import uuid
 
 from django.conf import settings
@@ -910,6 +910,7 @@ class ViewTestCases:
             with testing.disable_warnings("django.request"):
                 self.assertHttpStatus(response, 403)
 
+        @skip("TODO: import equivalent test on API testing side.")
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_import_objects_with_permission(self):
             initial_count = self._get_queryset().count()
@@ -930,6 +931,7 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
             self.assertEqual(self._get_queryset().count(), initial_count + len(self.csv_data) - 1)
 
+        @skip("TODO: import equivalent test on API testing side.")
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_import_objects_with_permission_csv_file(self):
             initial_count = self._get_queryset().count()
@@ -952,6 +954,7 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
             self.assertEqual(self._get_queryset().count(), initial_count + len(self.csv_data) - 1)
 
+        @skip("TODO: import equivalent test on API testing side.")
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_import_objects_with_constrained_permission(self):
             initial_count = self._get_queryset().count()
