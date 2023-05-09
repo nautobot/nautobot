@@ -23,6 +23,9 @@ HOSTNAME = platform.node()
 # Set the base directory two levels up (i.e. the base nautobot/ directory)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# The directory where the Nautobot UI packaging is stored.
+NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "ui")
+
 # Set the swapable User model to the Nautobot custom User model
 AUTH_USER_MODEL = "users.User"
 
@@ -183,7 +186,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
     "DEFAULT_RENDERER_CLASSES": (
-        "rest_framework.renderers.JSONRenderer",
+        "nautobot.core.api.renderers.NautobotJSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
     ),
     "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
@@ -358,7 +361,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
-    "cacheops",  # v2 TODO(jathan); Remove cacheops.
     "corsheaders",
     "django_filters",
     "django_jinja",
@@ -473,7 +475,10 @@ X_FRAME_OPTIONS = "DENY"
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
 STATIC_URL = "static/"
-STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, "project-static"),
+    os.path.join(NAUTOBOT_UI_DIR, "build", "static"),
+)
 
 # Media
 MEDIA_URL = "media/"
@@ -642,26 +647,6 @@ GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 # Caching
 #
 
-# v2 TODO(jathan): Remove all cacheops settings.
-# The django-cacheops plugin is used to cache querysets. The built-in Django
-# caching is not used.
-CACHEOPS = {
-    "auth.user": {"ops": "get", "timeout": 60 * 15},
-    "auth.*": {"ops": ("fetch", "get")},
-    "auth.permission": {"ops": "all"},
-    "circuits.*": {"ops": "all"},
-    "dcim.*": {"ops": "all"},
-    "ipam.*": {"ops": "all"},
-    "extras.*": {"ops": "all"},
-    "users.*": {"ops": "all"},
-    "tenancy.*": {"ops": "all"},
-    "virtualization.*": {"ops": "all"},
-}
-CACHEOPS_DEGRADE_ON_FAILURE = True
-CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
-CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
-CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
-
 # The django-redis cache is used to establish concurrent locks using Redis.
 CACHES = {
     "default": {
@@ -669,7 +654,7 @@ CACHES = {
             "NAUTOBOT_CACHES_BACKEND",
             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
         ),
-        "LOCATION": parse_redis_connection(redis_database=0),
+        "LOCATION": parse_redis_connection(redis_database=1),
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -800,3 +785,35 @@ def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
     :type: str
     """
     return str(device_display_name).split(".")[0]
+
+
+# Custom JSON schema serializer field type mappingss. These will be added to
+# `NautobotProcessingMixin.TYPE_MAP`.
+# Format: `{serializer_field_class.__name__}` => `{json_schema_type}`
+# See: https://github.com/yoyowallet/drf-react-template-framework#settings
+DRF_REACT_TEMPLATE_TYPE_MAP = {
+    "ContentTypeField": {"type": "string", "enum": "choices"},
+    "CustomFieldsDataField": {"type": "object", "widget": "textarea"},
+    "DateTimeField": {"type": "string", "format": "date-time", "widget": "date-time"},
+    "ImageField": {"type": "string", "format": "data-url"},
+    "IPFieldSerializer": {"type": "string"},
+    "JSONField": {"type": "string", "widget": "textarea"},
+    "MultipleChoiceJSONField": {"type": "array", "required": [], "enum": "choices"},
+    "ManyRelatedField": {"type": "array", "required": []},
+    #
+    # Foreign Key fields
+    #
+    # enum=choices is the one that works in the UI as a related field but it
+    # includes ALL related objects in the schema.
+    # "NautobotHyperlinkedRelatedField": {"type": "string", "enum": "choices"},
+    # readOnly=True disables the fields in the UI; not what we want.
+    # "NautobotHyperlinkedRelatedField": {"type": "string", "readOnly": True},
+    # type=string results in a free text field; also not what we want. For now,
+    # however, this will keep things moving so the unit tests pass.
+    "NautobotHyperlinkedRelatedField": {"type": "string", "format": "uuid"},
+    "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
+    "RelationshipsDataField": {"type": "object"},
+    "SlugField": {"type": "string"},
+    "TimeZoneSerializerField": {"type": "string"},
+    "UUIDField": {"type": "string", "format": "uuid"},
+}

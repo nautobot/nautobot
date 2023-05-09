@@ -14,52 +14,41 @@ Additionally, the `OPTIONS` verb can be used to inspect a particular REST API en
 One of the primary benefits of a REST API is its human-friendliness. Because it utilizes HTTP and JSON, it's very easy to interact with Nautobot data on the command line using common tools. For example, we can request an IP address from Nautobot and output the JSON using `curl` and `jq`. The following command makes an HTTP `GET` request for information about a particular IP address, identified by its primary key, and uses `jq` to present the raw JSON data returned in a more human-friendly format. (Piping the output through `jq` isn't strictly required but makes it much easier to read.)
 
 ```no-highlight
-curl -s http://nautobot/api/ipam/ip-addresses/c557df87-9a63-4555-bfd1-21cea2f6aac3/ | jq '.'
+curl -s http://nautobot/api/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df60/ | jq '.'
 ```
 
 ```json
 {
-  "id": 2954,
-  "url": "http://nautobot/api/ipam/ip-addresses/c557df87-9a63-4555-bfd1-21cea2f6aac3/",
+  "id": "83445aa3-bbd3-4ab4-86f5-36942ce9df60",
+  "url": "http://nautobot/api/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df60/",
+  "display": "10.0.60.39/32",
+  "custom_fields": {},
+  "notes_url": "http://nautobot/api/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df60/notes/",
   "family": {
     "value": 4,
     "label": "IPv4"
   },
-  "address": "192.168.0.42/26",
+  "address": "10.0.60.39/32",
+  "nat_outside_list": [
+    "http://nautobot/api/ipam/ip-addresses/a7569104-ed58-4938-ab6f-cb6a9e584f14/"
+  ],
+  "created": "2023-04-25T12:46:09.152507Z",
+  "last_updated": "2023-04-25T12:46:09.163545Z",
+  "host": "10.0.60.39",
+  "broadcast": "10.0.60.39",
+  "prefix_length": 32,
+  "dns_name": "desktop-08.cook.biz",
+  "description": "This is an IP Address",
+  "role": "http://nautobot/api/extras/roles/e7a815b0-2c48-499a-84b8-f20350abe415/",
+  "status": "http://nautobot/api/extras/statuses/b7f6a447-5616-4533-a6d5-a4ece50cd08c/",
   "vrf": null,
-  "tenant": null,
-  "status": {
-    "value": "active",
-    "label": "Active"
-  },
-  "role": null,
-  "assigned_object_type": "dcim.interface",
-  "assigned_object_id": "9fd066d2-135c-4005-b032-e0551cc61cec",
-  "assigned_object": {
-    "id": "9fd066d2-135c-4005-b032-e0551cc61cec",
-    "url": "http://nautobot/api/dcim/interfaces/9fd066d2-135c-4005-b032-e0551cc61cec/",
-    "device": {
-      "id": "6a522ebb-5739-4c5c-922f-ab4a2dc12eb0",
-      "url": "http://nautobot/api/dcim/devices/6a522ebb-5739-4c5c-922f-ab4a2dc12eb0/",
-      "name": "router1",
-      "display": "router1"
-    },
-    "name": "et-0/1/2",
-    "cable": null,
-    "connection_status": null
-  },
+  "tenant": "http://nautobot/api/tenancy/tenants/501fffe7-5302-40ae-b9e4-27d5e3ff2108/",
   "nat_inside": null,
-  "nat_outside_list": null,
-  "dns_name": "",
-  "description": "Example IP address",
-  "tags": [],
-  "custom_fields": {},
-  "created": "2020-08-04T00:00:00Z",
-  "last_updated": "2020-08-04T14:12:39.666885Z"
+  "tags": []
 }
 ```
 
-Each attribute of the IP address is expressed as an attribute of the JSON object. Fields may include their own nested objects, as in the case of the `assigned_object` field above. Every object includes a primary key named `id` which uniquely identifies it in the database.
+Each attribute of the IP address is expressed as an attribute of the JSON object. Related objects are identified by their own URLs that may be accessed to retrieve more details of the related object, as in the case of the `role` and `status` fields above. Every object includes a primary key named `id` which uniquely identifies it in the database.
 
 ## Interactive Documentation
 
@@ -91,7 +80,7 @@ Each model generally has two views associated with it: a list view and a detail 
 Lists of objects can be filtered using a set of query parameters. For example, to find all interfaces belonging to the device with ID 6a522ebb-5739-4c5c-922f-ab4a2dc12eb0:
 
 ```no-highlight
-GET /api/dcim/interfaces/?device_id=6a522ebb-5739-4c5c-922f-ab4a2dc12eb0
+GET /api/dcim/interfaces/?device=6a522ebb-5739-4c5c-922f-ab4a2dc12eb0
 ```
 
 See the [filtering documentation](filtering.md) for more details.
@@ -183,45 +172,34 @@ The constructor for Nautobot's `APISelect`/`APISelectMultiple` UI widgets now in
 
 ## Serialization
 
-The REST API employs two types of serializers to represent model data: base serializers and nested serializers. The base serializer is used to present the complete view of a model. This includes all database table fields which comprise the model, and may include additional metadata. A base serializer includes relationships to parent objects, but **does not** include child objects. For example, the `VLANSerializer` includes a nested representation its parent VLANGroup (if any), but does not include any assigned Prefixes.
-
-```json
-{
-    "id": 1048,
-    "site": {
-        "id": "09c9e21c-e038-44fd-be9a-43aef97bff8f",
-        "url": "http://nautobot/api/dcim/sites/09c9e21c-e038-44fd-be9a-43aef97bff8f/",
-        "name": "Corporate HQ",
-        "slug": "corporate-hq"
-    },
-    "group": {
-        "id": "eccc0964-9fab-43bc-bb77-66b1be08f64b",
-        "url": "http://nautobot/api/ipam/vlan-groups/eccc0964-9fab-43bc-bb77-66b1be08f64b/",
-        "name": "Production",
-        "slug": "production"
-    },
-    "vid": 101,
-    "name": "Users-Floor1",
-    "tenant": null,
-    "status": {
-        "value": "active",
-        "label": "Active"
-    },
-    "role": {
-        "id": "a1fd5e46-a85e-48c3-a2f4-3c2ec2bb2464",
-        "url": "http://nautobot/api/ipam/roles/a1fd5e46-a85e-48c3-a2f4-3c2ec2bb2464/",
-        "name": "User Access",
-        "slug": "user-access"
-    },
-    "description": "",
-    "display": "101 (Users-Floor1)",
-    "custom_fields": {}
-}
-```
+The REST API employs "serializers" to represent model data. The representation produced by a serializer typically includes all relevant database table fields which comprise the model, and may also include additional metadata such as information about other relevant objects in the database. Much like the database model itself, a serializer typically will represent information about "parent" objects (those objects that needed to exist in order to define the current object, such as `DeviceType` and `Location` for a `DeviceSerializer`) but typically will not include information about "child" objects (those objects that depend on the current object in order to be defined, such as `Interface` objects for a `DeviceSerializer`).
 
 ### Related Objects
 
-Related objects (e.g. `ForeignKey` fields) are represented using nested serializers. A nested serializer provides a minimal representation of an object, including only its direct URL and enough information to display the object to a user. When performing write API actions (`POST`, `PUT`, and `PATCH`), related objects may be specified by either UUID (primary key), or by a set of attributes sufficiently unique to return the desired object.
+Related objects (e.g. `ForeignKey` fields) are representable in several different ways. By default, when retrieving an object via the REST API, related objects are represented by URLs, or by a JSON `null` if no such related object exists. These URLs may be accessed in order to retrieve the full details of such related objects if needed/desired. For example, when retrieving an `IPAddress`, you might see:
+
+```json
+{
+    "id": "83445aa3-bbd3-4ab4-86f5-36942ce9df60",
+    "url": "http://localhost:8080/api/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df60/",
+    "display": "10.0.60.39/32",
+    "address": "10.0.60.39/32",
+    ...
+    "role": "http://localhost:8080/api/extras/roles/e7a815b0-2c48-499a-84b8-f20350abe415/",
+    "status": "http://localhost:8080/api/extras/statuses/b7f6a447-5616-4533-a6d5-a4ece50cd08c/",
+    "vrf": null,
+    "tenant": "http://localhost:8080/api/tenancy/tenants/501fffe7-5302-40ae-b9e4-27d5e3ff2108/",
+    "nat_inside": null,
+    "tags": []
+}
+```
+
+Here, the `role`, `status`, `vrf`, `tenant`, and `nat_outside` fields represent objects related to this `IPAddress`, and the `tags` field is a list of such objects (no tags in this example).
+
++/- 2.0.0
+    The representation of related objects on retrieval has changed from Nautobot 1.x. The `brief` query parameter has been removed, and distinct "nested" serializers no longer exist. Instead, the `depth` parameter controls whether related objects are represented by URLs or as nested objects. Please see [Depth Query Parameter](#depth-query-parameter) for more details.
+
+When performing write API actions (`POST`, `PUT`, and `PATCH`), related objects may be specified by either UUID (primary key), or by a set of attributes sufficiently unique to return the desired object.
 
 For example, when creating a new device, its rack can be specified by Nautobot ID (PK):
 
@@ -239,7 +217,7 @@ Or by a set of nested attributes which uniquely identify the rack:
 {
     "name": "MyNewDevice",
     "rack": {
-        "site": {
+        "location": {
             "name": "Equinix DC6"
         },
         "name": "R204"
@@ -248,54 +226,48 @@ Or by a set of nested attributes which uniquely identify the rack:
 }
 ```
 
-Note that if the provided parameters do not return exactly one object, a validation error is raised.
+Note that if the provided parameters do not match exactly one object, a validation error will be raised.
 
 ### Generic Relations
 
-Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, an IP address can be assigned to either a device interface _or_ a virtual machine interface. When making this assignment via the REST API, we must specify two attributes:
+Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, a `Cable` can be terminated (connected) to an `Interface`, or a `FrontPort`, or a `RearPort`, etc. For such generic relations, when making this assignment via the REST API, we must specify two attributes, typically a `object_type` and an `object_id`, and by convention in Nautobot's API:
 
-* `assigned_object_type` - The content type of the assigned object, defined as `<app>.<model>`
-* `assigned_object_id` - The assigned object's UUID
+* the `object_type` is the type of assigned object, typically represented as `<app_label>.<model_name>`
+* the `object_id` is the UUID (primary key) of the assigned object.
 
-Together, these values identify a unique object in Nautobot. The assigned object (if any) is represented by the `assigned_object` attribute on the IP address model.
+For example, the two ends of a Cable are identified by `termination_a_type`/`termination_a_id` and `termination_b_type`/`termination_b_id`, and might be specified on creation as something like:
 
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
-http://nautobot/api/ipam/ip-addresses/ \
+-H "Accept: application/json; version=2.0; indent=4" \
+http://nautobot/api/dcim/cables/ \
 --data '{
-    "address": "192.0.2.1/24",
-    "assigned_object_type": "dcim.interface",
-    "assigned_object_id": "e824bc29-623f-407e-8aa8-828f4c0b98ee"
+    "termination_a_type": "dcim.interface",
+    "termination_a_id": "96ee6c25-d689-46f4-b552-eb72977c27b8",
+    "termination_b_type": "dcim.frontport",
+    "termination_b_id": "ca54e2cc-d1b5-46e2-bb7d-85b1a9e3c1d0",
+    ...
 }'
 ```
 
+On retrieval, the REST API will include the `object_type` and `object_id` fields, but will also typically for convenience include an `object` field containing the URL or nested details of the object identified by the type/id fields. For the above `Cable` example, the retrieval response might look something like:
+
 ```json
 {
-    "id": "e2f29f8f-002a-4c4a-9d19-24cc7549e715",
-    "url": "http://nautobot/api/ipam/ip-addresses/56296/",
-    "assigned_object_type": "dcim.interface",
-    "assigned_object_id": "e824bc29-623f-407e-8aa8-828f4c0b98ee",
-    "assigned_object": {
-        "id": "e824bc29-623f-407e-8aa8-828f4c0b98ee",
-        "url": "http://nautobot/api/dcim/interfaces/e824bc29-623f-407e-8aa8-828f4c0b98ee/",
-        "device": {
-            "id": "76816a69-db2c-40e6-812d-115c61156e21",
-            "url": "http://nautobot/api/dcim/devices/76816a69-db2c-40e6-812d-115c61156e21/",
-            "name": "device105",
-            "display": "device105"
-        },
-        "name": "ge-0/0/0",
-        "cable": null,
-        "connection_status": null
-    },
+    "id": "549dae0d-3345-4bd1-8626-085e46a36ded",
+    "url": "http://localhost:8080/api/dcim/cables/549dae0d-3345-4bd1-8626-085e46a36ded/",
+    ...
+    "termination_a_type": "dcim.interface",
+    "termination_b_type": "dcim.frontport",
+    "termination_a_id": "96ee6c25-d689-46f4-b552-eb72977c27b8",
+    "termination_b_id": "ca54e2cc-d1b5-46e2-bb7d-85b1a9e3c1d0",
+    "termination_a": "http://localhost:8080/api/dcim/interfaces/96ee6c25-d689-46f4-b552-eb72977c27b8/",
+    "termination_b": "http://localhost:8080/api/dcim/front-ports/ca54e2cc-d1b5-46e2-bb7d-85b1a9e3c1d0/",
     ...
 }
 ```
-
-If we wanted to assign this IP address to a virtual machine interface instead, we would have set `assigned_object_type` to `virtualization.vminterface` and updated the object ID appropriately.
 
 ## Pagination
 
@@ -365,7 +337,7 @@ To query Nautobot for a list of objects, make a `GET` request to the model's _li
 
 ```no-highlight
 curl -s -X GET \
--H "Accept: application/json; version=1.3" \
+-H "Accept: application/json; version=2.0" \
 http://nautobot/api/ipam/ip-addresses/ | jq '.'
 ```
 
@@ -404,7 +376,7 @@ To query Nautobot for a single object, make a `GET` request to the model's _deta
 
 ```no-highlight
 curl -s -X GET \
--H "Accept: application/json; version=1.3" \
+-H "Accept: application/json; version=2.0" \
 http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq '.'
 ```
 
@@ -416,76 +388,283 @@ http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq
 }
 ```
 
-### Brief Format
+### Depth Query Parameter
 
-The `GET` API endpoints support an optional "brief" format, which returns only a minimal representation of each object in the response. This is useful when you need only a list of available objects without any related data, such as when populating a drop-down list in a form. As an example, the default (complete) format of an IP address looks like this:
++++ 2.0.0
+
+A `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` parameter. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It is available for both retrieving a single object and a list of objects.
+This parameter is an positive integer value that can range from 0 to 10. In most use cases, you will only need a maximum `depth` of 2 to get all the information you need.
+
+!!! note
+    The `?brief` query parameter is removed for Nautobot v2.x. Use `?depth=0` instead.
+
+!!! important
+    The `?depth` query parameter should only be used for `GET` operations in the API. It should not be used in `POST`, `PATCH` and `DELETE` requests. For these requests, only `?depth=0` should be used.
+
+#### Default/?depth=0
+
+`?depth` parameter defaults to 0 and offers a very lightweight view of the API where all object-related fields are represented by only their URLs:
 
 ```no-highlight
-GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/
+curl -s -X GET \
+-H "Accept: application/json; version=2.0" \
+http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/ | jq '.'
 ```
 
 ```json
 {
-    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
-    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
-    "family": {
-        "value": 4,
-        "label": "IPv4"
-    },
-    "prefix": "192.0.2.0/24",
-    "type": {
-        "value": "container",
-        "label": "Container"
-    },
-    "site": {
-        "id": "b9edf2ee-cad9-48be-9921-006294bff730",
-        "url": "http://nautobot/api/dcim/sites/b9edf2ee-cad9-48be-9921-006294bff730/",
-        "name": "Site 23A",
-        "slug": "site-23a"
-    },
-    "vrf": null,
-    "tenant": null,
-    "vlan": null,
+    "id": "0e19e475-89c9-4cf4-8b5f-a0589f0950cd",
+    "display": "Campus-01",
+    "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
+    "tree_depth": 0,
+    "time_zone": "Asia/Baghdad",
+    "circuit_count": 7,
+    "device_count": 0,
+    "prefix_count": 0,
+    "rack_count": 0,
+    "virtual_machine_count": 0,
+    "vlan_count": 0,
+    "created": "2023-04-12T19:29:06.884754Z",
+    "last_updated": "2023-04-12T19:29:06.906503Z",
+    "name": "Campus-01",
+    "slug": "campus-01",
+    "description": "Local take each compare court exactly.",
+    "facility": "328",
+    "asn": null,
+    "physical_address": "",
+    "shipping_address": "",
+    "latitude": null,
+    "longitude": "104.200000",
+    "contact_name": "Frances Hernandez",
+    "contact_phone": "",
+    "contact_email": "",
+    "comments": "Sort share road candidate.",
+    "status": "http://nautobot/api/extras/statuses/28eb334b-4171-4da4-a03a-fa6d0c6a9442/",
+    "parent": null,
+    "location_type": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
+    "tenant": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
+    "tags": [
+        "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/",
+    ],
+    "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
+    "custom_fields": {
+        "example_plugin_auto_custom_field": null
+    }
+}
+```
+
+#### ?depth=1
+
+When `?depth=1` is added to the query parameters, all object-related fields, instead of being represented as UUIDs as they are when `?depth=0`, will be represented as nested objects, similar (**but not necessarily identical!**) to the objects that would be retrieved when querying the API directly for those related objects.
+
+!!! important
+    Nested objects retrieved with a greater-than-zero `depth` parameter do not necessarily include all fields that would be included on the fully detailed object that can be retrieved by querying their `url` directly. In particular:
+
+    - Nested objects *will not include* a field for `tags` or any other many-to-many relations on the object (such as a `Status` object's `content_types` relation).
+    - Nested objects *will not include* the `relationships` or `computed_fields` keys, even if those are [opted-in](#retrieving-object-relationships-and-relationship-associations) on the request.
+    - Nested objects *may omit* any derived (non-database) attributes, such as related object counts, tree-depth information, etc.
+
+For example, retrieving a `Location` with `?depth=1` would provide nested objects for the `status`, `parent`, `location_type`, `tenant`, and `tags` fields:
+
+```no-highlight
+curl -s -X GET \
+-H "Accept: application/json; version=2.0" \
+http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1 | jq '.'
+```
+
+```json
+{
+    ...
     "status": {
-        "display": "Reserved",
-        "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-        "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
-        "name": "Reserved",
-        "slug": "reserved",
-        "created": "2019-12-09T01:02:03.456789Z",
-        "last_updated": "2019-12-09T16:38:50.363404Z"
+        "id": "91a53d61-4180-4820-835d-533b34dbb5b4",
+        "display": "Active",
+        "url": "http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/",
+        "custom_fields": {},
+        "notes_url": "http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/notes/",
+        "created": "2023-04-12T00:00:00Z",
+        "last_updated": "2023-04-12T19:25:51.413824Z",
+        "name": "Active",
+        "color": "4caf50",
+        "description": "Unit is active"
     },
-    "role": {
-        "id": "ae1470bc-a858-4ce7-b9ce-dd1cd46333fe",
-        "url": "http://nautobot/api/ipam/roles/ae1470bc-a858-4ce7-b9ce-dd1cd46333fe/",
-        "name": "Staging",
-        "slug": "staging"
+    "parent": {
+        "id": "0e19e475-89c9-4cf4-8b5f-a0589f0950cd",
+        "display": "Campus-01",
+        "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
+        "custom_fields": {
+            "example_plugin_auto_custom_field": null
+        },
+        "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
+        "tree_depth": null,
+        "time_zone": "Asia/Baghdad",
+        "created": "2023-04-12T19:29:06.884754Z",
+        "last_updated": "2023-04-12T19:29:06.906503Z",
+        "name": "Campus-01",
+        "slug": "campus-01",
+        "description": "Local take each compare court exactly.",
+        "facility": "328",
+        "asn": null,
+        "physical_address": "",
+        "shipping_address": "",
+        "latitude": null,
+        "longitude": "104.200000",
+        "contact_name": "Frances Hernandez",
+        "contact_phone": "",
+        "contact_email": "",
+        "comments": "Sort share road candidate.",
+        "status": "http://nautobot/api/extras/statuses/28eb334b-4171-4da4-a03a-fa6d0c6a9442/",
+        "parent": null,
+        "location_type": "http://nautobot/api/extras/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
+        "tenant": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
     },
-    "type": "network",
-    "description": "Example prefix",
-    "tags": [],
-    "custom_fields": {},
-    "created": "2018-12-10T00:00:00Z",
-    "last_updated": "2019-03-01T20:02:46.173540Z"
+    "location_type": {
+        "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
+        "display": "Campus → Building",
+        "url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/",
+        "custom_fields": {},
+        "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
+        "tree_depth": null,
+        "created": "2023-04-12T19:29:06.707759Z",
+        "last_updated": "2023-04-12T19:29:06.716482Z",
+        "name": "Building",
+        "slug": "building",
+        "description": "Protect growth bill all hair along.",
+        "nestable": false,
+        "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/"
+    },
+    "tenant": {
+        "id": "d043b6bc-6892-45f9-b460-4b006eb68016",
+        "display": "Page Inc",
+        "url": "http://nautobot/api/tenancy/tenants/d043b6bc-6892-45f9-b460-4b006eb68016/",
+        "custom_fields": {},
+        "notes_url": "http://nautobot/api/tenancy/tenants/d043b6bc-6892-45f9-b460-4b006eb68016/notes/",
+        "created": "2023-04-12T19:29:06.257345Z",
+        "last_updated": "2023-04-12T19:29:06.262563Z",
+        "name": "Page Inc",
+        "description": "Citizen father policy door science light. Glass improve place understand against ground.\nLarge firm per sing. Item they side walk test open tend.",
+        "comments": "",
+        "tenant_group": null,
+    },
+    "tags": [
+        {
+            "id": "a50d4568-27ae-4743-87ac-ffdc22b7f5d2",
+            "display": "Light blue",
+            "url": "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/",
+            "custom_fields": {},
+            "notes_url": "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/notes/",
+            "name": "Light blue",
+            "slug": "light-blue",
+            "created": "2023-04-12T19:29:05.753433Z",
+            "last_updated": "2023-04-12T19:29:05.770752Z",
+            "color": "03a9f4",
+            "description": "Want task generation. Commercial candidate performance financial guess modern.\nEarly toward adult black. Join black land sit. It smile standard possible reach."
+        }
+    ]
 }
 ```
 
-The brief format is much more terse:
+!!! note
+    As previously explained, note that the `status` nested object included in this response does not include the `content_types` many-to-many relation that exists on all Status objects. If this information is needed, you would need to directly query the URL of the status object itself (above, `http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/`) to get a fully detailed response. Similarly, the `parent` and `tenant` nested objects do not include their `tags` relations, the `parent` object does not include its derived `tree_depth` and related object counters, and the `tags` nested object list does not include the `content_types` for each `Tag`.
+
+#### ?depth=2 and beyond
+
+A higher `depth` parameter in the query presents you with more insight to the object and can be useful in situations that demand information of an indirectly related field of the object.
+
+!!! important
+    Using higher `depth` values may substantially increase the amount of time it takes for the REST API to respond to your query when there are a large number of related objects. In some cases it may be more efficient to initially query with a lower `depth` and then follow the `url` values that the REST API response provides for specific related objects to query those objects directly as a more narrowly focused query approach.
+
+For example, if you need information on the `parent` of a `location` instance's `parent`.
 
 ```no-highlight
-GET /api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/?brief=1
+curl -s -X GET \
+-H "Accept: application/json; version=2.0" \
+http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2 | jq '.'
 ```
 
 ```json
 {
-    "id": "7d2d24ac-4737-4fc1-a850-b30366618f3d",
-    "url": "http://nautobot/api/ipam/prefixes/7d2d24ac-4737-4fc1-a850-b30366618f3d/",
-    "family": 4,
-    "prefix": "10.40.3.0/24"
+    ...
+    "parent": {
+        ...
+        "status": {
+            "id": "39ea1ea4-3028-4a81-81e0-24a5743d3657",
+            "url": "http://nautobot/api/extras/statuses/39ea1ea4-3028-4a81-81e0-24a5743d3657/",
+            "display": "Retired",
+            "object_type": "extras.status",
+            "notes_url": "http://nautobot/api/extras/statuses/39ea1ea4-3028-4a81-81e0-24a5743d3657/notes/",
+            "created": "2023-04-12T00:00:00Z",
+            "last_updated": "2023-04-12T19:26:16.982697Z",
+            "name": "Retired",
+            "color": "f44336",
+            "description": "Location has been retired",
+            "custom_fields": {}
+        },
+        "parent": {
+            "id": "0e19e475-89c9-4cf4-8b5f-a0589f0950cd",
+            "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
+            "display": "Campus-01",
+            "object_type": "dcim.location",
+            "time_zone": "Asia/Baghdad",
+            "created": "2023-04-12T19:29:06.884754Z",
+            "last_updated": "2023-04-12T19:29:06.906503Z",
+            "name": "Campus-01",
+            "slug": "campus-01",
+            "description": "Local take each compare court exactly.",
+            "facility": "328",
+            "asn": null,
+            "physical_address": "",
+            "shipping_address": "",
+            "latitude": null,
+            "longitude": "104.200000",
+            "contact_name": "Frances Hernandez",
+            "contact_phone": "",
+            "contact_email": "",
+            "comments": "Sort share road candidate.",
+            "status": "http://nautobot/api/extras/statuses/28eb334b-4171-4da4-a03a-fa6d0c6a9442/",
+            "parent": null,
+            "location_type": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
+            "tenant": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
+            "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
+            "custom_fields": {
+                "example_plugin_auto_custom_field": null
+            }
+        },
+        "location_type": {
+            "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
+            "display": "Campus → Building",
+            "url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/",
+            "created": "2023-04-12T19:29:06.707759Z",
+            "last_updated": "2023-04-12T19:29:06.716482Z",
+            "name": "Building",
+            "slug": "building",
+            "description": "Protect growth bill all hair along.",
+            "nestable": false,
+            "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
+            "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
+            "custom_fields": {}
+        },
+        "tenant": null,
+    },
+    "location_type": {
+        ...
+        "parent": {
+            "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
+            "display": "Campus → Building",
+            "url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/",
+            "created": "2023-04-12T19:29:06.707759Z",
+            "last_updated": "2023-04-12T19:29:06.716482Z",
+            "name": "Building",
+            "slug": "building",
+            "description": "Protect growth bill all hair along.",
+            "nestable": false,
+            "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
+            "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
+            "custom_fields": {}
+        }
+    },
+    ...
 }
 ```
-
-The brief format is supported for both lists and individual objects.
 
 ### Retrieving Object Relationships and Relationship Associations
 
@@ -559,9 +738,9 @@ To create a new object, make a `POST` request to the model's _list_ endpoint wit
 curl -s -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3" \
+-H "Accept: application/json; version=2.0" \
 http://nautobot/api/ipam/prefixes/ \
---data '{"prefix": "192.0.2.0/24", "site": 8df9e629-4338-438b-8ea9-06114f7be08e}' | jq '.'
+--data '{"prefix": "192.0.2.0/24", "location": 8df9e629-4338-438b-8ea9-06114f7be08e}' | jq '.'
 ```
 
 ```json
@@ -573,24 +752,11 @@ http://nautobot/api/ipam/prefixes/ \
     "label": "IPv4"
   },
   "prefix": "192.0.2.0/24",
-  "site": {
-    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
-    "url": "http://nautobot/api/dcim/sites/8df9e629-4338-438b-8ea9-06114f7be08e/",
-    "name": "US-East 4",
-    "slug": "us-east-4"
-  },
+  "location": "http://nautobot/api/dcim/locations/8df9e629-4338-438b-8ea9-06114f7be08e/",
   "vrf": null,
   "tenant": null,
   "vlan": null,
-  "status": {
-      "display": "Active",
-      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-      "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
-      "name": "Active",
-      "slug": "active",
-      "created": "2019-12-09T16:38:50.363404Z",
-      "last_updated": "2019-12-09T16:38:50.363404Z"
-  },
+  "status": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
   "role": null,
   "type": "network",
   "description": "",
@@ -608,7 +774,7 @@ To create multiple instances of a model using a single request, make a `POST` re
 ```no-highlight
 curl -X POST -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3; indent=4" \
+-H "Accept: application/json; version=2.0; indent=4" \
 http://nautobot/api/dcim/sites/ \
 --data '[
 {"name": "Site 1", "slug": "site-1", "region": {"name": "United States"}},
@@ -648,9 +814,9 @@ To modify an object which has already been created, make a `PATCH` request to th
 curl -s -X PATCH \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3" \
+-H "Accept: application/json; version=2.0" \
 http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
---data '{"status": "reserved"}' | jq '.'
+--data '{"status": "fc32b83f-2448-4602-9d43-fecc6735e4e5"}' | jq '.'
 ```
 
 ```json
@@ -662,24 +828,11 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
     "label": "IPv4"
   },
   "prefix": "192.0.2.0/24",
-  "site": {
-    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
-    "url": "http://nautobot/api/dcim/sites/8df9e629-4338-438b-8ea9-06114f7be08e/",
-    "name": "US-East 4",
-    "slug": "us-east-4"
-  },
+  "site": "http://nautobot/api/dcim/sites/8df9e629-4338-438b-8ea9-06114f7be08e/",
   "vrf": null,
   "tenant": null,
   "vlan": null,
-  "status": {
-      "display": "Reserved",
-      "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-      "url": "http://localhost:8080/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
-      "name": "Reserved",
-      "slug": "reserved",
-      "created": "2019-12-09T00:00:00Z",
-      "last_updated": "2019-12-09T16:38:50.363404Z"
-  },
+  "status": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
   "role": null,
   "type": "network",
   "description": "",
@@ -738,15 +891,15 @@ It is possible to modify the objects associated via Relationship with an object 
 
 ### Updating Multiple Objects
 
-Multiple objects can be updated simultaneously by issuing a `PUT` or `PATCH` request to a model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted and the attributes to be updated. For example, to update sites with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589 and 1a414273-3d68-4586-ba22-6ae0a5702b8f to a status of "active", issue the following request:
+Multiple objects can be updated simultaneously by issuing a `PUT` or `PATCH` request to a model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted and the attributes to be updated. For example, to update sites with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589 and 1a414273-3d68-4586-ba22-6ae0a5702b8f to a status of "Active", issue the following request:
 
 ```no-highlight
 curl -s -X PATCH \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3" \
+-H "Accept: application/json; version=2.0" \
 http://nautobot/api/dcim/sites/ \
---data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589", "status": "active"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f", "status": "active"}]'
+--data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589", "status": {"name": "Active"}}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f", "status": {"name": "Active"}}]'
 ```
 
 Note that there is no requirement for the attributes to be identical among objects. For instance, it's possible to update the status of one site along with the name of another in the same request.
@@ -761,7 +914,7 @@ To delete an object from Nautobot, make a `DELETE` request to the model's _detai
 ```no-highlight
 curl -s -X DELETE \
 -H "Authorization: Token $TOKEN" \
--H "Accept: application/json; version=1.3" \
+-H "Accept: application/json; version=2.0" \
 http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/
 ```
 
@@ -778,7 +931,7 @@ Nautobot supports the simultaneous deletion of multiple objects of the same type
 curl -s -X DELETE \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
--H "Accept: application/json; version=1.3" \
+-H "Accept: application/json; version=2.0" \
 http://nautobot/api/dcim/sites/ \
 --data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f"}, {"id": "c2516019-caf6-41f0-98a6-4276c1a73fa3"}]'
 ```

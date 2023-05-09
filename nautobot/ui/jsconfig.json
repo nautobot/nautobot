@@ -1,0 +1,5 @@
+{
+    "extends": "./jsconfig.paths.json",
+    "compilerOptions": {},
+    "exclude": ["node_modules", "build"]
+}

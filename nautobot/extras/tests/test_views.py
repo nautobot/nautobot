@@ -517,6 +517,17 @@ class DynamicGroupTestCase(
         instance.refresh_from_db()
         self.assertEqual(instance.filter, {"serial": data["filter-serial"]})
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filter_by_content_type(self):
+        """
+        Test that filtering by `content_type` in the UI succeeds.
+
+        This is a regression test for https://github.com/nautobot/nautobot/issues/3612
+        """
+        path = self._get_url("list")
+        response = self.client.get(path + "?content_type=dcim.device")
+        self.assertHttpStatus(response, 200)
+
 
 class ExportTemplateTestCase(
     ViewTestCases.CreateObjectViewTestCase,
@@ -1475,8 +1486,8 @@ class JobTestCase(
         cls.run_urls = (
             # Legacy URL (job class path based)
             reverse("extras:job", kwargs={"class_path": cls.test_pass.class_path}),
-            # Current URL (job model slug based)
-            reverse("extras:job_run", kwargs={"slug": cls.test_pass.slug}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_pass.pk}),
         )
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
@@ -1486,8 +1497,8 @@ class JobTestCase(
         cls.extra_run_urls = (
             # Legacy URL (job class path based)
             reverse("extras:job", kwargs={"class_path": cls.test_required_args.class_path}),
-            # Current URL (job model slug based)
-            reverse("extras:job_run", kwargs={"slug": cls.test_required_args.slug}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_required_args.pk}),
         )
 
         # Create an entry for a non-installed Job as well
@@ -1646,7 +1657,7 @@ class JobTestCase(
 
         for run_url in (
             reverse("extras:job", kwargs={"class_path": self.test_not_installed.class_path}),
-            reverse("extras:job_run", kwargs={"slug": self.test_not_installed.slug}),
+            reverse("extras:job_run", kwargs={"pk": self.test_not_installed.pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)
@@ -1661,7 +1672,7 @@ class JobTestCase(
 
         for run_url in (
             reverse("extras:job", kwargs={"class_path": "local/test_fail/TestFail"}),
-            reverse("extras:job_run", kwargs={"slug": Job.objects.get(job_class_name="TestFail").slug}),
+            reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)
@@ -2133,6 +2144,7 @@ class RelationshipAssociationTestCase(
             source_type=device_type,
             destination_type=vlan_type,
         )
+        cls.relationship = relationship
         relationship.validated_save()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
@@ -2170,6 +2182,28 @@ class RelationshipAssociationTestCase(
             destination_type=vlan_type,
             destination_id=vlans[2].pk,
         ).validated_save()
+
+    def test_list_objects_with_constrained_permission(self):
+        instance1, instance2 = self.relationship.relationship_associations.all()[:2]
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+        self.assertIn(instance1.source.name, content, msg=content)
+        self.assertIn(instance1.destination.name, content, msg=content)
+        self.assertNotIn(instance2.source.name, content, msg=content)
+        self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
 class StatusTestCase(

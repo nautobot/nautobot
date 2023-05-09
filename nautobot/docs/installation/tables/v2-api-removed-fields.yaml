@@ -1,4 +1,7 @@
 ---
+- Model/Endpoint: "/api/plugins/installed-plugins"
+  Removed Field: "verison"
+  Comments: "Use `version` instead"
 - Model/Endpoint: "/api/status/"
   Removed Field: "rq-workers-running"
   Comments: "Django-RQ is no longer supported"
@@ -26,6 +29,9 @@
 - Model/Endpoint: "CustomLink"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "Device"
+  Removed Field: "primary_ip"
+  Comments: "Use `primary_ip4` or `primary_ip6`instead"
 - Model/Endpoint: "Device"
   Removed Field: "site"
   Comments: "Use `location` instead"
@@ -107,6 +113,9 @@
 - Model/Endpoint: "TenantGroup"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "VirtualMachine"
+  Removed Field: "primary_ip"
+  Comments: "Use `primary_ip4` or `primary_ip6`instead"
 - Model/Endpoint: "VLAN"
   Removed Field: "site"
   Comments: "Use `location` instead"

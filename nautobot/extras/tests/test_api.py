@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import uuid
+import tempfile
 from unittest import mock
 
 from django.conf import settings
@@ -26,8 +27,7 @@ from nautobot.dcim.models import (
     RackGroup,
 )
 from nautobot.dcim.tests import test_views
-from nautobot.extras.api.nested_serializers import NestedJobResultSerializer
-from nautobot.extras.api.serializers import ConfigContextSerializer
+from nautobot.extras.api.serializers import ConfigContextSerializer, JobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
     JobExecutionType,
@@ -90,13 +90,6 @@ class AppTest(APITestCase):
 
 class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
-    brief_fields = [
-        "content_type",
-        "display",
-        "id",
-        "label",
-        "url",
-    ]
     choices_fields = ["content_type"]
     create_data = [
         {
@@ -182,7 +175,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
 
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "Config Context 4",
@@ -285,7 +277,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["config_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(response.data["config_context_schema"], self.absolute_api_url(schema))
 
     def test_schema_validation_fails(self):
         """
@@ -322,7 +314,6 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
 
 class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContextSchema
-    brief_fields = ["display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Schema 4",
@@ -483,7 +474,6 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
     """Tests for the CustomField REST API."""
 
     model = CustomField
-    brief_fields = ["display", "id", "key", "url"]
     create_data = [
         {
             "content_types": ["dcim.location"],
@@ -556,7 +546,6 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):
     model = CustomLink
-    brief_fields = ["content_type", "display", "id", "name", "url"]
     create_data = [
         {
             "content_type": "dcim.location",
@@ -681,7 +670,6 @@ class DynamicGroupTestMixin:
 
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
-    brief_fields = ["content_type", "display", "id", "name", "url"]
     choices_fields = ["content_type"]
     create_data = [
         {
@@ -714,7 +702,6 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
 
 class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroupMembership
-    brief_fields = ["display", "group", "id", "operator", "parent_group", "url", "weight"]
     choices_fields = ["operator"]
 
     @classmethod
@@ -776,7 +763,6 @@ class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIView
 
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ExportTemplate
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "content_type": "dcim.device",
@@ -822,7 +808,6 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
 
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "branch": "develop",
     }
@@ -943,8 +928,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
-    brief_fields = ["display", "id", "name", "url"]
-
     create_data = [
         {
             "name": "graphql-query-4",
@@ -1092,7 +1075,6 @@ class ImageAttachmentTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = ImageAttachment
-    brief_fields = ["display", "id", "image", "name", "url"]
     choices_fields = ["content_type"]
 
     @classmethod
@@ -1137,7 +1119,6 @@ class JobTest(
     """Test cases for the Jobs REST API."""
 
     model = Job
-    brief_fields = ["display", "grouping", "id", "job_class_name", "module_name", "name", "slug", "source", "url"]
     choices_fields = None
     update_data = {
         # source, module_name, job_class_name, installed are NOT editable
@@ -1388,12 +1369,14 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["scheduled_job"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
+        self.assertEqual(response.data["scheduled_job"]["url"], self.absolute_api_url(schedule))
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
+        # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
+        self.assertEqual(
+            datetime.fromisoformat(response.data["scheduled_job"]["start_time"].replace("Z", "+00:00")),
+            schedule.start_time,
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1499,13 +1482,8 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertIsNone(response.data["scheduled_job"])
-        # The urls in a NestedJobResultSerializer depends on the request context, which we don't have
         data_job_result = response.data["job_result"]
-        del data_job_result["url"]
-        del data_job_result["user"]["url"]
-        expected_data_job_result = NestedJobResultSerializer(job_result, context={"request": None}).data
-        del expected_data_job_result["url"]
-        del expected_data_job_result["user"]["url"]
+        expected_data_job_result = JobResultSerializer(job_result, context={"request": response.wsgi_request}).data
         self.assertEqual(data_job_result, expected_data_job_result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1607,12 +1585,14 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["scheduled_job"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
+        self.assertEqual(response.data["scheduled_job"]["url"], self.absolute_api_url(schedule))
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
+        # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
+        self.assertEqual(
+            datetime.fromisoformat(response.data["scheduled_job"]["start_time"].replace("Z", "+00:00")),
+            schedule.start_time,
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1742,12 +1722,14 @@ class JobTest(
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
         self.assertEqual(response.data["scheduled_job"]["id"], str(schedule.pk))
-        self.assertEqual(
-            response.data["scheduled_job"]["url"],
-            "http://nautobot.example.com" + reverse("extras-api:scheduledjob-detail", kwargs={"pk": schedule.pk}),
-        )
+        self.assertEqual(response.data["scheduled_job"]["url"], self.absolute_api_url(schedule))
         self.assertEqual(response.data["scheduled_job"]["name"], schedule.name)
-        self.assertEqual(response.data["scheduled_job"]["start_time"], schedule.start_time)
+        # Python < 3.11 doesn't understand the datetime string "2023-04-27T18:33:16.017865Z",
+        # but it *does* understand the string "2023-04-27T18:33:17.330836+00:00"
+        self.assertEqual(
+            datetime.fromisoformat(response.data["scheduled_job"]["start_time"].replace("Z", "+00:00")),
+            schedule.start_time,
+        )
         self.assertEqual(response.data["scheduled_job"]["interval"], schedule.interval)
         self.assertIsNone(response.data["job_result"])
 
@@ -1873,7 +1855,6 @@ class JobTest(
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
     model = JobHook
-    brief_fields = ["display", "id", "name", "url"]
     choices_fields = []
     update_data = {
         "name": "Overridden name",
@@ -1980,7 +1961,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
 
 class JobButtonTest(APIViewTestCases.APIViewTestCase):
     model = JobButton
-    brief_fields = ["display", "id", "name", "url"]
     choices_fields = ["button_class"]
 
     @classmethod
@@ -2039,7 +2019,6 @@ class JobResultTest(
     APIViewTestCases.DeleteObjectViewTestCase,
 ):
     model = JobResult
-    brief_fields = ["date_created", "date_done", "display", "id", "name", "status", "url", "user"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2051,7 +2030,7 @@ class JobResultTest(
             job_model=jobs[0],
             name=jobs[0].class_path,
             obj_type=job_ct,
-            date_done=datetime.now(),
+            date_done=now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,
             data={"output": "\nRan for 3 seconds"},
@@ -2063,7 +2042,7 @@ class JobResultTest(
             job_model=None,
             name="Git Repository",
             obj_type=git_ct,
-            date_done=datetime.now(),
+            date_done=now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,
             data=None,
@@ -2090,18 +2069,6 @@ class JobLogEntryTest(
     APIViewTestCases.ListObjectsViewTestCase,
 ):
     model = JobLogEntry
-    brief_fields = [
-        "absolute_url",
-        "created",
-        "display",
-        "grouping",
-        "id",
-        "job_result",
-        "log_level",
-        "log_object",
-        "message",
-        "url",
-    ]
     choices_fields = []
 
     @classmethod
@@ -2133,7 +2100,6 @@ class ScheduledJobTest(
     APIViewTestCases.ListObjectsViewTestCase,
 ):
     model = ScheduledJob
-    brief_fields = ["crontab", "display", "id", "interval", "name", "start_time", "url"]
     choices_fields = []
 
     @classmethod
@@ -2350,15 +2316,6 @@ class JobApprovalTest(APITestCase):
 
 class NoteTest(APIViewTestCases.APIViewTestCase):
     model = Note
-    brief_fields = [
-        "assigned_object",
-        "display",
-        "id",
-        "note",
-        "slug",
-        "url",
-        "user",
-    ]
     choices_fields = ["assigned_object_type"]
 
     @classmethod
@@ -2411,7 +2368,6 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTestMixin):
     model = Relationship
-    brief_fields = ["display", "id", "name", "slug", "url"]
 
     create_data = [
         {
@@ -2505,10 +2461,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             {
                 self.relationships[0].slug: {
                     "id": str(self.relationships[0].pk),
-                    "url": (
-                        "http://nautobot.example.com"
-                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[0].pk})
-                    ),
+                    "url": self.absolute_api_url(self.relationships[0]),
                     "name": self.relationships[0].name,
                     "type": self.relationships[0].type,
                     "peer": {
@@ -2519,10 +2472,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 },
                 self.relationships[1].slug: {
                     "id": str(self.relationships[1].pk),
-                    "url": (
-                        "http://nautobot.example.com"
-                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[1].pk})
-                    ),
+                    "url": self.absolute_api_url(self.relationships[1]),
                     "name": self.relationships[1].name,
                     "type": self.relationships[1].type,
                     "destination": {
@@ -2538,10 +2488,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 },
                 self.relationships[2].slug: {
                     "id": str(self.relationships[2].pk),
-                    "url": (
-                        "http://nautobot.example.com"
-                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationships[2].pk})
-                    ),
+                    "url": self.absolute_api_url(self.relationships[2]),
                     "name": self.relationships[2].name,
                     "type": self.relationships[2].type,
                     "destination": {
@@ -2776,7 +2723,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
 
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
-    brief_fields = ["destination_id", "display", "id", "relationship", "source_id", "url"]
     choices_fields = ["destination_type", "source_type"]
 
     @classmethod
@@ -2947,7 +2893,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         """
         self.add_permissions("dcim.view_location")
         response = self.client.get(
-            reverse("dcim-api:location-detail", kwargs={"pk": self.locations[0].pk}) + "?include=relationships",
+            reverse("dcim-api:location-detail", kwargs={"pk": self.locations[0].pk})
+            + "?include=relationships"
+            + "&depth=1",
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -2956,53 +2904,26 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         # Ensure consistent ordering
         response.data["relationships"][self.relationship.slug]["destination"]["objects"].sort(key=lambda v: v["name"])
         self.maxDiff = None
-        self.assertEqual(
-            {
-                self.relationship.slug: {
-                    "id": str(self.relationship.pk),
-                    "url": (
-                        "http://nautobot.example.com"
-                        + reverse("extras-api:relationship-detail", kwargs={"pk": self.relationship.pk})
-                    ),
-                    "name": self.relationship.name,
-                    "type": "many-to-many",
-                    "destination": {
-                        "label": "devices",
-                        "object_type": "dcim.device",
-                        "objects": [
-                            {
-                                "id": str(self.devices[0].pk),
-                                "url": (
-                                    "http://nautobot.example.com"
-                                    + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[0].pk})
-                                ),
-                                "display": self.devices[0].display,
-                                "name": self.devices[0].name,
-                            },
-                            {
-                                "id": str(self.devices[1].pk),
-                                "url": (
-                                    "http://nautobot.example.com"
-                                    + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[1].pk})
-                                ),
-                                "display": self.devices[1].display,
-                                "name": self.devices[1].name,
-                            },
-                            {
-                                "id": str(self.devices[2].pk),
-                                "url": (
-                                    "http://nautobot.example.com"
-                                    + reverse("dcim-api:device-detail", kwargs={"pk": self.devices[2].pk})
-                                ),
-                                "display": self.devices[2].display,
-                                "name": self.devices[2].name,
-                            },
-                        ],
-                    },
-                },
-            },
-            response.data["relationships"],
-        )
+        relationship_data = response.data["relationships"][self.relationship.slug]
+        self.assertEqual(relationship_data["id"], str(self.relationship.pk))
+        self.assertEqual(relationship_data["url"], self.absolute_api_url(self.relationship))
+        self.assertEqual(relationship_data["name"], self.relationship.name)
+        self.assertEqual(relationship_data["type"], "many-to-many")
+        self.assertEqual(relationship_data["destination"]["label"], "devices")
+        self.assertEqual(relationship_data["destination"]["object_type"], "dcim.device")
+
+        objects = response.data["relationships"][self.relationship.slug]["destination"]["objects"]
+        for i, obj in enumerate(objects):
+            self.assertEqual(obj["id"], str(self.devices[i].pk))
+            self.assertEqual(obj["url"], self.absolute_api_url(self.devices[i]))
+            self.assertEqual(
+                obj["display"],
+                self.devices[i].display,
+            )
+            self.assertEqual(
+                obj["name"],
+                self.devices[i].name,
+            )
 
     def test_update_association_data_on_location(self):
         """
@@ -3132,7 +3053,6 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
 class SecretTest(APIViewTestCases.APIViewTestCase):
     model = Secret
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
 
     create_data = [
@@ -3183,10 +3103,50 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
         for secret in secrets:
             secret.validated_save()
 
+    def test_secret_check(self):
+        """
+        Ensure that we can check the validity of a secret.
+        """
+
+        with self.subTest("Secret is not accessible"):
+            test_secret = Secret.objects.create(
+                name="secret-check-test-not-accessible",
+                provider="text-file",
+                parameters={"path": "/tmp/does-not-matter"},
+            )
+            response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
+            self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+        self.add_permissions("extras.view_secret")
+
+        with self.subTest("Secret check successful"):
+            with tempfile.NamedTemporaryFile() as secret_file:
+                secret_file.write(b"HELLO WORLD")
+                test_secret = Secret.objects.create(
+                    name="secret-check-test-accessible",
+                    provider="text-file",
+                    parameters={"path": secret_file.name},
+                )
+                response = self.client.get(
+                    reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header
+                )
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(response.data["result"], True)
+
+        with self.subTest("Secret check failed"):
+            test_secret = Secret.objects.create(
+                name="secret-check-test-failed",
+                provider="text-file",
+                parameters={"path": "/tmp/does-not-exist"},
+            )
+            response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["result"], False)
+            self.assertIn("SecretValueNotFoundError", response.data["message"])
+
 
 class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
     model = SecretsGroup
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {}
 
     @classmethod
@@ -3237,7 +3197,6 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
 
 class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
     model = SecretsGroupAssociation
-    brief_fields = ["access_type", "display", "id", "secret", "secret_type", "url"]
     bulk_update_data = {}
     choices_fields = ["access_type", "secret_type"]
 
@@ -3304,7 +3263,6 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "color": "000000",
     }
@@ -3335,7 +3293,6 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 
 class TagTest(APIViewTestCases.APIViewTestCase):
     model = Tag
-    brief_fields = ["color", "display", "id", "name", "slug", "url"]
     create_data = [
         {"name": "Tag 4", "slug": "tag-4", "content_types": [Location._meta.label_lower]},
         {"name": "Tag 5", "slug": "tag-5", "content_types": [Location._meta.label_lower]},
@@ -3419,7 +3376,6 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
     model = Webhook
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "content_types": ["dcim.consoleport"],
@@ -3648,7 +3604,6 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
 
 class RoleTest(APIViewTestCases.APIViewTestCase):
     model = Role
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "color": "000000",
     }

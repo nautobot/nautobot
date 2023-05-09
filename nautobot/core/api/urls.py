@@ -10,6 +10,8 @@ from nautobot.core.api.views import (
     APIRootView,
     GetFilterSetFieldDOMElementAPIView,
     GetFilterSetFieldLookupExpressionChoicesAPIView,
+    GetMenuAPIView,
+    GetObjectCountsView,
     GraphQLDRFAPIView,
     StatusView,
     NautobotSpectacularSwaggerView,
@@ -17,9 +19,7 @@ from nautobot.core.api.views import (
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
-
 core_api_patterns = [
-    # Lookup Expr
     path(
         "filterset-fields/lookup-choices/",
         GetFilterSetFieldLookupExpressionChoicesAPIView.as_view(),
@@ -30,6 +30,12 @@ core_api_patterns = [
         GetFilterSetFieldDOMElementAPIView.as_view(),
         name="filtersetfield-retrieve-lookupvaluedomelement",
     ),
+]
+ui_api_patterns = [
+    # Lookup Expr
+    path("core/", include((core_api_patterns, "core-api"))),
+    path("get-menu/", GetMenuAPIView.as_view(), name="get-menu"),
+    path("get-object-counts/", GetObjectCountsView.as_view(), name="get-object-counts"),
 ]
 
 urlpatterns = [
@@ -52,6 +58,8 @@ urlpatterns = [
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
     # Plugins
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
-    # Core
+    # Core, keeping for backwards compatibility of the legacy UI (Dynamic Filter Form)
     path("core/", include((core_api_patterns, "core-api"))),
+    # UI
+    path("ui/", include((ui_api_patterns, "ui-api"))),
 ]

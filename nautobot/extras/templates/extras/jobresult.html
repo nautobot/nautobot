@@ -35,12 +35,12 @@
 {% block buttons %}
     {% if perms.extras.run_job %}
         {% if result.job_model and result.task_kwargs %}
-            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?kwargs_from_job_result={{ result.pk }}"
+            <a href="{% url 'extras:job_run' pk=result.job_model.pk %}?kwargs_from_job_result={{ result.pk }}"
                class="btn btn-success">
                 <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
             </a>
         {% elif result.job_model is not None %}
-            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}"
+            <a href="{% url 'extras:job_run' pk=result.job_model.pk %}"
                class="btn btn-primary">
                 <span class="mdi mdi-play" aria-hidden="true"></span> Run
             </a>

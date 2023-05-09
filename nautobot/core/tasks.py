@@ -1,7 +1,7 @@
 import logging
 
-from cacheops.simple import CacheMiss, cache
 from django.conf import settings
+from django.core.cache import cache
 from packaging import version
 import requests
 
@@ -21,12 +21,9 @@ def get_releases(pre_releases=False):
     releases = []
 
     # Check whether this URL has failed recently and shouldn't be retried yet
-    try:
-        if url == cache.get("latest_release_no_retry"):
-            logger.info(f"Skipping release check; URL failed recently: {url}")
-            return []
-    except CacheMiss:
-        pass
+    if url == cache.get("latest_release_no_retry"):
+        logger.info(f"Skipping release check; URL failed recently: {url}")
+        return []
 
     try:
         logger.debug(f"Fetching new releases from {url}")

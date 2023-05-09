@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Count, Sum, Q
-from django.urls import reverse
 
 from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -71,9 +70,6 @@ class RackGroup(TreeModel, OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:rackgroup", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -237,9 +233,6 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
 
     def __str__(self):
         return self.display or super().__str__()
-
-    def get_absolute_url(self):
-        return reverse("dcim:rack", args=[self.pk])
 
     def clean(self):
         super().clean()
@@ -549,9 +542,6 @@ class RackReservation(PrimaryModel):
 
     def __str__(self):
         return f"Reservation for rack {self.rack}"
-
-    def get_absolute_url(self):
-        return reverse("dcim:rackreservation", args=[self.pk])
 
     def clean(self):
         super().clean()

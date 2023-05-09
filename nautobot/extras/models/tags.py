@@ -1,6 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.urls import reverse
 from taggit.models import TagBase, GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
@@ -25,8 +24,7 @@ class TagQuerySet(RestrictedQuerySet):
         """
         Return all `Tags` assigned to the given model.
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.filter(content_types=content_type)
+        return self.filter(content_types__model=model._meta.model_name, content_types__app_label=model._meta.app_label)
 
 
 @extras_features(
@@ -50,9 +48,6 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
     class Meta:
         ordering = ["name"]
-
-    def get_absolute_url(self):
-        return reverse("extras:tag", args=[self.slug])
 
     def to_csv(self):
         return (self.name, self.slug, self.color, self.description)

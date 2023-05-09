@@ -26,7 +26,6 @@ class AppTest(APITestCase):
 
 class UserTest(APIViewTestCases.APIViewTestCase):
     model = User
-    brief_fields = ["display", "id", "url", "username"]
     validation_excluded_fields = ["password"]
     create_data = [
         {
@@ -45,15 +44,20 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        User.objects.create(username="User_1")
-        User.objects.create(username="User_2")
-        User.objects.create(username="User_3")
+        user1 = User.objects.create(username="User_1")
+        user1.set_password(None)
+        user1.save()
+        user2 = User.objects.create(username="User_2")
+        user2.set_password(None)
+        user2.save()
+        user3 = User.objects.create(username="User_3")
+        user3.set_password(None)
+        user3.save()
 
 
 class GroupTest(APIViewTestCases.APIViewTestCase):
     model = Group
     filterset = GroupFilterSet
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "Group 4",
@@ -83,7 +87,6 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
 
 class TokenTest(APIViewTestCases.APIViewTestCase):
     model = Token
-    brief_fields = ["display", "id", "key", "url", "write_enabled"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -267,17 +270,6 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
 
 class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
     model = ObjectPermission
-    brief_fields = [
-        "actions",
-        "display",
-        "enabled",
-        "groups",
-        "id",
-        "name",
-        "object_types",
-        "url",
-        "users",
-    ]
 
     @classmethod
     def setUpTestData(cls):

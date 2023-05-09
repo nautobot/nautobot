@@ -2,7 +2,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.urls import reverse
 
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import ExclusionValidator
@@ -55,9 +54,6 @@ class PowerPanel(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:powerpanel", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -170,9 +166,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:powerfeed", args=[self.pk])
 
     def to_csv(self):
         return (

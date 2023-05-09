@@ -429,25 +429,6 @@ files = [
 ]
 
 [[package]]
-name = "ciscoconfparse"
-version = "1.7.18"
-description = "Parse, Audit, Query, Build, and Modify Cisco IOS-style and JunOS-style configs"
-category = "main"
-optional = true
-python-versions = ">=3.7.2,<4.0.0"
-files = [
-    {file = "ciscoconfparse-1.7.18-py3-none-any.whl", hash = "sha256:593f8ff9af4bf667f9cef24327e36e19326c1090c0ad08a73d3aa9df4dd31d84"},
-    {file = "ciscoconfparse-1.7.18.tar.gz", hash = "sha256:f352c86e3e2d935ea6c188acd233bd5738199b30a040938c90c7ea38104f84c7"},
-]
-
-[package.dependencies]
-deprecat = ">=2.1.1"
-dnspython = ">=2.2.0,<3.0.0"
-loguru = "0.6.0"
-passlib = ">=1.7.4,<2.0.0"
-toml = ">=0.10.2"
-
-[[package]]
 name = "click"
 version = "8.1.3"
 description = "Composable command line interface toolkit"
@@ -657,24 +638,6 @@ files = [
 ]
 
 [[package]]
-name = "deprecat"
-version = "2.1.1"
-description = "Python @deprecat decorator to deprecate old python classes, functions or methods."
-category = "main"
-optional = true
-python-versions = ">=3.6"
-files = [
-    {file = "deprecat-2.1.1-py2.py3-none-any.whl", hash = "sha256:63b48ff6f7e9c55917fd04c726b49a68d6503e1040cd5283dc683140dfc7d861"},
-    {file = "deprecat-2.1.1.tar.gz", hash = "sha256:d1dfae13ffc2f580b23c0f754e05dc1277814eeb076ced83631264792ec03983"},
-]
-
-[package.dependencies]
-wrapt = ">=1.10,<2"
-
-[package.extras]
-dev = ["PyTest", "PyTest (<5)", "PyTest-Cov", "PyTest-Cov (<2.6)", "bump2version (<1)", "sphinx (<2)", "tox"]
-
-[[package]]
 name = "dill"
 version = "0.3.6"
 description = "serialize all of python"
@@ -737,24 +700,6 @@ files = [
 [package.dependencies]
 Django = ">=3.2"
 python-ldap = ">=3.1"
-
-[[package]]
-name = "django-cacheops"
-version = "6.0"
-description = "A slick ORM cache with automatic granular event-driven invalidation for Django."
-category = "main"
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "django-cacheops-6.0.tar.gz", hash = "sha256:78e161ebd96a32e28e19ec7da31f2afed9e62a79726b8b5f0ed12dd16c2e5841"},
-    {file = "django_cacheops-6.0-py2.py3-none-any.whl", hash = "sha256:ee38b969c9fc68f7c88e769b6c811e19563cca1ae08210d9f553ff758b6c3e17"},
-]
-
-[package.dependencies]
-django = ">=2.1"
-funcy = ">=1.8,<2.0"
-redis = ">=3.0.0"
-six = ">=1.4.0"
 
 [[package]]
 name = "django-celery-beat"
@@ -1113,25 +1058,19 @@ django = ">=3.0"
 pytz = "*"
 
 [[package]]
-name = "dnspython"
-version = "2.3.0"
-description = "DNS toolkit"
+name = "drf-react-template-framework"
+version = "0.0.17"
+description = "Django REST Framework plugin that creates form schemas for react-jsonschema-form"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "dnspython-2.3.0-py3-none-any.whl", hash = "sha256:89141536394f909066cabd112e3e1a37e4e654db00a25308b0f130bc3152eb46"},
-    {file = "dnspython-2.3.0.tar.gz", hash = "sha256:224e32b03eb46be70e12ef6d64e0be123a64e621ab4c0822ff6d450d52a540b9"},
+    {file = "drf-react-template-framework-0.0.17.tar.gz", hash = "sha256:25b115981528977fa703fb2a9b354f3874fff82830b56fc4c7269b287a0a9580"},
+    {file = "drf_react_template_framework-0.0.17-py3-none-any.whl", hash = "sha256:d8116b0c03459574a3b0f2885ce80702127f49fc66960d50deef1c7a35151593"},
 ]
 
-[package.extras]
-curio = ["curio (>=1.2,<2.0)", "sniffio (>=1.1,<2.0)"]
-dnssec = ["cryptography (>=2.6,<40.0)"]
-doh = ["h2 (>=4.1.0)", "httpx (>=0.21.1)", "requests (>=2.23.0,<3.0.0)", "requests-toolbelt (>=0.9.1,<0.11.0)"]
-doq = ["aioquic (>=0.9.20)"]
-idna = ["idna (>=2.1,<4.0)"]
-trio = ["trio (>=0.14,<0.23)"]
-wmi = ["wmi (>=1.5.1,<2.0.0)"]
+[package.dependencies]
+djangorestframework = ">=3.12.0,<4.0.0"
 
 [[package]]
 name = "drf-spectacular"
@@ -1285,18 +1224,6 @@ files = [
 mccabe = ">=0.7.0,<0.8.0"
 pycodestyle = ">=2.10.0,<2.11.0"
 pyflakes = ">=3.0.0,<3.1.0"
-
-[[package]]
-name = "funcy"
-version = "1.18"
-description = "A fancy and practical functional tools"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "funcy-1.18-py2.py3-none-any.whl", hash = "sha256:00ce91afc850357a131dc54f0db2ad8a1110d5087f1fa4480d7ea3ba0249f89d"},
-    {file = "funcy-1.18.tar.gz", hash = "sha256:15448d19a8ebcc7a585afe7a384a19186d0bd67cbf56fb42cd1fd0f76313f9b2"},
-]
 
 [[package]]
 name = "future"
@@ -1754,25 +1681,6 @@ files = [
 ]
 
 [[package]]
-name = "loguru"
-version = "0.6.0"
-description = "Python logging made (stupidly) simple"
-category = "main"
-optional = true
-python-versions = ">=3.5"
-files = [
-    {file = "loguru-0.6.0-py3-none-any.whl", hash = "sha256:4e2414d534a2ab57573365b3e6d0234dfb1d84b68b7f3b948e6fb743860a77c3"},
-    {file = "loguru-0.6.0.tar.gz", hash = "sha256:066bd06758d0a513e9836fd9c6b5a75bfb3fd36841f4b996bc60b547a309d41c"},
-]
-
-[package.dependencies]
-colorama = {version = ">=0.3.4", markers = "sys_platform == \"win32\""}
-win32-setctime = {version = ">=1.0.0", markers = "sys_platform == \"win32\""}
-
-[package.extras]
-dev = ["Sphinx (>=4.1.1)", "black (>=19.10b0)", "colorama (>=0.3.4)", "docutils (==0.16)", "flake8 (>=3.7.7)", "isort (>=5.1.1)", "pytest (>=4.6.2)", "pytest-cov (>=2.7.1)", "sphinx-autobuild (>=0.7.1)", "sphinx-rtd-theme (>=0.4.3)", "tox (>=3.9.0)"]
-
-[[package]]
 name = "lxml"
 version = "4.9.2"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
@@ -2213,33 +2121,36 @@ files = [
 
 [[package]]
 name = "napalm"
-version = "3.4.1"
+version = "4.0.0"
 description = "Network Automation and Programmability Abstraction Layer with Multivendor support"
 category = "main"
 optional = true
 python-versions = "*"
 files = [
-    {file = "napalm-3.4.1-py2.py3-none-any.whl", hash = "sha256:c1ab88c8a7474d3657fed69afb2d94cef27f5d57bb1973ecba8def39a1990839"},
-    {file = "napalm-3.4.1.tar.gz", hash = "sha256:9a9673f79a1c257a23af62675689d0d34a8c7b1a98702f5c1aab841bf1a829cd"},
+    {file = "napalm-4.0.0-py2.py3-none-any.whl", hash = "sha256:e4289f6966974b485c1f3de3e8f4a11ac2ed2825e975bbd5afc006331b1e4c36"},
+    {file = "napalm-4.0.0.tar.gz", hash = "sha256:40e1bd297ac4102c14c0d427c51d61c3a12d5d5bec163750733941ad82a464ee"},
 ]
 
 [package.dependencies]
 cffi = ">=1.11.3"
-ciscoconfparse = "*"
 future = "*"
 jinja2 = "*"
 junos-eznc = ">=2.6.3"
 lxml = ">=4.3.0"
 ncclient = "*"
 netaddr = "*"
-netmiko = ">=3.3.0,<4.0.0"
+netmiko = ">=4.0.0"
+netutils = ">=1.0.0"
 paramiko = ">=2.6.0"
 pyeapi = ">=0.8.2"
 pyYAML = "*"
 requests = ">=2.7.0"
 scp = "*"
 setuptools = ">=38.4.0"
-textfsm = "*"
+textfsm = "<=1.1.2"
+ttp = "*"
+ttp-templates = "*"
+typing-extensions = ">=4.3.0"
 
 [[package]]
 name = "ncclient"
@@ -2272,26 +2183,25 @@ files = [
 
 [[package]]
 name = "netmiko"
-version = "3.4.0"
-description = "Multi-vendor library to simplify Paramiko SSH connections to network devices"
+version = "4.1.2"
+description = "Multi-vendor library to simplify legacy CLI connections to network devices"
 category = "main"
 optional = true
 python-versions = "*"
 files = [
-    {file = "netmiko-3.4.0-py3-none-any.whl", hash = "sha256:b66f25717db3609878f83c85604349dd40a0ab494d8eafd817dcde8388131136"},
-    {file = "netmiko-3.4.0.tar.gz", hash = "sha256:acadb9dd97864ee848e2032f1f0e301c7b31e7a4153757d98f5c8ba1b9614993"},
+    {file = "netmiko-4.1.2-py3-none-any.whl", hash = "sha256:ee1e88ecbd07f619b0bc1e90648f82a64a0adee5968c3068621bbdadbfec5c03"},
+    {file = "netmiko-4.1.2.tar.gz", hash = "sha256:f5ede2a28670d3dfd3470061468665f80f9b4906ed20e6b0fb4d9e1c9be67afc"},
 ]
 
 [package.dependencies]
-ntc-templates = "*"
-paramiko = ">=2.6.0"
+ntc-templates = ">=2.0.0"
+paramiko = ">=2.7.2"
 pyserial = "*"
-scp = ">=0.13.2"
+pyyaml = ">=5.3"
+scp = ">=0.13.3"
 setuptools = ">=38.4.0"
 tenacity = "*"
-
-[package.extras]
-test = ["pytest (>=5.1.2)", "pyyaml (>=5.1.2)"]
+textfsm = "1.1.2"
 
 [[package]]
 name = "netutils"
@@ -2388,24 +2298,6 @@ pynacl = ">=1.5"
 all = ["gssapi (>=1.4.1)", "invoke (>=2.0)", "pyasn1 (>=0.1.7)", "pywin32 (>=2.1.8)"]
 gssapi = ["gssapi (>=1.4.1)", "pyasn1 (>=0.1.7)", "pywin32 (>=2.1.8)"]
 invoke = ["invoke (>=2.0)"]
-
-[[package]]
-name = "passlib"
-version = "1.7.4"
-description = "comprehensive password hashing framework supporting over 30 schemes"
-category = "main"
-optional = true
-python-versions = "*"
-files = [
-    {file = "passlib-1.7.4-py2.py3-none-any.whl", hash = "sha256:aa6bca462b8d8bda89c70b382f0c298a20b5560af6cbfa2dce410c0a2fb669f1"},
-    {file = "passlib-1.7.4.tar.gz", hash = "sha256:defd50f72b65c5402ab2c573830a6978e5f202ad0d984793c8dde2c4152ebe04"},
-]
-
-[package.extras]
-argon2 = ["argon2-cffi (>=18.2.0)"]
-bcrypt = ["bcrypt (>=3.1.0)"]
-build-docs = ["cloud-sptheme (>=1.10.1)", "sphinx (>=1.6)", "sphinxcontrib-fulltoc (>=1.2.0)"]
-totp = ["cryptography"]
 
 [[package]]
 name = "pathspec"
@@ -3537,15 +3429,20 @@ zope-testbrowser = ["cssselect", "lxml (>=4.2.4)", "zope.testbrowser (>=5.5.1)"]
 
 [[package]]
 name = "sqlparse"
-version = "0.4.3"
+version = "0.4.4"
 description = "A non-validating SQL parser."
 category = "main"
 optional = false
 python-versions = ">=3.5"
 files = [
-    {file = "sqlparse-0.4.3-py3-none-any.whl", hash = "sha256:0323c0ec29cd52bceabc1b4d9d579e311f3e4961b98d174201d5622a23b85e34"},
-    {file = "sqlparse-0.4.3.tar.gz", hash = "sha256:69ca804846bb114d2ec380e4360a8a340db83f0ccf3afceeb1404df028f57268"},
+    {file = "sqlparse-0.4.4-py3-none-any.whl", hash = "sha256:5430a4fe2ac7d0f93e66f1efc6e1338a41884b7ddf2a350cedd20ccc4d9d28f3"},
+    {file = "sqlparse-0.4.4.tar.gz", hash = "sha256:d446183e84b8349fa3061f0fe7f06ca94ba65b426946ffebe6e3e8295332420c"},
 ]
+
+[package.extras]
+dev = ["build", "flake8"]
+doc = ["sphinx"]
+test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "svgwrite"
@@ -3603,31 +3500,19 @@ files = [
 
 [[package]]
 name = "textfsm"
-version = "1.1.3"
+version = "1.1.2"
 description = "Python module for parsing semi-structured text into python tables."
 category = "main"
 optional = true
 python-versions = "*"
 files = [
-    {file = "textfsm-1.1.3-py2.py3-none-any.whl", hash = "sha256:dcbeebc6a6137bed561c71a56344d752e6dbc04ae5ea309252cb70fb97ccc9cd"},
-    {file = "textfsm-1.1.3.tar.gz", hash = "sha256:577ef278a9237f5341ae9b682947cefa4a2c1b24dbe486f94f2c95addc6504b5"},
+    {file = "textfsm-1.1.2-py2.py3-none-any.whl", hash = "sha256:f3d4e9bd4344935a08e6844e53d6220e2e4fb7e465bee51fa909152ed6bab406"},
+    {file = "textfsm-1.1.2.tar.gz", hash = "sha256:85a450b441aff04b1cac726bdb36f35534a5b196cca08c8bc14fddd879c4255c"},
 ]
 
 [package.dependencies]
 future = "*"
 six = "*"
-
-[[package]]
-name = "toml"
-version = "0.10.2"
-description = "Python Library for Tom's Obvious, Minimal Language"
-category = "main"
-optional = true
-python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
-files = [
-    {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
-    {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
-]
 
 [[package]]
 name = "tomli"
@@ -3735,10 +3620,44 @@ trio = ">=0.11"
 wsproto = ">=0.14"
 
 [[package]]
+name = "ttp"
+version = "0.9.4"
+description = "Template Text Parser"
+category = "main"
+optional = true
+python-versions = ">=2.7,<4.0"
+files = [
+    {file = "ttp-0.9.4-py2.py3-none-any.whl", hash = "sha256:550e26fd742703f9fd0fac09e3701766190d4551978fccdead294d49cdec2423"},
+    {file = "ttp-0.9.4.tar.gz", hash = "sha256:44aaef0561f83d588563918157a502fc9f928e5bc3867026c2cc7b5a8c0dc3e1"},
+]
+
+[package.extras]
+docs = ["Sphinx (==4.3.0)", "readthedocs-sphinx-search (==0.1.1)", "sphinx_rtd_theme (==1.0.0)", "sphinxcontrib-applehelp (==1.0.1)", "sphinxcontrib-devhelp (==1.0.1)", "sphinxcontrib-htmlhelp (==2.0.0)", "sphinxcontrib-jsmath (==1.0.1)", "sphinxcontrib-napoleon (==0.7)", "sphinxcontrib-qthelp (==1.0.2)", "sphinxcontrib-serializinghtml (==1.1.5)", "sphinxcontrib-spelling (==7.2.1)"]
+full = ["cerberus (>=1.3.0,<1.4.0)", "deepdiff (>=5.8.0,<5.9.0)", "jinja2 (>=3.0.0,<3.1.0)", "n2g (>=0.2.0,<0.3.0)", "openpyxl (>=3.0.0,<3.1.0)", "pyyaml (==6.0)", "tabulate (>=0.8.0,<0.9.0)", "ttp_templates (<1.0.0)", "yangson (>=1.4.0,<1.5.0)"]
+
+[[package]]
+name = "ttp-templates"
+version = "0.3.5"
+description = "Template Text Parser Templates collections"
+category = "main"
+optional = true
+python-versions = ">=3.6,<4.0"
+files = [
+    {file = "ttp_templates-0.3.5-py3-none-any.whl", hash = "sha256:4985a68640468127a0e31021672039cd88a8b9c3dd9289cad67839209cddaf30"},
+    {file = "ttp_templates-0.3.5.tar.gz", hash = "sha256:e59870d4f65bd4aaf89178dc9065a7db8b80a23d5d79b5d6ffd041312d5ec5a6"},
+]
+
+[package.dependencies]
+ttp = ">=0.6.0"
+
+[package.extras]
+docs = ["mkdocs (==1.2.4)", "mkdocs-material (==7.2.2)", "mkdocs-material-extensions (==1.0.1)", "mkdocstrings[python] (>=0.18.0,<0.19.0)", "pygments (==2.11)", "pymdown-extensions (==9.3)"]
+
+[[package]]
 name = "typing-extensions"
 version = "4.5.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -3843,25 +3762,10 @@ files = [
 ]
 
 [[package]]
-name = "win32-setctime"
-version = "1.1.0"
-description = "A small Python utility to set file creation time on Windows"
-category = "main"
-optional = true
-python-versions = ">=3.5"
-files = [
-    {file = "win32_setctime-1.1.0-py3-none-any.whl", hash = "sha256:231db239e959c2fe7eb1d7dc129f11172354f98361c4fa2d6d2d7e278baa8aad"},
-    {file = "win32_setctime-1.1.0.tar.gz", hash = "sha256:15cf5750465118d6929ae4de4eb46e8edae9a5634350c01ba582df868e932cb2"},
-]
-
-[package.extras]
-dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
-
-[[package]]
 name = "wrapt"
 version = "1.15.0"
 description = "Module for decorators, wrappers and monkey patching."
-category = "main"
+category = "dev"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 files = [
@@ -4040,4 +3944,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.11"
-content-hash = "966b436e5ac74c9d6f39e3fc49086328d3ce9badc8ec6333cf28d12cdc32097a"
+content-hash = "c6387f34adf760ab01bfcd7aef8942670f6ef1e69895f1336021525721430879"

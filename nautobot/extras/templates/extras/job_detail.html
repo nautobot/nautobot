@@ -9,7 +9,7 @@
 
 {% block extra_buttons %}
     {% if perms.extras.run_job %}
-        <a href="{% url 'extras:job_run' slug=object.slug %}" class="btn btn-primary"
+        <a href="{% url 'extras:job_run' pk=object.pk %}" class="btn btn-primary"
            {% if not object.installed or not object.enabled %}disabled="disabled"{% endif %}>
             <i class="mdi mdi-play" aria-hidden="true"></i> Run/Schedule
         </a>

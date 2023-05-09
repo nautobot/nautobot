@@ -1,0 +1,1 @@
+Removed explicit `url` field declarations from most REST API serializers as they are now derived automatically.

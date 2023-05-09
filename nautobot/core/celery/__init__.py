@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 import pkgutil
@@ -6,16 +7,15 @@ import sys
 
 from celery import Celery, shared_task, signals
 from celery.fixups.django import DjangoFixup
-from celery.utils.log import get_task_logger
 from django.conf import settings
-from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 
-logger = get_task_logger(__name__)
 
+logger = logging.getLogger(__name__)
 # The Celery documentation tells us to call setup on the app to initialize
 # settings, but we will NOT be doing that because of a chicken-and-egg problem
 # when bootstrapping the Django settings with `nautobot-server`.
@@ -102,42 +102,6 @@ def setup_prometheus(**kwargs):
             continue
     else:
         logger.warning("Cannot export Prometheus metrics from worker, no available ports in range.")
-
-
-class NautobotKombuJSONEncoder(DjangoJSONEncoder):
-    """
-    Custom json encoder based on DjangoJSONEncoder that serializes objects that implement
-    the `nautobot_serialize()` method via the `__nautobot_type__` interface. This is useful
-    in passing special objects to and from Celery tasks.
-
-    This pattern should generally be avoided by passing pointers to persisted objects to the
-    Celery tasks and retrieving them from within the task execution. While this is always possible
-    for model instances (which covers 99% of use cases), for rare instances where it does not,
-    and the actual object must be passed, this pattern allows for encoding and decoding
-    of such objects.
-
-    It requires a conforming class to implement the instance method `nautobot_serialize()` which
-    returns a json serializable dictionary of the object representation. The class must also implement
-    the `nautobot_deserialize()` class method which takes the dictionary representation and returns
-    an actual instance of the class.
-    """
-
-    def default(self, obj):
-        if hasattr(obj, "nautobot_serialize"):
-            cls = obj.__class__
-            module = cls.__module__
-            qual_name = ".".join([module, cls.__qualname__])  # fully qualified dotted import path
-            logger.debug("Performing nautobot serialization on %s for type %s", obj, qual_name)
-            data = {"__nautobot_type__": qual_name}
-            data.update(obj.nautobot_serialize())
-            return data
-
-        elif isinstance(obj, set):
-            # Convert a set to a list for passing to and from a task
-            return list(obj)
-
-        else:
-            return DjangoJSONEncoder.default(self, obj)
 
 
 def nautobot_kombu_json_loads_hook(data):

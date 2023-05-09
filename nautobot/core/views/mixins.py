@@ -29,7 +29,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
 
-from nautobot.core.api.views import BulkCreateModelMixin, BulkDestroyModelMixin, BulkUpdateModelMixin
+from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
     ConfirmationForm,
@@ -179,8 +179,12 @@ class GetReturnURLMixin:
         # Note that the use of both `obj.present_in_database` and `obj.pk` is correct here because this conditional
         # handles all three of the create, update, and delete operations. When Django deletes an instance
         # from the DB, it sets the instance's PK field to None, regardless of the use of a UUID.
-        if obj is not None and obj.present_in_database and obj.pk and hasattr(obj, "get_absolute_url"):
-            return obj.get_absolute_url()
+        try:
+            if obj is not None and obj.present_in_database and obj.pk:
+                return obj.get_absolute_url()
+        except AttributeError:
+            # Model has no get_absolute_url() method or no reverse match
+            pass
 
         # Fall back to the default URL (if specified) for the view.
         if self.default_return_url is not None:
@@ -205,7 +209,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     renderer_classes = [NautobotHTMLRenderer]
     logger = logging.getLogger(__name__)
-    lookup_field = "slug"
     # Attributes that need to be specified: form_class, queryset, serializer_class, table_class for most mixins.
     # filterset and filter_params will be initialized in filter_queryset() in ObjectListViewMixin
     filter_params = None
@@ -895,7 +898,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         return Response(data)
 
 
-class ObjectBulkCreateViewMixin(NautobotViewSetMixin, BulkCreateModelMixin):
+class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
     """
     UI mixin to bulk create model instances.
     """

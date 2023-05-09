@@ -105,7 +105,6 @@ class Mixins:
         """Mixin class for all `ComponentModel` model class tests."""
 
         model = None
-        brief_fields = ["device", "display", "id", "name", "url"]
         bulk_update_data = {
             "description": "New description",
         }
@@ -126,17 +125,13 @@ class Mixins:
         """Mixin class for all `FooPort` tests."""
 
         peer_termination_type = None
-        brief_fields = ["cable", "device", "display", "id", "name", "url"]
 
     class BasePortTemplateTestMixin(BaseComponentTestMixin):
         """Mixin class for all `FooPortTemplate` tests."""
 
-        brief_fields = ["display", "id", "name", "url"]
 
-
-class LocationTypeTest(APIViewTestCases.APIViewTestCase):
+class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = LocationType
-    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "Some generic description of multiple types. Not very useful.",
         "nestable": True,
@@ -177,9 +172,8 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class LocationTest(APIViewTestCases.APIViewTestCase):
+class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = Location
-    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
     choices_fields = []
     slug_source = ["parent__slug", "name"]
 
@@ -252,7 +246,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": self.location_statuses[0].pk,
             "time_zone": None,
             "location_type": self.lt1.pk,
-            "location": self.loc1.pk,
         }
 
         # Attempt to create new location with null time_zone attr.
@@ -273,7 +266,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": self.location_statuses[0].pk,
             "time_zone": "",
             "location_type": self.lt1.pk,
-            "location": self.loc1.pk,
         }
 
         # Attempt to create new location with blank time_zone attr.
@@ -295,7 +287,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
-            "location": self.loc1.pk,
         }
 
         # Attempt to create new location with valid time_zone attr.
@@ -317,7 +308,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
             "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
-            "location": self.loc1.pk,
         }
 
         # Attempt to create new location with invalid time_zone attr.
@@ -341,9 +331,8 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.json()["time_zone"], None)
 
 
-class RackGroupTest(APIViewTestCases.APIViewTestCase):
+class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = RackGroup
-    brief_fields = ["display", "id", "name", "rack_count", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -459,7 +448,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
 
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
-    brief_fields = ["device_count", "display", "id", "name", "url"]
     choices_fields = ["outer_unit", "type", "width"]
 
     @classmethod
@@ -552,7 +540,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
-        params = {"brief": "true", "face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
+        params = {"face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
         response = self.client.get(url, params, **self.header)
         self.assertHttpStatus(response, 200)
 
@@ -604,7 +592,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation
-    brief_fields = ["display", "id", "units", "url", "user"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -651,7 +638,6 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["device_type_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "Test Manufacturer 4",
@@ -681,15 +667,6 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     model = DeviceType
-    brief_fields = [
-        "device_count",
-        "display",
-        "id",
-        "manufacturer",
-        "model",
-        "slug",
-        "url",
-    ]
     bulk_update_data = {
         "part_number": "ABC123",
     }
@@ -1019,7 +996,6 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "display", "id", "name", "url", "virtual_machine_count"]
     create_data = [
         {
             "name": "Test Platform 4",
@@ -1041,7 +1017,6 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
-    brief_fields = ["display", "id", "name", "url"]
     choices_fields = ["face"]
 
     @classmethod
@@ -1197,7 +1172,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["local_config_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(str(response.data["local_config_context_schema"]), self.absolute_api_url(schema))
 
     def test_local_config_context_schema_schema_validation_fails(self):
         """
@@ -1423,17 +1398,50 @@ class InterfaceTest(Mixins.BasePortTestMixin):
         Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=cls.virtual_chassis, vc_position=1)
         Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=cls.virtual_chassis, vc_position=2)
 
+        # Interfaces have special handling around the "Active" status so let's set our interfaces to something else.
+        non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
         cls.interfaces = (
-            Interface.objects.create(device=cls.devices[0], name="Interface 1", type="1000base-t"),
-            Interface.objects.create(device=cls.devices[0], name="Interface 2", type="1000base-t"),
-            Interface.objects.create(device=cls.devices[0], name="Interface 3", type=InterfaceTypeChoices.TYPE_BRIDGE),
             Interface.objects.create(
-                device=cls.devices[1], name="Interface 4", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+                device=cls.devices[0],
+                name="Interface 1",
+                type="1000base-t",
+                status=non_default_status,
             ),
-            Interface.objects.create(device=cls.devices[1], name="Interface 5", type=InterfaceTypeChoices.TYPE_LAG),
-            Interface.objects.create(device=cls.devices[2], name="Interface 6", type=InterfaceTypeChoices.TYPE_LAG),
             Interface.objects.create(
-                device=cls.devices[2], name="Interface 7", type=InterfaceTypeChoices.TYPE_1GE_GBIC
+                device=cls.devices[0],
+                name="Interface 2",
+                type="1000base-t",
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[0],
+                name="Interface 3",
+                type=InterfaceTypeChoices.TYPE_BRIDGE,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[1],
+                name="Interface 4",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[1],
+                name="Interface 5",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[2],
+                name="Interface 6",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.devices[2],
+                name="Interface 7",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                status=non_default_status,
             ),
         )
 
@@ -1452,6 +1460,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
+                "mac_address": "00-01-02-03-04-05",
             },
             {
                 "device": cls.devices[0].pk,
@@ -1807,9 +1816,8 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         ]
 
 
-class InventoryItemTest(Mixins.BaseComponentTestMixin):
+class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = InventoryItem
-    brief_fields = ["device", "display", "id", "name", "tree_depth", "url"]
     choices_fields = []
 
     @classmethod
@@ -1841,7 +1849,6 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin):
 
 class CableTest(Mixins.BaseComponentTestMixin):
     model = Cable
-    brief_fields = ["display", "id", "label", "url"]
     bulk_update_data = {
         "length": 100,
         "length_unit": "m",
@@ -1967,7 +1974,6 @@ class ConnectedDeviceTest(APITestCase):
 
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     model = VirtualChassis
-    brief_fields = ["display", "id", "master", "member_count", "name", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2135,9 +2141,10 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         virtual_chassis_1 = response.json()["results"][0]
 
         # Make sure the master is set
-        self.assertNotEqual(virtual_chassis_1["master"], None)
+        self.assertIsNotNone(virtual_chassis_1["master"])
 
-        master_device = Device.objects.get(pk=virtual_chassis_1["master"]["id"])
+        # The `master` key will be a URL now, but it contains the PK
+        master_device = Device.objects.get(pk=virtual_chassis_1["master"].split("/")[-2])
 
         # Set the virtual_chassis of the master device to null
         url = reverse("dcim-api:device-detail", kwargs={"pk": master_device.id})
@@ -2157,7 +2164,6 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
-    brief_fields = ["display", "id", "name", "power_feed_count", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2196,7 +2202,6 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    brief_fields = ["cable", "display", "id", "name", "url"]
     choices_fields = ["phase", "supply", "type"]
 
     @classmethod
@@ -2219,40 +2224,47 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
         REDUNDANT = PowerFeedTypeChoices.TYPE_REDUNDANT
+        pf_status = Status.objects.get_for_model(PowerFeed).first()
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[0],
             name="Power Feed 1A",
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[0],
             name="Power Feed 1B",
+            status=pf_status,
             type=REDUNDANT,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[1],
             name="Power Feed 2A",
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[1],
             name="Power Feed 2B",
+            status=pf_status,
             type=REDUNDANT,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[0],
             rack=racks[2],
             name="Power Feed 3A",
+            status=pf_status,
             type=PRIMARY,
         )
         PowerFeed.objects.create(
             power_panel=power_panels[1],
             rack=racks[2],
             name="Power Feed 3B",
+            status=pf_status,
             type=REDUNDANT,
         )
 
@@ -2281,7 +2293,6 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRedundancyGroup
-    brief_fields = ["display", "failover_strategy", "id", "name", "url"]
     choices_fields = ["failover_strategy"]
 
     @classmethod

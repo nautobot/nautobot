@@ -5,7 +5,6 @@ import uuid
 import logging
 from datetime import timedelta
 
-from cacheops.signals import cache_invalidated, cache_read
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -13,7 +12,6 @@ from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
-from prometheus_client import Counter
 
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
@@ -153,30 +151,6 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
-
-
-#
-# Caching
-#
-
-cacheops_cache_hit = Counter("cacheops_cache_hit", "Number of cache hits")
-cacheops_cache_miss = Counter("cacheops_cache_miss", "Number of cache misses")
-cacheops_cache_invalidated = Counter("cacheops_cache_invalidated", "Number of cache invalidations")
-
-
-def cache_read_collector(sender, func, hit, **kwargs):
-    if hit:
-        cacheops_cache_hit.inc()
-    else:
-        cacheops_cache_miss.inc()
-
-
-def cache_invalidated_collector(sender, obj_dict, **kwargs):
-    cacheops_cache_invalidated.inc()
-
-
-cache_read.connect(cache_read_collector)
-cache_invalidated.connect(cache_invalidated_collector)
 
 
 #

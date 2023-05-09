@@ -56,6 +56,18 @@ class DeviceContent(TemplateExtension):
             },
         ]
 
+    def full_width_page(self):
+        return """
+            <div class="card card-default">
+                <div class="card-header">
+                    <strong>Plugin Full Width Page</strong>
+                </div>
+                <div class="card-body">
+                    I am a teapot short and stout.
+                </div>
+            </div>
+        """
+
 
 class LocationContent(TemplateExtension):
     model = "dcim.location"
