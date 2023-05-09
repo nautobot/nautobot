@@ -1,3 +1,5 @@
+import csv
+from io import StringIO
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
@@ -11,6 +13,8 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
+from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
@@ -385,6 +389,57 @@ class APIViewTestCases:
             """
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_csv(self):
+            """
+            GET a list of objects in CSV format as an authenticated user with permission to view some objects.
+            """
+            self.assertGreaterEqual(
+                self._get_queryset().count(),
+                3,
+                f"Test requires the creation of at least three {self.model} instances",
+            )
+            instance1, instance2, instance3 = self._get_queryset()[:3]
+
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(
+                name="Test permission",
+                constraints={"pk__in": [instance1.pk, instance2.pk]},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try filtered GET to objects specifying CSV format as a query parameter
+            response_1 = self.client.get(
+                f"{self._get_list_url()}?format=csv&id={instance1.pk}&id={instance3.pk}", **self.header
+            )
+            self.assertHttpStatus(response_1, status.HTTP_200_OK)
+            self.assertEqual(response_1.get("Content-Type"), "text/csv; charset=UTF-8")
+
+            # Try same request specifying CSV format via the ACCEPT header
+            response_2 = self.client.get(
+                f"{self._get_list_url()}?id={instance1.pk}&id={instance3.pk}", **self.header, HTTP_ACCEPT="text/csv"
+            )
+            self.assertHttpStatus(response_2, status.HTTP_200_OK)
+            self.assertEqual(response_2.get("Content-Type"), "text/csv; charset=UTF-8")
+
+            self.assertEqual(response_1.content, response_2.content)
+
+            # Load the csv data back into a list of object dicts
+            reader = csv.DictReader(StringIO(response_1.content.decode(response_1.charset)))
+            rows = [row for row in reader]
+            # Should only have one entry (instance1) since we filtered out instance2 and permissions block instance3
+            self.assertEqual(1, len(rows))
+            self.assertEqual(rows[0]["id"], str(instance1.pk))
+            self.assertEqual(rows[0]["display"], getattr(instance1, "display", str(instance1)))
+            # TODO what other generic tests should we run on the data?
+
+            # Headers should match those constructed by the NautobotCSVRenderer
+            expected_headers = NautobotCSVRenderer.get_headers(get_serializer_for_model(self._get_queryset().model)())
+            self.assertEqual(expected_headers, list(rows[0].keys()))
 
     class CreateObjectViewTestCase(APITestCase):
         create_data = []

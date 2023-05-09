@@ -84,14 +84,17 @@ class NautobotCSVRenderer(BaseRenderer):
 
         return buffer.getvalue()
 
-    def get_headers(self, serializer):
+    @classmethod
+    def get_headers(cls, serializer):
         """Identify the appropriate CSV headers corresponding to the given serializer."""
         base_headers = list(serializer.fields)
 
         # Remove specific headers that we know are irrelevant
         for undesired_header in [
+            "computed_fields",
             "custom_fields",  # will be handled later as a special case
             "notes_url",
+            "relationships",
             "tree_depth",
             "url",
             "web_url",  # TODO remove as unnecessary
