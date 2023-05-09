@@ -706,6 +706,7 @@ class JobResult(BaseModel, CustomFieldModel):
             job_celery_kwargs.update(celery_kwargs)
 
         if synchronous:
+            # synchronous tasks are run before the JobResult is saved, so we have to add any fields required by the job before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
             job_result.save()
             job_model.job_task.apply(args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs)

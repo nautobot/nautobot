@@ -1082,10 +1082,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 try:
                     job_result = job_model.job_results.get(pk=job_result_pk)
                     # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
-                    # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
+                    # for example "?kwargs_from_job_result=<UUID>&integervar=22"
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
-                    task_queue = job_result.task_kwargs.get("task_queue")
+                    task_queue = job_result.celery_kwargs.get("queue", None)
                     if task_queue is not None:
                         initial.setdefault("_task_queue", task_queue)
                     initial.update(explicit_initial)
