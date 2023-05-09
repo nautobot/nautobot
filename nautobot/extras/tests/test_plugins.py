@@ -484,8 +484,8 @@ class PluginCustomValidationTest(TestCase):
         prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
         ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status)
         relationship = Relationship.objects.create(
-            name="Test Relationship",
-            slug="test-relationship",
+            label="Test Relationship",
+            key="test_relationship",
             source_type=ContentType.objects.get_for_model(Prefix),
             destination_type=ContentType.objects.get_for_model(IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,

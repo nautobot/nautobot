@@ -149,7 +149,7 @@ In the relationship field, you may specify a dictionary of object attributes ins
 ```json
 {
     "relationship": {
-        "slug": "device-vlans"
+        "key": "device_vlans"
     },
     "source_type": "ipam.vlan",
     "source_id": "89588629-2d70-45ce-9e20-f6b159b41b0c",

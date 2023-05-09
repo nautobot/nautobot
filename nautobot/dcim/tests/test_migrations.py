@@ -468,7 +468,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             related_object_id=regions[0].id,
         )
         o2m = self.relationship.objects.create(
-            name="Site to Location o2m",
+            label="Site to Location o2m",
             slug="site-to-location-o2m",
             source_type=self.site_ct,
             destination_type=self.location_ct,
@@ -489,7 +489,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             destination_type_id=self.location_ct.id,
         )
         m2m = self.relationship.objects.create(
-            name="Region to Site m2m",
+            label="Region to Site m2m",
             slug="region-to-site-m2m",
             source_type=self.region_ct,
             destination_type=self.site_ct,
@@ -510,7 +510,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             destination_type_id=self.site_ct.id,
         )
         o2o = self.relationship.objects.create(
-            name="Region to Location o2o",
+            label="Region to Location o2o",
             slug="region-to-location-o2o",
             source_type=self.region_ct,
             destination_type=self.location_ct,
