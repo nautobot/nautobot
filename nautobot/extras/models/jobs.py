@@ -631,11 +631,10 @@ class JobResult(BaseModel, CustomFieldModel):
     @classmethod
     def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, **job_kwargs):
         """
-        Create a JobResult instance and run a job in the current process, blocking until the job finishes. Works around
-        a limitation in Celery where some of the fields in the job result are not updated when running synchronously so
-        they are added here.
+        Create a JobResult instance and run a job in the current process, blocking until the job finishes.
 
-        Running tasks synchronously in celery is *NOT* supported and if possible `enqueue_job` should be used instead.
+        Running tasks synchronously in celery is *NOT* supported and if possible `enqueue_job` with synchronous=False
+        should be used instead.
 
         Args:
             job_model (Job): The Job to be enqueued for execution
@@ -648,46 +647,22 @@ class JobResult(BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        job_celery_kwargs = {
-            "nautobot_job_job_model_id": job_model.id,
-            "nautobot_job_profile": profile,
-            "nautobot_job_user_id": user.id,
-        }
-
-        if job_model.soft_time_limit > 0:
-            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-        if job_model.time_limit > 0:
-            job_celery_kwargs["time_limit"] = job_model.time_limit
-
-        if celery_kwargs is not None:
-            job_celery_kwargs.update(celery_kwargs)
-
-        job_result = cls.objects.create(
-            job_model=job_model,
-            name=job_model.name,
-            user=user,
-            celery_kwargs=job_celery_kwargs,
+        return cls.enqueue_job(
+            job_model, user, *job_args, celery_kwargs=celery_kwargs, profile=profile, synchronous=True, **job_kwargs
         )
-
-        eager_result = job_model.job_task.apply(
-            args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
-        )
-        job_result.refresh_from_db()
-        job_result.date_done = timezone.now()
-        job_result.status = eager_result.status
-        job_result.result = eager_result.result
-        job_result.traceback = eager_result.traceback
-        # celery_kwargs, job_model and user must be re-added because celery Task.apply() does not keep track of properties like apply_async()
-        job_result.celery_kwargs = job_celery_kwargs
-        job_result.job_model = job_model
-        job_result.user = user
-        job_result.worker = eager_result.worker
-        job_result.save()
-        return job_result
 
     @classmethod
     def enqueue_job(
-        cls, job_model, user, *job_args, celery_kwargs=None, profile=False, schedule=None, task_queue=None, **job_kwargs
+        cls,
+        job_model,
+        user,
+        *job_args,
+        celery_kwargs=None,
+        profile=False,
+        schedule=None,
+        task_queue=None,
+        synchronous=False,
+        **job_kwargs,
     ):
         """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
 
@@ -704,7 +679,11 @@ class JobResult(BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        job_result = cls.objects.create(name=job_model.name)
+        job_result = cls.objects.create(
+            name=job_model.name,
+            job_model=job_model,
+            user=user,
+        )
 
         if task_queue is None:
             task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
@@ -726,12 +705,18 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is not None:
             job_celery_kwargs.update(celery_kwargs)
 
-        # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-        transaction.on_commit(
-            lambda: job_model.job_task.apply_async(
-                args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+        if synchronous:
+            job_result.celery_kwargs = job_celery_kwargs
+            job_result.save()
+            job_model.job_task.apply(args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs)
+            job_result.refresh_from_db()
+        else:
+            # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
+            transaction.on_commit(
+                lambda: job_model.job_task.apply_async(
+                    args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                )
             )
-        )
 
         return job_result
 

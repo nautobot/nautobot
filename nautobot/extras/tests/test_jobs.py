@@ -35,7 +35,6 @@ from nautobot.extras.models import CustomField, FileProxy, JobHook, JobResult, R
 from nautobot.extras.models.models import JobLogEntry
 
 
-@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class JobTest(TransactionTestCase):
     """
     Test basic jobs to ensure importing works.
@@ -532,7 +531,6 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 0)
 
 
-@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class RunJobManagementCommandTest(TransactionTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
 
@@ -751,7 +749,6 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
-@mock.patch.object(JobResult, "enqueue_job", JobResult.execute_job)
 class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     """
     Test job hooks.

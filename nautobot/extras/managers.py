@@ -48,8 +48,9 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             task_args (list): Task arguments.
             task_kwargs (dict): Task kwargs.
             celery_kwargs (dict): Celery kwargs (kwargs passed to apply_async).
-            job_model_id (uuid): UUID of the Job model instance of the task being run
-            scheduled_job_id (uuid): UUID of the ScheduledJob model instance that initiated this task
+            job_model_id (uuid): UUID of the Job model instance of the task being run.
+            scheduled_job_id (uuid): UUID of the ScheduledJob model instance that initiated
+                this task, or None if not scheduled.
             result (obj): Return value of the task, or an exception instance raised
                 by the task.
             status (str): Task status. See `JobResultStatusChoices` for a list of possible status

@@ -10,7 +10,13 @@ from textwrap import dedent
 import traceback
 import warnings
 
+from billiard.einfo import ExceptionInfo
+from celery import states
+from celery.exceptions import Retry
+from celery.result import EagerResult
+from celery.utils.functional import maybe_list
 from celery.utils.log import get_task_logger
+from celery.utils.nodenames import gethostname
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -23,6 +29,7 @@ from django.db.models.query import QuerySet
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms import ValidationError
 from django.utils.functional import classproperty
+from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
@@ -299,6 +306,71 @@ class BaseJob(Task):
         # TODO(gary): document this in job author docs
         # Super.after_return must be called for chords to function properly
         super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
+
+    def apply(
+        self,
+        args=None,
+        kwargs=None,
+        link=None,
+        link_error=None,
+        task_id=None,
+        retries=None,
+        throw=None,
+        logfile=None,
+        loglevel=None,
+        headers=None,
+        **options,
+    ):
+        """Fix celery's apply method to propagate options to the task result"""
+        # trace imports Task, so need to import inline.
+        from celery.app.trace import build_tracer
+
+        app = self._get_app()
+        args = args or ()
+        kwargs = kwargs or {}
+        task_id = task_id or uuid()
+        retries = retries or 0
+        if throw is None:
+            throw = app.conf.task_eager_propagates
+
+        # Make sure we get the task instance, not class.
+        task = app._tasks[self.name]
+
+        request = {
+            "id": task_id,
+            "retries": retries,
+            "is_eager": True,
+            "logfile": logfile,
+            "loglevel": loglevel or 0,
+            "hostname": gethostname(),
+            "callbacks": maybe_list(link),
+            "errbacks": maybe_list(link_error),
+            "headers": headers,
+            "ignore_result": options.get("ignore_result", False),
+            "delivery_info": {
+                "is_eager": True,
+                "exchange": options.get("exchange"),
+                "routing_key": options.get("routing_key"),
+                "priority": options.get("priority"),
+            },
+            "properties": options,  # one line fix to overloaded method
+        }
+        tb = None
+        tracer = build_tracer(
+            task.name,
+            task,
+            eager=True,
+            propagate=throw,
+            app=self._get_app(),
+        )
+        ret = tracer(task_id, args, kwargs, request)
+        retval = ret.retval
+        if isinstance(retval, ExceptionInfo):
+            retval, tb = retval.exception, retval.traceback
+        if isinstance(retval, Retry) and retval.sig is not None:
+            return retval.sig.apply(retries=retries + 1)
+        state = states.SUCCESS if ret.info is None else ret.info.state
+        return EagerResult(task_id, retval, state, traceback=tb)
 
     @classproperty
     def file_path(cls):  # pylint: disable=no-self-argument

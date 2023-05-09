@@ -628,12 +628,6 @@ class JobViewSet(
         if not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
-        if job_model.supports_dryrun and job_model.read_only and cleaned_data.get("dryrun", False) is not True:
-            err_msg = (
-                "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled."
-            )
-            raise ValidationError({"data": {"dryrun": [err_msg]}})
-
         # Default to a null JobResult.
         job_result = None
 
