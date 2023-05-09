@@ -2004,14 +2004,14 @@ class RelationshipTestCase(
 
         Relationship(
             name="Device VLANs",
-            slug="device-vlans",
+            key="device-vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         ).validated_save()
         Relationship(
             name="Primary VLAN",
-            slug="primary-vlan",
+            key="primary-vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
@@ -2025,7 +2025,7 @@ class RelationshipTestCase(
 
         cls.form_data = {
             "name": "VLAN-to-Interface",
-            "slug": "vlan-to-interface",
+            "key": "vlan-to-interface",
             "type": "many-to-many",
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
@@ -2129,7 +2129,7 @@ class RelationshipAssociationTestCase(
 
         relationship = Relationship(
             name="Device VLANs",
-            slug="device-vlans",
+            key="device-vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,

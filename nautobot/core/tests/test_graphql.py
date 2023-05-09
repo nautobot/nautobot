@@ -236,7 +236,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.m2m_1 = Relationship(
             name="Vlan to Rack",
-            slug="vlan-rack",
+            key="vlan-rack",
             source_type=rack_ct,
             source_label="My Vlans",
             destination_type=vlan_ct,
@@ -247,7 +247,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.m2m_2 = Relationship(
             name="Another Vlan to Rack",
-            slug="vlan-rack-2",
+            key="vlan-rack-2",
             source_type=rack_ct,
             destination_type=vlan_ct,
             type="many-to-many",
@@ -256,7 +256,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.o2m_1 = Relationship(
             name="generic location to vlan",
-            slug="location-vlan",
+            key="location-vlan",
             source_type=location_ct,
             destination_type=vlan_ct,
             type="one-to-many",
@@ -265,7 +265,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.o2o_1 = Relationship(
             name="Primary Rack per Location",
-            slug="primary-rack-location",
+            key="primary-rack-location",
             source_type=rack_ct,
             source_hidden=True,
             destination_type=location_ct,
@@ -276,7 +276,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.o2os_1 = Relationship(
             name="Redundant Location",
-            slug="redundant-location",
+            key="redundant-location",
             source_type=location_ct,
             destination_type=location_ct,
             type="symmetric-one-to-one",
@@ -285,7 +285,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.o2m_same_type_1 = Relationship(
             name="Some sort of location hierarchy?",
-            slug="location-hierarchy",
+            key="location-hierarchy",
             source_type=location_ct,
             destination_type=location_ct,
             type="one-to-many",
@@ -305,7 +305,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
             (self.m2m_2, "source"),
             (self.o2m_1, "source"),
         ]:
-            field_name = f"rel_{str_to_var_name(rel.slug)}"
+            field_name = f"rel_{str_to_var_name(rel.key)}"
             self.assertIn(field_name, schema._meta.fields.keys())
             self.assertIsInstance(schema._meta.fields[field_name], graphene.types.field.Field)
             if rel.has_many(peer_side):
@@ -315,7 +315,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         # Relationships not on VLAN
         for rel in [self.o2o_1, self.o2os_1]:
-            field_name = f"rel_{str_to_var_name(rel.slug)}"
+            field_name = f"rel_{str_to_var_name(rel.key)}"
             self.assertNotIn(field_name, schema._meta.fields.keys())
 
     @override_settings(GRAPHQL_RELATIONSHIP_PREFIX="pr")
@@ -329,7 +329,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
             (self.o2o_1, "source"),
             (self.o2os_1, "peer"),
         ]:
-            field_name = f"pr_{str_to_var_name(rel.slug)}"
+            field_name = f"pr_{str_to_var_name(rel.key)}"
             self.assertIn(field_name, schema._meta.fields.keys())
             self.assertIsInstance(schema._meta.fields[field_name], graphene.types.field.Field)
             if rel.has_many(peer_side):
@@ -340,7 +340,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         # Special handling of same-type non-symmetric relationships
         for rel in [self.o2m_same_type_1]:
             for peer_side in ["source", "destination"]:
-                field_name = f"pr_{str_to_var_name(rel.slug)}_{peer_side}"
+                field_name = f"pr_{str_to_var_name(rel.key)}_{peer_side}"
                 self.assertIn(field_name, schema._meta.fields.keys())
                 self.assertIsInstance(schema._meta.fields[field_name], graphene.types.field.Field)
                 if rel.has_many(peer_side):
@@ -350,7 +350,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         # Relationships not on Location
         for rel in [self.m2m_1, self.m2m_2]:
-            field_name = f"pr_{str_to_var_name(rel.slug)}"
+            field_name = f"pr_{str_to_var_name(rel.key)}"
             self.assertNotIn(field_name, schema._meta.fields.keys())
 
 
@@ -867,7 +867,7 @@ class GraphQLQueryTest(TestCase):
 
         cls.relationship_o2o_1 = Relationship(
             name="Device to VirtualMachine",
-            slug="device-to-vm",
+            key="device-to-vm",
             source_type=ContentType.objects.get_for_model(Device),
             destination_type=ContentType.objects.get_for_model(VirtualMachine),
             type="one-to-one",
@@ -883,7 +883,7 @@ class GraphQLQueryTest(TestCase):
 
         cls.relationship_m2ms_1 = Relationship(
             name="Device Group",
-            slug="device-group",
+            key="device-group",
             source_type=ContentType.objects.get_for_model(Device),
             destination_type=ContentType.objects.get_for_model(Device),
             type="symmetric-many-to-many",

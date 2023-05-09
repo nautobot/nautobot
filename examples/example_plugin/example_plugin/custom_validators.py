@@ -30,7 +30,7 @@ class RelationshipAssociationCustomValidator(CustomValidator):
         within the host range of a Prefix(source)
         """
         obj = self.context["object"]
-        if obj.relationship.slug != "test-relationship":
+        if obj.relationship.key != "test-relationship":
             # Not a relationship we have an interest in validating
             return
         prefix_host_range = obj.source.prefix.iter_hosts()

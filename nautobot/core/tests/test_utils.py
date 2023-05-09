@@ -658,7 +658,7 @@ class GetFilterFieldLabelTest(TestCase):
         device_ct = ContentType.objects.get_for_model(dcim_models.Device)
         cls.peer_relationship = extras_models.Relationship(
             name="HA Device Peer",
-            slug="ha_device_peer",
+            key="ha_device_peer",
             source_type=device_ct,
             destination_type=device_ct,
             source_label="Peer",
@@ -686,7 +686,7 @@ class GetFilterFieldLabelTest(TestCase):
 
         with self.subTest("Relationship field name"):
             self.assertEqual(
-                filtering.get_filter_field_label(device_filter_set_filters[f"cr_{self.peer_relationship.slug}__peer"]),
+                filtering.get_filter_field_label(device_filter_set_filters[f"cr_{self.peer_relationship.key}__peer"]),
                 self.peer_relationship.source_label,
             )
 

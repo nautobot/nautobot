@@ -40,7 +40,7 @@ side_data_schema = {
 
 @extend_schema_field(
     {
-        # Dictionary, keyed by relationship slug
+        # Dictionary, keyed by relationship key
         "type": "object",
         "additionalProperties": {
             "type": "object",
@@ -75,7 +75,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
 
         Returns:
             {
-                "<relationship-slug>": {
+                "<relationship-key>": {
                     "id": ...,
                     "url": ...,
                     "name": ...,
@@ -99,7 +99,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                         "objects": [{...}, {...}, ...],
                     },
                 },
-                "<relationship-slug>": {
+                "<relationship-key>": {
                     ...
                 },
                 ...
@@ -111,7 +111,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
             for relationship, associations in relationships.items():
                 depth = int(self.context.get("depth", 0))
                 data.setdefault(
-                    relationship.slug,
+                    relationship.key,
                     {
                         "id": str(relationship.id),
                         "url": reverse(
@@ -124,10 +124,10 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                     },
                 )
                 other_side = RelationshipSideChoices.OPPOSITE[this_side]
-                data[relationship.slug][other_side] = {"label": relationship.get_label(this_side)}
+                data[relationship.key][other_side] = {"label": relationship.get_label(this_side)}
 
                 other_type = getattr(relationship, f"{other_side}_type")
-                data[relationship.slug][other_side]["object_type"] = f"{other_type.app_label}.{other_type.model}"
+                data[relationship.key][other_side]["object_type"] = f"{other_type.app_label}.{other_type.model}"
 
                 # Get the nested serializer, if any, for the objects of other_type.
                 # This may fail, such as in the case of a plugin that has models but doesn't implement serializers,
@@ -151,7 +151,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                         pass
 
                 if other_side_serializer is not None:
-                    data[relationship.slug][other_side]["objects"] = [
+                    data[relationship.key][other_side]["objects"] = [
                         other_side_serializer(
                             other_obj, context={"request": self.context.get("request")}, **field_kwargs
                         ).data
@@ -159,7 +159,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                     ]
                 else:
                     # Simulate a serializer that contains nothing but the id field.
-                    data[relationship.slug][other_side]["objects"] = [
+                    data[relationship.key][other_side]["objects"] = [
                         {"id": other_obj.id} for other_obj in other_objects
                     ]
 
@@ -204,20 +204,20 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                 output_data[relationship]["peer"] = []
 
         # Input validation - prevent referencing a relationship that doesn't exist or apply
-        relationship_slugs = [relationship.slug for relationship in relationships]
-        for relationship_slug in data:
-            if relationship_slug not in relationship_slugs:
+        relationship_keys = [relationship.key for relationship in relationships]
+        for relationship_key in data:
+            if relationship_key not in relationship_keys:
                 raise ValidationError(
-                    f'"{relationship_slug}" is not a relationship on {self.parent.Meta.model._meta.label}'
+                    f'"{relationship_key}" is not a relationship on {self.parent.Meta.model._meta.label}'
                 )
 
         for relationship in relationships:
-            if relationship.slug not in data:
+            if relationship.key not in data:
                 # No changes to any associations for this relationship, can disregard it
                 del output_data[relationship]
                 continue
 
-            relationship_data = data[relationship.slug]
+            relationship_data = data[relationship.key]
 
             for other_side in ["source", "destination", "peer"]:
                 if other_side not in relationship_data:
@@ -236,7 +236,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                 # Don't allow omitting 'objects' altogether as a shorthand for deleting all associations
                 if "objects" not in relationship_data[other_side]:
                     raise ValidationError(
-                        f'"objects" must be specified under ["{relationship.slug}"]["{other_side}"] when present'
+                        f'"objects" must be specified under ["{relationship.key}"]["{other_side}"] when present'
                     )
                 objects_data = relationship_data[other_side]["objects"]
                 if not isinstance(objects_data, (list, tuple)):

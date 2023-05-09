@@ -254,10 +254,10 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
-            field_name = f"cr_{relationship.slug}__{peer_side}"
+            # "cr_<relationship-key>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship-key>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-key>__peer"
+            field_name = f"cr_{relationship.key}__{peer_side}"
 
             if field_name in self.relationships:
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".

@@ -831,7 +831,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         relationship = Relationship(
             name="Device to Prefix",
-            slug="device_to_prefix",
+            key="device_to_prefix",
             source_type=self.device_ct,
             source_label="My Prefixes",
             source_filter=None,

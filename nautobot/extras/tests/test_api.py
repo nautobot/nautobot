@@ -2328,21 +2328,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
     create_data = [
         {
             "name": "Device VLANs",
-            "slug": "device-vlans",
+            "key": "device-vlans",
             "type": "many-to-many",
             "source_type": "ipam.vlan",
             "destination_type": "dcim.device",
         },
         {
             "name": "Primary VLAN",
-            "slug": "primary-vlan",
+            "key": "primary-vlan",
             "type": "one-to-many",
             "source_type": "ipam.vlan",
             "destination_type": "dcim.device",
         },
         {
             "name": "Primary Interface",
-            "slug": "primary-interface",
+            "key": "primary-interface",
             "type": "one-to-one",
             "source_type": "dcim.device",
             "source_label": "primary interface",
@@ -2360,7 +2360,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
     ]
 
     bulk_update_data = {
-        "source_filter": {"slug": ["some-slug"]},
+        "source_filter": {"key": ["some-key"]},
     }
     choices_fields = ["destination_type", "source_type", "type", "required_on"]
     slug_source = "name"
@@ -2374,14 +2374,14 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         cls.relationships = (
             Relationship(
                 name="Related locations",
-                slug="related-locations",
+                key="related-locations",
                 type="symmetric-many-to-many",
                 source_type=location_type,
                 destination_type=location_type,
             ),
             Relationship(
                 name="Unrelated locations",
-                slug="unrelated-locations",
+                key="unrelated-locations",
                 type="many-to-many",
                 source_type=location_type,
                 source_label="Other locations (from source side)",
@@ -2390,7 +2390,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             ),
             Relationship(
                 name="Devices found elsewhere",
-                slug="devices-elsewhere",
+                key="devices-elsewhere",
                 type="many-to-many",
                 source_type=location_type,
                 destination_type=device_type,
@@ -2415,7 +2415,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         self.maxDiff = None
         self.assertEqual(
             {
-                self.relationships[0].slug: {
+                self.relationships[0].key: {
                     "id": str(self.relationships[0].pk),
                     "url": self.absolute_api_url(self.relationships[0]),
                     "name": self.relationships[0].name,
@@ -2426,7 +2426,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                         "objects": [],
                     },
                 },
-                self.relationships[1].slug: {
+                self.relationships[1].key: {
                     "id": str(self.relationships[1].pk),
                     "url": self.absolute_api_url(self.relationships[1]),
                     "name": self.relationships[1].name,
@@ -2442,7 +2442,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                         "objects": [],
                     },
                 },
-                self.relationships[2].slug: {
+                self.relationships[2].key: {
                     "id": str(self.relationships[2].pk),
                     "url": self.absolute_api_url(self.relationships[2]),
                     "name": self.relationships[2].name,
@@ -2501,17 +2501,17 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 "status": Status.objects.get_for_model(Location).first().pk,
                 "location_type": location_type.pk,
                 "relationships": {
-                    self.relationships[0].slug: {
+                    self.relationships[0].key: {
                         "peer": {
                             "objects": [str(existing_location_1.pk)],
                         },
                     },
-                    self.relationships[1].slug: {
+                    self.relationships[1].key: {
                         "source": {
                             "objects": [str(existing_location_2.pk)],
                         },
                     },
-                    self.relationships[2].slug: {
+                    self.relationships[2].key: {
                         "destination": {
                             "objects": [
                                 {"name": "existing-device-location-1"},
@@ -2689,7 +2689,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
         cls.relationship = Relationship(
             name="Devices found elsewhere",
-            slug="elsewhere-devices",
+            key="elsewhere-devices",
             type="many-to-many",
             source_type=cls.location_type,
             destination_type=cls.device_type,
@@ -2780,7 +2780,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
         relationship = Relationship.objects.create(
             name="Device to location Rel 1",
-            slug="device-to-location-rel-1",
+            key="device-to-location-rel-1",
             source_type=self.device_type,
             source_filter={"name": [self.devices[0].name]},
             destination_type=self.location_type,
@@ -2858,9 +2858,9 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("relationships", response.data)
         self.assertIsInstance(response.data["relationships"], dict)
         # Ensure consistent ordering
-        response.data["relationships"][self.relationship.slug]["destination"]["objects"].sort(key=lambda v: v["name"])
+        response.data["relationships"][self.relationship.key]["destination"]["objects"].sort(key=lambda v: v["name"])
         self.maxDiff = None
-        relationship_data = response.data["relationships"][self.relationship.slug]
+        relationship_data = response.data["relationships"][self.relationship.key]
         self.assertEqual(relationship_data["id"], str(self.relationship.pk))
         self.assertEqual(relationship_data["url"], self.absolute_api_url(self.relationship))
         self.assertEqual(relationship_data["name"], self.relationship.name)
@@ -2868,7 +2868,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(relationship_data["destination"]["label"], "devices")
         self.assertEqual(relationship_data["destination"]["object_type"], "dcim.device")
 
-        objects = response.data["relationships"][self.relationship.slug]["destination"]["objects"]
+        objects = response.data["relationships"][self.relationship.key]["destination"]["objects"]
         for i, obj in enumerate(objects):
             self.assertEqual(obj["id"], str(self.devices[i].pk))
             self.assertEqual(obj["url"], self.absolute_api_url(self.devices[i]))
@@ -2942,7 +2942,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Error handling: wrong relationship"):
             Relationship.objects.create(
                 name="Device-to-Device",
-                slug="device-to-device",
+                key="device-to-device",
                 source_type=self.device_type,
                 destination_type=self.device_type,
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
@@ -2964,7 +2964,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Error handling: wrong relationship side"):
             response = self.client.patch(
                 url,
-                {"relationships": {self.relationship.slug: {"source": {"objects": []}}}},
+                {"relationships": {self.relationship.key: {"source": {"objects": []}}}},
                 format="json",
                 **self.header,
             )
@@ -2982,7 +2982,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
                 url,
                 {
                     "relationships": {
-                        self.relationship.slug: {
+                        self.relationship.key: {
                             "destination": {
                                 "objects": [
                                     # remove devices[0] by omission

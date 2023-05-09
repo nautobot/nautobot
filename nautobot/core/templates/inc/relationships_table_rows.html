@@ -4,14 +4,14 @@
         {% for side, relationships in relationships.items %}
             {% for relationship, value in relationships.items %}
                 <tr>
-                    <td><span title="{{ relationship.slug }}">{{ value.label }}</span></td>
+                    <td><span title="{{ relationship.key }}">{{ value.label }}</span></td>
                 {% if not value.has_many and value.value %}
                     <td>
                         <a href="{{ value.url }}">{{ value.value }}</a>
                     </td>
                 {% elif value.has_many and value.queryset.count %}
                     <td>
-                        <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.slug}}&{{side}}_id={{object.id}}">
+                        <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.key}}&{{side}}_id={{object.id}}">
                             {{ value.queryset.count }}
                             {% comment %}
                             If peer_type is a plugin model that has subsequently been uninstalled,

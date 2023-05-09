@@ -1143,7 +1143,7 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
-    slug = SlugField(help_text="Internal name of this relationship. Please use underscores rather than dashes.")
+    key = SlugField(help_text="Internal name of this relationship. Please use underscores rather than dashes.")
     source_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
         help_text="The source object type to which this relationship applies.",
@@ -1167,7 +1167,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
         model = Relationship
         fields = [
             "name",
-            "slug",
+            "key",
             "description",
             "type",
             "required_on",
@@ -1208,7 +1208,7 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
 
     relationship = DynamicModelMultipleChoiceField(
         queryset=Relationship.objects.all(),
-        to_field_name="slug",
+        to_field_name="key",
         required=False,
     )
 
