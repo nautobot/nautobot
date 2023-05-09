@@ -24,7 +24,6 @@ from nautobot.virtualization.models import (
 
 
 class ClusterTypeSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:clustertype-detail")
     cluster_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -33,7 +32,6 @@ class ClusterTypeSerializer(NautobotModelSerializer):
 
 
 class ClusterGroupSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:clustergroup-detail")
     cluster_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -42,7 +40,6 @@ class ClusterGroupSerializer(NautobotModelSerializer):
 
 
 class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:cluster-detail")
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
@@ -57,8 +54,6 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:virtualmachine-detail")
-
     class Meta:
         model = VirtualMachine
         fields = "__all__"
@@ -87,7 +82,6 @@ class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
 class VMInterfaceSerializer(
     InterfaceCommonSerializer,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="virtualization-api:vminterface-detail")
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
 
     class Meta:

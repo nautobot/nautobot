@@ -262,7 +262,7 @@ Additional useful commands for the development environment:
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
 !!! note
-    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the `invoke start` or `invoke debug` commands.
+    The `mkdocs` and `storybook` containers (see later) are not started automatically by `invoke start` or `invoke debug`. If desired, these may be started manually with `invoke start -s mkdocs` or `invoke start -s storybook` as appropriate.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
@@ -528,16 +528,29 @@ You can connect to the development server at `localhost:8080`, but normally you'
 
 ### Starting the Node.js Server
 
-In development, you should run a Node.js server instance as well. This will handle automatically rebuilding the UI when you make changes in the `nautobot_ui` directory.
+In development, you should run a Node.js server instance as well. This will handle automatically rebuilding the UI when you make changes in the `nautobot/ui` directory.
 
 | Docker Compose Workflow | Virtual Environment Workflow    |
 | ----------------------- | ------------------------------- |
-| `invoke start`          | `cd nautobot_ui; npm run start` |
+| `invoke start`          | `cd nautobot/ui; npm run start` |
 
 !!! note
     In the Docker Compose workflow, the Node.js server will delay starting until the Nautobot development server has finished the initial UI build, which may take several minutes. This is normal.
 
 You can connect to the Node.js server at `localhost:3000`.
+
+### Starting the Storybook Server
+
+When working on the UI, you may find it useful to run a [Storybook](https://storybook.js.org/) instance that provides interactive documentation of the `nautobot-ui` library used by Nautobot's user interface.
+
+| Docker Compose Workflow     | Virtual Environment Workflow    |
+| --------------------------- | ------------------------------- |
+| `invoke start -s storybook` | `TODO`                          |
+
+!!! note
+    This container is not started by default when using `invoke start`. You must individually start it using `invoke start -s storybook`.
+
+You can connect to Storybook at `localhost:6006`.
 
 ### Starting the Worker Server
 

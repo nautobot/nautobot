@@ -40,3 +40,15 @@ services:
         condition: service_healthy
     command: >
       bash -c "npm run start"
+  storybook:
+    profiles:
+      - storybook
+    # TODO: can we use a lighter-weight base image?
+    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    environment:
+      PORT: "6006"
+    ports:
+      - "6006:6006"
+    entrypoint: ""
+    # TODO this needs to ensure the version of nautobot-ui remains in sync with package-lock.json
+    command: bash -c "git clone https://github.com/nautobot/nautobot-ui.git && cd nautobot-ui && npm install && npm run storybook|| npm run storybook"

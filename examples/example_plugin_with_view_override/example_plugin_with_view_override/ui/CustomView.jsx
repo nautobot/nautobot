@@ -19,8 +19,8 @@ export function CustomTableView(props) {
           <td>{props.display}</td>
         </tr>
         <tr>
-          <td>Web URL</td>
-          <td>{props.web_url}</td>
+          <td>URL</td>
+          <td>{props.url}</td>
         </tr>
       </tbody>
     </Table>

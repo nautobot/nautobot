@@ -12,8 +12,6 @@ from nautobot.users.models import ObjectPermission, Token
 
 
 class UserSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="users-api:user-detail")
-
     class Meta:
         model = get_user_model()
         exclude = ["user_permissions"]
@@ -41,7 +39,6 @@ class GroupSerializer(ValidatedModelSerializer):
 
 
 class TokenSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="users-api:token-detail")
     key = serializers.CharField(min_length=40, max_length=40, allow_blank=True, required=False)
 
     class Meta:
@@ -57,7 +54,6 @@ class TokenSerializer(ValidatedModelSerializer):
 
 
 class ObjectPermissionSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="users-api:objectpermission-detail")
     object_types = ContentTypeField(queryset=ContentType.objects.all(), many=True)
 
     class Meta:
@@ -76,5 +72,5 @@ class UserLoginSerializer(serializers.Serializer):
             password=attrs["password"],
         )
         if not user:
-            raise ValidationError("invalid login detail.")
+            raise ValidationError("Invalid login credentials.")
         return {"user": user}

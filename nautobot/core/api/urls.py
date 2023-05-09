@@ -8,9 +8,10 @@ from drf_spectacular.views import (
 
 from nautobot.core.api.views import (
     APIRootView,
-    GetMenuAPIView,
     GetFilterSetFieldDOMElementAPIView,
     GetFilterSetFieldLookupExpressionChoicesAPIView,
+    GetMenuAPIView,
+    GetObjectCountsView,
     GraphQLDRFAPIView,
     StatusView,
     NautobotSpectacularSwaggerView,
@@ -34,6 +35,7 @@ ui_api_patterns = [
     # Lookup Expr
     path("core/", include((core_api_patterns, "core-api"))),
     path("get-menu/", GetMenuAPIView.as_view(), name="get-menu"),
+    path("get-object-counts/", GetObjectCountsView.as_view(), name="get-object-counts"),
 ]
 
 urlpatterns = [

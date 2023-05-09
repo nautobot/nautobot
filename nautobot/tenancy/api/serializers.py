@@ -10,16 +10,15 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 
 
 class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenantgroup-detail")
     tenant_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = TenantGroup
         fields = "__all__"
+        list_display_fields = ["name", "tenant_count", "description", "actions"]
 
 
 class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenant-detail")
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     ipaddress_count = serializers.IntegerField(read_only=True)
@@ -33,3 +32,4 @@ class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Tenant
         fields = "__all__"
+        list_display_fields = ["name", "tenant_group", "description"]

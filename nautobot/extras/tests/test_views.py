@@ -1483,8 +1483,8 @@ class JobTestCase(
         cls.run_urls = (
             # Legacy URL (job class path based)
             reverse("extras:job", kwargs={"class_path": cls.test_pass.class_path}),
-            # Current URL (job model slug based)
-            reverse("extras:job_run", kwargs={"slug": cls.test_pass.slug}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_pass.pk}),
         )
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
@@ -1494,8 +1494,8 @@ class JobTestCase(
         cls.extra_run_urls = (
             # Legacy URL (job class path based)
             reverse("extras:job", kwargs={"class_path": cls.test_required_args.class_path}),
-            # Current URL (job model slug based)
-            reverse("extras:job_run", kwargs={"slug": cls.test_required_args.slug}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_required_args.pk}),
         )
 
         # Create an entry for a non-installed Job as well
@@ -1654,7 +1654,7 @@ class JobTestCase(
 
         for run_url in (
             reverse("extras:job", kwargs={"class_path": self.test_not_installed.class_path}),
-            reverse("extras:job_run", kwargs={"slug": self.test_not_installed.slug}),
+            reverse("extras:job_run", kwargs={"pk": self.test_not_installed.pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)
@@ -1669,7 +1669,7 @@ class JobTestCase(
 
         for run_url in (
             reverse("extras:job", kwargs={"class_path": "local/test_fail/TestFail"}),
-            reverse("extras:job_run", kwargs={"slug": Job.objects.get(job_class_name="TestFail").slug}),
+            reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)

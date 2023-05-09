@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import { NautobotUIProvider } from "@nautobot/nautobot-ui";
 
-import Layout from "@components/layouts/Layout";
+import Layout from "@components/Layout";
 import NautobotRouter from "./router";
 
 const theme = {

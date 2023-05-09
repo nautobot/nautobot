@@ -1,0 +1,2 @@
+Removed `NavMenuButton` and its subclasses as they are not a part of the 2.0 UI.
+Removed `NavMenuTab.weight` property as the menu tabs/contexts are not reorderable in 2.0.

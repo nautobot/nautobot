@@ -1,102 +1,126 @@
-import { useParams, useSearchParams } from "react-router-dom";
-import { Text } from "@nautobot/nautobot-ui";
-import useSWR from "swr";
-
-import { LoadingWidget } from "@components/common/LoadingWidget";
-import ObjectListTable from "@components/common/ObjectListTable";
+import { useLocation, useParams } from "react-router-dom";
+import { NautobotGridItem, Text } from "@nautobot/nautobot-ui";
+import { useDispatch } from "react-redux";
+import ObjectListTable from "@components/ObjectListTable";
 import GenericView from "@views/generic/GenericView";
-
-const fetcher = (...urls) => {
-    const f = (url) =>
-        fetch(url, { credentials: "include" })
-            .then((r) => r.json())
-            .catch((r) => r);
-    return Promise.all(urls.map((url) => f(url)));
-};
+import { useGetRESTAPIQuery } from "@utils/api";
+import { useEffect } from "react";
+import {
+    updateAppCurrentContext,
+    getCurrentAppContextSelector,
+} from "@utils/store";
+import { toTitleCase } from "@utils/string";
+import { useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
 
 export default function GenericObjectListView() {
     const { app_name, model_name } = useParams();
-    const { 0: searchParams } = useSearchParams();
+    const dispatch = useDispatch();
+    const location = useLocation();
+    const currentAppContext = useSelector(
+        getCurrentAppContextSelector(app_name, model_name)
+    );
+    const isPluginView = location.pathname.includes("/plugins/");
+    useEffect(() => {
+        dispatch(updateAppCurrentContext(currentAppContext));
+    }, [dispatch, currentAppContext]);
 
-    // TODO: If we can solve the dynamic API of RTK-Query we won't need to construct the API URLs
-    let list_url = `/api/${app_name}/${model_name}/`;
-    const headers_url = list_url + "table-fields/";
-
-    // Current fetcher allows to be passed multiple endpoints and fetch them at once
-    const urls = [list_url, headers_url];
-    const {
-        data = [{}, {}],
-        error,
-        isLoading: isLoadingData,
-    } = useSWR(urls, fetcher);
-    const { 0: tableData, 1: tableFields } = data;
+    // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";
+    const { data: headerData, isLoading: headerDataLoading } =
+        useGetRESTAPIQuery({
+            app_name: app_name,
+            model_name: model_name,
+            schema: true,
+            plugin: isPluginView,
+        });
+    let [searchParams] = useSearchParams();
 
     // What page are we on?
     // TODO: Pagination handling should be it's own function so it's testable
     let page_size = 50;
     let active_page_number = 0;
+    let searchQuery = {
+        app_name: app_name,
+        model_name: model_name,
+        plugin: isPluginView,
+    };
     if (searchParams.get("limit")) {
-        list_url += `?limit=${searchParams.get("limit")}`;
+        searchQuery.limit = searchParams.get("limit");
         page_size = searchParams.get("limit");
     }
     if (searchParams.get("offset")) {
-        list_url += `&offset=${searchParams.get("offset")}`;
+        searchQuery.offset = searchParams.get("offset");
         active_page_number = searchParams.get("offset") / page_size;
     }
+    const {
+        data: listData,
+        isLoading: listDataLoading,
+        isFetching: listDataFetching,
+    } = useGetRESTAPIQuery(searchQuery);
 
-    if (!app_name || !model_name) {
+    // TODO when are we going to run into this?
+    // if (!app_name || !model_name) {
+    //     return (
+    //         <GenericView>
+    //             <LoadingWidget />
+    //         </GenericView>
+    //     );
+    // }
+
+    let data_loaded = !(
+        listDataLoading ||
+        headerDataLoading ||
+        listDataFetching
+    );
+
+    let table_name = toTitleCase(model_name, "-");
+    if (!data_loaded) {
         return (
             <GenericView>
-                <LoadingWidget />
+                <NautobotGridItem>
+                    <ObjectListTable
+                        tableData={{}}
+                        defaultHeaders={[]}
+                        tableHeaders={[]}
+                        totalCount={0}
+                        active_page_number={active_page_number}
+                        page_size={page_size}
+                        tableTitle={table_name}
+                        data_loaded={data_loaded}
+                    />
+                </NautobotGridItem>
             </GenericView>
         );
     }
-
-    // ===
-    // TODO: This has promise for the RTK-Query Pattern and a global API and cache manager
-    //   ...but has an issue when the route is changed it won't run the query for the new view
-    //   something is not registering the need to make the new query and subscribe to the new
-    //   query objects.
-    //   Keeping this here because it's _almost_ working...
-    //
-    // --- Imports for the following pattern
-    // import { apiNameSlugger } from "@utils/api"
-    // ---
-    // const sluggedName = apiNameSlugger(model_name);
-    // const useDataQuery = globalApi.endpoints[sluggedName+"_fields"].useQuery
-    // const useFieldsQuery = globalApi.endpoints[sluggedName+"_fields"].useQuery
-    // const { data: tableData, isSuccess: isTableDataSuccess, refetch: refetchData } = useDataQuery()
-    // const { data: tableFields, isSuccess: isTableFieldsSuccess, refetch: refetchFields } = useFieldsQuery()
-    // ===
-
-    // TODO: Move to RTK-Query pattern (see api.js)
-    //   This doesn't currently use a global state manager which is 😭
-
-    if (isLoadingData || !tableData.results || !tableFields.data) {
-        return (
-            <GenericView>
-                <LoadingWidget name={model_name} />
-            </GenericView>
-        );
-    }
-
-    if (error) {
+    if (!listData || !headerData) {
         return (
             <GenericView>
                 <Text>Error loading.</Text>
             </GenericView>
         );
     }
+    // tableHeaders = all fields; and defaultHeaders = only the ones we want to see at first.
+    const tableHeaders = headerData.view_options.fields;
+    let defaultHeaders = headerData.view_options.list_display_fields;
 
+    // If list_display_fields is not defined or empty, default to showing all headers.
+    if (!defaultHeaders.length) {
+        defaultHeaders = tableHeaders;
+    }
     return (
         <GenericView>
-            <ObjectListTable
-                tableData={tableData.results}
-                tableHeader={tableFields.data}
-                totalCount={tableData.count}
-                active_page_number={active_page_number}
-                page_size={page_size}
-            />
+            <NautobotGridItem>
+                <ObjectListTable
+                    tableData={listData.results}
+                    defaultHeaders={defaultHeaders}
+                    tableHeaders={tableHeaders}
+                    totalCount={listData.count}
+                    active_page_number={active_page_number}
+                    page_size={page_size}
+                    tableTitle={table_name}
+                    data_loaded={data_loaded}
+                />
+            </NautobotGridItem>
         </GenericView>
     );
 }

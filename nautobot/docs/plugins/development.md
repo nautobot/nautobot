@@ -390,7 +390,10 @@ def banner(context, *args, **kwargs):
 
 Apps can extend the existing navigation bar layout. By default, Nautobot looks for a `menu_items` list inside of `navigation.py`. (This can be overridden by setting `menu_items` to a custom value on the app's `NautobotAppConfig`.)
 
-Using a key and weight system, a developer can integrate the app's menu additions amongst existing menu tabs, groups, items and buttons, and/or create entirely new menus as desired.
+Using a key and weight system, a developer can integrate the app's menu additions amongst existing menu tabs, groups, and items.
+
+--- 2.0.0
+    As part of the Nautobot 2.0 UI redesign, the option for apps to add entirely new top-level menu "tabs" has been removed. Additionally, buttons can no longer be added to menu items.
 
 More documentation and examples can be found in the [Navigation Menu](../development/navigation-menu.md) guide.
 
@@ -1181,13 +1184,13 @@ urlpatterns = [
     # changelog, notes and etc.
     ...
     path(
-        "yourappmodels/<slug:slug>/changelog/",
+        "yourappmodels/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="yourappmodel_changelog",
         kwargs={"model": yourappmodel},
     ),
     path(
-        "yourappmodels/<slug:slug>/notes/",
+        "yourappmodels/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="yourappmodel_notes",
         kwargs={"model": yourappmodel},
@@ -1421,7 +1424,7 @@ try:
     from nautobot.extras.views import ObjectNotesView
     urlpatterns.append(
         path(
-            'random/<slug:slug>/notes/),
+            'random/<uuid:pk>/notes/),
             ObjectNotesView.as_view(),
             name="random_notes",
             kwargs={"model": Random},

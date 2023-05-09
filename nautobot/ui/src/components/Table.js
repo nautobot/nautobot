@@ -8,7 +8,7 @@ import {
     Td,
 } from "@nautobot/nautobot-ui";
 
-import TableItem from "@components/core/TableItem";
+import TableItem from "@components/TableItem";
 
 // A standard Nautobot table. This _may_ be beneficial to move into nautobot-ui
 export default function NautobotTable({ data, headers }) {
@@ -16,7 +16,7 @@ export default function NautobotTable({ data, headers }) {
         <Table>
             <Thead>
                 <Tr>
-                    <Th>
+                    <Th borderTopLeftRadius="md">
                         <Checkbox></Checkbox>
                     </Th>
                     {headers.map(({ name, label }) => (

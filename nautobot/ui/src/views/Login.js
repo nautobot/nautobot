@@ -32,7 +32,9 @@ export default function Login() {
                     navigate("/");
                 });
             })
-            .catch((err) => alert(err.detail));
+            .catch((err) =>
+                alert(err.response?.data?.non_field_errors || err.message)
+            );
     };
 
     return (

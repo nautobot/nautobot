@@ -90,7 +90,6 @@ logger = logging.getLogger(__name__)
 
 
 class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:computedfield-detail")
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
     )
@@ -115,7 +114,6 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 
 class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMixin, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:configcontext-detail")
     owner_content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("config_context_owners").get_query()),
         required=False,
@@ -156,7 +154,6 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
 
 
 class ConfigContextSchemaSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:configcontextschema-detail")
     owner_content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("config_context_owners").get_query()),
         required=False,
@@ -208,7 +205,6 @@ class ContentTypeSerializer(BaseModelSerializer):
 
 
 class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfield-detail")
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()),
         many=True,
@@ -223,8 +219,6 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customfieldchoice-detail")
-
     class Meta:
         model = CustomFieldChoice
         fields = "__all__"
@@ -236,7 +230,6 @@ class CustomFieldChoiceSerializer(ValidatedModelSerializer):
 
 
 class CustomLinkSerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:customlink-detail")
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_links").get_query()).order_by("app_label", "model"),
     )
@@ -252,15 +245,12 @@ class CustomLinkSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 
 class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroupmembership-detail")
-
     class Meta:
         model = DynamicGroupMembership
         fields = "__all__"
 
 
 class DynamicGroupSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:dynamicgroup-detail")
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
     )
@@ -288,7 +278,6 @@ class DynamicGroupSerializer(NautobotModelSerializer):
 
 # TODO: export-templates don't support custom-fields, is this omission intentional?
 class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelSerializer, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:exporttemplate-detail")
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("export_templates").get_query()),
     )
@@ -327,7 +316,6 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
 class GitRepositorySerializer(NautobotModelSerializer):
     """Git repositories defined as a data source."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:gitrepository-detail")
     provided_contents = MultipleChoiceJSONField(
         choices=lambda: get_datasource_content_choices("extras.gitrepository"),
         allow_blank=True,
@@ -352,7 +340,6 @@ class GitRepositorySerializer(NautobotModelSerializer):
 
 
 class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:graphqlquery-detail")
     variables = serializers.DictField(required=False, allow_null=True, default={})
 
     class Meta:
@@ -379,7 +366,6 @@ class GraphQLQueryOutputSerializer(serializers.Serializer):
 
 
 class ImageAttachmentSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:imageattachment-detail")
     content_type = ContentTypeField(queryset=ContentType.objects.all())
 
     class Meta:
@@ -420,8 +406,6 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:job-detail")
-
     class Meta:
         model = Job
         fields = "__all__"
@@ -469,7 +453,6 @@ class JobVariableSerializer(serializers.Serializer):
 
 
 class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobresult-detail")
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
     obj_type = ContentTypeField(read_only=True)
 
@@ -484,7 +467,6 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
 
 
 class ScheduledJobSerializer(BaseModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
     # start_time = serializers.DateTimeField(format=None, required=False)
 
     class Meta:
@@ -539,7 +521,6 @@ class JobClassDetailSerializer(JobClassSerializer):
 
 
 class JobHookSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobhook-detail")
     content_types = ContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(),
         many=True,
@@ -655,7 +636,6 @@ class JobMultiPartInputSerializer(serializers.Serializer):
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:joblogentry-detail")
     display = serializers.SerializerMethodField()
 
     class Meta:
@@ -673,7 +653,6 @@ class JobLogEntrySerializer(BaseModelSerializer):
 
 
 class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:jobbutton-detail")
     content_types = ContentTypeField(queryset=ContentType.objects.all(), many=True)
 
     class Meta:
@@ -697,13 +676,13 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 
 class NoteSerializer(BaseModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:note-detail")
     assigned_object_type = ContentTypeField(queryset=ContentType.objects.all())
     assigned_object = serializers.SerializerMethodField()
 
     class Meta:
         model = Note
         fields = "__all__"
+        list_display_fields = ["note", "assigned_object_type", "assigned_object_id", "user"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -735,7 +714,6 @@ class NoteInputSerializer(serializers.Serializer):
 
 
 class ObjectChangeSerializer(BaseModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:objectchange-detail")
     action = ChoiceField(choices=ObjectChangeActionChoices, read_only=True)
     changed_object_type = ContentTypeField(read_only=True)
     changed_object = serializers.SerializerMethodField(read_only=True)
@@ -743,6 +721,7 @@ class ObjectChangeSerializer(BaseModelSerializer):
     class Meta:
         model = ObjectChange
         fields = "__all__"
+        list_display_fields = ["changed_object_id", "related_object_id", "related_object_type", "user"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -771,8 +750,6 @@ class ObjectChangeSerializer(BaseModelSerializer):
 
 
 class RelationshipSerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationship-detail")
-
     source_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()),
     )
@@ -787,8 +764,6 @@ class RelationshipSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 
 class RelationshipAssociationSerializer(ValidatedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:relationshipassociation-detail")
-
     source_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()),
     )
@@ -810,7 +785,6 @@ class RelationshipAssociationSerializer(ValidatedModelSerializer):
 class RoleSerializer(NautobotModelSerializer):
     """Serializer for `Role` objects."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:role-detail")
     content_types = ContentTypeField(
         queryset=RoleModelsQuery().as_queryset(),
         many=True,
@@ -829,8 +803,6 @@ class RoleSerializer(NautobotModelSerializer):
 class SecretSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     """Serializer for `Secret` objects."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secret-detail")
-
     class Meta:
         model = Secret
         fields = "__all__"
@@ -839,8 +811,6 @@ class SecretSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
     """Serializer for `SecretsGroupAssociation` objects."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroupassociation-detail")
-
     class Meta:
         model = SecretsGroupAssociation
         fields = "__all__"
@@ -848,8 +818,6 @@ class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
 
 class SecretsGroupSerializer(NautobotModelSerializer):
     """Serializer for `SecretsGroup` objects."""
-
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:secretsgroup-detail")
 
     # TODO: it would be **awesome** if we could create/update SecretsGroupAssociations
     # alongside creating/updating the base SecretsGroup, but since this is a ManyToManyField with
@@ -878,7 +846,6 @@ class SecretsGroupSerializer(NautobotModelSerializer):
 class StatusSerializer(NautobotModelSerializer):
     """Serializer for `Status` objects."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:status-detail")
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("statuses").get_query()),
         many=True,
@@ -895,7 +862,6 @@ class StatusSerializer(NautobotModelSerializer):
 
 
 class TagSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:tag-detail")
     tagged_items = serializers.IntegerField(read_only=True)
     content_types = ContentTypeField(
         queryset=TaggableClassesQuery().as_queryset(),
@@ -927,7 +893,6 @@ class TagSerializer(NautobotModelSerializer):
 
 
 class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="extras-api:webhook-detail")
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
         many=True,

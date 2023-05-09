@@ -167,7 +167,6 @@ class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
 
 
 class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:locationtype-detail")
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("locations").get_query()),
         required=False,
@@ -177,6 +176,7 @@ class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     class Meta:
         model = LocationType
         fields = "__all__"
+        list_display_fields = ["name", "nestable", "content_types", "description"]
 
 
 class LocationSerializer(
@@ -184,7 +184,6 @@ class LocationSerializer(
     TaggedModelSerializerMixin,
     TreeModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:location-detail")
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
@@ -196,6 +195,7 @@ class LocationSerializer(
     class Meta:
         model = Location
         fields = "__all__"
+        list_display_fields = ["name", "status", "parent", "tenant", "description", "tags"]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
 
@@ -216,12 +216,12 @@ class LocationSerializer(
 
 
 class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackgroup-detail")
     rack_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = RackGroup
         fields = "__all__"
+        list_display_fields = ["name", "location", "rack_count", "description"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (location, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
@@ -244,7 +244,6 @@ class RackSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rack-detail")
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False)
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
@@ -254,6 +253,7 @@ class RackSerializer(
     class Meta:
         model = Rack
         fields = "__all__"
+        list_display_fields = ["name", "location", "rack_group", "status", "facility_id", "tenant", "role", "u_height"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
         # This prevents facility_id from being interpreted as a required field.
         validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
@@ -282,11 +282,10 @@ class RackUnitSerializer(serializers.Serializer):
 
 
 class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rackreservation-detail")
-
     class Meta:
         model = RackReservation
         fields = "__all__"
+        list_display_fields = ["pk", "rack", "units", "user", "description"]
 
 
 class RackElevationDetailFilterSerializer(serializers.Serializer):
@@ -316,7 +315,6 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
 
 
 class ManufacturerSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:manufacturer-detail")
     device_type_count = serializers.IntegerField(read_only=True)
     inventory_item_count = serializers.IntegerField(read_only=True)
     platform_count = serializers.IntegerField(read_only=True)
@@ -324,16 +322,17 @@ class ManufacturerSerializer(NautobotModelSerializer):
     class Meta:
         model = Manufacturer
         fields = "__all__"
+        list_display_fields = ["name", "device_type_count", "platform_count", "description"]
 
 
 class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicetype-detail")
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = DeviceType
         fields = "__all__"
+        list_display_fields = ["model", "manufacturer", "part_number", "u_height", "is_full_depth", "device_count"]
         # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
         # prevents slug from being interpreted as a required field.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
@@ -353,7 +352,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class ConsolePortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleporttemplate-detail")
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -362,7 +360,6 @@ class ConsolePortTemplateSerializer(NautobotModelSerializer):
 
 
 class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleserverporttemplate-detail")
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -371,7 +368,6 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
 
 
 class PowerPortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerporttemplate-detail")
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -380,7 +376,6 @@ class PowerPortTemplateSerializer(NautobotModelSerializer):
 
 
 class PowerOutletTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlettemplate-detail")
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
 
@@ -390,7 +385,6 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
 
 
 class InterfaceTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfacetemplate-detail")
     type = ChoiceField(choices=InterfaceTypeChoices)
 
     class Meta:
@@ -399,7 +393,6 @@ class InterfaceTemplateSerializer(NautobotModelSerializer):
 
 
 class RearPortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearporttemplate-detail")
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -408,7 +401,6 @@ class RearPortTemplateSerializer(NautobotModelSerializer):
 
 
 class FrontPortTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontporttemplate-detail")
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -417,8 +409,6 @@ class FrontPortTemplateSerializer(NautobotModelSerializer):
 
 
 class DeviceBayTemplateSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebaytemplate-detail")
-
     class Meta:
         model = DeviceBayTemplate
         fields = "__all__"
@@ -430,31 +420,36 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 
 
 class PlatformSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     device_count = serializers.IntegerField(read_only=True)
     virtual_machine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Platform
         fields = "__all__"
+        list_display_fields = [
+            "name",
+            "manufacturer",
+            "device_count",
+            "virtual_machine_count",
+            "napalm_driver",
+            "description",
+        ]
 
 
 class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:devicebay-detail")
-
     class Meta:
         model = DeviceBay
         fields = "__all__"
 
 
 class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:device-detail")
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     parent_bay = serializers.SerializerMethodField()
 
     class Meta:
         model = Device
         fields = "__all__"
+        list_display_fields = ["name", "status", "tenant", "location", "rack", "role", "device_type", "primary_ip"]
         validators = []
 
     def validate(self, data):
@@ -507,7 +502,6 @@ class ConsoleServerPortSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleserverport-detail")
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -521,7 +515,6 @@ class ConsolePortSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:consoleport-detail")
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -535,7 +528,6 @@ class PowerOutletSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:poweroutlet-detail")
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
 
@@ -550,7 +542,6 @@ class PowerPortSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerport-detail")
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -582,7 +573,6 @@ class InterfaceSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interface-detail")
     type = ChoiceField(choices=InterfaceTypeChoices)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     ip_address_count = serializers.IntegerField(read_only=True)
@@ -590,6 +580,7 @@ class InterfaceSerializer(
     class Meta:
         model = Interface
         fields = "__all__"
+        list_display_fields = ["device", "name", "status", "label", "enabled", "type", "description"]
 
     def validate(self, data):
         # Validate many-to-many VLAN assignments
@@ -609,7 +600,6 @@ class InterfaceSerializer(
 
 
 class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:rearport-detail")
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -618,7 +608,6 @@ class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Ca
 
 
 class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:frontport-detail")
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -630,12 +619,12 @@ class DeviceRedundancyGroupSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
     failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices)
 
     class Meta:
         model = DeviceRedundancyGroup
         fields = "__all__"
+        list_display_fields = ["name", "status", "failover_strategy", "device_count"]
 
 
 #
@@ -644,8 +633,6 @@ class DeviceRedundancyGroupSerializer(
 
 
 class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:inventoryitem-detail")
-
     class Meta:
         model = InventoryItem
         fields = "__all__"
@@ -675,7 +662,6 @@ class CableSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_a = serializers.SerializerMethodField(read_only=True)
@@ -685,6 +671,13 @@ class CableSerializer(
     class Meta:
         model = Cable
         fields = "__all__"
+        list_display_fields = [
+            "label",
+            "termination_a",
+            "termination_b",
+            "status",
+            "type",
+        ]
 
     def _get_termination(self, obj, side):
         """
@@ -723,8 +716,6 @@ class TracedCableSerializer(serializers.ModelSerializer):
     """
     Used only while tracing a cable path.
     """
-
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:cable-detail")
 
     class Meta:
         model = Cable
@@ -822,12 +813,12 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
 
 
 class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:virtualchassis-detail")
     member_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = VirtualChassis
         fields = "__all__"
+        list_display_fields = ["name", "domain", "master", "member_count"]
 
 
 #
@@ -836,7 +827,6 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMix
 
 
 class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerpanel-detail")
     power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -850,7 +840,6 @@ class PowerFeedSerializer(
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
 ):
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerfeed-detail")
     type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)
     supply = ChoiceField(choices=PowerFeedSupplyChoices, default=PowerFeedSupplyChoices.SUPPLY_AC)
     phase = ChoiceField(choices=PowerFeedPhaseChoices, default=PowerFeedPhaseChoices.PHASE_SINGLE)

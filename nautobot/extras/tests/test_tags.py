@@ -51,7 +51,8 @@ class TaggedItemTest(APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertListEqual(sorted([str(t) for t in response.data["tags"]]), sorted(data["tags"]))
+        # response with default depth is a list of tag URLs
+        self.assertEqual(sorted(response.data["tags"]), sorted([self.absolute_api_url(t) for t in self.tags]))
         location = Location.objects.get(pk=response.data["id"])
         self.assertListEqual(sorted([t.name for t in location.tags.all()]), sorted([t.name for t in self.tags]))
 
@@ -70,10 +71,10 @@ class TaggedItemTest(APITestCase):
 
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        tag_name_list = Tag.objects.filter(pk__in=response.data["tags"]).values_list("name", flat=True)
+        # response with default depth is a list of tag URLs
         self.assertListEqual(
-            sorted(list(tag_name_list)),
-            sorted([t["name"] for t in data["tags"]]),
+            sorted(response.data["tags"]),
+            sorted([self.absolute_api_url(t) for t in [self.tags[0], self.tags[1], self.tags[3]]]),
         )
         location = Location.objects.get(pk=response.data["id"])
         self.assertListEqual(

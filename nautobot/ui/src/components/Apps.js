@@ -1,6 +1,6 @@
 import { lazy } from "react";
 
-import NautobotApps from "../../app_imports";
+import NautobotApps from "../app_imports";
 
 function EmptyElement() {
     return <></>;

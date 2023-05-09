@@ -1,6 +1,5 @@
 import {
     Box,
-    DcimIcon,
     Flex,
     Heading,
     Link,
@@ -11,10 +10,9 @@ import {
 
 import { useEffect } from "react";
 
-import LoadingWidget from "@components/common/LoadingWidget";
-import RouterButton from "@components/common/RouterButton";
-import RouterLink from "@components/common/RouterLink";
-import SidebarNav from "@components/common/SidebarNav";
+import LoadingWidget from "@components/LoadingWidget";
+import RouterLink from "@components/RouterLink";
+import SidebarNav from "@components/SidebarNav";
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
 
 export default function Layout({ children }) {
@@ -33,6 +31,7 @@ export default function Layout({ children }) {
 
     let toRender = children;
 
+    // TODO: showing the loading widget while the menu is loading is breaking the login route if not logged into the backend server
     if (!sessionLoaded || !menuLoaded || sessionInfo === undefined)
         toRender = <LoadingWidget name="application" />;
 
@@ -52,7 +51,7 @@ export default function Layout({ children }) {
     //   It would save us the `toRender` above.
     return (
         <Flex height="full" overflow="hidden" width="full">
-            <Sidebar>
+            <Sidebar overflow="hidden">
                 <Heading
                     as="h1"
                     paddingBottom="md"
@@ -66,22 +65,7 @@ export default function Layout({ children }) {
                         to="/"
                     />
                 </Heading>
-                <Heading variant="sidebar">
-                    <DcimIcon />
-                    All
-                </Heading>
-                {sessionInfo && sessionInfo.logged_in ? (
-                    <>
-                        <SidebarNav />
-                        <RouterButton m={3} to="/logout/">
-                            Log Out
-                        </RouterButton>
-                    </>
-                ) : (
-                    <RouterButton m={3} to="/login/">
-                        Log In
-                    </RouterButton>
-                )}
+                {sessionInfo && sessionInfo.logged_in && <SidebarNav />}
                 <Button onClick={legacyUI} variant="link" color="white">
                     Return to Legacy UI
                 </Button>

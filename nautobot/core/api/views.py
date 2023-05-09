@@ -1,7 +1,7 @@
+import itertools
 import logging
 import platform
 from collections import OrderedDict
-from typing import Any, Dict, List, Union
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
@@ -11,25 +11,15 @@ from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import NoReverseMatch, reverse as django_reverse
 from rest_framework import status
-from rest_framework import fields as drf_fields
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
-from rest_framework import serializers as drf_serializers
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
-from drf_react_template.mixins import FormSchemaViewSetMixin
-from drf_react_template.renderers import JSONSerializerRenderer
-from drf_react_template.schema_form_encoder import (
-    ColumnProcessor,
-    SchemaProcessor,
-    SerializerEncoder,
-    UiSchemaProcessor,
-    SerializerType,
-)
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
@@ -45,10 +35,13 @@ from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
-from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
+from nautobot.extras.registry import registry
 from . import serializers
 
 
@@ -271,128 +264,12 @@ class ModelViewSetMixin:
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
 
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MySchemaProcessor(SchemaProcessor):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.TYPE_MAP.update(
-            {
-                "SlugField": {"type": "string"},
-                "CustomFieldsDataField": {"type": "object"},
-                "UUIDField": {"type": "string"},
-                "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
-                "ManyRelatedField": {"type": "array", "required": []},
-                "ContentTypeField": {"type": "string", "enum": "choices"},
-            }
-        )
-
-    def _get_type_map_value(self, field: SerializerType):
-        result = {
-            "type": field.style.get("schema:type"),
-            "enum": field.style.get("schema:enum"),
-            "widget": field.style.get("ui:widget"),
-            "required": field.style.get("schema:required"),
-        }
-        result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k in result_default:
-            # if not result[k]:
-            if result[k] is None:
-                result[k] = result_default[k]
-        return result
-
-    def _get_field_properties(self, field: SerializerType, name: str) -> Dict[str, Any]:
-        result = {}
-        type_map_obj = self._get_type_map_value(field)
-        result["type"] = type_map_obj["type"]
-        result["title"] = self._get_title(field, name)
-
-        # if result['title'] == 'Content types':
-        #     breakpoint()
-
-        if isinstance(field, drf_serializers.ListField):
-            if field.allow_empty:
-                result["required"] = not getattr(field, "allow_empty", True)
-            result["items"] = self._get_field_properties(field.child, "")
-            result["uniqueItems"] = True
-        elif isinstance(field, drf_serializers.ManyRelatedField):
-            if field.allow_empty:
-                result["required"] = type_map_obj.get("required", [])
-            result["items"] = self._get_field_properties(field.child_relation, "")
-            result["uniqueItems"] = True
-        else:
-            if field.allow_null:
-                result["type"] = [result["type"], "null"]
-            enum = type_map_obj.get("enum")
-            if enum:
-                if enum == "choices":
-                    choices = field.choices
-                    result["enum"] = list(choices.keys())
-                    result["enumNames"] = list(choices.values())
-                if isinstance(enum, (list, tuple)):
-                    if isinstance(enum, (list, tuple)):
-                        result["enum"] = [item[0] for item in enum]
-                        result["enumNames"] = [item[1] for item in enum]
-                    else:
-                        result["enum"] = enum
-                        result["enumNames"] = list(enum)
-            try:
-                result["default"] = field.get_default()
-            except drf_fields.SkipField:
-                pass
-
-        result = self._set_validation_properties(field, result)
-
-        return result
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MyUiSchemaProcessor(UiSchemaProcessor):
-    def _get_type_map_value(self, field: SerializerType):
-        result = {
-            "type": field.style.get("schema:type"),
-            "enum": field.style.get("schema:enum"),
-            "widget": field.style.get("ui:widget"),
-            "required": field.style.get("schema:required"),
-        }
-        result_default = self.TYPE_MAP.get(type(field).__name__, {})
-        for k in result_default:
-            # if not result[k]:
-            if result[k] is None:
-                result[k] = result_default[k]
-        return result
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MySerializerEncoder(SerializerEncoder):
-    def default(self, obj: Any) -> Union[Dict, List]:
-        if isinstance(obj, drf_serializers.Serializer):
-            if self._get_view_action() == self.LIST_ACTION:
-                return ColumnProcessor(obj, self.renderer_context).get_schema()
-            else:
-                return {
-                    "schema": MySchemaProcessor(obj, self.renderer_context).get_schema(),
-                    "uiSchema": MyUiSchemaProcessor(obj, self.renderer_context).get_ui_schema(),
-                }
-        return super().default(obj)
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MyJSONSerializerRenderer(JSONSerializerRenderer):
-    encoder_class = MySerializerEncoder
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-class MyFormSchemaViewSetMixin(FormSchemaViewSetMixin):
-    renderer_classes = (MyJSONSerializerRenderer,)
-
-
 class ModelViewSet(
     NautobotAPIVersionMixin,
     BulkUpdateModelMixin,
     BulkDestroyModelMixin,
     ModelViewSetMixin,
     ModelViewSet_,
-    # MyFormSchemaViewSetMixin,  # TODO: This can/should be limited to /api/ui/ schemas
 ):
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
@@ -819,34 +696,152 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return ExecutionResult(errors=[e], invalid=True)
 
 
+#
+# UI Views
+#
+
+
 class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
-    """API View that returns the registered nav-menu content."""
+    """API View that returns the nav-menu content applicable to the requesting user."""
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
-    # TODO: the schema here is clearly wrong
-    @extend_schema(
-        responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "django-version": {"type": "string"},
-                    "installed-apps": {"type": "object"},
-                    "nautobot-version": {"type": "string"},
-                    "plugins": {"type": "object"},
-                    "python-version": {"type": "string"},
-                    "rq-workers-running": {"type": "integer"},
-                    "celery-workers-running": {"type": "integer"},
-                },
-            }
-        },
-        exclude=True,
-    )
+    @extend_schema(exclude=True)
     def get(self, request):
-        # TODO: do we need this local import or can it be moved globally?
-        from nautobot.extras.registry import registry
+        """Get the menu data for the requesting user.
 
-        return Response([{"name": item[0], "properties": item[1]} for item in registry["nav_menu"]["tabs"].items()])
+        Returns the following data-structure (as not all context in registry["nav_menu"] is relevant to the UI):
+
+        {
+            "Inventory": {
+                "Devices": {
+                    "Devices": "/dcim/devices/",
+                    "Device Types": "/dcim/device-types/",
+                    ...
+                    "Connections": {
+                        "Cables": "/dcim/cables/",
+                        "Console Connections": "/dcim/console-connections/",
+                        ...
+                    },
+                    ...
+                },
+                "Organization": {
+                    ...
+                },
+                ...
+            },
+            "Networks": {
+                ...
+            },
+            "Security": {
+                ...
+            },
+            "Automation": {
+                ...
+            },
+            "Platform": {
+                ...
+            },
+        }
+        """
+        base_menu = registry["nav_menu"]
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+
+        filtered_menu = {}
+        for context, context_details in base_menu.items():
+            if HIDE_RESTRICTED_UI and not any(
+                request.user.has_perm(permission) for permission in context_details["permissions"]
+            ):
+                continue
+            filtered_menu[context] = {}
+            for group_name, group_details in context_details["groups"].items():
+                if HIDE_RESTRICTED_UI and not any(
+                    request.user.has_perm(permission) for permission in group_details["permissions"]
+                ):
+                    continue
+                filtered_menu[context][group_name] = {}
+                for item_name, item_details in group_details["items"].items():
+                    if HIDE_RESTRICTED_UI and not any(
+                        request.user.has_perm(permission) for permission in item_details["permissions"]
+                    ):
+                        continue
+                    if "items" in item_details:
+                        # It's a sub-group
+                        filtered_menu[context][group_name][item_name] = {}
+                        for subitem_name, subitem_details in item_details["items"].items():
+                            if HIDE_RESTRICTED_UI and not any(
+                                request.user.has_perm(perm) for perm in subitem_details["permissions"]
+                            ):
+                                continue
+                            filtered_menu[context][group_name][item_name][subitem_name] = subitem_details["link"]
+                    else:
+                        # It's a menu item
+                        filtered_menu[context][group_name][item_name] = item_details["link"]
+
+        return Response(filtered_menu)
+
+
+class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
+    """
+    Enumerate the models listed on the Nautobot home page and return data structure
+    containing verbose_name_plural, url and count.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        object_counts = {
+            "Inventory": [
+                {"model": "dcim.rack"},
+                {"model": "dcim.devicetype"},
+                {"model": "dcim.device"},
+                {"model": "dcim.virtualchassis"},
+                {"model": "dcim.deviceredundancygroup"},
+                {"model": "dcim.cable"},
+            ],
+            "Networks": [
+                {"model": "ipam.vrf"},
+                {"model": "ipam.prefix"},
+                {"model": "ipam.ipaddress"},
+                {"model": "ipam.vlan"},
+            ],
+            "Security": [{"model": "extras.secret"}],
+            "Platform": [
+                {"model": "extras.gitrepository"},
+                {"model": "extras.relationship"},
+                {"model": "extras.computedfield"},
+                {"model": "extras.customfield"},
+                {"model": "extras.customlink"},
+                {"model": "extras.tag"},
+                {"model": "extras.status"},
+                {"model": "extras.role"},
+            ],
+        }
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+
+        for entry in itertools.chain(*object_counts.values()):
+            app_label, model_name = entry["model"].split(".")
+            model = apps.get_model(app_label, model_name)
+            permission = get_permission_for_model(model, "view")
+            if HIDE_RESTRICTED_UI and not request.user.has_perm(permission):
+                continue
+            data = {"name": model._meta.verbose_name_plural}
+            try:
+                data["url"] = django_reverse(get_route_for_model(model, "list"))
+            except NoReverseMatch:
+                logger = logging.getLogger(__name__)
+                route = get_route_for_model(model, "list")
+                logger.warning(f"Handled expected exception when generating filter field: {route}")
+            manager = model.objects
+            if request.user.has_perm(permission):
+                if hasattr(manager, "restrict"):
+                    data["count"] = model.objects.restrict(request.user).count()
+                else:
+                    data["count"] = model.objects.count()
+            entry.update(data)
+
+        return Response(object_counts)
 
 
 #

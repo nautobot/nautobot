@@ -252,7 +252,10 @@ class APIViewTestCases:
                             self.assertTrue(is_uuid(entry))
                     else:
                         if response_data[field] is not None:
-                            self.assertTrue(is_uuid(response_data[field]))
+                            # The response should be a detail API URL, ending in the UUID of the relevant object
+                            # http://nautobot.example.com/api/circuits/providers/<uuid>/
+                            #                                                    ^^^^^^
+                            self.assertTrue(is_uuid(response_data[field].split("/")[-2]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):
@@ -632,36 +635,6 @@ class APIViewTestCases:
                 )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_options_objects_returns_display_and_value(self):
-            """
-            Make an OPTIONS request for a list endpoint and validate choices use the display and value keys.
-            """
-            # Save self.user as superuser to be able to view available choices on list views.
-            self.user.is_superuser = True
-            self.user.save()
-
-            response = self.client.options(self._get_list_url(), **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            data = response.json()
-
-            self.assertIn("actions", data)
-
-            # Grab any field that has choices defined (fields with enums)
-            if "POST" in data["actions"]:
-                field_choices = {k: v["choices"] for k, v in data["actions"]["POST"].items() if "choices" in v}
-            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
-                field_choices = {k: v["choices"] for k, v in data["actions"]["PUT"].items() if "choices" in v}
-            else:
-                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
-
-            # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
-            # Broken down to provide better failure messages
-            for field, choices in field_choices.items():
-                for choice in choices:
-                    self.assertIn("display", choice, f"A choice in {field} is missing the display key")
-                    self.assertIn("value", choice, f"A choice in {field} is missing the value key")
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_options_returns_expected_choices(self):
             """
             Make an OPTIONS request for a list endpoint and validate choices match expected choices for serializer.
@@ -680,11 +653,25 @@ class APIViewTestCases:
 
             self.assertIn("actions", data)
 
-            # Grab any field name that has choices defined (fields with enums)
-            if "POST" in data["actions"]:
-                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
-            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
-                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
+            # Grab any field that has choices defined (fields with enums)
+            if any(
+                [
+                    "POST" in data["actions"],
+                    "PUT" in data["actions"],
+                ]
+            ):
+                schema = data["schema"]
+                props = schema["properties"]
+                fields = props.keys()
+                field_choices = set()
+                for field_name in fields:
+                    obj = props[field_name]
+                    if "enum" in obj and "enumNames" in obj:
+                        enum = obj["enum"]
+                        # Zipping to assert that the enum and the mapping have the same number of items.
+                        model_field_choices = dict(zip(obj["enumNames"], enum))
+                        self.assertEqual(len(enum), len(model_field_choices))
+                        field_choices.add(field_name)
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
