@@ -40,7 +40,7 @@ from nautobot.core.forms import (
 from nautobot.core.utils import lookup, permissions
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
-from nautobot.core.views.utils import csv_format, handle_protectederror, prepare_cloned_fields
+from nautobot.core.views.utils import handle_protectederror, prepare_cloned_fields
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
@@ -625,13 +625,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
-        # Fall back to built-in CSV formatting if export requested but no template specified
-        elif "export" in request.GET and hasattr(model, "to_csv"):
-            response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = f"nautobot_{queryset.model._meta.verbose_name_plural}.csv"
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
         return None
 
     def queryset_to_yaml(self):
@@ -642,35 +635,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         yaml_data = [obj.to_yaml() for obj in queryset]
 
         return "---\n".join(yaml_data)
-
-    def queryset_to_csv(self):
-        """
-        Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
-        """
-        queryset = self.filter_queryset(self.get_queryset())
-        csv_data = []
-        custom_fields = []
-        # Start with the column headers
-        headers = queryset.model.csv_headers.copy()
-
-        # Add custom field headers, if any
-        if hasattr(queryset.model, "_custom_field_data"):
-            for custom_field in CustomField.objects.get_for_model(queryset.model):
-                headers.append(custom_field.add_prefix_to_cf_key())
-                custom_fields.append(custom_field.key)
-
-        csv_data.append(",".join(headers))
-
-        # Iterate through the queryset appending each object
-        for obj in queryset:
-            data = obj.to_csv()
-
-            for custom_field in custom_fields:
-                data += (obj.cf.get(custom_field, ""),)
-
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
 
     def list(self, request, *args, **kwargs):
         """

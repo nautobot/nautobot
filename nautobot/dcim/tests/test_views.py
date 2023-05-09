@@ -2271,21 +2271,6 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         Cable.objects.create(termination_a=consoleports[1], termination_b=serverports[1], status=status_connected)
         Cable.objects.create(termination_a=consoleports[2], termination_b=rearport, status=status_connected)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_queryset_to_csv(self):
-        """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get(f"{self._get_url('list')}?export")
-        self.assertHttpStatus(response, 200)
-        self.assertEqual(response.get("Content-Type"), "text/csv")
-        self.assertEqual(
-            """\
-device,console_port,console_server,port,reachable
-Device 1,Console Port 1,Device 2,Console Server Port 1,True
-Device 1,Console Port 2,Device 2,Console Server Port 2,True
-Device 1,Console Port 3,,,False""",
-            response.content.decode(response.charset),
-        )
-
 
 class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """
@@ -2331,21 +2316,6 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         # Creating a PowerOutlet with a PowerPort via the ORM does *not* automatically cable the two together. Bug?
         Cable.objects.create(termination_a=powerports[0], termination_b=poweroutlets[0], status=status_connected)
         Cable.objects.create(termination_a=powerports[1], termination_b=poweroutlets[1], status=status_connected)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_queryset_to_csv(self):
-        """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get(f"{self._get_url('list')}?export")
-        self.assertHttpStatus(response, 200)
-        self.assertEqual(response.get("Content-Type"), "text/csv")
-        self.assertEqual(
-            """\
-device,power_port,pdu,outlet,reachable
-Device 1,Power Port 1,Device 2,Power Outlet 1,True
-Device 1,Power Port 2,Device 2,Power Outlet 2,True
-Device 1,Power Port 3,,Power Feed 1,True""",
-            response.content.decode(response.charset),
-        )
 
 
 class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
@@ -2395,21 +2365,6 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         Cable.objects.create(termination_a=cls.interfaces[0], termination_b=cls.device_2_interface, status=connected)
         Cable.objects.create(termination_a=cls.interfaces[1], termination_b=circuittermination, status=connected)
         Cable.objects.create(termination_a=cls.interfaces[2], termination_b=rearport, status=connected)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_queryset_to_csv(self):
-        """This view has a custom queryset_to_csv() implementation."""
-        response = self.client.get(f"{self._get_url('list')}?export")
-        self.assertHttpStatus(response, 200)
-        self.assertEqual(response.get("Content-Type"), "text/csv")
-        self.assertEqual(
-            """\
-device_a,interface_a,device_b,interface_b,reachable
-Device 1,Interface 1,Device 2,Interface 1,True
-Device 1,Interface 2,,,True
-Device 1,Interface 3,,,False""",
-            response.content.decode(response.charset),
-        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_objects_filtered(self):

@@ -56,9 +56,14 @@ def check_filter_for_display(filters, field_name, values):
     return resolved_filter
 
 
+# 2.2 TODO: remove this method as it's no longer used in core.
 def csv_format(data):
     """
+    Convert the given list of data to a CSV row string.
+
     Encapsulate any data which contains a comma within double quotes.
+
+    Obsolete, as CSV rendering in Nautobot core is now handled by nautobot.core.api.renderers.NautobotCSVRenderer.
     """
     csv = []
     for value in data:

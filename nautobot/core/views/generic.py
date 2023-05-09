@@ -43,7 +43,7 @@ from nautobot.core.utils.requests import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
-from nautobot.core.views.utils import check_filter_for_display, csv_format, handle_protectederror, prepare_cloned_fields
+from nautobot.core.views.utils import check_filter_for_display, handle_protectederror, prepare_cloned_fields
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
@@ -157,6 +157,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
 
+    # TODO: remove this as well?
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -164,35 +165,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         yaml_data = [obj.to_yaml() for obj in self.queryset]
 
         return "---\n".join(yaml_data)
-
-    def queryset_to_csv(self):
-        """
-        Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
-        """
-        csv_data = []
-        custom_field_keys = []
-
-        # Start with the column headers
-        headers = self.queryset.model.csv_headers.copy()
-
-        # Add custom field headers, if any
-        if hasattr(self.queryset.model, "_custom_field_data"):
-            for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append(custom_field.add_prefix_to_cf_key())
-                custom_field_keys.append(custom_field.key)
-
-        csv_data.append(",".join(headers))
-
-        # Iterate through the queryset appending each object
-        for obj in self.queryset:
-            data = obj.to_csv()
-
-            for custom_field_key in custom_field_keys:
-                data += (obj.cf.get(custom_field_key, ""),)
-
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
 
     def validate_action_buttons(self, request):
         """Verify actions in self.action_buttons are valid view actions."""
@@ -266,13 +238,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         elif "export" in request.GET and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.yaml"
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
-        # Fall back to built-in CSV formatting if export requested but no template specified
-        elif "export" in request.GET and hasattr(model, "to_csv"):
-            response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.csv"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
