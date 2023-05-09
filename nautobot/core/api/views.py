@@ -33,7 +33,6 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
-from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.config import get_settings_or_config
@@ -265,20 +264,30 @@ class ModelViewSetMixin:
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
-        if not isinstance(request.accepted_renderer, NautobotCSVRenderer):
-            return super().list(request, *args, format=format, **kwargs)
+        """Special-case handling for CSV format as it needs different data to be passed to the Response."""
+        if "text/csv" in request.accepted_media_type:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{queryset.model._meta.verbose_name_plural}.csv"
+            return Response(
+                data={"queryset": queryset, "serializer": serializer},
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
 
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({"queryset": queryset, "serializer": serializer})
+        return super().list(request, *args, format=format, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
-        if not isinstance(request.accepted_renderer, NautobotCSVRenderer):
-            return super().retrieve(request, *args, format=format, **kwargs)
+        """Special-case handling for CSV format as it needs different data to be passed to the Response."""
+        if "text/csv" in request.accepted_media_type:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{instance._meta.verbose_name}.csv"
+            return Response(
+                data={"instance": instance, "serializer": serializer},
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
 
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return Response({"instance": instance, "serializer": serializer})
+        return super().retrieve(request, *args, format=format, **kwargs)
 
 
 class ModelViewSet(
