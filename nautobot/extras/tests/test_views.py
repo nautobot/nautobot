@@ -2004,14 +2004,14 @@ class RelationshipTestCase(
 
         Relationship(
             label="Device VLANs",
-            key="device-vlans",
+            key="device_vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         ).validated_save()
         Relationship(
             label="Primary VLAN",
-            key="primary-vlan",
+            key="primary_vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
@@ -2025,7 +2025,7 @@ class RelationshipTestCase(
 
         cls.form_data = {
             "label": "VLAN-to-Interface",
-            "key": "vlan-to-interface",
+            "key": "vlan_to_interface",
             "type": "many-to-many",
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
@@ -2090,7 +2090,7 @@ class RelationshipTestCase(
             reverse("ipam:vlan_bulk_edit"),
             data={
                 "pk": [str(vlan.id) for vlan in vlans],
-                "add_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "add_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
                 "_apply": [""],
             },
             follow=True,
@@ -2102,7 +2102,7 @@ class RelationshipTestCase(
             reverse("ipam:vlan_bulk_edit"),
             data={
                 "pk": [str(vlan.id) for vlan in vlans],
-                "remove_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "remove_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
                 "_apply": [""],
             },
         )
@@ -2129,7 +2129,7 @@ class RelationshipAssociationTestCase(
 
         relationship = Relationship(
             label="Device VLANs",
-            key="device-vlans",
+            key="device_vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,

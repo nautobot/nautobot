@@ -214,9 +214,9 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-key>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-key>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-key>__peer"
+            # "cr_<relationship_key>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship_key>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship_key>__peer"
             field_name = f"cr_{relationship.key}__{peer_side}"
 
             if field_name in self.relationships:
@@ -350,7 +350,10 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         already_invalidated_keys = []
         for field, errors in required_objects_errors.items():
             self.add_error(None, errors)
-            relationship_key = field.split("__")[0][3:]
+            # rindex() find the last occurrence of "__" which is
+            # guaranteed to be cr_{key}__source, cr_{key}__destination, or cr_{key}__peer
+            # regardless of how {key} is formatted
+            relationship_key = field[: field.rindex("__")][3:]
             already_invalidated_keys.append(relationship_key)
 
         required_relationships = []
@@ -456,9 +459,9 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 # If this model is on the "source" side of the relationship, then the field will be named
-                # cr_<relationship-key>__destination since it's used to pick the destination object(s).
-                # If we're on the "destination" side, the field will be cr_<relationship-key>__source.
-                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship-key>__peer
+                # cr_<relationship_key>__destination since it's used to pick the destination object(s).
+                # If we're on the "destination" side, the field will be cr_<relationship_key>__source.
+                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship_key>__peer
                 field_name = f"cr_{relationship.key}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
@@ -672,9 +675,9 @@ class RelationshipModelFilterFormMixin(forms.Form):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-key>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-key>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-key>__peer"
+            # "cr_<relationship_key>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship_key>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship_key>__peer"
             field_name = f"cr_{relationship.key}__{peer_side}"
 
             if field_name in self.relationships:

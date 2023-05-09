@@ -75,7 +75,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
 
         Returns:
             {
-                "<relationship-key>": {
+                "<relationship_key>": {
                     "id": ...,
                     "url": ...,
                     "label": ...,
@@ -99,7 +99,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                         "objects": [{...}, {...}, ...],
                     },
                 },
-                "<relationship-key>": {
+                "<relationship_key>": {
                     ...
                 },
                 ...

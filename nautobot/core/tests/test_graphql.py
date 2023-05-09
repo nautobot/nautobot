@@ -236,7 +236,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.m2m_1 = Relationship(
             label="Vlan to Rack",
-            key="vlan-rack",
+            key="vlan_rack",
             source_type=rack_ct,
             source_label="My Vlans",
             destination_type=vlan_ct,
@@ -247,7 +247,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.m2m_2 = Relationship(
             label="Another Vlan to Rack",
-            key="vlan-rack-2",
+            key="vlan_rack_2",
             source_type=rack_ct,
             destination_type=vlan_ct,
             type="many-to-many",
@@ -256,7 +256,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.o2m_1 = Relationship(
             label="generic location to vlan",
-            key="location-vlan",
+            key="location_vlan",
             source_type=location_ct,
             destination_type=vlan_ct,
             type="one-to-many",
@@ -265,7 +265,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.o2o_1 = Relationship(
             label="Primary Rack per Location",
-            key="primary-rack-location",
+            key="primary_rack_location",
             source_type=rack_ct,
             source_hidden=True,
             destination_type=location_ct,
@@ -276,7 +276,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.o2os_1 = Relationship(
             label="Redundant Location",
-            key="redundant-location",
+            key="redundant_location",
             source_type=location_ct,
             destination_type=location_ct,
             type="symmetric-one-to-one",
@@ -285,7 +285,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
 
         self.o2m_same_type_1 = Relationship(
             label="Some sort of location hierarchy?",
-            key="location-hierarchy",
+            key="location_hierarchy",
             source_type=location_ct,
             destination_type=location_ct,
             type="one-to-many",
@@ -867,7 +867,7 @@ class GraphQLQueryTest(TestCase):
 
         cls.relationship_o2o_1 = Relationship(
             label="Device to VirtualMachine",
-            key="device-to-vm",
+            key="device_to_vm",
             source_type=ContentType.objects.get_for_model(Device),
             destination_type=ContentType.objects.get_for_model(VirtualMachine),
             type="one-to-one",
@@ -883,7 +883,7 @@ class GraphQLQueryTest(TestCase):
 
         cls.relationship_m2ms_1 = Relationship(
             label="Device Group",
-            key="device-group",
+            key="device_group",
             source_type=ContentType.objects.get_for_model(Device),
             destination_type=ContentType.objects.get_for_model(Device),
             type="symmetric-many-to-many",

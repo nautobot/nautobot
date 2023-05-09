@@ -2374,14 +2374,14 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         cls.relationships = (
             Relationship(
                 label="Related locations",
-                key="related-locations",
+                key="related_locations",
                 type="symmetric-many-to-many",
                 source_type=location_type,
                 destination_type=location_type,
             ),
             Relationship(
                 label="Unrelated locations",
-                key="unrelated-locations",
+                key="unrelated_locations",
                 type="many-to-many",
                 source_type=location_type,
                 source_label="Other locations (from source side)",
@@ -2390,7 +2390,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             ),
             Relationship(
                 label="Devices found elsewhere",
-                key="devices-elsewhere",
+                key="devices_elsewhere",
                 type="many-to-many",
                 source_type=location_type,
                 destination_type=device_type,
@@ -2603,10 +2603,10 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         self.assertEqual(
             {
                 "relationships": {
-                    "vlans-devices-m2m": [
+                    "vlans_devices_m2m": [
                         "VLANs require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
-                        'You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].',
+                        'You need to specify ["relationships"]["vlans_devices_m2m"]["source"]["objects"].',
                     ]
                 }
             },
@@ -2615,11 +2615,11 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
 
         # Create test device for association
         device_for_association = test_views.create_test_device("VLAN Required Device")
-        required_relationship_json = {"vlans-devices-m2m": {"source": {"objects": [str(device_for_association.id)]}}}
+        required_relationship_json = {"vlans_devices_m2m": {"source": {"objects": [str(device_for_association.id)]}}}
         expected_error_json = {
             "relationships": {
-                "vlans-devices-m2m": [
-                    'You need to specify ["relationships"]["vlans-devices-m2m"]["source"]["objects"].'
+                "vlans_devices_m2m": [
+                    'You need to specify ["relationships"]["vlans_devices_m2m"]["source"]["objects"].'
                 ]
             }
         }
@@ -2673,7 +2673,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
 
             # Check the relationship associations were actually created
             for vlan in response.json():
-                associated_device = vlan["relationships"]["vlans-devices-m2m"]["source"]["objects"][0]
+                associated_device = vlan["relationships"]["vlans_devices_m2m"]["source"]["objects"][0]
                 self.assertEqual(str(device_for_association.id), associated_device["id"])
 
 
@@ -2689,7 +2689,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
         cls.relationship = Relationship(
             label="Devices found elsewhere",
-            key="elsewhere-devices",
+            key="elsewhere_devices",
             type="many-to-many",
             source_type=cls.location_type,
             destination_type=cls.device_type,
@@ -2780,7 +2780,7 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
 
         relationship = Relationship.objects.create(
             label="Device to location Rel 1",
-            key="device-to-location-rel-1",
+            key="device_to_location_rel_1",
             source_type=self.device_type,
             source_filter={"name": [self.devices[0].name]},
             destination_type=self.location_type,
@@ -2942,20 +2942,20 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Error handling: wrong relationship"):
             Relationship.objects.create(
                 label="Device-to-Device",
-                key="device-to-device",
+                key="device_to_device",
                 source_type=self.device_type,
                 destination_type=self.device_type,
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
             )
             response = self.client.patch(
                 url,
-                {"relationships": {"device-to-device": {"peer": {"objects": []}}}},
+                {"relationships": {"device_to_device": {"peer": {"objects": []}}}},
                 format="json",
                 **self.header,
             )
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
-                str(response.data["relationships"][0]), '"device-to-device" is not a relationship on dcim.Location'
+                str(response.data["relationships"][0]), '"device_to_device" is not a relationship on dcim.Location'
             )
             self.assertEqual(3, RelationshipAssociation.objects.filter(relationship=self.relationship).count())
             for association in self.associations:

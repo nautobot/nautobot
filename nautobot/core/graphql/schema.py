@@ -378,7 +378,7 @@ def extend_schema_type_relationships(schema_type, model):
 
             # Generate the name of the attribute and the name of the resolver based on the slug of the relationship
             # and based on the prefix
-            rel_name = f"{prefix}{str_to_var_name(relationship.key)}"
+            rel_name = f"{prefix}{relationship.key}"
             # Handle non-symmetric relationships where the model can be either source or destination
             if not relationship.symmetric and relationship.source_type == relationship.destination_type:
                 rel_name = f"{rel_name}_{peer_side}"
