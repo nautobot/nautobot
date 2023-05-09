@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0077_remove_slug"),
+        ("extras", "0079_tagsfield"),
     ]
 
     operations = [
