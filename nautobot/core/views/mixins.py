@@ -41,7 +41,7 @@ from nautobot.core.utils import lookup, permissions
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.core.views.utils import handle_protectederror, prepare_cloned_fields
-from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.extras.models import ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
 from nautobot.extras.utils import remove_prefix_from_cf_key

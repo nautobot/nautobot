@@ -622,7 +622,6 @@ class JobMultiPartInputSerializer(serializers.Serializer):
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
-
     class Meta:
         model = JobLogEntry
         fields = "__all__"

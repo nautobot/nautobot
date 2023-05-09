@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
@@ -8,7 +7,6 @@ from nautobot.core.api import (
     ChoiceField,
     NautobotModelSerializer,
 )
-from nautobot.core.api.utils import get_nested_serializer_depth, return_nested_serializer_data_based_on_depth
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices

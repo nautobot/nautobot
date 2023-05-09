@@ -1,6 +1,5 @@
 import os
 import tempfile
-import datetime
 from unittest import mock
 import uuid
 

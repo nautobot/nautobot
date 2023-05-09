@@ -271,7 +271,7 @@ class ModelViewSetMixin:
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{queryset.model._meta.verbose_name_plural}.csv"
             return Response(
                 data={"queryset": queryset, "serializer_class": serializer_class},
-                headers={"Content-Disposition": f"attachment; filename={filename}"}
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
             )
 
         return super().list(request, *args, format=format, **kwargs)
@@ -284,7 +284,7 @@ class ModelViewSetMixin:
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{instance._meta.verbose_name}.csv"
             return Response(
                 data={"instance": instance, "serializer_class": serializer_class},
-                headers={"Content-Disposition": f"attachment; filename={filename}"}
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
             )
 
         return super().retrieve(request, *args, format=format, **kwargs)

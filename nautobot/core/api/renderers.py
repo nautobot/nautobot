@@ -1,14 +1,11 @@
 import csv
 from io import StringIO
 import logging
-from uuid import UUID
 
 from rest_framework import serializers
 from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 
-from nautobot.core.api.serializers import NautobotHyperlinkedRelatedField
 from nautobot.core.celery import NautobotKombuJSONEncoder
-from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import construct_natural_key_slug
 from nautobot.extras.models import CustomField
 
@@ -58,7 +55,7 @@ class NautobotCSVRenderer(BaseRenderer):
         this view) and either of the keys "instance" (for a single object) or "queryset" (for a list of objects).
         """
         if not data:
-            return ''
+            return ""
 
         if not isinstance(data, dict) or "serializer_class" not in data:
             raise ValueError(

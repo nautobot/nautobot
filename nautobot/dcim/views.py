@@ -1,5 +1,5 @@
 import uuid
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType

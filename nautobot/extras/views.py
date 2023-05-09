@@ -65,7 +65,6 @@ from .models import (
     ImageAttachment,
     JobButton,
     JobHook,
-    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
