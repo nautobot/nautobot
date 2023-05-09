@@ -116,13 +116,13 @@ function DetailFieldValue(value) {
                                         ? "None"
                                         : typeof v === "object" && v !== null
                                         ? Object.entries(v).map(
-                                                ([json_key, json_value]) => (
-                                                    <span>
-                                                        {json_key}
-                                                        {": "} {json_value}
-                                                    </span>
-                                                )
-                                            )
+                                              ([json_key, json_value]) => (
+                                                  <span>
+                                                      {json_key}
+                                                      {": "} {json_value}
+                                                  </span>
+                                              )
+                                          )
                                         : v.toString()}
                                 </Td>
                             </Tr>
