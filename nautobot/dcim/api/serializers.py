@@ -446,13 +446,19 @@ class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
-    parent_bay = serializers.SerializerMethodField()
 
     class Meta:
         model = Device
         fields = "__all__"
         list_display_fields = ["name", "status", "tenant", "location", "rack", "role", "device_type", "primary_ip"]
         validators = []
+        extra_kwargs = {"parent_bay": {"read_only": True}}
+
+    def get_field_names(self, declared_fields, info):
+        """As parent_bay is the reverse side of a OneToOneField, DRF can handle it but it isn't auto-included."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "parent_bay")
+        return fields
 
     def validate(self, data):
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
@@ -468,16 +474,6 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         super().validate(data)
 
         return data
-
-    @extend_schema_field(DeviceBaySerializer)
-    def get_parent_bay(self, obj):
-        try:
-            device_bay = obj.parent_bay
-        except DeviceBay.DoesNotExist:
-            return None
-        depth = get_nested_serializer_depth(self)
-        device_bay_data = return_nested_serializer_data_based_on_depth(self, depth, obj, device_bay, "parent_bay")
-        return device_bay_data
 
 
 class DeviceWithConfigContextSerializer(DeviceSerializer):

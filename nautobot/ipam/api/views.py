@@ -82,6 +82,7 @@ class PrefixViewSet(NautobotModelViewSet):
     queryset = Prefix.objects.select_related(
         "role",
         "status",
+        "location",
         "tenant",
         "vlan",
         "vrf__tenant",

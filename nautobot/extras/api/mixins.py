@@ -10,9 +10,10 @@ logger = logging.getLogger(__name__)
 
 class TaggedModelSerializerMixin(BaseModelSerializer):
     def get_field_names(self, declared_fields, info):
-        """Ensure that 'tags' field is always present."""
+        """Ensure that 'tags' field is always present except on nested serializers."""
         fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "tags")
+        if not self.is_nested:
+            self.extend_field_names(fields, "tags")
         return fields
 
     def create(self, validated_data):
