@@ -44,11 +44,11 @@ side_data_schema = {
         "type": "object",
         "additionalProperties": {
             "type": "object",
-            "required": ["id", "url", "name", "type"],
+            "required": ["id", "url", "label", "type"],
             "properties": {
                 "id": {"type": "string", "format": "uuid", "readOnly": True},
                 "url": {"type": "string", "format": "uri", "readOnly": True},
-                "name": {"type": "string", "readOnly": True},
+                "label": {"type": "string", "readOnly": True},
                 "type": {"type": "string", "readOnly": True, "example": "one-to-many"},
                 "source": {"type": "object", "properties": side_data_schema},
                 "destination": {"type": "object", "properties": side_data_schema},
@@ -78,7 +78,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                 "<relationship-key>": {
                     "id": ...,
                     "url": ...,
-                    "name": ...,
+                    "label": ...,
                     "type": "one-to-one|one-to-many|many-to-many|...",
                     # if this model can be the destination of the relationship:
                     "source": {
@@ -119,7 +119,7 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                             kwargs={"pk": relationship.id},
                             request=self.parent.context.get("request"),
                         ),
-                        "name": relationship.name,
+                        "label": relationship.label,
                         "type": relationship.type,
                     },
                 )

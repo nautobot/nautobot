@@ -341,7 +341,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
 
         cls.relationship_1 = Relationship(
-            name="BGP Router-ID",
+            label="BGP Router-ID",
             key="bgp-router-id",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
@@ -349,7 +349,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
         cls.relationship_1.validated_save()
         cls.relationship_2 = Relationship(
-            name="Device VLAN Groups",
+            label="Device VLAN Groups",
             key="device-vlan-groups",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(ipam_models.VLANGroup),
@@ -357,7 +357,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
         cls.relationship_2.validated_save()
         cls.relationship_3 = Relationship(
-            name="HA Device Peer",
+            label="HA Device Peer",
             key="ha-device-peer",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(dcim_models.Device),
@@ -749,7 +749,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         ]
 
         cls.rel_1to1 = Relationship(
-            name="Primary IP Address",
+            label="Primary IP Address",
             key="primary-ip-address",
             source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
@@ -758,7 +758,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         cls.rel_1to1.validated_save()
 
         cls.rel_1tom = Relationship(
-            name="Addresses per location",
+            label="Addresses per location",
             key="addresses-per-location",
             source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
@@ -767,7 +767,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         cls.rel_1tom.validated_save()
 
         cls.rel_mtom = Relationship(
-            name="Multiplexing",
+            label="Multiplexing",
             key="multiplexing",
             source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
@@ -776,7 +776,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         cls.rel_mtom.validated_save()
 
         cls.rel_mtom_s = Relationship(
-            name="Peer Locations",
+            label="Peer Locations",
             key="peer-locations",
             source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(dcim_models.Location),

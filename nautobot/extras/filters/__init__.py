@@ -792,7 +792,7 @@ class ObjectChangeFilterSet(BaseFilterSet):
 class RelationshipFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
+            "label": "icontains",
             "description": "icontains",
         }
     )
@@ -804,7 +804,7 @@ class RelationshipFilterSet(BaseFilterSet):
 
     class Meta:
         model = Relationship
-        fields = ["id", "name", "key", "type", "source_type", "destination_type"]
+        fields = ["id", "label", "key", "type", "source_type", "destination_type"]
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):

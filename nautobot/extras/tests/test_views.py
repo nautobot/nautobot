@@ -1992,7 +1992,7 @@ class RelationshipTestCase(
     RequiredRelationshipTestMixin,
 ):
     model = Relationship
-    slug_source = "name"
+    slug_source = "label"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
@@ -2003,28 +2003,28 @@ class RelationshipTestCase(
         status = Status.objects.get_for_model(Interface).first()
 
         Relationship(
-            name="Device VLANs",
+            label="Device VLANs",
             key="device-vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         ).validated_save()
         Relationship(
-            name="Primary VLAN",
+            label="Primary VLAN",
             key="primary-vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
         ).validated_save()
         Relationship(
-            name="Primary Interface",
+            label="Primary Interface",
             type="one-to-one",
             source_type=device_type,
             destination_type=interface_type,
         ).validated_save()
 
         cls.form_data = {
-            "name": "VLAN-to-Interface",
+            "label": "VLAN-to-Interface",
             "key": "vlan-to-interface",
             "type": "many-to-many",
             "source_type": vlan_type.pk,
@@ -2128,7 +2128,7 @@ class RelationshipAssociationTestCase(
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
         relationship = Relationship(
-            name="Device VLANs",
+            label="Device VLANs",
             key="device-vlans",
             type="many-to-many",
             source_type=device_type,

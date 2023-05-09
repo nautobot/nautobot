@@ -235,7 +235,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         vlan_ct = ContentType.objects.get_for_model(VLAN)
 
         self.m2m_1 = Relationship(
-            name="Vlan to Rack",
+            label="Vlan to Rack",
             key="vlan-rack",
             source_type=rack_ct,
             source_label="My Vlans",
@@ -246,7 +246,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         self.m2m_1.validated_save()
 
         self.m2m_2 = Relationship(
-            name="Another Vlan to Rack",
+            label="Another Vlan to Rack",
             key="vlan-rack-2",
             source_type=rack_ct,
             destination_type=vlan_ct,
@@ -255,7 +255,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         self.m2m_2.validated_save()
 
         self.o2m_1 = Relationship(
-            name="generic location to vlan",
+            label="generic location to vlan",
             key="location-vlan",
             source_type=location_ct,
             destination_type=vlan_ct,
@@ -264,7 +264,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         self.o2m_1.validated_save()
 
         self.o2o_1 = Relationship(
-            name="Primary Rack per Location",
+            label="Primary Rack per Location",
             key="primary-rack-location",
             source_type=rack_ct,
             source_hidden=True,
@@ -275,7 +275,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         self.o2o_1.validated_save()
 
         self.o2os_1 = Relationship(
-            name="Redundant Location",
+            label="Redundant Location",
             key="redundant-location",
             source_type=location_ct,
             destination_type=location_ct,
@@ -284,7 +284,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         self.o2os_1.validated_save()
 
         self.o2m_same_type_1 = Relationship(
-            name="Some sort of location hierarchy?",
+            label="Some sort of location hierarchy?",
             key="location-hierarchy",
             source_type=location_ct,
             destination_type=location_ct,
@@ -866,7 +866,7 @@ class GraphQLQueryTest(TestCase):
         cls.vminterface.add_ip_addresses(cls.vmipaddr)
 
         cls.relationship_o2o_1 = Relationship(
-            name="Device to VirtualMachine",
+            label="Device to VirtualMachine",
             key="device-to-vm",
             source_type=ContentType.objects.get_for_model(Device),
             destination_type=ContentType.objects.get_for_model(VirtualMachine),
@@ -882,7 +882,7 @@ class GraphQLQueryTest(TestCase):
         cls.ro2o_assoc_1.validated_save()
 
         cls.relationship_m2ms_1 = Relationship(
-            name="Device Group",
+            label="Device Group",
             key="device-group",
             source_type=ContentType.objects.get_for_model(Device),
             destination_type=ContentType.objects.get_for_model(Device),

@@ -1166,7 +1166,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = Relationship
         fields = [
-            "name",
+            "label",
             "key",
             "description",
             "type",

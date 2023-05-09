@@ -57,7 +57,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             name="Test Power Panel",
         )
         m2m = Relationship.objects.create(
-            name="Termination 2 Provider m2m",
+            label="Termination 2 Provider m2m",
             key="termination-2-provider-m2m",
             source_type=circuit_termination_ct,
             destination_type=provider_ct,
@@ -74,7 +74,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination=provider2,
         )
         o2m = Relationship.objects.create(
-            name="Termination 2 Location o2m",
+            label="Termination 2 Location o2m",
             key="termination-2-provider-o2m",
             source_type=circuit_termination_ct,
             destination_type=location_ct,
@@ -86,7 +86,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination=location,
         )
         o2o = Relationship.objects.create(
-            name="Termination 2 Power Panel o2o",
+            label="Termination 2 Power Panel o2o",
             key="termination-2-power-panel-o2o",
             source_type=circuit_termination_ct,
             destination_type=power_panel_ct,
@@ -100,7 +100,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         # https://github.com/nautobot/nautobot/issues/2077
         fake_ct = ContentType.objects.create(app_label="nonexistent", model="nonexistentmodel")
         bad_relation = Relationship.objects.create(
-            name="Termination 2 Nonexistent",
+            label="Termination 2 Nonexistent",
             source_type=circuit_termination_ct,
             destination_type=fake_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,

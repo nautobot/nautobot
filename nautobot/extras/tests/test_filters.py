@@ -1132,21 +1132,21 @@ class RelationshipTestCase(FilterTestCases.NameSlugFilterTestCase):
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
         Relationship(
-            name="Device VLANs",
+            label="Device VLANs",
             key="device-vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         ).validated_save()
         Relationship(
-            name="Primary VLAN",
+            label="Primary VLAN",
             key="primary-vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
         ).validated_save()
         Relationship(
-            name="Primary Interface",
+            label="Primary Interface",
             key="primary-interface",
             type="one-to-one",
             source_type=device_type,
@@ -1177,21 +1177,21 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
 
         cls.relationships = (
             Relationship(
-                name="Device VLANs",
+                label="Device VLANs",
                 key="device-vlans",
                 type="many-to-many",
                 source_type=cls.device_type,
                 destination_type=cls.vlan_type,
             ),
             Relationship(
-                name="Primary VLAN",
+                label="Primary VLAN",
                 key="primary-vlan",
                 type="one-to-many",
                 source_type=cls.vlan_type,
                 destination_type=cls.device_type,
             ),
             Relationship(
-                name="Device Device",
+                label="Device Device",
                 key="symmetric-device-device",
                 type="symmetric-many-to-many",
                 source_type=cls.device_type,
@@ -1295,21 +1295,21 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         cls.vlan_type = ContentType.objects.get_for_model(VLAN)
         cls.relationships = (
             Relationship(
-                name="Device VLANs",
+                label="Device VLANs",
                 key="device-vlans",
                 type="many-to-many",
                 source_type=cls.device_type,
                 destination_type=cls.vlan_type,
             ),
             Relationship(
-                name="Primary VLAN",
+                label="Primary VLAN",
                 key="primary-vlan",
                 type="one-to-many",
                 source_type=cls.vlan_type,
                 destination_type=cls.device_type,
             ),
             Relationship(
-                name="Device Peers",
+                label="Device Peers",
                 key="device-peers",
                 type="symmetric-many-to-many",
                 source_type=cls.device_type,

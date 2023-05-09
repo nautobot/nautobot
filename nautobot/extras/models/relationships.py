@@ -346,9 +346,9 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
-    name = models.CharField(max_length=100, unique=True, help_text="Name of the relationship as displayed to users")
+    label = models.CharField(max_length=100, unique=True, help_text="Label of the relationship as displayed to users")
     key = AutoSlugField(
-        populate_from="name",
+        populate_from="label",
         slugify_function=slugify_dashes_to_underscores,
         help_text="Internal relationship key. Please use underscores rather than dashes in this key.",
     )
@@ -435,10 +435,10 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
     objects = RelationshipManager()
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["label"]
 
     def __str__(self):
-        return self.name.replace("_", " ")
+        return self.label.replace("_", " ")
 
     @property
     def symmetric(self):

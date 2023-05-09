@@ -43,7 +43,7 @@ class RelationshipBaseTest(TestCase):
         ]
 
         self.m2m_1 = Relationship(
-            name="Vlan to Rack",
+            label="Vlan to Rack",
             key="vlan-rack",
             source_type=self.rack_ct,
             source_label="My Vlans",
@@ -55,7 +55,7 @@ class RelationshipBaseTest(TestCase):
         self.m2m_1.validated_save()
 
         self.m2m_2 = Relationship(
-            name="Another Vlan to Rack",
+            label="Another Vlan to Rack",
             key="vlan-rack-2",
             source_type=self.rack_ct,
             destination_type=self.vlan_ct,
@@ -64,7 +64,7 @@ class RelationshipBaseTest(TestCase):
         self.m2m_2.validated_save()
 
         self.o2m_1 = Relationship(
-            name="generic location to vlan",
+            label="generic location to vlan",
             key="location-vlan",
             source_type=self.location_ct,
             destination_type=self.vlan_ct,
@@ -73,7 +73,7 @@ class RelationshipBaseTest(TestCase):
         self.o2m_1.validated_save()
 
         self.o2o_1 = Relationship(
-            name="Primary Rack per Location",
+            label="Primary Rack per Location",
             key="primary-rack-location",
             source_type=self.rack_ct,
             source_hidden=True,
@@ -86,7 +86,7 @@ class RelationshipBaseTest(TestCase):
         # Relationships between objects of the same type
 
         self.o2o_2 = Relationship(
-            name="Alphabetical Locations",
+            label="Alphabetical Locations",
             key="alphabetical-locations",
             source_type=self.location_ct,
             source_label="Alphabetically Prior",
@@ -97,7 +97,7 @@ class RelationshipBaseTest(TestCase):
         self.o2o_2.validated_save()
 
         self.o2os_1 = Relationship(
-            name="Redundant Rack",
+            label="Redundant Rack",
             key="redundant-rack",
             source_type=self.rack_ct,
             destination_type=self.rack_ct,
@@ -106,7 +106,7 @@ class RelationshipBaseTest(TestCase):
         self.o2os_1.validated_save()
 
         self.m2ms_1 = Relationship(
-            name="Related Locations",
+            label="Related Locations",
             key="related-locations",
             source_type=self.location_ct,
             destination_type=self.location_ct,
@@ -122,21 +122,21 @@ class RelationshipBaseTest(TestCase):
         # Don't use validated_save() on these as it will fail due to the invalid content-type
         self.invalid_relationships = [
             Relationship.objects.create(
-                name="Invalid Relationship 1",
+                label="Invalid Relationship 1",
                 key="invalid-relationship-1",
                 source_type=self.location_ct,
                 destination_type=self.invalid_ct,
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
             ),
             Relationship.objects.create(
-                name="Invalid Relationship 2",
+                label="Invalid Relationship 2",
                 key="invalid-relationship-2",
                 source_type=self.invalid_ct,
                 destination_type=self.location_ct,
                 type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
             ),
             Relationship.objects.create(
-                name="Invalid Relationship 3",
+                label="Invalid Relationship 3",
                 key="invalid-relationship-3",
                 source_type=self.invalid_ct,
                 destination_type=self.invalid_ct,
@@ -148,7 +148,7 @@ class RelationshipBaseTest(TestCase):
 class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def test_clean_filter_not_dict(self):
         m2m = Relationship(
-            name="Another Vlan to Rack",
+            label="Another Vlan to Rack",
             key="vlan-rack-2",
             source_type=self.location_ct,
             source_filter=["a list not a dict"],
@@ -163,7 +163,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
 
     def test_clean_filter_not_valid(self):
         m2m = Relationship(
-            name="Another Vlan to Rack",
+            label="Another Vlan to Rack",
             key="vlan-rack-2",
             source_type=self.location_ct,
             source_filter={"notvalid": "not a location"},
@@ -177,7 +177,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
         m2m = Relationship(
-            name="Another Vlan to Rack",
+            label="Another Vlan to Rack",
             key="vlan-rack-2",
             source_type=self.location_ct,
             source_filter={"parent": "not a list"},
@@ -191,7 +191,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
         m2m = Relationship(
-            name="Another Vlan to Rack",
+            label="Another Vlan to Rack",
             key="vlan-rack-2",
             source_type=self.location_ct,
             source_filter={"parent": ["not a valid location"]},
@@ -210,7 +210,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
 
     def test_clean_valid(self):
         m2m = Relationship(
-            name="Another Vlan to Rack",
+            label="Another Vlan to Rack",
             key="vlan-rack-2",
             source_type=self.location_ct,
             source_filter={"name": [self.locations[1].slug]},
@@ -224,7 +224,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def test_clean_invalid_asymmetric(self):
         """For a symmetric relationship, source and destination properties must match if specified."""
         o2os = Relationship(
-            name="Location to Location",
+            label="Location to Location",
             key="location-to-location",
             source_type=self.location_ct,
             source_label="Location A",
@@ -251,7 +251,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         expected_exception = ValidationError({"required_on": ["Symmetric relationships cannot be marked as required."]})
         with self.assertRaises(ValidationError) as err:
             Relationship(
-                name="This shouldn't validate",
+                label="This shouldn't validate",
                 key="vlans-vlans-m2m",
                 type="symmetric-many-to-many",
                 source_type=self.vlan_ct,
@@ -261,7 +261,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         self.assertEqual(expected_exception, err.exception)
         with self.assertRaises(ValidationError) as err:
             Relationship(
-                name="This shouldn't validate",
+                label="This shouldn't validate",
                 key="vlans-vlans-o2o",
                 type="symmetric-one-to-one",
                 source_type=self.vlan_ct,
@@ -273,7 +273,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def test_clean_valid_symmetric_implicit(self):
         """For a symmetric relationship, omitted relevant properties are autofilled on clean."""
         o2os = Relationship(
-            name="Location to Location",
+            label="Location to Location",
             key="location-to-location",
             source_type=self.location_ct,
             destination_type=self.location_ct,
@@ -410,7 +410,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
         """Test creation of invalid relationship association restricted by destination/source filter."""
 
         relationship = Relationship.objects.create(
-            name="Location to Rack Rel 1",
+            label="Location to Rack Rel 1",
             key="location-to-rack-rel-1",
             source_type=self.location_ct,
             source_filter={"name": [self.locations[0].name]},
@@ -901,7 +901,7 @@ class RelationshipTableTest(RelationshipBaseTest):
 
         # Test non-symmetric many to many with same source_type and same destination_type
         self.m2m_same_type = Relationship(
-            name="Location to Location",
+            label="Location to Location",
             key="location-to-location",
             source_type=self.location_ct,
             destination_type=self.location_ct,
@@ -1058,7 +1058,7 @@ class RequiredRelationshipTestMixin(TestCase):
         circuittype_ct = ContentType.objects.get_for_model(CircuitType)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
         relationship_m2m = Relationship(
-            name="VLANs require at least one Device",
+            label="VLANs require at least one Device",
             key="vlans-devices-m2m",
             type="many-to-many",
             source_type=device_ct,
@@ -1067,7 +1067,7 @@ class RequiredRelationshipTestMixin(TestCase):
         )
         relationship_m2m.validated_save()
         relationship_o2m = Relationship(
-            name="Platforms require at least one device",
+            label="Platforms require at least one device",
             key="platform-devices-o2m",
             type="one-to-many",
             source_type=platform_ct,
@@ -1076,7 +1076,7 @@ class RequiredRelationshipTestMixin(TestCase):
         )
         relationship_o2m.validated_save()
         relationship_o2o = Relationship(
-            name="Circuit type requires one platform",
+            label="Circuit type requires one platform",
             key="circuittype-platform-o2o",
             type="one-to-one",
             source_type=circuittype_ct,
