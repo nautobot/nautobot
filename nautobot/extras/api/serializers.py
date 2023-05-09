@@ -622,15 +622,10 @@ class JobMultiPartInputSerializer(serializers.Serializer):
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
-    display = serializers.SerializerMethodField()
 
     class Meta:
         model = JobLogEntry
         fields = "__all__"
-
-    @extend_schema_field(serializers.CharField)
-    def get_display(self, obj):
-        return obj.created.isoformat()
 
 
 #
@@ -795,23 +790,17 @@ class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
 class SecretsGroupSerializer(NautobotModelSerializer):
     """Serializer for `SecretsGroup` objects."""
 
-    # TODO: it would be **awesome** if we could create/update SecretsGroupAssociations
-    # alongside creating/updating the base SecretsGroup, but since this is a ManyToManyField with
-    # a `through` table, that appears very non-trivial to implement. For now we have this as a
-    # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
-    # api/extras/secrets-group-associations/ REST endpoint as appropriate.
-    secrets = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(SecretsGroupAssociationSerializer)
-    def get_secrets(self, obj):
-        depth = get_nested_serializer_depth(self)
-        return return_nested_serializer_data_based_on_depth(
-            self, depth, obj, obj.secrets_group_associations, "secrets_group_associations"
-        )
-
     class Meta:
         model = SecretsGroup
         fields = "__all__"
+        # TODO: it would be **awesome** if we could create/update SecretsGroupAssociations
+        # alongside creating/updating the base SecretsGroup, but since this is a ManyToManyField with
+        # a `through` table, that appears very non-trivial to implement. For now we have this as a
+        # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
+        # api/extras/secrets-group-associations/ REST endpoint as appropriate.
+        extra_kwargs = {
+            "secrets": {"source": "secrets_group_associations", "read_only": True},
+        }
 
 
 #

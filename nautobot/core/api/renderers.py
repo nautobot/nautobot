@@ -92,12 +92,13 @@ class NautobotCSVRenderer(BaseRenderer):
         # Remove specific headers that we know are irrelevant
         for undesired_header in [
             "computed_fields",
+            "config_context",
             "custom_fields",  # will be handled later as a special case
+            "local_config_context_data",
             "notes_url",
             "relationships",
             "tree_depth",
             "url",
-            "web_url",  # TODO remove as unnecessary
         ]:
             if undesired_header in base_headers:
                 base_headers.remove(undesired_header)
@@ -151,9 +152,25 @@ class NautobotCSVRenderer(BaseRenderer):
             # Coerce the value to a format to make the CSV renderer happy (i.e. a string)
             if value is None:
                 value = ""
+            elif isinstance(value, dict):
+                if "id" in value and "object_type" in value:
+                    # A related object from a polymorphic serializer?
+                    # Serialize it as if it were a GenericForeignKey
+                    value = ",".join([value["object_type"], value["id"]])
+                elif "value" in value and "label" in value:
+                    # An enum type
+                    value = value["value"]
+                else:
+                    logger.warning(
+                        "Unsure how to handle dict value on %s for %s: %s", type(serializer).__name__, key, value
+                    )
+                    value = str(value)
             elif isinstance(value, (list, tuple)):
+                if value and isinstance(value[0], dict) and "id" in value[0] and "object_type" in value[0]:
+                    # Multiple related objects - serialize them as GenericForeignKeys
+                    value = [",".join([v["object_type"], v["id"]]) for v in value]
                 # Need to escape literal comma characters in order to avoid confusion on decoding
-                value = ",".join([str(v).replace(",", "%2C") for v in value])
+                value = ",".join([str(v).replace(",", "%2C") if v is not None else "" for v in value])
             else:
                 value = str(value)
 
@@ -170,6 +187,6 @@ class NautobotCSVRenderer(BaseRenderer):
 
         try:
             return obj.natural_key()
-        except NotImplementedError:
+        except (NotImplementedError, AttributeError):
             logger.error("%s doesn't implement natural_key()", type(obj).__name__)
-            return obj.pk
+            return [obj.pk]

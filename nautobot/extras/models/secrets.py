@@ -125,6 +125,8 @@ class SecretsGroupAssociation(BaseModel):
     access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
     secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)
 
+    natural_key_field_names = ["secrets_group", "access_type", "secret_type", "secret"]
+
     class Meta:
         unique_together = (
             # Don't allow the same access-type/secret-type combination to be used more than once in the same group

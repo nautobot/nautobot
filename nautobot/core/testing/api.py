@@ -426,7 +426,13 @@ class APIViewTestCases:
             self.assertHttpStatus(response_2, status.HTTP_200_OK)
             self.assertEqual(response_2.get("Content-Type"), "text/csv; charset=UTF-8")
 
-            self.assertEqual(response_1.content, response_2.content)
+            self.maxDiff = None
+            # This check is more useful than it might seem. Any related object that wasn't CSV-converted correctly
+            # will likely be rendered incorrectly as an API URL, and that API URL *will* differ between the
+            # two responses based on the inclusion or omission of the "?format=csv" parameter.
+            self.assertEqual(
+                response_1.content.decode(response_1.charset), response_2.content.decode(response_2.charset)
+            )
 
             # Load the csv data back into a list of object dicts
             reader = csv.DictReader(StringIO(response_1.content.decode(response_1.charset)))

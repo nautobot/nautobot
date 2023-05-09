@@ -212,7 +212,6 @@ class AvailablePrefixSerializer(serializers.Serializer):
 class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
-    nat_outside_list = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = IPAddress
@@ -229,23 +228,14 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         extra_kwargs = {
             "family": {"read_only": True},
             "prefix_length": {"read_only": True},
+            "nat_outside_list": {"read_only": True},
         }
 
-    @extend_schema_field(str)
-    def get_nat_outside_list(self, obj):
-        try:
-            nat_outside_list = obj.nat_outside_list
-        except IPAddress.DoesNotExist:
-            return None
-        depth = get_nested_serializer_depth(self)
-        data = return_nested_serializer_data_based_on_depth(
-            IPAddressSerializer(nat_outside_list, context={"request": self.context.get("request")}),
-            depth,
-            obj,
-            nat_outside_list,
-            "nat_outside_list",
-        )
-        return data
+    def get_field_names(self, declared_fields, info):
+        """Add nat_outside_list reverse relation to the automatically discovered fields."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "nat_outside_list")
+        return fields
 
 
 class AvailableIPSerializer(serializers.Serializer):
