@@ -1517,13 +1517,6 @@ class JobResultView(generic.ObjectView):
     queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
     template_name = "extras/jobresult.html"
 
-    def get(self, request, *args, **kwargs):
-        """
-        Generic GET handler for accessing an object by PK or slug
-        """
-        instance = get_object_or_404(self.queryset, **kwargs)
-        return super().get(request, *args, **kwargs)
-
     def get_extra_context(self, request, instance):
         associated_record = None
         job_class = None
