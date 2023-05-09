@@ -9,6 +9,7 @@ from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRen
 from nautobot.core.api.serializers import NautobotHyperlinkedRelatedField
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
+from nautobot.core.models.utils import construct_natural_key_slug
 from nautobot.extras.models import CustomField
 
 
@@ -53,32 +54,39 @@ class NautobotCSVRenderer(BaseRenderer):
         """
         Render the provided data to CSV format.
 
-        Unlike other DRF Renderers, `data` should be a dict with key "serializer" (the instantiated serializer for
+        Unlike other DRF Renderers, `data` should be a dict with key "serializer_class" (the serializer for
         this view) and either of the keys "instance" (for a single object) or "queryset" (for a list of objects).
         """
         if not data:
             return ''
 
-        if not isinstance(data, dict) or "serializer" not in data:
-            raise ValueError("data should be a dict with the keys 'serializer' and either 'instance' or 'queryset'.")
+        if not isinstance(data, dict) or "serializer_class" not in data:
+            raise ValueError(
+                "data should be a dict with the keys 'serializer_class' and either 'instance' or 'queryset'."
+            )
 
-        objects = data.get("queryset", [data["instance"]])
-        serializer = data["serializer"]
+        objects = data.get("queryset", [data.get("instance")])
+        serializer_class = data["serializer_class"]
 
-        headers = self.get_headers(serializer)
+        headers = self.get_headers(serializer_class(objects[0], context={"request": renderer_context["request"]}))
 
         buffer = StringIO()
         writer = csv.writer(buffer)
         writer.writerow(headers)
         for obj in objects:
-            writer.writerow(self.format_row(obj, headers=headers, serializer=serializer))
+            writer.writerow(
+                self.object_to_row_elements(
+                    obj,
+                    headers=headers,
+                    serializer=serializer_class(obj, context={"request": renderer_context["request"]}),
+                )
+            )
 
         return buffer.getvalue()
 
     def get_headers(self, serializer):
         """Identify the appropriate CSV headers corresponding to the given serializer."""
         base_headers = list(serializer.fields)
-        logger.info("base_headers from %s: %s", type(serializer).__name__, base_headers)
 
         # Remove specific headers that we know are irrelevant
         for undesired_header in [
@@ -90,51 +98,75 @@ class NautobotCSVRenderer(BaseRenderer):
         ]:
             if undesired_header in base_headers:
                 base_headers.remove(undesired_header)
-        # Remove all object-count headers
+
+        # Remove all write-only and object-count headers
         for header in list(base_headers):
+            if serializer.fields[header].write_only:
+                base_headers.remove(header)
             if header.endswith("_count"):
                 base_headers.remove(header)
 
+        # Add individual headers for each relevant custom field
         if "custom_fields" in serializer.fields:
             cf_keys = CustomField.objects.get_for_model(serializer.Meta.model).values_list("key", flat=True)
             cf_headers = sorted([f"cf_{key}" for key in cf_keys])
+        else:
+            cf_headers = []
 
         # TODO: relationships? computed fields?
 
         headers = base_headers + cf_headers
 
-        logger.info("Headers are: %s", headers)
+        logger.debug("CSV headers for %s are: %s", type(serializer).__name__, headers)
         return headers
 
-    def format_row(self, obj, *, headers, serializer):
+    def object_to_row_elements(self, obj, *, headers, serializer):
+        """Given an object, the desired CSV headers, and its serializer, yield the serialized values for each header."""
         for key in headers:
+            serializer_field = serializer.fields.get(key, None)
+
+            # Retrieve the base value corresponding to this key
             if key.startswith("cf_"):
+                # Custom field
                 value = obj._custom_field_data.get(key[3:], None)
-            elif isinstance(serializer.fields[key], NautobotHyperlinkedRelatedField):
-                # We use this workaround because for a HyperlinkedRelatedField,
-                # field.get_attribute(obj) returns only the PK of the object, instead of the entire related object.
-                # Calling the superclass get_attribute() gives us the actual related object.
-                related_object = serializers.Field.get_attribute(serializer.fields[key], obj)
-                try:
-                    value = related_object.natural_key()
-                except NotImplementedError:
-                    logger.error("related_object %s doesn't implement natural_key()", type(related_object).__name__)
-                    value = None
-            elif key == "tags":
-                tags = serializers.Field.get_attribute(serializer.fields[key], obj)
-                value = [tag.name for tag in tags.all()]
+            elif isinstance(serializer_field, serializers.ListSerializer):
+                # A list of related objects;  as CSV doesn't really have a good way to render a list of lists into
+                # a single field, we use the natural-key-slugs for each object instead of the natural keys
+                related_queryset = serializer_field.get_attribute(obj)
+                value = [
+                    construct_natural_key_slug(self.get_natural_key(related_object))
+                    for related_object in related_queryset.all()
+                ]
+            elif isinstance(serializer_field, serializers.Serializer):
+                # A related object; we want to render its natural key if at all possible.
+                related_object = serializer_field.get_attribute(obj)
+                value = self.get_natural_key(related_object)
             else:
+                # Default case - just use the REST API serializer representation
                 value = serializer.data[key]
 
-            logger.info("Initial value for %s on %s: %s (%s)", key, obj, value, type(value))
-
+            # Coerce the value to a format to make the CSV renderer happy (i.e. a string)
             if value is None:
                 value = ""
             elif isinstance(value, (list, tuple)):
-                value = ",".join([str(v) for v in value])
+                # Need to escape literal comma characters in order to avoid confusion on decoding
+                value = ",".join([str(v).replace(",", "%2C") for v in value])
             else:
                 value = str(value)
 
-            logger.info("CSV-compatible value for %s on %s: %s", key, obj, value)
-
             yield value
+
+    def get_natural_key(self, obj):
+        """Get the natural key for the given object, if any."""
+        if obj is None:
+            return None
+
+        # Match ContentTypeField representation for ContentType objects
+        if obj._meta.label_lower == "contenttypes.contenttype":
+            return f"{obj.app_label}.{obj.model}"
+
+        try:
+            return obj.natural_key()
+        except NotImplementedError:
+            logger.error("%s doesn't implement natural_key()", type(obj).__name__)
+            return obj.pk

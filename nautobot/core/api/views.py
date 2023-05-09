@@ -267,10 +267,10 @@ class ModelViewSetMixin:
         """Special-case handling for CSV format as it needs different data to be passed to the Response."""
         if "text/csv" in request.accepted_media_type:
             queryset = self.filter_queryset(self.get_queryset())
-            serializer = self.get_serializer(queryset, many=True)
+            serializer_class = self.get_serializer_class()
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{queryset.model._meta.verbose_name_plural}.csv"
             return Response(
-                data={"queryset": queryset, "serializer": serializer},
+                data={"queryset": queryset, "serializer_class": serializer_class},
                 headers={"Content-Disposition": f"attachment; filename={filename}"}
             )
 
@@ -280,10 +280,10 @@ class ModelViewSetMixin:
         """Special-case handling for CSV format as it needs different data to be passed to the Response."""
         if "text/csv" in request.accepted_media_type:
             instance = self.get_object()
-            serializer = self.get_serializer(instance)
+            serializer_class = self.get_serializer_class()
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{instance._meta.verbose_name}.csv"
             return Response(
-                data={"instance": instance, "serializer": serializer},
+                data={"instance": instance, "serializer_class": serializer_class},
                 headers={"Content-Disposition": f"attachment; filename={filename}"}
             )
 
