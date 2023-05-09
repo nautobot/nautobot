@@ -44,7 +44,7 @@ class RelationshipBaseTest(TestCase):
 
         self.m2m_1 = Relationship(
             label="Vlan to Rack",
-            key="vlan-rack",
+            key="vlan_rack",
             source_type=self.rack_ct,
             source_label="My Vlans",
             source_filter={"location": [self.locations[0].slug, self.locations[1].slug, self.locations[2].slug]},
@@ -56,7 +56,7 @@ class RelationshipBaseTest(TestCase):
 
         self.m2m_2 = Relationship(
             label="Another Vlan to Rack",
-            key="vlan-rack-2",
+            key="vlan_rack_2",
             source_type=self.rack_ct,
             destination_type=self.vlan_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -65,7 +65,7 @@ class RelationshipBaseTest(TestCase):
 
         self.o2m_1 = Relationship(
             label="generic location to vlan",
-            key="location-vlan",
+            key="location_vlan",
             source_type=self.location_ct,
             destination_type=self.vlan_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -74,7 +74,7 @@ class RelationshipBaseTest(TestCase):
 
         self.o2o_1 = Relationship(
             label="Primary Rack per Location",
-            key="primary-rack-location",
+            key="primary_rack_location",
             source_type=self.rack_ct,
             source_hidden=True,
             destination_type=self.location_ct,
@@ -87,7 +87,7 @@ class RelationshipBaseTest(TestCase):
 
         self.o2o_2 = Relationship(
             label="Alphabetical Locations",
-            key="alphabetical-locations",
+            key="alphabetical_locations",
             source_type=self.location_ct,
             source_label="Alphabetically Prior",
             destination_type=self.location_ct,
@@ -98,7 +98,7 @@ class RelationshipBaseTest(TestCase):
 
         self.o2os_1 = Relationship(
             label="Redundant Rack",
-            key="redundant-rack",
+            key="redundant_rack",
             source_type=self.rack_ct,
             destination_type=self.rack_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
@@ -107,7 +107,7 @@ class RelationshipBaseTest(TestCase):
 
         self.m2ms_1 = Relationship(
             label="Related Locations",
-            key="related-locations",
+            key="related_locations",
             source_type=self.location_ct,
             destination_type=self.location_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
@@ -123,21 +123,21 @@ class RelationshipBaseTest(TestCase):
         self.invalid_relationships = [
             Relationship.objects.create(
                 label="Invalid Relationship 1",
-                key="invalid-relationship-1",
+                key="invalid_relationship_1",
                 source_type=self.location_ct,
                 destination_type=self.invalid_ct,
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
             ),
             Relationship.objects.create(
                 label="Invalid Relationship 2",
-                key="invalid-relationship-2",
+                key="invalid_relationship_2",
                 source_type=self.invalid_ct,
                 destination_type=self.location_ct,
                 type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
             ),
             Relationship.objects.create(
                 label="Invalid Relationship 3",
-                key="invalid-relationship-3",
+                key="invalid_relationship_3",
                 source_type=self.invalid_ct,
                 destination_type=self.invalid_ct,
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
@@ -149,7 +149,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def test_clean_filter_not_dict(self):
         m2m = Relationship(
             label="Another Vlan to Rack",
-            key="vlan-rack-2",
+            key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter=["a list not a dict"],
             destination_type=self.rack_ct,
@@ -164,7 +164,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def test_clean_filter_not_valid(self):
         m2m = Relationship(
             label="Another Vlan to Rack",
-            key="vlan-rack-2",
+            key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter={"notvalid": "not a location"},
             destination_type=self.rack_ct,
@@ -178,7 +178,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
 
         m2m = Relationship(
             label="Another Vlan to Rack",
-            key="vlan-rack-2",
+            key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter={"parent": "not a list"},
             destination_type=self.rack_ct,
@@ -192,7 +192,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
 
         m2m = Relationship(
             label="Another Vlan to Rack",
-            key="vlan-rack-2",
+            key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter={"parent": ["not a valid location"]},
             destination_type=self.rack_ct,
@@ -211,7 +211,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def test_clean_valid(self):
         m2m = Relationship(
             label="Another Vlan to Rack",
-            key="vlan-rack-2",
+            key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter={"name": [self.locations[1].slug]},
             destination_type=self.rack_ct,
@@ -225,7 +225,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         """For a symmetric relationship, source and destination properties must match if specified."""
         o2os = Relationship(
             label="Location to Location",
-            key="location-to-location",
+            key="location_to_location",
             source_type=self.location_ct,
             source_label="Location A",
             source_hidden=True,
@@ -252,7 +252,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         with self.assertRaises(ValidationError) as err:
             Relationship(
                 label="This shouldn't validate",
-                key="vlans-vlans-m2m",
+                key="vlans_vlans_m2m",
                 type="symmetric-many-to-many",
                 source_type=self.vlan_ct,
                 destination_type=self.vlan_ct,
@@ -262,7 +262,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         with self.assertRaises(ValidationError) as err:
             Relationship(
                 label="This shouldn't validate",
-                key="vlans-vlans-o2o",
+                key="vlans_vlans_o2o",
                 type="symmetric-one-to-one",
                 source_type=self.vlan_ct,
                 destination_type=self.vlan_ct,
@@ -274,7 +274,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         """For a symmetric relationship, omitted relevant properties are autofilled on clean."""
         o2os = Relationship(
             label="Location to Location",
-            key="location-to-location",
+            key="location_to_location",
             source_type=self.location_ct,
             destination_type=self.location_ct,
             source_label="Location",
@@ -372,6 +372,49 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         self.assertIsInstance(field, DynamicModelChoiceField)
         self.assertEqual(field.label, "rack")
 
+    def test_check_if_key_is_graphql_safe(self):
+        """
+        Check the GraphQL validation method on CustomField Key Attribute.
+        """
+        # Check if it catches the cr.key starting with a digit.
+        cr1 = Relationship(
+            label="Vlans to Vlans",
+            key="12_vlans_to_vlans",
+            type="symmetric-many-to-many",
+            source_type=self.vlan_ct,
+            destination_type=self.vlan_ct,
+        )
+        with self.assertRaises(ValidationError) as error:
+            cr1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cr.key with whitespace.
+        cr1.key = "test 1"
+        with self.assertRaises(ValidationError) as error:
+            cr1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cr.key with hyphens.
+        cr1.key = "test-1-relationship"
+        with self.assertRaises(ValidationError) as error:
+            cr1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cr.key with special characters
+        cr1.key = "test_1_rela)(&dship"
+        with self.assertRaises(ValidationError) as error:
+            cr1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+
 
 class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
     def setUp(self):
@@ -411,7 +454,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
 
         relationship = Relationship.objects.create(
             label="Location to Rack Rel 1",
-            key="location-to-rack-rel-1",
+            key="location_to_rack_rel_1",
             source_type=self.location_ct,
             source_filter={"name": [self.locations[0].name]},
             destination_type=self.rack_ct,
@@ -902,7 +945,7 @@ class RelationshipTableTest(RelationshipBaseTest):
         # Test non-symmetric many to many with same source_type and same destination_type
         self.m2m_same_type = Relationship(
             label="Location to Location",
-            key="location-to-location",
+            key="location_to_location",
             source_type=self.location_ct,
             destination_type=self.location_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -929,7 +972,7 @@ class RelationshipTableTest(RelationshipBaseTest):
         location_table = LocationTable(queryset)
 
         relationship_column_expected = {
-            "location-vlan_src": [
+            "location_vlan_src": [
                 format_html(
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                     reverse("extras:relationshipassociation_list"),
@@ -940,13 +983,13 @@ class RelationshipTableTest(RelationshipBaseTest):
                     "VLANs",
                 )
             ],
-            "primary-rack-location_dst": [
+            "primary_rack_location_dst": [
                 f'<a href="{self.racks[0].get_absolute_url()}">{self.racks[0].__str__()}</a>'
             ],
-            "alphabetical-locations_src": [
+            "alphabetical_locations_src": [
                 f'<a href="{self.locations[1].get_absolute_url()}">{self.locations[1].__str__()}</a>'
             ],
-            "related-locations_peer": [
+            "related_locations_peer": [
                 format_html(
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                     reverse("extras:relationshipassociation_list"),
@@ -957,7 +1000,7 @@ class RelationshipTableTest(RelationshipBaseTest):
                     "locations",
                 )
             ],
-            "location-to-location_src": [
+            "location_to_location_src": [
                 format_html(
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                     reverse("extras:relationshipassociation_list"),
@@ -968,7 +1011,7 @@ class RelationshipTableTest(RelationshipBaseTest):
                     "location",
                 )
             ],
-            "location-to-location_dst": [
+            "location_to_location_dst": [
                 format_html(
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                     reverse("extras:relationshipassociation_list"),
@@ -1059,7 +1102,7 @@ class RequiredRelationshipTestMixin(TestCase):
         vlan_ct = ContentType.objects.get_for_model(VLAN)
         relationship_m2m = Relationship(
             label="VLANs require at least one Device",
-            key="vlans-devices-m2m",
+            key="vlans_devices_m2m",
             type="many-to-many",
             source_type=device_ct,
             destination_type=vlan_ct,
@@ -1068,7 +1111,7 @@ class RequiredRelationshipTestMixin(TestCase):
         relationship_m2m.validated_save()
         relationship_o2m = Relationship(
             label="Platforms require at least one device",
-            key="platform-devices-o2m",
+            key="platform_devices_o2m",
             type="one-to-many",
             source_type=platform_ct,
             destination_type=device_ct,
@@ -1077,7 +1120,7 @@ class RequiredRelationshipTestMixin(TestCase):
         relationship_o2m.validated_save()
         relationship_o2o = Relationship(
             label="Circuit type requires one platform",
-            key="circuittype-platform-o2o",
+            key="circuittype_platform_o2o",
             type="one-to-one",
             source_type=circuittype_ct,
             destination_type=platform_ct,
@@ -1102,7 +1145,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "VLANs require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
-                        "objects_not_specified": 'You need to specify ["relationships"]["vlans-devices-m2m"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["vlans_devices_m2m"]'
                         '["source"]["objects"].',
                     },
                     "ui": {
@@ -1124,7 +1167,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "Platforms require at least one device, but no devices exist yet. "
                         "Create a device by posting to /api/dcim/devices/",
-                        "objects_not_specified": 'You need to specify ["relationships"]["platform-devices-o2m"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["platform_devices_o2m"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {
@@ -1147,7 +1190,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "api": {
                         "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet. "
                         "Create a platform by posting to /api/dcim/platforms/",
-                        "objects_not_specified": 'You need to specify ["relationships"]["circuittype-platform-o2o"]'
+                        "objects_not_specified": 'You need to specify ["relationships"]["circuittype_platform_o2o"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {

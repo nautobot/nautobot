@@ -342,7 +342,7 @@ class RelationshipModelFormTestCase(TestCase):
 
         cls.relationship_1 = Relationship(
             label="BGP Router-ID",
-            key="bgp-router-id",
+            key="bgp_router_id",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
@@ -350,7 +350,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.relationship_1.validated_save()
         cls.relationship_2 = Relationship(
             label="Device VLAN Groups",
-            key="device-vlan-groups",
+            key="device_vlan_groups",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(ipam_models.VLANGroup),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -358,7 +358,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.relationship_2.validated_save()
         cls.relationship_3 = Relationship(
             label="HA Device Peer",
-            key="ha-device-peer",
+            key="ha_device_peer",
             source_type=ContentType.objects.get_for_model(dcim_models.Device),
             destination_type=ContentType.objects.get_for_model(dcim_models.Device),
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
@@ -750,7 +750,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
 
         cls.rel_1to1 = Relationship(
             label="Primary IP Address",
-            key="primary-ip-address",
+            key="primary_ip_address",
             source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
@@ -759,7 +759,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
 
         cls.rel_1tom = Relationship(
             label="Addresses per location",
-            key="addresses-per-location",
+            key="addresses_per_location",
             source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(ipam_models.IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -777,7 +777,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
 
         cls.rel_mtom_s = Relationship(
             label="Peer Locations",
-            key="peer-locations",
+            key="peer_locations",
             source_type=ContentType.objects.get_for_model(dcim_models.Location),
             destination_type=ContentType.objects.get_for_model(dcim_models.Location),
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
@@ -789,17 +789,17 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         self.assertEqual(
             set(form.relationships),
             {
-                "cr_addresses-per-location__destination",
+                "cr_addresses_per_location__destination",
                 "cr_multiplexing__destination",
-                "cr_peer-locations__peer",
-                "cr_primary-ip-address__destination",
+                "cr_peer_locations__peer",
+                "cr_primary_ip_address__destination",
             },
         )
 
         # One-to-many relationship is nullable but not editable
-        self.assertIn("cr_addresses-per-location__destination", form.fields)
-        self.assertTrue(form.fields["cr_addresses-per-location__destination"].disabled)
-        self.assertIn("cr_addresses-per-location__destination", form.nullable_fields)
+        self.assertIn("cr_addresses_per_location__destination", form.fields)
+        self.assertTrue(form.fields["cr_addresses_per_location__destination"].disabled)
+        self.assertIn("cr_addresses_per_location__destination", form.nullable_fields)
 
         # Many-to-many relationship has add/remove fields but is not directly editable or nullable
         self.assertNotIn("cr_multiplexing__destination", form.fields)
@@ -808,30 +808,30 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         self.assertNotIn("cr_multiplexing__destination", form.nullable_fields)
 
         # Symmetric many-to-many relationship has add/remove fields but is not directly editable or nullable
-        self.assertNotIn("cr_peer-locations__peer", form.fields)
-        self.assertIn("add_cr_peer-locations__peer", form.fields)
-        self.assertIn("remove_cr_peer-locations__peer", form.fields)
-        self.assertNotIn("cr_peer-locations__peer", form.nullable_fields)
+        self.assertNotIn("cr_peer_locations__peer", form.fields)
+        self.assertIn("add_cr_peer_locations__peer", form.fields)
+        self.assertIn("remove_cr_peer_locations__peer", form.fields)
+        self.assertNotIn("cr_peer_locations__peer", form.nullable_fields)
 
         # One-to-one relationship is nullable but not editable
-        self.assertIn("cr_primary-ip-address__destination", form.fields)
-        self.assertTrue(form.fields["cr_primary-ip-address__destination"].disabled)
-        self.assertIn("cr_primary-ip-address__destination", form.nullable_fields)
+        self.assertIn("cr_primary_ip_address__destination", form.fields)
+        self.assertTrue(form.fields["cr_primary_ip_address__destination"].disabled)
+        self.assertIn("cr_primary_ip_address__destination", form.nullable_fields)
 
     def test_ipaddress_form_rendering(self):
         form = IPAddressBulkEditForm(ipam_models.IPAddress)
         self.assertEqual(
             set(form.relationships),
             {
-                "cr_addresses-per-location__source",
+                "cr_addresses_per_location__source",
                 "cr_multiplexing__source",
-                "cr_primary-ip-address__source",
+                "cr_primary_ip_address__source",
             },
         )
 
         # Many-to-one relationship is editable and nullable
-        self.assertIn("cr_addresses-per-location__source", form.fields)
-        self.assertIn("cr_addresses-per-location__source", form.nullable_fields)
+        self.assertIn("cr_addresses_per_location__source", form.fields)
+        self.assertIn("cr_addresses_per_location__source", form.nullable_fields)
 
         # Many-to-many relationship has add/remove fields but is not directly editable or nullable
         self.assertNotIn("cr_multiplexing__source", form.fields)
@@ -840,9 +840,9 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         self.assertNotIn("cr_multiplexing__source", form.nullable_fields)
 
         # One-to-one relationship is nullable but not editable
-        self.assertIn("cr_primary-ip-address__source", form.fields)
-        self.assertTrue(form.fields["cr_primary-ip-address__source"].disabled)
-        self.assertIn("cr_primary-ip-address__source", form.nullable_fields)
+        self.assertIn("cr_primary_ip_address__source", form.fields)
+        self.assertTrue(form.fields["cr_primary_ip_address__source"].disabled)
+        self.assertIn("cr_primary_ip_address__source", form.nullable_fields)
 
     def test_location_form_nullification(self):
         """Test nullification of existing relationship-associations."""
@@ -873,11 +873,11 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         form.is_valid()
         form.save_relationships(
             instance=self.locations[0],
-            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-location__destination"],
+            nullified_fields=["cr_primary_ip_address__destination", "cr_addresses_per_location__destination"],
         )
         form.save_relationships(
             instance=self.locations[1],
-            nullified_fields=["cr_primary-ip-address__destination", "cr_addresses-per-location__destination"],
+            nullified_fields=["cr_primary_ip_address__destination", "cr_addresses_per_location__destination"],
         )
 
         self.assertEqual(0, RelationshipAssociation.objects.count())
@@ -889,7 +889,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
             data={
                 "pks": [self.locations[0].pk],
                 "add_cr_multiplexing__destination": [ipaddress.pk for ipaddress in self.ipaddresses],
-                "add_cr_peer-locations__peer": [self.locations[1].pk],
+                "add_cr_peer_locations__peer": [self.locations[1].pk],
             },
         )
         form.is_valid()
@@ -932,7 +932,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
             data={
                 "pks": [self.locations[0].pk, self.locations[1].pk],
                 "remove_cr_multiplexing__destination": [self.ipaddresses[0].pk],
-                "remove_cr_peer-locations__peer": [self.locations[0].pk, self.locations[1].pk],
+                "remove_cr_peer_locations__peer": [self.locations[0].pk, self.locations[1].pk],
             },
         )
         form.is_valid()
@@ -953,7 +953,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
             model=ipam_models.IPAddress,
             data={
                 "pks": [self.ipaddresses[0].pk],
-                "cr_addresses-per-location__source": self.locations[0].pk,
+                "cr_addresses_per_location__source": self.locations[0].pk,
             },
         )
         form.is_valid()

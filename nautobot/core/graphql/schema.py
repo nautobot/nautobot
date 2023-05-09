@@ -378,22 +378,11 @@ def extend_schema_type_relationships(schema_type, model):
 
             # Generate the name of the attribute and the name of the resolver based on the slug of the relationship
             # and based on the prefix
-            rel_name = f"{prefix}{str_to_var_name(relationship.key)}"
+            rel_name = f"{prefix}{relationship.key}"
             # Handle non-symmetric relationships where the model can be either source or destination
             if not relationship.symmetric and relationship.source_type == relationship.destination_type:
                 rel_name = f"{rel_name}_{peer_side}"
             resolver_name = f"resolve_{rel_name}"
-            if str_to_var_name(relationship.key) != relationship.key:
-                # 2.0 TODO: str_to_var_name is lossy, it may cause different relationships to map to the same rel_name
-                # In 2.0 we should simply omit relations whose slugs are invalid in GraphQL, instead of mapping them.
-                # We need to make sure that slug/key is unique in a data migration before we remove the warning
-                # See https://github.com/nautobot/nautobot/pull/3426 for detailed solution
-                warnings.warn(
-                    f'Relationship "{relationship}" on {model._meta.verbose_name} does not have a GraphQL-safe key '
-                    f'("{relationship.key}"); for now it will be mapped to the GraphQL name "{rel_name}", '
-                    "but in a future release this relationship may fail to appear in GraphQL.",
-                    FutureWarning,
-                )
 
             if hasattr(schema_type, resolver_name):
                 # If a symmetric relationship, and this is destination side, we already added source side, expected

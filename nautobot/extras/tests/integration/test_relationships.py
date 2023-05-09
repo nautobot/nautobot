@@ -40,7 +40,7 @@ class RelationshipsTestCase(SeleniumTestCase):
         device_content_type = ContentType.objects.get_for_model(Device)
         relationship = Relationship.objects.create(
             label="Device 2 Power Panel relationship",
-            key="device-2-power-panel-relationship",
+            key="device_2_power_panel_relationship",
             source_type=device_content_type,
             destination_type=power_panel_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
