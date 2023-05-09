@@ -1,3 +1,4 @@
+import itertools
 import logging
 import platform
 from collections import OrderedDict
@@ -10,6 +11,7 @@ from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import NoReverseMatch, reverse as django_reverse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -31,15 +33,17 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
-from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
-from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
+from nautobot.extras.registry import registry
 from . import serializers
+
 
 HTTP_ACTIONS = {
     "GET": "view",
@@ -50,7 +54,6 @@ HTTP_ACTIONS = {
     "PATCH": "change",
     "DELETE": "delete",
 }
-
 
 #
 # Mixins
@@ -69,29 +72,6 @@ class NautobotAPIVersionMixin:
         except AttributeError:
             pass
         return response
-
-
-class BulkCreateModelMixin:
-    """
-    Bulk create multiple model instances by using the
-    Serializers ``many=True`` ability from Django REST >= 2.2.5.
-
-    .. note::
-        This mixin uses the same method to create model instances
-        as ``CreateModelMixin`` because both non-bulk and bulk
-        requests will use ``POST`` request method.
-    """
-
-    def bulk_create(self, request, *args, **kwargs):
-        return self.perform_bulk_create(request)
-
-    def perform_bulk_create(self, request):
-        with transaction.atomic():
-            serializer = self.get_serializer(data=request.data, many=True)
-            serializer.is_valid(raise_exception=True)
-            # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
-            # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class BulkUpdateModelMixin:
@@ -185,10 +165,6 @@ class BulkDestroyModelMixin:
 
 
 class ModelViewSetMixin:
-    brief = False
-    # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
-    # select_related
-    brief_prefetch_fields = []
     logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
@@ -230,34 +206,22 @@ class ModelViewSetMixin:
 
         return super().get_serializer(*args, **kwargs)
 
-    def get_serializer_class(self):
-        # If using 'brief' mode, find and return the nested serializer for this model, if one exists
-        if self.brief:
-            self.logger.debug("Request is for 'brief' format; initializing nested serializer")
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # Only allow the depth to be greater than 0 in GET requests
+        # Use depth=0 in all write type requests.
+        if self.request.method == "GET":
+            depth = 0
             try:
-                serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-                self.logger.debug(f"Using serializer {serializer}")
-                return serializer
-            except SerializerNotFound:
-                self.logger.debug(f"Nested serializer for {self.queryset.model} not found!")
+                depth = int(self.request.query_params.get("depth", 0))
+            except ValueError:
+                self.logger.warning("The depth parameter must be an integer between 0 and 10")
 
-        # Fall back to the hard-coded serializer class
-        return self.serializer_class
+            context["depth"] = depth
+        else:
+            context["depth"] = 0
 
-    def get_queryset(self):
-        # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
-        if self.brief:
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
-
-        return super().get_queryset()
-
-    def initialize_request(self, request, *args, **kwargs):
-        # Check if brief=True has been passed
-        if request.method == "GET" and request.GET.get("brief"):
-            self.brief = True
-
-        return super().initialize_request(request, *args, **kwargs)
+        return context
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
@@ -730,6 +694,154 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             return document.execute(**options)
         except Exception as e:
             return ExecutionResult(errors=[e], invalid=True)
+
+
+#
+# UI Views
+#
+
+
+class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
+    """API View that returns the nav-menu content applicable to the requesting user."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        """Get the menu data for the requesting user.
+
+        Returns the following data-structure (as not all context in registry["nav_menu"] is relevant to the UI):
+
+        {
+            "Inventory": {
+                "Devices": {
+                    "Devices": "/dcim/devices/",
+                    "Device Types": "/dcim/device-types/",
+                    ...
+                    "Connections": {
+                        "Cables": "/dcim/cables/",
+                        "Console Connections": "/dcim/console-connections/",
+                        ...
+                    },
+                    ...
+                },
+                "Organization": {
+                    ...
+                },
+                ...
+            },
+            "Networks": {
+                ...
+            },
+            "Security": {
+                ...
+            },
+            "Automation": {
+                ...
+            },
+            "Platform": {
+                ...
+            },
+        }
+        """
+        base_menu = registry["nav_menu"]
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+
+        filtered_menu = {}
+        for context, context_details in base_menu.items():
+            if HIDE_RESTRICTED_UI and not any(
+                request.user.has_perm(permission) for permission in context_details["permissions"]
+            ):
+                continue
+            filtered_menu[context] = {}
+            for group_name, group_details in context_details["groups"].items():
+                if HIDE_RESTRICTED_UI and not any(
+                    request.user.has_perm(permission) for permission in group_details["permissions"]
+                ):
+                    continue
+                filtered_menu[context][group_name] = {}
+                for item_name, item_details in group_details["items"].items():
+                    if HIDE_RESTRICTED_UI and not any(
+                        request.user.has_perm(permission) for permission in item_details["permissions"]
+                    ):
+                        continue
+                    if "items" in item_details:
+                        # It's a sub-group
+                        filtered_menu[context][group_name][item_name] = {}
+                        for subitem_name, subitem_details in item_details["items"].items():
+                            if HIDE_RESTRICTED_UI and not any(
+                                request.user.has_perm(perm) for perm in subitem_details["permissions"]
+                            ):
+                                continue
+                            filtered_menu[context][group_name][item_name][subitem_name] = subitem_details["link"]
+                    else:
+                        # It's a menu item
+                        filtered_menu[context][group_name][item_name] = item_details["link"]
+
+        return Response(filtered_menu)
+
+
+class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
+    """
+    Enumerate the models listed on the Nautobot home page and return data structure
+    containing verbose_name_plural, url and count.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        object_counts = {
+            "Inventory": [
+                {"model": "dcim.rack"},
+                {"model": "dcim.devicetype"},
+                {"model": "dcim.device"},
+                {"model": "dcim.virtualchassis"},
+                {"model": "dcim.deviceredundancygroup"},
+                {"model": "dcim.cable"},
+            ],
+            "Networks": [
+                {"model": "ipam.vrf"},
+                {"model": "ipam.prefix"},
+                {"model": "ipam.ipaddress"},
+                {"model": "ipam.vlan"},
+            ],
+            "Security": [{"model": "extras.secret"}],
+            "Platform": [
+                {"model": "extras.gitrepository"},
+                {"model": "extras.relationship"},
+                {"model": "extras.computedfield"},
+                {"model": "extras.customfield"},
+                {"model": "extras.customlink"},
+                {"model": "extras.tag"},
+                {"model": "extras.status"},
+                {"model": "extras.role"},
+            ],
+        }
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+
+        for entry in itertools.chain(*object_counts.values()):
+            app_label, model_name = entry["model"].split(".")
+            model = apps.get_model(app_label, model_name)
+            permission = get_permission_for_model(model, "view")
+            if HIDE_RESTRICTED_UI and not request.user.has_perm(permission):
+                continue
+            data = {"name": model._meta.verbose_name_plural}
+            try:
+                data["url"] = django_reverse(get_route_for_model(model, "list"))
+            except NoReverseMatch:
+                logger = logging.getLogger(__name__)
+                route = get_route_for_model(model, "list")
+                logger.warning(f"Handled expected exception when generating filter field: {route}")
+            manager = model.objects
+            if request.user.has_perm(permission):
+                if hasattr(manager, "restrict"):
+                    data["count"] = model.objects.restrict(request.user).count()
+                else:
+                    data["count"] = model.objects.count()
+            entry.update(data)
+
+        return Response(object_counts)
 
 
 #

@@ -29,7 +29,8 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         """
         # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
+        # find_by_partial_text() finds both "Provider Networks" in the Inventory menu as well as the desired "Networks".
+        self.browser.links.find_by_partial_text("Networks")[1].click()
         self.browser.links.find_by_partial_text("Config Context Schemas").click()
 
         # Click add button
@@ -57,7 +58,8 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         """
         # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
+        # find_by_partial_text() finds both "Provider Networks" in the Inventory menu as well as the desired "Networks".
+        self.browser.links.find_by_partial_text("Networks")[1].click()
         self.browser.links.find_by_partial_text("Config Context Schemas").click()
 
         # Click add button
@@ -140,7 +142,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         )
 
         # Navigate to ConfigContextSchema Validation tab
-        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.slug}/")
+        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/")
         self.browser.links.find_by_text("Validation").click()
 
         # Assert Validation states

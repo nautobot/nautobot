@@ -50,7 +50,7 @@ class JobResultTest(SeleniumTestCase):
 
         # Visit the job result page
         self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Jobs").first.click()
+        self.browser.links.find_by_partial_text("Automation").first.click()
         self.browser.links.find_by_partial_text("Job Results").first.click()
         self.browser.find_by_xpath("//table[@class='table table-hover table-headings']/tbody/tr[1]/td[2]/a").click()
 

@@ -6,7 +6,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.db.models import Sum
-from django.urls import reverse
 from django.utils.functional import classproperty
 
 from nautobot.core.models.fields import ColorField
@@ -133,9 +132,6 @@ class Cable(PrimaryModel, StatusModel):
     def __str__(self):
         pk = self.pk or self._pk
         return self.label or f"#{pk}"
-
-    def get_absolute_url(self):
-        return reverse("dcim:cable", args=[self.pk])
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_CONNECTED(cls):  # pylint: disable=no-self-argument

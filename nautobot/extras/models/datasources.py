@@ -5,7 +5,6 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models
-from django.urls import reverse
 
 from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
@@ -74,9 +73,6 @@ class GitRepository(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:gitrepository", kwargs={"slug": self.slug})
 
     def get_latest_sync(self):
         """

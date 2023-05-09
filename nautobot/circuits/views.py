@@ -34,7 +34,6 @@ class CircuitTypeUIViewSet(
     queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "circuit_type"))
     serializer_class = serializers.CircuitTypeSerializer
     table_class = tables.CircuitTypeTable
-    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         # Circuits
@@ -67,7 +66,6 @@ class CircuitTerminationUIViewSet(
     view_mixins.ObjectNotesViewMixin,
 ):
     form_class = forms.CircuitTerminationForm
-    lookup_field = "pk"
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
 
@@ -90,7 +88,6 @@ class ProviderUIViewSet(NautobotUIViewSet):
     queryset = Provider.objects.annotate(count_circuits=count_related(Circuit, "provider"))
     serializer_class = serializers.ProviderSerializer
     table_class = tables.ProviderTable
-    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -120,7 +117,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
     filterset_class = filters.CircuitFilterSet
     filterset_form_class = forms.CircuitFilterForm
     form_class = forms.CircuitForm
-    lookup_field = "pk"
     # v2 TODO(jathan): Replace prefetch_related with select_related
     prefetch_related = ["provider", "circuit_type", "tenant", "circuit_termination_a", "circuit_termination_z"]
     queryset = Circuit.objects.all()

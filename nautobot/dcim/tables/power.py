@@ -1,5 +1,4 @@
 import django_tables2 as tables
-from django_tables2.utils import Accessor
 
 from nautobot.core.tables import (
     BaseTable,
@@ -26,7 +25,7 @@ __all__ = (
 class PowerPanelTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    location = tables.LinkColumn(viewname="dcim:location", args=[Accessor("location__slug")])
+    location = tables.Column(linkify=True)
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
         url_params={"power_panel_id": "pk"},

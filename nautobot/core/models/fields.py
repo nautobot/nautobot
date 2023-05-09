@@ -8,9 +8,11 @@ from django.db import models
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
+from taggit.managers import TaggableManager
 
 from nautobot.core.forms import fields, widgets
 from nautobot.core.models import ordering
+from nautobot.core.models.managers import TagsManager
 
 
 class mac_unix_expanded_uppercase(mac_unix_expanded):
@@ -370,3 +372,24 @@ class JSONArrayField(models.JSONField):
                 **kwargs,
             }
         )
+
+
+class TagsField(TaggableManager):
+    """Override FormField method on taggit.managers.TaggableManager to match the Nautobot UI."""
+
+    def __init__(self, *args, **kwargs):
+        from nautobot.extras.models.tags import TaggedItem
+
+        kwargs.setdefault("through", TaggedItem)
+        kwargs.setdefault("manager", TagsManager)
+        kwargs.setdefault("ordering", ["name"])
+        super().__init__(*args, **kwargs)
+
+    def formfield(self, form_class=fields.DynamicModelMultipleChoiceField, **kwargs):
+        from nautobot.extras.models.tags import Tag
+
+        queryset = Tag.objects.get_for_model(self.model)
+        kwargs.setdefault("queryset", queryset)
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("query_params", {"content_types": self.model._meta.label_lower})
+        return super().formfield(form_class=form_class, **kwargs)

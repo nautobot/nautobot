@@ -4,35 +4,21 @@ from nautobot.core.api import TreeModelSerializerMixin
 from nautobot.extras.api.serializers import NautobotModelSerializer, TaggedModelSerializerMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import NestedTenantGroupSerializer, NestedTenantSerializer  # noqa: F401
-
 #
 # Tenants
 #
 
 
 class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenantgroup-detail")
-    parent = NestedTenantGroupSerializer(required=False, allow_null=True)
     tenant_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = TenantGroup
-        fields = [
-            "url",
-            "name",
-            "parent",
-            "description",
-            "tenant_count",
-            "tree_depth",
-        ]
+        fields = "__all__"
+        list_display_fields = ["name", "tenant_count", "description", "actions"]
 
 
 class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="tenancy-api:tenant-detail")
-    tenant_group = NestedTenantGroupSerializer(required=False)
     circuit_count = serializers.IntegerField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     ipaddress_count = serializers.IntegerField(read_only=True)
@@ -45,19 +31,5 @@ class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Tenant
-        fields = [
-            "url",
-            "name",
-            "tenant_group",
-            "description",
-            "comments",
-            "circuit_count",
-            "device_count",
-            "ipaddress_count",
-            "prefix_count",
-            "rack_count",
-            "virtualmachine_count",
-            "vlan_count",
-            "vrf_count",
-            "cluster_count",
-        ]
+        fields = "__all__"
+        list_display_fields = ["name", "tenant_group", "description"]

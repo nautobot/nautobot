@@ -68,13 +68,3 @@ To extract the saved archive into a new installation, run the following from the
 ```no-highlight
 tar -xf nautobot_media.tar.gz
 ```
-
----
-
-## Cache Invalidation
-
-If you are migrating your instance of Nautobot to a different machine, be sure to first invalidate the cache on the original instance by issuing the `invalidate all` management command (within the Python virtual environment):
-
-```no-highlight
-nautobot-server invalidate all
-```

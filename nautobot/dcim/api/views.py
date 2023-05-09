@@ -97,14 +97,14 @@ class PathEndpointMixin:
                 break
 
             # Serialize each object
-            serializer_a = get_serializer_for_model(near_end, prefix="Nested")
+            serializer_a = get_serializer_for_model(near_end)
             x = serializer_a(near_end, context={"request": request}).data
             if cable is not None:
                 y = serializers.TracedCableSerializer(cable, context={"request": request}).data
             else:
                 y = None
             if far_end is not None:
-                serializer_b = get_serializer_for_model(far_end, prefix="Nested")
+                serializer_b = get_serializer_for_model(far_end)
                 z = serializer_b(far_end, context={"request": request}).data
             else:
                 z = None
@@ -284,8 +284,6 @@ class DeviceTypeViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.DeviceTypeSerializer
     filterset_class = filters.DeviceTypeFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["manufacturer"]
 
 
 #
@@ -367,10 +365,13 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "tenant",
         "platform",
         "rack",
+        "location",
         "parent_bay",
         "primary_ip4",
         "primary_ip6",
         "virtual_chassis__master",
+        "device_redundancy_group",
+        "secrets_group",
         "status",
     ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list")
     filterset_class = filters.DeviceFilterSet
@@ -379,18 +380,13 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         """
         Select the specific serializer based on the request context.
 
-        If the `brief` query param equates to True, return the NestedDeviceSerializer
-
         If the `exclude` query param includes `config_context` as a value, return the DeviceSerializer
 
         Else, return the DeviceWithConfigContextSerializer
         """
 
         request = self.get_serializer_context()["request"]
-        if request is not None and request.query_params.get("brief", False):
-            return serializers.NestedDeviceSerializer
-
-        elif request is not None and "config_context" in request.query_params.get("exclude", []):
+        if request is not None and "config_context" in request.query_params.get("exclude", []):
             return serializers.DeviceSerializer
 
         return serializers.DeviceWithConfigContextSerializer
@@ -559,8 +555,6 @@ class ConsolePortViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsolePortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
@@ -569,8 +563,6 @@ class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.ConsoleServerPortSerializer
     filterset_class = filters.ConsoleServerPortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
@@ -579,8 +571,6 @@ class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerPortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
@@ -589,8 +579,6 @@ class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
     )
     serializer_class = serializers.PowerOutletSerializer
     filterset_class = filters.PowerOutletFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
@@ -604,8 +592,6 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
     ).prefetch_related("tags", "_path__destination", "_cable_peer", "ip_addresses")
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
@@ -614,32 +600,24 @@ class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
     ).prefetch_related("tags")
     serializer_class = serializers.FrontPortSerializer
     filterset_class = filters.FrontPortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class RearPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
     queryset = RearPort.objects.select_related("device__device_type__manufacturer", "cable").prefetch_related("tags")
     serializer_class = serializers.RearPortSerializer
     filterset_class = filters.RearPortFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class DeviceBayViewSet(NautobotModelViewSet):
     queryset = DeviceBay.objects.select_related("installed_device").prefetch_related("tags")
     serializer_class = serializers.DeviceBaySerializer
     filterset_class = filters.DeviceBayFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 class InventoryItemViewSet(NautobotModelViewSet):
     queryset = InventoryItem.objects.select_related("device", "manufacturer").prefetch_related("tags")
     serializer_class = serializers.InventoryItemSerializer
     filterset_class = filters.InventoryItemFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["device"]
 
 
 #
@@ -691,8 +669,6 @@ class VirtualChassisViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.VirtualChassisSerializer
     filterset_class = filters.VirtualChassisFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["master"]
 
 
 #

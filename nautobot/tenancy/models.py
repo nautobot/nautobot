@@ -1,5 +1,4 @@
 from django.db import models
-from django.urls import reverse
 
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
@@ -31,9 +30,6 @@ class TenantGroup(TreeModel, OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("tenancy:tenantgroup", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -78,9 +74,6 @@ class Tenant(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("tenancy:tenant", args=[self.pk])
 
     def to_csv(self):
         return (

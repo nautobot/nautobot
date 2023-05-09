@@ -11,7 +11,6 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
-from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
@@ -377,9 +376,6 @@ class Job(PrimaryModel):
                 {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
             )
 
-    def get_absolute_url(self):
-        return reverse("extras:job_detail", kwargs={"slug": self.slug})
-
 
 @extras_features("graphql")
 class JobHook(OrganizationalModel):
@@ -422,9 +418,6 @@ class JobHook(OrganizationalModel):
         # At least one action type must be selected
         if not self.type_create and not self.type_delete and not self.type_update:
             raise ValidationError("You must select at least one type: create, update, and/or delete.")
-
-    def get_absolute_url(self):
-        return reverse("extras:jobhook", kwargs={"pk": self.pk})
 
     @classmethod
     def check_for_conflicts(
@@ -538,8 +531,8 @@ class JobResult(BaseModel, CustomFieldModel):
         db_index=True,
         help_text="Registered name of the Celery task for this job. Internal use only.",
     )
-    date_created = models.DateTimeField(auto_now_add=True)
-    date_done = models.DateTimeField(null=True, blank=True)
+    date_created = models.DateTimeField(auto_now_add=True, db_index=True)
+    date_done = models.DateTimeField(null=True, blank=True, db_index=True)
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
@@ -578,6 +571,24 @@ class JobResult(BaseModel, CustomFieldModel):
     class Meta:
         ordering = ["-date_created"]
         get_latest_by = "date_created"
+        indexes = [
+            models.Index(
+                name="extras_jobresult_rcreated_idx",
+                fields=["-date_created"],
+            ),
+            models.Index(
+                name="extras_jr_rdone_idx",
+                fields=["-date_done"],
+            ),
+            models.Index(
+                name="extras_jr_statrcreate_idx",
+                fields=["status", "-date_created"],
+            ),
+            models.Index(
+                name="extras_jr_statrdone_idx",
+                fields=["status", "-date_done"],
+            ),
+        ]
 
     def __str__(self):
         return str(self.id)
@@ -606,9 +617,6 @@ class JobResult(BaseModel, CustomFieldModel):
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
-
-    def get_absolute_url(self):
-        return reverse("extras:jobresult", kwargs={"pk": self.pk})
 
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
@@ -825,9 +833,6 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("extras:jobbutton", kwargs={"pk": self.pk})
-
 
 class ScheduledJobs(models.Model):
     """Helper table for tracking updates to scheduled tasks.
@@ -978,9 +983,6 @@ class ScheduledJob(BaseModel):
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
-
-    def get_absolute_url(self):
-        return reverse("extras:scheduledjob", kwargs={"pk": self.pk})
 
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""

@@ -11,10 +11,10 @@ This will run the following management commands with default settings, in order:
 
 - migrate
 - trace_paths
+- build_ui --npm-install
 - collectstatic
 - remove_stale_contenttypes
 - clearsessions
-- invalidate all
 """
 
 
@@ -29,6 +29,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            "--no-build-ui",
+            action="store_false",
+            dest="build_ui",
+            default=True,
+            help="Do not automatically build the user interface.",
+        )
+        parser.add_argument(
             "--no-clearsessions",
             action="store_false",
             dest="clearsessions",
@@ -41,13 +48,6 @@ class Command(BaseCommand):
             dest="collectstatic",
             default=True,
             help="Do not automatically collect static files into a single location.",
-        )
-        parser.add_argument(
-            "--no-invalidate-all",
-            action="store_false",
-            dest="invalidate_all",
-            default=True,
-            help="Do not automatically invalidate cache for entire application.",
         )
         parser.add_argument(
             "--no-migrate",
@@ -74,41 +74,41 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Run migrate
         if options.get("migrate"):
-            print("Performing database migrations...")
+            self.stdout.write("Performing database migrations...")
             call_command(
                 "migrate",
                 interactive=False,
                 traceback=options["traceback"],
                 verbosity=options["verbosity"],
             )
-            print()
+            self.stdout.write()
 
         # Run trace_paths
         if options.get("trace_paths"):
-            print("Generating cable paths...")
+            self.stdout.write("Generating cable paths...")
             call_command("trace_paths", no_input=True)
-            print()
+            self.stdout.write()
+
+        # Run build
+        if options.get("build_ui"):
+            self.stdout.write("Building user interface...")
+            call_command("build_ui", npm_install=True)
+            self.stdout.write()
 
         # Run collectstatic
         if options.get("collectstatic"):
-            print("Collecting static files...")
+            self.stdout.write("Collecting static files...")
             call_command("collectstatic", interactive=False)
-            print()
+            self.stdout.write()
 
         # Run remove_stale_contenttypes
         if options.get("remove_stale_contenttypes"):
-            print("Removing stale content types...")
+            self.stdout.write("Removing stale content types...")
             call_command("remove_stale_contenttypes", interactive=False)
-            print()
+            self.stdout.write()
 
         # Run clearsessions
         if options.get("clearsessions"):
-            print("Removing expired sessions...")
+            self.stdout.write("Removing expired sessions...")
             call_command("clearsessions")
-            print()
-
-        # Run invalidate all
-        if options.get("invalidate_all"):
-            print("Invalidating cache...")
-            call_command("invalidate", "all")
-            print()
+            self.stdout.write()

@@ -698,7 +698,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):  # TODO: BaseModelTestC
                 "has_many": False,
                 "label": "Alphabetically Subsequent",
                 "peer_type": self.location_ct,
-                "url": reverse("dcim:location", kwargs={"slug": self.locations[0].slug}),
+                "url": reverse("dcim:location", kwargs={"pk": self.locations[0].pk}),
                 "value": self.locations[0],
             },
         )

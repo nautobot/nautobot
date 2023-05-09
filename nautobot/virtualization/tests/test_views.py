@@ -43,6 +43,8 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        ClusterType.objects.all().delete()
+
         ClusterType.objects.create(name="Cluster Type 1")
         ClusterType.objects.create(name="Cluster Type 2")
         ClusterType.objects.create(name="Cluster Type 3")
@@ -55,10 +57,10 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,description",
-            "Cluster Type 4,Fourth cluster type",
-            "Cluster Type 5,Fifth cluster type",
-            "Cluster Type 6,Sixth cluster type",
-            "Cluster Type 7,Seventh cluster type",
+            'Cluster Type ""4"",Fourth cluster type',
+            'Cluster Type ""5"",Fifth cluster type',
+            'Cluster Type ""6"",Sixth cluster type',
+            'Cluster Type ""7"",Seventh cluster type',
         )
 
 
