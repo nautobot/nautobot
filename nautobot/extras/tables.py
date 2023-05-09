@@ -524,6 +524,7 @@ class JobTable(BaseTable):
     approval_required = BooleanColumn()
     is_job_hook_receiver = BooleanColumn()
     is_job_button_receiver = BooleanColumn()
+    supports_dryrun = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
     actions = ButtonsColumn(JobModel, pk_field="slug", prepend_template=JOB_BUTTONS)
@@ -562,6 +563,7 @@ class JobTable(BaseTable):
             "is_job_hook_receiver",
             "is_job_button_receiver",
             "approval_required",
+            "supports_dryrun",
             "soft_time_limit",
             "time_limit",
             "last_run",

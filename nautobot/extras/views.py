@@ -1145,12 +1145,6 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
-        elif job_model.supports_dryrun and job_model.read_only and request.POST.get("dryrun", False) is not True:
-            messages.error(
-                request,
-                "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
-            )
-
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             task_queue = job_form.cleaned_data.pop("_task_queue", None)
             dryrun = job_form.cleaned_data.get("dryrun", False)
@@ -1323,7 +1317,7 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job cannot be run at this time")
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")
-            elif not job_model.job_class.supports_dryrun:
+            elif not job_model.supports_dryrun:
                 messages.error(request, "This job does not support dryrun")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view

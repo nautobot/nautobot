@@ -741,6 +741,7 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "dryrun_default_override",
             "hidden",
             "hidden_override",
+            "supports_dryrun",
             "read_only",
             "soft_time_limit",
             "soft_time_limit_override",
@@ -819,7 +820,9 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
             "status",
             "user",
             "result",
+            "task_args",
             "task_kwargs",
+            "celery_kwargs",
             "scheduled_job",
         ]
 
