@@ -290,7 +290,7 @@ class TreeModelSerializerMixin(BaseModelSerializer):
     def get_field_names(self, declared_fields, info):
         """Ensure that "tree_depth" is included on root serializers only, as nested objects are not annotated."""
         fields = list(super().get_field_names(declared_fields, info))
-        if self.is_nested:
+        if self.is_nested and "tree_depth" in fields:
             fields.remove("tree_depth")
         return fields
 
@@ -475,7 +475,8 @@ class CustomFieldModelSerializerMixin(ValidatedModelSerializer):
             self.extend_field_names(fields, "computed_fields", opt_in_only=True)
         else:
             # As computed fields are expensive, do not include them in nested serializers even if opted-in at the root
-            fields.remove("computed_fields")
+            if "computed_fields" in fields:
+                fields.remove("computed_fields")
         return fields
 
 
@@ -602,7 +603,8 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
             self.extend_field_names(fields, "relationships", opt_in_only=True)
         else:
             # As relationships are expensive, do not include them on nested serializers even if opted in.
-            fields.remove("relationships")
+            if "relationships" in fields:
+                fields.remove("relationships")
         return fields
 
 
