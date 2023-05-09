@@ -84,7 +84,6 @@ class VRF(PrimaryModel):
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
     export_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="exporting_vrfs", blank=True)
 
-    csv_headers = ["name", "rd", "tenant", "enforce_unique", "description"]
     clone_fields = [
         "tenant",
         "enforce_unique",
@@ -98,15 +97,6 @@ class VRF(PrimaryModel):
 
     def __str__(self):
         return self.display or super().__str__()
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.rd,
-            self.tenant.name if self.tenant else None,
-            str(self.enforce_unique),
-            self.description,
-        )
 
     @property
     def display(self):
@@ -141,20 +131,11 @@ class RouteTarget(PrimaryModel):
         null=True,
     )
 
-    csv_headers = ["name", "description", "tenant"]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.description,
-            self.tenant.name if self.tenant else None,
-        )
 
 
 @extras_features(
@@ -175,8 +156,6 @@ class RIR(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "is_private", "description"]
-
     objects = BaseManager.from_queryset(RIRQuerySet)()
 
     class Meta:
@@ -186,13 +165,6 @@ class RIR(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            str(self.is_private),
-            self.description,
-        )
 
 
 @extras_features(
@@ -283,20 +255,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     natural_key = AttributeRemover()
 
-    csv_headers = [
-        "prefix",
-        "type",
-        "vrf",
-        "tenant",
-        "location",
-        "vlan_group",
-        "vlan",
-        "status",
-        "role",
-        "rir",
-        "date_allocated",
-        "description",
-    ]
     clone_fields = [
         "date_allocated",
         "description",
@@ -374,22 +332,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.prefix = self.prefix.cidr
 
         super().save(*args, **kwargs)
-
-    def to_csv(self):
-        return (
-            self.prefix,
-            self.get_type_display(),
-            self.vrf.name if self.vrf else None,
-            self.tenant.name if self.tenant else None,
-            self.location.name if self.location else None,
-            self.vlan.vlan_group.name if self.vlan and self.vlan.vlan_group else None,
-            self.vlan.vid if self.vlan else None,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            self.rir.name if self.rir else None,
-            str(self.date_allocated),
-            self.description,
-        )
 
     @property
     def cidr_str(self):
@@ -581,16 +523,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = [
-        "address",
-        "vrf",
-        "tenant",
-        "status",
-        "role",
-        "is_primary",
-        "dns_name",
-        "description",
-    ]
     clone_fields = [
         "vrf",
         "tenant",
@@ -700,25 +632,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
 
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
-
-    def to_csv(self):
-        # Determine if this IP is primary for a Device
-        is_primary = False
-        if self.address.version == 4 and getattr(self, "primary_ip4_for", False):
-            is_primary = True
-        elif self.address.version == 6 and getattr(self, "primary_ip6_for", False):
-            is_primary = True
-
-        return (
-            self.address,
-            self.vrf.name if self.vrf else None,
-            self.tenant.name if self.tenant else None,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            str(is_primary),
-            self.dns_name,
-            self.description,
-        )
 
     @property
     def address(self):
@@ -834,8 +747,6 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "location", "description"]
-
     class Meta:
         ordering = (
             "location",
@@ -865,14 +776,6 @@ class VLANGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.location.name if self.location else None,
-            self.description,
-        )
 
     def get_next_available_vid(self):
         """
@@ -931,16 +834,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = [
-        "location",
-        "vlan_group",
-        "vid",
-        "name",
-        "tenant",
-        "status",
-        "role",
-        "description",
-    ]
     clone_fields = [
         "location",
         "vlan_group",
@@ -990,18 +883,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
                     "vlan_group": f'The assigned group belongs to a location that does not include location "{self.location}".'
                 }
             )
-
-    def to_csv(self):
-        return (
-            self.location.name if self.location else None,
-            self.vlan_group.name if self.vlan_group else None,
-            self.vid,
-            self.name,
-            self.tenant.name if self.tenant else None,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            self.description,
-        )
 
     @property
     def display(self):
@@ -1063,15 +944,6 @@ class Service(PrimaryModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = [
-        "device",
-        "virtual_machine",
-        "name",
-        "protocol",
-        "ports",
-        "description",
-    ]
-
     class Meta:
         ordering = (
             "protocol",
@@ -1093,16 +965,6 @@ class Service(PrimaryModel):
             raise ValidationError("A service cannot be associated with both a device and a virtual machine.")
         if not self.device and not self.virtual_machine:
             raise ValidationError("A service must be associated with either a device or a virtual machine.")
-
-    def to_csv(self):
-        return (
-            self.device.name if self.device else None,
-            self.virtual_machine.name if self.virtual_machine else None,
-            self.name,
-            self.get_protocol_display(),
-            self.ports,
-            self.description,
-        )
 
     @property
     def port_list(self):

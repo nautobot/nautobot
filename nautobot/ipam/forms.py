@@ -111,7 +111,7 @@ class VRFCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = VRF
-        fields = VRF.csv_headers
+        fields = []  # TODO
 
 
 class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -169,7 +169,7 @@ class RouteTargetCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = RouteTarget
-        fields = RouteTarget.csv_headers
+        fields = []  # TODO
 
 
 class RouteTargetBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -222,7 +222,7 @@ class RIRForm(NautobotModelForm):
 class RIRCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = RIR
-        fields = RIR.csv_headers
+        fields = []  # TODO
         help_texts = {
             "name": "RIR name",
         }
@@ -336,7 +336,7 @@ class PrefixCSVForm(
 
     class Meta:
         model = Prefix
-        fields = Prefix.csv_headers
+        fields = []  # TODO
 
     def __init__(self, data=None, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
@@ -709,7 +709,7 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
 class VLANGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
     class Meta:
         model = VLANGroup
-        fields = VLANGroup.csv_headers
+        fields = []  # TODO
 
 
 class VLANGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -768,7 +768,7 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
 
     class Meta:
         model = VLAN
-        fields = VLAN.csv_headers
+        fields = []  # TODO
         help_texts = {
             "vid": "Numeric VLAN ID (1-4095)",
             "name": "VLAN name",
@@ -914,7 +914,7 @@ class ServiceCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = Service
-        fields = Service.csv_headers
+        fields = []  # TODO
 
 
 class ServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):

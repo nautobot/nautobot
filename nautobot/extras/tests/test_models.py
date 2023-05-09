@@ -1435,40 +1435,6 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)
 
-    def test_to_csv_no_log_object(self):
-        """Check that `to_csv` returns the correct data from the JobLogEntry model."""
-        expected_data = ("2020-01-26 15:37:36", "run", "success", "", "Django Test")
-
-        joblogentry_a = JobLogEntry(
-            job_result=self.job_result,
-            log_level=LogLevelChoices.LOG_SUCCESS,
-            grouping="run",
-            message="Django Test",
-            created=datetime.datetime(2020, 1, 26, 15, 37, 36),
-            log_object="",
-            absolute_url="",
-        )
-        joblogentry_a.validated_save()
-        csv_data = joblogentry_a.to_csv()
-        self.assertEqual(expected_data, csv_data)
-
-    def test_to_csv_with_log_object(self):
-        """Check that `to_csv` returns the correct data from the JobLogEntry model."""
-        expected_data = ("2030-05-26 15:37:36", "run", "success", "ams01-dist-01", "Django Test 2")
-
-        joblogentry_a = JobLogEntry(
-            job_result=self.job_result,
-            log_level=LogLevelChoices.LOG_SUCCESS,
-            grouping="run",
-            message="Django Test 2",
-            created=datetime.datetime(2030, 5, 26, 15, 37, 36),
-            log_object="ams01-dist-01",
-            absolute_url="https://nautobot.io/dcim/devices/8d769e14-286a-489c-b705-bd15c476abbb",
-        )
-        joblogentry_a.validated_save()
-        csv_data = joblogentry_a.to_csv()
-        self.assertEqual(expected_data, csv_data)
-
 
 class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
     def test_type_error_not_raised_when_calling_check_for_conflicts(self):

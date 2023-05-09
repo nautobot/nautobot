@@ -278,7 +278,7 @@ class LocationTypeCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = LocationType
-        fields = LocationType.csv_headers
+        fields = []  # TODO
 
 
 class LocationTypeFilterForm(NautobotFilterForm):
@@ -399,7 +399,7 @@ class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
     class Meta:
         model = Location
-        fields = Location.csv_headers
+        fields = []  # TODO
         help_texts = {
             "time_zone": mark_safe(
                 'Time zone (<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>)'
@@ -457,7 +457,7 @@ class RackGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
 
     class Meta:
         model = RackGroup
-        fields = RackGroup.csv_headers
+        fields = []  # TODO
 
 
 class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -537,7 +537,7 @@ class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModel
 
     class Meta:
         model = Rack
-        fields = Rack.csv_headers
+        fields = []  # TODO
 
     def __init__(self, data=None, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
@@ -794,7 +794,7 @@ class ManufacturerForm(NautobotModelForm):
 class ManufacturerCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = Manufacturer
-        fields = Manufacturer.csv_headers
+        fields = []  # TODO
 
 
 #
@@ -1583,7 +1583,7 @@ class PlatformCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = Platform
-        fields = Platform.csv_headers
+        fields = []  # TODO
 
 
 #
@@ -2166,7 +2166,7 @@ class ConsolePortCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = ConsolePort
-        fields = ConsolePort.csv_headers
+        fields = []  # TODO
 
 
 #
@@ -2233,7 +2233,7 @@ class ConsoleServerPortCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = ConsoleServerPort
-        fields = ConsoleServerPort.csv_headers
+        fields = []  # TODO
 
 
 #
@@ -2317,7 +2317,7 @@ class PowerPortCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = PowerPort
-        fields = PowerPort.csv_headers
+        fields = []  # TODO
 
 
 #
@@ -2441,7 +2441,7 @@ class PowerOutletCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = PowerOutlet
-        fields = PowerOutlet.csv_headers
+        fields = []  # TODO
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -2861,7 +2861,7 @@ class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
 
     class Meta:
         model = Interface
-        fields = Interface.csv_headers
+        fields = []  # TODO
 
     def clean_enabled(self):
         # Make sure enabled is True when it's not included in the uploaded data
@@ -3010,7 +3010,7 @@ class FrontPortCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = FrontPort
-        fields = FrontPort.csv_headers
+        fields = []  # TODO
         help_texts = {
             "rear_port_position": "Mapped position on corresponding rear port",
         }
@@ -3118,7 +3118,7 @@ class RearPortCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = RearPort
-        fields = RearPort.csv_headers
+        fields = []  # TODO
         help_texts = {"positions": "Number of front ports which may be mapped"}
 
 
@@ -3200,7 +3200,7 @@ class DeviceBayCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = DeviceBay
-        fields = DeviceBay.csv_headers
+        fields = []  # TODO
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -3295,7 +3295,7 @@ class InventoryItemCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = InventoryItem
-        fields = InventoryItem.csv_headers
+        fields = []  # TODO
 
 
 class InventoryItemBulkCreateForm(
@@ -3953,7 +3953,7 @@ class VirtualChassisCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = VirtualChassis
-        fields = VirtualChassis.csv_headers
+        fields = []  # TODO
 
 
 class VirtualChassisFilterForm(NautobotFilterForm):
@@ -4003,7 +4003,7 @@ class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
 
     class Meta:
         model = PowerPanel
-        fields = PowerPanel.csv_headers
+        fields = []  # TODO
 
     def __init__(self, data=None, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
@@ -4112,7 +4112,7 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
 
     class Meta:
         model = PowerFeed
-        fields = PowerFeed.csv_headers
+        fields = []  # TODO
 
     def __init__(self, data=None, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
@@ -4266,4 +4266,4 @@ class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVF
 
     class Meta:
         model = DeviceRedundancyGroup
-        fields = DeviceRedundancyGroup.csv_headers
+        fields = []  # TODO

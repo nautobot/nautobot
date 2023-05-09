@@ -65,7 +65,7 @@ class ProviderForm(NautobotModelForm):
 class ProviderCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = Provider
-        fields = Provider.csv_headers
+        fields = []  # TODO
 
 
 class ProviderBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -173,7 +173,7 @@ class CircuitTypeForm(NautobotModelForm):
 class CircuitTypeCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = CircuitType
-        fields = CircuitType.csv_headers
+        fields = []  # TODO
         help_texts = {
             "name": "Name of circuit type",
         }

@@ -15,19 +15,11 @@ class ExampleModel(OrganizationalModel):
     name = models.CharField(max_length=20, help_text="The name of this Example.")
     number = models.IntegerField(default=100, help_text="The number of this Example.")
 
-    csv_headers = ["name", "number"]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} - {self.number}"
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.number,
-        )
 
 
 @extras_features(

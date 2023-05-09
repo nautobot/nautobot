@@ -26,7 +26,7 @@ class ExampleModelCSVForm(CSVModelForm):
 
     class Meta:
         model = ExampleModel
-        fields = ExampleModel.csv_headers
+        fields = []  # TODO
 
 
 class ExampleModelFilterForm(BootstrapMixin, forms.Form):

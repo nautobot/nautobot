@@ -629,7 +629,7 @@ class GitRepositoryCSVForm(CSVModelForm):
 
     class Meta:
         model = GitRepository
-        fields = GitRepository.csv_headers
+        fields = []  # TODO
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1270,7 +1270,7 @@ class RoleCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = Role
-        fields = Role.csv_headers
+        fields = []  # TODO
         help_texts = {
             "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
         }
@@ -1306,7 +1306,7 @@ class SecretForm(NautobotModelForm):
 class SecretCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = Secret
-        fields = Secret.csv_headers
+        fields = []  # TODO
 
 
 def provider_choices_with_blank():
@@ -1384,7 +1384,7 @@ class StatusCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = Status
-        fields = Status.csv_headers
+        fields = []  # TODO
         help_texts = {
             "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
         }
@@ -1447,7 +1447,7 @@ class TagCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = Tag
-        fields = Tag.csv_headers
+        fields = []  # TODO
         help_texts = {
             "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
         }

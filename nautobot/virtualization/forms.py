@@ -70,7 +70,7 @@ class ClusterTypeForm(NautobotModelForm):
 class ClusterTypeCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = ClusterType
-        fields = ClusterType.csv_headers
+        fields = []  # TODO
 
 
 #
@@ -90,7 +90,7 @@ class ClusterGroupForm(NautobotModelForm):
 class ClusterGroupCSVForm(CustomFieldModelCSVForm):
     class Meta:
         model = ClusterGroup
-        fields = ClusterGroup.csv_headers
+        fields = []  # TODO
 
 
 #
@@ -137,7 +137,7 @@ class ClusterCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
 
     class Meta:
         model = Cluster
-        fields = Cluster.csv_headers
+        fields = []  # TODO
 
 
 class ClusterBulkEditForm(
@@ -350,7 +350,7 @@ class VirtualMachineCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, Cust
 
     class Meta:
         model = VirtualMachine
-        fields = VirtualMachine.csv_headers
+        fields = []  # TODO
 
 
 class VirtualMachineBulkEditForm(
@@ -605,7 +605,7 @@ class VMInterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
 
     class Meta:
         model = VMInterface
-        fields = VMInterface.csv_headers
+        fields = []  # TODO
 
     def clean_enabled(self):
         # Make sure enabled is True when it's not included in the uploaded data

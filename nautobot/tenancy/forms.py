@@ -44,7 +44,7 @@ class TenantGroupCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = TenantGroup
-        fields = TenantGroup.csv_headers
+        fields = []  # TODO
 
 
 #
@@ -77,7 +77,7 @@ class TenantCSVForm(CustomFieldModelCSVForm):
 
     class Meta:
         model = Tenant
-        fields = Tenant.csv_headers
+        fields = []  # TODO
 
 
 class TenantBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
