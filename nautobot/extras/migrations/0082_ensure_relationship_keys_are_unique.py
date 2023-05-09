@@ -9,6 +9,8 @@ def ensure_relationship_keys_are_unique(apps, schema_editor):
 
     relationship_keys = []
 
+    # Make sure that relationship keys are unique by appending counters
+    # and log messages if the old keys are changed.
     for rel in Relationship.objects.all().order_by("created"):
         original_rel_key = rel.key
         rel_key = slugify_dashes_to_underscores(original_rel_key)
