@@ -1121,7 +1121,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class RelationshipTestCase(FilterTestCases.NameSlugFilterTestCase):
+class RelationshipTestCase(FilterTestCases.FilterTestCase):
     queryset = Relationship.objects.all()
     filterset = RelationshipFilterSet
 
@@ -1152,6 +1152,22 @@ class RelationshipTestCase(FilterTestCases.NameSlugFilterTestCase):
             source_type=device_type,
             destination_type=interface_type,
         ).validated_save()
+
+    def test_label(self):
+        """Verify that the filterset supports filtering by label."""
+        params = {"label": list(self.queryset.values_list("label", flat=True)[:2])}
+        filterset = self.filterset(params, self.queryset)
+        self.assertTrue(filterset.is_valid())
+        self.assertQuerysetEqualAndNotEmpty(
+            filterset.qs.order_by("label"), self.queryset.filter(label__in=params["label"]).order_by("label")
+        )
+
+    def test_key(self):
+        """Verify that the filterset supports filtering by key."""
+        params = {"key": self.queryset.values_list("key", flat=True)[:2]}
+        filterset = self.filterset(params, self.queryset)
+        self.assertTrue(filterset.is_valid())
+        self.assertEqual(filterset.qs.count(), 2)
 
     def test_type(self):
         params = {"type": ["one-to-many"]}
@@ -1202,7 +1218,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
             relationship.validated_save()
 
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", key="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.devices = (
@@ -1320,7 +1336,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
             relationship.validated_save()
 
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", key="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.devices = (

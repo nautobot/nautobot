@@ -30,7 +30,7 @@ def ensure_relationship_keys_are_unique(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0081_alter_relationship_key_field"),
+        ("extras", "0081_rename_relationship_name_to_label"),
     ]
 
     operations = [

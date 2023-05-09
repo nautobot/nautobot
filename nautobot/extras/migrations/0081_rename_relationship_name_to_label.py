@@ -6,7 +6,7 @@ import nautobot.core.models.fields
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0080_rename_relationship_attributes"),
+        ("extras", "0080_rename_relationship_slug_to_key"),
     ]
 
     operations = [

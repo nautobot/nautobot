@@ -2328,21 +2328,21 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
     create_data = [
         {
             "label": "Device VLANs",
-            "key": "device-vlans",
+            "key": "device_vlans",
             "type": "many-to-many",
             "source_type": "ipam.vlan",
             "destination_type": "dcim.device",
         },
         {
             "label": "Primary VLAN",
-            "key": "primary-vlan",
+            "key": "primary_vlan",
             "type": "one-to-many",
             "source_type": "ipam.vlan",
             "destination_type": "dcim.device",
         },
         {
             "label": "Primary Interface",
-            "key": "primary-interface",
+            "key": "primary_interface",
             "type": "one-to-one",
             "source_type": "dcim.device",
             "source_label": "primary interface",
@@ -2360,7 +2360,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
     ]
 
     bulk_update_data = {
-        "source_filter": {"key": ["some-key"]},
+        "source_filter": {"slug": ["some-slug"]},
     }
     choices_fields = ["destination_type", "source_type", "type", "required_on"]
     slug_source = "label"
