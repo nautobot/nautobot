@@ -678,7 +678,7 @@ class JobResult(BaseModel, CustomFieldModel):
             job_model (Job): The Job to be enqueued for execution
             user (User): User object to link to the JobResult instance
             celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
-            profile (bool, optional): Whether to dumps cProfile stats on the job execution
+            profile (bool, optional): Whether to dump cProfile stats on the job execution
             schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult
             task_queue (str, optional): The celery queue to send the job to
             *job_args: positional args passed to the job task
