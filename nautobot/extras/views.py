@@ -1087,7 +1087,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     initial = job_result.task_kwargs.copy()
                     task_queue = job_result.celery_kwargs.get("queue", None)
                     if task_queue is not None:
-                        initial.setdefault("_task_queue", task_queue)
+                        initial["_task_queue"] = task_queue
+                    initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(

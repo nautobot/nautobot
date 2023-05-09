@@ -1682,6 +1682,37 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
+    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
+    def test_rerun_job(self, mock_task_queues_as_choices):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": self.test_required_args.id,
+            "nautobot_job_profile": True,
+            "nautobot_job_user_id": self.user.id,
+            "queue": "uniquequeue",
+        }
+
+        previous_result = JobResult.objects.create(
+            job_model=self.test_required_args,
+            user=self.user,
+            task_kwargs={"var": "456"},
+            celery_kwargs=job_celery_kwargs,
+        )
+
+        run_url = reverse("extras:job_run", kwargs={"slug": self.test_required_args.slug})
+        response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(
+            '<input type="text" name="var" value="456" class="form-control form-control" required placeholder="None" id="id_var">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
+
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
         self.add_permissions("extras.run_job")
