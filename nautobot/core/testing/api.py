@@ -568,6 +568,7 @@ class APIViewTestCases:
             # Redefine object-level permission for PATCH
             obj_perm.actions = ["change"]
             obj_perm.save()
+
             # Send empty PATCH request
             response = self.client.patch(url, {}, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -598,6 +599,33 @@ class APIViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+
+        def test_get_put_round_trip(self):
+            """GET and then PUT an object and verify that it's accepted and unchanged."""
+            self.maxDiff = None
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view", "change"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            instance = self._get_queryset().first()
+            url = self._get_detail_url(instance)
+
+            # GET object representation
+            get_response = self.client.get(url + "?include=computed_fields&include=relationships", **self.header)
+            self.assertHttpStatus(get_response, status.HTTP_200_OK)
+            initial_serialized_object = get_response.json()
+
+            # PUT same object representation
+            put_response = self.client.put(url, initial_serialized_object, format="json", **self.header)
+            self.assertHttpStatus(put_response, status.HTTP_200_OK, initial_serialized_object)
+            updated_serialized_object = put_response.json()
+
+            # Work around for https://github.com/nautobot/nautobot/issues/3321
+            initial_serialized_object.pop("last_updated", None)
+            updated_serialized_object.pop("last_updated", None)
+            self.assertEqual(initial_serialized_object, updated_serialized_object)
 
         def test_bulk_update_objects(self):
             """

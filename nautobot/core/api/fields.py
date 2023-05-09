@@ -50,9 +50,18 @@ class ChoiceField(serializers.Field):
                 return data
             raise ValidationError("This field may not be blank.")
 
+        if isinstance(data, dict):
+            if "value" in data:
+                data = data["value"]
+            else:
+                raise ValidationError(
+                    'Value must be passed directly (e.g. "foo": 123) '
+                    'or as a dict with key "value" (e.g. "foo": {"value": 123}).'
+                )
+
         # Provide an explicit error message if the request is trying to write a dict or list
-        if isinstance(data, (dict, list)):
-            raise ValidationError('Value must be passed directly (e.g. "foo": 123); do not use a dictionary or list.')
+        if isinstance(data, list):
+            raise ValidationError('Value must be passed directly (e.g. "foo": 123); do not use a list.')
 
         # Check for string representations of boolean/integer values
         if hasattr(data, "lower"):

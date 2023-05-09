@@ -327,6 +327,8 @@ class ManufacturerSerializer(NautobotModelSerializer):
 
 class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
+    front_image = serializers.ImageField(allow_null=True, required=False)
+    rear_image = serializers.ImageField(allow_null=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -575,6 +577,7 @@ class InterfaceSerializer(
 ):
     type = ChoiceField(choices=InterfaceTypeChoices)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
+    mac_address = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     ip_address_count = serializers.IntegerField(read_only=True)
 
     class Meta:

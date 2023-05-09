@@ -1460,6 +1460,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
+                "mac_address": "00-01-02-03-04-05",
             },
             {
                 "device": cls.devices[0].pk,
