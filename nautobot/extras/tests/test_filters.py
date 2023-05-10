@@ -1134,7 +1134,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class RelationshipTestCase(FilterTestCases.NameSlugFilterTestCase):
+class RelationshipTestCase(FilterTestCases.FilterTestCase):
     queryset = Relationship.objects.all()
     filterset = RelationshipFilterSet
 
@@ -1145,26 +1145,42 @@ class RelationshipTestCase(FilterTestCases.NameSlugFilterTestCase):
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
         Relationship(
-            name="Device VLANs",
-            slug="device-vlans",
+            label="Device VLANs",
+            key="device_vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         ).validated_save()
         Relationship(
-            name="Primary VLAN",
-            slug="primary-vlan",
+            label="Primary VLAN",
+            key="primary_vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
         ).validated_save()
         Relationship(
-            name="Primary Interface",
-            slug="primary-interface",
+            label="Primary Interface",
+            key="primary_interface",
             type="one-to-one",
             source_type=device_type,
             destination_type=interface_type,
         ).validated_save()
+
+    def test_label(self):
+        """Verify that the filterset supports filtering by label."""
+        params = {"label": list(self.queryset.values_list("label", flat=True)[:2])}
+        filterset = self.filterset(params, self.queryset)
+        self.assertTrue(filterset.is_valid())
+        self.assertQuerysetEqualAndNotEmpty(
+            filterset.qs.order_by("label"), self.queryset.filter(label__in=params["label"]).order_by("label")
+        )
+
+    def test_key(self):
+        """Verify that the filterset supports filtering by key."""
+        params = {"key": self.queryset.values_list("key", flat=True)[:2]}
+        filterset = self.filterset(params, self.queryset)
+        self.assertTrue(filterset.is_valid())
+        self.assertEqual(filterset.qs.count(), 2)
 
     def test_type(self):
         params = {"type": ["one-to-many"]}
@@ -1190,22 +1206,22 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
 
         cls.relationships = (
             Relationship(
-                name="Device VLANs",
-                slug="device-vlans",
+                label="Device VLANs",
+                key="device_vlans",
                 type="many-to-many",
                 source_type=cls.device_type,
                 destination_type=cls.vlan_type,
             ),
             Relationship(
-                name="Primary VLAN",
-                slug="primary-vlan",
+                label="Primary VLAN",
+                key="primary_vlan",
                 type="one-to-many",
                 source_type=cls.vlan_type,
                 destination_type=cls.device_type,
             ),
             Relationship(
-                name="Device Device",
-                slug="symmetric-device-device",
+                label="Device Device",
+                key="symmetric_device_device",
                 type="symmetric-many-to-many",
                 source_type=cls.device_type,
                 destination_type=cls.device_type,
@@ -1272,7 +1288,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         ).validated_save()
 
     def test_relationship(self):
-        params = {"relationship": [self.relationships[0].slug]}
+        params = {"relationship": [self.relationships[0].key]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_source_type(self):
@@ -1308,22 +1324,22 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         cls.vlan_type = ContentType.objects.get_for_model(VLAN)
         cls.relationships = (
             Relationship(
-                name="Device VLANs",
-                slug="device-vlans",
+                label="Device VLANs",
+                key="device_vlans",
                 type="many-to-many",
                 source_type=cls.device_type,
                 destination_type=cls.vlan_type,
             ),
             Relationship(
-                name="Primary VLAN",
-                slug="primary-vlan",
+                label="Primary VLAN",
+                key="primary_vlan",
                 type="one-to-many",
                 source_type=cls.vlan_type,
                 destination_type=cls.device_type,
             ),
             Relationship(
-                name="Device Peers",
-                slug="device-peers",
+                label="Device Peers",
+                key="device_peers",
                 type="symmetric-many-to-many",
                 source_type=cls.device_type,
                 destination_type=cls.device_type,
@@ -1411,7 +1427,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.queryset = Device.objects.all()
         self.filterset = DeviceFilterSet
         self.assertEqual(
-            self.filterset({f"cr_{self.relationships[1].slug}__source": [self.vlans[0].pk]}, self.queryset).qs.count(),
+            self.filterset({f"cr_{self.relationships[1].key}__source": [self.vlans[0].pk]}, self.queryset).qs.count(),
             3,
         )
 
@@ -1420,7 +1436,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.filterset = VLANFilterSet
         self.assertEqual(
             self.filterset(
-                {f"cr_{self.relationships[1].slug}__destination": [self.devices[0].pk, self.devices[1].pk]},
+                {f"cr_{self.relationships[1].key}__destination": [self.devices[0].pk, self.devices[1].pk]},
                 self.queryset,
             ).qs.count(),
             1,
@@ -1431,7 +1447,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.filterset = VLANFilterSet
         self.assertEqual(
             self.filterset(
-                {f"cr_{self.relationships[0].slug}__source": [self.devices[0].pk, self.devices[1].pk]}, self.queryset
+                {f"cr_{self.relationships[0].key}__source": [self.devices[0].pk, self.devices[1].pk]}, self.queryset
             ).qs.count(),
             2,
         )
@@ -1441,7 +1457,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.filterset = DeviceFilterSet
         self.assertEqual(
             self.filterset(
-                {f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk]}, self.queryset
+                {f"cr_{self.relationships[0].key}__destination": [self.vlans[0].pk, self.vlans[1].pk]}, self.queryset
             ).qs.count(),
             2,
         )
@@ -1451,12 +1467,12 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.filterset = DeviceFilterSet
         self.assertEqual(
             self.filterset(
-                {f"cr_{self.relationships[2].slug}__peer": [self.devices[0].pk, self.devices[1].pk]}, self.queryset
+                {f"cr_{self.relationships[2].key}__peer": [self.devices[0].pk, self.devices[1].pk]}, self.queryset
             ).qs.count(),
             3,
         )
         self.assertEqual(
-            self.filterset({f"cr_{self.relationships[2].slug}__peer": [self.devices[2].pk]}, self.queryset).qs.count(),
+            self.filterset({f"cr_{self.relationships[2].key}__peer": [self.devices[2].pk]}, self.queryset).qs.count(),
             2,
         )
 
@@ -1466,8 +1482,8 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(
             self.filterset(
                 {
-                    f"cr_{self.relationships[2].slug}__peer": [self.devices[0].pk, self.devices[1].pk],
-                    f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                    f"cr_{self.relationships[2].key}__peer": [self.devices[0].pk, self.devices[1].pk],
+                    f"cr_{self.relationships[0].key}__destination": [self.vlans[0].pk, self.vlans[1].pk],
                 },
                 self.queryset,
             ).qs.count(),
@@ -1476,8 +1492,8 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(
             self.filterset(
                 {
-                    f"cr_{self.relationships[2].slug}__peer": [self.devices[2].pk],
-                    f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                    f"cr_{self.relationships[2].key}__peer": [self.devices[2].pk],
+                    f"cr_{self.relationships[0].key}__destination": [self.vlans[0].pk, self.vlans[1].pk],
                 },
                 self.queryset,
             ).qs.count(),
@@ -1496,7 +1512,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(
             self.filterset(
                 {
-                    f"cr_{self.relationships[0].slug}__destination": [self.vlans[0].pk, self.vlans[1].pk],
+                    f"cr_{self.relationships[0].key}__destination": [self.vlans[0].pk, self.vlans[1].pk],
                     "manufacturer": ["manufacturer-1"],
                 },
                 self.queryset,

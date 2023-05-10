@@ -792,7 +792,7 @@ class ObjectChangeFilterSet(BaseFilterSet):
 class RelationshipFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
+            "label": "icontains",
             "description": "icontains",
         }
     )
@@ -804,15 +804,15 @@ class RelationshipFilterSet(BaseFilterSet):
 
     class Meta:
         model = Relationship
-        fields = ["id", "name", "slug", "type", "source_type", "destination_type"]
+        fields = ["id", "label", "key", "type", "source_type", "destination_type"]
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
     relationship = django_filters.ModelMultipleChoiceFilter(
-        field_name="relationship__slug",
+        field_name="relationship__key",
         queryset=Relationship.objects.all(),
-        to_field_name="slug",
-        label="Relationship (slug)",
+        to_field_name="key",
+        label="Relationship (key)",
     )
     source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
     destination_type = ContentTypeMultipleChoiceFilter(
