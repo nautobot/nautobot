@@ -1,29 +1,36 @@
-import { Table } from '@nautobot/nautobot-ui';
+import { Table, Box, TableContainer, Tbody, Thead, Tr, Th, Td } from '@nautobot/nautobot-ui';
+import GenericView from "@views/generic/GenericView";
 
 export function CustomTableView(props) {
   return (
-    <Table striped bordered hover>
-      <thead>
-        <tr>
-          <th>Key</th>
-          <th>Value</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>ID</td>
-          <td>{props.id}</td>
-        </tr>
-        <tr>
-          <td>Display</td>
-          <td>{props.display}</td>
-        </tr>
-        <tr>
-          <td>URL</td>
-          <td>{props.url}</td>
-        </tr>
-      </tbody>
-    </Table>
+  <GenericView>
+    <Box background="white-0" borderRadius="md" padding="md">
+      <TableContainer>
+        <Table>
+              <Thead>
+                <Th>Key</Th>
+                <Th>Value</Th>
+              </Thead>
+            <Tbody>
+              <Tr>
+                <Td>ID</Td>
+                <Td>{props.id}</Td>
+              </Tr>
+              <Tr>
+                <Td>Display</Td>
+                <Td>{props.display}</Td>
+              </Tr>
+              <Tr>
+                <Td>URL</Td>
+                <Td>{props.url}</Td>
+              </Tr>
+            </Tbody>
+          </Table>
+      </TableContainer>
+      
+    </Box>
+      
+    </GenericView>
   );
 }
 

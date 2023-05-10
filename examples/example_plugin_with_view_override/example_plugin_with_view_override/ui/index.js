@@ -1,6 +1,5 @@
 export { default as PluginFullWidthPageComponent } from "./FullWidthPage.jsx";
-// export { default as ExamplePluginRetrieveViewOverride } from "./CustomView";
-export { default as ExamplePluginRetrieveViewOverride } from "./RetrieveView";
+export { default as ExamplePluginRetrieveViewOverride } from "./CustomView";
 
 const plugin_config = {
     full_width_components: {
