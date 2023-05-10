@@ -1,7 +1,8 @@
 export { default as PluginFullWidthPageComponent } from "./FullWidthPage.jsx";
 export { default as ExamplePluginRetrieveViewOverride } from "./CustomView"
+export { default as ExamplePluginNonModelView } from "./NonModelView.jsx"
 
-const plugin_config = {
+const app_config = {
     full_width_components: {
         "dcim:sites": ["PluginFullWidthPageComponent"]
     },
@@ -11,7 +12,26 @@ const plugin_config = {
         "ipam:ip-addresses": {
             "retrieve": "ExamplePluginRetrieveViewOverride"
         }
-    }
+    },
+    routes: [
+        {
+            component: "ExamplePluginNonModelView",
+            name: "Inventory",
+            groups: [
+                {
+                    name: "Example App With View Override",
+                    weight: 150,
+                    items: [
+                        {
+                            name: "Non Model View",
+                            weight: 100,
+                            path: "/non-model-view/",
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
 }
 
-export default plugin_config
+export default app_config
