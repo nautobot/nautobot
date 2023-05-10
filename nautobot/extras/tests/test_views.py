@@ -1713,7 +1713,7 @@ class JobTestCase(
             celery_kwargs=job_celery_kwargs,
         )
 
-        run_url = reverse("extras:job_run", kwargs={"slug": self.test_required_args.slug})
+        run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
         response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
         content = extract_page_body(response.content.decode(response.charset))
 

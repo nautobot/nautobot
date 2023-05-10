@@ -581,9 +581,7 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
     crontab = serializer.get("crontab", "")
 
     celery_kwargs = {
-        "nautobot_job_user_id": user.id,
         "nautobot_job_profile": False,
-        "nautobot_job_job_model_id": job_model.id,
         "queue": task_queue,
     }
 

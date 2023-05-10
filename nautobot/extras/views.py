@@ -1177,7 +1177,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     else:
                         schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
-                celery_kwargs = {"user_id": request.user.id, "profile": profile, "queue": task_queue}
+                celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
                     task=job_model.job_class.registered_name,

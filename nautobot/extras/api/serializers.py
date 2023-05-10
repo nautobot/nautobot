@@ -446,8 +446,6 @@ class ScheduledJobSerializer(BaseModelSerializer):
 
 class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
-    job_model = JobSerializer(read_only=True)
-    scheduled_job = ScheduledJobSerializer(read_only=True)
 
     class Meta:
         model = JobResult
