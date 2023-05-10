@@ -108,7 +108,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         """
         Check the GraphQL validation method on CustomField Key Attribute.
         """
-        # Check if it catches the cf.key starting with a digit.
+        # Check if it catches the cpf.key starting with a digit.
         cpf1 = ComputedField(
             label="Test 1",
             key="12_test_1",
@@ -120,7 +120,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
         )
-        # Check if it catches the cf.key with whitespace.
+        # Check if it catches the cpf.key with whitespace.
         cpf1.key = "test 1"
         with self.assertRaises(ValidationError) as error:
             cpf1.validated_save()
@@ -128,16 +128,16 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
         )
-        # Check if it catches the cf.key with hyphens.
-        cpf1.key = "test-1-custom-field"
+        # Check if it catches the cpf.key with hyphens.
+        cpf1.key = "test-1-computed-field"
         with self.assertRaises(ValidationError) as error:
             cpf1.validated_save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
         )
-        # Check if it catches the cf.key with special characters
-        cpf1.key = "test_1_custom_f)(&d"
+        # Check if it catches the cpf.key with special characters
+        cpf1.key = "test_1_computed_f)(&d"
         with self.assertRaises(ValidationError) as error:
             cpf1.validated_save()
         self.assertIn(
