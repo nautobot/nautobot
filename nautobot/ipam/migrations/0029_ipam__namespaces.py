@@ -5,7 +5,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 import nautobot.extras.models.mixins
 import nautobot.ipam.models
-import taggit.managers
 import uuid
 
 
@@ -96,7 +95,7 @@ class Migration(migrations.Migration):
                         to="dcim.location",
                     ),
                 ),
-                ("tags", nautobot.core.models.fields.TagsField(through='extras.TaggedItem', to='extras.Tag')),
+                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
                 "abstract": False,
