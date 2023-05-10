@@ -416,10 +416,6 @@ http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/ | jq '.
     "id": "0e19e475-89c9-4cf4-8b5f-a0589f0950cd",
     "display": "Campus-01",
     "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
-    "custom_fields": {
-        "example_plugin_auto_custom_field": null
-    },
-    "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
     "tree_depth": 0,
     "time_zone": "Asia/Baghdad",
     "circuit_count": 7,
@@ -449,14 +445,26 @@ http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/ | jq '.
     "tenant": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
     "tags": [
         "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/",
-    ]
+    ],
+    "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
+    "custom_fields": {
+        "example_plugin_auto_custom_field": null
+    }
 }
 ```
 
 #### ?depth=1
 
-When `?depth=1` is added to the query parameters, all object-related fields, instead of being represented as UUIDs as they are when `?depth=0`, will be replaced by the related models' serializers.
-For example, `LocationSerializer`'s `location_type` field will be replaced by the `LocationTypeSerializer` and `LocationSerializer`'s `parent` field will be replaced by a Nested `LocationSerializer`:
+When `?depth=1` is added to the query parameters, all object-related fields, instead of being represented as UUIDs as they are when `?depth=0`, will be represented as nested objects, similar (**but not necessarily identical!**) to the objects that would be retrieved when querying the API directly for those related objects.
+
+!!! important
+    Nested objects retrieved with a greater-than-zero `depth` parameter do not necessarily include all fields that would be included on the fully detailed object that can be retrieved by querying their `url` directly. In particular:
+
+    - Nested objects *will not include* a field for `tags` or any other many-to-many relations on the object (such as a `Status` object's `content_types` relation).
+    - Nested objects *will not include* the `relationships` or `computed_fields` keys, even if those are [opted-in](#retrieving-object-relationships-and-relationship-associations) on the request.
+    - Nested objects *may omit* any derived (non-database) attributes, such as related object counts, tree-depth information, etc.
+
+For example, retrieving a `Location` with `?depth=1` would provide nested objects for the `status`, `parent`, `location_type`, `tenant`, and `tags` fields:
 
 ```no-highlight
 curl -s -X GET \
@@ -473,10 +481,6 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
         "url": "http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/",
         "custom_fields": {},
         "notes_url": "http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/notes/",
-        "content_types": [
-            "dcim.interface",
-            "dcim.location",
-        ],
         "created": "2023-04-12T00:00:00Z",
         "last_updated": "2023-04-12T19:25:51.413824Z",
         "name": "Active",
@@ -512,12 +516,6 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
         "parent": null,
         "location_type": "http://nautobot/api/extras/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
         "tenant": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
-        "tags": [
-            "http://nautobot/api/extras/tags/6e8ce6c9-0a8c-4731-b02a-b2ec19db5c52/",
-            "http://nautobot/api/extras/tags/1e986e5d-099d-4742-bfa5-16363abea5fd/",
-            "http://nautobot/api/extras/tags/21afbdad-c782-4fc5-9b3b-7b59273bb08c/",
-            "http://nautobot/api/extras/tags/0118b994-9943-4295-946b-92b27efe15db/"
-        ]
     },
     "location_type": {
         "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
@@ -526,11 +524,6 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
         "custom_fields": {},
         "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
         "tree_depth": null,
-        "content_types": [
-            "ipam.vlan",
-            "dcim.rackgroup",
-            "ipam.vlangroup"
-        ],
         "created": "2023-04-12T19:29:06.707759Z",
         "last_updated": "2023-04-12T19:29:06.716482Z",
         "name": "Building",
@@ -551,7 +544,6 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
         "description": "Citizen father policy door science light. Glass improve place understand against ground.\nLarge firm per sing. Item they side walk test open tend.",
         "comments": "",
         "tenant_group": null,
-        "tags": []
     },
     "tags": [
         {
@@ -560,11 +552,6 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
             "url": "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/",
             "custom_fields": {},
             "notes_url": "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/notes/",
-            "content_types": [
-                "dcim.location",
-                "tenancy.tenant",
-                "virtualization.cluster"
-            ],
             "name": "Light blue",
             "slug": "light-blue",
             "created": "2023-04-12T19:29:05.753433Z",
@@ -576,10 +563,17 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
 }
 ```
 
-### ?depth=2 and beyond
+!!! note
+    As previously explained, note that the `status` nested object included in this response does not include the `content_types` many-to-many relation that exists on all Status objects. If this information is needed, you would need to directly query the URL of the status object itself (above, `http://nautobot/api/extras/statuses/91a53d61-4180-4820-835d-533b34dbb5b4/`) to get a fully detailed response. Similarly, the `parent` and `tenant` nested objects do not include their `tags` relations, the `parent` object does not include its derived `tree_depth` and related object counters, and the `tags` nested object list does not include the `content_types` for each `Tag`.
 
-A higher depth parameter in the query presents you with more insight to the object and is very useful in situations that demand information of an indirectly related field of the object.
-E.g. If you need information on the `parent` of a `location` instance's `parent`.
+#### ?depth=2 and beyond
+
+A higher `depth` parameter in the query presents you with more insight to the object and can be useful in situations that demand information of an indirectly related field of the object.
+
+!!! important
+    Using higher `depth` values may substantially increase the amount of time it takes for the REST API to respond to your query when there are a large number of related objects. In some cases it may be more efficient to initially query with a lower `depth` and then follow the `url` values that the REST API response provides for specific related objects to query those objects directly as a more narrowly focused query approach.
+
+For example, if you need information on the `parent` of a `location` instance's `parent`.
 
 ```no-highlight
 curl -s -X GET \
@@ -594,29 +588,22 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
         ...
         "status": {
             "id": "39ea1ea4-3028-4a81-81e0-24a5743d3657",
-            "display": "Retired",
             "url": "http://nautobot/api/extras/statuses/39ea1ea4-3028-4a81-81e0-24a5743d3657/",
-            "custom_fields": {},
+            "display": "Retired",
+            "object_type": "extras.status",
             "notes_url": "http://nautobot/api/extras/statuses/39ea1ea4-3028-4a81-81e0-24a5743d3657/notes/",
-            "content_types": [
-                "dcim.location",
-                "dcim.deviceredundancygroup"
-            ],
             "created": "2023-04-12T00:00:00Z",
             "last_updated": "2023-04-12T19:26:16.982697Z",
             "name": "Retired",
             "color": "f44336",
-            "description": "Location has been retired"
+            "description": "Location has been retired",
+            "custom_fields": {}
         },
         "parent": {
             "id": "0e19e475-89c9-4cf4-8b5f-a0589f0950cd",
-            "display": "Campus-01",
             "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
-            "custom_fields": {
-                "example_plugin_auto_custom_field": null
-            },
-            "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
-            "tree_depth": null,
+            "display": "Campus-01",
+            "object_type": "dcim.location",
             "time_zone": "Asia/Baghdad",
             "created": "2023-04-12T19:29:06.884754Z",
             "last_updated": "2023-04-12T19:29:06.906503Z",
@@ -637,35 +624,26 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
             "parent": null,
             "location_type": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
             "tenant": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
-            "tags": [
-                "http://nautobot/api/extras/tags/6e8ce6c9-0a8c-4731-b02a-b2ec19db5c52/",
-                "http://nautobot/api/extras/tags/1e986e5d-099d-4742-bfa5-16363abea5fd/",
-                "http://nautobot/api/extras/tags/21afbdad-c782-4fc5-9b3b-7b59273bb08c/",
-                "http://nautobot/api/extras/tags/0118b994-9943-4295-946b-92b27efe15db/"
-            ]
+            "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
+            "custom_fields": {
+                "example_plugin_auto_custom_field": null
+            }
         },
         "location_type": {
             "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
             "display": "Campus → Building",
             "url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/",
-            "custom_fields": {},
-            "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
-            "tree_depth": null,
-            "content_types": [
-                "ipam.vlan",
-                "dcim.rackgroup",
-                "ipam.vlangroup"
-            ],
             "created": "2023-04-12T19:29:06.707759Z",
             "last_updated": "2023-04-12T19:29:06.716482Z",
             "name": "Building",
             "slug": "building",
             "description": "Protect growth bill all hair along.",
             "nestable": false,
-            "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/"
+            "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
+            "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
+            "custom_fields": {}
         },
         "tenant": null,
-        "tags": []
     },
     "location_type": {
         ...
@@ -673,21 +651,15 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
             "id": "4edcc111-e3f7-4309-ab0e-eb34c001874e",
             "display": "Campus → Building",
             "url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/",
-            "custom_fields": {},
-            "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
-            "tree_depth": null,
-            "content_types": [
-                "ipam.vlan",
-                "dcim.rackgroup",
-                "ipam.vlangroup"
-            ],
             "created": "2023-04-12T19:29:06.707759Z",
             "last_updated": "2023-04-12T19:29:06.716482Z",
             "name": "Building",
             "slug": "building",
             "description": "Protect growth bill all hair along.",
             "nestable": false,
-            "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/"
+            "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
+            "notes_url": "http://nautobot/api/dcim/location-types/4edcc111-e3f7-4309-ab0e-eb34c001874e/notes/",
+            "custom_fields": {}
         }
     },
     ...

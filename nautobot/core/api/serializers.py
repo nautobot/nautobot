@@ -8,6 +8,7 @@ from django.core.exceptions import (
     ValidationError as DjangoValidationError,
 )
 from django.db.models import AutoField, ManyToManyField
+from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
@@ -128,27 +129,33 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     - ensures that `id` field is always present on the serializer as well.
     - ensures that `created` and `last_updated` fields are always present if applicable to this model and serializer.
     - ensures that `object_type` field is always present on the serializer which represents the content-type of this
-    serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
-    PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
-    which of several possible serializers are in use for a given attribute.
-    - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function to enable the
-    dynamic generation of nested serializers.
+      serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
+      PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
+      which of several possible serializers are in use for a given attribute.
+    - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function
+      to enable the dynamic generation of nested serializers.
     """
 
-    display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     serializer_related_field = NautobotHyperlinkedRelatedField
+
+    display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
-        if "Nested" not in self.__class__.__name__:
+        if not self.is_nested:
             # We set our default depth value here to 1 because in OpenAPISchema
             # get_serializer_context() (where we get the depth from self.request.query_params) is not called
             # so in order to have enough information present in the OpenAPISchema, we set depth here to 1
             # RestAPI serializer is not affected by this because get_serializer_context() is always called
             # and depth is either passed into the request.query_params, or default to 0.
             self.Meta.depth = self.context.get("depth", 1)
+
+    @property
+    def is_nested(self):
+        """Return whether this is a nested serializer."""
+        return getattr(self.Meta, "is_nested", False)
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
@@ -159,11 +166,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     def extend_field_names(self, fields, field_name, at_start=False, opt_in_only=False):
         """Prepend or append the given field_name to `fields` and optionally self.Meta.opt_in_fields as well."""
-        if field_name not in fields:
-            if at_start:
-                fields.insert(0, field_name)
-            else:
-                fields.append(field_name)
+        if field_name in fields:
+            fields.remove(field_name)
+        if at_start:
+            fields.insert(0, field_name)
+        else:
+            fields.append(field_name)
         if opt_in_only:
             if not getattr(self.Meta, "opt_in_fields", None):
                 self.Meta.opt_in_fields = [field_name]
@@ -173,29 +181,39 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     def get_field_names(self, declared_fields, info):
         """
-        Override get_field_names() to ensure certain fields are present even when not explicitly stated in Meta.fields.
+        Override get_field_names() to add some custom logic.
 
-        DRF does not automatically add declared fields to `Meta.fields`, nor does it require that declared fields
-        on a super class be included in `Meta.fields` to allow for a subclass to include only a subset of declared
-        fields from the super. This means either we intercept and ensure the fields at this level, or
-        enforce by convention that all consumers of BaseModelSerializer include each of these standard fields in their
-        `Meta.fields` which would surely lead to errors of omission; therefore we have chosen the former approach.
+        Assuming that we follow the pattern where `fields = "__all__" for the vast majority of serializers in Nautobot,
+        we do not strictly need to use this method to protect against inadvertently omitting standard fields
+        like `display`, `created`, and `last_updated`. However, we continue to do as a bit of redundant safety.
 
-        Adds "id" and "display" to the start of `fields` for all models; also appends "created" and "last_updated"
-        to the end of `fields` if they are applicable to this model.
+        The other purpose of this method now is to manipulate the set of fields that "__all__" actually means as a
+        way of *excluding* fields that we *don't* want to include by default for performance or data exposure reasons.
         """
         fields = list(super().get_field_names(declared_fields, info))  # Meta.fields could be defined as a tuple
+
+        # Add initial fields in "reverse" order since they're each inserted at the start of the list.
         self.extend_field_names(fields, "display", at_start=True)
+        self.extend_field_names(fields, "object_type", at_start=True)
+        # Since we use HyperlinkedModelSerializer as our base class, "url" is auto-included by "__all__" but "id" isn't.
         self.extend_field_names(fields, "id", at_start=True)
+
+        # Move these fields to the end
         if hasattr(self.Meta.model, "created"):
             self.extend_field_names(fields, "created")
         if hasattr(self.Meta.model, "last_updated"):
             self.extend_field_names(fields, "last_updated")
-        # This is here for the PolymorphicProxySerializers which
-        # are looking for an object_type field (originally on WritableNestedSerializer now BaseModelSerializer)
-        self.extend_field_names(fields, "object_type", at_start=True)
-        # Eliminate all field names that start with "_" as those fields are not user-facing
-        fields = [field for field in fields if not field.startswith("_")]
+
+        def filter_field(field):
+            # Eliminate all field names that start with "_" as those fields are not user-facing
+            if field.startswith("_"):
+                return False
+            # These are expensive to look up, so we have decided not to include them on nested serializers
+            if self.is_nested and isinstance(getattr(self.Meta.model, field, None), ManyToManyDescriptor):
+                return False
+            return True
+
+        fields = [field for field in fields if filter_field(field)]
         return fields
 
     def build_field(self, field_name, info, model_class, nested_depth):
@@ -260,7 +278,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
 
 class TreeModelSerializerMixin(BaseModelSerializer):
-    """Add a `tree_depth` field to model serializers based on django-tree-queries."""
+    """Add a `tree_depth` field to non-nested model serializers based on django-tree-queries."""
 
     tree_depth = serializers.SerializerMethodField(read_only=True)
 
@@ -268,6 +286,13 @@ class TreeModelSerializerMixin(BaseModelSerializer):
     def get_tree_depth(self, obj):
         """The `tree_depth` is not a database field, but an annotation automatically added by django-tree-queries."""
         return getattr(obj, "tree_depth", None)
+
+    def get_field_names(self, declared_fields, info):
+        """Ensure that "tree_depth" is included on root serializers only, as nested objects are not annotated."""
+        fields = list(super().get_field_names(declared_fields, info))
+        if self.is_nested and "tree_depth" in fields:
+            fields.remove("tree_depth")
+        return fields
 
 
 class ValidatedModelSerializer(BaseModelSerializer):
@@ -441,10 +466,17 @@ class CustomFieldModelSerializerMixin(ValidatedModelSerializer):
         return obj.get_computed_fields()
 
     def get_field_names(self, declared_fields, info):
-        """Ensure that "custom_fields" and "computed_fields" are always included appropriately."""
+        """Ensure that "custom_fields" and "computed_fields" are included appropriately."""
         fields = list(super().get_field_names(declared_fields, info))
+        # Ensure that custom_fields field appears at the end, not the start, of the fields
         self.extend_field_names(fields, "custom_fields")
-        self.extend_field_names(fields, "computed_fields", opt_in_only=True)
+        if not self.is_nested:
+            # Only include computed_fields as opt-in.
+            self.extend_field_names(fields, "computed_fields", opt_in_only=True)
+        else:
+            # As computed fields are expensive, do not include them in nested serializers even if opted-in at the root
+            if "computed_fields" in fields:
+                fields.remove("computed_fields")
         return fields
 
 
@@ -564,9 +596,15 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
                     remove_assoc.delete()
 
     def get_field_names(self, declared_fields, info):
-        """Ensure that "relationships" is always included as an opt-in field."""
+        """Ensure that "relationships" is included as an opt-in field on root serializers."""
         fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "relationships", opt_in_only=True)
+        if not self.is_nested:
+            # Only include relationships as opt-in.
+            self.extend_field_names(fields, "relationships", opt_in_only=True)
+        else:
+            # As relationships are expensive, do not include them on nested serializers even if opted in.
+            if "relationships" in fields:
+                fields.remove("relationships")
         return fields
 
 
@@ -579,6 +617,7 @@ class NotesSerializerMixin(BaseModelSerializer):
         """Ensure that fields includes "notes_url" field if applicable."""
         fields = list(super().get_field_names(declared_fields, info))
         if hasattr(self.Meta.model, "notes"):
+            # Make sure the field is at the end of fields, instead of the beginning
             self.extend_field_names(fields, "notes_url")
         return fields
 

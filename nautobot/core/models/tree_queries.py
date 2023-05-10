@@ -1,3 +1,5 @@
+from django.core.cache import cache
+
 from tree_queries.models import TreeNode
 from tree_queries.query import TreeManager as TreeManager_
 from tree_queries.query import TreeQuerySet as TreeQuerySet_
@@ -41,16 +43,24 @@ class TreeModel(TreeNode):
 
     @property
     def display(self):
-        """By default, TreeModels display their full ancestry for clarity."""
+        """
+        By default, TreeModels display their full ancestry for clarity.
+
+        As this is an expensive thing to calculate, we cache it for a few seconds in the case of repeated lookups.
+        """
         if not hasattr(self, "name"):
             raise NotImplementedError("default TreeModel.display implementation requires a `name` attribute!")
-        display_str = ""
+        cache_key = f"{self.__class__.__name__}.{self.id}.display"
+        display_str = cache.get(cache_key, "")
+        if display_str:
+            return display_str
         try:
-            for ancestor in self.ancestors():
-                display_str += ancestor.name + " → "
+            if self.parent is not None:
+                display_str = self.parent.display + " → "
         except self.DoesNotExist:
             # Expected to occur at times during bulk-delete operations
             pass
         finally:
             display_str += self.name
+            cache.set(cache_key, display_str, 5)
             return display_str  # pylint: disable=lost-exception

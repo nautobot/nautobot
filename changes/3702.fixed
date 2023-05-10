@@ -1,0 +1,1 @@
+Added some missing `select_related` on `DeviceViewSet` and `PrefixViewSet` to improve performance.

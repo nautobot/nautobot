@@ -96,16 +96,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = ComputedField
-        fields = (
-            "url",
-            "slug",
-            "label",
-            "description",
-            "content_type",
-            "template",
-            "fallback_value",
-            "weight",
-        )
+        fields = "__all__"
 
 
 #
@@ -344,12 +335,7 @@ class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = GraphQLQuery
-        fields = (
-            "url",
-            "name",
-            "query",
-            "variables",
-        )
+        fields = "__all__"
 
 
 class GraphQLQueryInputSerializer(serializers.Serializer):
@@ -657,17 +643,7 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = JobButton
-        fields = (
-            "url",
-            "job",
-            "name",
-            "content_types",
-            "text",
-            "weight",
-            "group_name",
-            "button_class",
-            "confirmation",
-        )
+        fields = "__all__"
 
 
 #
