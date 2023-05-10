@@ -88,7 +88,7 @@ function initializeSlugField(context){
     this_context = $(context);
     var slug_field = this_context.find('#id_slug');
     // If id_slug field is not to be found
-    // check if it is rename to key field like what we did for CustomField
+    // check if it is rename to key field like what we did for CustomField and Relationship
     if (slug_field.length == 0) {
         slug_field = this_context.find('#id_key');
     }
