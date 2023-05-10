@@ -436,7 +436,7 @@ class APIViewTestCases:
 
             # Load the csv data back into a list of object dicts
             reader = csv.DictReader(StringIO(response_1.content.decode(response_1.charset)))
-            rows = [row for row in reader]
+            rows = list(reader)
             # Should only have one entry (instance1) since we filtered out instance2 and permissions block instance3
             self.assertEqual(1, len(rows))
             self.assertEqual(rows[0]["id"], str(instance1.pk))
