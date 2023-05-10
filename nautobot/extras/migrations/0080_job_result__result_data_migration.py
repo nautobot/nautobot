@@ -27,7 +27,7 @@ def migrate_result_to_data(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0079_job__commit_default_data_migration"),
+        ("extras", "0079_tagsfield"),
     ]
 
     operations = [

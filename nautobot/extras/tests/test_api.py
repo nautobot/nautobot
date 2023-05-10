@@ -2012,7 +2012,7 @@ class JobResultTest(
         )
         JobResult.objects.create(
             job_model=None,
-            name="Git Repository",
+            name="Deleted Job",
             date_done=now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,

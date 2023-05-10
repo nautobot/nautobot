@@ -2,8 +2,6 @@ import logging
 
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.core.models import BaseModel
-
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +27,7 @@ class NautobotKombuJSONEncoder(JSONEncoder):
     def default(self, obj):
         # Import here to avoid django.core.exceptions.ImproperlyConfigured Error.
         # Core App is not set up yet if we import this at the top of the file.
+        from nautobot.core.models import BaseModel
         from nautobot.core.models.managers import TagsManager
 
         if isinstance(obj, BaseModel):

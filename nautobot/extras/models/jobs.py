@@ -675,21 +675,26 @@ class JobResult(BaseModel, CustomFieldModel):
         """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
 
         Args:
-            job_model (Job): The Job to be enqueued for execution
-            user (User): User object to link to the JobResult instance
-            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
-            profile (bool, optional): Whether to dump cProfile stats on the job execution
-            schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult
-            task_queue (str, optional): The celery queue to send the job to
+            job_model (Job): The Job to be enqueued for execution.
+            user (User): User object to link to the JobResult instance.
+            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to `apply_async()`/`apply()` when job is run.
+            profile (bool, optional): If True, dump cProfile stats on the job execution.
+            schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult. Cannot be used with synchronous=True.
+            task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
+            synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
             *job_args: positional args passed to the job task
             **job_kwargs: keyword args passed to the job task
 
         Returns:
             JobResult instance
         """
+        if schedule is not None and synchronous:
+            raise ValueError("Scheduled jobs cannot be run synchronously")
+
         job_result = cls.objects.create(
             name=job_model.name,
             job_model=job_model,
+            scheduled_job=schedule,
             user=user,
         )
 

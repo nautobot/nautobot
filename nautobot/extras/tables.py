@@ -646,8 +646,7 @@ class JobLogEntryTable(BaseTable):
 
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
-    job_model = tables.Column(verbose_name="Job", linkify=True)
-    name = tables.Column()
+    job_model = tables.Column(linkify=True)
     date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
