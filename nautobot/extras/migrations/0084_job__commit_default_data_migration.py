@@ -15,7 +15,7 @@ def migrate_commit_default_to_dryrun_default(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0080_job__dryrun_support"),
+        ("extras", "0083_job__dryrun_support"),
     ]
 
     operations = [
