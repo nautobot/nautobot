@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import shutil
+import tempfile
 from textwrap import dedent
 import traceback
 import warnings
@@ -137,7 +138,7 @@ class BaseJob(Task):
 
                 # TODO: This should probably be available as a file download rather than dumped to the hard drive.
                 # Pending this: https://github.com/nautobot/nautobot/issues/3352
-                profiling_path = f"/tmp/nautobot-jobresult-{self.job_result.id}.pstats"
+                profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
 
                 with cProfile.Profile() as pr:
                     output = self.run(*args, **deserialized_kwargs)
