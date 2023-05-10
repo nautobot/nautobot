@@ -1,7 +1,7 @@
-import Card from 'react-bootstrap/Card';
+import { Box } from '@nautobot/nautobot-ui';
 
 export function MyFancyCard() {
-  return <Card body>I am from another plugin!</Card>;
+  return <Box body>I am from another plugin!</Box>;
 }
 
 export default MyFancyCard;

@@ -1,4 +1,4 @@
-import Table from 'react-bootstrap/Table';
+import { Table } from '@nautobot/nautobot-ui';
 
 export function CustomTableView(props) {
   return (
