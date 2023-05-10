@@ -24,7 +24,7 @@ def ensure_relationship_keys_are_unique(apps, schema_editor):
 
         if rel_key != original_rel_key:
             print(
-                f'  Relationship instance "{rel.name}" key attribute "{original_rel_key}" is being changed to "{rel_key}".'
+                f'  Relationship instance "{rel.label}" key attribute "{original_rel_key}" is being changed to "{rel_key}".'
             )
             rel.key = rel_key
             rel.save()
