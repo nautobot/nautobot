@@ -3756,6 +3756,7 @@ class ConsoleConnectionFilterForm(BootstrapMixin, forms.Form):
         queryset=Device.objects.all(),
         required=False,
         label="Device",
+        to_field_name="name",
         query_params={"location": "$location"},
     )
 
@@ -3766,6 +3767,7 @@ class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
         queryset=Device.objects.all(),
         required=False,
         label="Device",
+        to_field_name="name",
         query_params={"location": "$location"},
     )
 
@@ -3776,6 +3778,7 @@ class InterfaceConnectionFilterForm(BootstrapMixin, forms.Form):
         queryset=Device.objects.all(),
         required=False,
         label="Device",
+        to_field_name="name",
         query_params={"location": "$location"},
     )
 

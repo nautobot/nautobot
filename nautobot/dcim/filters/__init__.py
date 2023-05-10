@@ -1340,6 +1340,14 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
     )
+    termination_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("cable_terminations").get_choices,
+        conjoined=False,
+        distinct=True,
+        lookup_expr="in",
+        method="_termination_type",
+        label="Termination (either end) type",
+    )
 
     class Meta:
         model = Cable
@@ -1358,6 +1366,18 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
         )
         return queryset
+
+    def generate_query__termination_type(self, value):
+        a_type_q = Q()
+        b_type_q = Q()
+        for label in value:
+            app_label, model = label.split(".")
+            a_type_q |= Q(termination_a_type__app_label=app_label, termination_a_type__model=model)
+            b_type_q |= Q(termination_b_type__app_label=app_label, termination_b_type__model=model)
+        return a_type_q | b_type_q
+
+    def _termination_type(self, queryset, name, value):
+        return queryset.filter(self.generate_query__termination_type(value)).distinct()
 
 
 class ConnectionFilterSetMixin:

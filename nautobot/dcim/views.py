@@ -2400,6 +2400,7 @@ class ConsoleConnectionsListView(ConnectionsListView):
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
+    template_name = "dcim/console_port_connection_list.html"
     action_buttons = ("export",)
 
     def extra_context(self):
@@ -2415,6 +2416,7 @@ class PowerConnectionsListView(ConnectionsListView):
     filterset = filters.PowerConnectionFilterSet
     filterset_form = forms.PowerConnectionFilterForm
     table = tables.PowerConnectionTable
+    template_name = "dcim/power_port_connection_list.html"
     action_buttons = ("export",)
 
     def extra_context(self):
@@ -2430,6 +2432,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
     filterset = filters.InterfaceConnectionFilterSet
     filterset_form = forms.InterfaceConnectionFilterForm
     table = tables.InterfaceConnectionTable
+    template_name = "dcim/interface_connection_list.html"
     action_buttons = ("export",)
 
     def __init__(self, *args, **kwargs):
