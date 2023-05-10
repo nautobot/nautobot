@@ -350,9 +350,17 @@ class APIViewTestCases:
                 self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
                 response = self.client.get(f"{self._get_list_url()}?sort=name&limit=3", **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_list = list(map(lambda p: p["name"], response.data["results"]))
                 self.assertEqual(
-                    list(map(lambda p: p["name"], response.data["results"])),
+                    result_list,
                     list(self._get_queryset().order_by("name").values_list("name", flat=True)[:3]),
+                    "API sort not identical to QuerySet.order_by",
+                )
+
+                full_list = list(self._get_queryset().values_list("name", flat=True))
+                full_list.sort()
+                self.assertEqual(
+                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
                 )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -361,9 +369,17 @@ class APIViewTestCases:
                 self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
                 response = self.client.get(f"{self._get_list_url()}?sort=-name&limit=3", **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_list = list(map(lambda p: p["name"], response.data["results"]))
                 self.assertEqual(
-                    list(map(lambda p: p["name"], response.data["results"])),
+                    result_list,
                     list(self._get_queryset().order_by("-name").values_list("name", flat=True)[:3]),
+                    "API sort not identical to QuerySet.order_by",
+                )
+
+                full_list = list(self._get_queryset().values_list("name", flat=True))
+                full_list.sort(reverse=True)
+                self.assertEqual(
+                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
                 )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=True)
