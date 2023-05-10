@@ -441,10 +441,15 @@ class APIViewTestCases:
             self.assertEqual(1, len(rows))
             self.assertEqual(rows[0]["id"], str(instance1.pk))
             self.assertEqual(rows[0]["display"], getattr(instance1, "display", str(instance1)))
+            if hasattr(self.model, "_custom_field_data"):
+                custom_fields = extras_models.CustomField.objects.get_for_model(self.model)
+                for cf in custom_fields:
+                    self.assertIn(f"cf_{cf.key}", rows[0])
+                    self.assertEqual(rows[0][f"cf_{cf.key}"], instance1._custom_field_data.get(cf.key) or "")
             # TODO what other generic tests should we run on the data?
 
             # Headers should match those constructed by the NautobotCSVRenderer
-            expected_headers = NautobotCSVRenderer.get_headers(get_serializer_for_model(self._get_queryset().model)())
+            expected_headers = NautobotCSVRenderer.get_headers(get_serializer_for_model(self.model)())
             self.assertEqual(expected_headers, list(rows[0].keys()))
 
     class CreateObjectViewTestCase(APITestCase):

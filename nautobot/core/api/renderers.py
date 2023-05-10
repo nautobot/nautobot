@@ -62,8 +62,10 @@ class NautobotCSVRenderer(BaseRenderer):
                 "data should be a dict with the keys 'serializer_class' and either 'instance' or 'queryset'."
             )
 
-        objects = data.get("queryset", [data.get("instance")])
         serializer_class = data["serializer_class"]
+        objects = data.get("queryset", [data.get("instance")])
+        if not objects:
+            return ""
 
         headers = self.get_headers(serializer_class(objects[0], context={"request": renderer_context["request"]}))
 
@@ -168,7 +170,7 @@ class NautobotCSVRenderer(BaseRenderer):
                     value = [",".join([v["object_type"], v["id"]]) for v in value]
                 # Need to escape literal comma characters in order to avoid confusion on decoding
                 value = ",".join([str(v).replace(",", "%2C") if v is not None else "" for v in value])
-            else:
+            elif not isinstance(value, (str, int)):
                 value = str(value)
 
             yield value
