@@ -7,7 +7,7 @@ import nautobot.core.celery.encoders
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0080_job_result__result_data_migration"),
+        ("extras", "0083_job_result__result_data_migration"),
     ]
 
     operations = [
