@@ -2906,7 +2906,6 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     )
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
-    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

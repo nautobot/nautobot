@@ -1,25 +1,18 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.urls import reverse
-from taggit.managers import TaggableManager
 
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import NaturalOrderingField
-from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
-from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
     ConfigContextModel,
-    CustomFieldModel,
-    ObjectChange,
     StatusModel,
-    TaggedItem,
 )
-from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.roles import RoleModelMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
@@ -59,9 +52,6 @@ class ClusterType(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("virtualization:clustertype", args=[self.pk])
-
     def to_csv(self):
         return (
             self.name,
@@ -93,9 +83,6 @@ class ClusterGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("virtualization:clustergroup", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -161,9 +148,6 @@ class Cluster(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("virtualization:cluster", args=[self.pk])
 
     def clean(self):
         super().clean()
@@ -305,9 +289,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("virtualization:virtualmachine", args=[self.pk])
-
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a VM assigned to the same Cluster and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
@@ -385,7 +366,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
     "statuses",
     "webhooks",
 )
-class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
+class VMInterface(PrimaryModel, BaseInterface):
     virtual_machine = models.ForeignKey(
         to="virtualization.VirtualMachine",
         on_delete=models.CASCADE,
@@ -424,7 +405,6 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         blank=True,
         verbose_name="IP Addresses",
     )
-    tags = TaggableManager(through=TaggedItem, related_name="vminterface")
 
     csv_headers = [
         "virtual_machine",
@@ -447,9 +427,6 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("virtualization:vminterface", kwargs={"pk": self.pk})
-
     def to_csv(self):
         return (
             self.virtual_machine.name,
@@ -464,16 +441,15 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
             self.bridge.name if self.bridge else None,
         )
 
-    def to_objectchange(self, action):
+    def to_objectchange(self, action, **kwargs):
         # Annotate the parent VirtualMachine
-        return ObjectChange(
-            changed_object=self,
-            object_repr=str(self),
-            action=action,
-            object_data=serialize_object(self),
-            object_data_v2=serialize_object_v2(self),
-            related_object=self.virtual_machine,
-        )
+        try:
+            virtual_machine = self.virtual_machine
+        except VirtualMachine.DoesNotExist:
+            # The parent VirtualMachine has already been deleted
+            virtual_machine = None
+
+        return super().to_objectchange(action, related_object=virtual_machine, **kwargs)
 
     def add_ip_addresses(
         self,

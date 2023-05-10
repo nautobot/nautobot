@@ -13,9 +13,8 @@ from django.core.exceptions import (
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
@@ -36,7 +35,6 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -47,7 +45,6 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.utils import check_filter_for_display, csv_format, handle_protectederror, prepare_cloned_fields
 from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
@@ -89,55 +86,41 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "active_tab": request.GET.get("tab", "main"),
         }
 
-    # 2.0 TODO: Remove this method in 2.0. Can be retrieved from instance itself now
-    # instance.get_changelog_url()
-    # Only available on models that support changelogs
-    def get_changelog_url(self, instance):
-        """Return the changelog URL for a given instance."""
-        meta = self.queryset.model._meta
-
-        # Don't try to generate a changelog_url for an ObjectChange.
-        if meta.model_name == "objectchange":
-            return None
-
-        route = get_route_for_model(instance, "changelog")
-
-        # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug"]
-        for field in fields:
-            if not hasattr(instance, field):
-                continue
-
-            try:
-                return reverse(route, kwargs={field: getattr(instance, field)})
-            except NoReverseMatch:
-                continue
-
-        # This object likely doesn't have a changelog route defined.
-        return None
-
     def get(self, request, *args, **kwargs):
         """
         Generic GET handler for accessing an object by PK or slug
         """
         instance = get_object_or_404(self.queryset, **kwargs)
 
-        changelog_url = None
+        # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
+        # on the object-retrieve endpoint?
+        # TODO: similar functionality probably needed in NautobotUIViewSet as well, not currently present
+        if request.GET.get("viewconfig", None) == "true":
+            # TODO: we shouldn't be importing a private-named function from another module. Should it be renamed?
+            from nautobot.extras.templatetags.plugins import _get_registered_content
 
-        if isinstance(instance, ChangeLoggedModel):
-            changelog_url = instance.get_changelog_url()
-
-        return render(
-            request,
-            self.get_template_name(),
-            {
+            temp_fake_context = {
                 "object": instance,
-                "verbose_name": self.queryset.model._meta.verbose_name,
-                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": changelog_url,  # 2.0 TODO: Remove in 2.0. This information can be retrieved from the object itself now.
-                **self.get_extra_context(request, instance),
-            },
-        )
+                "request": request,
+                "settings": {},
+                "csrf_token": "",
+                "perms": {},
+            }
+
+            plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
+            resp = {"tabs": plugin_tabs}
+            return JsonResponse(resp)
+        else:
+            return render(
+                request,
+                self.get_template_name(),
+                {
+                    "object": instance,
+                    "verbose_name": self.queryset.model._meta.verbose_name,
+                    "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                    **self.get_extra_context(request, instance),
+                },
+            )
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):

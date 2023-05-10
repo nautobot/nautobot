@@ -28,7 +28,6 @@ class AppTest(APITestCase):
 @skip("Needs to be updated for Namespaces")
 class VRFTest(APIViewTestCases.APIViewTestCase):
     model = VRF
-    brief_fields = ["display", "id", "name", "prefix_count", "rd", "url"]
     create_data = [
         {
             "name": "VRF 4",
@@ -50,7 +49,6 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
     model = RouteTarget
-    brief_fields = ["display", "id", "name", "url"]
     create_data = [
         {
             "name": "65000:1004",
@@ -69,7 +67,6 @@ class RouteTargetTest(APIViewTestCases.APIViewTestCase):
 
 class RIRTest(APIViewTestCases.APIViewTestCase):
     model = RIR
-    brief_fields = ["assigned_prefix_count", "display", "id", "name", "url"]
     create_data = [
         {
             "name": "RIR 4",
@@ -103,7 +100,6 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
 @skip("Needs to be updated for Namespaces")
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
-    brief_fields = ["display", "id", "ip_version", "namespace", "prefix", "url"]
     choices_fields = []
 
     @classmethod
@@ -186,7 +182,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data["prefix"], str(prefixes_to_be_created[i]))
-            self.assertEqual(response.data["vrf"]["id"], str(prefix.vrf.pk))
+            self.assertEqual(str(response.data["vrf"]), self.absolute_api_url(prefix.vrf))
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more prefix
@@ -279,7 +275,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(response.data["vrf"]["id"], str(vrf.pk))
+            self.assertEqual(str(response.data["vrf"]), self.absolute_api_url(vrf))
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more IP
@@ -366,7 +362,6 @@ class ParallelPrefixTest(APITransactionTestCase):
 @skip("Needs to be updated for Namespaces")
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
-    brief_fields = ["address", "display", "id", "ip_version", "parent", "url"]
 
     @classmethod
     def setUpTestData(cls):
@@ -430,7 +425,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(ip2, status.HTTP_201_CREATED)
 
         response = self.client.get(
-            self._get_detail_url(nat_inside),
+            self._get_detail_url(nat_inside) + "?depth=1",
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -440,7 +435,6 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     model = VLANGroup
-    brief_fields = ["display", "id", "name", "slug", "url", "vlan_count"]
     create_data = [
         {
             "name": "VLAN Group 4",
@@ -466,7 +460,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
-    brief_fields = ["display", "id", "name", "url", "vid"]
     choices_fields = []
 
     @classmethod
@@ -530,7 +523,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
 
 class ServiceTest(APIViewTestCases.APIViewTestCase):
     model = Service
-    brief_fields = ["display", "id", "name", "ports", "protocol", "url"]
     bulk_update_data = {
         "description": "New description",
     }

@@ -9,8 +9,7 @@ from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
 from django.utils.text import slugify
 from netaddr import IPNetwork
-from rest_framework.test import APIClient
-from taggit.managers import TaggableManager
+from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
@@ -93,7 +92,7 @@ class NautobotTestCaseMixin:
                 field = None
 
             # Handle ManyToManyFields
-            if value and isinstance(field, (ManyToManyField, TaggableManager)):
+            if value and isinstance(field, (ManyToManyField, core_fields.TagsField)):
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
                     model_dict[key] = sorted([f"{ct.app_label}.{ct.model}" for ct in value])
@@ -150,14 +149,13 @@ class NautobotTestCaseMixin:
         if isinstance(expected_status, int):
             expected_status = [expected_status]
         if response.status_code not in expected_status:
+            err_message = f"Expected HTTP status(es) {expected_status}; received {response.status_code}:"
             if hasattr(response, "data"):
                 # REST API response; pass the response data through directly
-                err = response.data
-            else:
-                # Attempt to extract form validation errors from the response HTML
-                form_errors = testing.extract_form_failures(response.content.decode(response.charset))
-                err = form_errors or response.content.decode(response.charset) or "No data"
-            err_message = f"Expected HTTP status(es) {expected_status}; received {response.status_code}: {err}"
+                err_message += f"\n{response.data}"
+            # Attempt to extract form validation errors from the response HTML
+            form_errors = testing.extract_form_failures(response.content.decode(response.charset))
+            err_message += "\n" + str(form_errors or response.content.decode(response.charset) or "No data")
             if msg:
                 err_message = f"{msg}\n{err_message}"
         self.assertIn(response.status_code, expected_status, err_message)
@@ -183,6 +181,9 @@ class NautobotTestCaseMixin:
             if isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
                 new_model_dict[k] = sorted(v)
+            elif k == "data_schema" and isinstance(v, str):
+                # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
+                new_model_dict[k] = self.standardize_json(v)
             else:
                 new_model_dict[k] = v
 
@@ -193,6 +194,9 @@ class NautobotTestCaseMixin:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
                     relevant_data[k] = sorted(v)
+                elif k == "data_schema" and isinstance(v, str):
+                    # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
+                    relevant_data[k] = self.standardize_json(v)
                 else:
                     relevant_data[k] = v
 
@@ -209,6 +213,15 @@ class NautobotTestCaseMixin:
     #
     # Convenience methods
     #
+
+    def absolute_api_url(self, obj):
+        """Get the absolute API URL ("http://nautobot.example.com/api/...") for a given object."""
+        request = APIRequestFactory(SERVER_NAME="nautobot.example.com").get("")
+        return request.build_absolute_uri(obj.get_absolute_url(api=True))
+
+    def standardize_json(self, data):
+        obj = json.loads(data)
+        return json.dumps(obj, sort_keys=True)
 
     @classmethod
     def create_tags(cls, *names):

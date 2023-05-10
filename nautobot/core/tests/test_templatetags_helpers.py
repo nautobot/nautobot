@@ -27,24 +27,24 @@ class NautobotTemplatetagsHelperTest(TestCase):
         location.description = ""
         location.save()
         self.assertEqual(
-            helpers.hyperlinked_object(location), f'<a href="/dcim/locations/{location.slug}/">{location.name}</a>'
+            helpers.hyperlinked_object(location), f'<a href="/dcim/locations/{location.pk}/">{location.name}</a>'
         )
         # An object with get_absolute_url and a description gives a titled hyperlink
         location.description = "An important location"
         location.save()
         self.assertEqual(
             helpers.hyperlinked_object(location),
-            f'<a href="/dcim/locations/{location.slug}/" title="An important location">{location.name}</a>',
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location.name}</a>',
         )
         # Optionally you can request a field other than the object's display string
         self.assertEqual(
             helpers.hyperlinked_object(location, "slug"),
-            f'<a href="/dcim/locations/{location.slug}/" title="An important location">{location.slug}</a>',
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location.slug}</a>',
         )
         # If you request a nonexistent field, it defaults to the string representation
         self.assertEqual(
             helpers.hyperlinked_object(location, "foo"),
-            f'<a href="/dcim/locations/{location.slug}/" title="An important location">{location!s}</a>',
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location!s}</a>',
         )
 
     def test_placeholder(self):

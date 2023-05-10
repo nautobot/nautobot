@@ -41,7 +41,7 @@ Nautobot requires access to a supported database service to store data. This ser
 * `HOST` - Name or IP address of the database server (use `localhost` if running locally)
 * `PORT` - The port to use when connecting to the database. An empty string means the default port for your selected backend. (PostgreSQL: `5432`, MySQL: `3306`)
 * `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
-* `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.
+* `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.  If `METRICS_ENABLED` is `True` this can also be either `django_prometheus.db.backends.postgresql` or `django_prometheus.db.backends.mysql`
 
 The following environment variables may also be set for each of the above values:
 
@@ -124,64 +124,16 @@ to different Redis instances/databases per feature.
 
 ### Caching
 
-Nautobot supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops).
-
-Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL.
-
 For more details on Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../additional-features/caching.md).
-
-!!! important
-    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching, as `django-cacheops` takes its place.
-
-#### CACHEOPS_REDIS
-
-Default: `"redis://localhost:6379/1"`
-
-Environment Variable: `NAUTOBOT_CACHEOPS_REDIS`
-
-If you wish to use SSL, you may set the URL scheme to `rediss://`, for example:
-
-```python
-CACHEOPS_REDIS = "rediss://localhost:6379/1"
-```
-
-This setting may also be a dictionary style to provide additional options such as custom TLS/SSL settings, for example:
-
-```python
-import ssl
-
-CACHEOPS_REDIS = {
-    "host": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
-    "port": int(os.getenv("NAUTOBOT_REDIS_PORT", 6379)),
-    "password": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
-    "ssl": True,
-    "ssl_cert_reqs": ssl.CERT_REQUIRED,
-    "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
-    "ssl_certfile": "/opt/nautobot/redis/tls.crt",
-    "ssl_keyfile": "/opt/nautobot/redis/tls.key",
-}
-```
-
-Additional settings may be available and are not covered here. Please see the official guide on [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
-
-#### CACHEOPS_SENTINEL
-
-Default: `undefined`
-
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel). For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../additional-features/caching.md#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
-setup](https://github.com/Suor/django-cacheops#setup).
-
-!!! warning
-    [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
 
 ### Task Queuing
 
 #### CACHES
 
-The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
+The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects. The `CACHES` setting is required to simplify the configuration for `django-redis`.
 
 !!! important
-    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
+    Nautobot also utilizes the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching.
 
 Default:
 
@@ -192,7 +144,7 @@ Default:
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://localhost:6379/0",
+        "LOCATION": "redis://localhost:6379/1",
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -207,6 +159,13 @@ CACHES = {
     }
 }
 ```
+
+The following environment variables may also be set for some of the above values:
+
+* `NAUTOBOT_CACHES_BACKEND`
+
++/- 2.0.0
+    The default value of `CACHES["default"]["LOCATION"]` has changed from `redis://localhost:6379/0` to `redis://localhost:6379/1`, as Django's native caching is now taking the role previously occupied by `django-cacheops`.
 
 ### Task Queuing with Celery
 

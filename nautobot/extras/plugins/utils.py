@@ -103,9 +103,6 @@ def load_plugin(plugin_name, settings):
         if middleware not in settings.MIDDLEWARE:
             settings.MIDDLEWARE.append(middleware)
 
-    # Update caching configg
-    settings.CACHEOPS.update({f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()})
-
     # Update Constance Config and Constance Fieldset
     if plugin_config.constance_config:
         app_config = {}

@@ -1,0 +1,3 @@
+Fixed inability to set null via the REST API on `Interface.mac_address` and `VMInterface.mac_address`.
+Fixed inability to set null via the REST API on `DeviceType.front_image` and `DeviceType.rear_image`.
+Fixed `password` being incorrectly marked as a required field when editing a User via the REST API.

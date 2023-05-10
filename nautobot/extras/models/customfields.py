@@ -11,7 +11,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
 from django.forms.widgets import TextInput
-from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.core.forms import (
@@ -94,9 +93,6 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def __str__(self):
         return self.label
-
-    def get_absolute_url(self):
-        return reverse("extras:computedfield", args=[self.slug])
 
     def render(self, context):
         try:
@@ -618,9 +614,6 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         super().delete(*args, **kwargs)
 
         delete_custom_field_data.delay(self.key, content_types)
-
-    def get_absolute_url(self):
-        return reverse("extras:customfield", args=[self.pk])
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)

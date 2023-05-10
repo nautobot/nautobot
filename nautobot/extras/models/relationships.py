@@ -21,7 +21,7 @@ from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_undersc
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
-from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.extras.utils import FeatureQuery, check_if_key_is_graphql_safe, extras_features
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
 
@@ -261,9 +261,9 @@ class RelationshipModel(models.Model):
 
             required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
             required_model_meta = required_model_class._meta
-            cr_field_name = f"cr_{relation.slug}__{opposite_side}"
+            cr_field_name = f"cr_{relation.key}__{opposite_side}"
             name_plural = cls._meta.verbose_name_plural
-            field_key = relation.slug if output_for == "api" else cr_field_name
+            field_key = relation.key if output_for == "api" else cr_field_name
             field_errors = {field_key: []}
 
             if not required_model_class.objects.exists():
@@ -312,7 +312,7 @@ class RelationshipModel(models.Model):
                         )
                     elif output_for == "api":
                         field_errors[field_key].append(
-                            f'You need to specify ["relationships"]["{relation.slug}"]["{opposite_side}"]["objects"].'
+                            f'You need to specify ["relationships"]["{relation.key}"]["{opposite_side}"]["objects"].'
                         )
 
             if len(field_errors[field_key]) > 0:
@@ -346,11 +346,11 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
-    name = models.CharField(max_length=100, unique=True, help_text="Name of the relationship as displayed to users")
-    slug = AutoSlugField(
-        populate_from="name",
+    label = models.CharField(max_length=100, unique=True, help_text="Label of the relationship as displayed to users")
+    key = AutoSlugField(
+        populate_from="label",
         slugify_function=slugify_dashes_to_underscores,
-        help_text="Internal relationship name. Please use underscores rather than dashes in this slug.",
+        help_text="Internal relationship key. Please use underscores rather than dashes in this key.",
     )
     description = models.CharField(max_length=200, blank=True)
     type = models.CharField(
@@ -435,10 +435,10 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
     objects = RelationshipManager()
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["label"]
 
     def __str__(self):
-        return self.name.replace("_", " ")
+        return self.label
 
     @property
     def symmetric(self):
@@ -453,9 +453,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         if self.symmetric:
             return self.source_type
         return None
-
-    def get_absolute_url(self):
-        return reverse("extras:relationship", args=[self.slug])
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.
@@ -562,6 +559,9 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         return field
 
     def clean(self):
+        # Check if relationship.key is graphql safe.
+        if self.key != "":
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
         # Check if source and destination filters are valid
         for side in ["source", "destination"]:
             if not getattr(self, f"{side}_filter"):
@@ -733,6 +733,9 @@ class RelationshipAssociation(BaseModel):
             )
 
         return None
+
+    def get_absolute_url(self, api=False):
+        return self.relationship.get_absolute_url(api=api)
 
     def get_source(self):
         """Accessor for self.source - returns None if the object cannot be located."""

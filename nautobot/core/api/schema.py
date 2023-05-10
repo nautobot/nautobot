@@ -84,7 +84,17 @@ class NautobotAutoSchema(AutoSchema):
             for param in operation["parameters"]:
                 if param["name"] == "id" and "description" not in param:
                     param["description"] = "Unique object identifier, either a UUID primary key or a natural-key slug."
-
+            if self.method == "GET":
+                if "depth" not in operation["parameters"]:
+                    operation["parameters"].append(
+                        {
+                            "in": "query",
+                            "name": "depth",
+                            "required": False,
+                            "description": "Serializer Depth",
+                            "schema": {"type": "integer", "minimum": 0, "maximum": 10, "default": 1},
+                        }
+                    )
         return operation
 
     def get_operation_id(self):

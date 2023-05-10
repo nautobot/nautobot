@@ -2,6 +2,7 @@ from collections import OrderedDict, namedtuple
 from decimal import Decimal
 import uuid
 
+from django.core import validators
 from django.template import engines
 
 from nautobot.dcim import choices  # TODO move dcim.choices.CableLengthUnitChoices into core
@@ -64,6 +65,22 @@ def is_uuid(value):
     except (ValueError, TypeError, AttributeError):
         pass
     return False
+
+
+def is_url(value):
+    """
+    Validate whether a value is a URL.
+
+    Args:
+        value (str): String to validate.
+
+    Returns:
+        bool
+    """
+    try:
+        return validators.URLValidator()(value) is None
+    except validators.ValidationError:
+        return False
 
 
 def render_jinja2(template_code, context):

@@ -483,7 +483,7 @@ class DynamicModelChoiceMixin:
     :param null_option: The string used to represent a null selection (if any)
     :param disabled_indicator: The name of the field which, if populated, will disable selection of the
         choice (optional)
-    :param brief_mode: Use the "brief" format (?brief=true) when making API requests (default)
+    :param depth: Nested serialization depth when making API requests (default: `0` or a flat representation)
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
@@ -496,7 +496,7 @@ class DynamicModelChoiceMixin:
         initial_params=None,
         null_option=None,
         disabled_indicator=None,
-        brief_mode=True,
+        depth=0,
         *args,
         **kwargs,
     ):
@@ -505,7 +505,7 @@ class DynamicModelChoiceMixin:
         self.initial_params = initial_params or {}
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
-        self.brief_mode = brief_mode
+        self.depth = depth
 
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()
@@ -530,9 +530,8 @@ class DynamicModelChoiceMixin:
         if self.disabled_indicator is not None:
             attrs["disabled-indicator"] = self.disabled_indicator
 
-        # Toggle brief mode
-        if not self.brief_mode:
-            attrs["data-full"] = "true"
+        # Toggle depth
+        attrs["data-depth"] = self.depth
 
         # Attach any static query parameters
         for key, value in self.query_params.items():

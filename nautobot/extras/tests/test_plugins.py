@@ -186,20 +186,6 @@ class PluginTest(TestCase):
         with self.assertRaises(PluginImproperlyConfigured):
             ExampleConfigWithMiddleware.validate({}, settings.VERSION)
 
-    def test_caching_config(self):
-        """
-        Check that plugin caching configuration is registered and valid.
-        """
-        self.assertIn("example_plugin.*", settings.CACHEOPS)
-
-        # Establish example config to have invalid cache_config (list)
-        class ExampleConfigWithBadCacheConfig(example_config):
-            caching_config = []
-
-        # Validation should fail when a caching_config is not a dict
-        with self.assertRaises(PluginImproperlyConfigured):
-            ExampleConfigWithBadCacheConfig.validate({}, settings.VERSION)
-
     def test_min_version(self):
         """
         Check enforcement of minimum Nautobot version.
@@ -286,14 +272,9 @@ class PluginTest(TestCase):
         """
         Validate that example plugin is adding new items to `registry["nav_menu"]`.
         """
-        self.assertTrue(registry["nav_menu"]["tabs"].get("Example Menu"))
-        self.assertTrue(registry["nav_menu"]["tabs"]["Example Menu"]["groups"].get("Example Group 1"))
+        self.assertIn("Example App", registry["nav_menu"]["Inventory"]["groups"])
         # Modified this statement since we are passing the url into registry directly instead of the reverse url string
-        self.assertTrue(
-            registry["nav_menu"]["tabs"]["Example Menu"]["groups"]["Example Group 1"]["items"].get(
-                "/plugins/example-plugin/models/"
-            )
-        )
+        self.assertIn("Example Model", registry["nav_menu"]["Inventory"]["groups"]["Example App"]["items"])
 
     def test_nautobot_database_ready_signal(self):
         """
@@ -404,7 +385,6 @@ class PluginDetailViewTest(TestCase):
 )
 class PluginAPITest(APIViewTestCases.APIViewTestCase):
     model = ExampleModel
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "number": 2600,
     }
@@ -443,7 +423,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(detail_url, self._get_detail_url(instance))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.serializers.reverse")
+    @mock.patch("nautobot.core.api.serializers.reverse")
     def test_get_notes_url_on_object_raise_no_reverse_match(self, mock_reverse):
         # This test is to check the error handling when the user implemented a model without NotesMixin
         # But include the NotesSerializerMixin in the Model APIViewSet with NautobotModelViewSet
@@ -462,7 +442,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         url = self._get_detail_url(instance)
 
         # Check if log messages and API data is properly rendered
-        with self.assertLogs(logger="nautobot.extras.api", level="WARNING") as cm:
+        with self.assertLogs(logger="nautobot.core.api", level="WARNING") as cm:
             response = self.client.get(url, **self.header)
             self.assertHttpStatus(response, 200)
             self.assertIn("notes_url", response.data)
@@ -473,7 +453,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
                     f"Notes feature is not available for model {model_name}. "
                     "Please make sure to: "
                     f"1. Include NotesMixin from nautobot.extras.model.mixins in the {model_name} class definition "
-                    f"2. Include NotesViewSetMixin from nautobot.extras.api.mixins in the {model_name}ViewSet "
+                    f"2. Include NotesViewSetMixin from nautobot.extras.api.views in the {model_name}ViewSet "
                     "before including NotesSerializerMixin in the model serializer"
                 ),
                 cm.output[0],
@@ -506,8 +486,8 @@ class PluginCustomValidationTest(TestCase):
         prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.22.0/24"), namespace=namespace)
         ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status, namespace=namespace)
         relationship = Relationship.objects.create(
-            name="Test Relationship",
-            slug="test-relationship",
+            label="Test Relationship",
+            key="test_relationship",
             source_type=ContentType.objects.get_for_model(Prefix),
             destination_type=ContentType.objects.get_for_model(IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,

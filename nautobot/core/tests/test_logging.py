@@ -17,6 +17,10 @@ class LoggingUtilitiesTest(testing.TestCase):
             "I use username FOO and password BAR to log in as https://FOO:BAR@example.com",
             "I use username (redacted) and password (redacted) to log in as https://(redacted)@example.com",
         ),
+        ("Password is1234", "Password (redacted)"),
+        ("Password: is1234", "Password: (redacted)"),
+        ("Password is: is1234", "Password is: (redacted)"),
+        ("Password is is1234", "Password is (redacted)"),
     )
 
     def test_sanitize_default_coverage(self):

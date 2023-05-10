@@ -1,8 +1,9 @@
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import ForeignKey
+from django.db.models import ForeignKey, ManyToManyField
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.text import slugify
@@ -10,8 +11,10 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
+from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
+from nautobot.core.utils.data import is_uuid
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.extras import registry
@@ -185,12 +188,25 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
     class ListObjectsViewTestCase(APITestCase):
-        brief_fields = []
         choices_fields = None
         filterset = None
 
         def get_filterset(self):
             return self.filterset or lookup.get_filterset_for_model(self.model)
+
+        def get_depth_fields(self):
+            """Get a list of model fields that could be tested with the ?depth query parameter"""
+            depth_fields = []
+            for field in self.model._meta.fields:
+                if not field.name.startswith("_"):
+                    if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, core_fields.TagsField)) and (
+                        # we represent content-types as "app_label.modelname" rather than as FKs
+                        field.related_model != ContentType
+                        # user is a model field on Token but not a field on TokenSerializer
+                        and not (field.name == "user" and self.model == users_models.Token)
+                    ):
+                        depth_fields.append(field.name)
+            return depth_fields
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -214,24 +230,59 @@ class APIViewTestCases:
                 self.assertEqual(len(response.data["results"]), self._get_queryset().count())
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_list_objects_brief(self):
+        def test_list_objects_depth_0(self):
             """
-            GET a list of objects using the "brief" parameter.
+            GET a list of objects using the "?depth=0" parameter.
             """
+            depth_fields = self.get_depth_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            url = f"{self._get_list_url()}?brief=1"
+            url = f"{self._get_list_url()}?depth=0"
             response = self.client.get(url, **self.header)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
-            self.assertEqual(
-                sorted(response.data["results"][0]),
-                self.brief_fields,
-                "In order to test the brief API parameter the brief fields need to be manually added to "
-                "self.brief_fields. If this is already the case, perhaps the serializer is implemented incorrectly?",
-            )
+
+            for response_data in response.data["results"]:
+                for field in depth_fields:
+                    self.assertIn(field, response_data)
+                    if isinstance(response_data[field], list):
+                        for entry in response_data[field]:
+                            self.assertTrue(is_uuid(entry))
+                    else:
+                        if response_data[field] is not None:
+                            # The response should be a detail API URL, ending in the UUID of the relevant object
+                            # http://nautobot.example.com/api/circuits/providers/<uuid>/
+                            #                                                    ^^^^^^
+                            self.assertTrue(is_uuid(response_data[field].split("/")[-2]))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_depth_1(self):
+            """
+            GET a list of objects using the "?depth=1" parameter.
+            """
+            depth_fields = self.get_depth_fields()
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            url = f"{self._get_list_url()}?depth=1"
+            response = self.client.get(url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+
+            for response_data in response.data["results"]:
+                for field in depth_fields:
+                    self.assertIn(field, response_data)
+                    if isinstance(response_data[field], list):
+                        for entry in response_data[field]:
+                            self.assertIsInstance(entry, dict)
+                            self.assertTrue(is_uuid(entry["id"]))
+                    else:
+                        if response_data[field] is not None:
+                            self.assertIsInstance(response_data[field], dict)
+                            self.assertTrue(is_uuid(response_data[field]["id"]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -390,7 +441,13 @@ class APIViewTestCases:
 
             initial_count = self._get_queryset().count()
             for i, create_data in enumerate(self.create_data):
-                response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
+                if i == len(self.create_data) - 1:
+                    # Test to see if depth parameter is ignored in POST request.
+                    response = self.client.post(
+                        self._get_list_url() + "?depth=3", create_data, format="json", **self.header
+                    )
+                else:
+                    response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_201_CREATED)
                 self.assertEqual(self._get_queryset().count(), initial_count + i + 1)
                 instance = self._get_queryset().get(pk=response.data["id"])
@@ -466,6 +523,26 @@ class APIViewTestCases:
             """
             PATCH a single object identified by its ID.
             """
+
+            def strip_serialized_object(this_object):
+                """
+                Only here to work around acceptable differences in PATCH response vs GET response which are known bugs.
+                """
+                # Work around for https://github.com/nautobot/nautobot/issues/3321
+                this_object.pop("last_updated", None)
+                # PATCH response always includes "opt-in" fields, but GET response does not.
+                this_object.pop("computed_fields", None)
+                this_object.pop("relationships", None)
+
+                for value in this_object.values():
+                    if isinstance(value, dict):
+                        strip_serialized_object(value)
+                    elif isinstance(value, list):
+                        for list_dict in value:
+                            if isinstance(list_dict, dict):
+                                strip_serialized_object(list_dict)
+
+            self.maxDiff = None
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
             update_data = self.update_data or getattr(self, "create_data")[0]
@@ -476,8 +553,44 @@ class APIViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
+            # Verify that an empty PATCH results in no change to the object.
+            # This is to catch issues like https://github.com/nautobot/nautobot/issues/3533
+
+            # Add object-level permission for GET
+            obj_perm.actions = ["view"]
+            obj_perm.save()
+            # Get initial serialized object representation
+            get_response = self.client.get(url, **self.header)
+            self.assertHttpStatus(get_response, status.HTTP_200_OK)
+            initial_serialized_object = get_response.json()
+            strip_serialized_object(initial_serialized_object)
+
+            # Redefine object-level permission for PATCH
+            obj_perm.actions = ["change"]
+            obj_perm.save()
+
+            # Send empty PATCH request
+            response = self.client.patch(url, {}, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            serialized_object = response.json()
+            strip_serialized_object(serialized_object)
+            self.assertEqual(initial_serialized_object, serialized_object)
+
+            # Verify ObjectChange creation -- yes, even though nothing actually changed
+            # This may change (hah) at some point -- see https://github.com/nautobot/nautobot/issues/3321
+            if hasattr(self.model, "to_objectchange"):
+                objectchanges = lookup.get_changes_for_model(instance)
+                self.assertEqual(len(objectchanges), 1)
+                self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+                objectchanges.delete()
+
+            # Verify that a PATCH with some data updates that data correctly.
             response = self.client.patch(url, update_data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            # Check for unexpected side effects on fields we DIDN'T intend to update
+            for field in initial_serialized_object:
+                if field not in update_data:
+                    self.assertEqual(initial_serialized_object[field], serialized_object[field])
             instance.refresh_from_db()
             self.assertInstanceEqual(instance, update_data, exclude=self.validation_excluded_fields, api=True)
 
@@ -486,6 +599,33 @@ class APIViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+
+        def test_get_put_round_trip(self):
+            """GET and then PUT an object and verify that it's accepted and unchanged."""
+            self.maxDiff = None
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view", "change"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            instance = self._get_queryset().first()
+            url = self._get_detail_url(instance)
+
+            # GET object representation
+            get_response = self.client.get(url + "?include=computed_fields&include=relationships", **self.header)
+            self.assertHttpStatus(get_response, status.HTTP_200_OK)
+            initial_serialized_object = get_response.json()
+
+            # PUT same object representation
+            put_response = self.client.put(url, initial_serialized_object, format="json", **self.header)
+            self.assertHttpStatus(put_response, status.HTTP_200_OK, initial_serialized_object)
+            updated_serialized_object = put_response.json()
+
+            # Work around for https://github.com/nautobot/nautobot/issues/3321
+            initial_serialized_object.pop("last_updated", None)
+            updated_serialized_object.pop("last_updated", None)
+            self.assertEqual(initial_serialized_object, updated_serialized_object)
 
         def test_bulk_update_objects(self):
             """
@@ -523,36 +663,6 @@ class APIViewTestCases:
                 )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_options_objects_returns_display_and_value(self):
-            """
-            Make an OPTIONS request for a list endpoint and validate choices use the display and value keys.
-            """
-            # Save self.user as superuser to be able to view available choices on list views.
-            self.user.is_superuser = True
-            self.user.save()
-
-            response = self.client.options(self._get_list_url(), **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            data = response.json()
-
-            self.assertIn("actions", data)
-
-            # Grab any field that has choices defined (fields with enums)
-            if "POST" in data["actions"]:
-                field_choices = {k: v["choices"] for k, v in data["actions"]["POST"].items() if "choices" in v}
-            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
-                field_choices = {k: v["choices"] for k, v in data["actions"]["PUT"].items() if "choices" in v}
-            else:
-                self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
-
-            # Will successfully assert if field_choices has entries and will not fail if model as no enum choices
-            # Broken down to provide better failure messages
-            for field, choices in field_choices.items():
-                for choice in choices:
-                    self.assertIn("display", choice, f"A choice in {field} is missing the display key")
-                    self.assertIn("value", choice, f"A choice in {field} is missing the value key")
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_options_returns_expected_choices(self):
             """
             Make an OPTIONS request for a list endpoint and validate choices match expected choices for serializer.
@@ -571,11 +681,25 @@ class APIViewTestCases:
 
             self.assertIn("actions", data)
 
-            # Grab any field name that has choices defined (fields with enums)
-            if "POST" in data["actions"]:
-                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
-            elif "PUT" in data["actions"]:  # JobModelViewSet supports editing but not creation
-                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
+            # Grab any field that has choices defined (fields with enums)
+            if any(
+                [
+                    "POST" in data["actions"],
+                    "PUT" in data["actions"],
+                ]
+            ):
+                schema = data["schema"]
+                props = schema["properties"]
+                fields = props.keys()
+                field_choices = set()
+                for field_name in fields:
+                    obj = props[field_name]
+                    if "enum" in obj and "enumNames" in obj:
+                        enum = obj["enum"]
+                        # Zipping to assert that the enum and the mapping have the same number of items.
+                        model_field_choices = dict(zip(obj["enumNames"], enum))
+                        self.assertEqual(len(enum), len(model_field_choices))
+                        field_choices.add(field_name)
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
@@ -685,6 +809,39 @@ class APIViewTestCases:
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 self.assertIn("notes_url", response.data)
                 self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+
+    class TreeModelAPIViewTestCaseMixin:
+        """Test `?depth=2` query parameter for TreeModel"""
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_depth_2(self):
+            """
+            GET a list of objects using the "?depth=2" parameter.
+            TreeModel Only
+            """
+            field = "parent"
+
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            url = f"{self._get_list_url()}?depth=2"
+            response = self.client.get(url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+
+            response_data = response.data["results"]
+            for data in response_data:
+                # First Level Parent
+                self.assertEqual(field in data, True)
+                if data[field] is not None:
+                    self.assertIsInstance(data[field], dict)
+                    self.assertTrue(is_uuid(data[field]["id"]))
+                    # Second Level Parent
+                    self.assertIn(field, data[field])
+                    if data[field][field] is not None:
+                        self.assertIsInstance(data[field][field], dict)
+                        self.assertTrue(is_uuid(data[field][field]["id"]))
 
     class APIViewTestCase(
         GetObjectViewTestCase,

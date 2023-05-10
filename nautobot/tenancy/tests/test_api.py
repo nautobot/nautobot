@@ -12,9 +12,8 @@ class AppTest(APITestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class TenantGroupTest(APIViewTestCases.APIViewTestCase):
+class TenantGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = TenantGroup
-    brief_fields = ["display", "id", "name", "tenant_count", "tree_depth", "url"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -41,7 +40,6 @@ class TenantGroupTest(APIViewTestCases.APIViewTestCase):
 
 class TenantTest(APIViewTestCases.APIViewTestCase):
     model = Tenant
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "description": "New description",
     }

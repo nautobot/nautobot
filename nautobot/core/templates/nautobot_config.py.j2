@@ -21,8 +21,11 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # CACHES = {
 #     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": parse_redis_connection(redis_database=0),
+#         "BACKEND": os.getenv(
+#             "NAUTOBOT_CACHES_BACKEND",
+#             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
+#         ),
+#         "LOCATION": parse_redis_connection(redis_database=1),
 #         "TIMEOUT": 300,
 #         "OPTIONS": {
 #             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -30,10 +33,6 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #         },
 #     }
 # }
-
-# Redis connection to use for caching.
-#
-# CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 
 # Celery broker URL used to tell workers where queues are located
 #
@@ -55,7 +54,8 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),  # Database port (leave blank for default)
 #         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),  # Database timeout
 #         "ENGINE": os.getenv(
-#             "NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"
+#             "NAUTOBOT_DB_ENGINE",
+#             "django_prometheus.db.backends.postgresql" if METRICS_ENABLED else "django.db.backends.postgresql",
 #         ),  # Database driver ("mysql" or "postgresql")
 #     }
 # }
@@ -244,18 +244,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 # }
 
-# Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
-#
-# CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
-
-# Set to True to enable caching with cacheops. (Default: False)
-#
-# CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
-
-# Set to True to enable periodic health checks for the Redis server connection used by cacheops.
-#
-# CACHEOPS_HEALTH_CHECK_ENABLED = False
-
 # Options to pass to the Celery broker transport, for example when using Celery with Redis Sentinel.
 #
 # CELERY_BROKER_TRANSPORT_OPTIONS = {}
@@ -437,7 +425,7 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # SANITIZER_PATTERNS = [
 #     # General removal of username-like and password-like tokens
 #     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-#     (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+#     (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
 # ]
 
 # Configure SSO, for more information see docs/configuration/authentication/sso.md

@@ -1,0 +1,1 @@
+Added `created` and `last_updated` fields on the `VMInterface` model. When migrating to this release, these fields will default to `None` for any pre-existing instances of this model.

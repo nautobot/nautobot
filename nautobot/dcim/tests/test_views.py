@@ -348,19 +348,19 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Create a class racks variable
         cls.racks = racks
 
-        # cls.relationships = (
-        #     Relationship(
-        #         name="Backup Locations",
-        #         slug="backup-locations",
-        #         type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
-        #         source_type=ContentType.objects.get_for_model(Rack),
-        #         source_label="Backup location(s)",
-        #         destination_type=ContentType.objects.get_for_model(Location),
-        #         destination_label="Racks using this location as a backup",
-        #     ),
-        # )
-        # for relationship in cls.relationships:
-        #     relationship.validated_save()
+        cls.relationships = (
+            Relationship(
+                label="Backup Locations",
+                key="backup_locations",
+                type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                source_type=ContentType.objects.get_for_model(Rack),
+                source_label="Backup location(s)",
+                destination_type=ContentType.objects.get_for_model(Location),
+                destination_label="Racks using this location as a backup",
+            ),
+        )
+        for relationship in cls.relationships:
+            relationship.validated_save()
 
         # for rack in racks:
         #     RelationshipAssociation(
@@ -1224,8 +1224,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.relationships = (
             Relationship(
-                name="BGP Router-ID",
-                slug="router-id",
+                label="BGP Router-ID",
+                key="router_id",
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
                 source_type=ContentType.objects.get_for_model(Device),
                 source_label="BGP Router ID",

@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
-from django.urls import reverse
 from django.utils.functional import cached_property, classproperty
 
 from nautobot.core.models import BaseManager, BaseModel
@@ -72,9 +71,6 @@ class Namespace(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("ipam:namespace", args=[self.pk])
 
 
 def get_default_namespace():
@@ -153,9 +149,6 @@ class VRF(PrimaryModel):
 
     def __str__(self):
         return self.display or super().__str__()
-
-    def get_absolute_url(self):
-        return reverse("ipam:vrf", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -314,9 +307,6 @@ class RouteTarget(PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("ipam:routetarget", args=[self.pk])
-
     def to_csv(self):
         return (
             self.name,
@@ -354,9 +344,6 @@ class RIR(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("ipam:rir", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -539,9 +526,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             self.broadcast = str(broadcast)
             self.prefix_length = prefix.prefixlen
             self.ip_version = prefix.version
-
-    def get_absolute_url(self):
-        return reverse("ipam:prefix", args=[self.pk])
 
     # TODO: this function is completely unused at present - remove?
     def get_duplicates(self):
@@ -1005,8 +989,18 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
             self.prefix_length = address.prefixlen
             self.ip_version = address.version
 
-    def get_absolute_url(self):
-        return reverse("ipam:ipaddress", args=[self.pk])
+    def get_duplicates(self):
+        return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
+
+    # TODO: The current IPAddress model has no appropriate natural key available yet.
+    #       However, by default all BaseModel subclasses now have a `natural_key` property;
+    #       but for this model, accessing the natural_key will raise an exception.
+    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
+    class AttributeRemover:
+        def __get__(self, instance, owner):
+            raise AttributeError("IPAddress doesn't yet have a natural key!")
+
+    natural_key = AttributeRemover()
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
@@ -1254,9 +1248,6 @@ class VLANGroup(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("ipam:vlangroup", args=[self.pk])
-
     def to_csv(self):
         return (
             self.name,
@@ -1358,9 +1349,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
 
     def __str__(self):
         return self.display or super().__str__()
-
-    def get_absolute_url(self):
-        return reverse("ipam:vlan", args=[self.pk])
 
     def clean(self):
         super().clean()
@@ -1474,9 +1462,6 @@ class Service(PrimaryModel):
 
     def __str__(self):
         return f"{self.name} ({self.get_protocol_display()}/{self.port_list})"
-
-    def get_absolute_url(self):
-        return reverse("ipam:service", args=[self.pk])
 
     @property
     def parent(self):

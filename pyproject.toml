@@ -29,6 +29,8 @@ include = [
     "NOTICE",
     # Poetry by default will exclude these files as they are in .gitignore
     "nautobot/project-static/docs/**/*",
+    # Bundle all of the UI code
+    "nautobot/ui/**/*",
 ]
 
 [tool.poetry.dependencies]
@@ -41,8 +43,6 @@ Django = "~3.2.18"
 django-ajax-tables = "~1.1.1"
 # LDAP Support
 django-auth-ldap = {version = "~4.2.0", optional = true}
-# Caching with Redis
-django-cacheops = "~6.0"
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.2.1"
 # Provides a database backend & models for Celery task results
@@ -80,6 +80,8 @@ django-tree-queries = "~0.14.0"
 django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.14.0"
+# Adds JSON schema support to API endpoints for rendering JSON schema forms.
+drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.26.0", extras = ["sidecar"]}
 # Git integrations for Python
@@ -100,7 +102,7 @@ MarkupSafe = "~2.1.1"
 # MySQL database adapter
 mysqlclient = {version = "~2.1.0", optional = true}
 # NAPALM automation library
-napalm = {version = "~3.4.1", optional = true}
+napalm = {version = "~4.0.0", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
@@ -160,6 +162,8 @@ flake8 = {version = "~6.0.0", python = ">=3.8.1"}
 invoke = "~2.0.0"
 # Code style checking for python import statements
 isort = "~5.12.0"
+# Embedding YAML files into Markdown documents as tables
+markdown-data-tables = "~1.0.0"
 # Rendering docs to HTML
 mkdocs = "~1.4.2"
 # Automatically generate some files as part of mkdocs build
@@ -189,6 +193,8 @@ splinter = "~0.18.0"
 towncrier = "~22.12.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~3.0.0"
+# YAML linting
+yamllint = "~1.30.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -214,6 +220,7 @@ exclude = '''
     | buck-out
     | build
     | dist
+    | node_modules
   )/
 )
 '''

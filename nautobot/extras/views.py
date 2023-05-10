@@ -834,7 +834,7 @@ class GitRepositoryEditView(generic.ObjectEditView):
 
     def get_return_url(self, request, obj):
         if request.method == "POST":
-            return reverse("extras:gitrepository_result", kwargs={"slug": obj.slug})
+            return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
         return super().get_return_url(request, obj)
 
 
@@ -883,11 +883,11 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
         }
 
 
-def check_and_call_git_repository_function(request, slug, func):
+def check_and_call_git_repository_function(request, pk, func):
     """Helper for checking Git permissions and worker availability, then calling provided function if all is well
     Args:
         request: request object.
-        slug (str): GitRepository slug value.
+        pk (UUID): GitRepository pk value.
         func (function): Enqueue git repo function.
     Returns:
         HttpResponseForbidden or a redirect
@@ -899,20 +899,20 @@ def check_and_call_git_repository_function(request, slug, func):
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
     else:
-        repository = get_object_or_404(GitRepository, slug=slug)
+        repository = get_object_or_404(GitRepository, pk=pk)
         func(repository, request)
 
-    return redirect("extras:gitrepository_result", slug=slug)
+    return redirect("extras:gitrepository_result", pk=pk)
 
 
 class GitRepositorySyncView(View):
-    def post(self, request, slug):
-        return check_and_call_git_repository_function(request, slug, enqueue_pull_git_repository_and_refresh_data)
+    def post(self, request, pk):
+        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
 
 
 class GitRepositoryDryRunView(View):
-    def post(self, request, slug):
-        return check_and_call_git_repository_function(request, slug, enqueue_git_repository_diff_origin_and_local)
+    def post(self, request, pk):
+        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
 
 class GitRepositoryResultView(generic.ObjectView):
@@ -1065,7 +1065,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def get_required_permission(self):
         return "extras.run_job"
 
-    def _get_job_model_or_404(self, class_path=None, slug=None):
+    def _get_job_model_or_404(self, class_path=None, pk=None):
         """Helper function for get() and post()."""
         if class_path:
             try:
@@ -1073,12 +1073,12 @@ class JobView(ObjectPermissionRequiredMixin, View):
             except JobModel.DoesNotExist:
                 raise Http404
         else:
-            job_model = get_object_or_404(self.queryset, slug=slug)
+            job_model = get_object_or_404(self.queryset, pk=pk)
 
         return job_model
 
-    def get(self, request, class_path=None, slug=None):
-        job_model = self._get_job_model_or_404(class_path, slug)
+    def get(self, request, class_path=None, pk=None):
+        job_model = self._get_job_model_or_404(class_path, pk)
 
         try:
             job_class = job_model.job_class()
@@ -1128,8 +1128,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
             },
         )
 
-    def post(self, request, class_path=None, slug=None):
-        job_model = self._get_job_model_or_404(class_path, slug)
+    def post(self, request, class_path=None, pk=None):
+        job_model = self._get_job_model_or_404(class_path, pk)
 
         job_form = (
             job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
@@ -1156,6 +1156,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             # Run the job. A new JobResult is created.
             commit = job_form.cleaned_data.pop("_commit")
+            profile = job_form.cleaned_data.pop("_profile")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
@@ -1231,6 +1232,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     data=job_model.job_class.serialize_data(job_form.cleaned_data),
                     request=copy_safe_request(request),
                     commit=commit,
+                    profile=profile,
                     task_queue=job_form.cleaned_data.get("_task_queue", None),
                 )
 
@@ -1587,7 +1589,6 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     filterset_class = filters.JobButtonFilterSet
     filterset_form_class = forms.JobButtonFilterForm
     form_class = forms.JobButtonForm
-    lookup_field = "pk"
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
@@ -1858,7 +1859,6 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     form_class = RoleForm
     serializer_class = serializers.RoleSerializer
     table_class = RoleTable
-    lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

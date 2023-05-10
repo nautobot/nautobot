@@ -2,12 +2,10 @@ import uuid
 from unittest import skip, skipIf
 
 from django.db import connection
-from taggit.managers import TaggableManager
 
-from nautobot.core.models.generics import _NautobotTaggableManager
+from nautobot.core.models.fields import TagsField
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.circuits.choices import CircuitTerminationSideChoices
-from nautobot.extras import models as extras_models
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, RelationshipTypeChoices
 
 
@@ -20,17 +18,14 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
     def populateDataBeforeMigration(self, installed_apps):
         """Populate Site/Site-related and Region/Region-related Data before migrating them to Locations"""
         # Needed models
-        taggable_manager = TaggableManager(
-            through=extras_models.TaggedItem, manager=_NautobotTaggableManager, ordering=["name"]
-        )
         apps = installed_apps
         self.content_type = apps.get_model("contenttypes", "ContentType")
         self.region = apps.get_model("dcim", "region")
         self.site = apps.get_model("dcim", "site")
-        self.site.tags = taggable_manager
+        self.site.tags = TagsField()
         self.location_type = apps.get_model("dcim", "locationtype")
         self.location = apps.get_model("dcim", "location")
-        self.location.tags = taggable_manager
+        self.location.tags = TagsField()
         self.provider = apps.get_model("circuits", "provider")
         self.circuit_type = apps.get_model("circuits", "circuittype")
         self.circuit = apps.get_model("circuits", "circuit")
@@ -473,7 +468,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             related_object_id=regions[0].id,
         )
         o2m = self.relationship.objects.create(
-            name="Site to Location o2m",
+            label="Site to Location o2m",
             slug="site-to-location-o2m",
             source_type=self.site_ct,
             destination_type=self.location_ct,
@@ -494,7 +489,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             destination_type_id=self.location_ct.id,
         )
         m2m = self.relationship.objects.create(
-            name="Region to Site m2m",
+            label="Region to Site m2m",
             slug="region-to-site-m2m",
             source_type=self.region_ct,
             destination_type=self.site_ct,
@@ -515,7 +510,7 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
             destination_type_id=self.site_ct.id,
         )
         o2o = self.relationship.objects.create(
-            name="Region to Location o2o",
+            label="Region to Location o2o",
             slug="region-to-location-o2o",
             source_type=self.region_ct,
             destination_type=self.location_ct,

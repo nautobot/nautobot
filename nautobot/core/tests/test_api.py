@@ -329,10 +329,36 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             {
                 "dom_element": '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
-                'display-field="display" value-field="name" data-url="/api/extras/roles/" id="id_for_role" '
+                'display-field="display" value-field="name" data-depth="0" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
             },
         )
+
+        with self.subTest("Assert correct lookup field dom element is generated"):
+            response = self.client.get(url + "?content_type=dcim.location&field_name=name", **self.header)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data,
+                {
+                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
+                },
+            )
+
+        with self.subTest("Assert TempFilterForm is used if model filterform raises error at initialization"):
+            # The generation of a lookup field DOM representation is dependent on the ModelForm of the field;;
+            # if an error occurs when initializing the ModelForm, it should fall back to creating a temp ModelForm.
+            # Because the InterfaceModelForm requires a device to initialize, this is a perfect example to test that
+            # the Temp ModelForm is used.
+            response = self.client.get(url + "?content_type=dcim.interface&field_name=name", **self.header)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data,
+                {
+                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
+                },
+            )
 
 
 class WritableNestedSerializerTest(testing.APITestCase):
@@ -375,7 +401,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["location"]["id"], str(self.location1.pk))
+        self.assertEqual(str(response.data["location"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.status, self.statuses.first())
         self.assertEqual(vlan.location, self.location1)
@@ -408,7 +434,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["location"]["id"], str(self.location1.pk))
+        self.assertEqual(str(response.data["location"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.location, self.location1)
 

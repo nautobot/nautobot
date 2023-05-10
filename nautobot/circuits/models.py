@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
@@ -53,9 +52,6 @@ class ProviderNetwork(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("circuits:providernetwork", args=[self.slug])
 
     def to_csv(self):
         return (
@@ -121,9 +117,6 @@ class Provider(PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("circuits:provider", args=[self.pk])
-
     def to_csv(self):
         return (
             self.name,
@@ -156,9 +149,6 @@ class CircuitType(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("circuits:circuittype", args=[self.pk])
 
     def to_csv(self):
         return (
@@ -244,9 +234,6 @@ class Circuit(PrimaryModel, StatusModel):
     def __str__(self):
         return self.cid
 
-    def get_absolute_url(self):
-        return reverse("circuits:circuit", args=[self.pk])
-
     def to_csv(self):
         return (
             self.cid,
@@ -304,9 +291,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
 
     def __str__(self):
         return f"Termination {self.term_side}: {self.location or self.provider_network}"
-
-    def get_absolute_url(self):
-        return reverse("circuits:circuittermination", args=[self.pk])
 
     def clean(self):
         super().clean()

@@ -1,6 +1,5 @@
 import logging
 
-from cacheops import invalidate_obj
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models.signals import m2m_changed, post_save, pre_delete
@@ -46,7 +45,6 @@ def rebuild_paths(obj):
 
     with transaction.atomic():
         for cp in cable_paths:
-            invalidate_obj(cp.origin)
             cp.delete()
             # Prevent looping back to rebuild_paths during the atomic transaction.
             create_cablepath(cp.origin, rebuild=False)

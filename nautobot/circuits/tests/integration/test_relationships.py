@@ -57,8 +57,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             name="Test Power Panel",
         )
         m2m = Relationship.objects.create(
-            name="Termination 2 Provider m2m",
-            slug="termination-2-provider-m2m",
+            label="Termination 2 Provider m2m",
+            key="termination_2_provider_m2m",
             source_type=circuit_termination_ct,
             destination_type=provider_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -74,8 +74,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination=provider2,
         )
         o2m = Relationship.objects.create(
-            name="Termination 2 Location o2m",
-            slug="termination-2-provider-o2m",
+            label="Termination 2 Location o2m",
+            key="termination_2_provider_o2m",
             source_type=circuit_termination_ct,
             destination_type=location_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -86,8 +86,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination=location,
         )
         o2o = Relationship.objects.create(
-            name="Termination 2 Power Panel o2o",
-            slug="termination-2-power-panel-o2o",
+            label="Termination 2 Power Panel o2o",
+            key="termination_2_power_panel_o2o",
             source_type=circuit_termination_ct,
             destination_type=power_panel_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
@@ -100,7 +100,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         # https://github.com/nautobot/nautobot/issues/2077
         fake_ct = ContentType.objects.create(app_label="nonexistent", model="nonexistentmodel")
         bad_relation = Relationship.objects.create(
-            name="Termination 2 Nonexistent",
+            label="Termination 2 Nonexistent",
             source_type=circuit_termination_ct,
             destination_type=fake_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -122,8 +122,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         """
         self.browser.visit(self.live_server_url)
 
-        # Click Circuits dropdown button
-        self.browser.links.find_by_partial_text("Circuits")[0].click()
+        # Click Inventory dropdown button
+        self.browser.links.find_by_partial_text("Inventory")[0].click()
 
         # Click Circuits link
         self.browser.links.find_by_partial_text("Circuits")[1].click()

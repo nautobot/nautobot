@@ -1,5 +1,4 @@
 from collections import OrderedDict
-
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -51,9 +50,18 @@ class ChoiceField(serializers.Field):
                 return data
             raise ValidationError("This field may not be blank.")
 
+        if isinstance(data, dict):
+            if "value" in data:
+                data = data["value"]
+            else:
+                raise ValidationError(
+                    'Value must be passed directly (e.g. "foo": 123) '
+                    'or as a dict with key "value" (e.g. "foo": {"value": 123}).'
+                )
+
         # Provide an explicit error message if the request is trying to write a dict or list
-        if isinstance(data, (dict, list)):
-            raise ValidationError('Value must be passed directly (e.g. "foo": 123); do not use a dictionary or list.')
+        if isinstance(data, list):
+            raise ValidationError('Value must be passed directly (e.g. "foo": 123); do not use a list.')
 
         # Check for string representations of boolean/integer values
         if hasattr(data, "lower"):
@@ -110,9 +118,9 @@ class ObjectTypeField(serializers.CharField):
     Represent the ContentType of this serializer's model as "<app_label>.<model>".
     """
 
-    def __init__(self, *args, read_only=True, **kwargs):  # pylint: disable=useless-parent-delegation
+    def __init__(self, *args, read_only=True, source="*", **kwargs):  # pylint: disable=useless-parent-delegation
         """Default read_only to True as this should never be a writable field."""
-        super().__init__(*args, read_only=read_only, **kwargs)
+        super().__init__(*args, read_only=read_only, source=source, **kwargs)
 
     def to_representation(self, _value):
         """
@@ -121,7 +129,7 @@ class ObjectTypeField(serializers.CharField):
         Implemented this way because `_value` may be None when generating the schema.
         """
         model = self.parent.Meta.model
-        return f"{model._meta.app_label}.{model._meta.model_name}"
+        return model._meta.label_lower
 
 
 class SerializedPKRelatedField(PrimaryKeyRelatedField):

@@ -88,7 +88,7 @@ function initializeSlugField(context){
     this_context = $(context);
     var slug_field = this_context.find('#id_slug');
     // If id_slug field is not to be found
-    // check if it is rename to key field like what we did for CustomField
+    // check if it is rename to key field like what we did for CustomField and Relationship
     if (slug_field.length == 0) {
         slug_field = this_context.find('#id_key');
     }
@@ -202,8 +202,8 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                     }
 
 
-                    // Allow for controlling the brief setting from within APISelect
-                    parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
+                    // Allow for controlling the depth setting from within APISelect
+                    parameters.depth = parseInt($(element).attr('data-depth'))
 
                     // Attach any extra query parameters
                     $.each(element.attributes, function(index, attr){
@@ -286,6 +286,12 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                         }
                         else {
                             results[idx] = record;
+                        }
+                        // DynamicGroupSerializer has a `children` field which fits an inappropriate if condition
+                        // in select2.min.js, which will result in the incorrect rendering of DynamicGroup DynamicChoiceField.
+                        // So we nullify the field here since we do not need this field.
+                        if (record.url.includes("dynamic-groups")){
+                            record.children = undefined;
                         }
 
                         return results;
@@ -372,7 +378,6 @@ function initializeTags(context, dropdownParent=null){
                 var offset = (params.page - 1) * 50 || 0;
                 var parameters = {
                     q: params.term,
-                    brief: 1,
                     limit: 50,
                     offset: offset,
                 };
@@ -533,7 +538,7 @@ function initializeDynamicFilterForm(context){
 
         if(lookup_type_val){
             $.ajax({
-                url: `/api/core/filterset-fields/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
+                url: `/api/ui/core/filterset-fields/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
                 async: true,
                 contentType: 'application/json',
                 dataType: 'json',

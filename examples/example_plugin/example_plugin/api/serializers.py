@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.apps.api import WritableNestedSerializer, NautobotModelSerializer
+from nautobot.apps.api import NautobotModelSerializer
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
@@ -12,17 +12,7 @@ class AnotherExampleModelSerializer(NautobotModelSerializer):
 
     class Meta:
         model = AnotherExampleModel
-        fields = ["url", "id", "name", "number"]
-
-
-class NestedAnotherExampleModelSerializer(WritableNestedSerializer):
-    """Used for nested representations."""
-
-    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_plugin-api:anotherexamplemodel-detail")
-
-    class Meta:
-        model = AnotherExampleModel
-        fields = ["url", "id", "name"]
+        fields = "__all__"
 
 
 class ExampleModelSerializer(NautobotModelSerializer):
@@ -32,14 +22,4 @@ class ExampleModelSerializer(NautobotModelSerializer):
 
     class Meta:
         model = ExampleModel
-        fields = ["url", "id", "name", "number"]
-
-
-class NestedExampleModelSerializer(WritableNestedSerializer):
-    """Used for nested representations."""
-
-    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_plugin-api:examplemodel-detail")
-
-    class Meta:
-        model = ExampleModel
-        fields = ["url", "id", "name"]
+        fields = "__all__"

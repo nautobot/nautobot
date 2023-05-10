@@ -222,6 +222,7 @@ Available tasks:
   destroy                Destroy all containers and volumes.
   docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
   dumpdata               Dump data from database to db_output file.
+  eslint                 Check for ESLint rule compliance and other style issues.
   flake8                 Check for PEP8 compliance and other style issues.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
@@ -232,6 +233,7 @@ Available tasks:
   nbshell                Launch an interactive Nautobot shell.
   performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
+  prettier               Check Node.JS code style with Prettier.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
   serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
@@ -240,6 +242,7 @@ Available tasks:
   tests                  Run all linters and unit tests.
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
+  unittest-ui            Run Nautobot UI unit tests.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
 ```
 
@@ -254,12 +257,12 @@ A development environment can be easily started up from the root of the project 
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Node.js, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
 !!! note
-    The mkdocs container must be started manually with `invoke start -s mkdocs`. It will not start automatically with the `invoke start` or `invoke debug` commands.
+    The `mkdocs` and `storybook` containers (see later) are not started automatically by `invoke start` or `invoke debug`. If desired, these may be started manually with `invoke start -s mkdocs` or `invoke start -s storybook` as appropriate.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
@@ -318,6 +321,22 @@ brew install hadolint
 ```no-highlight
 brew install markdownlint-cli
 ```
+
+#### Install npm
+
+[npm](https://www.npmjs.com/) is the tool used to install and compile the Nautobot front-end UI. On macOS with [Homebrew](https://brew.sh) you can install npm by running:
+
+```no-highlight
+brew install npm
+```
+
+You should then move to the `nautobot_ui/` subdirectory and run `npm install` to install all of the JS dependencies for local development of the Nautobot UI:
+
+```no-highlight
+npm install
+```
+
+Be sure to switch back to the base directory of the repository after you do this.
 
 #### Creating a Python Virtual Environment
 
@@ -450,7 +469,7 @@ A newly created configuration includes sane defaults. If you need to customize t
 
 * [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
 * [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
-* **Redis settings**: Redis configuration requires multiple settings including [`CACHEOPS_REDIS`](../configuration/required-settings.md#cacheops_redis). The defaults should be fine for development.
+* **Redis settings**: Redis configuration requires multiple settings. The defaults should be fine for development.
 * [`DEBUG`](../configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
 * [`EXTRA_INSTALLED_APPS`](../configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
 
@@ -502,7 +521,36 @@ Quit the server with CONTROL-C.
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
-You can then log into the development server at `localhost:8080` with the [superuser](#creating-a-superuser) you created.
+!!! note
+    When first started in Docker Compose, the Nautobot development server container will automatically install dependencies for building the React UI for Nautobot, then build this UI. This may take several minutes before the server becomes ready to accept web connections.
+
+You can connect to the development server at `localhost:8080`, but normally you'll want to connect to the Node.js server instead (see below).
+
+### Starting the Node.js Server
+
+In development, you should run a Node.js server instance as well. This will handle automatically rebuilding the UI when you make changes in the `nautobot/ui` directory.
+
+| Docker Compose Workflow | Virtual Environment Workflow    |
+| ----------------------- | ------------------------------- |
+| `invoke start`          | `cd nautobot/ui; npm run start` |
+
+!!! note
+    In the Docker Compose workflow, the Node.js server will delay starting until the Nautobot development server has finished the initial UI build, which may take several minutes. This is normal.
+
+You can connect to the Node.js server at `localhost:3000`.
+
+### Starting the Storybook Server
+
+When working on the UI, you may find it useful to run a [Storybook](https://storybook.js.org/) instance that provides interactive documentation of the `nautobot-ui` library used by Nautobot's user interface.
+
+| Docker Compose Workflow     | Virtual Environment Workflow    |
+| --------------------------- | ------------------------------- |
+| `invoke start -s storybook` | `TODO`                          |
+
+!!! note
+    This container is not started by default when using `invoke start`. You must individually start it using `invoke start -s storybook`.
+
+You can connect to Storybook at `localhost:6006`.
 
 ### Starting the Worker Server
 
@@ -676,12 +724,14 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 
 ### Verifying Code Style and Static Analysis
 
-To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/) and [Black](https://black.readthedocs.io/). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
+To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/),  [Black](https://black.readthedocs.io/), [ESLint](https://eslint.org), and [Prettier](https://prettier.io). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
 | `invoke flake8`         | `flake8`                                                                                                |
 | `invoke black`          | `black`                                                                                                 |
+| `invoke eslint`         | `npx eslint .`                                                                                          |
+| `invoke prettier`       | `npx prettier -c .`                                                                                     |
 | `invoke pylint`         | `nautobot-server pylint nautobot tasks.py && nautobot-server pylint --recursive development/ examples/` |
 
 ### Handling Migrations

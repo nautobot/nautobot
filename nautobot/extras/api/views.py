@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -20,7 +20,7 @@ from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import get_data_for_serializer_parameter, get_serializer_for_model
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
@@ -30,6 +30,7 @@ from nautobot.core.api.views import (
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.core.utils.requests import copy_safe_request
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobResultStatusChoices
@@ -67,8 +68,9 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.jobs import run_job
+from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.extras.utils import get_job_content_type, get_worker_count
-from . import nested_serializers, serializers
+from . import serializers
 
 
 class ExtrasRootView(APIRootView):
@@ -110,6 +112,84 @@ class NotesViewSetMixin:
             serializer = serializers.NoteSerializer(notes, many=True, context={"request": request})
 
         return self.get_paginated_response(serializer.data)
+
+
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
+# TODO: Why is this in extras instead of core?
+class FormFieldsViewSetMixin:
+    """TODO: docstring needed."""
+
+    # TODO: shouldn't this function generally be named "get_field_groups" not "get_field_group"?
+    def get_field_group(self):
+        return []
+
+    # TODO: schema doesn't *look* correct to me based on a reading of the below code. Should this even be in the schema?
+    @extend_schema(
+        responses={
+            200: {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {"type": "string"},
+                        "label": {"type": "string"},
+                        "required": {"type": "string"},
+                        "help_text": {"type": "string"},
+                        "choices": {"type": "array", "items": {"type": "array"}},
+                    },
+                },
+            }
+        }
+    )
+    @action(detail=False, url_path="form-fields", methods=["get"])
+    def form_fields(self, request):
+        groups = self.get_field_group()
+        model = self.queryset.model
+        fields = get_data_for_serializer_parameter(model)
+        if groups:
+            data = {
+                group_name: [fields.get(field) for field in group_fields] for group_name, group_fields in groups.items()
+            }
+        else:
+            model_name = model._meta.model_name
+            data = {model_name.capitalize(): fields.values()}
+
+        return Response(data)
+
+
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
+# TODO: Why is this in extras instead of core?
+class TableFieldsViewSetMixin:
+    """TODO: docstring needed."""
+
+    # TODO: this schema is definitely incorrect. Should this view even be in the schema?
+    @extend_schema(
+        responses={
+            200: {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {"type": "string"},
+                        "label": {"type": "string"},
+                        "required": {"type": "string"},
+                        "help_text": {"type": "string"},
+                        "choices": {"type": "array", "items": {"type": "array"}},
+                    },
+                },
+            }
+        }
+    )
+    @action(detail=False, url_path="table-fields", methods=["get"])
+    def table_fields(self, request):
+        table = get_table_for_model(self.queryset.model)
+        table_instance = table(user=request.user, data=[])
+        data = [
+            {"name": item[0], "label": item[1]}
+            for item in table_instance.configurable_columns
+            if item[0] in table_instance.visible_columns
+        ]
+        return Response({"data": data})
 
 
 #
@@ -161,14 +241,14 @@ class ConfigContextQuerySetMixin:
         """
         Build the proper queryset based on the request context
 
-        If the `brief` query param equates to True or the `exclude` query param
+        If the `exclude` query param
         includes `config_context` as a value, return the base queryset.
 
         Else, return the queryset annotated with config context data
         """
         queryset = super().get_queryset()
         request = self.get_serializer_context()["request"]
-        if self.brief or (request is not None and "config_context" in request.query_params.get("exclude", [])):
+        if request is not None and "config_context" in request.query_params.get("exclude", []):
             return queryset
         return queryset.annotate_config_context_data()
 
@@ -249,11 +329,95 @@ class CustomFieldModelViewSet(ModelViewSet):
         return context
 
 
-class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin):
+class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin, TableFieldsViewSetMixin):
     """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
 
     Can also be used for models derived from BaseModel, so long as they support Notes.
     """
+
+    # TODO: this currently throws a 500 error in drf_react_template because it's returning an HttpResponse but
+    # drf_react_template thinks it's a REST endpoint that should be returning a JsonResponse
+    @action(detail=True, url_path="app_full_width_fragment")
+    def app_full_width_fragment(self, request, pk):
+        """
+        Return html fragment from a plugin.
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+
+        return render(request, "generic/object_retrieve_plugin_full_width.html", {"object": obj})
+
+    @action(detail=True, url_path="detail-view-config")
+    def detail_view_config(self, request, pk):
+        """
+        Return a JSON of the ObjectDetailView configuration
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+        obj_serializer_class = get_serializer_for_model(obj)
+        obj_serializer = obj_serializer_class(data=None)
+        response = self.get_detail_view_config(obj_serializer)
+        response = Response(response)
+        return response
+
+    def get_detail_view_config(self, obj_serializer):
+        all_fields = list(obj_serializer.get_fields().keys())
+        header_fields = ["display", "status", "created", "last_updated"]
+        extra_fields = ["object_type", "relationships", "computed_fields", "custom_fields"]
+        advanced_fields = ["id", "url", "display", "slug", "notes_url"]
+        plugin_tab_1_fields = ["field_1", "field_2", "field_3"]
+        plugin_tab_2_fields = ["field_1", "field_2", "field_3"]
+        main_fields = [
+            field
+            for field in all_fields
+            if field not in header_fields and field not in extra_fields and field not in advanced_fields
+        ]
+        response = {
+            "main": [
+                {
+                    "name": obj_serializer.Meta.model._meta.model_name,
+                    "fields": main_fields,
+                    "colspan": 2,
+                    "rowspan": len(main_fields),
+                },
+                {
+                    "name": "extra",
+                    "fields": extra_fields,
+                    "colspan": 2,
+                    "rowspan": len(extra_fields),
+                },
+            ],
+            "advanced": [
+                {
+                    "name": "advanced data",
+                    "fields": advanced_fields,
+                    "colspan": 3,
+                    "rowspan": len(advanced_fields),
+                    "advanced": "true",
+                }
+            ],
+            "plugin_tab_1": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": 3,
+                    "rowspan": len(plugin_tab_1_fields),
+                },
+                {
+                    "name": "extra_plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": 1,
+                    "rowspan": len(plugin_tab_1_fields),
+                },
+            ],
+            "plugin_tab_2": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_2_fields,
+                    "colspan": 3,
+                    "rowspan": len(plugin_tab_2_fields),
+                }
+            ],
+        }
+        return response
 
 
 #
@@ -616,13 +780,10 @@ def _run_job(request, job_model, legacy_response=False):
         # New-style JobModelViewSet response - serialize the schedule or job_result as appropriate
         data = {"scheduled_job": None, "job_result": None}
         if schedule:
-            data["scheduled_job"] = nested_serializers.NestedScheduledJobSerializer(
-                schedule, context={"request": request}
-            ).data
+            data["scheduled_job"] = serializers.ScheduledJobSerializer(schedule, context={"request": request}).data
         if job_result:
-            data["job_result"] = nested_serializers.NestedJobResultSerializer(
-                job_result, context={"request": request}
-            ).data
+            job_result.refresh_from_db()
+            data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
 
 
@@ -827,7 +988,7 @@ class JobResultViewSet(
     def logs(self, request, pk=None):
         job_result = self.get_object()
         logs = job_result.job_log_entries.all()
-        serializer = nested_serializers.NestedJobLogEntrySerializer(logs, context={"request": request}, many=True)
+        serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
 
@@ -993,7 +1154,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 #
 
 
-class NoteViewSet(ModelViewSet):
+class NoteViewSet(ModelViewSet, TableFieldsViewSetMixin):
     queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -1008,7 +1169,7 @@ class NoteViewSet(ModelViewSet):
 #
 
 
-class ObjectChangeViewSet(ReadOnlyModelViewSet):
+class ObjectChangeViewSet(ReadOnlyModelViewSet, TableFieldsViewSetMixin):
     """
     Retrieve a list of recent changes.
     """
@@ -1059,6 +1220,31 @@ class SecretsViewSet(NautobotModelViewSet):
     queryset = Secret.objects.all()
     serializer_class = serializers.SecretSerializer
     filterset_class = filters.SecretFilterSet
+
+    @extend_schema(
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "result": {"type": "boolean"},
+                    "message": {"type": "string"},
+                },
+            }
+        },
+    )
+    @action(methods=["GET"], detail=True)
+    def check(self, request, pk):
+        """Check that a secret's value is accessible."""
+        result = False
+        message = "Unknown error"
+        try:
+            self.get_object().get_value()
+            result = True
+            message = "Passed"
+        except SecretError as e:
+            message = str(e)
+        response = {"result": result, "message": message}
+        return Response(response)
 
 
 class SecretsGroupViewSet(NautobotModelViewSet):
