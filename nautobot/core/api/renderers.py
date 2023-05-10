@@ -1,7 +1,9 @@
 import csv
 from io import StringIO
+import json
 import logging
 
+from django.db import models
 from rest_framework import serializers
 from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 
@@ -144,6 +146,19 @@ class NautobotCSVRenderer(BaseRenderer):
                 # A related object; we want to render its natural key if at all possible.
                 related_object = serializer_field.get_attribute(obj)
                 value = self.get_natural_key(related_object)
+            elif isinstance(serializer_field, serializers.SerializerMethodField):
+                # Tricky since a SerializerMethodField can theoretically return anything.
+                value = serializer.data[key]
+                # However, in *many* cases in Nautobot core, it's just a wrapper around a GenericForeignKey field.
+                # So let's try that:
+                try:
+                    related_object = getattr(obj, key)
+                    if related_object is None:
+                        value = None
+                    elif isinstance(related_object, models.Model):
+                        value = [related_object._meta.label_lower] + self.get_natural_key(related_object)
+                except AttributeError:
+                    pass
             else:
                 # Default case - just use the REST API serializer representation
                 value = serializer.data[key]
@@ -153,17 +168,14 @@ class NautobotCSVRenderer(BaseRenderer):
                 value = ""
             elif isinstance(value, dict):
                 if "id" in value and "object_type" in value:
-                    # A related object from a polymorphic serializer?
+                    # A related object from a polymorphic serializer that we weren't able to catch above?
                     # Serialize it as if it were a GenericForeignKey
                     value = ",".join([value["object_type"], value["id"]])
                 elif "value" in value and "label" in value:
                     # An enum type
                     value = value["value"]
                 else:
-                    logger.warning(
-                        "Unsure how to handle dict value on %s for %s: %s", type(serializer).__name__, key, value
-                    )
-                    value = str(value)
+                    value = json.dumps(value)
             elif isinstance(value, (list, tuple)):
                 if value and isinstance(value[0], dict) and "id" in value[0] and "object_type" in value[0]:
                     # Multiple related objects - serialize them as GenericForeignKeys

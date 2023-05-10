@@ -1376,6 +1376,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             b_type_q |= Q(termination_b_type__app_label=app_label, termination_b_type__model=model)
         return a_type_q | b_type_q
 
+    @extend_schema_field({"type": "string"})
     def _termination_type(self, queryset, name, value):
         return queryset.filter(self.generate_query__termination_type(value)).distinct()
 
