@@ -502,7 +502,7 @@ class APIOrderingTestCase(testing.APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_ascending_sort(self):
         """Tests that results are returned in the expected ascending order."""
-        response = self.client.get(f"{self.url}?ordering=name&limit=10", **self.header)
+        response = self.client.get(f"{self.url}?sort=name&limit=10", **self.header)
         self.assertHttpStatus(response, 200)
         self.assertEqual(
             list(map(lambda p: p["name"], response.data["results"])),
@@ -512,7 +512,7 @@ class APIOrderingTestCase(testing.APITestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_descending_sort(self):
         """Tests that results are returned in the expected descending order."""
-        response = self.client.get(f"{self.url}?ordering=-name&limit=10", **self.header)
+        response = self.client.get(f"{self.url}?sort=-name&limit=10", **self.header)
         self.assertHttpStatus(response, 200)
         self.assertEqual(
             list(map(lambda p: p["name"], response.data["results"])),

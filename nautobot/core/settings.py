@@ -198,6 +198,7 @@ REST_FRAMEWORK = {
     # This should only change (if at all) with Nautobot major (breaking) releases.
     "DEFAULT_VERSION": "2.0",
     "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
+    "ORDERING_PARAM": "sort",  # This is not meant to be changed by users, but is used internally by the API
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings

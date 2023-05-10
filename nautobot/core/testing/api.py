@@ -348,7 +348,7 @@ class APIViewTestCases:
         def test_list_objects_ascending_ordered(self):
             if hasattr(self.model, "name"):
                 self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-                response = self.client.get(f"{self._get_list_url()}?ordering=name&limit=3", **self.header)
+                response = self.client.get(f"{self._get_list_url()}?sort=name&limit=3", **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 self.assertEqual(
                     list(map(lambda p: p["name"], response.data["results"])),
@@ -359,7 +359,7 @@ class APIViewTestCases:
         def test_list_objects_descending_ordered(self):
             if hasattr(self.model, "name"):
                 self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-                response = self.client.get(f"{self._get_list_url()}?ordering=-name&limit=3", **self.header)
+                response = self.client.get(f"{self._get_list_url()}?sort=-name&limit=3", **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 self.assertEqual(
                     list(map(lambda p: p["name"], response.data["results"])),
