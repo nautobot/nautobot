@@ -6,19 +6,19 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0028_ipam__namespaces"),
-        ("virtualization", "0020_remove_clustergroup_clustertype_slug"),
+        ("ipam", "0026_ipaddress_remove_assigned_object"),
+        ("dcim", "0040_tagsfield"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name="vminterface",
+            model_name="interface",
             name="vrf",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name="vm_interfaces",
+                related_name="interfaces",
                 to="ipam.vrf",
             ),
         ),

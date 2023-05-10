@@ -11,9 +11,9 @@ import uuid
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0040_ipam__namespaces"),
-        ("extras", "0070_rename_model_fields"),
-        ("ipam", "0027_remove_rir_slug"),
+        ("dcim", "0041_ipam__namespaces"),
+        ("extras", "0071_rename_model_fields"),
+        ("ipam", "0028_tagsfield"),
     ]
 
     operations = [
@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                         to="dcim.location",
                     ),
                 ),
-                ("tags", taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag")),
+                ("tags", nautobot.core.models.fields.TagsField(through='extras.TaggedItem', to='extras.Tag')),
             ],
             options={
                 "abstract": False,

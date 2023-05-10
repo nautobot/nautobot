@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0031_ipam__ipaddress__add_parent"),
+        ("ipam", "0032_ipam__ipaddress__add_parent"),
     ]
 
     operations = []
