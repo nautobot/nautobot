@@ -94,21 +94,18 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "content_type": "dcim.location",
-            "slug": "cf4",
             "label": "Computed Field 4",
             "template": "{{ obj.name }}",
             "fallback_value": "error",
         },
         {
             "content_type": "dcim.location",
-            "slug": "cf5",
             "label": "Computed Field 5",
             "template": "{{ obj.name }}",
             "fallback_value": "error",
         },
         {
             "content_type": "dcim.location",
-            "slug": "cf6",
             "label": "Computed Field 6",
             "template": "{{ obj.name }}",
         },
@@ -121,7 +118,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     ]
     update_data = {
         "content_type": "dcim.location",
-        "slug": "cf1",
+        "key": "cf1",
         "label": "My Computed Field",
     }
     bulk_update_data = {
@@ -135,21 +132,21 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         location_ct = ContentType.objects.get_for_model(Location)
 
         ComputedField.objects.create(
-            slug="cf1",
+            key="cf1",
             label="Computed Field One",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=location_ct,
         )
         ComputedField.objects.create(
-            slug="cf2",
+            key="cf2",
             label="Computed Field Two",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=location_ct,
         )
         ComputedField.objects.create(
-            slug="cf3",
+            key="cf3",
             label="Computed Field Three",
             template="{{ obj.name }}",
             fallback_value="error",

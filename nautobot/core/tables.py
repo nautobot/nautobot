@@ -37,7 +37,7 @@ class BaseTable(django_tables2.Table):
             self.base_columns[name] = CustomFieldColumn(cf)
 
         for cpf in models.ComputedField.objects.filter(content_type=obj_type):
-            self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
+            self.base_columns[f"cpf_{cpf.key}"] = ComputedFieldColumn(cpf)
 
         for relationship in models.Relationship.objects.filter(source_type=obj_type):
             if not relationship.symmetric:

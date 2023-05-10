@@ -69,7 +69,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     def setUp(self):
         self.good_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="good_computed_field",
+            key="good_computed_field",
             label="Good Computed Field",
             template="{{ obj.name }} is awesome!",
             fallback_value="This template has errored",
@@ -77,7 +77,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         )
         self.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="bad_computed_field",
+            key="bad_computed_field",
             label="Bad Computed Field",
             template="{{ not_in_context | not_a_filter }} is horrible!",
             fallback_value="An error occurred while rendering this template.",
@@ -85,7 +85,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         )
         self.blank_fallback_value = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="blank_fallback_value",
+            key="blank_fallback_value",
             label="Blank Fallback Value",
             template="{{ obj.location }}",
             weight=50,
@@ -103,6 +103,47 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+
+    def test_check_if_key_is_graphql_safe(self):
+        """
+        Check the GraphQL validation method on CustomField Key Attribute.
+        """
+        # Check if it catches the cf.key starting with a digit.
+        cpf1 = ComputedField(
+            label="Test 1",
+            key="12_test_1",
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+        with self.assertRaises(ValidationError) as error:
+            cpf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cf.key with whitespace.
+        cpf1.key = "test 1"
+        with self.assertRaises(ValidationError) as error:
+            cpf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cf.key with hyphens.
+        cpf1.key = "test-1-custom-field"
+        with self.assertRaises(ValidationError) as error:
+            cpf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cf.key with special characters
+        cpf1.key = "test_1_custom_f)(&d"
+        with self.assertRaises(ValidationError) as error:
+            cpf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
 
 
 class ConfigContextTest(ModelTestCases.BaseModelTestCase):
