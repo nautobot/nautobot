@@ -21,7 +21,7 @@ from django.views.generic import View
 
 from nautobot.utilities.forms import ConfirmationForm
 from .forms import LoginForm, PasswordChangeForm, TokenForm
-from .models import Token
+from .models import Token, SSOBackend
 
 
 #
@@ -52,6 +52,7 @@ class LoginView(View):
             self.template_name,
             {
                 "form": form,
+                "sso_backends": SSOBackend.objects.filter(enabled=True)
             },
         )
 

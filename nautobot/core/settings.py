@@ -4,9 +4,10 @@ import re
 
 from django.contrib.messages import constants as messages
 import django.forms
+from social_core.pipeline import DEFAULT_AUTH_PIPELINE
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, load_social_backends  # noqa: F401
 
 #
 # Environment setup
@@ -101,6 +102,8 @@ REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 # Nautobot related - May be overridden if using custom social auth backend
 SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
+# Nautobot custom strategy for database driven SSO configurations
+SOCIAL_AUTH_STRATEGY = "nautobot.core.sso.NautobotStrategy"
 
 # Job log entry sanitization and similar
 SANITIZER_PATTERNS = [
@@ -393,10 +396,9 @@ TEMPLATES = [
 ]
 
 # Set up authentication backends
-AUTHENTICATION_BACKENDS = [
-    # Always check object permissions
-    "nautobot.core.authentication.ObjectPermissionBackend",
-]
+# Defaults to load all social_core.backends + ObjectPermissionBackend
+# ObjectPermissionBackend must remain last in the list for Nautobot permissions
+AUTHENTICATION_BACKENDS = load_social_backends() + ["nautobot.core.authentication.ObjectPermissionBackend"]
 
 # Internationalization
 LANGUAGE_CODE = "en-us"
@@ -440,6 +442,8 @@ CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
+CONSTANCE_MANAGE_SSO = is_truthy(os.getenv("NAUTOBOT_CONSTANCE_MANAGE_SSO", False))
+
 CONSTANCE_ADDITIONAL_FIELDS = {
     "per_page_defaults_field": [
         "nautobot.utilities.forms.fields.JSONArrayFormField",
@@ -456,6 +460,12 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     ],
     "release_check_url_field": [
         "django.forms.URLField",
+        {
+            "required": False,
+        },
+    ],
+    "social_core_pipeline": [
+        "django.forms.JSONField",
         {
             "required": False,
         },
@@ -531,6 +541,15 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         "release_check_url_field",
     ],
+    "SOCIAL_CORE_DATABASE_CONFIGURATION": [
+        False,
+        "Enable Database configuration for SSO.",
+    ],
+    "SOCIAL_CORE_PIPELINE": [
+        DEFAULT_AUTH_PIPELINE,
+        "List of Social Core pipelines to perform during authentication.",
+        "social_core_pipeline",
+    ]
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -540,6 +559,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
+    "SSO": ["SOCIAL_CORE_DATABASE_CONFIGURATION", "SOCIAL_CORE_PIPELINE"],
     "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
 }
 

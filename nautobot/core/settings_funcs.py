@@ -3,7 +3,11 @@
 from django.conf import settings
 from distutils.util import strtobool
 from functools import lru_cache
+import importlib
+import inspect
 import os
+import pkgutil
+import social_core.backends
 
 
 #
@@ -86,3 +90,25 @@ def parse_redis_connection(redis_database):
         redis_creds = f"{redis_username}:{redis_password}@"
 
     return f"{redis_scheme}://{redis_creds}{redis_host}:{redis_port}/{redis_database}"
+
+
+def load_social_backends():
+    pkgpath = os.path.dirname(social_core.backends.__file__)
+    backends = [name for _, name, _ in pkgutil.iter_modules([pkgpath])]
+    available_backends = set()
+    for backend in backends:
+        try:
+            backend_module = importlib.import_module(f"social_core.backends.{backend}")
+            for name, obj in inspect.getmembers(backend_module):
+                if (
+                    inspect.isclass(obj)
+                    and hasattr(obj, "name")
+                    and obj.name
+                    and backend_module.__spec__.name == obj.__module__
+                ):
+                    available_backends.add(f"social_core.backends.{backend}.{name}")
+        except ModuleNotFoundError:
+            pass
+        except ImportError:
+            pass
+    return sorted(available_backends)

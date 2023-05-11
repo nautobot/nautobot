@@ -9,6 +9,7 @@ from django.contrib.staticfiles.finders import find
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
+from django.utils.module_loading import import_string
 from django.utils.safestring import mark_safe
 from markdown import markdown
 from django_jinja import library
@@ -476,6 +477,12 @@ def quote_string(value):
     if isinstance(value, str):
         return f'"{value}"'
     return value
+
+
+@library.filter()
+@register.filter()
+def get_backend_name(backend):
+    return backend._backend_name
 
 
 #

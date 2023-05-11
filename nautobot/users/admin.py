@@ -9,7 +9,8 @@ from django.db import models
 
 from nautobot.core.admin import NautobotModelAdmin
 from nautobot.extras.admin import order_content_types
-from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
+from nautobot.users.models import AdminGroup, ObjectPermission, Token, User, SSOBackend, SSOBackendConfiguration
+from nautobot.utilities.forms import StaticSelect2, APISelect
 
 
 #
@@ -48,6 +49,12 @@ class GroupObjectPermissionInline(ObjectPermissionInline):
 class UserObjectPermissionInline(ObjectPermissionInline):
     model = get_user_model().object_permissions.through
 
+
+class SSOBackendInline(admin.TabularInline):
+    model = SSOBackend.configuration.through
+    verbose_name = "Backend Configuration Item"
+    verbose_name_plural = "Backend Configuration Items"
+    fields = ("name", "type", "text", "secret")
 
 #
 # Users & groups
@@ -126,6 +133,30 @@ class TokenAdminForm(forms.ModelForm):
 class TokenAdmin(NautobotModelAdmin):
     form = TokenAdminForm
     list_display = ["key", "user", "created", "expires", "write_enabled", "description"]
+
+
+#
+# SSOBackends
+#
+
+
+class SSOBackendAdminForm(forms.ModelForm):
+
+    class Meta:
+        model = SSOBackend
+        fields = [
+            "name",
+            "backend",
+            "enabled",
+            "configuration",
+        ]
+
+
+@admin.register(SSOBackend)
+class SSOBackendAdmin(NautobotModelAdmin):
+    form = SSOBackendAdminForm
+    list_display = ["name", "backend", "enabled"]
+    inlines = [SSOBackendInline]
 
 
 #
