@@ -190,7 +190,10 @@ REST_FRAMEWORK = {
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
         "nautobot.core.api.renderers.NautobotCSVRenderer",
     ),
-    "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
+    "DEFAULT_PARSER_CLASSES": (
+        "rest_framework.parsers.JSONParser",
+        "nautobot.core.api.parsers.NautobotCSVParser",
+    ),
     "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
