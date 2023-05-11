@@ -1,0 +1,1 @@
+Fixed a `KeyError` when filtering Cables in the UI by `termination_a_type` or `termination_b_type`.

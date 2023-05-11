@@ -910,6 +910,9 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
         # models that have sucha  filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
+        # Cable-connectable models use "cable_terminations", not "cables", as the feature name
+        if plural_name == "cables":
+            plural_name == "cable_terminations"
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:
