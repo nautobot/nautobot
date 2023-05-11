@@ -1,0 +1,1 @@
+Changed `Job.read_only` field to an informational field set by the job author and removed the ability for administrators to override this field. This field no longer changes the behavior of Nautobot core.
