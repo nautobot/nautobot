@@ -4,6 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.db.models import Sum
+from django.utils.functional import classproperty
 
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import PrimaryModel
@@ -922,3 +923,12 @@ class InventoryItem(TreeModel, ComponentModel):
     class Meta:
         ordering = ("_name",)
         unique_together = ("device", "parent", "name")
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
+        """
+        Due to the recursive nature of InventoryItem.unique_together, we need a custom implementation of this property.
+
+        For the time being we just use the PK as a natural key.
+        """
+        return ["pk"]

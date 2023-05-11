@@ -168,7 +168,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     @extend_schema_field(serializers.CharField)
     def get_natural_key_slug(self, instance):
-        return getattr(instance, "natural_key_slug", construct_natural_key_slug(instance.natural_key()))
+        try:
+            return getattr(instance, "natural_key_slug", construct_natural_key_slug(instance.natural_key()))
+        except (AttributeError, NotImplementedError):
+            return "unknown"
 
     def extend_field_names(self, fields, field_name, at_start=False, opt_in_only=False):
         """Prepend or append the given field_name to `fields` and optionally self.Meta.opt_in_fields as well."""

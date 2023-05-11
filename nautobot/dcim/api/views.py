@@ -19,7 +19,6 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.api.views import ModelViewSetMixin
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
@@ -627,19 +626,19 @@ class InventoryItemViewSet(NautobotModelViewSet):
 #
 
 
-class ConsoleConnectionViewSet(ModelViewSetMixin, ListModelMixin, GenericViewSet):
+class ConsoleConnectionViewSet(ListModelMixin, GenericViewSet):
     queryset = ConsolePort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsoleConnectionFilterSet
 
 
-class PowerConnectionViewSet(ModelViewSetMixin, ListModelMixin, GenericViewSet):
+class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
     queryset = PowerPort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerConnectionFilterSet
 
 
-class InterfaceConnectionViewSet(ModelViewSetMixin, ListModelMixin, GenericViewSet):
+class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
     queryset = Interface.objects.select_related("device", "_path").filter(
         # Avoid duplicate connections by only selecting the lower PK in a connected pair
         _path__destination_id__isnull=False,

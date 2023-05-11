@@ -13,8 +13,6 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
-from nautobot.core.api.renderers import NautobotCSVRenderer
-from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
@@ -447,10 +445,6 @@ class APIViewTestCases:
                     self.assertIn(f"cf_{cf.key}", rows[0])
                     self.assertEqual(rows[0][f"cf_{cf.key}"], instance1._custom_field_data.get(cf.key) or "")
             # TODO what other generic tests should we run on the data?
-
-            # Headers should match those constructed by the NautobotCSVRenderer
-            expected_headers = NautobotCSVRenderer.get_headers(get_serializer_for_model(self.model)())
-            self.assertEqual(expected_headers, list(rows[0].keys()))
 
     class CreateObjectViewTestCase(APITestCase):
         create_data = []

@@ -208,9 +208,11 @@ class ModelViewSetMixin:
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        # Only allow the depth to be greater than 0 in GET requests
-        # Use depth=0 in all write type requests.
-        if self.request.method == "GET":
+        if "text/csv" in self.request.accepted_media_type:
+            # CSV rendering should always use depth 1
+            context["depth"] = 1
+        elif self.request.method == "GET":
+            # Only allow the depth to be greater than 0 in GET requests
             depth = 0
             try:
                 depth = int(self.request.query_params.get("depth", 0))
@@ -219,6 +221,7 @@ class ModelViewSetMixin:
 
             context["depth"] = depth
         else:
+            # Use depth=0 in all write type requests.
             context["depth"] = 0
 
         return context
@@ -262,32 +265,6 @@ class ModelViewSetMixin:
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
             self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
-
-    def list(self, request, *args, **kwargs):
-        """Special-case handling for CSV format as it needs different data to be passed to the Response."""
-        if "text/csv" in request.accepted_media_type:
-            queryset = self.filter_queryset(self.get_queryset())
-            serializer_class = self.get_serializer_class()
-            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{queryset.model._meta.verbose_name_plural}.csv"
-            return Response(
-                data={"queryset": queryset, "serializer_class": serializer_class},
-                headers={"Content-Disposition": f"attachment; filename={filename}"},
-            )
-
-        return super().list(request, *args, format=format, **kwargs)
-
-    def retrieve(self, request, *args, **kwargs):
-        """Special-case handling for CSV format as it needs different data to be passed to the Response."""
-        if "text/csv" in request.accepted_media_type:
-            instance = self.get_object()
-            serializer_class = self.get_serializer_class()
-            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{instance._meta.verbose_name}.csv"
-            return Response(
-                data={"instance": instance, "serializer_class": serializer_class},
-                headers={"Content-Disposition": f"attachment; filename={filename}"},
-            )
-
-        return super().retrieve(request, *args, format=format, **kwargs)
 
 
 class ModelViewSet(
