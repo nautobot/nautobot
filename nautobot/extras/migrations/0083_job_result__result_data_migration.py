@@ -5,7 +5,7 @@ def migrate_data_to_result(apps, schema_editor):
     """
     Migrate the JobResult `data` field to `result`
     """
-    JobResult = apps.get_model("extras", "Job")
+    JobResult = apps.get_model("extras", "JobResult")
     for job_result in JobResult.objects.all():
         if job_result.data is not None and job_result.result is None:
             job_result.result = job_result.data
@@ -17,7 +17,7 @@ def migrate_result_to_data(apps, schema_editor):
     """
     Migrate the JobResult `result` field to `data`
     """
-    JobResult = apps.get_model("extras", "Job")
+    JobResult = apps.get_model("extras", "JobResult")
     for job_result in JobResult.objects.all():
         if job_result.result is not None and job_result.data is None:
             job_result.data = job_result.result
