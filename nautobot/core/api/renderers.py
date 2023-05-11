@@ -3,11 +3,12 @@ from io import StringIO
 import json
 import logging
 
-from django.db import models
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
+from nautobot.core.models.constants import NATURAL_KEY_SLUG_SEPARATOR
 from nautobot.core.models.utils import construct_natural_key_slug
 from nautobot.extras.models import CustomField
 
@@ -93,22 +94,17 @@ class NautobotCSVRenderer(BaseRenderer):
         # Remove specific headers that we know are irrelevant
         for undesired_header in [
             "computed_fields",
-            "config_context",
             "custom_fields",  # will be handled later as a special case
-            "local_config_context_data",
-            "notes_url",
+            "notes_url",  # irrelevant to CSV
             "relationships",
-            "tree_depth",
-            "url",
+            "url",  # irrelevant to CSV
         ]:
             if undesired_header in base_headers:
                 base_headers.remove(undesired_header)
 
-        # Remove all write-only and object-count headers
+        # Remove any write-only fields as we won't have values for those fields on read
         for header in list(base_headers):
             if serializer.fields[header].write_only:
-                base_headers.remove(header)
-            if header.endswith("_count"):
                 base_headers.remove(header)
 
         # Add individual headers for each relevant custom field
@@ -122,7 +118,14 @@ class NautobotCSVRenderer(BaseRenderer):
 
         headers = base_headers + cf_headers
 
-        logger.debug("CSV headers for %s are: %s", type(serializer).__name__, headers)
+        # Coerce important fields, if present, to the front of the list
+        for priority_header in ["id", "natural_key_slug", "display", "name"]:
+            if priority_header in headers:
+                headers.remove(priority_header)
+                headers.insert(0, priority_header)
+
+        if settings.DEBUG:
+            logger.debug("CSV headers for %s are: %s", type(serializer).__name__, headers)
         return headers
 
     def object_to_row_elements(self, obj, *, headers, serializer):
@@ -135,42 +138,28 @@ class NautobotCSVRenderer(BaseRenderer):
                 # Custom field
                 value = obj._custom_field_data.get(key[3:], None)
             elif isinstance(serializer_field, serializers.ListSerializer):
-                # A list of related objects;  as CSV doesn't really have a good way to render a list of lists into
-                # a single field, we use the natural-key-slugs for each object instead of the natural keys
+                # A list of related objects - use the natural key slug for each such object
                 related_queryset = serializer_field.get_attribute(obj)
-                value = [
-                    construct_natural_key_slug(self.get_natural_key(related_object))
-                    for related_object in related_queryset.all()
-                ]
+                value = [self.get_natural_key_slug(related_object) for related_object in related_queryset.all()]
             elif isinstance(serializer_field, serializers.Serializer):
-                # A related object; we want to render its natural key if at all possible.
+                # A single related object - use its natural key slug
                 related_object = serializer_field.get_attribute(obj)
-                value = self.get_natural_key(related_object)
-            elif isinstance(serializer_field, serializers.SerializerMethodField):
-                # Tricky since a SerializerMethodField can theoretically return anything.
-                value = serializer.data[key]
-                # However, in *many* cases in Nautobot core, it's just a wrapper around a GenericForeignKey field.
-                # So let's try that:
-                try:
-                    related_object = getattr(obj, key)
-                    if related_object is None:
-                        value = None
-                    elif isinstance(related_object, models.Model):
-                        value = [related_object._meta.label_lower] + self.get_natural_key(related_object)
-                except AttributeError:
-                    pass
+                value = self.get_natural_key_slug(related_object)
             else:
-                # Default case - just use the REST API serializer representation
+                # Default case - start with the REST API serializer representation
                 value = serializer.data[key]
 
-            # Coerce the value to a format to make the CSV renderer happy (i.e. a string)
+            # Coerce the value to a format to make the CSV renderer happy (i.e. a string or number)
             if value is None:
+                # Unfortunately we're going to have to be a bit lossy here, as CSV doesn't have a distinction between
+                # a null value and an empty string value for a column.
+                # We could choose to represent a null value as "None" or "null" but those are also valid strings, so...
                 value = ""
             elif isinstance(value, dict):
                 if "id" in value and "object_type" in value:
                     # A related object from a polymorphic serializer that we weren't able to catch above?
                     # Serialize it as if it were a GenericForeignKey
-                    value = ",".join([value["object_type"], value["id"]])
+                    value = NATURAL_KEY_SLUG_SEPARATOR.join([value["object_type"], value["natural_key_slug"]])
                 elif "value" in value and "label" in value:
                     # An enum type
                     value = value["value"]
@@ -179,16 +168,17 @@ class NautobotCSVRenderer(BaseRenderer):
             elif isinstance(value, (list, tuple)):
                 if value and isinstance(value[0], dict) and "id" in value[0] and "object_type" in value[0]:
                     # Multiple related objects - serialize them as GenericForeignKeys
-                    value = [",".join([v["object_type"], v["id"]]) for v in value]
-                # Need to escape literal comma characters in order to avoid confusion on decoding
-                value = ",".join([str(v).replace(",", "%2C") if v is not None else "" for v in value])
+                    value = [NATURAL_KEY_SLUG_SEPARATOR.join([v["object_type"], v["natural_key_slug"]]) for v in value]
+                value = ",".join([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):
                 value = str(value)
 
+            if settings.DEBUG:
+                logger.debug("key: %s, value: %s", key, value)
             yield value
 
-    def get_natural_key(self, obj):
-        """Get the natural key for the given object, if any."""
+    def get_natural_key_slug(self, obj):
+        """Get the natural key slug for the given object, if any."""
         if obj is None:
             return None
 
@@ -197,7 +187,7 @@ class NautobotCSVRenderer(BaseRenderer):
             return f"{obj.app_label}.{obj.model}"
 
         try:
-            return obj.natural_key()
+            return construct_natural_key_slug(obj.natural_key())
         except (NotImplementedError, AttributeError):
             logger.error("%s doesn't implement natural_key()", type(obj).__name__)
-            return [str(obj.pk)]
+            return str(obj.pk)

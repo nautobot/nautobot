@@ -26,6 +26,7 @@ from nautobot.core.api.utils import (
     nested_serializer_factory,
 )
 from nautobot.core.models.managers import TagsManager
+from nautobot.core.models.utils import construct_natural_key_slug
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
@@ -140,6 +141,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
+    natural_key_slug = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -163,6 +165,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         Return either the `display` property of the instance or `str(instance)`
         """
         return getattr(instance, "display", str(instance))
+
+    @extend_schema_field(serializers.CharField)
+    def get_natural_key_slug(self, instance):
+        return getattr(instance, "natural_key_slug", construct_natural_key_slug(instance.natural_key()))
 
     def extend_field_names(self, fields, field_name, at_start=False, opt_in_only=False):
         """Prepend or append the given field_name to `fields` and optionally self.Meta.opt_in_fields as well."""
