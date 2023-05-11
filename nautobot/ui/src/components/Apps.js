@@ -1,7 +1,6 @@
 import { lazy } from "react";
 
 import NautobotApps from "../app_imports";
-import { convertPluginMenuIntoNavMenuFormat } from "@utils/nav"
 import { slugify } from "@utils/string";
 
 function EmptyElement() {
@@ -22,6 +21,7 @@ function get_components() {
     var base = {};
     base["FullWidthComponents"] = {};
     base["CustomViews"] = {};
+    base["Views"] = {};
 
     for (const [app_name, import_promise] of Object.entries(NautobotApps)) {
         import_promise.then((value) => {
@@ -65,31 +65,20 @@ function get_components() {
                     }
                 );
             }
+            // Add Plugin Provided View Components
+            if (value?.default?.routes) {
+                // eslint-disable-next-line
+                value?.default?.routes.forEach(({ namespace, component }) => {
+                    const route = `${slugify(app_name)}:${namespace}`;
+                    base["Views"][route] = lazy(() =>
+                        my_import_as_function(app_name, component)
+                    );
+                });
+            }
         });
     }
 
     return base;
 }
 
-
-
-
-function get_routes(){
-    let data = {}
-    for (const [app_name, import_promise] of Object.entries(NautobotApps)) {
-        // eslint-disable-next-line no-loop-func
-        import_promise.then((value) => {
-            const routes = value?.default?.routes
-            if (routes) {
-                data = convertPluginMenuIntoNavMenuFormat(routes, slugify(app_name), data)
-            }
-        })
-    }
-    return data;
-
-}
-const pluginRoutes = get_routes()
-
-
 export default get_components();
-export { pluginRoutes }

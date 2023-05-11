@@ -1,3 +1,6 @@
+import NautobotApps from "../app_imports";
+import { slugify } from "./string";
+
 /**
  * Converts a plugin menu into a navigation menu format by grouping the items by name and group,
  * and appending the plugin name to the item path.
@@ -41,19 +44,36 @@ export function convertPluginMenuIntoNavMenuFormat(
     return finalData;
 }
 
+function get_routes() {
+    let data = {};
+    for (const [app_name, import_promise] of Object.entries(NautobotApps)) {
+        // eslint-disable-next-line no-loop-func
+        import_promise.then((value) => {
+            const routes = value?.default?.routes;
+            if (routes) {
+                data = convertPluginMenuIntoNavMenuFormat(
+                    routes,
+                    slugify(app_name),
+                    data
+                );
+            }
+        });
+    }
+    return data;
+}
+const pluginRoutes = get_routes();
 
 /**
- * Updates the given navigation menu data with the provided items.
+ * Updates the given navigation menu data with the plugin menu items.
  *
  * @param {Object} data - The navigation menu to update
- * @param {Object} update_with - The items to add or update to the navigation menu
  * @returns {Object} The updated navigation menu data
  */
-export function updateMenuitems(data, update_with) {
+export function updateMenuitemsWithPluginMenu(data) {
     // React Prevents modifying props; causing this error : cannot add property 'X', object is not extensible
     // Making a copy resolves the error
     let updatedData = JSON.parse(JSON.stringify(data));
-    for (const [name, groups] of Object.entries(update_with)) {
+    for (const [name, groups] of Object.entries(pluginRoutes)) {
         if (!updatedData[name]) {
             updatedData[name] = {};
         }

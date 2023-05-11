@@ -1,6 +1,6 @@
-export { default as PluginFullWidthPageComponent } from "./FullWidthPage.jsx";
+export { default as PluginFullWidthPageComponent } from "./FullWidthPage";
 export { default as ExamplePluginRetrieveViewOverride } from "./CustomView"
-export { default as ExamplePluginNonModelView } from "./NonModelView.jsx"
+export { default as ExamplePluginNonModelView } from "./NonModelView"
 
 const app_config = {
     full_width_components: {
@@ -16,6 +16,8 @@ const app_config = {
     routes: [
         {
             component: "ExamplePluginNonModelView",
+            // This would be used as this route namespace; similar to what we have in django; "<app_name>:<namespace>"
+            namespace: "non-model-view", 
             name: "Inventory",
             groups: [
                 {

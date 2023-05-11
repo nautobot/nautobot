@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 import ObjectListTable from "@components/ObjectListTable";
 import GenericView from "@views/generic/GenericView";
 import { useGetRESTAPIQuery } from "@utils/api";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import {
     updateAppCurrentContext,
     getCurrentAppContextSelector,
@@ -12,8 +12,11 @@ import {
 import { toTitleCase } from "@utils/string";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
+import AppComponents from "@components/Apps";
+import { slugify } from "@utils/string";
+import { LoadingWidget } from "@components/LoadingWidget";
 
-export default function GenericObjectListView() {
+function GenericObjectListView() {
     const { app_name, model_name } = useParams();
     const dispatch = useDispatch();
     const location = useLocation();
@@ -123,4 +126,19 @@ export default function GenericObjectListView() {
             </NautobotGridItem>
         </GenericView>
     );
+}
+
+export default function ListView() {
+    const { app_name, model_name } = useParams();
+    const route_name = `${slugify(app_name)}:${model_name}`;
+    const CustomView = AppComponents.Views[route_name];
+    if (CustomView) {
+        return (
+            <Suspense fallback={<LoadingWidget />}>
+                <CustomView />
+            </Suspense>
+        );
+    }
+
+    return <GenericObjectListView />;
 }
