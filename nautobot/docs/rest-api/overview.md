@@ -329,6 +329,22 @@ The maximum number of objects that can be returned is limited by the [`MAX_PAGE_
 !!! warning
     Disabling the page size limit introduces a potential for very resource-intensive requests, since one API request can effectively retrieve an entire table from the database.
 
+## Sorting
+
+By default, objects are sorted by their model-defined ordering property. However, this can be overridden by specifying the `?sort` query parameter. For example, to retrieve devices sorted by their rack position:
+
+```no-highlight
+http://nautobot/api/dcim/devices/?sort=position
+```
+
+To sort in descending order, prefix the field name with a minus sign (`-`):
+
+```no-highlight
+http://nautobot/api/dcim/devices/?sort=-position
+```
+
+Currently only direct model attributes are validated to be sorted as expected.
+
 ## Interacting with Objects
 
 ### Retrieving Multiple Objects

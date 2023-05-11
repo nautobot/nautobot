@@ -1,0 +1,1 @@
+Added sorting support to the REST API via the `sort` query parameter.
