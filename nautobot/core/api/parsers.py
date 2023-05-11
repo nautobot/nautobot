@@ -4,7 +4,10 @@ from io import StringIO
 import json
 import logging
 
+from django.conf import settings
+
 from rest_framework import serializers
+from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
 from nautobot.core.models.utils import deconstruct_natural_key_slug
@@ -29,19 +32,22 @@ class NautobotCSVParser(BaseParser):
 
         serializer = serializer_class(context={"request": parser_context.get("request", None)})
 
-        text = stream.read().decode(encoding)
-        logger.info(text)
-        reader = csv.DictReader(StringIO(text))
-        data = []
-        for row in reader:
-            data.append(self.row_elements_to_data(row, serializer=serializer))
+        try:
+            text = stream.read().decode(encoding)
+            reader = csv.DictReader(StringIO(text))
+            data = []
+            for row in reader:
+                data.append(self.row_elements_to_data(row, serializer=serializer))
 
-        # TODO should we have a smarter way to distinguish between single-object and bulk operations?
-        if len(data) == 1:
-            data = data[0]
+            # TODO should we have a smarter way to distinguish between single-object and bulk operations?
+            if len(data) == 1:
+                data = data[0]
 
-        # logger.info("data: %s", json.dumps(data, indent=2))
-        return data
+            if settings.DEBUG:
+                logger.info("CSV loaded into data:\n%s", json.dumps(data, indent=2))
+            return data
+        except Exception as exc:
+            raise ParseError(str(exc)) from exc
 
     def row_elements_to_data(self, row, serializer):
         """
@@ -59,7 +65,8 @@ class NautobotCSVParser(BaseParser):
                 data.setdefault("custom_fields", {})[key[3:]] = value
                 continue
 
-            # logger.info("%s: %s", key, serializer_field)
+            if settings.DEBUG:
+                logger.info("%s: %s", key, serializer_field)
 
             if serializer_field.read_only:
                 continue
@@ -69,6 +76,8 @@ class NautobotCSVParser(BaseParser):
                 if value:
                     related_model = serializer_field.child_relation.queryset.model
                     value = [self.get_natural_key_dict(slug, related_model) for slug in value.split(",")]
+                else:
+                    value = []
             elif isinstance(serializer_field, serializers.RelatedField):
                 # A single related object, represented by its natural key
                 if value:
@@ -80,7 +89,8 @@ class NautobotCSVParser(BaseParser):
             if value == "" and serializer_field.allow_null:
                 value = None
 
-            # logger.info("%s: %s", key, value)
+            if settings.DEBUG:
+                logger.info("%s: %s", key, value)
             data[key] = value
 
         return data

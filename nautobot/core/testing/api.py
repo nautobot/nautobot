@@ -528,6 +528,29 @@ class APIViewTestCases:
                     self.assertEqual(len(objectchanges), 1)
                     self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
 
+        def test_recreate_object_csv(self):
+            """CSV export an object, delete it, and recreate it via CSV import."""
+            instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+            if instance is None:
+                self.fail("Couldn't find a single deletable object!")
+
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add", "view"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(instance.get_absolute_url(api=True) + "?format=csv", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            csv_data = response.content.decode(response.charset)
+
+            instance.delete()
+
+            response = self.client.post(self._get_list_url(), csv_data, content_type="text/csv", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            new_instance = self._get_queryset().get(pk=response.data["id"])
+            # TODO validate attributes are set correctly
+
         def test_bulk_create_objects(self):
             """
             POST a set of objects in a single request.

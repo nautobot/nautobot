@@ -54,6 +54,7 @@ class NautobotCSVRenderer(BaseRenderer):
         if not data:
             return ""
 
+        # TODO need to handle rendering of exceptions (e.g. not authenticated) as those have a different data dict.
         if isinstance(data, dict):
             data = [data]
 
