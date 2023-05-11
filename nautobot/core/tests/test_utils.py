@@ -665,7 +665,7 @@ class GetFilterFieldLabelTest(TestCase):
             destination_label="Peer",
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
         )
-        # cls.peer_relationship.validated_save()
+        cls.peer_relationship.validated_save()
 
         cls.custom_field = extras_models.CustomField(key="labeled_custom_field", label="Moo!", type="text")
         cls.custom_field.validated_save()

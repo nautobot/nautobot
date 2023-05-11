@@ -3,7 +3,6 @@ import json
 import logging
 from unittest import skip
 from random import shuffle
-from unittest import skip
 
 from django.db import connection
 from django.urls import reverse

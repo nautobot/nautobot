@@ -883,14 +883,14 @@ class GraphQLQueryTest(TestCase):
             destination_type=ContentType.objects.get_for_model(VirtualMachine),
             type="one-to-one",
         )
-        # cls.relationship_o2o_1.validated_save()
+        cls.relationship_o2o_1.validated_save()
 
         cls.ro2o_assoc_1 = RelationshipAssociation(
             relationship=cls.relationship_o2o_1,
             source=cls.device1,
             destination=cls.virtualmachine,
         )
-        # cls.ro2o_assoc_1.validated_save()
+        cls.ro2o_assoc_1.validated_save()
 
         cls.relationship_m2ms_1 = Relationship(
             label="Device Group",
@@ -899,26 +899,26 @@ class GraphQLQueryTest(TestCase):
             destination_type=ContentType.objects.get_for_model(Device),
             type="symmetric-many-to-many",
         )
-        # cls.relationship_m2ms_1.validated_save()
+        cls.relationship_m2ms_1.validated_save()
 
         cls.rm2ms_assoc_1 = RelationshipAssociation(
             relationship=cls.relationship_m2ms_1,
             source=cls.device1,
             destination=cls.device2,
         )
-        # cls.rm2ms_assoc_1.validated_save()
+        cls.rm2ms_assoc_1.validated_save()
         cls.rm2ms_assoc_2 = RelationshipAssociation(
             relationship=cls.relationship_m2ms_1,
             source=cls.device2,
             destination=cls.device3,
         )
-        # cls.rm2ms_assoc_2.validated_save()
+        cls.rm2ms_assoc_2.validated_save()
         cls.rm2ms_assoc_3 = RelationshipAssociation(
             relationship=cls.relationship_m2ms_1,
             source=cls.device3,
             destination=cls.device1,
         )
-        # cls.rm2ms_assoc_3.validated_save()
+        cls.rm2ms_assoc_3.validated_save()
 
         cls.backend = get_default_backend()
         cls.schema = graphene_settings.SCHEMA

@@ -99,6 +99,7 @@ class VRF(PrimaryModel):
     name = models.CharField(max_length=100, db_index=True)
     rd = models.CharField(
         max_length=VRF_RD_MAX_LENGTH,
+        # unique=True,
         blank=True,
         null=True,
         verbose_name="Route distinguisher",
@@ -116,11 +117,17 @@ class VRF(PrimaryModel):
         through="ipam.VRFDeviceAssignment",
         through_fields=("vrf", "device"),
     )
-    prefixes = models.ManyToManyField(
-        to="ipam.Prefix",
+    virtual_machines = models.ManyToManyField(
+        to="virtualization.VirtualMachine",
         related_name="vrfs",
-        through="ipam.VRFPrefixAssignment",
+        through="ipam.VRFDeviceAssignment",
+        through_fields=("vrf", "virtual_machine"),
     )
+    # prefixes = models.ManyToManyField(
+    #     to="ipam.Prefix",
+    #     related_name="vrfs",
+    #     through="ipam.VRFPrefixAssignment",
+    # )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -128,14 +135,21 @@ class VRF(PrimaryModel):
         blank=True,
         null=True,
     )
+    enforce_unique = models.BooleanField(
+        default=True,
+        verbose_name="Enforce unique space",
+        help_text="Prevent duplicate prefixes/IP addresses within this VRF",
+    )
     description = models.CharField(max_length=200, blank=True)
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
     export_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="exporting_vrfs", blank=True)
 
     clone_fields = [
         "tenant",
+        "enforce_unique",
         "description",
     ]
+    # TODO(jathan): Remove/revise this to account for Namespaces.
     natural_key_field_names = ["name", "rd"]  # default auto-key is just "rd", but it's nullable!
 
     class Meta:
@@ -187,6 +201,37 @@ class VRF(PrimaryModel):
         instance = self.devices.through.objects.get(vrf=self, device=device)
         return instance.delete()
 
+    def add_virtual_machine(self, virtual_machine, rd="", name=""):
+        """
+        Add a `virtual_machine` to this VRF, optionally overloading `rd` and `name`.
+
+        If `rd` or `name` are not provided, the values from this VRF will be inherited.
+
+        Args:
+            virtual_machine (VirtualMachine): VirtualMachine instance
+            rd (str): (Optional) RD of the VRF when associated with this VirtualMachine
+            name (str): (Optional) Name of the VRF when associated with this VirtualMachine
+
+        Returns:
+            VRFDeviceAssignment instance
+        """
+        instance = self.virtual_machines.through(vrf=self, virtual_machine=virtual_machine, rd=rd, name=name)
+        instance.validated_save()
+        return instance
+
+    def remove_virtual_machine(self, virtual_machine):
+        """
+        Remove a `virtual_machine` from this VRF.
+
+        Args:
+            virtual_machine (VirtualMachine): VirtualMachine instance
+
+        Returns:
+            tuple (int, dict): Number of objects deleted and a dict with number of deletions.
+        """
+        instance = self.virtual_machines.through.objects.get(vrf=self, virtual_machine=virtual_machine)
+        return instance.delete()
+
     def add_prefix(self, prefix):
         """
         Add a `prefix` to this VRF. Each object must be in the same Namespace.
@@ -217,7 +262,12 @@ class VRF(PrimaryModel):
 
 class VRFDeviceAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="device_assignments")
-    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="vrf_assignments")
+    device = models.ForeignKey(
+        "dcim.Device", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
+    )
+    virtual_machine = models.ForeignKey(
+        "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
+    )
     rd = models.CharField(
         max_length=VRF_RD_MAX_LENGTH,
         blank=True,
@@ -230,11 +280,14 @@ class VRFDeviceAssignment(BaseModel):
     class Meta:
         unique_together = [
             ["vrf", "device"],
+            ["vrf", "virtual_machine"],
             ["device", "rd", "name"],
+            ["virtual_machine", "rd", "name"],
         ]
 
     def __str__(self):
-        return f"{self.vrf} [{self.device}] (rd: {self.rd}, name: {self.name})"
+        obj = self.device or self.virtual_machine
+        return f"{self.vrf} [{obj}] (rd: {self.rd}, name: {self.name})"
 
     def clean(self):
         super().clean()
@@ -246,6 +299,12 @@ class VRFDeviceAssignment(BaseModel):
         # If name is not set, inherit it from `vrf.name`.
         if not self.name:
             self.name = self.vrf.name
+
+        # A VRF must belong to a Device *or* to a VirtualMachine.
+        if all([self.device, self.virtual_machine]):
+            raise ValidationError("A VRF cannot be associated with both a device and a virtual machine.")
+        if not any([self.device, self.virtual_machine]):
+            raise ValidationError("A VRF must be associated with either a device or a virtual machine.")
 
 
 class VRFPrefixAssignment(BaseModel):
@@ -380,6 +439,14 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         blank=True,
         null=True,
     )
+    vrf = models.ForeignKey(
+        to="ipam.VRF",
+        on_delete=models.PROTECT,
+        related_name="prefixes",
+        blank=True,
+        null=True,
+        verbose_name="VRF",
+    )
     namespace = models.ForeignKey(
         to="ipam.Namespace",
         on_delete=models.PROTECT,
@@ -451,7 +518,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             ["network", "broadcast", "prefix_length"],
             ["namespace", "network", "broadcast", "prefix_length"],
         ]
-        unique_together = ["namespace", "network", "prefix_length"]
+        # unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
 
     def validate_unique(self, exclude=None):
@@ -722,6 +789,17 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         return query
 
+    # FIXME(jathan); Restored for data migration work.
+    def get_child_prefixes(self):
+        """
+        Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
+        Prefixes belonging to any VRF.
+        """
+        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
+            return Prefix.objects.net_contained(self.prefix)
+        else:
+            return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
+
     def get_child_ips(self):
         """Return all IPAddresses directly contained within this Prefix and Namespace."""
         return self.ip_addresses.all()
@@ -836,6 +914,14 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     )
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
+    vrf = models.ForeignKey(
+        to="ipam.VRF",
+        on_delete=models.PROTECT,
+        related_name="ip_addresses",
+        blank=True,
+        null=True,
+        verbose_name="VRF",
+    )
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
@@ -878,6 +964,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     description = models.CharField(max_length=200, blank=True)
 
     clone_fields = [
+        "vrf",
         "tenant",
         "status",
         "role",
