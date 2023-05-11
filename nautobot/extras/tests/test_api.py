@@ -901,7 +901,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
-    @mock.patch("nautobot.extras.models.jobs.JOB_LOGS", None)  # TODO: temporary workaround (remove JOB_LOGS db?)
     def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
         self.add_permissions("extras.add_gitrepository")
@@ -1109,7 +1108,6 @@ class ImageAttachmentTest(
         )
 
 
-@mock.patch("nautobot.extras.models.jobs.JOB_LOGS", None)  # TODO: temporary workaround (remove JOB_LOGS db?)
 class JobTest(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
     APIViewTestCases.GetObjectViewTestCase,
