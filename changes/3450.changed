@@ -1,0 +1,1 @@
+Renamed `ComputedField` model attribute `slug` to `key`.
