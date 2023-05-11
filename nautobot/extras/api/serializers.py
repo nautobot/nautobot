@@ -245,21 +245,14 @@ class DynamicGroupSerializer(NautobotModelSerializer):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
     )
-    # Read-only because m2m is hard. Easier to just create # `DynamicGroupMemberships` explicitly
-    # using their own endpoint at /api/extras/dynamic-group-memberships/.
-    children = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(DynamicGroupMembershipSerializer)
-    def get_children(self, obj):
-        depth = get_nested_serializer_depth(self)
-        return return_nested_serializer_data_based_on_depth(
-            self, depth, obj, obj.dynamic_group_memberships, "dynamic_group_memberships"
-        )
 
     class Meta:
         model = DynamicGroup
         fields = "__all__"
-        extra_kwargs = {"filter": {"read_only": False}}
+        extra_kwargs = {
+            "children": {"source": "dynamic_group_memberships", "read_only": True},
+            "filter": {"read_only": False},
+        }
 
 
 #
