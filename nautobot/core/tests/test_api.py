@@ -517,7 +517,10 @@ class APIOrderingTestCase(testing.APITestCase):
                 self.assertEqual(
                     list(map(lambda p: p["id"], response.data["results"])),
                     list(
-                        map(lambda p: str(p), Provider.objects.order_by(field_name).values_list("id", flat=True)[:10])  # pylint: disable=unnecessary-lambda
+                        map(
+                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
+                            Provider.objects.order_by(field_name).values_list("id", flat=True)[:10],
+                        )
                     ),
                 )
 
@@ -533,8 +536,8 @@ class APIOrderingTestCase(testing.APITestCase):
                     list(map(lambda p: p["id"], response.data["results"])),
                     list(
                         map(
-                            lambda p: str(p),
-                            Provider.objects.order_by(f"-{field_name}").values_list("id", flat=True)[:10],  # pylint: disable=unnecessary-lambda
+                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
+                            Provider.objects.order_by(f"-{field_name}").values_list("id", flat=True)[:10],
                         )
                     ),
                 )
