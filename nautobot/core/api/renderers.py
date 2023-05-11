@@ -200,4 +200,4 @@ class NautobotCSVRenderer(BaseRenderer):
             return obj.natural_key()
         except (NotImplementedError, AttributeError):
             logger.error("%s doesn't implement natural_key()", type(obj).__name__)
-            return [obj.pk]
+            return [str(obj.pk)]
