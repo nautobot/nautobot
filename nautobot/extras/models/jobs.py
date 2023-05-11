@@ -547,14 +547,11 @@ class JobResult(BaseModel, CustomFieldModel):
     task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    # TODO(jathan): This field is currently unused for Jobs, but we should coerce it to a JSONField
-    # and set a contract that anything returned from a Job task MUST be JSON. In DCR core it is
-    # expected to be encoded/decoded using `content_type` and `content_encoding` which we have
-    # eliminated for our implmentation
-    result = models.TextField(
+    result = models.JSONField(
+        blank=True,
         null=True,
-        default=None,
         editable=False,
+        encoder=NautobotKombuJSONEncoder,
         verbose_name="Result Data",
         help_text="The data returned by the task",
     )
@@ -591,7 +588,7 @@ class JobResult(BaseModel, CustomFieldModel):
         ]
 
     def __str__(self):
-        return str(self.id)
+        return f"{self.name} started at {self.date_created} ({self.status})"
 
     def as_dict(self):
         """This is required by the django-celery-results DB backend."""

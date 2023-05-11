@@ -89,4 +89,11 @@ class Migration(migrations.Migration):
                 blank=True, default=dict, encoder=nautobot.core.celery.encoders.NautobotKombuJSONEncoder
             ),
         ),
+        migrations.AlterField(
+            model_name="jobresult",
+            name="result",
+            field=models.JSONField(
+                blank=True, editable=False, null=True, encoder=nautobot.core.celery.encoders.NautobotKombuJSONEncoder
+            ),
+        ),
     ]

@@ -38,6 +38,8 @@ class NautobotKombuJSONEncoder(JSONEncoder):
             data = {
                 "id": obj.id,
                 "__nautobot_type__": qual_name,
+                # TODO: change to natural key
+                "display": getattr(obj, "display", str(obj)),
             }
             return data
 
