@@ -7,7 +7,7 @@ import nautobot.core.celery.encoders
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0083_job_result__result_data_migration"),
+        ("extras", "0082_ensure_relationship_keys_are_unique"),
     ]
 
     operations = [
@@ -34,10 +34,6 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name="job",
             name="read_only_override",
-        ),
-        migrations.RemoveField(
-            model_name="jobresult",
-            name="data",
         ),
         migrations.RemoveField(
             model_name="jobresult",
@@ -87,13 +83,6 @@ class Migration(migrations.Migration):
             name="task_kwargs",
             field=models.JSONField(
                 blank=True, default=dict, encoder=nautobot.core.celery.encoders.NautobotKombuJSONEncoder
-            ),
-        ),
-        migrations.AlterField(
-            model_name="jobresult",
-            name="result",
-            field=models.JSONField(
-                blank=True, editable=False, null=True, encoder=nautobot.core.celery.encoders.NautobotKombuJSONEncoder
             ),
         ),
     ]

@@ -8,6 +8,7 @@ from celery import schedules
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
@@ -543,15 +544,27 @@ class JobResult(BaseModel, CustomFieldModel):
         help_text="Current state of the Job being run",
         db_index=True,
     )
+    data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
+    """
+    Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
+    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
+    Log Messages now go to their own object, the JobLogEntry.
+    data = {
+        "output": <optional string, such as captured stdout/stderr>,
+    }
+    """
     worker = models.CharField(max_length=100, default=None, null=True)
     task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    result = models.JSONField(
-        blank=True,
+    # TODO(jathan): This field is currently unused for Jobs, but we should coerce it to a JSONField
+    # and set a contract that anything returned from a Job task MUST be JSON. In DCR core it is
+    # expected to be encoded/decoded using `content_type` and `content_encoding` which we have
+    # eliminated for our implmentation
+    result = models.TextField(
         null=True,
+        default=None,
         editable=False,
-        encoder=NautobotKombuJSONEncoder,
         verbose_name="Result Data",
         help_text="The data returned by the task",
     )

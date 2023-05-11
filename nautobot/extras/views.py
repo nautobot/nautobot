@@ -800,7 +800,9 @@ class GitRepositoryListView(generic.ObjectListView):
             for r in JobResult.objects.filter(
                 # obj_type=git_repository_content_type, # TODO: replace with task_name
                 status__in=JobResultStatusChoices.READY_STATES,
-            ).order_by("date_done")
+            )
+            .order_by("date_done")
+            .defer("data")
         }
         return {
             "job_results": results,

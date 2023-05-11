@@ -15,7 +15,7 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
     Backwards compatibility with Netbox scripts and reports has been removed.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs may be optionally marked as [read-only](#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](#variables).
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". User input is supported via [job variables](#variables).
 
 ## Writing Jobs
 
@@ -517,7 +517,6 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `dryrun_default`
 * `has_sensitive_variables`
 * `hidden`
-* `read_only`
 * `soft_time_limit`
 * `time_limit`
 * `task_queues`
