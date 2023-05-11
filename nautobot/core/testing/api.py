@@ -350,7 +350,7 @@ class APIViewTestCases:
             # Simple sorting check for models with a "name" field
             # TreeModels don't support sorting at this time (order_by is not supported by TreeQuerySet)
             #   They will pass api == queryset tests below but will fail the user expected sort test
-            if hasattr(self.model, "name") and not isinstance(self.model, TreeModel):
+            if hasattr(self.model, "name") and not issubclass(self.model, TreeModel):
                 self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
                 response = self.client.get(f"{self._get_list_url()}?sort=name&limit=3", **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -372,7 +372,7 @@ class APIViewTestCases:
             # Simple sorting check for models with a "name" field
             # TreeModels don't support sorting at this time (order_by is not supported by TreeQuerySet)
             #   They will pass api == queryset tests below but will fail the user expected sort test
-            if hasattr(self.model, "name") and not isinstance(self.model, TreeModel):
+            if hasattr(self.model, "name") and not issubclass(self.model, TreeModel):
                 self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
                 response = self.client.get(f"{self._get_list_url()}?sort=-name&limit=3", **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
