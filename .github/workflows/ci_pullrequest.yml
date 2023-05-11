@@ -218,7 +218,7 @@ jobs:
       - name: "Reinstall Nautobot Local"
         run: "poetry install"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --keepdb" # TODO: DEMONSTRATION PURPOSES
+        run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
     needs:
@@ -267,7 +267,7 @@ jobs:
       - name: "Install MySql Dependencies"
         run: "poetry install --no-interaction --no-root --extras mysql"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --keepdb" # TODO: DEMONSTRATION PURPOSES
+        run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
     needs:

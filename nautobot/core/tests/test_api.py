@@ -498,23 +498,43 @@ class APIOrderingTestCase(testing.APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.url = reverse("circuits-api:provider-list")
+        cls.field_type_map = {
+            "CharField": "name",
+            "IntegerField": "asn",
+            "URLField": "portal_url",
+            "TextField": "admin_contact",
+            "DateTimeField": "created",
+        }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_ascending_sort(self):
         """Tests that results are returned in the expected ascending order."""
-        response = self.client.get(f"{self.url}?sort=name&limit=10", **self.header)
-        self.assertHttpStatus(response, 200)
-        self.assertEqual(
-            list(map(lambda p: p["name"], response.data["results"])),
-            list(Provider.objects.order_by("name").values_list("name", flat=True)[:10]),
-        )
+
+        for field_type, field_name in self.field_type_map.items():
+            with self.subTest(f"Testing {field_type}"):
+                response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(
+                    list(map(lambda p: p["id"], response.data["results"])),
+                    list(
+                        map(lambda p: str(p), Provider.objects.order_by(field_name).values_list("id", flat=True)[:10])
+                    ),
+                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_descending_sort(self):
         """Tests that results are returned in the expected descending order."""
-        response = self.client.get(f"{self.url}?sort=-name&limit=10", **self.header)
-        self.assertHttpStatus(response, 200)
-        self.assertEqual(
-            list(map(lambda p: p["name"], response.data["results"])),
-            list(Provider.objects.order_by("-name").values_list("name", flat=True)[:10]),
-        )
+
+        for field_type, field_name in self.field_type_map.items():
+            with self.subTest(f"Testing {field_type}"):
+                response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(
+                    list(map(lambda p: p["id"], response.data["results"])),
+                    list(
+                        map(
+                            lambda p: str(p),
+                            Provider.objects.order_by(f"-{field_name}").values_list("id", flat=True)[:10],
+                        )
+                    ),
+                )

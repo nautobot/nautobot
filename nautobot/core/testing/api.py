@@ -12,6 +12,7 @@ from rest_framework.test import APITransactionTestCase as _APITransactionTestCas
 
 from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -346,7 +347,10 @@ class APIViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_ascending_ordered(self):
-            if hasattr(self.model, "name"):
+            # Simple sorting check for models with a "name" field
+            # TreeModels don't support sorting at this time (order_by is not supported by TreeQuerySet)
+            #   They will pass api == queryset tests below but will fail the user expected sort test
+            if hasattr(self.model, "name") and not isinstance(self.model, TreeModel):
                 self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
                 response = self.client.get(f"{self._get_list_url()}?sort=name&limit=3", **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -365,7 +369,10 @@ class APIViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_descending_ordered(self):
-            if hasattr(self.model, "name"):
+            # Simple sorting check for models with a "name" field
+            # TreeModels don't support sorting at this time (order_by is not supported by TreeQuerySet)
+            #   They will pass api == queryset tests below but will fail the user expected sort test
+            if hasattr(self.model, "name") and not isinstance(self.model, TreeModel):
                 self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
                 response = self.client.get(f"{self._get_list_url()}?sort=-name&limit=3", **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
