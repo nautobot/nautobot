@@ -421,8 +421,8 @@ class GitRepositoryTable(BaseTable):
 
     class JobResultColumn(tables.TemplateColumn):
         def render(self, record, table, value, bound_column, **kwargs):
-            if record.name in table.context.get("job_results", {}):
-                table.context.update({"result": table.context["job_results"][record.name]})
+            if str(record.pk) in table.context.get("job_results", {}):
+                table.context.update({"result": table.context["job_results"][str(record.pk)]})
             else:
                 table.context.update({"result": None})
             return super().render(record, table, value, bound_column, **kwargs)

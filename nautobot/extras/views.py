@@ -796,9 +796,10 @@ class GitRepositoryListView(generic.ObjectListView):
     def extra_context(self):
         # Get the newest results for each repository name
         results = {
-            r.name: r
+            r.task_kwargs["repository"]: r
             for r in JobResult.objects.filter(
-                # obj_type=git_repository_content_type, # TODO: replace with task_name
+                task_name__startswith="nautobot.core.jobs.GitRepository",
+                task_kwargs__repository__isnull=False,
                 status__in=JobResultStatusChoices.READY_STATES,
             )
             .order_by("date_done")
