@@ -1,1 +1,2 @@
 Added `termination_type` filter to `CableFilterSet`.
+Added `natural_key_slug` field to REST API serializers.
