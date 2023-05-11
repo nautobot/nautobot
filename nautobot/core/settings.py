@@ -5,6 +5,7 @@ import sys
 
 from django.contrib.messages import constants as messages
 import django.forms
+import django_stubs_ext
 
 from nautobot import __version__
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
@@ -12,6 +13,8 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # no
 #
 # Environment setup
 #
+
+django_stubs_ext.monkeypatch()
 
 # This is used for display in the UI.
 VERSION = __version__

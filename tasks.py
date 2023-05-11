@@ -567,6 +567,18 @@ def flake8(context):
     run_command(context, command)
 
 
+@task
+def mypy(context, show_traceback=False, pdb=False):
+    """Check for typing errors."""
+    # --no-incremental: https://github.com/typeddjango/django-stubs/issues/760
+    command = "mypy -p nautobot --no-incremental"
+    if show_traceback:
+        command += " --show-traceback"
+    if pdb:
+        command += " --pdb"
+    run_command(context, command)
+
+
 @task(
     help={
         "target": "Module or file or directory to inspect, repeatable",

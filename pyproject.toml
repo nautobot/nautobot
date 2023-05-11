@@ -154,6 +154,8 @@ coverage = "~6.5.0"
 django-debug-toolbar = "~3.8.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
+# Type hints for Django
+django-stubs = {extras = ["compatible-mypy"], version = "^1.14.0"}
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
@@ -180,10 +182,14 @@ mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "0.19.1"
 mkdocstrings-python = "0.8.2"
+# Typing analysis
+mypy = "^1.1.1"
 # Code static analysis
 pylint = {version = "~2.15.0", python = "^3.7.2"}
 # Pylint extensions for Django
 pylint-django = {version = "~2.5.3", python = "^3.7.2"}
+# Loading of .env files, needed for mypy plugin
+python-dotenv = "^0.21.1"
 # Integration Tests
 requests = "~2.28.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -336,3 +342,16 @@ issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 [tool.towncrier.fragment.fixed]
 [tool.towncrier.fragment.removed]
 [tool.towncrier.fragment.security]
+
+[tool.mypy]
+plugins = "mypy_nautobot_plugin.py"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "nautobot.dcim.models.devices.*"
+disallow_untyped_defs = true
+ignore_errors = false
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "nautobot.core.settings"
