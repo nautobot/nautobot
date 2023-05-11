@@ -4,9 +4,10 @@ import re
 
 from django.contrib.messages import constants as messages
 import django.forms
+from social_core.pipeline import DEFAULT_AUTH_PIPELINE
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, load_social_backends  # noqa: F401
 
 #
 # Environment setup
@@ -440,6 +441,8 @@ CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
+CONSTANCE_MANAGE_SSO = is_truthy(os.getenv("NAUTOBOT_CONSTANCE_MANAGE_SSO", False))
+
 CONSTANCE_ADDITIONAL_FIELDS = {
     "per_page_defaults_field": [
         "nautobot.utilities.forms.fields.JSONArrayFormField",
@@ -542,6 +545,41 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
 }
+
+if CONSTANCE_MANAGE_SSO:
+    CONSTANCE_CONFIG_FIELDSETS["SSO"] = ["ALLOWED_SOCIAL_BACKENDS", "SOCIAL_CORE_CONFIG", "SOCIAL_CORE_PIPELINE"]
+    CONSTANCE_CONFIG["SOCIAL_CORE_CONFIG"] = [
+        {},
+        "JSON representation of Social Auth Core configuration.",
+        "social_core_config",
+    ]
+    CONSTANCE_CONFIG["SOCIAL_CORE_PIPELINE"] = [
+        DEFAULT_AUTH_PIPELINE,
+        "List of Social Core pipelines to perform during authentication.",
+        "social_core_config",
+    ]
+    CONSTANCE_CONFIG["ALLOWED_SOCIAL_BACKENDS"] = [
+        [],
+        "List of Allowed Social Core backends.",
+        "social_core_config",
+    ]
+    # CONSTANCE_ADDITIONAL_FIELDS["allowed_social_backends"] = [
+    #     "django.forms.MultipleChoiceField",
+    #     {
+    #         "required": False,
+    #         "widget": "django.forms.SelectMultiple",
+    #         "choices": ((i, i) for i in load_social_backends()),
+    #     },
+    # ]
+    CONSTANCE_ADDITIONAL_FIELDS["social_core_config"] = [
+        "django.forms.JSONField",
+        {
+            "required": False,
+        },
+    ]
+
+    SOCIAL_AUTH_STRATEGY = "nautobot.core.sso.NautobotStrategy"
+    AUTHENTICATION_BACKENDS = load_social_backends() + AUTHENTICATION_BACKENDS
 
 #
 # From django-cors-headers
