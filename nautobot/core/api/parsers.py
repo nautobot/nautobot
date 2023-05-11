@@ -10,8 +10,6 @@ from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
-from nautobot.core.models.utils import deconstruct_natural_key_slug
-
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +95,7 @@ class NautobotCSVParser(BaseParser):
 
     def get_natural_key_dict(self, natural_key_or_slug, model):
         """
-        Get the data dictionary corresponding to the given natural key list or natural-key-slug for the given model.
+        Get the data dictionary corresponding to the given natural key list or string for the given model.
         """
         if not natural_key_or_slug:
             return None
@@ -106,7 +104,8 @@ class NautobotCSVParser(BaseParser):
         elif model._meta.label_lower == "contenttypes.contenttype":
             natural_key = natural_key_or_slug.split(".")
         else:
-            natural_key = deconstruct_natural_key_slug(natural_key_or_slug)
+            # de-escape any literal string characters that were part of the natural key
+            natural_key = [s.replace("%2C", ",") if s else None for s in natural_key_or_slug.split(",")]
 
         if model._meta.label_lower == "contenttypes.contenttype":
             return {"app_label": natural_key[0], "model": natural_key[1]}
