@@ -49,7 +49,7 @@ JOB_LOG_MAX_ABSOLUTE_URL_LENGTH = 255
 CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL = 400
 CHANGELOG_MAX_OBJECT_REPR = 200
 
-# JobResult custom celery kwargs
+# JobResult custom Celery kwargs
 JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_profile",
     "nautobot_job_job_model_id",
