@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
@@ -544,12 +545,34 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_200_OK)
             csv_data = response.content.decode(response.charset)
 
+            serializer_class = get_serializer_for_model(self.model)
+            old_serializer = serializer_class(instance, context={"request": None})
+            old_data = old_serializer.data
             instance.delete()
 
             response = self.client.post(self._get_list_url(), csv_data, content_type="text/csv", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            new_instance = self._get_queryset().get(pk=response.data["id"])
-            # TODO validate attributes are set correctly
+            # Note that create via CSV is always treated as a bulk-create, and so the response is always a list of dicts
+            new_instance = self._get_queryset().get(pk=response.data[0]["id"])
+            self.assertNotEqual(new_instance.pk, instance.pk)
+
+            new_serializer = serializer_class(new_instance, context={"request": None})
+            new_data = new_serializer.data
+            for field_name, field in new_serializer.fields.items():
+                if field.read_only:
+                    continue
+                if field_name in ["created", "last_updated"]:
+                    self.assertNotEqual(
+                        old_data[field_name],
+                        new_data[field_name],
+                        f"{field_name} should have been updated on delete/recreate but it didn't change!",
+                    )
+                else:
+                    self.assertEqual(
+                        old_data[field_name],
+                        new_data[field_name],
+                        f"{field_name} should have been unchanged on delete/recreate but it differs!",
+                    )
 
         def test_bulk_create_objects(self):
             """

@@ -141,7 +141,9 @@ class NautobotCSVRenderer(BaseRenderer):
                     value = value["value"]
                 else:
                     value = json.dumps(value)
-            elif isinstance(value, (list, tuple)):
+            elif isinstance(value, (list, tuple, set)):
+                if isinstance(value, set):
+                    value = sorted(value)
                 if value and isinstance(value[0], dict) and "natural_key_slug" in value[0]:
                     # Multiple nested related objects
                     if value[0].get("generic_foreign_key"):
@@ -151,7 +153,7 @@ class NautobotCSVRenderer(BaseRenderer):
                         ]
                     else:
                         value = [v["natural_key_slug"] for v in value]
-                value = ",".join([str(v) if v is not None else "" for v in value])
+                value = json.dumps(value)
             elif not isinstance(value, (str, int)):
                 value = str(value)
 
