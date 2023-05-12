@@ -1,5 +1,4 @@
 import threading
-import time
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -95,20 +94,20 @@ class WebRequestContextTransactionTestCase(TransactionTestCase):
         """
         user = User.objects.create(username="test-user123")
 
-        def create_object_with_sleep(seconds):
+        def create_object_threaded(recurse):
             try:
                 with web_request_context(user, context_detail="test_change_log_context"):
-                    time.sleep(seconds)
+                    if recurse:
+                        t2 = threading.Thread(target=create_object_threaded, args=[False])
+                        t2.start()
+                        t2.join()
                     Site.objects.create(name=f"Test Site {threading.current_thread().name}")
             finally:
                 # threads have to manually close their own database connections
                 connection.close()
 
-        t1 = threading.Thread(target=create_object_with_sleep, args=[1])
-        t2 = threading.Thread(target=create_object_with_sleep, args=[0])
+        t1 = threading.Thread(target=create_object_threaded, args=[True])
         t1.start()
-        t2.start()
         t1.join()
-        t2.join()
 
         self.assertEqual(get_changes_for_model(Site).count(), 2)
