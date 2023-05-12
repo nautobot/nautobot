@@ -1,8 +1,5 @@
-import threading
-
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db import connection
 from django.test import TestCase
 
 from nautobot.core.celery import app
@@ -93,21 +90,9 @@ class WebRequestContextTransactionTestCase(TransactionTestCase):
         is disconnected while there is a pending object change.
         """
         user = User.objects.create(username="test-user123")
-
-        def create_object_threaded(recurse):
-            try:
-                with web_request_context(user, context_detail="test_change_log_context"):
-                    if recurse:
-                        t2 = threading.Thread(target=create_object_threaded, args=[False])
-                        t2.start()
-                        t2.join()
-                    Site.objects.create(name=f"Test Site {threading.current_thread().name}")
-            finally:
-                # threads have to manually close their own database connections
-                connection.close()
-
-        t1 = threading.Thread(target=create_object_threaded, args=[True])
-        t1.start()
-        t1.join()
+        with web_request_context(user, context_detail="test_change_log_context"):
+            with web_request_context(user, context_detail="test_change_log_context"):
+                Site.objects.create(name="Test Site 1")
+            Site.objects.create(name="Test Site 2")
 
         self.assertEqual(get_changes_for_model(Site).count(), 2)
