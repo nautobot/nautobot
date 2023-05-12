@@ -89,7 +89,7 @@ class WebRequestContextTestCase(TestCase):
 class WebRequestContextTransactionTestCase(TransactionTestCase):
     def test_change_log_thread_safe(self):
         """
-        Create a race condition where the change log signal handler
+        Emulate a race condition where the change log signal handler
         is disconnected while there is a pending object change.
         """
         user = User.objects.create(username="test-user123")
