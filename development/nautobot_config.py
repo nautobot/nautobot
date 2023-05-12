@@ -33,7 +33,6 @@ LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 
 PLUGINS = [
     "example_plugin",
-    "example_plugin_with_view_override",
 ]
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]

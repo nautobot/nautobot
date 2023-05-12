@@ -13,27 +13,6 @@ const app_config = {
             "retrieve": "ExamplePluginRetrieveViewOverride"
         }
     },
-    routes: [
-        {
-            component: "ExamplePluginNonModelView",
-            // This would be used as this route namespace; similar to what we have in django; "<app_name>:<namespace>"
-            namespace: "non-model-view", 
-            name: "Inventory",
-            groups: [
-                {
-                    name: "Example App With View Override",
-                    weight: 150,
-                    items: [
-                        {
-                            name: "Non Model View",
-                            weight: 100,
-                            path: "/non-model-view/",
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
 }
 
 export default app_config
