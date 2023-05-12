@@ -24,7 +24,7 @@ The buttons appear at the top right corner of an object's individual detail page
 
 ![Job Button Form](../../media/models/jobbutton_form.png "Job Button Form")
 
-For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Nautobot Enable Jobs](../../additional-features/jobs.md#enabling-jobs-for-running) for more details.
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](../../additional-features/jobs.md#enabling-jobs-for-running) for more details.
 
 ## Required Permissions
 
