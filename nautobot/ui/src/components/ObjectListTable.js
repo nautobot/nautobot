@@ -167,7 +167,7 @@ export default function ObjectListTable({
             )}
 
             <SkeletonText
-                endColor="gray.300"
+                endColor="gray.200"
                 noOfLines={parseInt(page_size)}
                 skeletonHeight="25"
                 spacing="3"

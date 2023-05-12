@@ -43,9 +43,7 @@ export default function Home() {
 
     if (isLoading) {
         return (
-            <GenericView>
-                <LoadingWidget />
-            </GenericView>
+            <LoadingWidget />
         );
     }
 
