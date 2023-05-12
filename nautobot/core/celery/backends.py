@@ -42,7 +42,9 @@ class NautobotDatabaseBackend(DatabaseBackend):
 
             properties = getattr(request, "properties", {}) or {}
 
+            # retrieve original "queue" kwarg from the request, celery stores it in delivery_info.routing_key
             celery_kwargs = {"queue": request.delivery_info.get("routing_key", None)}
+
             for kwarg_name in JOB_RESULT_CUSTOM_CELERY_KWARGS:
                 if kwarg_name in properties:
                     celery_kwargs[kwarg_name] = properties[kwarg_name]
