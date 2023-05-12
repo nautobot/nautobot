@@ -1,7 +1,8 @@
 import { Navigate, useRoutes } from "react-router-dom";
 // import { lazy } from 'react'
 
-import { useGetSessionQuery } from "@utils/api";
+import { useSelector } from "react-redux";
+import { isLoggedInSelector } from "@utils/store";
 import Home from "@views/Home";
 import CreateView from "@views/generic/ObjectCreate";
 import DetailView from "@views/generic/ObjectRetrieve";
@@ -12,33 +13,20 @@ import Logout from "@views/Logout";
 
 // TODO: Dynamic route injection
 export default function NautobotRouter() {
-    const {
-        data: sessionInfo,
-        isSuccess: sessionLoaded,
-        isError: sessionError,
-    } = useGetSessionQuery();
+    const isLoggedIn = useSelector(isLoggedInSelector);
 
     let element = useRoutes([
         {
             path: "/login/",
-            element:
-                sessionError || (sessionLoaded && !sessionInfo.logged_in) ? (
-                    <Login />
-                ) : (
-                    <Navigate to="/" />
-                ),
+            element: !isLoggedIn ? <Login /> : <Navigate to="/" />,
         },
         {
             path: "/logout/",
-            element: <Logout />,
+            element: isLoggedIn ? <Logout /> : <Navigate to="/" />,
         },
         {
             path: "/",
-            element:
-                sessionError ||
-                (sessionLoaded && !sessionInfo.logged_in && (
-                    <Navigate to="/login/" />
-                )),
+            element: !isLoggedIn && <Navigate to="/login/" />,
             children: [
                 {
                     path: "",

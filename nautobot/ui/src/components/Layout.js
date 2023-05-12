@@ -14,10 +14,11 @@ import LoadingWidget from "@components/LoadingWidget";
 import RouterLink from "@components/RouterLink";
 import SidebarNav from "@components/SidebarNav";
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
+import { useSelector } from "react-redux";
+import { isLoggedInSelector } from "@utils/store";
 
 export default function Layout({ children }) {
-    const { data: sessionInfo, isSuccess: sessionLoaded } =
-        useGetSessionQuery();
+    const isLoggedIn = useSelector(isLoggedInSelector);
     const { isSuccess: menuLoaded, refetch: refetchMenu } = useGetUIMenuQuery();
 
     // TODO: Update for RTK pattern hopefully
@@ -32,8 +33,8 @@ export default function Layout({ children }) {
     let toRender = children;
 
     // TODO: showing the loading widget while the menu is loading is breaking the login route if not logged into the backend server
-    if (!sessionLoaded || !menuLoaded || sessionInfo === undefined)
-        toRender = <LoadingWidget name="application" />;
+    // if (!sessionLoaded || !menuLoaded || sessionInfo === undefined)
+    //     toRender = <LoadingWidget name="application" />;
 
     function legacyUI() {
         document.cookie =
@@ -65,7 +66,7 @@ export default function Layout({ children }) {
                         to="/"
                     />
                 </Heading>
-                {sessionInfo && sessionInfo.logged_in && <SidebarNav />}
+                {isLoggedIn && <SidebarNav />}
                 <Button onClick={legacyUI} variant="link" color="white">
                     Return to Legacy UI
                 </Button>

@@ -1,10 +1,11 @@
 // Import the RTK Query methods from the React-specific entry point
 import { createApi, fetchBaseQuery, retry } from "@reduxjs/toolkit/query/react";
 import {
-    API_BASE,
     API_OBJECT_COUNTS,
     API_USER_SESSION_INFO,
     API_UI_MENU_INFO,
+    API_USER_AUTHENTICATE,
+    AUTH_LOGOUT,
 } from "@constants/apiPath";
 
 /*
@@ -16,7 +17,7 @@ import {
   in React and Redux's sites.
 */
 
-const staggeredBaseQuery = retry(fetchBaseQuery({ baseUrl: API_BASE }), {
+const staggeredBaseQuery = retry(fetchBaseQuery({ baseUrl: "" }), {
     maxRetries: 5,
 });
 
@@ -74,6 +75,19 @@ export const baseApi = createApi({
             },
             providesTags: ["APIData"],
         }),
+        login: builder.mutation({
+            query: ({ username, password }) => ({
+                url: API_USER_AUTHENTICATE,
+                method: "POST",
+                body: { username, password },
+            }),
+        }),
+        logout: builder.mutation({
+            query: () => ({
+                url: AUTH_LOGOUT,
+                method: "GET",
+            }),
+        }),
     }),
 });
 
@@ -89,6 +103,8 @@ export const {
     useGetUIMenuQuery,
     useGetRESTAPIQuery,
     useGetObjectCountsQuery,
+    useLoginMutation,
+    useLogoutMutation,
 } = baseApi;
 
 // TODO: Below is a pattern for taking the menu API and building an entire RTK-Query API for it

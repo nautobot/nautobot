@@ -23,8 +23,8 @@ import {
 } from "react-router-dom";
 import RouterButton from "@components/RouterButton";
 
-export function Navbar({ session, currentContext }) {
-    const isLoggedIn = !!session?.logged_in;
+export function Navbar({ appState }) {
+    const isLoggedIn = appState.logged_in;
 
     return (
         <UINavbar>
@@ -61,7 +61,8 @@ export function Navbar({ session, currentContext }) {
                             <NavbarSection
                                 as="span"
                                 isActive={
-                                    isActive || children === currentContext
+                                    isActive ||
+                                    children === appState.currentContext
                                 }
                                 children={children}
                                 {...rest}
@@ -81,16 +82,16 @@ export function Navbar({ session, currentContext }) {
             {isLoggedIn && (
                 <Menu>
                     <MenuButton as={NavbarMenuButton} isDisabled={!isLoggedIn}>
-                        {session?.user?.display ||
+                        {appState.user?.display ||
                             [
-                                ...(session?.user?.firstName
-                                    ? [session?.user?.firstName]
+                                ...(appState.user?.firstName
+                                    ? [appState.user?.firstName]
                                     : []),
-                                ...(session?.user?.lastName
-                                    ? [session?.user?.lastName]
+                                ...(appState.user?.lastName
+                                    ? [appState.user?.lastName]
                                     : []),
                             ].join(" ") ||
-                            session?.user?.username}
+                            appState.user?.username}
                     </MenuButton>
                     <MenuList>
                         {[

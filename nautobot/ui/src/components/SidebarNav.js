@@ -21,7 +21,7 @@ export default function SidebarNav() {
         data: menuInfo,
         isSuccess: isMenuSuccess,
         isError: isMenuError,
-    } = useGetUIMenuQuery();
+    } = useGetUIMenuQuery({ refetchOnReconnect: true });
     const dispatch = useDispatch();
 
     const currentContext = useSelector(

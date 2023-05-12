@@ -4,10 +4,11 @@ import {
     FormLabel,
     Input,
     Box,
+    Spinner,
 } from "@nautobot/nautobot-ui";
 import axios from "axios";
 
-import { useGetSessionQuery } from "@utils/api";
+import { useGetSessionQuery, useLoginMutation } from "@utils/api";
 import { useNavigate } from "react-router-dom";
 
 axios.defaults.withCredentials = true;
@@ -16,29 +17,40 @@ axios.defaults.xsrfHeaderName = "X-CSRFToken";
 
 export default function Login() {
     const { refetch: refetchSession } = useGetSessionQuery();
+    const [login, { isLoading }] = useLoginMutation();
     const navigate = useNavigate();
 
     // TODO: Places like this might be best to stick with Axios calls but we should have a generic Axios object
     //   for global cookie management, etc.
     const handleSubmit = (e) => {
+        login({
+            username: e.target.username.value,
+            password: e.target.password.value,
+        })
+            .then(refetchSession)
+            .catch((err) => {
+                console.log("error");
+                console.log(err);
+            });
         e.preventDefault();
-        axios
-            .post("/api/users/tokens/authenticate/", {
-                username: e.target.username.value,
-                password: e.target.password.value,
-            })
-            .then(() => {
-                refetchSession().then(() => {
-                    navigate("/");
-                });
-            })
-            .catch((err) =>
-                alert(err.response?.data?.non_field_errors || err.message)
-            );
+        // axios
+        //     .post("/api/users/tokens/authenticate/", {
+        //         username: e.target.username.value,
+        //         password: e.target.password.value,
+        //     })
+        //     .then(() => {
+        //         refetchSession().then(() => {
+        //             navigate("/");
+        //         });
+        //     })
+        //     .catch((err) =>
+        //         alert(err.response?.data?.non_field_errors || err.message)
+        //     );
     };
 
     return (
         <Box boxShadow="base" p="6" rounded="md" bg="white">
+            {isLoading && <Spinner />}
             <form method="POST" onSubmit={handleSubmit}>
                 <FormControl>
                     <FormLabel>Username</FormLabel>

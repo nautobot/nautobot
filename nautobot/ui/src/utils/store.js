@@ -16,7 +16,7 @@ import { createSlice } from "@reduxjs/toolkit";
 // Configure redux-persist to save state in Local Storage for performance
 const persistConfig = {
     key: "root",
-    version: 1,
+    version: 2,
     storage,
 };
 
@@ -36,6 +36,12 @@ const appContextSlice = createSlice({
 const initialAppState = {
     currentContext: "Inventory", // TODO: What is the context for the homepage?
     routeToContext: {},
+    user: {},
+    logged_in: false,
+    auth: {
+        sso_enabled: false,
+        backends: [],
+    },
 };
 
 const appStateSlice = createSlice({
@@ -94,6 +100,18 @@ const appStateSlice = createSlice({
             state.routeToContext = urlPatternToContext;
             return state;
         },
+        updateSessionState(state, action) {
+            state.user = action.payload.user;
+            state.logged_in = action.payload.logged_in;
+            state.auth = state.auth || {};
+            state.auth.sso_enabled = action.payload.sso_enabled;
+            state.auth.backends = action.payload.backends;
+            return state;
+        },
+        flushSessionState(state, action) {
+            state.user = {};
+            state.logged_in = false;
+        },
     },
 });
 
@@ -106,6 +124,10 @@ export function getCurrentAppContextSelector(app_label, model_name) {
     };
 }
 
+export function isLoggedInSelector(state) {
+    return state?.appState?.logged_in || false;
+}
+
 const rootReducer = combineReducers({
     [baseApi.reducerPath]: baseApi.reducer,
     appContext: appContextSlice.reducer,
@@ -116,8 +138,12 @@ const rootReducer = combineReducers({
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const { updateAppContext } = appContextSlice.actions;
-export const { updateAppCurrentContext, updateRouteToContext } =
-    appStateSlice.actions;
+export const {
+    updateAppCurrentContext,
+    updateRouteToContext,
+    updateSessionState,
+    flushSessionState,
+} = appStateSlice.actions;
 
 // Global Redux store for global state management
 export const store = configureStore({

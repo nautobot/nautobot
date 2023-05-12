@@ -85,13 +85,12 @@ export default function GenericView({
     gridBackground = "",
 }) {
     const { pathname } = useLocation();
-    const menu = useGetUIMenuQuery();
-    const session = useGetSessionQuery();
+    const { menu, isSuccess } = useGetUIMenuQuery();
 
     const breadcrumbs = useMemo(
         () =>
             (function () {
-                if (pathname === "/") {
+                if (pathname === "/" || !isSuccess || !menu) {
                     return [
                         {
                             children: "Home",
@@ -106,12 +105,10 @@ export default function GenericView({
                     objectData
                 );
             })(),
-        [menu, objectData, pathname]
+        [menu, objectData, pathname, isSuccess]
     );
 
-    const currentContext = useSelector(
-        (state) => state.appState.currentContext
-    );
+    const currentState = useSelector((state) => state.appState);
 
     return (
         <Flex
@@ -122,7 +119,7 @@ export default function GenericView({
             paddingTop="md"
             width="full"
         >
-            <Navbar session={session?.data} currentContext={currentContext} />
+            <Navbar appState={currentState} />
             <Box flex="1" overflow="auto">
                 <Breadcrumbs paddingX="md">
                     {breadcrumbs.map((props) => (

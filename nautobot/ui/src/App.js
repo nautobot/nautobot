@@ -1,6 +1,9 @@
 import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import { NautobotUIProvider } from "@nautobot/nautobot-ui";
+import { useDispatch } from "react-redux";
+import { useGetSessionQuery } from "@utils/api";
+import { updateSessionState } from "@utils/store";
 
 import Layout from "@components/Layout";
 import NautobotRouter from "./router";
@@ -28,6 +31,22 @@ const theme = {
 // (see index.js for context)
 
 function App() {
+    const dispatch = useDispatch();
+    const {
+        data: sessionData,
+        isSuccess: isSessionSuccess,
+        isError: isSessionError,
+    } = useGetSessionQuery();
+
+    React.useEffect(() => {
+        if (!isSessionSuccess || isSessionError) {
+            return;
+        }
+        if (isSessionSuccess) {
+            dispatch(updateSessionState(sessionData));
+        }
+    }, [dispatch, sessionData, isSessionSuccess, isSessionError]);
+
     return (
         <NautobotUIProvider theme={theme}>
             <BrowserRouter>

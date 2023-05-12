@@ -1,34 +1,27 @@
 import axios from "axios";
+import { useEffect } from "react";
 
-import { useGetSessionQuery } from "@utils/api";
-import { useNavigate } from "react-router-dom";
+import { useLogoutMutation } from "@utils/api";
+import { useSelector } from "react-redux";
+import { isLoggedInSelector, flushSessionState } from "@utils/store";
 
 axios.defaults.withCredentials = true;
 axios.defaults.xsrfCookieName = "csrftoken";
 axios.defaults.xsrfHeaderName = "X-CSRFToken";
 
 export default function Logout() {
-    const {
-        data: sessionInfo,
-        isSuccess: sessionLoaded,
-        refetch: refetchSession,
-    } = useGetSessionQuery();
-    const navigate = useNavigate();
+    const isLoggedIn = useSelector(isLoggedInSelector);
+    const [logout] = useLogoutMutation();
 
-    // TODO: Places like this might be best to stick with Axios calls but we should have a generic Axios object
-    //   for global cookie management, etc.
-    if (sessionLoaded && sessionInfo.logged_in) {
-        axios
-            .get("/logout/")
-            .then(() => {
-                refetchSession().then(() => {
-                    navigate("/login/");
+    useEffect(() => {
+        if (isLoggedIn) {
+            logout()
+                .then(flushSessionState)
+                .catch((err) => {
+                    console.log(err);
                 });
-            })
-            .catch((err) => console.log(err.detail));
-    } else {
-        navigate("/login/");
-    }
+        }
+    }, [isLoggedIn, logout]);
 
-    return <span>Logging out...</span>;
+    return <></>;
 }

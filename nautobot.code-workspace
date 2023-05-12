@@ -64,7 +64,8 @@
 					"localRoot": "${workspaceFolder}",
 					"remoteRoot": "/source"
 				}],
-				"django": true
+				"django": true,
+				"justMyCode": false
 			},
 			{
 				"name": "Python: Nautobot-Celery (Remote)",
