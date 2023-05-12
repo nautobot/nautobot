@@ -7,9 +7,7 @@ const app_config = {
         "dcim:sites": ["PluginFullWidthPageComponent"]
     },
     view_overrides: {
-        // TODO: this will still cause test failures since the tests run with this plugin included.
-        // Needs to override an otherwise untested view instead, probably something from example-plugin?
-        "ipam:ip-addresses": {
+        "example-plugin:models": {
             "retrieve": "ExamplePluginRetrieveViewOverride"
         }
     },

@@ -4,7 +4,7 @@ export { default as ExamplePluginNonModelView } from "./NonModelView"
 const app_config = {
     detail_tabs: {},
     full_width_components: {
-        "dcim:sites": ["ExampleAppFullWidthPageComponent"]
+        "dcim:devices": ["ExampleAppFullWidthPageComponent"]
     },
     view_overrides: {},
     routes: [
