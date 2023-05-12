@@ -6,11 +6,11 @@ from django.db import connection
 from django.test import TestCase
 
 from nautobot.core.celery import app
-from nautobot.utilities.testing import TransactionTestCase
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook
+from nautobot.utilities.testing import TransactionTestCase
 from nautobot.utilities.utils import get_changes_for_model
 
 
