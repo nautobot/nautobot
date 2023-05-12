@@ -1,8 +1,13 @@
+import threading
+import time
+
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
 from django.test import TestCase
 
 from nautobot.core.celery import app
+from nautobot.utilities.testing import TransactionTestCase
 from nautobot.dcim.models import Site
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
@@ -38,13 +43,11 @@ class WebRequestContextTestCase(TestCase):
         app.control.purge()  # Begin each test with an empty queue
 
     def test_user_object_type_error(self):
-
         with self.assertRaises(TypeError):
             with web_request_context("a string is not a user object"):
                 pass
 
     def test_change_log_created(self):
-
         with web_request_context(self.user):
             site = Site(name="Test Site 1")
             site.save()
@@ -56,7 +59,6 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
     def test_change_log_context(self):
-
         with web_request_context(self.user, context_detail="test_change_log_context"):
             site = Site(name="Test Site 1")
             site.save()
@@ -83,3 +85,30 @@ class WebRequestContextTestCase(TestCase):
         # self.assertEqual(job.args[0], Webhook.objects.get(type_create=True))
         # self.assertEqual(job.args[1]["id"], str(site.pk))
         # self.assertEqual(job.args[2], "site")
+
+
+class WebRequestContextTransactionTestCase(TransactionTestCase):
+    def test_change_log_thread_safe(self):
+        """
+        Create a race condition where the change log signal handler
+        is disconnected while there is a pending object change.
+        """
+        user = User.objects.create(username="test-user123")
+
+        def create_object_with_sleep(seconds):
+            try:
+                with web_request_context(user, context_detail="test_change_log_context"):
+                    time.sleep(seconds)
+                    Site.objects.create(name=f"Test Site {threading.current_thread().name}")
+            finally:
+                # threads have to manually close their own database connections
+                connection.close()
+
+        t1 = threading.Thread(target=create_object_with_sleep, args=[1])
+        t2 = threading.Thread(target=create_object_with_sleep, args=[0])
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        self.assertEqual(get_changes_for_model(Site).count(), 2)
