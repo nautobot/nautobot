@@ -17,7 +17,7 @@ Records of this type store the following data as read-only (not modifiable via t
 * The name of the module containing the Job
 * The name of the Job class
 * Whether the job is installed presently
-* Whether the job is read only
+* Whether the job is read-only
 * Whether the job is a [Job Hook Receiver](jobhook.md#job-hook-receivers)
 * Whether the job is a [Job Button Receiver](jobbutton.md#job-button-receivers)
 
