@@ -54,16 +54,16 @@ class CSVDataField(django_forms.CharField):
     item is a dictionary of column headers, mapping field names to the attribute by which they match a related object
     (where applicable). The second item is a list of dictionaries, each representing a discrete row of CSV data.
 
-    :param from_form: The form from which the field derives its validation rules.
+    Args:
+        serializer_class: The serializer class used to validate the field.
     """
 
     widget = django_forms.Textarea
 
-    def __init__(self, from_form, *args, **kwargs):
-        form = from_form()
-        self.model = form.Meta.model
-        self.fields = form.fields
-        self.required_fields = [name for name, field in form.fields.items() if field.required]
+    def __init__(self, serializer_class, *args, **kwargs):
+        self.serializer_class = serializer_class
+        self.fields = self.serializer_class().fields
+        self.required_fields = [name for name, field in self.fields.items() if field.required]
 
         super().__init__(*args, **kwargs)
 
@@ -101,14 +101,14 @@ class CSVFileField(django_forms.FileField):
     by which they match a related object (where applicable). The second item is a list of dictionaries, each
     representing a discrete row of CSV data.
 
-    :param from_form: The form from which the field derives its validation rules.
+    Args:
+        serializer_class: The serializer class used to validate the field.
     """
 
-    def __init__(self, from_form, *args, **kwargs):
-        form = from_form()
-        self.model = form.Meta.model
-        self.fields = form.fields
-        self.required_fields = [name for name, field in form.fields.items() if field.required]
+    def __init__(self, serializer_class, *args, **kwargs):
+        self.serializer_class = serializer_class
+        self.fields = self.serializer_class().fields
+        self.required_fields = [name for name, field in self.fields.items() if field.required]
 
         super().__init__(*args, **kwargs)
 

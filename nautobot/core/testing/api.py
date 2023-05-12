@@ -546,7 +546,7 @@ class APIViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            response = self.client.get(instance.get_absolute_url(api=True) + "?format=csv", **self.header)
+            response = self.client.get(self._get_detail_url(instance) + "?format=csv", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             csv_data = response.content.decode(response.charset)
 

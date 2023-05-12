@@ -29,6 +29,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
 
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -528,9 +529,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
             class BulkCreateForm(BootstrapMixin, Form):
                 csv_data = CSVDataField(
-                    from_form=self.bulk_create_form_class, widget=Textarea(attrs=self.bulk_create_widget_attrs)
+                    serializer_class=get_serializer_for_model(self.get_queryset().model),
+                    widget=Textarea(attrs=self.bulk_create_widget_attrs)
                 )
-                csv_file = CSVFileField(from_form=self.bulk_create_form_class)
+                csv_file = CSVFileField(serializer_class=get_serializer_for_model(self.get_queryset().model))
 
             form_class = BulkCreateForm
         else:

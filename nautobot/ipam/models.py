@@ -89,9 +89,10 @@ class VRF(PrimaryModel):
         "enforce_unique",
         "description",
     ]
+    natural_key_field_names = ["name", "rd"]  # default auto-key is just "rd", but it's nullable!
 
     class Meta:
-        ordering = ("name", "rd")  # (name, rd) may be non-unique
+        ordering = ("name", "rd")  # (name, rd) may be non-unique because rd is nullable
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
 
