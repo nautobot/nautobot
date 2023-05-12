@@ -94,7 +94,8 @@ class NautobotCSVParser(BaseParser):
                 else:
                     value = None
             elif isinstance(
-                serializer_field, (serializers.DictField, serializers.JSONField, serializers.MultipleChoiceField)
+                serializer_field,
+                (serializers.DictField, serializers.JSONField, serializers.ListField, serializers.MultipleChoiceField),
             ):
                 if value != "":
                     value = json.loads(value)

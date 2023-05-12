@@ -531,7 +531,12 @@ class APIViewTestCases:
 
         def test_recreate_object_csv(self):
             """CSV export an object, delete it, and recreate it via CSV import."""
-            instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+            if hasattr(self, "get_deletable_object"):
+                # provided by DeleteObjectViewTestCase mixin
+                instance = self.get_deletable_object()
+            else:
+                # try to do it ourselves
+                instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
             if instance is None:
                 self.fail("Couldn't find a single deletable object!")
 
