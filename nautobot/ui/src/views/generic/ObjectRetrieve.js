@@ -35,7 +35,7 @@ import {
 import { ReferenceDataTag } from "@components/ReferenceDataTag";
 import { useLocation, useParams } from "react-router-dom";
 import useSWR from "swr";
-import { useRef } from "react";
+import { Suspense, useRef } from "react";
 // import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
 import AppComponents from "@components/Apps";
 import { toTitleCase } from "@utils/string";
@@ -46,6 +46,7 @@ import { humanFriendlyDate } from "@utils/date";
 import { uiUrl } from "@utils/url";
 import RouterLink from "@components/RouterLink";
 import { useDisclosure } from "@chakra-ui/react";
+import LoadingWidget from "@components/LoadingWidget";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
@@ -75,7 +76,7 @@ function render_header(value) {
     return value;
 }
 
-function DetailFieldValue(value) {
+export function DetailFieldValue(value) {
     const ref = useRef();
     if (value === undefined) {
         return <>&mdash;</>;
@@ -488,7 +489,12 @@ export default function ObjectRetrieve({ api_url }) {
         "retrieve" in AppComponents.CustomViews?.[route_name]
     ) {
         const CustomView = AppComponents.CustomViews[route_name].retrieve;
-        return_view = <CustomView {...obj} />;
+        return_view = (
+            <Suspense fallback={<LoadingWidget></LoadingWidget>}>
+                {" "}
+                <CustomView {...obj} />{" "}
+            </Suspense>
+        );
     }
 
     return return_view;
