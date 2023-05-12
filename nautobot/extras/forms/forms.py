@@ -172,7 +172,9 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         required=True,
         label="Content Type",
     )
-    slug = SlugField(
+    key = SlugField(
+        label="Key",
+        max_length=50,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
@@ -189,7 +191,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         fields = (
             "content_type",
             "label",
-            "slug",
+            "key",
             "description",
             "template",
             "fallback_value",

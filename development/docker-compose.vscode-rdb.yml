@@ -10,11 +10,11 @@ services:
     command: sh -c "
       pip install debugpy &&
       /docker-entrypoint.sh &&
-      python -m debugpy --listen 0.0.0.0:6899 -m manage runserver 0.0.0.0:8080 --insecure"
+      python -m debugpy --listen 0.0.0.0:6899 -m nautobot.core.cli runserver 0.0.0.0:8080 --insecure"
   celery_worker:
     ports:
       - "6898:6898"
     entrypoint: ""
     command: sh -c "
       pip install debugpy &&
-      watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- python -m debugpy --listen 0.0.0.0:6898 -m manage celery worker -l INFO --events"
+      watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- python -m debugpy --listen 0.0.0.0:6898 -m nautobot.core.cli celery worker -l INFO --events"
