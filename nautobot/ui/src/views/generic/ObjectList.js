@@ -131,7 +131,7 @@ function GenericObjectListView() {
 export default function ListView() {
     const { app_name, model_name } = useParams();
     const route_name = `${slugify(app_name)}:${model_name}`;
-    const CustomView = AppComponents.Views[route_name];
+    const CustomView = AppComponents.OverrideViews[route_name];
     if (CustomView) {
         return (
             <Suspense fallback={<LoadingWidget />}>

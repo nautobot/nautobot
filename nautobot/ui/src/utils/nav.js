@@ -1,5 +1,7 @@
 import NautobotApps from "../app_imports";
 import { slugify } from "./string";
+import { lazy } from "react";
+import { my_import_as_function } from "./utils";
 
 /**
  * Converts a plugin menu into a navigation menu format by grouping the items by name and group,
@@ -44,7 +46,7 @@ export function convertPluginMenuIntoNavMenuFormat(
     return finalData;
 }
 
-function get_routes() {
+function getPluginNavMenu() {
     let data = {};
     for (const [app_name, import_promise] of Object.entries(NautobotApps)) {
         // eslint-disable-next-line no-loop-func
@@ -61,7 +63,7 @@ function get_routes() {
     }
     return data;
 }
-const pluginRoutes = get_routes();
+const pluginNavMenu = getPluginNavMenu();
 
 /**
  * Updates the given navigation menu data with the plugin menu items.
@@ -73,7 +75,7 @@ export function updateMenuitemsWithPluginMenu(data) {
     // React Prevents modifying props; causing this error : cannot add property 'X', object is not extensible
     // Making a copy resolves the error
     let updatedData = JSON.parse(JSON.stringify(data));
-    for (const [name, groups] of Object.entries(pluginRoutes)) {
+    for (const [name, groups] of Object.entries(pluginNavMenu)) {
         if (!updatedData[name]) {
             updatedData[name] = {};
         }
@@ -85,4 +87,48 @@ export function updateMenuitemsWithPluginMenu(data) {
         }
     }
     return updatedData;
+}
+
+/**
+ * Converts a list of plugin routes to a list of React routes.
+ *
+ * @param {Array} data - A list of plugin routes to format:
+ * @param {string} app_name - Plugin app_name.
+ * @returns {Array} A list of React routes in the format:
+ *   [
+ *     {
+ *       path: string,
+ *       component: lazy(() => Component),
+ *     },
+ *     ...
+ *   ]
+ */
+function convertPluginRoutesToReactRoutes(data, app_name) {
+    let convertedData = [];
+    data.forEach((namespace) => {
+        namespace.groups.forEach((group) => {
+            group.items.forEach((item) => {
+                const path = `${slugify(app_name)}${item.path}`;
+                const PluginComponent = lazy(() =>
+                    my_import_as_function(app_name, item.component)
+                );
+                convertedData.push({ path, element: <PluginComponent /> });
+            });
+        });
+    });
+    return convertedData;
+}
+
+export async function getPluginRoutes() {
+    let react_routes = [];
+    for (const [app_name, import_promise] of Object.entries(NautobotApps)) {
+        try {
+            const pluginImports = await import_promise;
+            const routes = pluginImports?.default?.routes;
+            react_routes = convertPluginRoutesToReactRoutes(routes, app_name);
+        } catch (e) {
+            console.log("Encountered Error in importing Plugin Routes: ", e);
+        }
+    }
+    return react_routes;
 }

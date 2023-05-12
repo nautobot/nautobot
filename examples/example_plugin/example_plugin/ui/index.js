@@ -9,9 +9,6 @@ const app_config = {
     view_overrides: {},
     routes: [
         {
-            component: "ExamplePluginNonModelView",
-            // This would be used as this route namespace; similar to what we have in django; "<app_name>:<namespace>"
-            namespace: "non-model-view", 
             name: "Inventory",
             groups: [
                 {
@@ -22,6 +19,8 @@ const app_config = {
                             name: "Non Model View",
                             weight: 100,
                             path: "/non-model-view/",
+                            component: "ExamplePluginNonModelView",
+                            namespace: "non-model-view", 
                         }
                     ]
                 }
