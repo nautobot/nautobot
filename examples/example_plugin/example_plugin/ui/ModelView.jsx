@@ -1,7 +1,7 @@
 import { Table, Box, TableContainer, Tbody, Thead, Tr, Th, Td } from '@nautobot/nautobot-ui';
 import GenericView from "@views/generic/GenericView";
 
-export default function CustomView(props) {
+export default function ModelView(props) {
   return (
   <GenericView>
     <Box background="white-0" borderRadius="md" padding="md">

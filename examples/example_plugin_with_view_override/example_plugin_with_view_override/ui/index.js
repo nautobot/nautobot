@@ -1,10 +1,10 @@
 export { default as PluginFullWidthPageComponent } from "./FullWidthPage";
-export { default as ExamplePluginRetrieveViewOverride } from "./CustomView"
+export { default as ExamplePluginRetrieveViewOverride } from "./ModelView"
 export { default as ExamplePluginNonModelView } from "./NonModelView"
 
 const app_config = {
     full_width_components: {
-        "dcim:sites": ["PluginFullWidthPageComponent"]
+        "dcim:locations": ["PluginFullWidthPageComponent"]
     },
     view_overrides: {
         "example-plugin:models": {

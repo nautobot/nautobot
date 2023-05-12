@@ -1,4 +1,5 @@
 export { default as ExampleAppFullWidthPageComponent } from "./FullWidthPage"
+export { default as ExamplePluginModelView } from "./ModelView"
 export { default as ExamplePluginNonModelView } from "./NonModelView"
 
 const app_config = {
@@ -6,7 +7,11 @@ const app_config = {
     full_width_components: {
         "dcim:devices": ["ExampleAppFullWidthPageComponent"]
     },
-    view_overrides: {},
+    view_overrides: {
+        "example-plugin:models": {
+            "retrieve": "ExamplePluginModelView"
+        }
+    },
     routes: [
         {
             name: "Inventory",
