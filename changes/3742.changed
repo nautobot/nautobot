@@ -1,0 +1,2 @@
+Replaced existing spinner in LoadingWidget component with spinning-nautobot.
+Lightened the color of the skeleton component when loading tables.
