@@ -8,31 +8,6 @@ import {
 } from "@constants/apiPath";
 import { updateMenuitemsWithPluginMenu } from "./nav";
 
-/*
-  The one true API!
-
-  Using Redux's RTK Query making fetching and caching a breeze! This will provide hooks and wires automagically.
-
-  A standardized convention for retrieving data which should make developer's lives easier and is already extensively documented
-  in React and Redux's sites.
-*/
-
-/**
- * 
- * getUIMenu: builder.query({
-    query: async () => {
-        const response = await staggeredBaseQuery.fetch(API_UI_MENU_INFO);
-        const data = response.data;
-        // Add custom data to the returned data
-        const updatedData = {
-            ...data,
-            customData: "your custom data here",
-        };
-        return updatedData;
-    },
-    providesTags: ["AppData"],
-}),
- */
 const staggeredBaseQuery = retry(fetchBaseQuery({ baseUrl: API_BASE }), {
     maxRetries: 5,
 });
