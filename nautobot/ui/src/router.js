@@ -17,8 +17,6 @@ export default function NautobotRouter() {
         isError: sessionError,
     } = useGetSessionQuery();
 
-    console.log("===> ", getPluginRoutes());
-
     return useRoutes([
         {
             path: "/login/",
