@@ -64,6 +64,7 @@ class CSVDataField(django_forms.CharField):
         self.serializer_class = serializer_class
         self.fields = self.serializer_class(context={"depth": 0}).fields
         self.required_fields = [name for name, field in self.fields.items() if field.required]
+        kwargs.setdefault("required", False)
 
         super().__init__(*args, **kwargs)
 
@@ -95,6 +96,7 @@ class CSVFileField(django_forms.FileField):
         self.serializer_class = serializer_class
         self.fields = self.serializer_class(context={"depth": 0}).fields
         self.required_fields = [name for name, field in self.fields.items() if field.required]
+        kwargs.setdefault("required", False)
 
         super().__init__(*args, **kwargs)
 
@@ -108,32 +110,12 @@ class CSVFileField(django_forms.FileField):
             )
 
     def to_python(self, file):
+        """For parity with CSVDataField, this returns the CSV text rather than an UploadedFile object."""
         if file is None:
             return None
 
         file = super().to_python(file)
-        csv_str = file.read().decode("utf-8-sig").strip()
-        # Check if there is only one column of input
-        # If so a delimiter cannot be determined and it will raise an exception.
-        # In that case we will use csv.excel class
-        # Which defines the usual properties of an Excel-generated CSV file.
-        try:
-            dialect = csv.Sniffer().sniff(csv_str, delimiters=",")
-        except csv.Error:
-            dialect = csv.excel
-        reader = csv.reader(csv_str.splitlines(), dialect)
-        headers, records = forms.parse_csv(reader)
-
-        return headers, records
-
-    def validate(self, value):
-        if value is None:
-            return None
-
-        headers, _records = value
-        forms.validate_csv(headers, self.fields, self.required_fields)
-
-        return value
+        return file.read().decode("utf-8-sig").strip()
 
 
 class CSVChoiceField(django_forms.ChoiceField):

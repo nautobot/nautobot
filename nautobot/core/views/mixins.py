@@ -871,7 +871,6 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
     """
 
     bulk_create_active_tab = "csv-data"
-    bulk_create_form_class = None
     bulk_create_widget_attrs = {}
 
     def _process_bulk_create_form(self, form):
