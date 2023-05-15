@@ -1,3 +1,4 @@
+from io import BytesIO
 import logging
 
 from django.contrib import messages
@@ -29,6 +30,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
 
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
@@ -886,18 +888,20 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
                 self.bulk_create_active_tab = "csv-file"
             else:
                 field_name = "csv_data"
-            headers, records = form.cleaned_data[field_name]
-            for row, data in enumerate(records, start=1):
-                obj_form = self.bulk_create_form_class(data, headers=headers)
-                restrict_form_fields(obj_form, request.user)
 
-                if obj_form.is_valid():
-                    obj = self.form_save(obj_form)
-                    new_objs.append(obj)
-                else:
-                    for field, err in obj_form.errors.items():
+            csvtext = form.cleaned_data[field_name]
+            data = NautobotCSVParser().parse(
+                stream=BytesIO(csvtext.encode("utf-8")),
+                parser_context={"request": request, "serializer_class": self.serializer_class}
+            )
+            serializer = self.serializer_class(data=data, context={"request": request}, many=True)
+            if serializer.is_valid():
+                new_objs = serializer.save()
+            else:
+                for row, errors in enumerate(serializer.errors, start=1):
+                    for field, err in errors.items():
                         form.add_error(field_name, f"Row {row} {field}: {err[0]}")
-                    raise ValidationError("")
+                raise ValidationError("")
 
             # Enforce object-level permissions
             if queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
