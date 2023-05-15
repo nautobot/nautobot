@@ -245,7 +245,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 context.update(
                     {
                         "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
-                        "fields": view.bulk_create_form_class(model).fields if view.bulk_create_form_class else None,
+                        "fields": view.serializer_class(context={"request": request, "depth": 0}).fields,
                     }
                 )
             elif view.action in ["changelog", "notes"]:

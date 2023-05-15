@@ -846,8 +846,9 @@ class GitRepositoryBulkImportView(generic.BulkImportView):
     model_form = forms.GitRepositoryCSVForm
     table = tables.GitRepositoryBulkTable
 
-    def _save_obj(self, obj_form, request):
+    def _save_obj(self, serializer, request):
         """Each GitRepository needs to know the originating request when it's saved so that it can enqueue using it."""
+        # TODO
         instance = obj_form.save(commit=False)
         instance.request = request
         instance.save()

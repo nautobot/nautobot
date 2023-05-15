@@ -1,4 +1,5 @@
 from copy import deepcopy
+from io import BytesIO
 import logging
 import re
 
@@ -21,6 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.forms import SearchForm
 from nautobot.core.exceptions import AbortTransaction
@@ -793,11 +795,11 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
         return CSVImportForm(*args, **kwargs)
 
-    def _save_obj(self, obj_form, request):
+    def _save_obj(self, serializer, request):
         """
         Provide a hook to modify the object immediately before saving it (e.g. to encrypt secret data).
         """
-        return obj_form.save()
+        return serializer.save()
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
@@ -808,7 +810,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             self.template_name,
             {
                 "form": self._import_form(),
-                "fields": self.serializer_class(context={"request": request}).fields,
+                "fields": self.serializer_class(context={"request": request, "depth": 0}).fields,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
@@ -830,16 +832,27 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                         field_name = "csv_file"
                     else:
                         field_name = "csv_data"
-                    headers, records = form.cleaned_data[field_name]
-                    for row, data in enumerate(records, start=1):
-                        obj_form = self.model_form(data, headers=headers)
-                        restrict_form_fields(obj_form, request.user)
+                    csvtext = form.cleaned_data[field_name]
 
-                        if obj_form.is_valid():
-                            obj = self._save_obj(obj_form, request)
+                    # TODO: For the moment we process the rows of the CSV one at a time.
+                    #       This is done so that we can call `self._save_obj()` for each row independently.
+                    #       Probably we *should* remove all `_save_obj()` implementations and move that logic to the
+                    #       appropriate serializers instead, in which case we could just use a serializer(many=True).
+                    csvlines = csvtext.splitlines()
+                    headers = csvlines[0]
+                    records = csvlines[1:]
+
+                    for row, csvline in enumerate(records, start=1):
+                        data = NautobotCSVParser().parse(
+                            stream=BytesIO(f"{headers}\r\n{csvline}".encode("utf-8")),
+                            parser_context={"request": request, "serializer_class": self.serializer_class},
+                        )[0]  # CSVReader returns a list of data dicts, even if only one element
+                        serializer = self.serializer_class(data=data, context={"request": request})
+                        if serializer.is_valid():
+                            obj = self._save_obj(serializer, request)
                             new_objs.append(obj)
                         else:
-                            for field, err in obj_form.errors.items():
+                            for field, err in serializer.errors.items():
                                 form.add_error(field_name, f"Row {row} {field}: {err[0]}")
                             raise ValidationError("")
 
@@ -880,7 +893,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             self.template_name,
             {
                 "form": form,
-                "fields": self.model_form().fields,
+                "fields": self.serializer_class(context={"request": request, "depth": 0}).fields,
                 "obj_type": self.model_form._meta.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-file" if form.has_error("csv_file") else "csv-data",

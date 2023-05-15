@@ -62,7 +62,7 @@ class CSVDataField(django_forms.CharField):
 
     def __init__(self, serializer_class, *args, **kwargs):
         self.serializer_class = serializer_class
-        self.fields = self.serializer_class().fields
+        self.fields = self.serializer_class(context={"depth": 0}).fields
         self.required_fields = [name for name, field in self.fields.items() if field.required]
 
         super().__init__(*args, **kwargs)
@@ -79,20 +79,6 @@ class CSVDataField(django_forms.CharField):
                 "in double quotes."
             )
 
-    def to_python(self, value):
-        if value is None:
-            return None
-        reader = csv.reader(StringIO(value.strip()))
-        return forms.parse_csv(reader)
-
-    def validate(self, value):
-        if value is None:
-            return None
-        headers, _records = value
-        forms.validate_csv(headers, self.fields, self.required_fields)
-
-        return value
-
 
 class CSVFileField(django_forms.FileField):
     """
@@ -107,7 +93,7 @@ class CSVFileField(django_forms.FileField):
 
     def __init__(self, serializer_class, *args, **kwargs):
         self.serializer_class = serializer_class
-        self.fields = self.serializer_class().fields
+        self.fields = self.serializer_class(context={"depth": 0}).fields
         self.required_fields = [name for name, field in self.fields.items() if field.required]
 
         super().__init__(*args, **kwargs)

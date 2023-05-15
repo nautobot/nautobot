@@ -24,7 +24,12 @@ class NautobotCSVParser(BaseParser):
         parser_context = parser_context or {}
         encoding = parser_context.get("encoding", "UTF-8")
         try:
-            serializer_class = parser_context["view"].get_serializer_class()
+            if "serializer_class" in parser_context:
+                # UI bulk-import case
+                serializer_class = parser_context["serializer_class"]
+            else:
+                # REST API case
+                serializer_class = parser_context["view"].get_serializer_class()
         except (KeyError, AttributeError):
             logger.error("Unable to find serializer_class for the view?")
             return None
@@ -72,6 +77,8 @@ class NautobotCSVParser(BaseParser):
                 continue
 
             serializer_field = serializer.fields.get(key)
+            if not serializer_field:
+                raise KeyError(key)
 
             if serializer_field.read_only and key != "id":
                 # Deserializing read-only fields is tricky, especially for things like SerializerMethodFields that

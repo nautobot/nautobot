@@ -301,7 +301,7 @@ def nested_serializer_factory(relation_info, nested_depth):
     # else we build a new one and store it in the cache for future use.
     if nested_serializer_name in NESTED_SERIALIZER_CACHE:
         field_class = NESTED_SERIALIZER_CACHE[nested_serializer_name]
-        field_kwargs = {"many": relation_info.to_many}
+        field_kwargs = get_nested_relation_kwargs(relation_info)
     else:
         base_serializer_class = get_serializer_for_model(relation_info.related_model)
 
@@ -318,7 +318,7 @@ def nested_serializer_factory(relation_info, nested_depth):
         NautobotNestedSerializer.__name__ = nested_serializer_name
         NESTED_SERIALIZER_CACHE[nested_serializer_name] = NautobotNestedSerializer
         field_class = NautobotNestedSerializer
-        field_kwargs = {"many": relation_info.to_many}
+        field_kwargs = get_nested_relation_kwargs(relation_info)
     return field_class, field_kwargs
 
 
