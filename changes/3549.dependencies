@@ -1,0 +1,3 @@
+Updated `django` to `~3.2.19` to address `CVE-2023-31047`.
+Updated `mkdocs` to `~1.4.3`.
+Updated `psycopg2-binary` to `~2.9.6`.
