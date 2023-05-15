@@ -7,26 +7,10 @@ const app_config = {
         "dcim:sites": ["ExampleAppFullWidthPageComponent"]
     },
     view_overrides: {},
-    routes: [
-        {
-            name: "Inventory",
-            groups: [
-                {
-                    name: "Example App",
-                    weight: 150,
-                    items: [
-                        {
-                            name: "Non Model View",
-                            weight: 100,
-                            path: "/non-model-view/",
-                            component: "ExamplePluginNonModelView",
-                            namespace: "non-model-view", 
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
+    routes_view_components: {
+        "examplemodel_dynamicgroups": "ExampleAppFullWidthPageComponent",
+        "examplemodel": "ExamplePluginNonModelView",
+    }
 }
 
 export default app_config

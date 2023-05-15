@@ -1,10 +1,5 @@
-import GenericView from "@views/generic/GenericView";
-
-
 export default function NonModelView(){
     return (
-        <GenericView gridBackground="white">
-            <div> Im a humble 🙈 Non Model Plugin View.</div>
-        </GenericView>
+            <div>Im a App provided route view.</div>
     )
 }

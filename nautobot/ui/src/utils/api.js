@@ -6,7 +6,6 @@ import {
     API_USER_SESSION_INFO,
     API_UI_MENU_INFO,
 } from "@constants/apiPath";
-import { updateMenuitemsWithPluginMenu } from "./nav";
 
 const staggeredBaseQuery = retry(fetchBaseQuery({ baseUrl: API_BASE }), {
     maxRetries: 5,
@@ -27,9 +26,6 @@ export const baseApi = createApi({
         getUIMenu: builder.query({
             query: () => API_UI_MENU_INFO,
             providesTags: ["AppData"],
-            // Update API return Menu with menu from menu data from plugins
-            transformResponse: (response) =>
-                updateMenuitemsWithPluginMenu(response),
         }),
         getObjectCounts: builder.query({
             query: () => API_OBJECT_COUNTS,

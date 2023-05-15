@@ -1,13 +1,17 @@
 import copy
+from importlib import util
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.admindocs.views import simplify_regex
 from django.core.management.base import BaseCommand, CommandError
+from django.urls.resolvers import RoutePattern
 import jinja2
 
 
@@ -37,18 +41,85 @@ class Command(BaseCommand):
             help="Do not compile UI.",
         )
 
+    def convert_django_url_regex_to_react_route_path(self, regex):
+        """
+        Converts a regular expression object to a string representation of the regular expression.
+        It replaces named capture groups with their corresponding names and
+        removes unnecessary characters such as '^', '$', '\Z', and '\'.
+
+        Args:
+            regex (re.Pattern): A regular expression object.
+
+        Returns:
+            str: A string representation of the regular expression.
+
+        Example:
+            >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
+            >>> convert_django_url_regex_to_react_route_path(pattern)
+            '/other-models/:pk/notes'
+        """
+        pattern = str(regex.pattern)
+        path = simplify_regex(pattern).replace('<', ':').replace('>', '').replace('\\Z', '').replace('\\', '')
+        return path if path.endswith("/") else f"{path}/"
+
+    def get_app_component(self, file_path, route_name):
+        """
+        Extracts the view component associated with the specified route name from the App index.js file.
+
+        Parameters:
+            file_path (str): The path to the JavaScript file to read from.
+            route_name (str): The name of the route to extract the view component for.
+
+        Returns:
+            str: The view component associated with the specified route name, or None if not found.
+        """
+        with open(file_path, 'r') as f:
+            js_content = f.read()
+
+        # Construct a regular expression that matches the specified key and extracts the associated view component
+        pattern = rf'routes_view_components:\s*{{[^}}]*"{re.escape(route_name)}"\s*:\s*"([^"]+)"'
+        view_component_match = re.search(pattern, js_content)
+        return view_component_match[1] if view_component_match else None
+    
+    def render_routes_imports(self, app_base_path, app_name, app_config):
+        data = []
+        module = __import__(f"{app_name}.urls", {}, {}, [""])
+        base_url = app_config.base_url or app_config.label 
+        for urlpattern in module.urlpatterns:
+            if component := self.get_app_component(
+                app_base_path / "ui/index.js",
+                urlpattern.name,
+            ):
+                if isinstance(urlpattern.pattern, RoutePattern):
+                    path_regex = urlpattern.pattern._compile(urlpattern.pattern._route)
+                else:
+                    path_regex = urlpattern.pattern._compile(urlpattern.pattern._regex)
+                url_path = self.convert_django_url_regex_to_react_route_path(path_regex)
+                data.append({ "path": base_url + url_path, "component": component })
+        return data
+
     def render_app_imports(self):
-        """Render `app_imports.js` and update `jsconfig.json` to map to the path for each."""
+        """Render `app_imports.js`, update `jsconfig.json` to map to the path for each and update `urls.json` to match url imports."""
         self.stdout.write(self.style.WARNING(">>> Rendering Nautobot App imports..."))
 
         ui_dir = settings.NAUTOBOT_UI_DIR
 
         router_file_path = Path(ui_dir, "src", "router.js")
+        app_routes_file_path = Path(ui_dir, "src", "app_routes.json")
         jsconfig_file_path = Path(ui_dir, "jsconfig.paths.json")
         jsconfig_base_file_path = Path(ui_dir, "jsconfig-base.json")
+        app_routes = {}
 
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
+        
+        # Create file if not exists
+        if not os.path.exists(app_routes_file_path):
+            with open(app_routes_file_path, "w", encoding="utf-8") as app_routes_file:
+                json.dump({}, app_routes_file)
+        else:
+            with open(app_routes_file_path, "r", encoding="utf-8") as app_rotes_file:
+                app_routes = json.load(app_rotes_file)
 
         # We're going to modify this list if apps don't have a `ui` directory.
         enabled_apps = copy.copy(settings.PLUGINS)
@@ -60,6 +131,7 @@ class Command(BaseCommand):
             abs_app_ui_path = abs_app_path / "ui"
             app_path = Path(os.path.relpath(abs_app_path, ui_dir))
             app_ui_path = app_path / "ui"
+            app_routes[app_name] = self.render_routes_imports(abs_app_path, app_name, app_config)
 
             # Assert that an App has a UI folder.
             if not abs_app_ui_path.exists():
@@ -72,6 +144,9 @@ class Command(BaseCommand):
 
         with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
             json.dump(jsconfig, generated_config_file, indent=4)
+        
+        with open(app_routes_file_path, "w", encoding="utf-8") as app_rotes_file:
+                json.dump(app_routes, app_rotes_file, indent=4)
 
         app_imports_final_file_path = Path(ui_dir, "src", "app_imports.js")
         environment = jinja2.sandbox.SandboxedEnvironment(loader=jinja2.FileSystemLoader(ui_dir))
