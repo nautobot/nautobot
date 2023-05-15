@@ -1,7 +1,7 @@
 import NautobotApps from "../app_imports";
 import { slugify } from "./string";
 import { lazy } from "react";
-import { my_import_as_function } from "./utils";
+import { my_import_as_function } from "./generic";
 
 /**
  * Converts a plugin menu into a navigation menu format by grouping the items by name and group,

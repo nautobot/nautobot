@@ -1,5 +1,5 @@
 export { default as PluginFullWidthPageComponent } from "./FullWidthPage";
-export { default as ExamplePluginOverridenModelView } from "./OverridenView";
+export { default as ExampleAppOverrideModelView } from "./OverrideView";
 
 const app_config = {
     full_width_components: {
@@ -7,7 +7,7 @@ const app_config = {
     },
     view_overrides: {
         "dcim:locations": {
-            "retrieve": "ExamplePluginOverridenModelView"
+            "retrieve": "ExampleAppOverrideModelView"
         }
     },
 }

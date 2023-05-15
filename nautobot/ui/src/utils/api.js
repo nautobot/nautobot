@@ -6,7 +6,7 @@ import {
     API_USER_SESSION_INFO,
     API_UI_MENU_INFO,
 } from "@constants/apiPath";
-import { updateMenuitemsWithPluginMenu } from "./nav";
+import { updateMenuitemsWithPluginMenu } from "./navigation";
 
 /*
   The one true API!

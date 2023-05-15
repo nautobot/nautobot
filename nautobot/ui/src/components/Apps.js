@@ -2,7 +2,7 @@ import { lazy } from "react";
 
 import NautobotApps from "../app_imports";
 import { slugify } from "@utils/string";
-import { my_import_as_function } from "@utils/utils";
+import { my_import_as_function } from "@utils/generic";
 
 function get_components() {
     var base = {};

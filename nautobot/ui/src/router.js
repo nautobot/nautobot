@@ -9,7 +9,7 @@ import ListView from "@views/generic/ObjectList";
 import InstalledApps from "@views/InstalledApps";
 import Login from "@views/Login";
 import Logout from "@views/Logout";
-import { getPluginRoutes } from "@utils/nav";
+import { getPluginRoutes } from "@utils/navigation";
 
 // TODO: Dynamic route injection
 export default function NautobotRouter() {

@@ -18,7 +18,7 @@ export default function ModelView(props) {
         pb="sm"
     >
         <NtcThumbnailIcon width="25px" height="30px" />{" "}
-        Overriden Retrieve View for {toTitleCase(model_name, "-")}
+        Overridden Retrieve View for {toTitleCase(model_name, "-")}
     </Heading>
       <TableContainer>
         <Table>

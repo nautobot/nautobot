@@ -1,6 +1,6 @@
 export { default as ExampleAppFullWidthPageComponent } from "./FullWidthPage"
-export { default as ExamplePluginOverridenModelView } from "./ModelView"
-export { default as ExamplePluginNonModelView } from "./NonModelView"
+export { default as ExampleAppOverrideModelView } from "./ModelView"
+export { default as ExampleAppNonModelView } from "./NonModelView"
 
 const app_config = {
     detail_tabs: {},
@@ -9,7 +9,7 @@ const app_config = {
     },
     view_overrides: {
         "example-plugin:other-models": {
-            "retrieve": "ExamplePluginOverridenModelView"
+            "retrieve": "ExampleAppOverrideModelView"
         },
     },
     routes: [
@@ -24,7 +24,7 @@ const app_config = {
                             name: "Non Model View",
                             weight: 100,
                             path: "/non-model-view/",
-                            component: "ExamplePluginNonModelView",
+                            component: "ExampleAppNonModelView",
                             namespace: "non-model-view", 
                         }
                     ]
