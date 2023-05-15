@@ -8,7 +8,6 @@ const app_config = {
     },
     view_overrides: {},
     routes_view_components: {
-        "examplemodel_dynamicgroups": "ExampleAppFullWidthPageComponent",
         "examplemodel": "ExamplePluginNonModelView",
     }
 }
