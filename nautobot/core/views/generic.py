@@ -811,7 +811,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             {
                 "form": self._import_form(),
                 "fields": self.serializer_class(context={"request": request, "depth": 0}).fields,
-                "obj_type": self.model_form._meta.model._meta.verbose_name,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
             },
@@ -846,7 +846,9 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                         data = NautobotCSVParser().parse(
                             stream=BytesIO(f"{headers}\r\n{csvline}".encode("utf-8")),
                             parser_context={"request": request, "serializer_class": self.serializer_class},
-                        )[0]  # CSVReader returns a list of data dicts, even if only one element
+                        )[
+                            0
+                        ]  # CSVReader returns a list of data dicts, even if only one element
                         serializer = self.serializer_class(data=data, context={"request": request})
                         if serializer.is_valid():
                             obj = self._save_obj(serializer, request)
@@ -894,7 +896,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             {
                 "form": form,
                 "fields": self.serializer_class(context={"request": request, "depth": 0}).fields,
-                "obj_type": self.model_form._meta.model._meta.verbose_name,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-file" if form.has_error("csv_file") else "csv-data",
             },

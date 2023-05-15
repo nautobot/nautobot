@@ -2,11 +2,7 @@ import re
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.forms.array import SimpleArrayField
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.utils.safestring import mark_safe
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
@@ -19,9 +15,7 @@ from nautobot.core.forms import (
     ColorSelect,
     CommentField,
     CSVChoiceField,
-    CSVContentTypeField,
     CSVModelChoiceField,
-    CSVMultipleContentTypeField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
@@ -52,7 +46,6 @@ from nautobot.extras.forms import (
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
     RoleModelBulkEditFormMixin,
-    RoleModelCSVFormMixin,
     RoleModelFilterFormMixin,
     RoleRequiredRoleModelCSVFormMixin,
     StatusModelBulkEditFormMixin,
@@ -87,10 +80,8 @@ from .choices import (
     SubdeviceRoleChoices,
 )
 from .constants import (
-    CABLE_TERMINATION_MODELS,
     INTERFACE_MTU_MAX,
     INTERFACE_MTU_MIN,
-    NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
 )
@@ -258,29 +249,6 @@ class LocationTypeForm(NautobotModelForm):
         fields = ("parent", "name", "slug", "description", "nestable", "content_types")
 
 
-class LocationTypeCSVForm(CustomFieldModelCSVForm):
-    parent = CSVModelChoiceField(
-        queryset=LocationType.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Name of parent location type",
-    )
-    content_types = CSVMultipleContentTypeField(
-        feature="locations",
-        required=False,
-        choices_as_strings=True,
-        help_text=mark_safe(
-            "The object types to which this status applies. Multiple values "
-            "must be comma-separated and wrapped in double quotes. (e.g. "
-            '<code>"dcim.device,dcim.rack"</code>)'
-        ),
-    )
-
-    class Meta:
-        model = LocationType
-        fields = []  # TODO
-
-
 class LocationTypeFilterForm(NautobotFilterForm):
     model = LocationType
     q = forms.CharField(required=False, label="Search")
@@ -378,35 +346,6 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
         ]
 
 
-class LocationCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    location_type = CSVModelChoiceField(
-        queryset=LocationType.objects.all(),
-        to_field_name="name",
-        help_text="Location type",
-    )
-    parent = CSVModelChoiceField(
-        queryset=Location.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent location",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = Location
-        fields = []  # TODO
-        help_texts = {
-            "time_zone": mark_safe(
-                'Time zone (<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>)'
-            )
-        }
-
-
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = Location
     field_order = ["q", "location_type", "parent", "subtree", "status", "tenant_group", "tenant", "tag"]
@@ -442,22 +381,6 @@ class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
             "slug",
             "description",
         )
-
-
-class RackGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
-    parent = CSVModelChoiceField(
-        queryset=RackGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent rack group",
-        error_messages={
-            "invalid_choice": "Rack group not found.",
-        },
-    )
-
-    class Meta:
-        model = RackGroup
-        fields = []  # TODO
 
 
 class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -517,35 +440,6 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "width": StaticSelect2(),
             "outer_unit": StaticSelect2(),
         }
-
-
-class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
-    rack_group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Name of assigned tenant",
-    )
-    type = CSVChoiceField(choices=RackTypeChoices, required=False, help_text="Rack type")
-    width = forms.ChoiceField(choices=RackWidthChoices, help_text="Rail-to-rail width (in inches)")
-    outer_unit = CSVChoiceField(
-        choices=RackDimensionUnitChoices,
-        required=False,
-        help_text="Unit for outer dimensions",
-    )
-
-    class Meta:
-        model = Rack
-        fields = []  # TODO
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit rack_group queryset by assigned location
-            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
 
 class RackBulkEditForm(
@@ -694,47 +588,6 @@ class RackReservationForm(NautobotModelForm, TenancyForm):
         ]
 
 
-class RackReservationCSVForm(CustomFieldModelCSVForm):
-    location = CSVModelChoiceField(queryset=Location.objects.all(), to_field_name="name", help_text="Parent location")
-    rack_group = CSVModelChoiceField(
-        queryset=RackGroup.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Rack's group (if any)",
-    )
-    rack = CSVModelChoiceField(queryset=Rack.objects.all(), to_field_name="name", help_text="Rack")
-    units = SimpleArrayField(
-        base_field=forms.IntegerField(),
-        required=True,
-        help_text="Comma-separated list of individual unit numbers",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = RackReservation
-        fields = ("location", "rack_group", "rack", "units", "tenant", "description")
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit rack_group queryset by assigned location
-            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
-
-            # Limit rack queryset by assigned location and group
-            params = {
-                f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
-            }
-            self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
-
-
 class RackReservationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RackReservation.objects.all(), widget=forms.MultipleHiddenInput())
     user = forms.ModelChoiceField(
@@ -789,12 +642,6 @@ class ManufacturerForm(NautobotModelForm):
             "name",
             "description",
         ]
-
-
-class ManufacturerCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = Manufacturer
-        fields = []  # TODO
 
 
 #
@@ -1573,19 +1420,6 @@ class PlatformForm(NautobotModelForm):
         }
 
 
-class PlatformCSVForm(CustomFieldModelCSVForm):
-    manufacturer = CSVModelChoiceField(
-        queryset=Manufacturer.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Limit platform assignments to this manufacturer",
-    )
-
-    class Meta:
-        model = Platform
-        fields = []  # TODO
-
-
 #
 # Devices
 #
@@ -2160,15 +1994,6 @@ class ConsolePortBulkEditForm(
         nullable_fields = ["label", "description"]
 
 
-class ConsolePortCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    type = CSVChoiceField(choices=ConsolePortTypeChoices, required=False, help_text="Port type")
-
-    class Meta:
-        model = ConsolePort
-        fields = []  # TODO
-
-
 #
 # Console server ports
 #
@@ -2225,15 +2050,6 @@ class ConsoleServerPortBulkEditForm(
 
     class Meta:
         nullable_fields = ["label", "description"]
-
-
-class ConsoleServerPortCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    type = CSVChoiceField(choices=ConsolePortTypeChoices, required=False, help_text="Port type")
-
-    class Meta:
-        model = ConsoleServerPort
-        fields = []  # TODO
 
 
 #
@@ -2309,15 +2125,6 @@ class PowerPortBulkEditForm(
 
     class Meta:
         nullable_fields = ["label", "description"]
-
-
-class PowerPortCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    type = CSVChoiceField(choices=PowerPortTypeChoices, required=False, help_text="Port type")
-
-    class Meta:
-        model = PowerPort
-        fields = []  # TODO
 
 
 #
@@ -2422,46 +2229,6 @@ class PowerOutletBulkEditForm(
         else:
             self.fields["power_port"].choices = ()
             self.fields["power_port"].widget.attrs["disabled"] = True
-
-
-class PowerOutletCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    type = CSVChoiceField(choices=PowerOutletTypeChoices, required=False, help_text="Outlet type")
-    power_port = CSVModelChoiceField(
-        queryset=PowerPort.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Local power port which feeds this outlet",
-    )
-    feed_leg = CSVChoiceField(
-        choices=PowerOutletFeedLegChoices,
-        required=False,
-        help_text="Electrical phase (for three-phase circuits)",
-    )
-
-    class Meta:
-        model = PowerOutlet
-        fields = []  # TODO
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit PowerPort choices to those belonging to this device (or VC master)
-        if self.is_bound:
-            try:
-                device = self.fields["device"].to_python(self.data["device"])
-            except forms.ValidationError:
-                device = None
-        else:
-            try:
-                device = self.instance.device
-            except Device.DoesNotExist:
-                device = None
-
-        if device:
-            self.fields["power_port"].queryset = PowerPort.objects.filter(device__in=[device, device.get_vc_master()])
-        else:
-            self.fields["power_port"].queryset = PowerPort.objects.none()
 
 
 #
@@ -2810,67 +2577,6 @@ class InterfaceBulkEditForm(
             self.cleaned_data["tagged_vlans"] = []
 
 
-class InterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    parent_interface = CSVModelChoiceField(
-        queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
-    )
-    bridge = CSVModelChoiceField(
-        queryset=Interface.objects.all(), required=False, to_field_name="name", help_text="Bridge interface"
-    )
-    lag = CSVModelChoiceField(
-        queryset=Interface.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent LAG interface",
-    )
-    type = CSVChoiceField(choices=InterfaceTypeChoices, help_text="Physical medium")
-    mode = CSVChoiceField(
-        choices=InterfaceModeChoices,
-        required=False,
-        help_text="IEEE 802.1Q operational mode (for L2 interfaces)",
-    )
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit choices for parent, bridge, and LAG interfaces to the assigned device (or VC)
-            device_name = data.get("device")
-            if device_name is not None:
-                device = Device.objects.filter(name=device_name).first()
-
-                filter_by = Q(device=device)
-
-                if device and device.virtual_chassis:
-                    filter_by |= Q(device__virtual_chassis=device.virtual_chassis)
-
-                self.fields["parent_interface"].queryset = (
-                    self.fields["parent_interface"]
-                    .queryset.filter(Q(filter_by))
-                    .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
-                )
-                self.fields["bridge"].queryset = self.fields["bridge"].queryset.filter(filter_by)
-
-                filter_by &= Q(type=InterfaceTypeChoices.TYPE_LAG)
-                self.fields["lag"].queryset = self.fields["lag"].queryset.filter(filter_by)
-            else:
-                self.fields["parent_interface"].queryset = self.fields["parent_interface"].queryset.none()
-                self.fields["bridge"].queryset = self.fields["bridge"].queryset.none()
-                self.fields["lag"].queryset = self.fields["lag"].queryset.none()
-
-    class Meta:
-        model = Interface
-        fields = []  # TODO
-
-    def clean_enabled(self):
-        # Make sure enabled is True when it's not included in the uploaded data
-        if "enabled" not in self.data:
-            return True
-        else:
-            return self.cleaned_data["enabled"]
-
-
 #
 # Front pass-through ports
 #
@@ -2999,43 +2705,6 @@ class FrontPortBulkEditForm(
         nullable_fields = ["label", "description"]
 
 
-class FrontPortCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    rear_port = CSVModelChoiceField(
-        queryset=RearPort.objects.all(),
-        to_field_name="name",
-        help_text="Corresponding rear port",
-    )
-    type = CSVChoiceField(choices=PortTypeChoices, help_text="Physical medium classification")
-
-    class Meta:
-        model = FrontPort
-        fields = []  # TODO
-        help_texts = {
-            "rear_port_position": "Mapped position on corresponding rear port",
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit RearPort choices to those belonging to this device (or VC master)
-        if self.is_bound:
-            try:
-                device = self.fields["device"].to_python(self.data["device"])
-            except forms.ValidationError:
-                device = None
-        else:
-            try:
-                device = self.instance.device
-            except Device.DoesNotExist:
-                device = None
-
-        if device:
-            self.fields["rear_port"].queryset = RearPort.objects.filter(device__in=[device, device.get_vc_master()])
-        else:
-            self.fields["rear_port"].queryset = RearPort.objects.none()
-
-
 #
 # Rear pass-through ports
 #
@@ -3109,19 +2778,6 @@ class RearPortBulkEditForm(
         nullable_fields = ["label", "description"]
 
 
-class RearPortCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    type = CSVChoiceField(
-        help_text="Physical medium classification",
-        choices=PortTypeChoices,
-    )
-
-    class Meta:
-        model = RearPort
-        fields = []  # TODO
-        help_texts = {"positions": "Number of front ports which may be mapped"}
-
-
 #
 # Device bays
 #
@@ -3186,49 +2842,6 @@ class DeviceBayBulkEditForm(
         nullable_fields = ["label", "description"]
 
 
-class DeviceBayCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    installed_device = CSVModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Child device installed within this bay",
-        error_messages={
-            "invalid_choice": "Child device not found.",
-        },
-    )
-
-    class Meta:
-        model = DeviceBay
-        fields = []  # TODO
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit installed device choices to devices of the correct type and location
-        if self.is_bound:
-            try:
-                device = self.fields["device"].to_python(self.data["device"])
-            except forms.ValidationError:
-                device = None
-        else:
-            try:
-                device = self.instance.device
-            except Device.DoesNotExist:
-                device = None
-
-        if device:
-            self.fields["installed_device"].queryset = Device.objects.filter(
-                location=device.location,
-                rack=device.rack,
-                parent_bay__isnull=True,
-                device_type__u_height=0,
-                device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
-            ).exclude(pk=device.pk)
-        else:
-            self.fields["installed_device"].queryset = Interface.objects.none()
-
-
 #
 # Inventory items
 #
@@ -3287,15 +2900,6 @@ class InventoryItemCreateForm(ComponentCreateForm):
         "description",
         "tags",
     )
-
-
-class InventoryItemCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name")
-    manufacturer = CSVModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name", required=False)
-
-    class Meta:
-        model = InventoryItem
-        fields = []  # TODO
 
 
 class InventoryItemBulkCreateForm(
@@ -3574,109 +3178,6 @@ class CableForm(NautobotModelForm):
         error_messages = {"length": {"max_value": "Maximum length is 32767 (any unit)"}}
 
 
-class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    # Termination A
-    side_a_device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name", help_text="Side A device")
-    side_a_type = CSVContentTypeField(
-        queryset=ContentType.objects.all(),
-        limit_choices_to=CABLE_TERMINATION_MODELS,
-        help_text="Side A type",
-    )
-    side_a_name = forms.CharField(help_text="Side A component name")
-
-    # Termination B
-    side_b_device = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name", help_text="Side B device")
-    side_b_type = CSVContentTypeField(
-        queryset=ContentType.objects.all(),
-        limit_choices_to=CABLE_TERMINATION_MODELS,
-        help_text="Side B type",
-    )
-    side_b_name = forms.CharField(help_text="Side B component name")
-
-    # Cable attributes
-    type = CSVChoiceField(
-        choices=CableTypeChoices,
-        required=False,
-        help_text="Physical medium classification",
-    )
-    length_unit = CSVChoiceField(choices=CableLengthUnitChoices, required=False, help_text="Length unit")
-
-    class Meta:
-        model = Cable
-        fields = [
-            "side_a_device",
-            "side_a_type",
-            "side_a_name",
-            "side_b_device",
-            "side_b_type",
-            "side_b_name",
-            "type",
-            "status",
-            "label",
-            "color",
-            "length",
-            "length_unit",
-        ]
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-            "status": "Connection status",
-        }
-
-    def _clean_side(self, side):
-        """
-        Derive a Cable's A/B termination objects.
-
-        :param side: 'a' or 'b'
-        """
-        assert side in "ab", f"Invalid side designation: {side}"
-
-        device = self.cleaned_data.get(f"side_{side}_device")
-        content_type = self.cleaned_data.get(f"side_{side}_type")
-        name = self.cleaned_data.get(f"side_{side}_name")
-        if not device or not content_type or not name:
-            return None
-
-        model = content_type.model_class()
-        try:
-            termination_object = model.objects.get(device=device, name=name)
-            if termination_object.cable is not None:
-                raise forms.ValidationError(f"Side {side.upper()}: {device} {termination_object} is already connected")
-        except ObjectDoesNotExist:
-            raise forms.ValidationError(f"{side.upper()} side termination not found: {device} {name}")
-
-        setattr(self.instance, f"termination_{side}", termination_object)
-        return termination_object
-
-    def clean_side_a_name(self):
-        return self._clean_side("a")
-
-    def clean_side_b_name(self):
-        return self._clean_side("b")
-
-    def clean_length_unit(self):
-        # Avoid trying to save as NULL
-        length_unit = self.cleaned_data.get("length_unit", None)
-        return length_unit if length_unit is not None else ""
-
-    def add_error(self, field, error):
-        # Edge Case: some fields in error are not properties in this instance
-        #   e.g: termination_a_id not an property in CableCSVForm, This would raise a ValueError Exception
-        # Solution: convert those fields to its equivalent in CableCSVForm
-        #   e.g: termination_a_id > side_a_name
-
-        final_error = error
-        if hasattr(error, "error_dict"):
-            error_dict = error.error_dict
-            termination_keys = [key for key in error_dict.keys() if key.startswith("termination")]
-            for error_field in termination_keys:
-                side_value = error_field.split("_")[1]
-                error_msg = error_dict.pop(error_field)
-                error_dict[f"side_{side_value}_name"] = error_msg
-
-            final_error = ValidationError(error_dict)
-        super().add_error(field, final_error)
-
-
 class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Cable.objects.all(), widget=forms.MultipleHiddenInput)
     type = forms.ChoiceField(
@@ -3946,19 +3447,6 @@ class VirtualChassisBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         nullable_fields = ["domain"]
 
 
-class VirtualChassisCSVForm(CustomFieldModelCSVForm):
-    master = CSVModelChoiceField(
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Master device",
-    )
-
-    class Meta:
-        model = VirtualChassis
-        fields = []  # TODO
-
-
 class VirtualChassisFilterForm(NautobotFilterForm):
     model = VirtualChassis
     q = forms.CharField(required=False, label="Search")
@@ -3999,22 +3487,6 @@ class PowerPanelForm(LocatableModelFormMixin, NautobotModelForm):
             "name",
             "tags",
         ]
-
-
-class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
-    rack_group = CSVModelChoiceField(queryset=RackGroup.objects.all(), required=False, to_field_name="name")
-
-    class Meta:
-        model = PowerPanel
-        fields = []  # TODO
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit rack_group queryset by assigned location
-            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
 
 
 class PowerPanelBulkEditForm(
@@ -4088,53 +3560,6 @@ class PowerFeedForm(NautobotModelForm):
             "supply": StaticSelect2(),
             "phase": StaticSelect2(),
         }
-
-
-class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    location = CSVModelChoiceField(queryset=Location.objects.all(), to_field_name="name", help_text="Assigned location")
-    power_panel = CSVModelChoiceField(
-        queryset=PowerPanel.objects.all(),
-        to_field_name="name",
-        help_text="Upstream power panel",
-    )
-    rack_group = CSVModelChoiceField(
-        queryset=RackGroup.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Rack's group (if any)",
-    )
-    rack = CSVModelChoiceField(
-        queryset=Rack.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Rack",
-    )
-    type = CSVChoiceField(choices=PowerFeedTypeChoices, required=False, help_text="Primary or redundant")
-    supply = CSVChoiceField(choices=PowerFeedSupplyChoices, required=False, help_text="Supply type (AC/DC)")
-    phase = CSVChoiceField(choices=PowerFeedPhaseChoices, required=False, help_text="Single or three-phase")
-
-    class Meta:
-        model = PowerFeed
-        fields = []  # TODO
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit power_panel queryset by location
-            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["power_panel"].queryset = self.fields["power_panel"].queryset.filter(**params)
-
-            # Limit rack_group queryset by location
-            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
-
-            # Limit rack queryset by location and group
-            params = {
-                f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
-            }
-            self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
 
 
 class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
@@ -4253,20 +3678,3 @@ class DeviceRedundancyGroupBulkEditForm(
             "failover_strategy",
             "secrets_group",
         ]
-
-
-class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    failover_strategy = CSVChoiceField(
-        choices=DeviceRedundancyGroupFailoverStrategyChoices, required=False, help_text="Failover Strategy"
-    )
-
-    secrets_group = CSVModelChoiceField(
-        queryset=SecretsGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Secrets group",
-    )
-
-    class Meta:
-        model = DeviceRedundancyGroup
-        fields = []  # TODO

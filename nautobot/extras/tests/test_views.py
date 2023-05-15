@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import urllib.parse
 import uuid
 
@@ -616,9 +616,9 @@ class GitRepositoryTestCase(
 
         cls.csv_data = (
             "name,slug,remote_url,branch,secrets_group,provided_contents",
-            "Git Repository 5,git-repo-5,https://example.com,main,,extras.configcontext",
-            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,",
-            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
+            'Git Repository 5,git-repo-5,https://example.com,main,,["extras.configcontext"]',
+            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,[]",
+            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"[""extras.job"",""extras.configcontext""]"',
         )
 
         cls.slug_source = "name"
@@ -948,7 +948,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
@@ -956,7 +956,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
@@ -964,7 +964,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
     def test_only_enabled_is_listed(self):
@@ -978,7 +978,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
         response = self.client.get(self._get_url("list"))
@@ -1028,7 +1028,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
             crontab="*/15 9,17 3 * 1-5",
         )
 
@@ -1067,7 +1067,7 @@ class ApprovalQueueTestCase(
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
@@ -1077,7 +1077,7 @@ class ApprovalQueueTestCase(
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
@@ -1087,7 +1087,7 @@ class ApprovalQueueTestCase(
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
     def test_only_approvable_is_listed(self):
@@ -1101,7 +1101,7 @@ class ApprovalQueueTestCase(
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=False,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
         response = self.client.get(self._get_url("list"))
@@ -1746,7 +1746,7 @@ class JobTestCase(
         data = {
             "_schedule_type": "future",
             "_schedule_name": "test",
-            "_schedule_start_time": str(datetime.now() - timedelta(minutes=1)),
+            "_schedule_start_time": str(timezone.now() - timedelta(minutes=1)),
         }
 
         for run_url in self.run_urls:
@@ -2245,10 +2245,10 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,color,description",
-            "Tag 4,tag-4,ff0000,Fourth tag",
-            "Tag 5,tag-5,00ff00,Fifth tag",
-            "Tag 6,tag-6,0000ff,Sixth tag",
+            "name,slug,color,description,content_types",
+            'Tag 4,tag-4,ff0000,Fourth tag,["dcim.device"]',
+            'Tag 5,tag-5,00ff00,Fifth tag,"[""dcim.device"",""dcim.location""]"',
+            'Tag 6,tag-6,0000ff,Sixth tag,["dcim.location"]',
         )
 
         cls.bulk_edit_data = {
@@ -2389,10 +2389,10 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,weight,color,content_types,description",
-            'test_role1,1000,ffffff,"dcim.device",A Role',
-            'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
-            'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
-            'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
+            'test_role1,1000,ffffff,["dcim.device"],A Role',
+            'test_role2,200,ffffff,"[""dcim.device"",""dcim.rack""]",A Role',
+            'test_role3,100,ffffff,"[""dcim.device"",""ipam.prefix""]",A Role',
+            'test_role4,50,ffffff,"[""ipam.ipaddress"",""ipam.vlan""]",A Role',
         )
 
         cls.bulk_edit_data = {

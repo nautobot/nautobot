@@ -28,7 +28,6 @@ class CircuitTypeUIViewSet(
     view_mixins.ObjectChangeLogViewMixin,
     view_mixins.ObjectNotesViewMixin,
 ):
-    bulk_create_form_class = forms.CircuitTypeCSVForm
     filterset_class = filters.CircuitTypeFilterSet
     form_class = forms.CircuitTypeForm
     queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "circuit_type"))
@@ -80,7 +79,6 @@ class CircuitTerminationUIViewSet(
 
 
 class ProviderUIViewSet(NautobotUIViewSet):
-    bulk_create_form_class = forms.ProviderCSVForm
     bulk_update_form_class = forms.ProviderBulkEditForm
     filterset_class = filters.ProviderFilterSet
     filterset_form_class = forms.ProviderFilterForm
@@ -112,7 +110,6 @@ class ProviderUIViewSet(NautobotUIViewSet):
 
 
 class CircuitUIViewSet(NautobotUIViewSet):
-    bulk_create_form_class = forms.CircuitCSVForm
     bulk_update_form_class = forms.CircuitBulkEditForm
     filterset_class = filters.CircuitFilterSet
     filterset_form_class = forms.CircuitFilterForm
@@ -165,7 +162,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
 
 class ProviderNetworkUIViewSet(NautobotUIViewSet):
     model = ProviderNetwork
-    bulk_create_form_class = forms.ProviderNetworkCSVForm
     bulk_update_form_class = forms.ProviderNetworkBulkEditForm
     filterset_class = filters.ProviderNetworkFilterSet
     filterset_form_class = forms.ProviderNetworkFilterForm

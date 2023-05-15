@@ -14,6 +14,7 @@ from nautobot.dcim import models as dcim_models
 from nautobot.dcim.tests import test_views
 from nautobot.extras import filters as extras_filters
 from nautobot.extras import models as extras_models
+from nautobot.ipam.api import serializers as ipam_serializers
 from nautobot.ipam import forms as ipam_forms
 from nautobot.ipam import models as ipam_models
 
@@ -378,7 +379,7 @@ class AddFieldToFormClassTest(TestCase):
 
 class CSVDataFieldTest(TestCase):
     def setUp(self):
-        self.field = forms.CSVDataField(from_form=ipam_forms.IPAddressCSVForm)
+        self.field = forms.CSVDataField(serializer_class=ipam_serializers.IPAddressSerializer)
 
     def test_clean(self):
         input_ = """

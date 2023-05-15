@@ -948,8 +948,11 @@ class ViewTestCases:
             # Test POST with permission
             response = self.client.post(self._get_url("import"), data)
             self.assertHttpStatus(response, 200)
-            self.assertEqual(self._get_queryset().count(), initial_count + len(self.csv_data) - 1,
-                             testing.extract_page_body(response.content.decode(response.charset)))
+            self.assertEqual(
+                self._get_queryset().count(),
+                initial_count + len(self.csv_data) - 1,
+                testing.extract_page_body(response.content.decode(response.charset)),
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_import_objects_with_constrained_permission(self):

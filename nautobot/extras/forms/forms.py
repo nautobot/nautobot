@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.db.models.fields import TextField
 from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
-from django.utils.safestring import mark_safe
 
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.forms import (
@@ -19,10 +18,7 @@ from nautobot.core.forms import (
     ColorSelect,
     CommentField,
     CSVContentTypeField,
-    CSVModelChoiceField,
     CSVModelForm,
-    CSVMultipleChoiceField,
-    CSVMultipleContentTypeField,
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -113,7 +109,6 @@ __all__ = (
     "ExportTemplateForm",
     "ExportTemplateFilterForm",
     "GitRepositoryForm",
-    "GitRepositoryCSVForm",
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
     "GraphQLQueryForm",
@@ -139,21 +134,17 @@ __all__ = (
     "RelationshipFilterForm",
     "RelationshipAssociationFilterForm",
     "RoleBulkEditForm",
-    "RoleCSVForm",
     "RoleForm",
     "ScheduledJobFilterForm",
     "SecretForm",
-    "SecretCSVForm",
     "SecretFilterForm",
     "SecretsGroupForm",
     "SecretsGroupFilterForm",
     "SecretsGroupAssociationFormSet",
     "StatusForm",
-    "StatusCSVForm",
     "StatusFilterForm",
     "StatusBulkEditForm",
     "TagForm",
-    "TagCSVForm",
     "TagFilterForm",
     "TagBulkEditForm",
     "WebhookForm",
@@ -617,30 +608,6 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
         # set dryrun after a successful clean
         if "_dryrun_create" in self.data or "_dryrun_update" in self.data:
             self.instance.set_dryrun()
-
-
-class GitRepositoryCSVForm(CSVModelForm):
-    secrets_group = CSVModelChoiceField(
-        queryset=SecretsGroup.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Secrets group for repository access (if any)",
-    )
-
-    class Meta:
-        model = GitRepository
-        fields = []  # TODO
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["provided_contents"] = CSVMultipleChoiceField(
-            choices=get_git_datasource_content_choices(),
-            required=False,
-            help_text=mark_safe(
-                "The data types this repository provides. Multiple values must be comma-separated and wrapped in "
-                'double quotes (e.g. <code>"extras.job,extras.configcontext"</code>).'
-            ),
-        )
 
 
 class GitRepositoryBulkEditForm(NautobotBulkEditForm):
@@ -1254,28 +1221,6 @@ class RoleBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["weight"]
 
 
-class RoleCSVForm(CustomFieldModelCSVForm):
-    """Generic CSV bulk import form for `Role` objects."""
-
-    content_types = CSVMultipleContentTypeField(
-        queryset=RoleModelsQuery().as_queryset(),
-        choices_as_strings=True,
-        help_text=mark_safe(
-            "The object types to which this role applies. Multiple values "
-            "must be comma-separated and wrapped in double quotes. (e.g. "
-            '<code>"dcim.device,dcim.rack"</code>)'
-        ),
-        label="Content type(s)",
-    )
-
-    class Meta:
-        model = Role
-        fields = []  # TODO
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
-
-
 #
 # Secrets
 #
@@ -1301,12 +1246,6 @@ class SecretForm(NautobotModelForm):
             "parameters",
             "tags",
         ]
-
-
-class SecretCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = Secret
-        fields = []  # TODO
 
 
 def provider_choices_with_blank():
@@ -1368,28 +1307,6 @@ class StatusForm(NautobotModelForm):
         fields = ["name", "description", "content_types", "color"]
 
 
-class StatusCSVForm(CustomFieldModelCSVForm):
-    """Generic CSV bulk import form for `Status` objects."""
-
-    content_types = CSVMultipleContentTypeField(
-        feature="statuses",
-        choices_as_strings=True,
-        help_text=mark_safe(
-            "The object types to which this status applies. Multiple values "
-            "must be comma-separated and wrapped in double quotes. (e.g. "
-            '<code>"dcim.device,dcim.rack"</code>)'
-        ),
-        label="Content type(s)",
-    )
-
-    class Meta:
-        model = Status
-        fields = []  # TODO
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
-
-
 class StatusFilterForm(NautobotFilterForm):
     """Filtering/search form for `Status` objects."""
 
@@ -1440,17 +1357,6 @@ class TagForm(NautobotModelForm):
                 raise ValidationError(errors)
 
         return data
-
-
-class TagCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
-    class Meta:
-        model = Tag
-        fields = []  # TODO
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 class TagFilterForm(NautobotFilterForm):

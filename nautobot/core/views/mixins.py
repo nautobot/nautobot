@@ -31,7 +31,6 @@ from rest_framework.viewsets import GenericViewSet
 from drf_spectacular.utils import extend_schema
 
 from nautobot.core.api.parsers import NautobotCSVParser
-from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -891,7 +890,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
             csvtext = form.cleaned_data[field_name]
             data = NautobotCSVParser().parse(
                 stream=BytesIO(csvtext.encode("utf-8")),
-                parser_context={"request": request, "serializer_class": self.serializer_class}
+                parser_context={"request": request, "serializer_class": self.serializer_class},
             )
             serializer = self.serializer_class(data=data, context={"request": request}, many=True)
             if serializer.is_valid():
