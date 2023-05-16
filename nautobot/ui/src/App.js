@@ -1,9 +1,9 @@
-import React from "react";
+import { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { NautobotUIProvider } from "@nautobot/nautobot-ui";
 import { useDispatch } from "react-redux";
-import { useGetSessionQuery } from "@utils/api";
-import { updateSessionState } from "@utils/store";
+import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
+import { updateAuthStateWithSession, updateNavigation } from "@utils/store";
 
 import Layout from "@components/Layout";
 import NautobotRouter from "./router";
@@ -32,20 +32,25 @@ const theme = {
 
 function App() {
     const dispatch = useDispatch();
-    const {
-        data: sessionData,
-        isSuccess: isSessionSuccess,
-        isError: isSessionError,
-    } = useGetSessionQuery();
+    const { data: sessionData, isSuccess: isSessionSuccess } =
+        useGetSessionQuery();
+    const { data: menuData, isSuccess: isMenuSuccess } = useGetUIMenuQuery();
 
-    React.useEffect(() => {
-        if (!isSessionSuccess || isSessionError) {
-            return;
-        }
+    useEffect(() => {
+        // TODO: Do we need special handling for non-successful session requests?
         if (isSessionSuccess) {
-            dispatch(updateSessionState(sessionData));
+            dispatch(updateAuthStateWithSession(sessionData));
         }
-    }, [dispatch, sessionData, isSessionSuccess, isSessionError]);
+        return;
+    }, [dispatch, sessionData, isSessionSuccess]);
+
+    useEffect(() => {
+        // TODO: Do we need special handling for non-successful menu requests?
+        if (isMenuSuccess) {
+            dispatch(updateNavigation(menuData));
+        }
+        return;
+    }, [dispatch, menuData, isMenuSuccess]);
 
     return (
         <NautobotUIProvider theme={theme}>

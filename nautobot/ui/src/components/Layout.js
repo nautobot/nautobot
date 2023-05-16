@@ -8,27 +8,19 @@ import {
     Button,
 } from "@nautobot/nautobot-ui";
 
-import { useEffect } from "react";
+// import { useEffect } from "react";
 
-import LoadingWidget from "@components/LoadingWidget";
+// import LoadingWidget from "@components/LoadingWidget";
 import RouterLink from "@components/RouterLink";
 import SidebarNav from "@components/SidebarNav";
-import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
+// import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
 import { useSelector } from "react-redux";
 import { isLoggedInSelector } from "@utils/store";
 
 export default function Layout({ children }) {
     const isLoggedIn = useSelector(isLoggedInSelector);
-    const { isSuccess: menuLoaded, refetch: refetchMenu } = useGetUIMenuQuery();
 
-    // TODO: Update for RTK pattern hopefully
-    // Here is the safest place to check that the session and menu data are loaded
-    // to then regenerate the API and update what is globally known
-    // import { useEffect } from "react";
-    // const fullApi = generateFullAPI(menuData)
-    useEffect(() => {
-        refetchMenu();
-    }, [refetchMenu]);
+    // const { isSuccess: menuLoaded, refetch: refetchMenu } = useGetUIMenuQuery();
 
     let toRender = children;
 

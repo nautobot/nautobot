@@ -41,7 +41,7 @@ __all__ = (
     "graphql",
     "locations",
 )
-class RackGroup(TreeModel, OrganizationalModel):
+class RackGroup(TreeModel, PrimaryModel):
     """
     Racks can be grouped as subsets within a Location.
     """

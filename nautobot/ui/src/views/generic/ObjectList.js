@@ -6,7 +6,7 @@ import GenericView from "@views/generic/GenericView";
 import { useGetRESTAPIQuery } from "@utils/api";
 import { useEffect } from "react";
 import {
-    updateAppCurrentContext,
+    updateCurrentContext,
     getCurrentAppContextSelector,
 } from "@utils/store";
 import { toTitleCase } from "@utils/string";
@@ -22,7 +22,7 @@ export default function GenericObjectListView() {
     );
     const isPluginView = location.pathname.includes("/plugins/");
     useEffect(() => {
-        dispatch(updateAppCurrentContext(currentAppContext));
+        dispatch(updateCurrentContext(currentAppContext));
     }, [dispatch, currentAppContext]);
 
     // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";

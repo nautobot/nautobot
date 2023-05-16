@@ -10,7 +10,7 @@ import { useMemo } from "react";
 import { useSelector } from "react-redux";
 import { Link as ReactRouterLink, useLocation } from "react-router-dom";
 
-import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
+import { useGetUIMenuQuery } from "@utils/api";
 import { uiUrl } from "@utils/url";
 
 // Descend into the menu "data" until we find a leaf whose URL matches "pathname", and return the keys to get there
