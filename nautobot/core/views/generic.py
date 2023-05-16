@@ -13,7 +13,7 @@ from django.core.exceptions import (
 )
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
-from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
+from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import escape
@@ -21,6 +21,7 @@ from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
+from rest_framework.exceptions import ParseError
 
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.utils import get_serializer_for_model
@@ -841,19 +842,23 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     records = csvlines[1:]
 
                     for row, csvline in enumerate(records, start=1):
-                        data = NautobotCSVParser().parse(
-                            stream=BytesIO(f"{headers}\r\n{csvline}".encode("utf-8")),
-                            parser_context={"request": request, "serializer_class": self.serializer_class},
-                        )[
-                            0
-                        ]  # CSVReader returns a list of data dicts, even if only one element
-                        serializer = self.serializer_class(data=data, context={"request": request})
-                        if serializer.is_valid():
-                            obj = self._save_obj(serializer, request)
-                            new_objs.append(obj)
-                        else:
-                            for field, err in serializer.errors.items():
-                                form.add_error(field_name, f"Row {row} {field}: {err[0]}")
+                        try:
+                            data = NautobotCSVParser().parse(
+                                stream=BytesIO(f"{headers}\r\n{csvline}".encode("utf-8")),
+                                parser_context={"request": request, "serializer_class": self.serializer_class},
+                            )[
+                                0
+                            ]  # CSVReader returns a list of data dicts, even if only one element
+                            serializer = self.serializer_class(data=data, context={"request": request})
+                            if serializer.is_valid():
+                                obj = self._save_obj(serializer, request)
+                                new_objs.append(obj)
+                            else:
+                                for field, err in serializer.errors.items():
+                                    form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
+                                raise ValidationError("")
+                        except ParseError as exc:
+                            form.add_error(None, str(exc))
                             raise ValidationError("")
 
                     # Enforce object-level permissions

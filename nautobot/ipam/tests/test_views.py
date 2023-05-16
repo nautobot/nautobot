@@ -379,9 +379,9 @@ class ServiceTestCase(
 
         cls.csv_data = (
             "device,name,protocol,ports,description",
-            f"{device.natural_key_slug},Service 1,tcp,[1],First service",
-            f"{device.natural_key_slug},Service 2,tcp,[2],Second service",
-            f'{device.natural_key_slug},Service 3,udp,"[3,4,5]",Third service',
+            f"{device.natural_key_slug},Service 1,tcp,1,First service",
+            f"{device.natural_key_slug},Service 2,tcp,2,Second service",
+            f'{device.natural_key_slug},Service 3,udp,"3,4,5",Third service',
         )
 
         cls.bulk_edit_data = {

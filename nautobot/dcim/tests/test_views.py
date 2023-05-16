@@ -140,9 +140,9 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,parent,description,content_types,nestable",
-            f'Intermediate 3,intermediate-3,{lt1.name},Another intermediate type,["ipam.prefix"],false',
-            f'Intermediate 4,intermediate-4,{lt1.name},Another type,"[""ipam.prefix"",""dcim.device""]",false',
-            "Root 3,root-3,,Another root type,[],true",
+            f"Intermediate 3,intermediate-3,{lt1.name},Another intermediate type,ipam.prefix,false",
+            f'Intermediate 4,intermediate-4,{lt1.name},Another type,"ipam.prefix,dcim.device",false',
+            "Root 3,root-3,,Another root type,,true",
         )
 
         cls.slug_source = "name"
@@ -275,9 +275,9 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "rack,units,description",
-            f'{rack.natural_key_slug},"[10,11,12]",Reservation 1',
-            f'{rack.natural_key_slug},"[13,14,15]",Reservation 2',
-            f'{rack.natural_key_slug},"[16,17,18]",Reservation 3',
+            f'{rack.natural_key_slug},"10,11,12",Reservation 1',
+            f"{rack.natural_key_slug},13,Reservation 2",
+            f'{rack.natural_key_slug},"16,17,18",Reservation 3',
         )
 
         cls.bulk_edit_data = {

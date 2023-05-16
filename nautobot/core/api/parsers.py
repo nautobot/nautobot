@@ -44,8 +44,8 @@ class NautobotCSVParser(BaseParser):
             reader = csv.DictReader(StringIO(text))
 
             data = []
-            for row in reader:
-                data.append(self.row_elements_to_data(row, serializer=serializer))
+            for counter, row in enumerate(reader, start=1):
+                data.append(self.row_elements_to_data(counter, row, serializer=serializer))
 
             if "pk" in parser_context.get("kwargs", {}):
                 # Single-object update, not bulk update - strip it so that we get the expected input and return format
@@ -57,10 +57,12 @@ class NautobotCSVParser(BaseParser):
             if settings.DEBUG:
                 logger.debug("CSV loaded into data:\n%s", json.dumps(data, indent=2))
             return data
+        except ParseError:
+            raise
         except Exception as exc:
             raise ParseError(str(exc)) from exc
 
-    def row_elements_to_data(self, row, serializer):
+    def row_elements_to_data(self, counter, row, serializer):
         """
         Parse a single row of CSV data (represented as a dict) into a dict suitable for consumption by the serializer.
 
@@ -68,7 +70,11 @@ class NautobotCSVParser(BaseParser):
         could we then literally have the parser just return list(reader) and not need this function at all?
         """
         data = {}
-        for key, value in row.items():
+        for column, key in enumerate(row.keys(), start=1):
+            if not key:
+                raise ParseError(f"Row {counter}: Column {column}: missing/empty header for this column")
+
+            value = row[key]
             if key.startswith("cf_"):
                 # Custom field
                 if value == "":
@@ -78,7 +84,9 @@ class NautobotCSVParser(BaseParser):
 
             serializer_field = serializer.fields.get(key)
             if not serializer_field:
-                raise KeyError(key)
+                raise ParseError(
+                    f'Row {counter}: Column {column}: "{key}" is not a known, parseable column for this model'
+                )
 
             if serializer_field.read_only and key != "id":
                 # Deserializing read-only fields is tricky, especially for things like SerializerMethodFields that
@@ -90,7 +98,7 @@ class NautobotCSVParser(BaseParser):
                 # A list of related objects, represented as a list of natural-key-slugs
                 if value:
                     related_model = serializer_field.child_relation.get_queryset().model
-                    value = [self.get_natural_key_dict(slug, related_model) for slug in json.loads(value)]
+                    value = [self.get_natural_key_dict(slug, related_model) for slug in value.split(",")]
                 else:
                     value = []
             elif isinstance(serializer_field, serializers.RelatedField):
@@ -100,12 +108,24 @@ class NautobotCSVParser(BaseParser):
                     value = self.get_natural_key_dict(value, related_model)
                 else:
                     value = None
-            elif isinstance(
-                serializer_field,
-                (serializers.DictField, serializers.JSONField, serializers.ListField, serializers.MultipleChoiceField),
-            ):
-                if value != "":
+            elif isinstance(serializer_field, (serializers.ListField, serializers.MultipleChoiceField)):
+                if value:
+                    value = value.split(",")
+                else:
+                    value = []
+            elif isinstance(serializer_field, (serializers.DictField, serializers.JSONField)):
+                # We currently only store lists or dicts in JSONFields, never bare ints/strings.
+                # On the CSV write side, we only render dicts to JSON
+                if "{" in value or "[" in value:
                     value = json.loads(value)
+                else:
+                    value = value.split(",")
+                    try:
+                        # We have some cases where it's a list of integers, such as in RackReservation.units
+                        value = [int(v) for v in value]
+                    except ValueError:
+                        # Guess not!
+                        pass
 
             # CSV doesn't provide a ready distinction between blank and null, so in this case we have to pick one.
             # This does mean that for a nullable AND blankable field, there's no way for CSV to set it to blank string.

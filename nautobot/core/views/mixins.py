@@ -12,7 +12,7 @@ from django.core.exceptions import (
 )
 from django.db import transaction
 from django.db.models import ManyToManyField, ProtectedError
-from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
+from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
@@ -885,17 +885,21 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
                 field_name = "csv_data"
 
             csvtext = form.cleaned_data[field_name]
-            data = NautobotCSVParser().parse(
-                stream=BytesIO(csvtext.encode("utf-8")),
-                parser_context={"request": request, "serializer_class": self.serializer_class},
-            )
-            serializer = self.serializer_class(data=data, context={"request": request}, many=True)
-            if serializer.is_valid():
-                new_objs = serializer.save()
-            else:
-                for row, errors in enumerate(serializer.errors, start=1):
-                    for field, err in errors.items():
-                        form.add_error(field_name, f"Row {row} {field}: {err[0]}")
+            try:
+                data = NautobotCSVParser().parse(
+                    stream=BytesIO(csvtext.encode("utf-8")),
+                    parser_context={"request": request, "serializer_class": self.serializer_class},
+                )
+                serializer = self.serializer_class(data=data, context={"request": request}, many=True)
+                if serializer.is_valid():
+                    new_objs = serializer.save()
+                else:
+                    for row, errors in enumerate(serializer.errors, start=1):
+                        for field, err in errors.items():
+                            form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
+                    raise ValidationError("")
+            except exceptions.ParseError as exc:
+                form.add_error(None, str(exc))
                 raise ValidationError("")
 
             # Enforce object-level permissions

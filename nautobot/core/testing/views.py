@@ -885,6 +885,9 @@ class ViewTestCases:
         """
         Create multiple instances from imported data.
 
+        Note that CSV import, since it's now implemented via the REST API,
+        is also exercised by APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_csv().
+
         :csv_data: A list of CSV-formatted lines (starting with the headers) to be used for bulk object import.
         """
 

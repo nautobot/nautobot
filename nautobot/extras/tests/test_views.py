@@ -616,9 +616,9 @@ class GitRepositoryTestCase(
 
         cls.csv_data = (
             "name,slug,remote_url,branch,secrets_group,provided_contents",
-            'Git Repository 5,git-repo-5,https://example.com,main,,["extras.configcontext"]',
-            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,[]",
-            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"[""extras.job"",""extras.configcontext""]"',
+            "Git Repository 5,git-repo-5,https://example.com,main,,extras.configcontext",
+            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,",
+            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
         )
 
         cls.slug_source = "name"
@@ -2220,10 +2220,10 @@ class StatusTestCase(
 
         cls.csv_data = (
             "name,color,content_types"
-            'test_status1,ffffff,"dcim.device"'
-            'test_status2,ffffff,"dcim.device"'
-            'test_status3,ffffff,"dcim.device"'
-            'test_status4,ffffff,"dcim.device"'
+            "test_status1,ffffff,dcim.device"
+            'test_status2,ffffff,"dcim.device,dcim.location"'
+            "test_status3,ffffff,dcim.device"
+            "test_status4,ffffff,dcim.device"
         )
 
         cls.bulk_edit_data = {
@@ -2246,9 +2246,9 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,slug,color,description,content_types",
-            'Tag 4,tag-4,ff0000,Fourth tag,["dcim.device"]',
-            'Tag 5,tag-5,00ff00,Fifth tag,"[""dcim.device"",""dcim.location""]"',
-            'Tag 6,tag-6,0000ff,Sixth tag,["dcim.location"]',
+            "Tag 4,tag-4,ff0000,Fourth tag,dcim.device",
+            'Tag 5,tag-5,00ff00,Fifth tag,"dcim.device,dcim.location"',
+            "Tag 6,tag-6,0000ff,Sixth tag,dcim.location",
         )
 
         cls.bulk_edit_data = {
@@ -2389,10 +2389,10 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,weight,color,content_types,description",
-            'test_role1,1000,ffffff,["dcim.device"],A Role',
-            'test_role2,200,ffffff,"[""dcim.device"",""dcim.rack""]",A Role',
-            'test_role3,100,ffffff,"[""dcim.device"",""ipam.prefix""]",A Role',
-            'test_role4,50,ffffff,"[""ipam.ipaddress"",""ipam.vlan""]",A Role',
+            "test_role1,1000,ffffff,dcim.device,A Role",
+            'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
+            'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
+            'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
         )
 
         cls.bulk_edit_data = {

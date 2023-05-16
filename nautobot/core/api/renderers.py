@@ -154,7 +154,8 @@ class NautobotCSVRenderer(BaseRenderer):
                         ]
                     else:
                         value = [v["natural_key_slug"] for v in value]
-                value = json.dumps(value)
+                # The below makes for better UX than `json.dump()` for most current cases.
+                value = ",".join([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):
                 value = str(value)
 
