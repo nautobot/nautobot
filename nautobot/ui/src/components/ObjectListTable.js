@@ -21,6 +21,7 @@ import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
 
 import TableItem from "@components/TableItem";
+import LoadingWidget from "./LoadingWidget";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
@@ -46,6 +47,7 @@ export default function ObjectListTable({
     page_size,
     tableTitle,
     data_loaded,
+    data_fetched,
     include_button = true,
 }) {
     let location = useLocation();
@@ -128,7 +130,12 @@ export default function ObjectListTable({
     });
 
     return (
-        <Box background="white-0" borderRadius="md" padding="md">
+        <Box
+            background="white-0"
+            borderRadius="md"
+            padding="md"
+            id="ObjectListContainer"
+        >
             {!include_button ? null : (
                 <Box display="flex" justifyContent="space-between" mb="sm">
                     <Heading
@@ -174,6 +181,13 @@ export default function ObjectListTable({
                 mt="3"
                 isLoaded={data_loaded}
             >
+                {!data_fetched && data_loaded ? (
+                    <Box background="white-0" borderRadius="md" padding="md">
+                        <LoadingWidget name={tableTitle}></LoadingWidget>
+                    </Box>
+                ) : (
+                    () => {}
+                )}
                 <TableRenderer
                     table={table}
                     containerProps={{ overflow: "auto" }}

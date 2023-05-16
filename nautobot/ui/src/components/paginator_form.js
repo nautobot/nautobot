@@ -7,6 +7,9 @@ export default function PaginatorForm({ start, end, total_count }) {
     let paginator_string = `Showing ${start} - ${end} of ${total_count}`;
     function onPageSizeChange(event) {
         let offset = searchParams.get("offset");
+        document
+            .getElementById("ObjectListContainer")
+            .scrollIntoView({ alignToTop: true });
         setSearchParams({
             limit: event.target.value,
             offset: offset ? offset : 0,

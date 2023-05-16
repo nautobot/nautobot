@@ -66,12 +66,8 @@ export default function GenericObjectListView() {
     //         </GenericView>
     //     );
     // }
-
-    let data_loaded = !(
-        listDataLoading ||
-        headerDataLoading ||
-        listDataFetching
-    );
+    let data_loaded = !(listDataLoading || headerDataLoading);
+    let data_fetched = !listDataFetching;
 
     let table_name = toTitleCase(model_name, "-");
     if (!data_loaded) {
@@ -87,6 +83,7 @@ export default function GenericObjectListView() {
                         page_size={page_size}
                         tableTitle={table_name}
                         data_loaded={data_loaded}
+                        data_fetched={data_fetched}
                     />
                 </NautobotGridItem>
             </GenericView>
@@ -119,6 +116,7 @@ export default function GenericObjectListView() {
                     page_size={page_size}
                     tableTitle={table_name}
                     data_loaded={data_loaded}
+                    data_fetched={data_fetched}
                 />
             </NautobotGridItem>
         </GenericView>
