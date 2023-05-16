@@ -183,7 +183,7 @@ export default function ObjectListTable({
             >
                 {!data_fetched && data_loaded ? (
                     <Box background="white-0" borderRadius="md" padding="md">
-                        <LoadingWidget name={tableTitle}></LoadingWidget>
+                        <LoadingWidget name={tableTitle} />
                     </Box>
                 ) : (
                     () => {}
