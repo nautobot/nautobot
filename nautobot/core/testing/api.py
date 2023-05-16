@@ -556,7 +556,7 @@ class APIViewTestCases:
             instance.delete()
 
             response = self.client.post(self._get_list_url(), csv_data, content_type="text/csv", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED, csv_data)
             # Note that create via CSV is always treated as a bulk-create, and so the response is always a list of dicts
             new_instance = self._get_queryset().get(pk=response.data[0]["id"])
             self.assertNotEqual(new_instance.pk, instance.pk)
@@ -564,7 +564,7 @@ class APIViewTestCases:
             new_serializer = serializer_class(new_instance, context={"request": None})
             new_data = new_serializer.data
             for field_name, field in new_serializer.fields.items():
-                if field.read_only:
+                if field.read_only or field.write_only:
                     continue
                 if field_name in ["created", "last_updated"]:
                     self.assertNotEqual(

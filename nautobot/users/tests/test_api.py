@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
-from nautobot.core.testing import APIViewTestCases, APITestCase
+from nautobot.core.testing import APIViewTestCases, APITestCase, get_deletable_objects
 from nautobot.core.utils.data import deepmerge
 from nautobot.users.filters import GroupFilterSet
 from nautobot.users.models import ObjectPermission, Token
@@ -38,9 +38,9 @@ class UserTest(APIViewTestCases.APIViewTestCase):
         },
         {
             "username": "User_6",
-            "password": "password6",
         },
     ]
+    update_data = {"username": "User_22"}
 
     @classmethod
     def setUpTestData(cls):
@@ -53,6 +53,40 @@ class UserTest(APIViewTestCases.APIViewTestCase):
         user3 = User.objects.create(username="User_3")
         user3.set_password(None)
         user3.save()
+
+    def get_deletable_object(self):
+        """Get an instance that can be deleted, being sure not to delete the test user!"""
+        return User.objects.create(username="User_100")
+
+    def test_create_object(self):
+        """Add validation of the password on the created users."""
+        super().test_create_object()
+        for entry in self.create_data:
+            user = User.objects.get(username=entry["username"])
+            if "password" in entry:
+                self.assertTrue(user.check_password(entry["password"]))
+            else:
+                self.assertFalse(user.has_usable_password())
+
+    def test_recreate_object_csv(self):
+        """Add validation that the recreated user has no password."""
+        super().test_recreate_object_csv()
+        user = User.objects.get(username="User_100")
+        self.assertFalse(user.has_usable_password())
+
+    def test_update_object(self):
+        """Add validation that a partial update doesn't screw up the password."""
+        user = self._get_queryset().first()
+        hashed_password = user.password
+        super().test_update_object()
+        user.refresh_from_db()
+        self.assertEqual(hashed_password, user.password)
+
+    def test_get_put_round_trip(self):
+        """Add validation that the password is cleared by a PUT with no specified password."""
+        super().test_get_put_round_trip()
+        user = self._get_queryset().first()
+        self.assertFalse(user.has_usable_password())
 
 
 class GroupTest(APIViewTestCases.APIViewTestCase):
@@ -128,9 +162,16 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def get_deletable_object(self):
+        """Get an instance that can be deleted, being sure not to delete the test token!"""
+        instance = get_deletable_objects(self.model, self._get_queryset().exclude(pk=self.token.pk)).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
+
     def _create_basic_authentication_header(self, username, password):
         """
-        Given username, password create a valid Basic authenticaition header string.
+        Given username, password create a valid Basic authentication header string.
 
         Same procedure used to test DRF.
         """
@@ -327,6 +368,13 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "description": "New description",
         }
+
+    def get_deletable_object(self):
+        return ObjectPermission.objects.create(
+            name="Permission 100",
+            actions=["view", "add", "change", "delete"],
+            constraints={"name": "TEST100"},
+        )
 
 
 class UserConfigTest(APITestCase):

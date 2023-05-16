@@ -129,7 +129,7 @@ class NautobotCSVParser(BaseParser):
             return natural_key_slug
         if model._meta.label_lower == "auth.group":
             # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method.
-            return {"name": natural_key_slug}
+            return {"name": deconstruct_natural_key_slug(natural_key_slug)}
         if hasattr(model, "natural_key_args_to_kwargs"):
             return model.natural_key_args_to_kwargs(deconstruct_natural_key_slug(natural_key_slug))
         logger.error("%s doesn't implement natural_key_args_to_kwargs()", model.__name__)
