@@ -107,6 +107,9 @@ class NautobotCSVParser(BaseParser):
                 if value != "":
                     value = json.loads(value)
 
+            # CSV doesn't provide a ready distinction between blank and null, so in this case we have to pick one.
+            # This does mean that for a nullable AND blankable field, there's no way for CSV to set it to blank string.
+            # See corresponding logic in NautobotCSVRenderer.
             if value == "" and serializer_field.allow_null:
                 value = None
 

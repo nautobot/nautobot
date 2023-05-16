@@ -362,7 +362,7 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
         all_fields = list(obj_serializer.get_fields().keys())
         header_fields = ["display", "status", "created", "last_updated"]
         extra_fields = ["object_type", "relationships", "computed_fields", "custom_fields"]
-        advanced_fields = ["id", "url", "display", "slug", "notes_url"]
+        advanced_fields = ["id", "url", "display", "natural_key_slug", "slug", "notes_url"]
         plugin_tab_1_fields = ["field_1", "field_2", "field_3"]
         plugin_tab_2_fields = ["field_1", "field_2", "field_3"]
         main_fields = [

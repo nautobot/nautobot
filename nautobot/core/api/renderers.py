@@ -127,6 +127,7 @@ class NautobotCSVRenderer(BaseRenderer):
                 # Unfortunately we're going to have to be a bit lossy here, as CSV doesn't have a distinction between
                 # a null value and an empty string value for a column.
                 # We could choose to represent a null value as "None" or "null" but those are also valid strings, so...
+                # See corresponding logic in NautobotCSVParser.
                 value = ""
             elif isinstance(value, dict):
                 if "natural_key_slug" in value:

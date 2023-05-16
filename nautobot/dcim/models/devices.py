@@ -498,6 +498,8 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         "secrets_group",
     ]
 
+    natural_key_field_names = ["name", "tenant", "location"]  # location should be last since it's variadic
+
     class Meta:
         ordering = ("_name",)  # Name may be null
         unique_together = (
