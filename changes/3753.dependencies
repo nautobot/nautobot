@@ -1,0 +1,1 @@
+Updated indirect dev dependency `pymdown-extensions` to `10.0` to address `CVE-2023-32309`.
