@@ -26,13 +26,16 @@ export default function GenericObjectListView() {
     }, [dispatch, currentAppContext]);
 
     // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";
-    const { data: headerData, isLoading: headerDataLoading } =
-        useGetRESTAPIQuery({
-            app_name: app_name,
-            model_name: model_name,
-            schema: true,
-            plugin: isPluginView,
-        });
+    const {
+        data: headerData,
+        isLoading: headerDataLoading,
+        isFetching: headerDataFetching,
+    } = useGetRESTAPIQuery({
+        app_name: app_name,
+        model_name: model_name,
+        schema: true,
+        plugin: isPluginView,
+    });
     let [searchParams] = useSearchParams();
 
     // What page are we on?
@@ -66,7 +69,11 @@ export default function GenericObjectListView() {
     //         </GenericView>
     //     );
     // }
-    let data_loaded = !(listDataLoading || headerDataLoading);
+    let data_loaded = !(
+        listDataLoading ||
+        headerDataLoading ||
+        headerDataFetching
+    );
     let data_fetched = !listDataFetching;
 
     let table_name = toTitleCase(model_name, "-");
