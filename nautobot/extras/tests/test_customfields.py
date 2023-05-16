@@ -1,5 +1,4 @@
 import logging
-from unittest import skip
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -14,7 +13,6 @@ from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.filters import LocationFilterSet
-from nautobot.dcim.forms import LocationCSVForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
@@ -603,6 +601,12 @@ class CustomFieldDataAPITest(APITestCase):
                 location.cf["example_plugin_auto_custom_field"], data_cf["example_plugin_auto_custom_field"]
             )
 
+    # TODO: add REST API test for invalid create with missing required custom fields
+
+    # TODO: add REST API test for invalid create with non-permitted value for choices custom field
+
+    # TODO: add REST API test for successful create via CSV with various custom field types
+
     def test_create_multiple_objects_with_defaults(self):
         """
         Create three news locations with no specified custom field values and check that each received
@@ -903,172 +907,6 @@ class CustomFieldDataAPITest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Value must be a string", str(response.content))
-
-
-@skip("TODO")
-class CustomFieldImportTest(TestCase):
-    """
-    Test importing object custom field data along with the object itself.
-    """
-
-    user_permissions = (
-        "dcim.add_location",
-        "dcim.view_location",
-        "dcim.change_location",
-        "dcim.add_locationtype",
-        "dcim.change_locationtype",
-        "dcim.view_locationtype",
-        "extras.view_status",
-    )
-
-    @classmethod
-    def setUpTestData(cls):
-        custom_fields = (
-            CustomField(label="Text", type=CustomFieldTypeChoices.TYPE_TEXT),
-            CustomField(label="Integer", type=CustomFieldTypeChoices.TYPE_INTEGER),
-            CustomField(label="Boolean", type=CustomFieldTypeChoices.TYPE_BOOLEAN),
-            CustomField(label="Date", type=CustomFieldTypeChoices.TYPE_DATE),
-            CustomField(label="URL", type=CustomFieldTypeChoices.TYPE_URL),
-            CustomField(
-                label="Select",
-                type=CustomFieldTypeChoices.TYPE_SELECT,
-            ),
-            CustomField(
-                label="Multiselect",
-                type=CustomFieldTypeChoices.TYPE_MULTISELECT,
-            ),
-        )
-        for cf in custom_fields:
-            cf.validated_save()
-            cf.content_types.set([ContentType.objects.get_for_model(Location)])
-
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="Select"), value="Choice A")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="Select"), value="Choice B")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="Select"), value="Choice C")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="Multiselect"), value="Choice A")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="Multiselect"), value="Choice B")
-        CustomFieldChoice.objects.create(custom_field=CustomField.objects.get(label="Multiselect"), value="Choice C")
-
-    def test_import(self):
-        """
-        Import a Location in CSV format, including a value for each CustomField.
-        """
-        LocationType.objects.create(name="Test Root")
-        location_status = Status.objects.get_for_model(Location).first()
-        data = (
-            [
-                "name",
-                "slug",
-                "location_type",
-                "status",
-                "cf_text",
-                "cf_integer",
-                "cf_boolean",
-                "cf_date",
-                "cf_url",
-                "cf_select",
-                "cf_multiselect",
-            ],
-            [
-                "Location 1",
-                "location-1",
-                "Test Root",
-                location_status.name,
-                "ABC",
-                "123",
-                "True",
-                "2020-01-01",
-                "http://example.com/1",
-                "Choice A",
-                "Choice A",
-            ],
-            [
-                "Location 2",
-                "location-2",
-                "Test Root",
-                location_status.name,
-                "DEF",
-                "456",
-                "False",
-                "2020-01-02",
-                "http://example.com/2",
-                "Choice B",
-                '"Choice A,Choice B"',
-            ],
-            ["Location 3", "location-3", "Test Root", location_status.name, "", "", "", "", "", "", ""],
-        )
-        if "example_plugin" in settings.PLUGINS:
-            data[0].append("cf_example_plugin_auto_custom_field")
-            data[1].append("Custom value")
-            data[2].append("Another custom value")
-            data[3].append("")
-        csv_data = "\n".join(",".join(row) for row in data)
-        response = self.client.post(reverse("dcim:location_import"), {"csv_data": csv_data})
-        self.assertEqual(response.status_code, 200)
-
-        # Validate data for location 1
-        location1 = Location.objects.get(name="Location 1")
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(len(location1.cf), 8)
-        else:
-            self.assertEqual(len(location1.cf), 7)
-        self.assertEqual(location1.cf["text"], "ABC")
-        self.assertEqual(location1.cf["integer"], 123)
-        self.assertEqual(location1.cf["boolean"], True)
-        self.assertEqual(location1.cf["date"], "2020-01-01")
-        self.assertEqual(location1.cf["url"], "http://example.com/1")
-        self.assertEqual(location1.cf["select"], "Choice A")
-        self.assertEqual(location1.cf["multiselect"], ["Choice A"])
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(location1.cf["example_plugin_auto_custom_field"], "Custom value")
-
-        # Validate data for location 2
-        location2 = Location.objects.get(name="Location 2")
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(len(location2.cf), 8)
-        else:
-            self.assertEqual(len(location2.cf), 7)
-        self.assertEqual(location2.cf["text"], "DEF")
-        self.assertEqual(location2.cf["integer"], 456)
-        self.assertEqual(location2.cf["boolean"], False)
-        self.assertEqual(location2.cf["date"], "2020-01-02")
-        self.assertEqual(location2.cf["url"], "http://example.com/2")
-        self.assertEqual(location2.cf["select"], "Choice B")
-        self.assertEqual(location2.cf["multiselect"], ["Choice A", "Choice B"])
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(location2.cf["example_plugin_auto_custom_field"], "Another custom value")
-
-        # No custom field data should be set for location 3
-        location3 = Location.objects.get(name="Location 3")
-        self.assertFalse(any(location3.cf.values()))
-
-    def test_import_missing_required(self):
-        """
-        Attempt to import an object missing a required custom field.
-        """
-        # Set one of our CustomFields to required
-        CustomField.objects.filter(label="Text").update(required=True)
-        lt = LocationType.objects.get(name="Campus")
-        form_data = {
-            "name": "Location 1",
-            "slug": "location-1",
-            "location_type": lt.pk,
-        }
-
-        form = LocationCSVForm(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("cf_text", form.errors)
-
-    def test_import_invalid_choice(self):
-        """
-        Attempt to import an object with an invalid choice selection.
-        """
-        lt = LocationType.objects.get(name="Campus")
-        form_data = {"name": "Location 1", "slug": "location-1", "location_type": lt.name, "cf_select": "Choice X"}
-
-        form = LocationCSVForm(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("cf_select", form.errors)
 
 
 class CustomFieldModelTest(TestCase):
