@@ -29,3 +29,6 @@ In some cases you may have a collection of closely related secrets values that a
 
 - A "Device Password" secret could use the *Text File* provider and specify the file `path` as `"/opt/nautobot/device_passwords/{{ obj.site.slug }}/{{ obj.name }}.txt"`, so that a device `csr1` at site `nyc` would be able to retrieve its password value from `/opt/nautobot/device_passwords/nyc/csr1.txt`.
 - A "Git Token" secret could use the *Environment Variable* provider and specify the `variable` name as `"GIT_TOKEN_{{ obj.slug | replace('-', '_') | upper }}"`, so that a Git repository `golden-config` would be able to retrieve its token value from `$GIT_TOKEN_GOLDEN_CONFIG`.
+
+!!! note
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for a custom field named `color` on `obj`.
