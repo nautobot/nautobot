@@ -43,15 +43,10 @@ class Command(BaseCommand):
 
     def convert_django_url_regex_to_react_route_path(self, regex):
         """
-        Converts a regular expression object to a string representation of the regular expression.
-        It replaces named capture groups with their corresponding names and
-        removes unnecessary characters such as '^', '$', '\Z', and '\'.
+        Converts a regular expression object to its equivalent react router path representation.
 
         Args:
             regex (re.Pattern): A regular expression object.
-
-        Returns:
-            str: A string representation of the regular expression.
 
         Example:
             >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
@@ -59,7 +54,7 @@ class Command(BaseCommand):
             '/other-models/:pk/notes'
         """
         pattern = str(regex.pattern)
-        path = simplify_regex(pattern).replace('<', ':').replace('>', '').replace('\\Z', '').replace('\\', '')
+        path = simplify_regex(pattern).replace("<", ":").replace(">", "").replace("\\Z", "").replace("\\", "")
         return path if path.endswith("/") else f"{path}/"
 
     def get_app_component(self, file_path, route_name):
@@ -73,18 +68,18 @@ class Command(BaseCommand):
         Returns:
             str: The view component associated with the specified route name, or None if not found.
         """
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             js_content = f.read()
 
         # Construct a regular expression that matches the specified key and extracts the associated view component
         pattern = rf'routes_view_components:\s*{{[^}}]*"{re.escape(route_name)}"\s*:\s*"([^"]+)"'
         view_component_match = re.search(pattern, js_content)
         return view_component_match[1] if view_component_match else None
-    
+
     def render_routes_imports(self, app_base_path, app_name, app_config):
         data = []
         module = __import__(f"{app_name}.urls", {}, {}, [""])
-        base_url = app_config.base_url or app_config.label 
+        base_url = app_config.base_url or app_config.label
         for urlpattern in module.urlpatterns:
             if component := self.get_app_component(
                 app_base_path / "ui/index.js",
@@ -95,7 +90,7 @@ class Command(BaseCommand):
                 else:
                     path_regex = urlpattern.pattern._compile(urlpattern.pattern._regex)
                 url_path = self.convert_django_url_regex_to_react_route_path(path_regex)
-                data.append({ "path": base_url + url_path, "component": component })
+                data.append({"path": base_url + url_path, "component": component})
         return data
 
     def render_app_imports(self):
@@ -112,7 +107,7 @@ class Command(BaseCommand):
 
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
-        
+
         # Create file if not exists
         if not os.path.exists(app_routes_file_path):
             with open(app_routes_file_path, "w", encoding="utf-8") as app_routes_file:
@@ -144,9 +139,9 @@ class Command(BaseCommand):
 
         with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
             json.dump(jsconfig, generated_config_file, indent=4)
-        
+
         with open(app_routes_file_path, "w", encoding="utf-8") as app_rotes_file:
-                json.dump(app_routes, app_rotes_file, indent=4)
+            json.dump(app_routes, app_rotes_file, indent=4)
 
         app_imports_final_file_path = Path(ui_dir, "src", "app_imports.js")
         environment = jinja2.sandbox.SandboxedEnvironment(loader=jinja2.FileSystemLoader(ui_dir))
