@@ -7,13 +7,13 @@ import {
     API_UI_MENU_INFO,
 } from "@constants/apiPath";
 
-/*	
-  The one true API!	
+/*
+  The one true API!
 
-  Using Redux's RTK Query making fetching and caching a breeze! This will provide hooks and wires automagically.	
+  Using Redux's RTK Query making fetching and caching a breeze! This will provide hooks and wires automagically.
 
-  A standardized convention for retrieving data which should make developer's lives easier and is already extensively documented	
-  in React and Redux's sites.	
+  A standardized convention for retrieving data which should make developer's lives easier and is already extensively documented
+  in React and Redux's sites.
 */
 
 const staggeredBaseQuery = retry(fetchBaseQuery({ baseUrl: API_BASE }), {

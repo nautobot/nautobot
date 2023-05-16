@@ -99,7 +99,7 @@ class Command(BaseCommand):
         return data
 
     def render_app_imports(self):
-        """Render `app_imports.js`, update `jsconfig.json` to map to the path for each and update `urls.json` to match url imports."""
+        """Render `app_imports.js`, update `jsconfig.json` to map to the path for each and render `app_routes.json` to register all app routes."""
         self.stdout.write(self.style.WARNING(">>> Rendering Nautobot App imports..."))
 
         ui_dir = settings.NAUTOBOT_UI_DIR
