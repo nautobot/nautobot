@@ -1,15 +1,17 @@
-export { default as PluginFullWidthPageComponent } from "./FullWidthPage";
-export { default as ExampleAppOverrideModelView } from "./OverrideView";
+export { default as PluginFullWidthPageComponent } from "./FullWidthPage.jsx";
+export { default as ExamplePluginRetrieveViewOverride } from "./CustomView"
 
-const app_config = {
+const plugin_config = {
     full_width_components: {
-        "dcim:locations": ["PluginFullWidthPageComponent"]
+        "dcim:sites": ["PluginFullWidthPageComponent"]
     },
     view_overrides: {
-        "dcim:locations": {
-            "retrieve": "ExampleAppOverrideModelView"
+        // TODO: this will still cause test failures since the tests run with this plugin included.
+        // Needs to override an otherwise untested view instead, probably something from example-plugin?
+        "ipam:ip-addresses": {
+            "retrieve": "ExamplePluginRetrieveViewOverride"
         }
-    },
+    }
 }
 
-export default app_config
+export default plugin_config
