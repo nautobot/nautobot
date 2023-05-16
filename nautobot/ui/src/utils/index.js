@@ -1,6 +1,6 @@
 export { my_import_as_function } from "./app-import";
 
-export { getPluginRoutes } from "./nav";
+export { getPluginRoutes } from "./navigation";
 
 export { default as getApiClient } from "./axios-api";
 

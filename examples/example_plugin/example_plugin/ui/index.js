@@ -1,5 +1,5 @@
 export { default as ExampleAppFullWidthPageComponent } from "./FullWidthPage"
-export { default as ExamplePluginModelRetrieveView } from "./ModelRetrieveView"
+export { default as ExampleAppModelRetrieveView } from "./ModelRetrieveView"
 
 const app_config = {
     detail_tabs: {},
@@ -8,7 +8,7 @@ const app_config = {
     },
     view_overrides: {},
     routes_view_components: {
-        "examplemodel": "ExamplePluginModelRetrieveView",
+        "examplemodel": "ExampleAppModelRetrieveView",
     }
 }
 
