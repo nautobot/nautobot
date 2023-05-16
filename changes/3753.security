@@ -1,1 +1,1 @@
-Updated indirect dev dependency `pymdown-extensions` to `10.0` to address `CVE-2023-32309`. This should not be installed in a production environment by default but should be updated if you do.
+Updated indirect dev dependency `pymdown-extensions` to `10.0` to address `CVE-2023-32309`. This should not be installed in a production environment by default but should be updated if you have installed it.
