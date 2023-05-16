@@ -107,11 +107,8 @@ class Command(BaseCommand):
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
 
-        # Create file if not exists
-        if not os.path.exists(app_routes_file_path):
-            with open(app_routes_file_path, "w", encoding="utf-8") as app_routes_file:
-                json.dump({}, app_routes_file)
-        else:
+        # Only load if file exists
+        if os.path.exists(app_routes_file_path):
             with open(app_routes_file_path, "r", encoding="utf-8") as app_rotes_file:
                 app_routes = json.load(app_rotes_file)
 
