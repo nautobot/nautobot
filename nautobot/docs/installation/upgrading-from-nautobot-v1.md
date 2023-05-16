@@ -295,7 +295,8 @@ A new `supports_dryrun` field has been added to the `Job` model and `Job` class 
 
 The `commit_default` job field has been renamed to `dryrun_default` and the default value has been changed from `True` to `False`.
 
-The `read_only` job field now forces `dryrun=True` instead of the prior behavior of setting `commit=False`.
+!!! important
+    The `read_only` job field no longer changes the behavior of Nautobot core and is left to the job author to decide whether their job is read only.
 
 !!! important
     Nautobot no longer enforces any job behavior when dryrun is set. It is now the job author's responsibility to define and enforce the execution of a "dry run".

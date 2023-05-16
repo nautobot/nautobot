@@ -26,7 +26,6 @@ JOB_OVERRIDABLE_FIELDS = (
     "description",
     "dryrun_default",
     "hidden",
-    "read_only",
     "approval_required",
     "soft_time_limit",
     "time_limit",
@@ -49,3 +48,11 @@ JOB_LOG_MAX_ABSOLUTE_URL_LENGTH = 255
 # ChangeLog Truncation Length
 CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL = 400
 CHANGELOG_MAX_OBJECT_REPR = 200
+
+# JobResult custom Celery kwargs
+JOB_RESULT_CUSTOM_CELERY_KWARGS = (
+    "nautobot_job_profile",
+    "nautobot_job_job_model_id",
+    "nautobot_job_scheduled_job_id",
+    "nautobot_job_user_id",
+)

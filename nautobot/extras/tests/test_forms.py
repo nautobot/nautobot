@@ -1143,8 +1143,6 @@ class JobEditFormTestCase(TestCase):
             "dryrun_default": True,
             "hidden_override": True,
             "hidden": True,
-            "read_only_override": True,
-            "read_only": True,
             "soft_time_limit_override": True,
             "soft_time_limit": 350.1,
             "time_limit_override": True,

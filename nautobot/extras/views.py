@@ -1,4 +1,3 @@
-import inspect
 from datetime import timedelta
 import logging
 
@@ -50,7 +49,6 @@ from .datasources import (
 )
 from .filters import RoleFilterSet
 from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
-from .jobs import Job as JobClass
 from .jobs import get_job
 from .models import (
     ComputedField,
@@ -796,12 +794,12 @@ class GitRepositoryListView(generic.ObjectListView):
     template_name = "extras/gitrepository_list.html"
 
     def extra_context(self):
-        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
         # Get the newest results for each repository name
         results = {
-            r.name: r
+            r.task_kwargs["repository"]: r
             for r in JobResult.objects.filter(
-                obj_type=git_repository_content_type,
+                task_name__startswith="nautobot.core.jobs.GitRepository",
+                task_kwargs__repository__isnull=False,
                 status__in=JobResultStatusChoices.READY_STATES,
             )
             .order_by("date_done")
@@ -1086,12 +1084,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 try:
                     job_result = job_model.job_results.get(pk=job_result_pk)
                     # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
-                    # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
+                    # for example "?kwargs_from_job_result=<UUID>&integervar=22"
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
-                    task_queue = job_result.task_kwargs.get("task_queue")
+                    task_queue = job_result.celery_kwargs.get("queue", None)
                     if task_queue is not None:
-                        initial.setdefault("_task_queue", task_queue)
+                        initial["_task_queue"] = task_queue
+                    initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(
@@ -1148,14 +1147,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
-        elif job_model.supports_dryrun and job_model.read_only and request.POST.get("dryrun", False) is not True:
-            messages.error(
-                request,
-                "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
-            )
-
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
-            task_queue = job_form.cleaned_data.get("_task_queue", None)
+            task_queue = job_form.cleaned_data.pop("_task_queue", None)
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
@@ -1187,6 +1180,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     else:
                         schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
+                celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
                     task=job_model.job_class.registered_name,
@@ -1195,6 +1189,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
                     kwargs=job_model.job_class.serialize_data(job_form.cleaned_data),
+                    celery_kwargs=celery_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     queue=task_queue,
@@ -1218,7 +1213,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     job_model,
                     request.user,
                     profile=profile,
-                    celery_kwargs={"queue": task_queue},
+                    task_queue=task_queue,
                     **job_model.job_class.serialize_data(job_kwargs),
                 )
 
@@ -1288,6 +1283,7 @@ class JobApprovalRequestView(generic.ObjectView):
             # Render the form with all fields disabled
             initial = instance.kwargs
             initial["_task_queue"] = instance.queue
+            initial["_profile"] = instance.celery_kwargs.get("profile", False)
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
             job_form = None
@@ -1323,17 +1319,16 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job cannot be run at this time")
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")
-            elif not job_model.job_class.supports_dryrun:
+            elif not job_model.supports_dryrun:
                 messages.error(request, "This job does not support dryrun")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view
-                job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
+                job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
                 job_kwargs["dryrun"] = True
-                celery_kwargs = {"queue": scheduled_job.queue}
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
-                    celery_kwargs=celery_kwargs,
+                    celery_kwargs=scheduled_job.celery_kwargs,
                     **job_model.job_class.serialize_data(job_kwargs),
                 )
 
@@ -1475,7 +1470,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.select_related("job_model", "obj_type", "user").prefetch_related("logs")
+    queryset = JobResult.objects.select_related("job_model", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1496,7 +1491,7 @@ class JobResultView(generic.ObjectView):
     Display a JobResult and its Job data.
     """
 
-    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.prefetch_related("job_model", "user")
     template_name = "extras/jobresult.html"
 
     def instance_to_csv(self, instance):
@@ -1532,13 +1527,6 @@ class JobResultView(generic.ObjectView):
         job_class = None
         if instance.job_model is not None:
             job_class = instance.job_model.job_class
-        # 2.0 TODO: remove JobResult.related_object entirely
-        related_object = instance.related_object
-        if inspect.isclass(related_object) and issubclass(related_object, JobClass):
-            if job_class is None:
-                job_class = related_object
-        elif related_object:
-            associated_record = related_object
 
         return {
             "job": job_class,

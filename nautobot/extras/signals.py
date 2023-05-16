@@ -1,7 +1,6 @@
 import os
 import random
 import shutil
-import uuid
 import logging
 from datetime import timedelta
 
@@ -174,9 +173,7 @@ def git_repository_pre_delete(instance, **kwargs):
     # worker events will be such as firing the worker event here.
     job_result = JobResult.objects.create(
         name=instance.name,
-        obj_type=ContentType.objects.get_for_model(instance),
         user=None,
-        task_id=uuid.uuid4(),
         status=JobResultStatusChoices.STATUS_STARTED,
     )
 

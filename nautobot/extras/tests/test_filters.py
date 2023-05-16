@@ -842,9 +842,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 job_model=job,
                 name=job.class_path,
                 user=User.objects.first(),
-                obj_type=ContentType.objects.get_for_model(Job),
                 status=JobResultStatusChoices.STATUS_STARTED,
-                task_id=job.pk,
             )
 
     def test_job_model(self):
@@ -1000,11 +998,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.job_result = JobResult.objects.create(
-            name="test",
-            task_id=uuid.uuid4(),
-            obj_type=ContentType.objects.get_for_model(GitRepository),
-        )
+        cls.job_result = JobResult.objects.create(name="test")
 
         for log_level in ("debug", "info", "success", "warning"):
             JobLogEntry.objects.create(

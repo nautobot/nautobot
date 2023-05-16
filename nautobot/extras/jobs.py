@@ -6,11 +6,18 @@ import json
 import logging
 import os
 import shutil
+import tempfile
 from textwrap import dedent
 import traceback
 import warnings
 
+from billiard.einfo import ExceptionInfo
+from celery import states
+from celery.exceptions import Retry
+from celery.result import EagerResult
+from celery.utils.functional import maybe_list
 from celery.utils.log import get_task_logger
+from celery.utils.nodenames import gethostname
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -23,6 +30,7 @@ from django.db.models.query import QuerySet
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms import ValidationError
 from django.utils.functional import classproperty
+from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
@@ -123,26 +131,27 @@ class BaseJob(Task):
         self.active_test = "run"
         context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
         change_context = context_class(user=self.user, context_detail=self.class_path)
-        # TODO: re-add profiling feature
-        # if profile:
-        #     import cProfile
-
-        #     # TODO: This should probably be available as a file download rather than dumped to the hard drive.
-        #     # Pending this: https://github.com/nautobot/nautobot/issues/3352
-        #     profiling_path = f"/tmp/nautobot-jobresult-{self.request.id}.pstats"
-
-        #     # TODO: Context manager for this is added in 3.8
-        #     profiler = cProfile.Profile()
-        #     profiler.enable()
-        #     output = job.run(data=data, commit=commit)
-        #     profiler.disable()
-        #     profiler.dump_stats(profiling_path)
-        #     job.log_info(obj=None, message=f"Wrote profiling information to {profiling_path}.")
-        # else:
-        #     output = job.run(data=data, commit=commit)
 
         with change_logging(change_context):
-            return self.run(*args, **deserialized_kwargs)
+            if self.celery_kwargs.get("nautobot_job_profile", False) is True:
+                import cProfile
+
+                # TODO: This should probably be available as a file download rather than dumped to the hard drive.
+                # Pending this: https://github.com/nautobot/nautobot/issues/3352
+                profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
+                self.log_info(obj=None, message=f"Writing profiling information to {profiling_path}.")
+
+                with cProfile.Profile() as pr:
+                    try:
+                        output = self.run(*args, **deserialized_kwargs)
+                    except Exception as e:
+                        pr.dump_stats(profiling_path)
+                        raise e
+                    else:
+                        pr.dump_stats(profiling_path)
+                        return output
+            else:
+                return self.run(*args, **deserialized_kwargs)
 
     def __str__(self):
         return str(self.name)
@@ -304,6 +313,71 @@ class BaseJob(Task):
         # TODO(gary): document this in job author docs
         # Super.after_return must be called for chords to function properly
         super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
+
+    def apply(
+        self,
+        args=None,
+        kwargs=None,
+        link=None,
+        link_error=None,
+        task_id=None,
+        retries=None,
+        throw=None,
+        logfile=None,
+        loglevel=None,
+        headers=None,
+        **options,
+    ):
+        """Fix celery's apply method to propagate options to the task result"""
+        # trace imports Task, so need to import inline.
+        from celery.app.trace import build_tracer
+
+        app = self._get_app()
+        args = args or ()
+        kwargs = kwargs or {}
+        task_id = task_id or uuid()
+        retries = retries or 0
+        if throw is None:
+            throw = app.conf.task_eager_propagates
+
+        # Make sure we get the task instance, not class.
+        task = app._tasks[self.name]
+
+        request = {
+            "id": task_id,
+            "retries": retries,
+            "is_eager": True,
+            "logfile": logfile,
+            "loglevel": loglevel or 0,
+            "hostname": gethostname(),
+            "callbacks": maybe_list(link),
+            "errbacks": maybe_list(link_error),
+            "headers": headers,
+            "ignore_result": options.get("ignore_result", False),
+            "delivery_info": {
+                "is_eager": True,
+                "exchange": options.get("exchange"),
+                "routing_key": options.get("routing_key"),
+                "priority": options.get("priority"),
+            },
+            "properties": options,  # one line fix to overloaded method
+        }
+        tb = None
+        tracer = build_tracer(
+            task.name,
+            task,
+            eager=True,
+            propagate=throw,
+            app=self._get_app(),
+        )
+        ret = tracer(task_id, args, kwargs, request)
+        retval = ret.retval
+        if isinstance(retval, ExceptionInfo):
+            retval, tb = retval.exception, retval.traceback
+        if isinstance(retval, Retry) and retval.sig is not None:
+            return retval.sig.apply(retries=retries + 1)
+        state = states.SUCCESS if ret.info is None else ret.info.state
+        return EagerResult(task_id, retval, state, traceback=tb)
 
     @classproperty
     def file_path(cls):  # pylint: disable=no-self-argument
@@ -491,26 +565,19 @@ class BaseJob(Task):
 
         try:
             job_model = JobModel.objects.get_for_class_path(self.class_path)
-            read_only = job_model.read_only if job_model.read_only_override else self.read_only
             dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else self.dryrun_default
             task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
         except JobModel.DoesNotExist:
             logger.error("No Job instance found in the database corresponding to %s", self.class_path)
-            read_only = self.read_only
             dryrun_default = self.dryrun_default
             task_queues = self.task_queues
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
-        if self.supports_dryrun:
-            if read_only:
-                # Hide the dryrun field for read only jobs
-                form.fields["dryrun"].widget = forms.HiddenInput()
-                form.fields["dryrun"].initial = True
-            elif not initial or "dryrun" not in initial:
-                # Set initial "dryrun" checkbox state based on the Meta parameter
-                form.fields["dryrun"].initial = dryrun_default
+        if self.supports_dryrun and (not initial or "dryrun" not in initial):
+            # Set initial "dryrun" checkbox state based on the Meta parameter
+            form.fields["dryrun"].initial = dryrun_default
         if not settings.DEBUG:
             form.fields["_profile"].widget = forms.HiddenInput()
 
@@ -531,6 +598,10 @@ class BaseJob(Task):
         celery reuses task instances for multiple runs.
         """
         try:
+            del self.celery_kwargs
+        except AttributeError:
+            pass
+        try:
             del self.job_result
         except AttributeError:
             pass
@@ -545,7 +616,11 @@ class BaseJob(Task):
 
     @functools.cached_property
     def job_result(self):
-        return JobResult.objects.get(task_id=self.request.id)
+        return JobResult.objects.get(id=self.request.id)
+
+    @functools.cached_property
+    def celery_kwargs(self):
+        return self.job_result.celery_kwargs or {}
 
     @property
     def user(self):
@@ -582,6 +657,7 @@ class BaseJob(Task):
 
         return return_data
 
+    # TODO: can the deserialize_data logic be moved to NautobotKombuJSONEncoder?
     @classmethod
     def deserialize_data(cls, data):
         """

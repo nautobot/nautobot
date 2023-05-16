@@ -56,6 +56,12 @@
 - Model: "JobHook"
   Removed Field: "slug"
   Comments:
+- Model: "JobResult"
+  Removed Field: "job_id"
+  Comments:
+- Model: "JobResult"
+  Removed Field: "obj_type"
+  Comments:
 - Model: "Location"
   Removed Field: "site"
   Comments:

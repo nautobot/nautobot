@@ -8,6 +8,7 @@ import sys
 from celery import Celery, shared_task, signals
 from celery.fixups.django import DjangoFixup
 from django.conf import settings
+from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
@@ -114,7 +115,7 @@ def nautobot_kombu_json_loads_hook(data):
         logger.debug("Performing nautobot deserialization for type %s", qual_name)
         cls = import_string(qual_name)  # fully qualified dotted import path
         if cls:
-            return cls.nautobot_deserialize(data)
+            return SimpleLazyObject(lambda: cls.objects.get(id=data["id"]))
         else:
             raise TypeError(f"Unable to import {qual_name} during nautobot deserialization")
     else:

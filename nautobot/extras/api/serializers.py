@@ -427,20 +427,6 @@ class JobVariableSerializer(serializers.Serializer):
 
 
 #
-# Job Results
-#
-
-
-class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
-    status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
-    obj_type = ContentTypeField(read_only=True)
-
-    class Meta:
-        model = JobResult
-        fields = "__all__"
-
-
-#
 # Scheduled Jobs
 #
 
@@ -450,6 +436,19 @@ class ScheduledJobSerializer(BaseModelSerializer):
 
     class Meta:
         model = ScheduledJob
+        fields = "__all__"
+
+
+#
+# Job Results
+#
+
+
+class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
+    status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
+
+    class Meta:
+        model = JobResult
         fields = "__all__"
 
 

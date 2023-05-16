@@ -580,6 +580,11 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
         name = serializer["name"]
     crontab = serializer.get("crontab", "")
 
+    celery_kwargs = {
+        "nautobot_job_profile": False,
+        "queue": task_queue,
+    }
+
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
     # We pass in job_class and job_model here partly for forward/backward compatibility logic, and
@@ -595,6 +600,7 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
         start_time=time,
         description=f"Nautobot job {name} scheduled by {user} for {time}",
         kwargs=data,
+        celery_kwargs=celery_kwargs,
         interval=type_,
         one_off=(type_ == JobExecutionType.TYPE_FUTURE),
         user=user,
@@ -784,12 +790,6 @@ class JobViewSet(
         if not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
-        if job_model.supports_dryrun and job_model.read_only and cleaned_data.get("dryrun", False) is not True:
-            err_msg = (
-                "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled."
-            )
-            raise ValidationError({"data": {"dryrun": [err_msg]}})
-
         # Default to a null JobResult.
         job_result = None
 
@@ -826,7 +826,7 @@ class JobViewSet(
             job_result = JobResult.enqueue_job(
                 job_model,
                 request.user,
-                celery_kwargs={"queue": task_queue},
+                task_queue=task_queue,
                 **job_class.serialize_data(cleaned_data),
             )
 
@@ -882,7 +882,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
-    queryset = JobResult.objects.select_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.select_related("job_model", "user")
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -1041,7 +1041,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            celery_kwargs=scheduled_job.kwargs.get("celery_kwargs", {}),
+            celery_kwargs=scheduled_job.celery_kwargs or {},
             **job_model.job_class.serialize_data(job_kwargs),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})

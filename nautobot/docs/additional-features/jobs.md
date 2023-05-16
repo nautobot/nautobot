@@ -15,7 +15,7 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
     Backwards compatibility with Netbox scripts and reports has been removed.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". Jobs may be optionally marked as [read-only](#read_only) which equates to the `Report` functionally, but in all cases, user input is supported via [job variables](#variables).
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". User input is supported via [job variables](#variables).
 
 ## Writing Jobs
 
@@ -169,9 +169,12 @@ Important notes about hidden jobs:
 
 +++ 1.1.0
 
++/- 2.0.0
+    The `read_only` flag no longer changes the behavior of Nautobot core and is up to the job author to decide whether their job should be considered read only.
+
 Default: `False`
 
-A boolean that when set will only allow the job to run when the `dryrun` argument is set to `True`. The job input form is also modified to remove the `dryrun` checkbox as it is irrelevant for read-only jobs. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
+A boolean that can be set by the job author to indicate that the job does not make any changes to the environment. What behavior makes each job "read only" is up to the individual job author to decide. Note that user input may still be optionally collected with read-only jobs via job variables, as described below.
 
 #### `soft_time_limit`
 
@@ -514,7 +517,6 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `dryrun_default`
 * `has_sensitive_variables`
 * `hidden`
-* `read_only`
 * `soft_time_limit`
 * `time_limit`
 * `task_queues`

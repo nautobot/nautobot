@@ -52,7 +52,7 @@ from nautobot.extras.models import (
     ComputedField,
 )
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
+from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
@@ -1247,7 +1247,8 @@ class ApprovalQueueTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_post_dry_run_success(self, _):
+    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
+    def test_post_dry_run_success(self, mock_enqueue_job, _):
         """Successfully request a dry run based on object-based run_job permissions."""
         self.add_permissions("extras.view_scheduledjob")
         instance = ScheduledJob.objects.filter(name="test1").first()
@@ -1259,15 +1260,12 @@ class ApprovalQueueTestCase(
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
         data = {"_dry_run": True}
 
+        mock_enqueue_job.side_effect = lambda job_model, *args, **kwargs: JobResult.objects.create(name=job_model.name)
+
         response = self.client.post(self._get_url("view", instance), data)
         # Job was submitted
-        self.assertTrue(
-            JobResult.objects.filter(name=instance.job_model.class_path).exists(),
-            msg=extract_page_body(response.content.decode(response.charset)),
-        )
-        job_result = JobResult.objects.get(name=instance.job_model.class_path)
-        self.assertEqual(job_result.job_model, instance.job_model)
-        self.assertEqual(job_result.user, self.user)
+        mock_enqueue_job.assert_called_once()
+        job_result = JobResult.objects.get(name=instance.job_model.name)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1441,17 +1439,8 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = get_job_content_type()
-        JobResult.objects.create(
-            name="local/test_pass/TestPass",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-        JobResult.objects.create(
-            name="local/test_fail/TestFail",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
+        JobResult.objects.create(name="local/test_pass/TestPass")
+        JobResult.objects.create(name="local/test_fail/TestFail")
 
 
 class JobTestCase(
@@ -1530,8 +1519,6 @@ class JobTestCase(
             "dryrun_default": True,
             "hidden_override": True,
             "hidden": False,
-            "read_only_override": True,
-            "read_only": False,
             "approval_required_override": True,
             "approval_required": True,
             "soft_time_limit_override": True,
@@ -1705,6 +1692,37 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
+    def test_rerun_job(self, mock_task_queues_as_choices):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": self.test_required_args.id,
+            "nautobot_job_profile": True,
+            "nautobot_job_user_id": self.user.id,
+            "queue": "uniquequeue",
+        }
+
+        previous_result = JobResult.objects.create(
+            job_model=self.test_required_args,
+            user=self.user,
+            task_kwargs={"var": "456"},
+            celery_kwargs=job_celery_kwargs,
+        )
+
+        run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
+        response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(
+            '<input type="text" name="var" value="456" class="form-control form-control" required placeholder="None" id="id_var">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
@@ -1881,32 +1899,6 @@ class JobTestCase(
 
         self.assertHttpStatus(response, 200)
         self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_read_only_without_dryrun(self, _):
-        self.add_permissions("extras.run_job")
-
-        read_only_job = Job.objects.get(job_class_name="TestReadOnlyJob")
-        read_only_job.enabled = True
-        read_only_job.save()
-
-        data = {
-            "_schedule_type": "immediately",
-            "dryrun": False,
-            "var": "teststring",
-        }
-
-        run_url = reverse("extras:job_run", kwargs={"slug": read_only_job.slug})
-
-        # Assert error message shows after post
-        response = self.client.post(run_url, data)
-        self.assertHttpStatus(response, 200, msg=run_url)
-
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(
-            "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
-            content,
-        )
 
 
 class JobButtonTestCase(

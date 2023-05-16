@@ -1,7 +1,5 @@
 from datetime import datetime
 
-from django.contrib.contenttypes.models import ContentType
-
 from selenium.webdriver.common.keys import Keys
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -31,10 +29,8 @@ class JobResultTest(SeleniumTestCase):
         job_result = JobResult.objects.create(
             job_model=job,
             name=job.class_path,
-            obj_type=ContentType.objects.get_for_model(Job),
             user=self.user,
             status=JobResultStatusChoices.STATUS_STARTED,
-            task_id=job.pk,
         )
         job_result.save()
 

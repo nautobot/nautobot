@@ -43,7 +43,6 @@ class FileProxyAdmin(NautobotModelAdmin):
 @admin.register(JobResult)
 class JobResultAdmin(NautobotModelAdmin):
     list_display = [
-        "obj_type",
         "name",
         "date_created",
         "date_done",
@@ -51,14 +50,13 @@ class JobResultAdmin(NautobotModelAdmin):
         "status",
     ]
     fields = [
-        "obj_type",
+        "id",
         "name",
         "date_created",
         "date_done",
         "user",
         "status",
-        "data",
-        "task_id",
+        "result",
     ]
     list_filter = [
         "status",

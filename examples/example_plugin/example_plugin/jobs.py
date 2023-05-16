@@ -48,12 +48,18 @@ class ExampleJob(Job):
             *This is italicized*
         """
 
+    def run(self):
+        pass
+
 
 class ExampleHiddenJob(Job):
     class Meta:
         hidden = True
         name = "Example hidden job"
         description = "I should not show in the UI!"
+
+    def run(self):
+        pass
 
 
 class ExampleLoggingJob(Job):

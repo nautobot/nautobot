@@ -900,10 +900,9 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_git_sync_with_permissions(self, mock_get_worker_count):
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
-        mock_get_worker_count.return_value = 1
         self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
@@ -1136,8 +1135,6 @@ class JobTest(
         "dryrun_default": True,
         "hidden_override": True,
         "hidden": True,
-        "read_only_override": True,
-        "read_only": True,
         "soft_time_limit_override": True,
         "soft_time_limit": 350.1,
         "time_limit_override": True,
@@ -1158,6 +1155,7 @@ class JobTest(
     def setUp(self):
         super().setUp()
         self.default_job_name = "local/api_test_job/APITestJob"
+        self.job_class = get_job(self.default_job_name)
         self.job_model = Job.objects.get_for_class_path(self.default_job_name)
         self.job_model.enabled = True
         self.job_model.validated_save()
@@ -1440,7 +1438,7 @@ class JobTest(
 
         # This handles things like ObjectVar fields looked up by non-UUID
         # Jobs are executed with deserialized data
-        deserialized_data = get_job(self.default_job_name).deserialize_data(job_data)
+        deserialized_data = self.job_class.deserialize_data(job_data)
 
         self.assertEqual(
             deserialized_data,
@@ -1454,8 +1452,8 @@ class JobTest(
         # Ensure the enqueue_job args deserialize to the same as originally inputted
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
-            "celery_kwargs": {"queue": "default"},
-            **get_job(self.default_job_name).serialize_data(deserialized_data),
+            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+            **self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
 
@@ -1477,7 +1475,7 @@ class JobTest(
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.get(name=self.default_job_name)
+        job_result = JobResult.objects.get(name=self.job_model.name)
 
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
@@ -1655,9 +1653,8 @@ class JobTest(
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_a_job_with_sensitive_variables_immediately(self, mock_get_worker_count):
-        mock_get_worker_count.return_value = 1
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_a_job_with_sensitive_variables_immediately(self, _):
         self.add_permissions("extras.run_job")
         d = Role.objects.get_for_model(Device).first()
         data = {
@@ -1667,17 +1664,16 @@ class JobTest(
                 "name": "test",
             },
         }
-        job = Job.objects.get_for_class_path(self.default_job_name)
-        job.has_sensitive_variables = True
-        job.has_sensitive_variables_override = True
-        job.validated_save()
+        self.job_model.has_sensitive_variables = True
+        self.job_model.has_sensitive_variables_override = True
+        self.job_model.validated_save()
 
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.get(name=self.default_job_name)
-        self.assertEqual(job_result.task_kwargs, None)
+        job_result = JobResult.objects.get(name=self.job_model.name)
+        self.assertEqual(job_result.task_kwargs, {})
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1830,27 +1826,6 @@ class JobTest(
         url = self.get_run_url("local/test_pass/TestPass")
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
-    def test_run_job_read_only_without_dryrun(self, _):
-        self.add_permissions("extras.run_job")
-        data = {
-            "data": {"dryrun": False, "var": "teststring"},
-        }
-        read_only_job = Job.objects.get_for_class_path("local/test_read_only_job/TestReadOnlyJob")
-        read_only_job.enabled = True
-        read_only_job.validated_save()
-        url = self.get_run_url("local/test_read_only_job/TestReadOnlyJob")
-
-        # Assert error message shows after post
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        # breakpoint()
-        self.assertEqual(
-            response.data["data"]["dryrun"][0],
-            "Unable to run or schedule job: This job is marked as read only and may only run with dryrun enabled.",
-        )
 
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
@@ -2023,44 +1998,33 @@ class JobResultTest(
     @classmethod
     def setUpTestData(cls):
         jobs = Job.objects.all()[:2]
-        job_ct = ContentType.objects.get_for_model(Job)
-        git_ct = ContentType.objects.get_for_model(GitRepository)
 
         JobResult.objects.create(
             job_model=jobs[0],
             name=jobs[0].class_path,
-            obj_type=job_ct,
             date_done=now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,
-            data={"output": "\nRan for 3 seconds"},
-            task_kwargs=None,
+            task_kwargs={},
             scheduled_job=None,
-            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=None,
-            name="Git Repository",
-            obj_type=git_ct,
+            name="Deleted Job",
             date_done=now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,
-            data=None,
             task_kwargs={"repository_pk": uuid.uuid4()},
             scheduled_job=None,
-            task_id=uuid.uuid4(),
         )
         JobResult.objects.create(
             job_model=jobs[1],
             name=jobs[1].class_path,
-            obj_type=job_ct,
             date_done=None,
             user=None,
             status=JobResultStatusChoices.STATUS_PENDING,
-            data=None,
             task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             scheduled_job=None,
-            task_id=uuid.uuid4(),
         )
 
 
@@ -2073,11 +2037,7 @@ class JobLogEntryTest(
 
     @classmethod
     def setUpTestData(cls):
-        cls.job_result = JobResult.objects.create(
-            name="test",
-            task_id=uuid.uuid4(),
-            obj_type=ContentType.objects.get_for_model(GitRepository),
-        )
+        cls.job_result = JobResult.objects.create(name="test")
 
         for log_level in ("debug", "info", "success", "warning"):
             JobLogEntry.objects.create(
