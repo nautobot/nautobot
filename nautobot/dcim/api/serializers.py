@@ -286,6 +286,13 @@ class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMi
         model = RackReservation
         fields = "__all__"
         list_display_fields = ["pk", "rack", "units", "user", "description"]
+        extra_kwargs = {"user": {"required": False}}
+
+    def to_internal_value(self, data):
+        """Add the requesting user as the owner of the RackReservation if not otherwise specified."""
+        if "user" not in data and not self.partial:
+            data["user"] = self.context["request"].user.id
+        return super().to_internal_value(data)
 
 
 class RackElevationDetailFilterSerializer(serializers.Serializer):
@@ -618,7 +625,11 @@ class DeviceRedundancyGroupSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
-    failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices, default="")
+    failover_strategy = ChoiceField(
+        choices=DeviceRedundancyGroupFailoverStrategyChoices,
+        allow_blank=True,
+        default=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_UNSPECIFIED,
+    )
 
     class Meta:
         model = DeviceRedundancyGroup
