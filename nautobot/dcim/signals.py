@@ -261,7 +261,6 @@ def nullify_connected_endpoints(instance, **kwargs):
         instance.termination_a.save()
     if instance.termination_b is not None:
         logger.debug(f"Nullifying termination B for cable {instance}")
-        instance.termination_b.refresh_from_db()
         instance.termination_b.cable = None
         instance.termination_b._cable_peer = None
         instance.termination_b.save()

@@ -79,6 +79,9 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        # save a copy of this instance's field cache so it can be restored after serialization
+        # to prevent unexpected behavior when chaining multiple signal handlers
+        original_cache = instance._state.fields_cache.copy()
         if object_m2m_changed:
             related_changes = ObjectChange.objects.filter(
                 changed_object_type=ContentType.objects.get_for_model(instance),
@@ -97,6 +100,9 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
                 :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
             ]
             objectchange.save()
+
+        # restore field cache
+        instance._state.fields_cache = original_cache
 
         # Enqueue job hooks
         if objectchange is not None:
@@ -130,6 +136,9 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        # save a copy of this instance's field cache so it can be restored after serialization
+        # to prevent unexpected behavior when chaining multiple signal handlers
+        original_cache = instance._state.fields_cache.copy()
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
         objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
         objectchange.request_id = change_context_state.get().change_id
@@ -138,6 +147,9 @@ def _handle_deleted_object(sender, instance, **kwargs):
             :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
         ]
         objectchange.save()
+
+        # restore field cache
+        instance._state.fields_cache = original_cache
 
         # Enqueue job hooks
         enqueue_job_hooks(objectchange)
