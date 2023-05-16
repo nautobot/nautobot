@@ -286,7 +286,12 @@ class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMi
         model = RackReservation
         fields = "__all__"
         list_display_fields = ["pk", "rack", "units", "user", "description"]
-        extra_kwargs = {"user": {"required": False}}
+        extra_kwargs = {
+            "user": {
+                "help_text": "User to associate to reservations. If unspecified, the current user will be used.",
+                "required": False,
+            },
+        }
 
     def to_internal_value(self, data):
         """Add the requesting user as the owner of the RackReservation if not otherwise specified."""

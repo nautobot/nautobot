@@ -48,12 +48,15 @@ __all__ = (
 
 class CSVDataField(django_forms.CharField):
     """
-    A CharField (rendered as a Textarea) which accepts CSV-formatted data. It returns data as a two-tuple: The first
-    item is a dictionary of column headers, mapping field names to the attribute by which they match a related object
-    (where applicable). The second item is a list of dictionaries, each representing a discrete row of CSV data.
+    A CharField (rendered as a Textarea) which expects CSV-formatted data.
+
+    Initial value is a list of headers corresponding to the required fields for the given serializer class.
+
+    This no longer actually does any CSV parsing or validation on its own,
+    as that is now handled by the NautobotCSVParser class and the REST API serializers.
 
     Args:
-        serializer_class: The serializer class used to validate the field.
+        serializer_class: The serializer class used to define the initial default field contents.
     """
 
     widget = django_forms.Textarea
@@ -81,19 +84,13 @@ class CSVDataField(django_forms.CharField):
 
 class CSVFileField(django_forms.FileField):
     """
-    A FileField (rendered as a ClearableFileInput) which accepts a file containing CSV-formatted data. It returns
-    data as a two-tuple: The first item is a dictionary of column headers, mapping field names to the attribute
-    by which they match a related object (where applicable). The second item is a list of dictionaries, each
-    representing a discrete row of CSV data.
+    A FileField (rendered as a ClearableFileInput) which expects a file containing CSV-formatted data.
 
-    Args:
-        serializer_class: The serializer class used to validate the field.
+    This no longer actually does any CSV parsing or validation on its own,
+    as that is now handled by the NautobotCSVParser class and the REST API serializers.
     """
 
-    def __init__(self, serializer_class, *args, **kwargs):
-        self.serializer_class = serializer_class
-        self.fields = self.serializer_class(context={"depth": 0}).fields
-        self.required_fields = [name for name, field in self.fields.items() if field.required]
+    def __init__(self, *args, **kwargs):
         kwargs.setdefault("required", False)
 
         super().__init__(*args, **kwargs)
@@ -164,6 +161,8 @@ class CSVModelChoiceField(django_forms.ModelChoiceField):
 class CSVContentTypeField(CSVModelChoiceField):
     """
     Reference a ContentType in the form `{app_label}.{model}`.
+
+    Note: class name is misleading; this field is also used in numerous FilterSets where it has nothing to do with CSV.
     """
 
     STATIC_CHOICES = True
@@ -279,6 +278,8 @@ class MultiValueCharField(django_forms.CharField):
 class CSVMultipleContentTypeField(MultipleContentTypeField):
     """
     Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
+
+    TODO: this might be removable now that we no longer have bespoke CSV import forms?
     """
 
     def prepare_value(self, value):

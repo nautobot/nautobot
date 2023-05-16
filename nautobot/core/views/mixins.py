@@ -529,10 +529,8 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         elif self.action == "bulk_create":
 
             class BulkCreateForm(BootstrapMixin, Form):
-                csv_data = CSVDataField(
-                    serializer_class=self.serializer_class, widget=Textarea(attrs=self.bulk_create_widget_attrs)
-                )
-                csv_file = CSVFileField(serializer_class=self.serializer_class)
+                csv_data = CSVDataField(serializer_class=self.serializer_class)
+                csv_file = CSVFileField()
 
             form_class = BulkCreateForm
         else:
@@ -870,7 +868,6 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
     """
 
     bulk_create_active_tab = "csv-data"
-    bulk_create_widget_attrs = {}
 
     def _process_bulk_create_form(self, form):
         # Iterate through CSV data and bind each row to a new model form instance.

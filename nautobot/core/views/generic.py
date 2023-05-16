@@ -776,13 +776,11 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     queryset: Base queryset for the model
     table: The django-tables2 Table used to render the list of imported objects
     template_name: The name of the template
-    widget_attrs: A dict of attributes to apply to the import widget (e.g. to require a session key)
     """
 
     queryset = None
     table = None
     template_name = "generic/object_bulk_import.html"
-    widget_attrs = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -790,8 +788,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def _import_form(self, *args, **kwargs):
         class CSVImportForm(BootstrapMixin, Form):
-            csv_data = CSVDataField(serializer_class=self.serializer_class, widget=Textarea(attrs=self.widget_attrs))
-            csv_file = CSVFileField(serializer_class=self.serializer_class)
+            csv_data = CSVDataField(serializer_class=self.serializer_class)
+            csv_file = CSVFileField()
 
         return CSVImportForm(*args, **kwargs)
 
