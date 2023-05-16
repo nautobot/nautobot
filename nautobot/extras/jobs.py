@@ -139,11 +139,17 @@ class BaseJob(Task):
                 # TODO: This should probably be available as a file download rather than dumped to the hard drive.
                 # Pending this: https://github.com/nautobot/nautobot/issues/3352
                 profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
+                self.log_info(obj=None, message=f"Writing profiling information to {profiling_path}.")
 
                 with cProfile.Profile() as pr:
-                    output = self.run(*args, **deserialized_kwargs)
-                    pr.dump_stats(profiling_path)
-                    return output
+                    try:
+                        output = self.run(*args, **deserialized_kwargs)
+                    except Exception as e:
+                        pr.dump_stats(profiling_path)
+                        raise e
+                    else:
+                        pr.dump_stats(profiling_path)
+                        return output
             else:
                 return self.run(*args, **deserialized_kwargs)
 
