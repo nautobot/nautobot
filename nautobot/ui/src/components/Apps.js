@@ -1,7 +1,7 @@
 import { lazy } from "react";
 
 import NautobotApps from "../app_imports";
-import { my_import_as_function }from "../utils";
+import { my_import_as_function } from "../utils";
 
 function get_components() {
     var base = {};
