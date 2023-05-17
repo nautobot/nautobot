@@ -1377,26 +1377,7 @@ class DeviceDeleteView(generic.ObjectDeleteView):
 
 class DeviceBulkImportView(generic.BulkImportView):
     queryset = Device.objects.all()
-    model_form = forms.DeviceCSVForm
     table = tables.DeviceImportTable
-    template_name = "dcim/device_import.html"
-
-
-class ChildDeviceBulkImportView(generic.BulkImportView):
-    queryset = Device.objects.all()
-    model_form = forms.ChildDeviceCSVForm
-    table = tables.DeviceImportTable
-    template_name = "dcim/device_import_child.html"
-
-    def _save_obj(self, serializer, request):
-        obj = serializer.save()
-
-        # Save the reverse relation to the parent device bay
-        device_bay = obj.parent_bay
-        device_bay.installed_device = obj
-        device_bay.save()
-
-        return obj
 
 
 class DeviceBulkEditView(generic.BulkEditView):

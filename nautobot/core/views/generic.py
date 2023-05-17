@@ -794,12 +794,6 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
         return CSVImportForm(*args, **kwargs)
 
-    def _save_obj(self, serializer, request):
-        """
-        Provide a hook to modify the object immediately before saving it (e.g. to encrypt secret data).
-        """
-        return serializer.save()
-
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
 
@@ -833,33 +827,22 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                         field_name = "csv_data"
                     csvtext = form.cleaned_data[field_name]
 
-                    # TODO: For the moment we process the rows of the CSV one at a time.
-                    #       This is done so that we can call `self._save_obj()` for each row independently.
-                    #       Probably we *should* remove all `_save_obj()` implementations and move that logic to the
-                    #       appropriate serializers instead, in which case we could just use a serializer(many=True).
-                    csvlines = csvtext.splitlines()
-                    headers = csvlines[0]
-                    records = csvlines[1:]
-
-                    for row, csvline in enumerate(records, start=1):
-                        try:
-                            data = NautobotCSVParser().parse(
-                                stream=BytesIO(f"{headers}\r\n{csvline}".encode("utf-8")),
-                                parser_context={"request": request, "serializer_class": self.serializer_class},
-                            )[
-                                0
-                            ]  # CSVReader returns a list of data dicts, even if only one element
-                            serializer = self.serializer_class(data=data, context={"request": request})
-                            if serializer.is_valid():
-                                obj = self._save_obj(serializer, request)
-                                new_objs.append(obj)
-                            else:
-                                for field, err in serializer.errors.items():
+                    try:
+                        data = NautobotCSVParser().parse(
+                            stream=BytesIO(csvtext.encode("utf-8")),
+                            parser_context={"request": request, "serializer_class": self.serializer_class},
+                        )
+                        serializer = self.serializer_class(data=data, context={"request": request}, many=True)
+                        if serializer.is_valid():
+                            new_objs = serializer.save()
+                        else:
+                            for row, errors in enumerate(serializer.errors, start=1):
+                                for field, err in errors.items():
                                     form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
-                                raise ValidationError("")
-                        except ParseError as exc:
-                            form.add_error(None, str(exc))
                             raise ValidationError("")
+                    except ParseError as exc:
+                        form.add_error(None, str(exc))
+                        raise ValidationError("")
 
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):

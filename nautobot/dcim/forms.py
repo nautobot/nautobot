@@ -14,8 +14,6 @@ from nautobot.core.forms import (
     BulkEditNullBooleanSelect,
     ColorSelect,
     CommentField,
-    CSVChoiceField,
-    CSVModelChoiceField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
@@ -32,7 +30,6 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
-    LocatableModelCSVFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
@@ -47,9 +44,7 @@ from nautobot.extras.forms import (
     LocalContextModelBulkEditForm,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
-    RoleRequiredRoleModelCSVFormMixin,
     StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
@@ -682,6 +677,14 @@ class DeviceTypeForm(NautobotModelForm):
 
 
 class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
+    """
+    Form for JSON/YAML import of DeviceType objects.
+
+    TODO: at some point we'll want to add general-purpose YAML serialization/deserialization,
+    similar to what we've done for CSV in 2.0, but for the moment we're leaving this as-is so that we can remain
+    at least nominally compatible with the netbox-community/devicetype-library repo.
+    """
+
     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
 
     class Meta:
@@ -1250,6 +1253,14 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
 
 
 class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
+    """
+    Base form class for JSON/YAML import of device component templates as a part of the DeviceType import form/view.
+
+    TODO: at some point we'll want to switch to general-purpose YAML import support, similar to what we've done for
+    CSV in 2.0, but for now we're keeping this as-is for nominal compatibility with the
+    netbox-community/devicetype-library repository.
+    """
+
     def __init__(self, device_type, data=None, *args, **kwargs):
         # Must pass the parent DeviceType on form initialization
         data.update(
@@ -1587,164 +1598,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         position = self.data.get("position") or self.initial.get("position")
         if position:
             self.fields["position"].widget.choices = [(position, f"U{position}")]
-
-
-class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-    manufacturer = CSVModelChoiceField(
-        queryset=Manufacturer.objects.all(),
-        to_field_name="name",
-        help_text="Device type manufacturer",
-    )
-    device_type = CSVModelChoiceField(
-        queryset=DeviceType.objects.all(),
-        to_field_name="model",
-        help_text="Device type model",
-    )
-    platform = CSVModelChoiceField(
-        queryset=Platform.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned platform",
-    )
-    cluster = CSVModelChoiceField(
-        queryset=Cluster.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Virtualization cluster",
-    )
-    secrets_group = CSVModelChoiceField(
-        queryset=SecretsGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Secrets group",
-    )
-
-    class Meta:
-        fields = []
-        model = Device
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit device type queryset by manufacturer
-            params = {f"manufacturer__{self.fields['manufacturer'].to_field_name}": data.get("manufacturer")}
-            self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
-
-
-class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm, RoleRequiredRoleModelCSVFormMixin):
-    rack_group = CSVModelChoiceField(
-        queryset=RackGroup.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Rack's group (if any)",
-    )
-    rack = CSVModelChoiceField(
-        queryset=Rack.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned rack",
-    )
-    face = CSVChoiceField(choices=DeviceFaceChoices, required=False, help_text="Mounted rack face")
-    device_redundancy_group = CSVModelChoiceField(
-        queryset=DeviceRedundancyGroup.objects.all(),
-        to_field_name="slug",
-        required=False,
-        help_text="Associated device redundancy group (slug)",
-    )
-
-    class Meta(BaseDeviceCSVForm.Meta):
-        fields = [
-            "name",
-            "role",
-            "tenant",
-            "manufacturer",
-            "device_type",
-            "platform",
-            "serial",
-            "asset_tag",
-            "status",
-            "location",
-            "rack_group",
-            "rack",
-            "position",
-            "face",
-            "device_redundancy_group",
-            "device_redundancy_group_priority",
-            "cluster",
-            "comments",
-        ]
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit rack_group queryset by assigned location
-            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
-
-            # Limit rack queryset by assigned location and group
-            params = {
-                f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"rack_group__{self.fields['rack_group'].to_field_name}": data.get("rack_group"),
-            }
-            self.fields["rack"].queryset = self.fields["rack"].queryset.filter(**params)
-
-            # 2.0 TODO: limit location queryset by assigned location
-
-
-class ChildDeviceCSVForm(BaseDeviceCSVForm):
-    parent = CSVModelChoiceField(queryset=Device.objects.all(), to_field_name="name", help_text="Parent device")
-    device_bay = CSVModelChoiceField(
-        queryset=DeviceBay.objects.all(),
-        to_field_name="name",
-        help_text="Device bay in which this device is installed",
-    )
-
-    class Meta(BaseDeviceCSVForm.Meta):
-        fields = [
-            "name",
-            "role",
-            "tenant",
-            "manufacturer",
-            "device_type",
-            "platform",
-            "serial",
-            "asset_tag",
-            "status",
-            "parent",
-            "device_bay",
-            "cluster",
-            "comments",
-        ]
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit device bay queryset by parent device
-            params = {f"device__{self.fields['parent'].to_field_name}": data.get("parent")}
-            self.fields["device_bay"].queryset = self.fields["device_bay"].queryset.filter(**params)
-
-    def clean(self):
-        super().clean()
-
-        # Set parent_bay reverse relationship
-        device_bay = self.cleaned_data.get("device_bay")
-        if device_bay:
-            self.instance.parent_bay = device_bay
-
-        # Inherit location and rack from parent device
-        parent = self.cleaned_data.get("parent")
-        if parent:
-            self.instance.location = parent.location
-            self.instance.rack = parent.rack
 
 
 class DeviceBulkEditForm(

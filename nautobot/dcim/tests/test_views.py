@@ -1222,6 +1222,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ),
         )
 
+        device_bay = DeviceBay.objects.create(device=devices[0], name="Device Bay 1")
+
         cls.relationships = (
             Relationship(
                 name="BGP Router-ID",
@@ -1275,10 +1277,11 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "role,device_type,status,name,location,rack,position,face,secrets_group",
+            "role,device_type,status,name,location,rack,position,face,secrets_group,parent_bay",
             f"{deviceroles[0].name},{devicetypes[0].natural_key_slug},{statuses[0].name},Device 4,{locations[0].name},{racks[0].natural_key_slug},10,front,",
             f"{deviceroles[0].name},{devicetypes[0].natural_key_slug},{statuses[0].name},Device 5,{locations[0].name},{racks[0].natural_key_slug},20,front,",
             f"{deviceroles[0].name},{devicetypes[0].natural_key_slug},{statuses[0].name},Device 6,{locations[0].name},{racks[0].natural_key_slug},30,front,Secrets Group 2",
+            f"{deviceroles[1].name},{devicetypes[1].natural_key_slug},{statuses[0].name},Child Device,{locations[0].name},,,,,{device_bay.natural_key_slug}",
         )
 
         cls.bulk_edit_data = {
@@ -1396,7 +1399,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_device_devicebays(self):
         device = Device.objects.first()
 
-        DeviceBay.objects.create(device=device, name="Device Bay 1")
+        # Device Bay 1 was already created in setUpTestData()
         DeviceBay.objects.create(device=device, name="Device Bay 2")
         DeviceBay.objects.create(device=device, name="Device Bay 3")
 

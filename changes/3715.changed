@@ -1,0 +1,3 @@
+Reworked CSV import to be based on the REST API implementation instead of custom forms and views.
+Changed the parameters and behavior of `CSVDataField` and `CSVFileField` in support of the new CSV import framework.
+Changed the `user` parameter on the RackReservation REST API to optional; if omitted, the requesting user will now be automatically selected as the owner of any created reservations.

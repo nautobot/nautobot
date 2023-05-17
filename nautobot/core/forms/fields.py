@@ -116,6 +116,8 @@ class CSVFileField(django_forms.FileField):
 class CSVChoiceField(django_forms.ChoiceField):
     """
     Invert the provided set of choices to take the human-friendly label as input, and return the database value.
+
+    Despite the name, this is no longer used in CSV imports since 2.0, but *is* used in JSON/YAML import of DeviceTypes.
     """
 
     STATIC_CHOICES = True
@@ -127,7 +129,10 @@ class CSVChoiceField(django_forms.ChoiceField):
 
 class CSVMultipleChoiceField(CSVChoiceField):
     """
-    A version of CSVChoiceField that supports and emits a list of choice values
+    A version of CSVChoiceField that supports and emits a list of choice values.
+
+    As with CSVChoiceField, the name is misleading, as this is no longer used for CSV imports, but is used for
+    JSON/YAML import of DeviceTypes still.
     """
 
     def to_python(self, value):
@@ -145,6 +150,9 @@ class CSVMultipleChoiceField(CSVChoiceField):
 class CSVModelChoiceField(django_forms.ModelChoiceField):
     """
     Provides additional validation for model choices entered as CSV data.
+
+    Note: class name is misleading; the subclass CSVContentTypeField (below) is also used in FilterSets, where it has
+    nothing to do with CSV data.
     """
 
     default_error_messages = {
@@ -279,7 +287,8 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
     """
     Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
 
-    TODO: this might be removable now that we no longer have bespoke CSV import forms?
+    Note: This is unused in Nautobot core at this time, but some apps (data-validation-engine) use this for non-CSV
+    purposes, similar to CSVContentTypeField above.
     """
 
     def prepare_value(self, value):

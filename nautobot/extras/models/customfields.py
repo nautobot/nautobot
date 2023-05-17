@@ -451,11 +451,14 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     ):
         """
         Return a form field suitable for setting a CustomField's value for an object.
-        set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
-        enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
-        for_csv_import: Return a form field suitable for bulk import of objects in CSV format.
-        simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
-        label: Set the input label manually (if required) otherwise it will default to field's __str__() implementation.
+
+        Args:
+            set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
+            enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
+            for_csv_import: Return a form field suitable for bulk import of objects. Despite the parameter name,
+                this is *not* used for CSV imports since 2.0, but it *is* used for JSON/YAML import of DeviceTypes.
+            simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
+            label: Set the input label manually (if required); otherwise, defaults to field's __str__() implementation.
         """
         initial = self.default if set_initial else None
         required = self.required if enforce_required else False

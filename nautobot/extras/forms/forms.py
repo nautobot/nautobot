@@ -394,7 +394,13 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
-    """Base class for CSV export of models that support custom fields."""
+    """
+    Base class for CSV/JSON/YAML import of models that support custom fields.
+
+    TODO: The class name is a misnomer; as of 2.0 this class is **not** used for any CSV imports,
+    as that's now handled by the REST API. However it is still used when importing component-templates as
+    part of a JSON/YAML DeviceType import.
+    """
 
     def _append_customfield_fields(self):
         # Append form fields

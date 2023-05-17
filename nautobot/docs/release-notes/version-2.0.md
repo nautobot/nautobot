@@ -128,9 +128,13 @@ Check out the [Region and Site Related Data Model Migration Guide](../installati
 
 `nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../installation/upgrading-from-nautobot-v1.md#python-code-location-changes).
 
-#### Revamped CSV Export ([#2569](https://github.com/nautobot/nautobot/issues/2569))
+#### Revamped CSV Import and Export ([#2569](https://github.com/nautobot/nautobot/issues/2569), [#3715](https://github.com/nautobot/nautobot/issues/3715))
 
 Exporting objects and lists of objects to CSV format has been totally reimplemented in a new framework for ease of use and maintainability. Instead of accessing `http://nautobot/<app>/<model>/?export` you will now use the URL pattern `http://nautobot/api/<app>/<model>/?format=csv`, as the new CSV renderer is based on the REST API serializer definitions. This results in substantially more comprehensive CSV representations of many models.
+
+Conversely, importing objects from CSV format has also been reimplemented in the same new framework. The REST API can now accept CSV files as well as the existing JSON support, and the UI for importing CSVs uses this same framework behind the scenes.
+
+An immediate benefit you can notice from this reimplementation is that CSVs should now **generally** be "round-trip" capable, meaning that you can export a set of records to CSV format and then import that CSV into a different Nautobot instance (or delete the records and use the CSV to recreate them) without needing to "massage" the CSV into a different set of columns or fields.
 
 #### Renamed Database Foreign Keys and Related Names ([#2520](https://github.com/nautobot/nautobot/issues/2520))
 
