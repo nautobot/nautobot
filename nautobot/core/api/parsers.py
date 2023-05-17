@@ -118,7 +118,7 @@ class NautobotCSVParser(BaseParser):
                 # On the CSV write side, we only render dicts to JSON
                 if "{" in value or "[" in value:
                     value = json.loads(value)
-                else:
+                elif value:
                     value = value.split(",")
                     try:
                         # We have some cases where it's a list of integers, such as in RackReservation.units
