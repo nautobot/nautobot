@@ -478,7 +478,7 @@ class JobLogEntry(BaseModel):
 
     job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="job_log_entries")
     log_level = models.CharField(
-        max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT, db_index=True
+        max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_INFO, db_index=True
     )
     grouping = models.CharField(max_length=JOB_LOG_MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
@@ -748,7 +748,7 @@ class JobResult(BaseModel, CustomFieldModel):
         self,
         message,
         obj=None,
-        level_choice=LogLevelChoices.LOG_DEFAULT,
+        level_choice=LogLevelChoices.LOG_INFO,
         grouping="main",
         logger=None,  # pylint: disable=redefined-outer-name
     ):
@@ -788,7 +788,7 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save(using=JOB_LOGS)
 
         if logger:
-            if level_choice == LogLevelChoices.LOG_FAILURE:
+            if level_choice == LogLevelChoices.LOG_ERROR:
                 log_level = logging.ERROR
             elif level_choice == LogLevelChoices.LOG_WARNING:
                 log_level = logging.WARNING

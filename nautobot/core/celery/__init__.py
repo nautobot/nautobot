@@ -14,6 +14,7 @@ from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
+from nautobot.core.celery.log import NautobotLogHandler
 
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,11 @@ def import_tasks_from_jobs_root(sender, **kwargs):
             except Exception as exc:
                 # logger.error(f"Unable to load module '{module_name}' from {jobs_root}: {exc:}")
                 logger.exception(exc)
+
+
+@signals.after_setup_task_logger.connect
+def setup_nautobot_joblogentry_logger(logger, loglevel, logfile, format, colorize, **kwargs):
+    logger.addHandler(NautobotLogHandler())
 
 
 @signals.worker_ready.connect

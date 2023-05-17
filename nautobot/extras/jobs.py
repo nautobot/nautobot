@@ -789,29 +789,29 @@ class BaseJob(Task):
 
     # Logging
 
-    def _log(self, obj, message, level_choice=LogLevelChoices.LOG_DEFAULT):
-        """
-        Log a message. Do not call this method directly; use one of the log_* wrappers below.
-        """
-        self.job_result.log(
-            message,
-            obj=obj,
-            level_choice=level_choice,
-            grouping=self.active_test,
-            logger=self.logger,
-        )
+    # def _log(self, obj, message, level_choice=LogLevelChoices.LOG_INFO):
+    #     """
+    #     Log a message. Do not call this method directly; use one of the log_* wrappers below.
+    #     """
+    #     self.job_result.log(
+    #         message,
+    #         obj=obj,
+    #         level_choice=level_choice,
+    #         grouping=self.active_test,
+    #         logger=self.logger,
+    #     )
 
-    def log(self, message):
-        """
-        Log a generic message which is not associated with a particular object.
-        """
-        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT)
+    # def log(self, message):
+    #     """
+    #     Log a generic message which is not associated with a particular object.
+    #     """
+    #     self._log(None, message, level_choice=LogLevelChoices.LOG_INFO)
 
     def log_debug(self, message):
         """
         Log a debug message which is not associated with a particular object.
         """
-        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT)
+        self.logger.debug(message)
 
     def log_success(self, obj=None, message=None):
         """
@@ -819,9 +819,11 @@ class BaseJob(Task):
         If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
         if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_SUCCESS)
+            self.logger.info(obj)
         else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS)
+            if obj is not None:
+                self.logger.info(str(obj))
+            self.logger.info(message)
 
     def log_info(self, obj=None, message=None):
         """
@@ -829,9 +831,11 @@ class BaseJob(Task):
         If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
         if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_INFO)
+            self.logger.info(obj)
         else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO)
+            if obj is not None:
+                self.logger.info(str(obj))
+            self.logger.info(message)
 
     def log_warning(self, obj=None, message=None):
         """
@@ -839,9 +843,11 @@ class BaseJob(Task):
         If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
         if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_WARNING)
+            self.logger.warning(obj)
         else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING)
+            if obj is not None:
+                self.logger.warning(str(obj))
+            self.logger.warning(message)
 
     def log_failure(self, obj=None, message=None):
         """
@@ -849,9 +855,11 @@ class BaseJob(Task):
         If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
         """
         if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_FAILURE)
+            self.logger.error(obj)
         else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
+            if obj is not None:
+                self.logger.error(str(obj))
+            self.logger.error(message)
         raise RunJobTaskFailed(message)
 
     # Convenience functions
