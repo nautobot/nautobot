@@ -21,10 +21,18 @@ import {
     Link as ReactRouterLink,
     NavLink as ReactRouterNavLink,
 } from "react-router-dom";
+import { useSelector } from "react-redux";
+import {
+    isLoggedInSelector,
+    getCurrentContextSelector,
+    currentUserSelector,
+} from "@utils/store";
 import RouterButton from "@components/RouterButton";
 
-export function Navbar({ appState }) {
-    const isLoggedIn = appState.logged_in;
+export function Navbar() {
+    const isLoggedIn = useSelector(isLoggedInSelector);
+    const currentContext = useSelector(getCurrentContextSelector);
+    const currentUser = useSelector(currentUserSelector);
 
     return (
         <UINavbar>
@@ -61,8 +69,7 @@ export function Navbar({ appState }) {
                             <NavbarSection
                                 as="span"
                                 isActive={
-                                    isActive ||
-                                    children === appState.currentContext
+                                    isActive || children === currentContext
                                 }
                                 children={children}
                                 {...rest}
@@ -82,16 +89,16 @@ export function Navbar({ appState }) {
             {isLoggedIn && (
                 <Menu>
                     <MenuButton as={NavbarMenuButton} isDisabled={!isLoggedIn}>
-                        {appState.user?.display ||
+                        {currentUser?.display ||
                             [
-                                ...(appState.user?.firstName
-                                    ? [appState.user?.firstName]
+                                ...(currentUser?.firstName
+                                    ? [currentUser?.firstName]
                                     : []),
-                                ...(appState.user?.lastName
-                                    ? [appState.user?.lastName]
+                                ...(currentUser?.lastName
+                                    ? [currentUser?.lastName]
                                     : []),
                             ].join(" ") ||
-                            appState.user?.username}
+                            currentUser?.username}
                     </MenuButton>
                     <MenuList>
                         {[

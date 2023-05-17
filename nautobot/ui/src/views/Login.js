@@ -8,11 +8,7 @@ import {
 } from "@nautobot/nautobot-ui";
 import axios from "axios";
 
-import {
-    useGetSessionQuery,
-    useGetUIMenuQuery,
-    useLoginMutation,
-} from "@utils/api";
+import { useGetSessionQuery, useLoginMutation } from "@utils/api";
 
 axios.defaults.withCredentials = true;
 axios.defaults.xsrfCookieName = "csrftoken";
@@ -20,7 +16,6 @@ axios.defaults.xsrfHeaderName = "X-CSRFToken";
 
 export default function Login() {
     const { refetch: refetchSession } = useGetSessionQuery();
-    const { refetch: refetchMenu } = useGetUIMenuQuery();
     const [login, { isLoading }] = useLoginMutation();
 
     const handleSubmit = (e) => {
@@ -30,7 +25,6 @@ export default function Login() {
             password: e.target.password.value,
         })
             .then(refetchSession)
-            .then(refetchMenu)
             .catch((err) => {
                 console.log("error");
                 console.log(err);

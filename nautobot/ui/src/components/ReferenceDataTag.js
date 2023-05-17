@@ -6,7 +6,7 @@ import { calculateLuminance } from "@utils/color";
 export function ReferenceDataTag(props) {
     const { model_name, id } = props;
     const { data, isSuccess } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: model_name,
         uuid: id,
     });

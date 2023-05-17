@@ -28,12 +28,21 @@ const initialAuthState = {
 };
 
 /**
- * Redux slice for authentication state
+ * Redux slice for logged_in state
  * @param {Object} state - The current state
  * @returns {boolean} - Whether the user is logged in
  */
 export function isLoggedInSelector(state) {
-    return state?.appState?.logged_in || false;
+    return state?.appState?.auth?.logged_in || false;
+}
+
+/**
+ * Redux slice for current user state
+ * @param {Object} state - The current state
+ * @returns {Object} - Whether the user is logged in
+ */
+export function currentUserSelector(state) {
+    return state?.appState?.auth?.user || {};
 }
 
 //      _   __            _             __  _
@@ -194,6 +203,7 @@ const appStateSlice = createSlice({
          * @returns The updated state
          */
         flushSessionState(state, _) {
+            console.log("flushSessionState");
             state.auth.user = {};
             state.auth.logged_in = false;
             return state;

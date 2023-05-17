@@ -34,15 +34,20 @@ function App() {
     const dispatch = useDispatch();
     const { data: sessionData, isSuccess: isSessionSuccess } =
         useGetSessionQuery();
-    const { data: menuData, isSuccess: isMenuSuccess } = useGetUIMenuQuery();
+    const {
+        data: menuData,
+        isSuccess: isMenuSuccess,
+        refetch: refetchMenuQuery,
+    } = useGetUIMenuQuery();
 
     useEffect(() => {
         // TODO: Do we need special handling for non-successful session requests?
         if (isSessionSuccess) {
             dispatch(updateAuthStateWithSession(sessionData));
+            dispatch(refetchMenuQuery);
         }
         return;
-    }, [dispatch, sessionData, isSessionSuccess]);
+    }, [dispatch, sessionData, isSessionSuccess, refetchMenuQuery]);
 
     useEffect(() => {
         // TODO: Do we need special handling for non-successful menu requests?
@@ -50,7 +55,7 @@ function App() {
             dispatch(updateNavigation(menuData));
         }
         return;
-    }, [dispatch, menuData, isMenuSuccess]);
+    }, [dispatch, sessionData, menuData, isMenuSuccess]);
 
     return (
         <NautobotUIProvider theme={theme}>

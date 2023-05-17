@@ -34,17 +34,17 @@ export default function NautobotRouter() {
                     children: [],
                 },
                 {
-                    path: "/:app_name/:model_name/",
+                    path: "/:app_label/:model_name/",
                     element: <ListView />,
                     children: [],
                 },
                 {
-                    path: "/:app_name/:model_name/add/",
+                    path: "/:app_label/:model_name/add/",
                     element: <CreateView />,
                     children: [],
                 },
                 {
-                    path: "/:app_name/:model_name/:object_id/",
+                    path: "/:app_label/:model_name/:object_id/",
                     element: <DetailView />,
                     children: [],
                 },
@@ -56,17 +56,17 @@ export default function NautobotRouter() {
                             element: <InstalledApps />,
                         },
                         {
-                            path: ":app_name/:model_name/",
+                            path: ":app_label/:model_name/",
                             element: <ListView />,
                             children: [],
                         },
                         {
-                            path: ":app_name/:model_name/add/",
+                            path: ":app_label/:model_name/add/",
                             element: <CreateView />,
                             children: [],
                         },
                         {
-                            path: ":app_name/:model_name/:object_id/",
+                            path: ":app_label/:model_name/:object_id/",
                             element: <DetailView />,
                             children: [],
                         },

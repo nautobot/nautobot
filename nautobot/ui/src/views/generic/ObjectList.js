@@ -14,11 +14,11 @@ import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 
 export default function GenericObjectListView() {
-    const { app_name, model_name } = useParams();
+    const { app_label, model_name } = useParams();
     const dispatch = useDispatch();
     const location = useLocation();
     const currentAppContext = useSelector(
-        getCurrentAppContextSelector(app_name, model_name)
+        getCurrentAppContextSelector(app_label, model_name)
     );
     const isPluginView = location.pathname.includes("/plugins/");
     useEffect(() => {
@@ -28,7 +28,7 @@ export default function GenericObjectListView() {
     // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";
     const { data: headerData, isLoading: headerDataLoading } =
         useGetRESTAPIQuery({
-            app_name: app_name,
+            app_label: app_label,
             model_name: model_name,
             schema: true,
             plugin: isPluginView,
@@ -40,7 +40,7 @@ export default function GenericObjectListView() {
     let page_size = 50;
     let active_page_number = 0;
     let searchQuery = {
-        app_name: app_name,
+        app_label: app_label,
         model_name: model_name,
         plugin: isPluginView,
     };
@@ -57,15 +57,6 @@ export default function GenericObjectListView() {
         isLoading: listDataLoading,
         isFetching: listDataFetching,
     } = useGetRESTAPIQuery(searchQuery);
-
-    // TODO when are we going to run into this?
-    // if (!app_name || !model_name) {
-    //     return (
-    //         <GenericView>
-    //             <LoadingWidget />
-    //         </GenericView>
-    //     );
-    // }
 
     let data_loaded = !(
         listDataLoading ||

@@ -165,13 +165,13 @@ function RenderRow(props) {
 }
 
 export default function ObjectRetrieve({ api_url }) {
-    const { app_name, model_name, object_id } = useParams();
+    const { app_label, model_name, object_id } = useParams();
     const { isOpen, onClose, onOpen } = useDisclosure();
     const location = useLocation();
     const isPluginView = location.pathname.includes("/plugins/");
     const pluginPrefix = isPluginView ? "plugins/" : "";
-    if (!!app_name && !!model_name && !!object_id && !api_url) {
-        api_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/?depth=1`;
+    if (!!app_label && !!model_name && !!object_id && !api_url) {
+        api_url = `/api/${pluginPrefix}${app_label}/${model_name}/${object_id}/?depth=1`;
     }
     // const { data: appHTML } = useSWR(
     //     () => (api_url ? api_url + "app_full_width_fragment/" : null),
@@ -201,13 +201,13 @@ export default function ObjectRetrieve({ api_url }) {
         isFetching: changelogHeaderDataFetching,
         isLoading: changelogHeaderDataLoading,
     } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: "object-changes",
         schema: true,
         plugin: isPluginView,
     });
     // Note Data
-    const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
+    const notes_url = `/api/${pluginPrefix}${app_label}/${model_name}/${object_id}/notes/`;
     const {
         data: noteData,
         isError: note_error,
@@ -219,7 +219,7 @@ export default function ObjectRetrieve({ api_url }) {
         isFetching: noteHeaderDataFetching,
         isLoading: noteHeaderDataLoading,
     } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: "notes",
         schema: true,
         plugin: isPluginView,
@@ -246,7 +246,7 @@ export default function ObjectRetrieve({ api_url }) {
             </GenericView>
         );
     }
-    const route_name = `${app_name}:${model_name}`;
+    const route_name = `${app_label}:${model_name}`;
     let obj = objectData;
     let changelogDataLoaded =
         !(changelogDataLoading || changelogDataFetching) &&
