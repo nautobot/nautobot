@@ -1,7 +1,7 @@
-import Card from 'react-bootstrap/Card';	
+import { Box } from '@nautobot/nautobot-ui';
 
-export function MyFancyCard() {	
-  return <Card body>I am from another plugin!</Card>;	
-}	
+export function MyFancyCard(props) {
+    return <Box body>I am a full-fledged component provided by the default example App. The ID of the object I am displaying is: {props.id}</Box>;
+}
 
 export default MyFancyCard;
