@@ -31,11 +31,11 @@ class NautobotCSVParser(BaseParser):
                 # REST API case
                 serializer_class = parser_context["view"].get_serializer_class()
         except (KeyError, AttributeError):
-            raise ParseError("Unable to identify the serializer_class for this view")
+            raise ParseError("No serializer_class was provided by the parser_context")
         if serializer_class is None:
-            raise ParseError("Serializer class for this view is None, unable to proceed")
+            raise ParseError("Serializer class for this parser_context is None, unable to proceed")
 
-        serializer = serializer_class(context={"request": parser_context.get("request", None)})
+        serializer = serializer_class(context={"request": parser_context.get("request", None), "depth": 0})
 
         try:
             text = stream.read().decode(encoding)
@@ -80,11 +80,11 @@ class NautobotCSVParser(BaseParser):
                 data.setdefault("custom_fields", {})[key[3:]] = value
                 continue
 
-            serializer_field = serializer.fields.get(key)
-            if not serializer_field:
-                raise ParseError(
-                    f'Row {counter}: Column {column}: "{key}" is not a known, parseable column for this model'
-                )
+            serializer_field = serializer.fields.get(key, None)
+            if serializer_field is None:
+                # The REST API normally just ignores any columns the serializer doesn't understand
+                logger.debug('Skipping unknown column "%s"', key)
+                continue
 
             if serializer_field.read_only and key != "id":
                 # Deserializing read-only fields is tricky, especially for things like SerializerMethodFields that
