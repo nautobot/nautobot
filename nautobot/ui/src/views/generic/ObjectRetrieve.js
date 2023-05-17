@@ -75,7 +75,7 @@ function render_header(value) {
     return value;
 }
 
-function DetailFieldValue(value) {
+export function DetailFieldValue(value) {
     const ref = useRef();
     if (value === undefined) {
         return <>&mdash;</>;
