@@ -1,14 +1,25 @@
 import { lazy } from "react";
 
 import NautobotApps from "../app_imports";
-import { slugify } from "@utils/string";
-import { my_import_as_function } from "@utils/generic";
+
+function EmptyElement() {
+    return <></>;
+}
+
+function findOrEmpty(module, key) {
+    return key in module ? module[key] : EmptyElement;
+}
+
+function my_import_as_function(module_name, component_name) {
+    return NautobotApps[module_name]
+        .then((module) => ({ default: findOrEmpty(module, component_name) }))
+        .catch({ default: EmptyElement });
+}
 
 function get_components() {
     var base = {};
     base["FullWidthComponents"] = {};
     base["CustomViews"] = {};
-    base["OverrideViews"] = {};
 
     for (const [app_name, import_promise] of Object.entries(NautobotApps)) {
         import_promise.then((value) => {
@@ -38,9 +49,8 @@ function get_components() {
                 // eslint-disable-next-line
                 Object.entries(value.default.full_width_components).map(
                     ([route, components]) => {
-                        if (!base["FullWidthComponents"][route]) {
+                        if (!base["FullWidthComponents"][route])
                             base["FullWidthComponents"][route] = [];
-                        }
                         // eslint-disable-next-line
                         components.map((component) => {
                             base["FullWidthComponents"][route].push(
@@ -52,20 +62,6 @@ function get_components() {
                         return true; // probably need to switch to using something other than map
                     }
                 );
-            }
-            // Add Plugin Provided View Components
-            if (value?.default?.routes) {
-                // eslint-disable-next-line
-                value?.default?.routes.forEach(({ groups }) => {
-                    groups.forEach(({ items }) => {
-                        items.forEach(({ namespace, component }) => {
-                            const route = `${slugify(app_name)}:${namespace}`;
-                            base["OverrideViews"][route] = lazy(() =>
-                                my_import_as_function(app_name, component)
-                            );
-                        });
-                    });
-                });
             }
         });
     }

@@ -6,7 +6,6 @@ import {
     API_USER_SESSION_INFO,
     API_UI_MENU_INFO,
 } from "@constants/apiPath";
-import { updateMenuitemsWithPluginMenu } from "./navigation";
 
 /*
   The one true API!
@@ -17,22 +16,6 @@ import { updateMenuitemsWithPluginMenu } from "./navigation";
   in React and Redux's sites.
 */
 
-/**
- * 
- * getUIMenu: builder.query({
-    query: async () => {
-        const response = await staggeredBaseQuery.fetch(API_UI_MENU_INFO);
-        const data = response.data;
-        // Add custom data to the returned data
-        const updatedData = {
-            ...data,
-            customData: "your custom data here",
-        };
-        return updatedData;
-    },
-    providesTags: ["AppData"],
-}),
- */
 const staggeredBaseQuery = retry(fetchBaseQuery({ baseUrl: API_BASE }), {
     maxRetries: 5,
 });
@@ -52,9 +35,6 @@ export const baseApi = createApi({
         getUIMenu: builder.query({
             query: () => API_UI_MENU_INFO,
             providesTags: ["AppData"],
-            // Update API return Menu with menu from menu data from plugins
-            transformResponse: (response) =>
-                updateMenuitemsWithPluginMenu(response),
         }),
         getObjectCounts: builder.query({
             query: () => API_OBJECT_COUNTS,

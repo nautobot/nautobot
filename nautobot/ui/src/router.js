@@ -1,6 +1,6 @@
 import { Navigate, useRoutes } from "react-router-dom";
 // import { lazy } from 'react'
-import { useState, useEffect } from "react";
+
 import { useGetSessionQuery } from "@utils/api";
 import Home from "@views/Home";
 import CreateView from "@views/generic/ObjectCreate";
@@ -9,7 +9,6 @@ import ListView from "@views/generic/ObjectList";
 import InstalledApps from "@views/InstalledApps";
 import Login from "@views/Login";
 import Logout from "@views/Logout";
-import { getPluginRoutes } from "@utils/navigation";
 
 // TODO: Dynamic route injection
 export default function NautobotRouter() {
@@ -19,13 +18,7 @@ export default function NautobotRouter() {
         isError: sessionError,
     } = useGetSessionQuery();
 
-    const [pluginRoutes, setPluginRoutes] = useState([]);
-
-    useEffect(() => {
-        getPluginRoutes().then((routes) => setPluginRoutes(routes));
-    }, []);
-
-    return useRoutes([
+    let element = useRoutes([
         {
             path: "/login/",
             element:
@@ -89,10 +82,10 @@ export default function NautobotRouter() {
                             element: <DetailView />,
                             children: [],
                         },
-                        ...pluginRoutes,
                     ],
                 },
             ],
         },
     ]);
+    return element;
 }
