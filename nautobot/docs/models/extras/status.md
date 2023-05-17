@@ -14,6 +14,9 @@ Statuses may be managed by navigating to **Organization > Statuses** in the navi
 
 When using CSV import to reference a `status` field on an object, the `Status.name` field is used.
 
++/- 2.0.0
+    Changed the CSV import reference for Statuses from `Status.slug` to `Status.name`.
+
 ## Customizing Statuses
 
 With Status as a model, statuses can be customized. This can be as simple as removing the option to configure an existing status with a particular model or to remove that status entirely.

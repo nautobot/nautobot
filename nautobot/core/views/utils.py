@@ -6,6 +6,9 @@ from django.db.models import ForeignKey
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
+from rest_framework import serializers
+
+from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
@@ -88,6 +91,56 @@ def csv_format(data):
             csv.append(f"{value}")
 
     return ",".join(csv)
+
+
+def get_csv_form_fields_from_serializer_class(serializer_class):
+    """From the given serializer class, build a list of field dicts suitable for rendering in the CSV import form."""
+    serializer = serializer_class(context={"request": None, "depth": 0})
+    fields = []
+    for field_name, field in serializer.fields.items():
+        if field.read_only:
+            continue
+        if field_name == "custom_fields":
+            continue  # TODO, split into individual documented fields
+
+        field_info = {
+            "name": field_name,
+            "required": field.required,
+            "label": field.label,
+            "help_text": field.help_text,
+        }
+        if isinstance(field, serializers.BooleanField):
+            field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
+        elif isinstance(field, serializers.DateField):
+            field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
+        elif isinstance(field, TimeZoneSerializerField):
+            field_info["format"] = mark_safe(
+                '<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>'
+            )
+        elif isinstance(field, serializers.ManyRelatedField):
+            if isinstance(field.child_relation, ContentTypeField):
+                field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')
+            else:
+                field_info["format"] = mark_safe('<code>"natural_key_slug,natural_key_slug"</code>')
+        elif isinstance(field, serializers.RelatedField):
+            if isinstance(field, ContentTypeField):
+                field_info["format"] = mark_safe("<code>app_label.model</code>")
+            else:
+                field_info["format"] = mark_safe("<code>natural_key_slug</code>")
+        elif isinstance(field, (serializers.ListField, serializers.MultipleChoiceField)):
+            field_info["format"] = mark_safe('<code>"value,value"</code>')
+        elif isinstance(field, (serializers.DictField, serializers.JSONField)):
+            pass  # Not trivial to specify a format as it could be a JSON dict or a comma-separated string
+
+        if isinstance(field, ChoiceField):
+            field_info["choices"] = field.choices
+
+        fields.append(field_info)
+
+    # Move all required fields to the start of the list
+    # TODO this ordering should be defined by the serializer instead...
+    fields = sorted(fields, key=lambda info: 1 if info["required"] else 2)
+    return fields
 
 
 def handle_protectederror(obj_list, request, e):

@@ -276,6 +276,10 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Service
         fields = "__all__"
+        extra_kwargs = {
+            "device": {"help_text": "Required if no virtual_machine is specified"},
+            "virtual_machine": {"help_text": "Required if no device is specified"},
+        }
         # TODO(jathan): We need to account for the "parent" field from the `ServiceTable` which is
         # an either/or column for `device` or `virtual_machine`. For now it's hard-coded to
         # `device`.

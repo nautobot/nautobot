@@ -31,11 +31,9 @@ class NautobotCSVParser(BaseParser):
                 # REST API case
                 serializer_class = parser_context["view"].get_serializer_class()
         except (KeyError, AttributeError):
-            logger.error("Unable to find serializer_class for the view?")
-            return None
+            raise ParseError("Unable to identify the serializer_class for this view")
         if serializer_class is None:
-            logger.error("No serializer_class for the view?")
-            return None
+            raise ParseError("Serializer class for this view is None, unable to proceed")
 
         serializer = serializer_class(context={"request": parser_context.get("request", None)})
 

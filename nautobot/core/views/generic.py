@@ -47,7 +47,12 @@ from nautobot.core.utils.requests import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
-from nautobot.core.views.utils import check_filter_for_display, handle_protectederror, prepare_cloned_fields
+from nautobot.core.views.utils import (
+    check_filter_for_display,
+    get_csv_form_fields_from_serializer_class,
+    handle_protectederror,
+    prepare_cloned_fields,
+)
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
@@ -803,7 +808,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             self.template_name,
             {
                 "form": self._import_form(),
-                "fields": self.serializer_class(context={"request": request, "depth": 0}).fields,
+                "fields": get_csv_form_fields_from_serializer_class(self.serializer_class),
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",

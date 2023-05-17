@@ -23,6 +23,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
+    CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
@@ -245,7 +246,7 @@ class RackSerializer(
     TaggedModelSerializerMixin,
 ):
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
-    width = ChoiceField(choices=RackWidthChoices, required=False)
+    width = ChoiceField(choices=RackWidthChoices, required=False, help_text="Rail-to-rail width (in inches)")
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
     power_feed_count = serializers.IntegerField(read_only=True)
@@ -287,6 +288,7 @@ class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMi
         fields = "__all__"
         list_display_fields = ["pk", "rack", "units", "user", "description"]
         extra_kwargs = {
+            "units": {"help_text": "List of rack unit numbers to reserve"},
             "user": {
                 "help_text": "User to associate to reservations. If unspecified, the current user will be used.",
                 "required": False,
@@ -517,6 +519,7 @@ class ConsoleServerPortSerializer(
     class Meta:
         model = ConsoleServerPort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class ConsolePortSerializer(
@@ -530,6 +533,7 @@ class ConsolePortSerializer(
     class Meta:
         model = ConsolePort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class PowerOutletSerializer(
@@ -544,6 +548,7 @@ class PowerOutletSerializer(
     class Meta:
         model = PowerOutlet
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class PowerPortSerializer(
@@ -557,6 +562,7 @@ class PowerPortSerializer(
     class Meta:
         model = PowerPort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -592,6 +598,7 @@ class InterfaceSerializer(
         model = Interface
         fields = "__all__"
         list_display_fields = ["device", "name", "status", "label", "enabled", "type", "description"]
+        extra_kwargs = {"cable": {"read_only": True}}
 
     def validate(self, data):
         # Validate many-to-many VLAN assignments
@@ -616,6 +623,7 @@ class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Ca
     class Meta:
         model = RearPort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
@@ -624,6 +632,7 @@ class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, C
     class Meta:
         model = FrontPort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class DeviceRedundancyGroupSerializer(
@@ -683,10 +692,14 @@ class CableSerializer(
     termination_a = serializers.SerializerMethodField(read_only=True)
     termination_b = serializers.SerializerMethodField(read_only=True)
     length_unit = ChoiceField(choices=CableLengthUnitChoices, allow_blank=True, required=False)
+    type = ChoiceField(choices=CableTypeChoices, allow_blank=True, required=False)
 
     class Meta:
         model = Cable
         fields = "__all__"
+        extra_kwargs = {
+            "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
+        }
         list_display_fields = [
             "label",
             "termination_a",
