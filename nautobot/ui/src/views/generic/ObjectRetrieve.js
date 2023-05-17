@@ -443,6 +443,7 @@ export default function ObjectRetrieve({ api_url }) {
                                     tableTitle={"Notes"}
                                     include_button={false}
                                     data_loaded={noteDataLoaded}
+                                    data_fetched={!noteDataFetching}
                                 />
                             </Card>
                         </TabPanel>
@@ -476,6 +477,7 @@ export default function ObjectRetrieve({ api_url }) {
                                     tableTitle={"Change Logs"}
                                     include_button={false}
                                     data_loaded={changelogDataLoaded}
+                                    data_fetched={!changelogDataFetching}
                                 />
                             </Card>
                         </TabPanel>
