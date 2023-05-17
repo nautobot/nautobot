@@ -6,7 +6,18 @@ from nautobot.circuits.filters import (
     ProviderNetworkFilterSet,
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Location, LocationType, Manufacturer, Region, Site
+from nautobot.dcim.models import (
+    Cable,
+    Device,
+    DeviceRole,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    Region,
+    Site,
+)
 from nautobot.extras.models import Status
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.testing import FilterTestCases
@@ -18,7 +29,6 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         providers = (
             Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001, account="1234"),
             Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002, account="2345"),
@@ -56,8 +66,12 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
             Circuit.objects.create(provider=providers[1], type=circuit_types[1], cid="Test Circuit 1"),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=cls.sites[0], location=cls.locations[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=cls.sites[0], location=cls.locations[1], term_side="A")
+        CircuitTermination.objects.create(
+            circuit=circuits[0], site=cls.sites[0], location=cls.locations[0], term_side="A"
+        )
+        CircuitTermination.objects.create(
+            circuit=circuits[1], site=cls.sites[0], location=cls.locations[1], term_side="A"
+        )
 
     def test_asn(self):
         params = {"asn": ["65001", "65002"]}
@@ -66,12 +80,14 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
     def test_account(self):
         params = {"account": ["1234", "2345"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-    
+
     def test_location(self):
         filter_params = {"location": [self.locations[0].pk, self.locations[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(filter_params, self.queryset).qs,
-            self.queryset.filter(circuits__terminations__location__in=[self.locations[0], self.locations[1]]).distinct(),
+            self.queryset.filter(
+                circuits__terminations__location__in=[self.locations[0], self.locations[1]]
+            ).distinct(),
         )
 
     def test_site(self):
@@ -98,7 +114,6 @@ class CircuitTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
         CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
         CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
@@ -111,7 +126,6 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     @classmethod
     def setUpTestData(cls):
-
         cls.regions = list(Region.objects.filter(sites__isnull=False).distinct()[:3])
 
         cls.sites = (
@@ -205,8 +219,12 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             ),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=cls.sites[0], location=cls.locations[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=cls.sites[1], location=cls.locations[1],term_side="A")
+        CircuitTermination.objects.create(
+            circuit=circuits[0], site=cls.sites[0], location=cls.locations[0], term_side="A"
+        )
+        CircuitTermination.objects.create(
+            circuit=circuits[1], site=cls.sites[1], location=cls.locations[1], term_side="A"
+        )
         CircuitTermination.objects.create(circuit=circuits[2], site=cls.sites[2], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[3], provider_network=provider_network[0], term_side="A")
         CircuitTermination.objects.create(circuit=circuits[4], provider_network=provider_network[1], term_side="A")
@@ -260,7 +278,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             self.filterset(params, self.queryset).qs.count(),
             self.queryset.filter(status__slug__in=params["status"]).count(),
         )
-    
+
     def test_location(self):
         filter_params = {"location": [self.locations[0].pk, self.locations[1].slug]}
         self.assertQuerysetEqualAndNotEmpty(
@@ -301,7 +319,6 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         sites = Site.objects.all()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(
@@ -477,7 +494,6 @@ class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         providers = (
             Provider(name="Provider 1", slug="provider-1"),
             Provider(name="Provider 2", slug="provider-2"),
