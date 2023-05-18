@@ -1,5 +1,6 @@
 import time
 
+from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.db import transaction
 
@@ -9,6 +10,7 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import DryRunVar, IntegerVar, Job, JobHookReceiver, JobButtonReceiver
 
 
+logger = get_task_logger(__name__)
 name = "ExamplePlugin jobs"
 
 
@@ -24,16 +26,16 @@ class ExampleDryRunJob(Job):
         try:
             with transaction.atomic():
                 devices_with_serial = Device.objects.exclude(serial="")
-                log_msg = f"Removing serial on {devices_with_serial.count()} devices."
+                log_msg = "Removing serial on %d devices."
                 if dryrun:
                     log_msg += " (DRYRUN)"
-                self.log_info(log_msg)
+                logger.info(log_msg, devices_with_serial.count())
                 for device in devices_with_serial:
                     if not dryrun:
                         device.serial = ""
                         device.save()
         except Exception:
-            self.log_failure(f"{self.__name__} failed. Database changes rolled back.")
+            logger.failure("%s failed. Database changes rolled back.", self.__name__)
 
 
 class ExampleJob(Job):
@@ -75,11 +77,11 @@ class ExampleLoggingJob(Job):
         ]
 
     def run(self, interval):
-        self.log_debug(message=f"Running for {interval} seconds.")
+        logger.debug("Running for %d seconds.", interval)
         for step in range(1, interval + 1):
             time.sleep(1)
-            self.log_info(message=f"Step {step}")
-        self.log_success(obj=None)
+            logger.info("Step %d", step)
+        logger.info("Success", extra={"object": self.job_model})
         return f"Ran for {interval} seconds"
 
 
@@ -95,21 +97,21 @@ class ExampleJobHookReceiver(JobHookReceiver):
 
         # log diff output
         snapshots = change.get_snapshots()
-        self.log_info(f"DIFF: {snapshots['differences']}")
+        logger.info("DIFF: %s", snapshots["differences"])
 
         # validate changes to serial field
         if "serial" in snapshots["differences"]["added"]:
             old_serial = snapshots["differences"]["removed"]["serial"]
             new_serial = snapshots["differences"]["added"]["serial"]
-            self.log_info(f"{changed_object} serial has been changed from {old_serial} to {new_serial}")
+            logger.info("%s serial has been changed from %s to %s", changed_object, old_serial, new_serial)
 
             # Check the new serial is valid and revert if necessary
             if not self.validate_serial(new_serial):
                 changed_object.serial = old_serial
                 changed_object.save()
-                self.log_info(f"{changed_object} serial {new_serial} was not valid. Reverted to {old_serial}")
+                logger.info("%s serial %s was not valid. Reverted to %s", changed_object, new_serial, old_serial)
 
-            self.log_success(message=f"Serial validation completed for {changed_object}")
+            logger.info("Serial validation completed for %s", changed_object)
 
     def validate_serial(self, serial):
         # add business logic to validate serial
@@ -121,7 +123,7 @@ class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
         name = "Example Simple Job Button Receiver"
 
     def receive_job_button(self, obj):
-        self.log_info(obj=obj, message="Running Job Button Receiver.")
+        logger.info("Running Job Button Receiver.", extra={"object": obj})
         # Add job logic here
 
 
@@ -130,26 +132,26 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         name = "Example Complex Job Button Receiver"
 
     def _run_location_job(self, obj):
-        self.log_info(obj=obj, message="Running Location Job Button Receiver.")
+        logger.info("Running Location Job Button Receiver.", extra={"object": obj})
         # Run Location Job function
 
     def _run_device_job(self, obj):
-        self.log_info(obj=obj, message="Running Device Job Button Receiver.")
+        logger.info("Running Device Job Button Receiver.", extra={"object": obj})
         # Run Device Job function
 
     def receive_job_button(self, obj):
         user = self.request.user
         if isinstance(obj, Location):
             if not user.has_perm("dcim.add_location"):
-                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Location.")
+                logger.error("User '%s' does not have permission to add a Location.", user, extra={"object": obj})
             else:
                 self._run_location_job(obj)
         if isinstance(obj, Device):
             if not user.has_perm("dcim.add_device"):
-                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Device.")
+                logger.error("User '%s' does not have permission to add a Device.", user, extra={"object": obj})
             else:
                 self._run_device_job(obj)
-        self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
+        logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
 
 
 jobs = (

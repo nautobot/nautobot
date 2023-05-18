@@ -10,11 +10,15 @@ class NautobotLogHandler(logging.NullHandler):
         if current_task is None:
             return
 
-        from nautobot.extras.models.jobs import JobLogEntry, JobResult
+        from nautobot.extras.models.jobs import JobResult
 
-        if not JobResult.objects.filter(id=record.task_id).exists():
+        job_result = JobResult.objects.filter(id=record.task_id)
+        if not job_result.exists():
             return
 
-        JobLogEntry.objects.create(
-            job_result_id=record.task_id, log_level=record.levelname.lower(), message=record.message
+        job_result.first().log(
+            message=record.message,
+            level_choice=record.levelname.lower(),
+            obj=getattr(record, "object", None),
+            grouping=getattr(record, "grouping", record.funcName),
         )
