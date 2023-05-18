@@ -385,7 +385,7 @@ class NautobotCSVParserTest(TestCase):
         self.assertEqual(str(cm.exception), "Serializer class for this parser_context is None, unable to proceed")
 
     def test_parse_success(self):
-        status = extras_models.Status.objects.first()
+        status = extras_models.Status.objects.first()  # pylint: disable=redefined-outer-name
         tags = extras_models.Tag.objects.get_for_model(ipam_models.VLAN)
         csv_data = "\n".join(
             [
