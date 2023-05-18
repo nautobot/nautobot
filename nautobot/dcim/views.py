@@ -189,7 +189,6 @@ class LocationTypeDeleteView(generic.ObjectDeleteView):
 
 class LocationTypeBulkImportView(generic.BulkImportView):
     queryset = LocationType.objects.all()
-    model_form = forms.LocationTypeCSVForm
     table = tables.LocationTypeTable
 
 
@@ -279,7 +278,6 @@ class LocationBulkEditView(generic.BulkEditView):
 
 class LocationBulkImportView(generic.BulkImportView):
     queryset = Location.objects.all()
-    model_form = forms.LocationCSVForm
     table = tables.LocationTable
 
 
@@ -337,7 +335,6 @@ class RackGroupDeleteView(generic.ObjectDeleteView):
 
 class RackGroupBulkImportView(generic.BulkImportView):
     queryset = RackGroup.objects.all()
-    model_form = forms.RackGroupCSVForm
     table = tables.RackGroupTable
 
 
@@ -462,7 +459,6 @@ class RackDeleteView(generic.ObjectDeleteView):
 
 class RackBulkImportView(generic.BulkImportView):
     queryset = Rack.objects.all()
-    model_form = forms.RackCSVForm
     table = tables.RackTable
 
 
@@ -514,18 +510,7 @@ class RackReservationDeleteView(generic.ObjectDeleteView):
 
 class RackReservationImportView(generic.BulkImportView):
     queryset = RackReservation.objects.all()
-    model_form = forms.RackReservationCSVForm
     table = tables.RackReservationTable
-
-    def _save_obj(self, obj_form, request):
-        """
-        Assign the currently authenticated user to the RackReservation.
-        """
-        instance = obj_form.save(commit=False)
-        instance.user = request.user
-        instance.save()
-
-        return instance
 
 
 class RackReservationBulkEditView(generic.BulkEditView):
@@ -591,7 +576,6 @@ class ManufacturerDeleteView(generic.ObjectDeleteView):
 
 class ManufacturerBulkImportView(generic.BulkImportView):
     queryset = Manufacturer.objects.all()
-    model_form = forms.ManufacturerCSVForm
     table = tables.ManufacturerTable
 
 
@@ -1068,7 +1052,6 @@ class PlatformDeleteView(generic.ObjectDeleteView):
 
 class PlatformBulkImportView(generic.BulkImportView):
     queryset = Platform.objects.all()
-    model_form = forms.PlatformCSVForm
     table = tables.PlatformTable
 
 
@@ -1394,26 +1377,7 @@ class DeviceDeleteView(generic.ObjectDeleteView):
 
 class DeviceBulkImportView(generic.BulkImportView):
     queryset = Device.objects.all()
-    model_form = forms.DeviceCSVForm
     table = tables.DeviceImportTable
-    template_name = "dcim/device_import.html"
-
-
-class ChildDeviceBulkImportView(generic.BulkImportView):
-    queryset = Device.objects.all()
-    model_form = forms.ChildDeviceCSVForm
-    table = tables.DeviceImportTable
-    template_name = "dcim/device_import_child.html"
-
-    def _save_obj(self, obj_form, request):
-        obj = obj_form.save()
-
-        # Save the reverse relation to the parent device bay
-        device_bay = obj.parent_bay
-        device_bay.installed_device = obj
-        device_bay.save()
-
-        return obj
 
 
 class DeviceBulkEditView(generic.BulkEditView):
@@ -1470,7 +1434,6 @@ class ConsolePortDeleteView(generic.ObjectDeleteView):
 
 class ConsolePortBulkImportView(generic.BulkImportView):
     queryset = ConsolePort.objects.all()
-    model_form = forms.ConsolePortCSVForm
     table = tables.ConsolePortTable
 
 
@@ -1534,7 +1497,6 @@ class ConsoleServerPortDeleteView(generic.ObjectDeleteView):
 
 class ConsoleServerPortBulkImportView(generic.BulkImportView):
     queryset = ConsoleServerPort.objects.all()
-    model_form = forms.ConsoleServerPortCSVForm
     table = tables.ConsoleServerPortTable
 
 
@@ -1598,7 +1560,6 @@ class PowerPortDeleteView(generic.ObjectDeleteView):
 
 class PowerPortBulkImportView(generic.BulkImportView):
     queryset = PowerPort.objects.all()
-    model_form = forms.PowerPortCSVForm
     table = tables.PowerPortTable
 
 
@@ -1662,7 +1623,6 @@ class PowerOutletDeleteView(generic.ObjectDeleteView):
 
 class PowerOutletBulkImportView(generic.BulkImportView):
     queryset = PowerOutlet.objects.all()
-    model_form = forms.PowerOutletCSVForm
     table = tables.PowerOutletTable
 
 
@@ -1755,7 +1715,6 @@ class InterfaceDeleteView(generic.ObjectDeleteView):
 
 class InterfaceBulkImportView(generic.BulkImportView):
     queryset = Interface.objects.all()
-    model_form = forms.InterfaceCSVForm
     table = tables.InterfaceTable
 
 
@@ -1820,7 +1779,6 @@ class FrontPortDeleteView(generic.ObjectDeleteView):
 
 class FrontPortBulkImportView(generic.BulkImportView):
     queryset = FrontPort.objects.all()
-    model_form = forms.FrontPortCSVForm
     table = tables.FrontPortTable
 
 
@@ -1884,7 +1842,6 @@ class RearPortDeleteView(generic.ObjectDeleteView):
 
 class RearPortBulkImportView(generic.BulkImportView):
     queryset = RearPort.objects.all()
-    model_form = forms.RearPortCSVForm
     table = tables.RearPortTable
 
 
@@ -2033,7 +1990,6 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
 
 class DeviceBayBulkImportView(generic.BulkImportView):
     queryset = DeviceBay.objects.all()
-    model_form = forms.DeviceBayCSVForm
     table = tables.DeviceBayTable
 
 
@@ -2092,7 +2048,6 @@ class InventoryItemDeleteView(generic.ObjectDeleteView):
 
 class InventoryItemBulkImportView(generic.BulkImportView):
     queryset = InventoryItem.objects.all()
-    model_form = forms.InventoryItemCSVForm
     table = tables.InventoryItemTable
 
 
@@ -2369,7 +2324,6 @@ class CableDeleteView(generic.ObjectDeleteView):
 
 class CableBulkImportView(generic.BulkImportView):
     queryset = Cable.objects.all()
-    model_form = forms.CableCSVForm
     table = tables.CableTable
 
 
@@ -2691,7 +2645,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
 
 class VirtualChassisBulkImportView(generic.BulkImportView):
     queryset = VirtualChassis.objects.all()
-    model_form = forms.VirtualChassisCSVForm
     table = tables.VirtualChassisTable
 
 
@@ -2747,7 +2700,6 @@ class PowerPanelDeleteView(generic.ObjectDeleteView):
 
 class PowerPanelBulkImportView(generic.BulkImportView):
     queryset = PowerPanel.objects.all()
-    model_form = forms.PowerPanelCSVForm
     table = tables.PowerPanelTable
 
 
@@ -2794,7 +2746,6 @@ class PowerFeedDeleteView(generic.ObjectDeleteView):
 
 class PowerFeedBulkImportView(generic.BulkImportView):
     queryset = PowerFeed.objects.all()
-    model_form = forms.PowerFeedCSVForm
     table = tables.PowerFeedTable
 
 
@@ -2812,7 +2763,6 @@ class PowerFeedBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
-    bulk_create_form_class = forms.DeviceRedundancyGroupCSVForm
     bulk_update_form_class = forms.DeviceRedundancyGroupBulkEditForm
     filterset_class = filters.DeviceRedundancyGroupFilterSet
     filterset_form_class = forms.DeviceRedundancyGroupFilterForm

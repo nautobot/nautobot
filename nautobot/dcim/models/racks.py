@@ -479,6 +479,9 @@ class RackReservation(PrimaryModel):
     class Meta:
         ordering = ["created"]
 
+    # TODO: no appropriate natural-key for RackReservation?
+    natural_key_field_names = ["id"]
+
     def __str__(self):
         return f"Reservation for rack {self.rack}"
 

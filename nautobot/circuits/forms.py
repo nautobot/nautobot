@@ -2,7 +2,6 @@ from django import forms
 
 from nautobot.core.forms import (
     CommentField,
-    CSVModelChoiceField,
     DatePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -15,12 +14,10 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFormMixin,
 )
 from nautobot.extras.forms import (
-    CustomFieldModelCSVForm,
     NautobotFilterForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
@@ -60,12 +57,6 @@ class ProviderForm(NautobotModelForm):
             "noc_contact": "NOC email address and phone number",
             "admin_contact": "Administrative contact email address and phone number",
         }
-
-
-class ProviderCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = Provider
-        fields = []  # TODO
 
 
 class ProviderBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -119,20 +110,6 @@ class ProviderNetworkForm(NautobotModelForm):
         fieldsets = (("Provider Network", ("provider", "name", "slug", "description", "comments", "tags")),)
 
 
-class ProviderNetworkCSVForm(CustomFieldModelCSVForm):
-    provider = CSVModelChoiceField(queryset=Provider.objects.all(), to_field_name="name", help_text="Assigned provider")
-
-    class Meta:
-        model = ProviderNetwork
-        fields = [
-            "provider",
-            "name",
-            "slug",
-            "description",
-            "comments",
-        ]
-
-
 class ProviderNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ProviderNetwork.objects.all(), widget=forms.MultipleHiddenInput)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
@@ -170,15 +147,6 @@ class CircuitTypeForm(NautobotModelForm):
         ]
 
 
-class CircuitTypeCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = CircuitType
-        fields = []  # TODO
-        help_texts = {
-            "name": "Name of circuit type",
-        }
-
-
 #
 # Circuits
 #
@@ -211,39 +179,6 @@ class CircuitForm(NautobotModelForm, TenancyForm):
         widgets = {
             "install_date": DatePicker(),
         }
-
-
-class CircuitCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    provider = CSVModelChoiceField(
-        queryset=Provider.objects.all(),
-        to_field_name="name",
-        help_text="Assigned provider",
-    )
-    circuit_type = CSVModelChoiceField(
-        queryset=CircuitType.objects.all(),
-        to_field_name="name",
-        help_text="Type of circuit",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = Circuit
-        fields = [
-            "cid",
-            "provider",
-            "circuit_type",
-            "status",
-            "tenant",
-            "install_date",
-            "commit_rate",
-            "description",
-            "comments",
-        ]
 
 
 class CircuitBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):

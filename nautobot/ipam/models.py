@@ -89,9 +89,10 @@ class VRF(PrimaryModel):
         "enforce_unique",
         "description",
     ]
+    natural_key_field_names = ["name", "rd"]  # default auto-key is just "rd", but it's nullable!
 
     class Meta:
-        ordering = ("name", "rd")  # (name, rd) may be non-unique
+        ordering = ("name", "rd")  # (name, rd) may be non-unique because rd is nullable
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
 
@@ -246,14 +247,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     objects = BaseManager.from_queryset(PrefixQuerySet)()
 
     # TODO: The current Prefix model has no appropriate natural key available yet.
-    #       However, by default all BaseModel subclasses now have a `natural_key` property;
-    #       but for this model, accessing the natural_key will raise an exception.
-    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
-    class AttributeRemover:
-        def __get__(self, instance, owner):
-            raise AttributeError("Prefix doesn't yet have a natural key!")
-
-    natural_key = AttributeRemover()
+    natural_key_field_names = ["id"]
 
     clone_fields = [
         "date_allocated",
@@ -568,14 +562,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
     # TODO: The current IPAddress model has no appropriate natural key available yet.
-    #       However, by default all BaseModel subclasses now have a `natural_key` property;
-    #       but for this model, accessing the natural_key will raise an exception.
-    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
-    class AttributeRemover:
-        def __get__(self, instance, owner):
-            raise AttributeError("IPAddress doesn't yet have a natural key!")
-
-    natural_key = AttributeRemover()
+    natural_key_field_names = ["id"]
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
@@ -956,6 +943,8 @@ class Service(PrimaryModel):
     @property
     def parent(self):
         return self.device or self.virtual_machine
+
+    natural_key_field_names = ["name", "device", "virtual_machine"]
 
     def clean(self):
         super().clean()

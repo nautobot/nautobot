@@ -16,6 +16,19 @@
                         </span>
                     </td>
                 </tr>
+                {% if object.natural_key_slug %}
+                    <tr>
+                        <td>Natural-key Slug</td>
+                        <td>
+                            <span class="hover_copy">
+                                <span id="natural_key_slug_copy">{{ object.natural_key_slug }}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#natural_key_slug_copy">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        </td>
+                    </tr>
+                {% endif %}
                 {% if object.slug %}
                     <tr>
                         <td>Slug</td>

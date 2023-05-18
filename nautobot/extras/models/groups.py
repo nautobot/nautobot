@@ -894,7 +894,10 @@ class DynamicGroupMembership(BaseModel):
 
     def get_absolute_url(self, api=False):
         """Return the group's absolute URL."""
-        return self.group.get_absolute_url(api=api)
+        # TODO: we should be able to have an absolute UI URL for this model in the new UI
+        if not api:
+            return self.group.get_absolute_url(api=api)
+        return super().get_absolute_url(api=api)
 
     def get_group_members_url(self):
         """Return the group members URL."""

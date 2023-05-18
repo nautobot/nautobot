@@ -19,7 +19,7 @@ from nautobot.core.utils.requests import (
     normalize_querydict,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import check_filter_for_display
+from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.utils import get_base_template
 
@@ -245,7 +245,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 context.update(
                     {
                         "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
-                        "fields": view.bulk_create_form_class(model).fields if view.bulk_create_form_class else None,
+                        "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
                     }
                 )
             elif view.action in ["changelog", "notes"]:

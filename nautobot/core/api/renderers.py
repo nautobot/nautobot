@@ -54,6 +54,7 @@ class NautobotCSVRenderer(BaseRenderer):
         if not data:
             return ""
 
+        # TODO need to handle rendering of exceptions (e.g. not authenticated) as those have a different data dict.
         if isinstance(data, dict):
             data = [data]
 
@@ -126,6 +127,7 @@ class NautobotCSVRenderer(BaseRenderer):
                 # Unfortunately we're going to have to be a bit lossy here, as CSV doesn't have a distinction between
                 # a null value and an empty string value for a column.
                 # We could choose to represent a null value as "None" or "null" but those are also valid strings, so...
+                # See corresponding logic in NautobotCSVParser.
                 value = ""
             elif isinstance(value, dict):
                 if "natural_key_slug" in value:
@@ -140,7 +142,9 @@ class NautobotCSVRenderer(BaseRenderer):
                     value = value["value"]
                 else:
                     value = json.dumps(value)
-            elif isinstance(value, (list, tuple)):
+            elif isinstance(value, (list, tuple, set)):
+                if isinstance(value, set):
+                    value = sorted(value)
                 if value and isinstance(value[0], dict) and "natural_key_slug" in value[0]:
                     # Multiple nested related objects
                     if value[0].get("generic_foreign_key"):
@@ -150,6 +154,7 @@ class NautobotCSVRenderer(BaseRenderer):
                         ]
                     else:
                         value = [v["natural_key_slug"] for v in value]
+                # The below makes for better UX than `json.dump()` for most current cases.
                 value = ",".join([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):
                 value = str(value)

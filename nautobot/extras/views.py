@@ -49,7 +49,7 @@ from .datasources import (
     get_datasource_contents,
 )
 from .filters import RoleFilterSet
-from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
+from .forms import RoleBulkEditForm, RoleForm
 from .jobs import Job as JobClass
 from .jobs import get_job, run_job
 from .models import (
@@ -843,16 +843,7 @@ class GitRepositoryDeleteView(generic.ObjectDeleteView):
 
 class GitRepositoryBulkImportView(generic.BulkImportView):
     queryset = GitRepository.objects.all()
-    model_form = forms.GitRepositoryCSVForm
     table = tables.GitRepositoryBulkTable
-
-    def _save_obj(self, obj_form, request):
-        """Each GitRepository needs to know the originating request when it's saved so that it can enqueue using it."""
-        instance = obj_form.save(commit=False)
-        instance.request = request
-        instance.save()
-
-        return instance
 
 
 class GitRepositoryBulkEditView(generic.BulkEditView):
@@ -1824,7 +1815,6 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     """`Roles` UIViewSet."""
 
     queryset = Role.objects.all()
-    bulk_create_form_class = RoleCSVForm
     bulk_update_form_class = RoleBulkEditForm
     filterset_class = RoleFilterSet
     form_class = RoleForm
@@ -1969,7 +1959,6 @@ class SecretDeleteView(generic.ObjectDeleteView):
 
 class SecretBulkImportView(generic.BulkImportView):
     queryset = Secret.objects.all()
-    model_form = forms.SecretCSVForm
     table = tables.SecretTable
 
 
@@ -2144,7 +2133,6 @@ class StatusBulkImportView(generic.BulkImportView):
     """Bulk CSV import of multiple `Status` objects."""
 
     queryset = Status.objects.all()
-    model_form = forms.StatusCSVForm
     table = tables.StatusTable
 
 
@@ -2205,7 +2193,6 @@ class TagDeleteView(generic.ObjectDeleteView):
 
 class TagBulkImportView(generic.BulkImportView):
     queryset = Tag.objects.all()
-    model_form = forms.TagCSVForm
     table = tables.TagTable
 
 

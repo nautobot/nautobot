@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
@@ -527,6 +528,56 @@ class APIViewTestCases:
                     objectchanges = lookup.get_changes_for_model(instance)
                     self.assertEqual(len(objectchanges), 1)
                     self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
+
+        def test_recreate_object_csv(self):
+            """CSV export an object, delete it, and recreate it via CSV import."""
+            if hasattr(self, "get_deletable_object"):
+                # provided by DeleteObjectViewTestCase mixin
+                instance = self.get_deletable_object()
+            else:
+                # try to do it ourselves
+                instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+            if instance is None:
+                self.fail("Couldn't find a single deletable object!")
+
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add", "view"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(self._get_detail_url(instance) + "?format=csv", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            csv_data = response.content.decode(response.charset)
+
+            serializer_class = get_serializer_for_model(self.model)
+            old_serializer = serializer_class(instance, context={"request": None})
+            old_data = old_serializer.data
+            instance.delete()
+
+            response = self.client.post(self._get_list_url(), csv_data, content_type="text/csv", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED, csv_data)
+            # Note that create via CSV is always treated as a bulk-create, and so the response is always a list of dicts
+            new_instance = self._get_queryset().get(pk=response.data[0]["id"])
+            self.assertNotEqual(new_instance.pk, instance.pk)
+
+            new_serializer = serializer_class(new_instance, context={"request": None})
+            new_data = new_serializer.data
+            for field_name, field in new_serializer.fields.items():
+                if field.read_only or field.write_only:
+                    continue
+                if field_name in ["created", "last_updated"]:
+                    self.assertNotEqual(
+                        old_data[field_name],
+                        new_data[field_name],
+                        f"{field_name} should have been updated on delete/recreate but it didn't change!",
+                    )
+                else:
+                    self.assertEqual(
+                        old_data[field_name],
+                        new_data[field_name],
+                        f"{field_name} should have been unchanged on delete/recreate but it differs!",
+                    )
 
         def test_bulk_create_objects(self):
             """

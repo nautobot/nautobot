@@ -52,7 +52,6 @@ Extend any forms to include the new field as appropriate. Common forms include:
 
 * **Create/edit** - Manipulating a single object
 * **Bulk edit** - Performing a change on many objects at once
-* **CSV import** - The form used when bulk importing objects in CSV format
 * **Filter** - Displays the options available for filtering a list of objects (both UI and API)
 
 ## Extend object filter set

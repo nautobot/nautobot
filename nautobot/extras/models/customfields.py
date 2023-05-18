@@ -28,6 +28,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
+from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
@@ -221,7 +222,7 @@ class CustomFieldModel(models.Model):
                 logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                custom_fields[field_key].validate(value)
+                self._custom_field_data[field_key] = custom_fields[field_key].validate(value)
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
@@ -413,7 +414,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         # Validate the field's default value (if any)
         if self.default is not None:
             try:
-                self.validate(self.default)
+                self.default = self.validate(self.default)
             except ValidationError as err:
                 raise ValidationError({"default": f'Invalid default value "{self.default}": {err.message}'})
 
@@ -451,11 +452,14 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     ):
         """
         Return a form field suitable for setting a CustomField's value for an object.
-        set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
-        enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
-        for_csv_import: Return a form field suitable for bulk import of objects in CSV format.
-        simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
-        label: Set the input label manually (if required) otherwise it will default to field's __str__() implementation.
+
+        Args:
+            set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
+            enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
+            for_csv_import: Return a form field suitable for bulk import of objects. Despite the parameter name,
+                this is *not* used for CSV imports since 2.0, but it *is* used for JSON/YAML import of DeviceTypes.
+            simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
+            label: Set the input label manually (if required); otherwise, defaults to field's __str__() implementation.
         """
         initial = self.default if set_initial else None
         required = self.required if enforce_required else False
@@ -551,6 +555,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def validate(self, value):
         """
         Validate a value according to the field's type validation rules.
+
+        Returns the value, possibly cleaned up
         """
         if value not in [None, "", []]:
             # Validate text field
@@ -564,7 +570,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             # Validate integer
             if self.type == CustomFieldTypeChoices.TYPE_INTEGER:
                 try:
-                    int(value)
+                    value = int(value)
                 except ValueError:
                     raise ValidationError("Value must be an integer.")
                 if self.validation_minimum is not None and value < self.validation_minimum:
@@ -573,13 +579,11 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     raise ValidationError(f"Value must not exceed {self.validation_maximum}")
 
             # Validate boolean
-            if self.type == CustomFieldTypeChoices.TYPE_BOOLEAN and value not in [
-                True,
-                False,
-                1,
-                0,
-            ]:
-                raise ValidationError("Value must be true or false.")
+            if self.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+                try:
+                    value = is_truthy(value)
+                except ValueError as exc:
+                    raise ValidationError("Value must be true or false.") from exc
 
             # Validate date
             if self.type == CustomFieldTypeChoices.TYPE_DATE:
@@ -597,6 +601,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     )
 
             if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+                if isinstance(value, str):
+                    value = value.split(",")
                 if not set(value).issubset(self.custom_field_choices.values_list("value", flat=True)):
                     raise ValidationError(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
@@ -604,6 +610,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         elif self.required:
             raise ValidationError("Required field cannot be empty.")
+
+        return value
 
     def delete(self, *args, **kwargs):
         """

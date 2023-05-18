@@ -1060,6 +1060,9 @@ class ScheduledJob(BaseModel):
     def __str__(self):
         return f"{self.name}: {self.interval}"
 
+    # TODO: there's currently no natural key for ScheduledJob
+    natural_key_field_names = ["id"]
+
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""
         # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker

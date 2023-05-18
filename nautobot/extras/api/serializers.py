@@ -756,6 +756,9 @@ class RoleSerializer(NautobotModelSerializer):
     class Meta:
         model = Role
         fields = "__all__"
+        extra_kwargs = {
+            "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
+        }
 
 
 #
@@ -811,6 +814,9 @@ class StatusSerializer(NautobotModelSerializer):
     class Meta:
         model = Status
         fields = "__all__"
+        extra_kwargs = {
+            "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
+        }
 
 
 #
@@ -829,6 +835,9 @@ class TagSerializer(NautobotModelSerializer):
     class Meta:
         model = Tag
         fields = "__all__"
+        extra_kwargs = {
+            "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
+        }
 
     def validate(self, data):
         data = super().validate(data)
