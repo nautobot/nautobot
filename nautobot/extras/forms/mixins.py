@@ -209,10 +209,10 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
-            field_name = f"cr_{relationship.slug}__{peer_side}"
+            # "cr_<relationship_key>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship_key>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship_key>__peer"
+            field_name = f"cr_{relationship.key}__{peer_side}"
 
             if field_name in self.relationships:
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".
@@ -252,7 +252,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         for side, relationships_data in instance_relationships.items():
             peer_side = RelationshipSideChoices.OPPOSITE[side]
             for relationship, relationshipassociation_queryset in relationships_data.items():
-                field_name = f"cr_{relationship.slug}__{peer_side}"
+                field_name = f"cr_{relationship.key}__{peer_side}"
                 logger.debug(
                     "Processing relationship %s %s (field %s) for instance %s",
                     relationship,
@@ -342,22 +342,25 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
     def clean(self):
         # Get any initial required relationship objects errors (i.e. non-existent required objects)
         required_objects_errors = self.model.required_related_objects_errors(output_for="ui")
-        already_invalidated_slugs = []
+        already_invalidated_keys = []
         for field, errors in required_objects_errors.items():
             self.add_error(None, errors)
-            relationship_slug = field.split("__")[0][3:]
-            already_invalidated_slugs.append(relationship_slug)
+            # rindex() find the last occurrence of "__" which is
+            # guaranteed to be cr_{key}__source, cr_{key}__destination, or cr_{key}__peer
+            # regardless of how {key} is formatted
+            relationship_key = field[: field.rindex("__")][3:]
+            already_invalidated_keys.append(relationship_key)
 
         required_relationships = []
         # The following query excludes already invalidated relationships (this happened above
         # by checking for the existence of required objects
         # with the call to self.Meta().model.required_related_objects_errors(output_for="ui"))
         for relationship in Relationship.objects.get_required_for_model(self.model).exclude(
-            slug__in=already_invalidated_slugs
+            key__in=already_invalidated_keys
         ):
             required_relationships.append(
                 {
-                    "slug": relationship.slug,
+                    "key": relationship.key,
                     "required_side": RelationshipSideChoices.OPPOSITE[relationship.required_on],
                     "relationship": relationship,
                 }
@@ -366,7 +369,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         # Get difference of add/remove objects for each required relationship:
         required_relationships_to_check = []
         for required_relationship in required_relationships:
-            required_field = f"cr_{required_relationship['slug']}__{required_relationship['required_side']}"
+            required_field = f"cr_{required_relationship['key']}__{required_relationship['required_side']}"
 
             add_list = []
             if f"add_{required_field}" in self.cleaned_data:
@@ -451,10 +454,10 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 # If this model is on the "source" side of the relationship, then the field will be named
-                # cr_<relationship-slug>__destination since it's used to pick the destination object(s).
-                # If we're on the "destination" side, the field will be cr_<relationship-slug>__source.
-                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship-slug>__peer
-                field_name = f"cr_{relationship.slug}__{peer_side}"
+                # cr_<relationship_key>__destination since it's used to pick the destination object(s).
+                # If we're on the "destination" side, the field will be cr_<relationship_key>__source.
+                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship_key>__peer
+                field_name = f"cr_{relationship.key}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # HTML5 validation for required relationship field:
@@ -496,7 +499,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for relationship in relationships:
                 # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
-                field_name = f"cr_{relationship.slug}__{peer_side}"
+                field_name = f"cr_{relationship.key}__{peer_side}"
 
                 # Is the form trying to set this field (create/update a RelationshipAssociation(s))?
                 # If not (that is, clearing the field / deleting RelationshipAssociation(s)), we don't need to check.
@@ -667,10 +670,10 @@ class RelationshipModelFilterFormMixin(forms.Form):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
-            field_name = f"cr_{relationship.slug}__{peer_side}"
+            # "cr_<relationship_key>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship_key>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship_key>__peer"
+            field_name = f"cr_{relationship.key}__{peer_side}"
 
             if field_name in self.relationships:
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".

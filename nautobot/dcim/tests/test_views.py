@@ -350,8 +350,8 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.relationships = (
             Relationship(
-                name="Backup Locations",
-                slug="backup-locations",
+                label="Backup Locations",
+                key="backup_locations",
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                 source_type=ContentType.objects.get_for_model(Rack),
                 source_label="Backup location(s)",
@@ -1226,8 +1226,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.relationships = (
             Relationship(
-                name="BGP Router-ID",
-                slug="router-id",
+                label="BGP Router-ID",
+                key="router_id",
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
                 source_type=ContentType.objects.get_for_model(Device),
                 source_label="BGP Router ID",

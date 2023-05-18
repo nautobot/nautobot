@@ -1119,7 +1119,7 @@ class CustomFieldModelTest(TestCase):
         self.location1 = Location.objects.create(name="NYC", location_type=self.lt)
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="computed_field_one",
+            key="computed_field_one",
             label="Computed Field One",
             template="{{ obj.name }} is the name of this location.",
             fallback_value="An error occurred while rendering this template.",
@@ -1128,7 +1128,7 @@ class CustomFieldModelTest(TestCase):
         # Field whose template will raise a TemplateError
         self.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="bad_computed_field",
+            key="bad_computed_field",
             label="Bad Computed Field",
             template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
             fallback_value="This template has errored",
@@ -1137,7 +1137,7 @@ class CustomFieldModelTest(TestCase):
         # Field whose template will raise a TypeError
         self.worse_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="worse_computed_field",
+            key="worse_computed_field",
             label="Worse Computed Field",
             template="{{ obj.images | list }}",
             fallback_value="Another template error",
@@ -1145,7 +1145,7 @@ class CustomFieldModelTest(TestCase):
         )
         self.non_location_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
-            slug="device_computed_field",
+            key="device_computed_field",
             label="Device Computed Field",
             template="Hello, world.",
             fallback_value="This template has errored",
@@ -1154,7 +1154,7 @@ class CustomFieldModelTest(TestCase):
         # Field whose template will return None, with fallback_value defaulting to empty string
         self.bad_attribute_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="bad_attribute_computed_field",
+            key="bad_attribute_computed_field",
             label="Bad Attribute Computed Field",
             template="{{ obj.location }}",
             weight=200,
@@ -1245,7 +1245,7 @@ class CustomFieldModelTest(TestCase):
         self.assertDictEqual(self.location1.get_computed_fields(label_as_key=True), expected_renderings)
 
     def test_get_computed_fields_only_returns_fields_for_content_type(self):
-        self.assertTrue(self.non_location_computed_field.slug not in self.location1.get_computed_fields())
+        self.assertTrue(self.non_location_computed_field.key not in self.location1.get_computed_fields())
 
     def test_check_if_key_is_graphql_safe(self):
         """

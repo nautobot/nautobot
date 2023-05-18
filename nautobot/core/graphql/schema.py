@@ -1,7 +1,6 @@
 """Schema module for GraphQL."""
 from collections import OrderedDict
 import logging
-import warnings
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -276,18 +275,7 @@ def extend_schema_type_computed_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
 
     for field in cfs:
-        field_name = f"{prefix}{str_to_var_name(field.slug)}"
-        if str_to_var_name(field.slug) != field.slug:
-            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
-            # In 2.0 we should simply omit fields whose slugs are invalid in GraphQL, instead of mapping them.
-            # We need to make sure that slug/key is unique in a data migration before we remove the warning
-            # See https://github.com/nautobot/nautobot/pull/3426 for detailed solution
-            warnings.warn(
-                f'Computed field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
-                f'("{field.slug}"); for now it will be mapped to the GraphQL name "{field_name}", '
-                "but in a future release this field may fail to appear in GraphQL.",
-                FutureWarning,
-            )
+        field_name = f"{prefix}{field.key}"
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
@@ -303,7 +291,7 @@ def extend_schema_type_computed_field(schema_type, model):
         setattr(
             schema_type,
             resolver_name,
-            generate_computed_field_resolver(field.slug, resolver_name),
+            generate_computed_field_resolver(field.key, resolver_name),
         )
 
         schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
@@ -376,24 +364,13 @@ def extend_schema_type_relationships(schema_type, model):
         for relationship in relationships:
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
-            # Generate the name of the attribute and the name of the resolver based on the slug of the relationship
+            # Generate the name of the attribute and the name of the resolver based on the key of the relationship
             # and based on the prefix
-            rel_name = f"{prefix}{str_to_var_name(relationship.slug)}"
+            rel_name = f"{prefix}{relationship.key}"
             # Handle non-symmetric relationships where the model can be either source or destination
             if not relationship.symmetric and relationship.source_type == relationship.destination_type:
                 rel_name = f"{rel_name}_{peer_side}"
             resolver_name = f"resolve_{rel_name}"
-            if str_to_var_name(relationship.slug) != relationship.slug:
-                # 2.0 TODO: str_to_var_name is lossy, it may cause different relationships to map to the same rel_name
-                # In 2.0 we should simply omit relations whose slugs are invalid in GraphQL, instead of mapping them.
-                # We need to make sure that slug/key is unique in a data migration before we remove the warning
-                # See https://github.com/nautobot/nautobot/pull/3426 for detailed solution
-                warnings.warn(
-                    f'Relationship "{relationship}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
-                    f'("{relationship.slug}"); for now it will be mapped to the GraphQL name "{rel_name}", '
-                    "but in a future release this relationship may fail to appear in GraphQL.",
-                    FutureWarning,
-                )
 
             if hasattr(schema_type, resolver_name):
                 # If a symmetric relationship, and this is destination side, we already added source side, expected

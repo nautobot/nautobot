@@ -17,13 +17,13 @@ As an example, within your automation system, you may want to be able to have an
 
 Computed fields can be created through the Nautobot UI under **Extensibility > Computed Fields**.
 
-Each computed field must have a slug and a label.
+Each computed field must have a key and a label.
 
-- Slug must be a simple, database-friendly string, e.g. `device_with_site`
+- Key must be a simple, database-friendly string, e.g. `device_with_site`
 - Label is used as the human-friendly display name for this field in the UI, for example, `Device With Site`.
 
 !!! tip
-    Because computed field data can be included in the REST API and in GraphQL, we strongly recommend that when defining a computed field, you provide a slug that contains underscores rather than dashes (`my_field_slug`, not `my-field-slug`), as some features may not work optimally if dashes are included in the slug.
+    Because computed field data can be included in the REST API and in GraphQL, we strongly recommend that when defining a computed field, you provide a key that contains underscores rather than dashes (`my_field_key`, not `my-field-key`), as some features may not work optimally if dashes are included in the key.
 
 Similar to custom fields, the weight value is used to order computed fields within a form. A description can also be provided, and will appear beneath the field in a form.
 
@@ -76,4 +76,4 @@ When explicitly requested as such, computed field data will be included in the `
 ```
 
 !!! note
-    The `slug` value of each computed field is used as the key name for items in the `computed_fields` attribute.
+    The `key` value of each computed field is used as the key name for items in the `computed_fields` attribute.

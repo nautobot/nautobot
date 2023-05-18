@@ -83,14 +83,14 @@ class ComputedFieldTestCase(
             ComputedField(
                 content_type=obj_type,
                 label="Computed Field One",
-                slug="computed_field_one",
+                key="computed_field_one",
                 template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
                 weight=100,
             ),
             ComputedField(
                 content_type=obj_type,
-                slug="computed_field_two",
+                key="computed_field_two",
                 label="Computed Field Two",
                 template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
@@ -98,7 +98,7 @@ class ComputedFieldTestCase(
             ),
             ComputedField(
                 content_type=obj_type,
-                slug="computed_field_three",
+                key="computed_field_three",
                 label="Computed Field Three",
                 template="Location name is {{ obj.name }}",
                 weight=100,
@@ -120,7 +120,7 @@ class ComputedFieldTestCase(
 
         cls.form_data = {
             "content_type": obj_type.pk,
-            "slug": "computed_field_four",
+            "key": "computed_field_four",
             "label": "Computed Field Four",
             "template": "{{ obj.name }} is the best Location!",
             "fallback_value": ":skull_emoji:",
@@ -1992,7 +1992,7 @@ class RelationshipTestCase(
     RequiredRelationshipTestMixin,
 ):
     model = Relationship
-    slug_source = "name"
+    slug_source = "label"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
@@ -2003,29 +2003,29 @@ class RelationshipTestCase(
         status = Status.objects.get_for_model(Interface).first()
 
         Relationship(
-            name="Device VLANs",
-            slug="device-vlans",
+            label="Device VLANs",
+            key="device_vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         ).validated_save()
         Relationship(
-            name="Primary VLAN",
-            slug="primary-vlan",
+            label="Primary VLAN",
+            key="primary_vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
         ).validated_save()
         Relationship(
-            name="Primary Interface",
+            label="Primary Interface",
             type="one-to-one",
             source_type=device_type,
             destination_type=interface_type,
         ).validated_save()
 
         cls.form_data = {
-            "name": "VLAN-to-Interface",
-            "slug": "vlan-to-interface",
+            "label": "VLAN-to-Interface",
+            "key": "vlan_to_interface",
             "type": "many-to-many",
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
@@ -2090,7 +2090,7 @@ class RelationshipTestCase(
             reverse("ipam:vlan_bulk_edit"),
             data={
                 "pk": [str(vlan.id) for vlan in vlans],
-                "add_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "add_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
                 "_apply": [""],
             },
             follow=True,
@@ -2102,7 +2102,7 @@ class RelationshipTestCase(
             reverse("ipam:vlan_bulk_edit"),
             data={
                 "pk": [str(vlan.id) for vlan in vlans],
-                "remove_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "remove_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
                 "_apply": [""],
             },
         )
@@ -2128,8 +2128,8 @@ class RelationshipAssociationTestCase(
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
         relationship = Relationship(
-            name="Device VLANs",
-            slug="device-vlans",
+            label="Device VLANs",
+            key="device_vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,

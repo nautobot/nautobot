@@ -12,6 +12,7 @@ from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
+from rest_framework.filters import OrderingFilter
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -235,7 +236,7 @@ class ConfigContextQuerySetMixin:
     data annotation or not.
     """
 
-    filter_backends = [ConfigContextFilterBackend]
+    filter_backends = [ConfigContextFilterBackend, OrderingFilter]
 
     def get_queryset(self):
         """

@@ -37,21 +37,21 @@ class BaseTable(django_tables2.Table):
             self.base_columns[name] = CustomFieldColumn(cf)
 
         for cpf in models.ComputedField.objects.filter(content_type=obj_type):
-            self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
+            self.base_columns[f"cpf_{cpf.key}"] = ComputedFieldColumn(cpf)
 
         for relationship in models.Relationship.objects.filter(source_type=obj_type):
             if not relationship.symmetric:
-                self.base_columns[f"cr_{relationship.slug}_src"] = RelationshipColumn(
+                self.base_columns[f"cr_{relationship.key}_src"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
                 )
             else:
-                self.base_columns[f"cr_{relationship.slug}_peer"] = RelationshipColumn(
+                self.base_columns[f"cr_{relationship.key}_peer"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
         for relationship in models.Relationship.objects.filter(destination_type=obj_type):
             if not relationship.symmetric:
-                self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
+                self.base_columns[f"cr_{relationship.key}_dst"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
                 )
             # symmetric relationships are already handled above in the source_type case
@@ -443,7 +443,7 @@ class RelationshipColumn(django_tables2.Column):
                 template += format_html(
                     '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
                     reverse("extras:relationshipassociation_list"),
-                    self.relationship.slug,
+                    self.relationship.key,
                     self.side,
                     record.id,
                     len(value),

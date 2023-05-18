@@ -651,9 +651,9 @@ def create_site_to_animal_relationship(sender, apps, **kwargs):
 
     # Ensure that the Relationship exists
     Relationship.objects.update_or_create(
-        slug="site-favorite-animal",
+        key="site_favorite_animal",
         defaults={
-            "name": "Site's Favorite Animal",
+            "label": "Site's Favorite Animal",
             "type": RelationshipTypeChoices.TYPE_ONE_TO_MANY,
             "source_type": ContentType.objects.get_for_model(Animal),
             "source_label": "Sites that love this Animal",

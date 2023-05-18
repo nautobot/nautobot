@@ -124,7 +124,7 @@ class ComputedFieldTable(BaseTable):
         fields = (
             "pk",
             "label",
-            "slug",
+            "key",
             "content_type",
             "description",
             "weight",
@@ -132,7 +132,7 @@ class ComputedFieldTable(BaseTable):
         default_columns = (
             "pk",
             "label",
-            "slug",
+            "key",
             "content_type",
             "description",
         )
@@ -834,14 +834,14 @@ class ObjectChangeTable(BaseTable):
 
 class RelationshipTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
+    label = tables.Column(linkify=True)
     actions = ButtonsColumn(Relationship, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = Relationship
         fields = (
             "pk",
-            "name",
+            "label",
             "description",
             "type",
             "source_type",

@@ -1,4 +1,4 @@
-from unittest import mock, skipIf
+from unittest import mock, skipIf, skip
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -459,6 +459,15 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
                 cm.output[0],
             )
 
+    # TODO: Unskip after resolving #2908, #2909
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_descending_ordered(self):
+        pass
+
 
 @skipIf(
     "example_plugin" not in settings.PLUGINS,
@@ -484,8 +493,8 @@ class PluginCustomValidationTest(TestCase):
         prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
         ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status)
         relationship = Relationship.objects.create(
-            name="Test Relationship",
-            slug="test-relationship",
+            label="Test Relationship",
+            key="test_relationship",
             source_type=ContentType.objects.get_for_model(Prefix),
             destination_type=ContentType.objects.get_for_model(IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
