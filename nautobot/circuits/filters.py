@@ -55,7 +55,7 @@ class ProviderFilterSet(NautobotFilterSet):
         label="Site (ID or slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="circuits__terminations__location__slug",
+        field_name="circuits__terminations__location",
         queryset=Location.objects.all(),
         to_field_name="slug",
         label="Location (slug or ID)",
@@ -154,7 +154,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         label="Site (ID or slug)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        field_name="terminations__location__slug",
+        field_name="terminations__location",
         queryset=Location.objects.all(),
         to_field_name="slug",
         label="Location (slug or ID)",
