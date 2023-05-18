@@ -42,7 +42,11 @@ from nautobot.core.forms import (
 from nautobot.core.utils import lookup, permissions
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
-from nautobot.core.views.utils import handle_protectederror, prepare_cloned_fields
+from nautobot.core.views.utils import (
+    get_csv_form_fields_from_serializer_class,
+    handle_protectederror,
+    prepare_cloned_fields,
+)
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
@@ -527,9 +531,14 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         if self.action in ["create", "update"]:
             form_class = getattr(self, "form_class", None)
         elif self.action == "bulk_create":
+            required_field_names = [
+                field["name"]
+                for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
+                if field["required"]
+            ]
 
             class BulkCreateForm(BootstrapMixin, Form):
-                csv_data = CSVDataField(serializer_class=self.serializer_class)
+                csv_data = CSVDataField(required_field_names=required_field_names)
                 csv_file = CSVFileField()
 
             form_class = BulkCreateForm

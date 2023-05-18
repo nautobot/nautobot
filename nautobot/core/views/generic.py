@@ -791,10 +791,16 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.serializer_class = get_serializer_for_model(self.queryset.model)
+        self.fields = get_csv_form_fields_from_serializer_class(self.serializer_class)
+        self.required_field_names = [
+            field["name"]
+            for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
+            if field["required"]
+        ]
 
     def _import_form(self, *args, **kwargs):
         class CSVImportForm(BootstrapMixin, Form):
-            csv_data = CSVDataField(serializer_class=self.serializer_class)
+            csv_data = CSVDataField(required_field_names=self.required_field_names)
             csv_file = CSVFileField()
 
         return CSVImportForm(*args, **kwargs)
@@ -808,7 +814,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             self.template_name,
             {
                 "form": self._import_form(),
-                "fields": get_csv_form_fields_from_serializer_class(self.serializer_class),
+                "fields": self.fields,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
@@ -886,7 +892,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             self.template_name,
             {
                 "form": form,
-                "fields": self.serializer_class(context={"request": request, "depth": 0}).fields,
+                "fields": self.fields,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-file" if form.has_error("csv_file") else "csv-data",

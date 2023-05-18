@@ -56,15 +56,13 @@ class CSVDataField(django_forms.CharField):
     as that is now handled by the NautobotCSVParser class and the REST API serializers.
 
     Args:
-        serializer_class: The serializer class used to define the initial default field contents.
+        required_field_names: List of field names representing required fields for this import.
     """
 
     widget = django_forms.Textarea
 
-    def __init__(self, serializer_class, *args, **kwargs):
-        self.serializer_class = serializer_class
-        self.fields = self.serializer_class(context={"depth": 0}).fields
-        self.required_fields = [name for name, field in self.fields.items() if field.required]
+    def __init__(self, *args, required_field_names="", **kwargs):
+        self.required_field_names = required_field_names
         kwargs.setdefault("required", False)
 
         super().__init__(*args, **kwargs)
@@ -73,7 +71,7 @@ class CSVDataField(django_forms.CharField):
         if not self.label:
             self.label = ""
         if not self.initial:
-            self.initial = ",".join(self.required_fields) + "\n"
+            self.initial = ",".join(self.required_field_names) + "\n"
         if not self.help_text:
             self.help_text = (
                 "Enter the list of column headers followed by one line per record to be imported, using "

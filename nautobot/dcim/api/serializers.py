@@ -466,7 +466,11 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = ["name", "status", "tenant", "location", "rack", "role", "device_type", "primary_ip"]
         validators = []
-        extra_kwargs = {"parent_bay": {"required": False, "allow_null": True}}
+        extra_kwargs = {
+            "parent_bay": {"required": False, "allow_null": True},
+            "vc_position": {"label": "Virtual chassis position"},
+            "vc_priority": {"label": "Virtual chassis priority"},
+        }
 
     def get_field_names(self, declared_fields, info):
         """As parent_bay is the reverse side of a OneToOneField, DRF can handle it but it isn't auto-included."""
