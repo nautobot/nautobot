@@ -623,8 +623,10 @@ class JobLogEntryTable(BaseTable):
     def render_log_level(self, value):
         log_level = value.lower()
         # The css is label-danger for failure items.
-        if log_level == "failure":
+        if log_level in ["error", "critical"]:
             log_level = "danger"
+        elif log_level == "debug":
+            log_level = "default"
 
         return format_html('<label class="label label-{}">{}</label>', log_level, value)
 
@@ -689,19 +691,19 @@ class JobResultTable(BaseTable):
         Define custom rendering for the summary column.
         """
         log_objects = record.job_log_entries.all()
-        success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+        debug = log_objects.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
         info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
         warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()
-        failure = log_objects.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
+        error = log_objects.filter(log_level__in=[LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]).count()
         return format_html(
-            """<label class="label label-success">{}</label>
+            """<label class="label label-default">{}</label>
             <label class="label label-info">{}</label>
             <label class="label label-warning">{}</label>
             <label class="label label-danger">{}</label>""",
-            success,
+            debug,
             info,
             warning,
-            failure,
+            error,
         )
 
     class Meta(BaseTable.Meta):

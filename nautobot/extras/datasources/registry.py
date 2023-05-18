@@ -39,7 +39,7 @@ def refresh_datasource_content(model_name, record, user, job_result, delete=Fals
         try:
             entry.callback(record, job_result, delete=delete)
         except Exception as exc:
-            job_result.log(f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_FAILURE)
+            job_result.log(f"Error while refreshing {entry.name}: {exc}", level_choice=LogLevelChoices.LOG_ERROR)
             raise
 
     # Now that any exception will fail a Job and Git Repository syncs are jobs,
@@ -47,10 +47,10 @@ def refresh_datasource_content(model_name, record, user, job_result, delete=Fals
     # check here to ensure that any failed log events by the various content
     # callbacks will result in this task "failing successfully" by raising an
     # exception.
-    failure_logs = job_result.job_log_entries.filter(log_level=LogLevelChoices.LOG_FAILURE)
+    failure_logs = job_result.job_log_entries.filter(log_level=LogLevelChoices.LOG_ERROR)
     if failure_logs.exists():
         msg = f"Failed to refresh data provided by {record}. Please see traceback."
-        job_result.log(msg, level_choice=LogLevelChoices.LOG_FAILURE)
+        job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR)
         raise RuntimeError(msg)
 
     # Otherwise, log a friendly info message.

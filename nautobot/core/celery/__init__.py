@@ -6,6 +6,7 @@ import pkgutil
 import sys
 
 from celery import Celery, shared_task, signals
+from celery.app.log import TaskFormatter
 from celery.fixups.django import DjangoFixup
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
@@ -14,7 +15,7 @@ from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
-from nautobot.core.celery.log import NautobotLogHandler
+from nautobot.core.celery.log import NautobotDatabaseHandler
 
 
 logger = logging.getLogger(__name__)
@@ -79,8 +80,14 @@ def import_tasks_from_jobs_root(sender, **kwargs):
 
 
 @signals.after_setup_task_logger.connect
-def setup_nautobot_joblogentry_logger(logger, loglevel, logfile, format, colorize, **kwargs):
-    logger.addHandler(NautobotLogHandler())
+def setup_nautobot_joblogentry_logger(sender, logger, loglevel, logfile, format, colorize, **kwargs):
+    # move the logging level check to the handlers so the database handler can see all messages
+    for handler in logger.handlers:
+        handler.setLevel(loglevel)
+    logger.setLevel(logging.DEBUG)
+    handler = NautobotDatabaseHandler()
+    handler.setFormatter(TaskFormatter(format, use_color=colorize))
+    logger.addHandler(handler)
 
 
 @signals.worker_ready.connect

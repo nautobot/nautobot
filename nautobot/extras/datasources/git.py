@@ -183,12 +183,12 @@ def ensure_git_repository(
     if job_result:
         job_result.log(
             "Repository successfully refreshed",
-            level_choice=LogLevelChoices.LOG_SUCCESS,
+            level_choice=LogLevelChoices.LOG_INFO,
             logger=logger,
         )
         job_result.log(
             f'The current Git repository hash is "{repository_record.current_head}"',
-            level_choice=LogLevelChoices.LOG_SUCCESS,
+            level_choice=LogLevelChoices.LOG_INFO,
             logger=logger,
         )
     elif logger:
@@ -225,7 +225,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
         raise
 
     if job_result:
-        job_result.log("Repository dry run successful", level_choice=LogLevelChoices.LOG_SUCCESS, logger=logger)
+        job_result.log("Repository dry run successful", level_choice=LogLevelChoices.LOG_INFO, logger=logger)
     elif logger:
         logger.info("Repository dry run successful")
 
@@ -536,7 +536,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         job_result.log(
             "Successfully created config context",
             obj=context_record,
-            level_choice=LogLevelChoices.LOG_SUCCESS,
+            level_choice=LogLevelChoices.LOG_INFO,
             grouping="config contexts",
             logger=logger,
         )
@@ -544,7 +544,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
         job_result.log(
             "Successfully refreshed config context",
             obj=context_record,
-            level_choice=LogLevelChoices.LOG_SUCCESS,
+            level_choice=LogLevelChoices.LOG_INFO,
             grouping="config contexts",
             logger=logger,
         )
@@ -608,7 +608,7 @@ def import_local_config_context(
     job_result.log(
         "Successfully updated local config context",
         obj=record,
-        level_choice=LogLevelChoices.LOG_SUCCESS,
+        level_choice=LogLevelChoices.LOG_INFO,
         grouping="local config contexts",
         logger=logger,
     )
@@ -765,7 +765,7 @@ def import_config_context_schema(
         job_result.log(
             "Successfully created config context schema",
             obj=schema_record,
-            level_choice=LogLevelChoices.LOG_SUCCESS,
+            level_choice=LogLevelChoices.LOG_INFO,
             grouping="config context schemas",
             logger=logger,
         )
@@ -774,7 +774,7 @@ def import_config_context_schema(
         job_result.log(
             "Successfully refreshed config context schema",
             obj=schema_record,
-            level_choice=LogLevelChoices.LOG_SUCCESS,
+            level_choice=LogLevelChoices.LOG_INFO,
             grouping="config context schemas",
             logger=logger,
         )
@@ -852,7 +852,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     message=message,
                     obj=job_model,
                     grouping="jobs",
-                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    level_choice=LogLevelChoices.LOG_INFO,
                     logger=logger,
                 )
                 installed_jobs.append(job_model)
@@ -978,7 +978,7 @@ def update_git_export_templates(repository_record, job_result):
                 job_result.log(
                     "Successfully created export template",
                     obj=template_record,
-                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    level_choice=LogLevelChoices.LOG_INFO,
                     grouping="export templates",
                     logger=logger,
                 )
@@ -986,7 +986,7 @@ def update_git_export_templates(repository_record, job_result):
                 job_result.log(
                     "Successfully refreshed export template",
                     obj=template_record,
-                    level_choice=LogLevelChoices.LOG_SUCCESS,
+                    level_choice=LogLevelChoices.LOG_INFO,
                     grouping="export templates",
                     logger=logger,
                 )
