@@ -101,7 +101,29 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
         if field.read_only:
             continue
         if field_name == "custom_fields":
-            continue  # TODO, split into individual documented fields
+            from nautobot.extras.choices import CustomFieldTypeChoices
+            from nautobot.extras.models import CustomField
+
+            cfs = CustomField.objects.get_for_model(serializer_class.Meta.model)
+            for cf in cfs:
+                cf_form_field = cf.to_form_field(set_initial=False)
+                field_info = {
+                    "name": cf.add_prefix_to_cf_key(),
+                    "required": cf_form_field.required,
+                    "label": cf_form_field.label,
+                    "help_text": cf_form_field.help_text,
+                }
+                if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+                    field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
+                elif cf.type == CustomFieldTypeChoices.TYPE_DATE:
+                    field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
+                elif cf.type == CustomFieldTypeChoices.TYPE_SELECT:
+                    field_info["choices"] = {cfc.value: cfc.value for cfc in cf.custom_field_choices.all()}
+                elif cf.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+                    field_info["format"] = mark_safe('<code>"value,value"</code>')
+                    field_info["choices"] = {cfc.value: cfc.value for cfc in cf.custom_field_choices.all()}
+                fields.append(field_info)
+            continue
 
         field_info = {
             "name": field_name,
