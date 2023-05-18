@@ -1,8 +1,13 @@
 import pstats
 import tempfile
 
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
+
+
+logger = get_task_logger(__name__)
 
 
 class TestProfilingJob(Job):
@@ -17,7 +22,7 @@ class TestProfilingJob(Job):
         Job function.
         """
 
-        self.log_success(obj=None, message="Profiling test.")
+        logger.info("Profiling test.")
 
         return []
 

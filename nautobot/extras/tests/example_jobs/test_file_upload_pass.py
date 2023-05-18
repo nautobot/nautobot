@@ -1,5 +1,10 @@
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, FileVar
+
+
+logger = get_task_logger(__name__)
 
 
 class TestFileUploadPass(Job):
@@ -13,8 +18,8 @@ class TestFileUploadPass(Job):
 
     def run(self, file):
         contents = str(file.read())
-        self.log_warning(message=f"File contents: {contents}")
-        self.log_success(message="Job didn't crash!")
+        logger.warning("File contents: %s", contents)
+        logger.info("Job didn't crash!")
 
         return "Great job!"
 

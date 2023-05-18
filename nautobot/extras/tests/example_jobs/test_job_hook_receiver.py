@@ -1,14 +1,19 @@
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import JobHookReceiver
 from nautobot.dcim.models import Location, LocationType
 
 
+logger = get_task_logger(__name__)
+
+
 class TestJobHookReceiverLog(JobHookReceiver):
     def receive_job_hook(self, change, action, changed_object):
-        self.log_info(f"change: {change}")
-        self.log_info(f"action: {action}")
-        self.log_info(f"jobresult.user: {self.job_result.user.username}")
-        self.log_success(changed_object.name)
+        logger.info("change: %s", change)
+        logger.info("action: %s", action)
+        logger.info("jobresult.user: %s", self.job_result.user.username)
+        logger.info(changed_object.name)
 
 
 class TestJobHookReceiverChange(JobHookReceiver):

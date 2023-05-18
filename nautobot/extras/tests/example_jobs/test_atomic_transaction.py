@@ -1,8 +1,13 @@
 from django.db import transaction
 
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, BooleanVar
 from nautobot.extras.models import Status
+
+
+logger = get_task_logger(__name__)
 
 
 class SimulatedError(Exception):
@@ -22,9 +27,10 @@ class TestAtomicDecorator(Job):
             Status.objects.create(name="Test database atomic rollback 1")
             if fail:
                 raise SimulatedError("simulated failure")
-        except Exception:
-            self.log_failure("Job failed, all database changes have been rolled back.")
-        self.log_success("Job succeeded.")
+        except Exception as err:
+            logger.error("Job failed, all database changes have been rolled back.")
+            raise err
+        logger.info("Job succeeded.")
 
 
 class TestAtomicContextManager(Job):
@@ -40,9 +46,10 @@ class TestAtomicContextManager(Job):
                 Status.objects.create(name="Test database atomic rollback 2")
                 if fail:
                     raise SimulatedError("simulated failure")
-        except Exception:
-            self.log_failure("Job failed, all database changes have been rolled back.")
-        self.log_success("Job succeeded.")
+        except Exception as err:
+            logger.error("Job failed, all database changes have been rolled back.")
+            raise err
+        logger.info("Job succeeded.")
 
 
 register_jobs(TestAtomicContextManager, TestAtomicDecorator)

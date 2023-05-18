@@ -1,9 +1,13 @@
 import collections
+import logging
 
+from celery.app.log import TaskFormatter
+from celery.utils.log import get_task_logger
 from django.contrib.auth import get_user_model
 from django.test import TransactionTestCase as _TransactionTestCase
 from django.test import tag
 
+from nautobot.core.celery.log import NautobotDatabaseHandler
 from nautobot.core.testing.api import APITestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
@@ -78,6 +82,14 @@ def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
 
 def create_job_result_and_run_job(module, name, source="local", *args, **kwargs):
     """Test helper function to call get_job_class_and_model() then call run_job_for_testing()."""
+    # add the database handler for job logging
+    logger = get_task_logger(module)
+    logger.setLevel(logging.DEBUG)
+    if len(logger.handlers) == 1:
+        handler = NautobotDatabaseHandler()
+        handler.setFormatter(TaskFormatter())
+        logger.addHandler(handler)
+
     _job_class, job_model = get_job_class_and_model(module, name, source)
     job_result = run_job_for_testing(job=job_model, **kwargs)
     job_result.refresh_from_db()

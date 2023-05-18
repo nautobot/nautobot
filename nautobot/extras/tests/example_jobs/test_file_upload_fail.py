@@ -1,5 +1,10 @@
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, FileVar
+
+
+logger = get_task_logger(__name__)
 
 
 class FileUploadFailed(Exception):
@@ -21,7 +26,7 @@ class TestFileUploadFail(Job):
 
     def run(self, file):
         contents = str(file.read())
-        self.log_warning(message=f"File contents: {contents}")
+        logger.warning("File contents: %s", contents)
 
         raise self.exception("Test failure")
 

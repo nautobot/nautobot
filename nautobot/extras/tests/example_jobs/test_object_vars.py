@@ -1,7 +1,11 @@
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, ObjectVar, MultiObjectVar
 from nautobot.extras.models import Role
 
+
+logger = get_task_logger(__name__)
 name = "Object Vars"
 
 
@@ -13,10 +17,10 @@ class TestObjectVars(Job):
     roles = MultiObjectVar(model=Role)
 
     def run(self, role, roles):
-        self.log_info(f"Role: {role}")
-        self.log_warning(f"Roles: {roles}")
+        logger.info("Role: %s", role)
+        logger.warning("Roles: %s", roles)
 
-        self.log_success(message="Job didn't crash!")
+        logger.info("Job didn't crash!")
 
         return "Nice Roles!"
 

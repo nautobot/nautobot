@@ -1,5 +1,10 @@
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
+
+
+logger = get_task_logger(__name__)
 
 
 class TestFail(Job):
@@ -13,8 +18,8 @@ class TestFail(Job):
         """
         Job function.
         """
-        self.log_success(obj=None)
-        self.log_failure("Test failure")
+        logger.info("Success")
+        raise Exception("Test failure")
 
 
 register_jobs(TestFail)

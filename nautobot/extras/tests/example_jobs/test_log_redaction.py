@@ -1,5 +1,10 @@
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
+
+
+logger = get_task_logger(__name__)
 
 
 class TestLogRedaction(Job):
@@ -7,12 +12,11 @@ class TestLogRedaction(Job):
         description = "Test redaction of logs"
 
     def run(self):
-        self.log_debug("The secret is supersecret123")
-        self.log_info(message="The secret is supersecret123")
-        self.log_success(message="The secret is supersecret123")
-        self.log_warning(message="The secret is supersecret123")
-        # Disabled as we don't want the job to fail
-        # self.log_failure(message="The secret is supersecret123")
+        logger.debug("The secret is supersecret123")
+        logger.info("The secret is supersecret123")
+        logger.warning("The secret is supersecret123")
+        logger.error("The secret is supersecret123")
+        logger.critical("The secret is supersecret123")
 
 
 register_jobs(TestLogRedaction)

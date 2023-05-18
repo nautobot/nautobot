@@ -330,9 +330,7 @@ class JobTest(TransactionTestCase):
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        log_failure = JobLogEntry.objects.filter(
-            grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
-        ).first()
+        log_failure = JobLogEntry.objects.filter(grouping="initialization", log_level=LogLevelChoices.LOG_ERROR).first()
         self.assertIn("location is a required field", log_failure.message)
 
     def test_job_latest_result_property(self):
@@ -511,13 +509,11 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 1)
 
         # Run the job
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, **serialized_data)
         self.assertIsNotNone(job_result.traceback)
         # TODO(jathan): If there are more use-cases for asserting class comparison for errors raised
         # by Jobs, factor this into a test case method.
         self.assertIn(job_class.exception.__name__, job_result.traceback)
-        logging.disable(logging.NOTSET)
 
         # Assert that file contents were correctly read
         self.assertEqual(
@@ -779,7 +775,7 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
                 ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
                 ("info", "action: create"),
                 ("info", f"jobresult.user: {self.user.username}"),
-                ("success", "Test Job Hook Location 1"),
+                ("info", "Test Job Hook Location 1"),
                 ("info", "Job completed"),
             ]
             log_messages = JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")

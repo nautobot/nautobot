@@ -81,7 +81,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-task_logger = get_task_logger(__name__)
 
 
 class RunJobTaskFailed(Exception):
@@ -112,6 +111,9 @@ class BaseJob(Task):
         - task_queues (list)
         """
 
+    def __init__(self):
+        self.logger = get_task_logger(self.__module__)
+
     def __call__(self, *args, **kwargs):
         # Attempt to resolve serialized data back into original form by creating querysets or model instances
         # If we fail to find any objects, we consider this a job execution error, and fail.
@@ -131,7 +133,7 @@ class BaseJob(Task):
                 # TODO: This should probably be available as a file download rather than dumped to the hard drive.
                 # Pending this: https://github.com/nautobot/nautobot/issues/3352
                 profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
-                task_logger.info(
+                self.logger.info(
                     "Writing profiling information to %s.", profiling_path, extra={"grouping": "initialization"}
                 )
 
@@ -208,7 +210,7 @@ class BaseJob(Task):
             raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
 
         if not self.job_model.enabled:
-            task_logger.error(
+            self.logger.error(
                 "Job %s is not enabled to be run!",
                 self.job_model,
                 extra={"object": self.job_model, "grouping": "initialization"},
@@ -217,17 +219,16 @@ class BaseJob(Task):
         soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
         time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
         if time_limit <= soft_time_limit:
-            task_logger.warning(
-                "The hard time limit of %d seconds is less than "
-                "or equal to the soft time limit of %d seconds. "
-                "This job will fail silently after %d seconds.",
+            self.logger.warning(
+                "The hard time limit of %s seconds is less than "
+                "or equal to the soft time limit of %s seconds. "
+                "This job will fail silently after %s seconds.",
                 time_limit,
                 soft_time_limit,
                 time_limit,
                 extra={"grouping": "initialization"},
             )
-
-        task_logger.info("Running job", extra={"grouping": "initialization"})
+        self.logger.info("Running job", extra={"grouping": "initialization"})
 
     def run(self, *args, **kwargs):
         """
@@ -306,7 +307,7 @@ class BaseJob(Task):
         if file_ids:
             self.delete_files(*file_ids)
 
-        task_logger.info("Job completed", extra={"grouping": "post_run"})
+        self.logger.info("Job completed", extra={"grouping": "post_run"})
 
         # TODO(gary): document this in job author docs
         # Super.after_return must be called for chords to function properly
@@ -767,8 +768,7 @@ class BaseJob(Task):
         fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
         return fp.pk
 
-    @staticmethod
-    def delete_files(*files_to_delete):
+    def delete_files(self, *files_to_delete):
         """Given an unpacked list of primary keys for `FileProxy` objects, delete them.
 
         Args:
@@ -782,7 +782,7 @@ class BaseJob(Task):
         for fp in files:
             fp.delete()  # Call delete() on each, so `FileAttachment` is reaped
             num += 1
-        task_logger.debug("Deleted %d file proxies", num)
+        self.logger.debug("Deleted %d file proxies", num)
         return num
 
     # Convenience functions
