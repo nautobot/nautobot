@@ -139,8 +139,8 @@ class Command(BaseCommand):
 
         # Only load if file exists
         if os.path.exists(app_routes_file_path):
-            with open(app_routes_file_path, "r", encoding="utf-8") as app_rotes_file:
-                app_routes = json.load(app_rotes_file)
+            with open(app_routes_file_path, "r", encoding="utf-8") as app_routes_file:
+                app_routes = json.load(app_routes_file)
 
         # We're going to modify this list if apps don't have a `ui` directory.
         enabled_apps = copy.copy(settings.PLUGINS)
