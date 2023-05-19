@@ -13,12 +13,9 @@ import {
 } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 
-//      ___         __  __
-//    /   | __  __/ /_/ /_
-//   / /| |/ / / / __/ __ \
-//  / ___ / /_/ / /_/ / / /
-// /_/  |_\__,_/\__/_/ /_/
-// Auth section of the state
+//
+// Auth
+//
 
 const initialAuthState = {
     logged_in: false,
@@ -45,13 +42,9 @@ export function currentUserSelector(state) {
     return state?.appState?.auth?.user || {};
 }
 
-//      _   __            _             __  _
-//    / | / /___ __   __(_)___ _____ _/ /_(_)___  ____
-//   /  |/ / __ `/ | / / / __ `/ __ `/ __/ / __ \/ __ \
-//  / /|  / /_/ /| |/ / / /_/ / /_/ / /_/ / /_/ / / / /
-// /_/ |_/\__,_/ |___/_/\__, /\__,_/\__/_/\____/_/ /_/
-//                     /____/
-// Navigation section of the state
+//
+// Navigation
+//
 
 const initialCurrentContext = "Inventory";
 
@@ -95,13 +88,9 @@ export function getMenuInfoSelector(state) {
     return state?.appState?.navigation?.contextToRoute || {};
 }
 
-//      ___                   _____ __        __
-//    /   |  ____  ____     / ___// /_____ _/ /____
-//   / /| | / __ \/ __ \    \__ \/ __/ __ `/ __/ _ \
-//  / ___ |/ /_/ / /_/ /   ___/ / /_/ /_/ / /_/  __/
-// /_/  |_/ .___/ .___/   /____/\__/\__,_/\__/\___/
-//       /_/   /_/
-// The combined app state
+//
+// App State
+//
 
 const initialAppState = {
     auth: structuredClone(initialAuthState),
@@ -203,7 +192,6 @@ const appStateSlice = createSlice({
          * @returns The updated state
          */
         flushSessionState(state, _) {
-            console.log("flushSessionState");
             state.auth.user = {};
             state.auth.logged_in = false;
             return state;

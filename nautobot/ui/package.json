@@ -34,6 +34,7 @@
         "web-vitals": "^2.1.4"
     },
     "scripts": {
+        "analyze": "source-map-explorer 'build/static/js/*.js' --html analyze_report.html",
         "start": "craco start",
         "build": "craco build",
         "gen:theme-typings": "chakra-cli tokens node_modules/@nautobot/nautobot-ui",
@@ -63,6 +64,7 @@
         "@craco/craco": "^7.1.0",
         "prettier": "^2.8.7",
         "react-app-alias": "^2.2.2",
-        "react-app-alias-ex": "^2.1.0"
+        "react-app-alias-ex": "^2.1.0",
+        "source-map-explorer": "^2.5.3"
     }
 }

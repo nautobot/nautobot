@@ -1,17 +1,17 @@
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useParams } from "react-router-dom";
 import { NautobotGridItem, Text } from "@nautobot/nautobot-ui";
-import { useDispatch } from "react-redux";
+
 import ObjectListTable from "@components/ObjectListTable";
 import GenericView from "@views/generic/GenericView";
 import { useGetRESTAPIQuery } from "@utils/api";
-import { useEffect } from "react";
 import {
     updateCurrentContext,
     getCurrentAppContextSelector,
 } from "@utils/store";
 import { toTitleCase } from "@utils/string";
-import { useSelector } from "react-redux";
-import { useSearchParams } from "react-router-dom";
 
 export default function GenericObjectListView() {
     const { app_label, model_name } = useParams();
@@ -25,14 +25,16 @@ export default function GenericObjectListView() {
         dispatch(updateCurrentContext(currentAppContext));
     }, [dispatch, currentAppContext]);
 
-    // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";
     const { data: headerData, isLoading: headerDataLoading } =
-        useGetRESTAPIQuery({
-            app_label: app_label,
-            model_name: model_name,
-            schema: true,
-            plugin: isPluginView,
-        });
+        useGetRESTAPIQuery(
+            {
+                app_label: app_label,
+                model_name: model_name,
+                schema: true,
+                plugin: isPluginView,
+            },
+            { keepUnusedDataFor: 600 } // Let's keep the header schema cached for longer than the default 60 seconds
+        );
     let [searchParams] = useSearchParams();
 
     // What page are we on?
@@ -90,10 +92,10 @@ export default function GenericObjectListView() {
             </GenericView>
         );
     }
+
     // tableHeaders = all fields; and defaultHeaders = only the ones we want to see at first.
     const tableHeaders = headerData.view_options.fields;
     let defaultHeaders = headerData.view_options.list_display_fields;
-
     // If list_display_fields is not defined or empty, default to showing all headers.
     if (!defaultHeaders.length) {
         defaultHeaders = tableHeaders;

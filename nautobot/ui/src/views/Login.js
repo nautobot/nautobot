@@ -6,18 +6,14 @@ import {
     Box,
     Spinner,
 } from "@nautobot/nautobot-ui";
-import axios from "axios";
 
 import { useGetSessionQuery, useLoginMutation } from "@utils/api";
-
-axios.defaults.withCredentials = true;
-axios.defaults.xsrfCookieName = "csrftoken";
-axios.defaults.xsrfHeaderName = "X-CSRFToken";
 
 export default function Login() {
     const { refetch: refetchSession } = useGetSessionQuery();
     const [login, { isLoading }] = useLoginMutation();
 
+    /** Handle the form submission. */
     const handleSubmit = (e) => {
         e.preventDefault();
         login({
@@ -25,14 +21,12 @@ export default function Login() {
             password: e.target.password.value,
         })
             .then(refetchSession)
-            .catch((err) => {
-                console.log("error");
-                console.log(err);
-            });
+            .catch(console.log);
     };
 
     return (
         <Box boxShadow="base" p="6" rounded="md" bg="white">
+            {/* Show that we're trying to log in while we wait for the server to respond. */}
             {isLoading && <Spinner />}
             <form method="POST" onSubmit={handleSubmit}>
                 <FormControl>

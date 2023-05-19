@@ -1,4 +1,3 @@
-// Import the RTK Query methods from the React-specific entry point
 import { createApi, fetchBaseQuery, retry } from "@reduxjs/toolkit/query/react";
 import {
     API_BASE,
@@ -18,31 +17,53 @@ import {
   in React and Redux's sites.
 */
 
-// eslint-disable-next-line no-unused-vars
-const staggeredBaseQuery = retry(fetchBaseQuery({ baseUrl: "" }), {
-    maxRetries: 5,
-}); // TODO: Make this smarter on which conditions it retries on
+/**
+ * A custom baseQuery that will retry requests that fail with a 5xx error code.
+ *
+ * @param {Object} args - The arguments passed to the query.
+ * @param {Object} api - The API object.
+ * @param {Object} extraOptions - Extra options passed to the query.
+ * @returns {Object} - The result of the query.
+ */
+const smartRetryBaseQuery = retry(
+    async (args, api, extraOptions) => {
+        const result = await fetchBaseQuery({ baseUrl: "" })(
+            args,
+            api,
+            extraOptions
+        );
+        const dontRetryHeaders = [400, 401, 403, 404, 405, 406, 407];
+        if (dontRetryHeaders.includes(result.error?.status)) {
+            retry.fail(result.error);
+        }
+        return result;
+    },
+    {
+        maxRetries: 5,
+    }
+);
 
+/** The base RTK Query API object that will be used to create the endpoints. */
 export const baseApi = createApi({
-    baseQuery: fetchBaseQuery({ baseUrl: "" }), // TODO: Restore staggeredBaseQuery
-    keepUnusedDataFor: 5,
-    refetchOnMountOrArgChange: true,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
+    baseQuery: smartRetryBaseQuery,
     endpoints: (builder) => ({
+        /** The query to retrieve the session data. */
         getSession: builder.query({
             query: () => API_USER_SESSION_INFO,
             providesTags: ["Session"],
             invalidatesTags: ["APIData", "AppData"],
         }),
+        /** The query to retrieve the menu data. */
         getUIMenu: builder.query({
             query: () => API_UI_MENU_INFO,
             providesTags: ["AppData"],
         }),
+        /** The query to retrieve object counts (used on the homepage). */
         getObjectCounts: builder.query({
             query: () => API_OBJECT_COUNTS,
             providesTags: ["ObjectCounts"],
         }),
+        /** The query to retrieve object data from RESTful API. */
         getRESTAPI: builder.query({
             query: ({
                 app_label,
@@ -82,6 +103,7 @@ export const baseApi = createApi({
             },
             providesTags: ["APIData"],
         }),
+        /** The mutation to log in */
         login: builder.mutation({
             query: ({ username, password }) => ({
                 url: API_USER_AUTHENTICATE,
@@ -89,6 +111,7 @@ export const baseApi = createApi({
                 body: { username, password },
             }),
         }),
+        /** The mutation to log out. While is a GET, it changes data on the back-end */
         logout: builder.mutation({
             query: () => ({
                 url: AUTH_LOGOUT,

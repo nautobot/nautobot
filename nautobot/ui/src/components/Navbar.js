@@ -1,3 +1,8 @@
+import { useSelector } from "react-redux";
+import {
+    Link as ReactRouterLink,
+    NavLink as ReactRouterNavLink,
+} from "react-router-dom";
 import {
     AutomationIcon,
     DcimIcon,
@@ -17,17 +22,13 @@ import {
     SearchIcon,
     SecurityIcon,
 } from "@nautobot/nautobot-ui";
-import {
-    Link as ReactRouterLink,
-    NavLink as ReactRouterNavLink,
-} from "react-router-dom";
-import { useSelector } from "react-redux";
+
+import RouterButton from "@components/RouterButton";
 import {
     isLoggedInSelector,
     getCurrentContextSelector,
     currentUserSelector,
 } from "@utils/store";
-import RouterButton from "@components/RouterButton";
 
 export function Navbar() {
     const isLoggedIn = useSelector(isLoggedInSelector);
@@ -89,23 +90,10 @@ export function Navbar() {
             {isLoggedIn && (
                 <Menu>
                     <MenuButton as={NavbarMenuButton} isDisabled={!isLoggedIn}>
-                        {currentUser?.display ||
-                            [
-                                ...(currentUser?.firstName
-                                    ? [currentUser?.firstName]
-                                    : []),
-                                ...(currentUser?.lastName
-                                    ? [currentUser?.lastName]
-                                    : []),
-                            ].join(" ") ||
-                            currentUser?.username}
+                        {currentUser?.display || currentUser?.username}
                     </MenuButton>
                     <MenuList>
                         {[
-                            {
-                                children: "Profile",
-                                to: "/user/profile",
-                            },
                             {
                                 children: "Log Out",
                                 color: "red-1",

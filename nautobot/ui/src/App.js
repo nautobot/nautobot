@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
-import { NautobotUIProvider } from "@nautobot/nautobot-ui";
 import { useDispatch } from "react-redux";
+import { NautobotUIProvider } from "@nautobot/nautobot-ui";
+
+import Layout from "@components/Layout";
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
 import { updateAuthStateWithSession, updateNavigation } from "@utils/store";
 
-import Layout from "@components/Layout";
 import NautobotRouter from "./router";
 
 const theme = {
@@ -25,13 +26,14 @@ const theme = {
     },
 };
 
-// TODO: See if we can/need to continue this pattern:
-// Global API pattern needs these arguments passed through:
-//   { updateStore, globalApi }
-// (see index.js for context)
-
 function App() {
     const dispatch = useDispatch();
+
+    // Because the entire application is dependent on the session and menu data,
+    // bind the entire application to the success of these queries.
+    //
+    // When we have successfully retrieved the session data, update the auth state
+    // and refetch the menu data.
     const { data: sessionData, isSuccess: isSessionSuccess } =
         useGetSessionQuery();
     const {
@@ -41,7 +43,6 @@ function App() {
     } = useGetUIMenuQuery();
 
     useEffect(() => {
-        // TODO: Do we need special handling for non-successful session requests?
         if (isSessionSuccess) {
             dispatch(updateAuthStateWithSession(sessionData));
             dispatch(refetchMenuQuery);
@@ -50,7 +51,6 @@ function App() {
     }, [dispatch, sessionData, isSessionSuccess, refetchMenuQuery]);
 
     useEffect(() => {
-        // TODO: Do we need special handling for non-successful menu requests?
         if (isMenuSuccess) {
             dispatch(updateNavigation(menuData));
         }

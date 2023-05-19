@@ -1,17 +1,15 @@
 import { Navigate, useRoutes } from "react-router-dom";
-// import { lazy } from 'react'
-
 import { useSelector } from "react-redux";
+
 import { isLoggedInSelector } from "@utils/store";
-import Home from "@views/Home";
 import CreateView from "@views/generic/ObjectCreate";
 import DetailView from "@views/generic/ObjectRetrieve";
 import ListView from "@views/generic/ObjectList";
+import Home from "@views/Home";
 import InstalledApps from "@views/InstalledApps";
 import Login from "@views/Login";
 import Logout from "@views/Logout";
 
-// TODO: Dynamic route injection
 export default function NautobotRouter() {
     const isLoggedIn = useSelector(isLoggedInSelector);
 
@@ -22,7 +20,7 @@ export default function NautobotRouter() {
         },
         {
             path: "/logout/",
-            element: isLoggedIn ? <Logout /> : <Navigate to="/" />,
+            element: isLoggedIn ? <Logout /> : <Navigate to="/login/" />,
         },
         {
             path: "/",
