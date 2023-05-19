@@ -100,6 +100,6 @@ invoke prettier -a
 
 Here are some links to resources that may be helpful when working with the React UI:
 
-- https://react.dev/learn/synchronizing-with-effects
-- https://redux-toolkit.js.org/rtk-query/usage/queries#query-hook-options
-- https://react-redux.js.org/api/hooks#usedispatch
+- [React and Effects](https://react.dev/learn/synchronizing-with-effects)
+- [RTK Query and Asynchronous Hooks](https://redux-toolkit.js.org/rtk-query/usage/queries#query-hook-options)
+- [Using useDispatch](https://react-redux.js.org/api/hooks#usedispatch)
