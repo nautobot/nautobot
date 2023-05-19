@@ -50,7 +50,7 @@ class Command(BaseCommand):
         Example:
             >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
             >>> convert_django_url_regex_to_react_route_path(pattern)
-            '/other-models/:pk/notes'
+            '/other-models/:pk/notes/'
         """
         pattern = str(regex.pattern)
         path = simplify_regex(pattern).replace("<", ":").replace(">", "").replace("\\Z", "").replace("\\", "")
@@ -136,8 +136,8 @@ class Command(BaseCommand):
         with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
             json.dump(jsconfig, generated_config_file, indent=4)
 
-        with open(app_routes_file_path, "w", encoding="utf-8") as app_rotes_file:
-            json.dump(app_routes, app_rotes_file, indent=4)
+        with open(app_routes_file_path, "w", encoding="utf-8") as app_routes_file:
+            json.dump(app_routes, app_routes_file, indent=4)
 
         app_imports_final_file_path = Path(ui_dir, "src", "app_imports.js")
         environment = jinja2.sandbox.SandboxedEnvironment(loader=jinja2.FileSystemLoader(ui_dir))
