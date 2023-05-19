@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
             model_name="device",
             name="role",
             field=nautobot.extras.models.roles.RoleField(
-                blank=True, on_delete=django.db.models.deletion.PROTECT, related_name="devices", to="extras.role"
+                on_delete=django.db.models.deletion.PROTECT, related_name="devices", to="extras.role"
             ),
         ),
         migrations.AlterField(
