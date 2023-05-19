@@ -70,7 +70,6 @@ class Command(BaseCommand):
             str: The view component associated with the specified route name, or None if not found.
 
         Example:
-            >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
             >>> get_app_component(file_path="/src/example_plugin/example_plugin/ui/index.js", route_name="examplemodel_list")
             "ExampleModelListView"
         """
@@ -102,7 +101,6 @@ class Command(BaseCommand):
             - "component": The React component associated with the URL path.
 
         Example:
-            >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
             >>> render_routes_imports("/src/example_plugin/", "example_plugin", <AppConfig instance>)
             [
                 { "path": "example-plugin/", "component": "HomeView"},
@@ -136,11 +134,6 @@ class Command(BaseCommand):
 
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
-
-        # Only load if file exists
-        if os.path.exists(app_routes_file_path):
-            with open(app_routes_file_path, "r", encoding="utf-8") as app_rotes_file:
-                app_routes = json.load(app_rotes_file)
 
         # We're going to modify this list if apps don't have a `ui` directory.
         enabled_apps = copy.copy(settings.PLUGINS)

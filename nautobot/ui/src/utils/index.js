@@ -1,4 +1,4 @@
-export { my_import_as_function } from "./app-import";
+export { getComponentFromModule } from "./app-import";
 
 export { getPluginRoutes } from "./navigation";
 

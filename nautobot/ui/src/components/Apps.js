@@ -1,7 +1,7 @@
 import { lazy } from "react";
 
 import NautobotApps from "../app_imports";
-import { my_import_as_function } from "../utils";
+import { getComponentFromModule } from "../utils";
 
 function get_components() {
     var base = {};
@@ -21,7 +21,7 @@ function get_components() {
                                     base["CustomViews"][route] = {};
                                 base["CustomViews"][route][view_action] = lazy(
                                     () =>
-                                        my_import_as_function(
+                                    getComponentFromModule(
                                             app_name,
                                             component
                                         )
@@ -43,7 +43,7 @@ function get_components() {
                         components.map((component) => {
                             base["FullWidthComponents"][route].push(
                                 lazy(() =>
-                                    my_import_as_function(app_name, component)
+                                getComponentFromModule(app_name, component)
                                 )
                             );
                         });
