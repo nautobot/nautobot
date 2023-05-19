@@ -532,6 +532,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
@@ -539,12 +540,14 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
                 location=location,
                 device_type=devicetype,
                 role=devicerole,
+                status=devicestatus,
             ),
             Device.objects.create(
                 name="Device 2",
                 location=location,
                 device_type=devicetype,
                 role=devicerole,
+                status=devicestatus,
             ),
         )
         cls.devices = devices
