@@ -11,7 +11,6 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.admindocs.views import simplify_regex
 from django.core.management.base import BaseCommand, CommandError
-from django.urls.resolvers import RoutePattern
 import jinja2
 
 
@@ -69,7 +68,7 @@ class Command(BaseCommand):
 
         Returns:
             str: The view component associated with the specified route name, or None if not found.
-        
+
         Example:
             >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
             >>> get_app_component(file_path="/src/example_plugin/example_plugin/ui/index.js", route_name="examplemodel_list")
@@ -101,7 +100,7 @@ class Command(BaseCommand):
             Each dictionary has the following keys:
             - "path": The URL path pattern.
             - "component": The React component associated with the URL path.
-        
+
         Example:
             >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
             >>> render_routes_imports("/src/example_plugin/", "example_plugin", <AppConfig instance>)
