@@ -29,6 +29,7 @@ export default function HomeChangelogPanel() {
     if (isError) {
         return <NautobotGridItem>TODO</NautobotGridItem>;
     }
+    data?.results?.map((objectChange) => [console.log(objectChange)]);
 
     return (
         <NautobotGridItem>
@@ -76,13 +77,17 @@ export default function HomeChangelogPanel() {
                                     {objectChange.changed_object_type}
                                 </Td>
                                 <Td colSpan={3}>
-                                    <Link
-                                        href={uiUrl(
-                                            objectChange.changed_object.url
-                                        )}
-                                    >
-                                        {objectChange.object_repr}
-                                    </Link>
+                                    {objectChange.changed_object ? (
+                                        <Link
+                                            href={uiUrl(
+                                                objectChange.changed_object.url
+                                            )}
+                                        >
+                                            {objectChange.object_repr}
+                                        </Link>
+                                    ) : (
+                                        objectChange.object_repr
+                                    )}
                                 </Td>
                             </Tr>,
                         ])}
