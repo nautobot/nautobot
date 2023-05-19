@@ -58,6 +58,7 @@ export default function SidebarNav() {
                                         isLast={
                                             group_idx === group_arr.length - 1
                                         }
+                                        sx={{ color: "gray-1" }}
                                     >
                                         {group[0]}
                                         <AccordionIcon />
@@ -76,6 +77,7 @@ export default function SidebarNav() {
                                                         menu_idx ===
                                                         menu_arr.length - 1
                                                     }
+                                                    sx={{ color: "gray-1" }}
                                                 >
                                                     {menu[0]}
                                                 </SidebarButton>
@@ -93,6 +95,9 @@ export default function SidebarNav() {
                                                                     menu_arr.length -
                                                                         1
                                                                 }
+                                                                sx={{
+                                                                    color: "gray-1",
+                                                                }}
                                                             >
                                                                 {menu[0]}
                                                                 <AccordionIcon />
@@ -125,6 +130,9 @@ export default function SidebarNav() {
                                                                             submenu_arr.length -
                                                                                 1
                                                                         }
+                                                                        sx={{
+                                                                            color: "gray-1",
+                                                                        }}
                                                                     >
                                                                         {
                                                                             submenu[0]
