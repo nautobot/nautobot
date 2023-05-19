@@ -145,7 +145,7 @@ class VirtualMachineTable(StatusTableMixin, BaseTable):
 class VirtualMachineDetailTable(VirtualMachineTable):
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
-    primary_ip = tables.Column(linkify=True, verbose_name="IP Address")
+    primary_ip = tables.Column(linkify=True, verbose_name="IP Address", order_by=("primary_ip6", "primary_ip4"))
     tags = TagColumn(url_name="virtualization:virtualmachine_list")
 
     class Meta(BaseTable.Meta):
