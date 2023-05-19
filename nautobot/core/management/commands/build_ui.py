@@ -135,14 +135,6 @@ class Command(BaseCommand):
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
 
-<<<<<<< HEAD
-=======
-        # Only load if file exists
-        if os.path.exists(app_routes_file_path):
-            with open(app_routes_file_path, "r", encoding="utf-8") as app_routes_file:
-                app_routes = json.load(app_routes_file)
-
->>>>>>> afad5056478f435827650ccdf3214909bb46060e
         # We're going to modify this list if apps don't have a `ui` directory.
         enabled_apps = copy.copy(settings.PLUGINS)
 
