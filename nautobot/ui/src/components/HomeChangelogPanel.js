@@ -29,7 +29,6 @@ export default function HomeChangelogPanel() {
     if (isError) {
         return <NautobotGridItem>TODO</NautobotGridItem>;
     }
-    data?.results?.map((objectChange) => [console.log(objectChange)]);
 
     return (
         <NautobotGridItem>
