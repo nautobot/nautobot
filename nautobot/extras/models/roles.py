@@ -46,27 +46,4 @@ class RoleField(ForeignKeyLimitedByContentTypes):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("to", Role)
         kwargs.setdefault("on_delete", models.PROTECT)
-        kwargs.setdefault("blank", True)
         super().__init__(*args, **kwargs)
-
-
-class RoleModelMixin(models.Model):
-    """
-    Abstract base class for any model which may have roles.
-    """
-
-    role = RoleField(null=True, blank=True)
-
-    class Meta:
-        abstract = True
-
-
-class RoleRequiredRoleModelMixin(models.Model):
-    """
-    Abstract base class for any model which may have roles with role field required.
-    """
-
-    role = RoleField(null=False, blank=False)
-
-    class Meta:
-        abstract = True

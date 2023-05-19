@@ -47,9 +47,6 @@ class StatusField(ForeignKeyLimitedByContentTypes):
         kwargs.setdefault("on_delete", models.PROTECT)
         super().__init__(*args, **kwargs)
 
-    def get_limit_choices_to(self):
-        return {"content_types": ContentType.objects.get_for_model(self.model)}
-
     def contribute_to_class(self, cls, *args, **kwargs):
         """
         Overload default so that we can assert that `.get_FOO_display` is
@@ -104,10 +101,12 @@ class StatusField(ForeignKeyLimitedByContentTypes):
 
 class StatusModel(models.Model):
     """
-    Abstract base class for any model which may have statuses.
+    Deprecated abstract base class for any model which may have statuses.
+
+    Just directly include a StatusField instead for any new models.
     """
 
-    status = StatusField()
+    status = StatusField(null=True)  # for backward compatibility
 
     class Meta:
         abstract = True

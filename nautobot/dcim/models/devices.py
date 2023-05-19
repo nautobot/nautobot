@@ -16,7 +16,7 @@ from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
-from nautobot.extras.models import ConfigContextModel, RoleRequiredRoleModelMixin, StatusModel
+from nautobot.extras.models import ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 from .device_components import (
@@ -384,7 +384,7 @@ class Platform(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleModelMixin):
+class Device(PrimaryModel, ConfigContextModel):
     """
     A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     Role, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
@@ -399,6 +399,8 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     """
 
     device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="devices")
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=False, null=False)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -953,12 +955,13 @@ class VirtualChassis(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class DeviceRedundancyGroup(PrimaryModel, StatusModel):
+class DeviceRedundancyGroup(PrimaryModel):
     """
     A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of high-availability.
     """
 
     name = models.CharField(max_length=100, unique=True)
+    status = StatusField(blank=False, null=False)
     description = models.CharField(max_length=200, blank=True)
 
     failover_strategy = models.CharField(

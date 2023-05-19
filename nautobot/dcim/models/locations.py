@@ -10,7 +10,7 @@ from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
 from nautobot.dcim.fields import ASNField
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
@@ -129,7 +129,7 @@ class LocationManager(TreeManager.from_queryset(LocationQuerySet)):
     "statuses",
     "webhooks",
 )
-class Location(TreeModel, StatusModel, PrimaryModel):
+class Location(TreeModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
 
@@ -166,6 +166,7 @@ class Location(TreeModel, StatusModel, PrimaryModel):
         on_delete=models.PROTECT,
         related_name="locations",
     )
+    status = StatusField(blank=False, null=False)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,

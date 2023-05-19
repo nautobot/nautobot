@@ -17,7 +17,7 @@ from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.elevations import RackElevationSVG
-from nautobot.extras.models import RoleModelMixin, StatusModel
+from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
@@ -113,7 +113,7 @@ class RackGroup(TreeModel, OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Rack(PrimaryModel, StatusModel, RoleModelMixin):
+class Rack(PrimaryModel):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
     Each Rack is assigned to a Location and (optionally) a RackGroup.
@@ -121,6 +121,8 @@ class Rack(PrimaryModel, StatusModel, RoleModelMixin):
 
     name = models.CharField(max_length=100, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     facility_id = models.CharField(
         max_length=50,
         blank=True,

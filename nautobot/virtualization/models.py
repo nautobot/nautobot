@@ -11,9 +11,9 @@ from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
     ConfigContextModel,
-    StatusModel,
+    RoleField,
+    StatusField,
 )
-from nautobot.extras.models.roles import RoleModelMixin
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 
@@ -202,7 +202,7 @@ class Cluster(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMixin):
+class VirtualMachine(PrimaryModel, ConfigContextModel):
     """
     A virtual machine which runs inside a Cluster.
     """
@@ -227,6 +227,8 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
         null=True,
     )
     name = models.CharField(max_length=64, db_index=True)
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     primary_ip4 = models.OneToOneField(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
