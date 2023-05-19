@@ -61,9 +61,9 @@ export default function SidebarNav() {
                                             group_idx === group_arr.length - 1
                                         }
                                         sx={{
-                                            color: 'gray-1', // Set the default text color
+                                            color: "gray-1", // Set the default text color
                                             '&[aria-expanded="true"]': {
-                                                color: 'orange-0', // Change the text color when open
+                                                color: "orange-0", // Change the text color when open
                                             },
                                         }}
                                     >
@@ -85,7 +85,11 @@ export default function SidebarNav() {
                                                         menu_arr.length - 1
                                                     }
                                                     sx={{
-                                                        color: location.pathname === menu[1] ? 'orange-0' : 'gray-1',
+                                                        color:
+                                                            location.pathname ===
+                                                            menu[1]
+                                                                ? "orange-0"
+                                                                : "gray-1",
                                                     }}
                                                 >
                                                     {menu[0]}
@@ -105,10 +109,11 @@ export default function SidebarNav() {
                                                                         1
                                                                 }
                                                                 sx={{
-                                                                    color: 'gray-1', // Set the default text color
-                                                                    '&[aria-expanded="true"]': {
-                                                                        color: 'orange-0', // Change the text color when open
-                                                                    },
+                                                                    color: "gray-1", // Set the default text color
+                                                                    '&[aria-expanded="true"]':
+                                                                        {
+                                                                            color: "orange-0", // Change the text color when open
+                                                                        },
                                                                 }}
                                                             >
                                                                 {menu[0]}
@@ -143,7 +148,11 @@ export default function SidebarNav() {
                                                                                 1
                                                                         }
                                                                         sx={{
-                                                                            color: location.pathname === submenu[1] ? 'orange-0' : 'gray-1',
+                                                                            color:
+                                                                                location.pathname ===
+                                                                                submenu[1]
+                                                                                    ? "orange-0"
+                                                                                    : "gray-1",
                                                                         }}
                                                                     >
                                                                         {
