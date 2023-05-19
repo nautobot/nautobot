@@ -7,7 +7,7 @@ import {
     Heading,
     SidebarButton,
 } from "@nautobot/nautobot-ui";
-import { Link as ReactRouterLink } from "react-router-dom";
+import { Link as ReactRouterLink, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { updateRouteToContext } from "@utils/store";
 import { useGetUIMenuQuery } from "@utils/api";
@@ -31,6 +31,8 @@ export default function SidebarNav() {
     useEffect(() => {
         dispatch(updateRouteToContext(menuInfo));
     }, [dispatch, menuInfo]);
+
+    const location = useLocation();
 
     if (!isMenuSuccess || isMenuError) {
         return <></>;
@@ -58,7 +60,12 @@ export default function SidebarNav() {
                                         isLast={
                                             group_idx === group_arr.length - 1
                                         }
-                                        sx={{ color: "gray-1" }}
+                                        sx={{
+                                            color: 'gray-1', // Set the default text color
+                                            '&[aria-expanded="true"]': {
+                                                color: 'orange-0', // Change the text color when open
+                                            },
+                                        }}
                                     >
                                         {group[0]}
                                         <AccordionIcon />
@@ -77,7 +84,9 @@ export default function SidebarNav() {
                                                         menu_idx ===
                                                         menu_arr.length - 1
                                                     }
-                                                    sx={{ color: "gray-1" }}
+                                                    sx={{
+                                                        color: location.pathname === menu[1] ? 'orange-0' : 'gray-1',
+                                                    }}
                                                 >
                                                     {menu[0]}
                                                 </SidebarButton>
@@ -96,7 +105,10 @@ export default function SidebarNav() {
                                                                         1
                                                                 }
                                                                 sx={{
-                                                                    color: "gray-1",
+                                                                    color: 'gray-1', // Set the default text color
+                                                                    '&[aria-expanded="true"]': {
+                                                                        color: 'orange-0', // Change the text color when open
+                                                                    },
                                                                 }}
                                                             >
                                                                 {menu[0]}
@@ -131,7 +143,7 @@ export default function SidebarNav() {
                                                                                 1
                                                                         }
                                                                         sx={{
-                                                                            color: "gray-1",
+                                                                            color: location.pathname === submenu[1] ? 'orange-0' : 'gray-1',
                                                                         }}
                                                                     >
                                                                         {
