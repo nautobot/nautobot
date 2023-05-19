@@ -1,4 +1,5 @@
 import copy
+from importlib import import_module
 import json
 import os
 from pathlib import Path
@@ -58,7 +59,9 @@ class Command(BaseCommand):
 
     def get_app_component(self, file_path, route_name):
         """
-        Extracts the view component associated with the specified route name from the App index.js file.
+        Obtains the view component for the given route name from the index.js file of the App.
+        This locates the `route_name` in the app configuration `routes_view_components` dict and
+        returns the View Component registered for the `route_name`.
 
         Parameters:
             file_path (str): The path to the JavaScript file to read from.
@@ -66,6 +69,11 @@ class Command(BaseCommand):
 
         Returns:
             str: The view component associated with the specified route name, or None if not found.
+        
+        Example:
+            >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
+            >>> get_app_component(file_path="/src/example_plugin/example_plugin/ui/index.js", route_name="examplemodel_list")
+            "ExampleModelListView"
         """
         with open(file_path, "r") as f:
             js_content = f.read()
@@ -76,18 +84,41 @@ class Command(BaseCommand):
         return view_component_match[1] if view_component_match else None
 
     def render_routes_imports(self, app_base_path, app_name, app_config):
+        """
+        Renders the imports for the React Router components of the App's URLs.
+
+        This method inspects the `urlpatterns` list of the `urls.py` module of the App and generates
+        a list of dictionaries representing the React Router components and their corresponding URL paths.
+
+        Args:
+            app_base_path (Path): The base path of the Django app.
+            app_name (str): The name of the Django app.
+            app_config (AppConfig): The configuration object of the Django app.
+
+        Returns:
+            List[Dict[str, str]]: A list of dictionaries representing the React Router components and their
+            corresponding URL paths.
+            Each dictionary has the following keys:
+            - "path": The URL path pattern.
+            - "component": The React component associated with the URL path.
+        
+        Example:
+            >>> pattern = re.compile('^other-models/(?P<pk>[^/.]+)/notes/$')
+            >>> render_routes_imports("/src/example_plugin/", "example_plugin", <AppConfig instance>)
+            [
+                { "path": "example-plugin/", "component": "HomeView"},
+                { "path": "example-plugin/config/", "component": "ConfigView"},
+            ]
+        """
         data = []
-        module = __import__(f"{app_name}.urls", {}, {}, [""])
+        module = import_module(f"{app_name}.urls")
         base_url = app_config.base_url or app_config.label
         for urlpattern in module.urlpatterns:
             if component := self.get_app_component(
                 app_base_path / "ui/index.js",
                 urlpattern.name,
             ):
-                if isinstance(urlpattern.pattern, RoutePattern):
-                    path_regex = urlpattern.pattern._compile(urlpattern.pattern._route)
-                else:
-                    path_regex = urlpattern.pattern._compile(urlpattern.pattern._regex)
+                path_regex = urlpattern.pattern.regex
                 url_path = self.convert_django_url_regex_to_react_route_path(path_regex)
                 data.append({"path": base_url + url_path, "component": component})
         return data
