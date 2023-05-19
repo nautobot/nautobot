@@ -176,7 +176,10 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
-    "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
+    "DEFAULT_FILTER_BACKENDS": (
+        "nautobot.core.api.filter_backends.NautobotFilterBackend",
+        "rest_framework.filters.OrderingFilter",
+    ),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
@@ -190,6 +193,7 @@ REST_FRAMEWORK = {
     # This should only change (if at all) with Nautobot major (breaking) releases.
     "DEFAULT_VERSION": "2.0",
     "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
+    "ORDERING_PARAM": "sort",  # This is not meant to be changed by users, but is used internally by the API
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings

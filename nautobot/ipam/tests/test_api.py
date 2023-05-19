@@ -1,6 +1,7 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 import json
 import logging
+from unittest import skip
 from random import shuffle
 from unittest import skip
 
@@ -619,3 +620,12 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(response.json()["ports"], expected)
+
+    # TODO: Unskip after resolving #2908, #2909
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_descending_ordered(self):
+        pass

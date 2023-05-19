@@ -97,21 +97,18 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "content_type": "dcim.location",
-            "slug": "cf4",
             "label": "Computed Field 4",
             "template": "{{ obj.name }}",
             "fallback_value": "error",
         },
         {
             "content_type": "dcim.location",
-            "slug": "cf5",
             "label": "Computed Field 5",
             "template": "{{ obj.name }}",
             "fallback_value": "error",
         },
         {
             "content_type": "dcim.location",
-            "slug": "cf6",
             "label": "Computed Field 6",
             "template": "{{ obj.name }}",
         },
@@ -124,7 +121,7 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     ]
     update_data = {
         "content_type": "dcim.location",
-        "slug": "cf1",
+        "key": "cf1",
         "label": "My Computed Field",
     }
     bulk_update_data = {
@@ -138,21 +135,21 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         location_ct = ContentType.objects.get_for_model(Location)
 
         ComputedField.objects.create(
-            slug="cf1",
+            key="cf1",
             label="Computed Field One",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=location_ct,
         )
         ComputedField.objects.create(
-            slug="cf2",
+            key="cf2",
             label="Computed Field Two",
             template="{{ obj.name }}",
             fallback_value="error",
             content_type=location_ct,
         )
         ComputedField.objects.create(
-            slug="cf3",
+            key="cf3",
             label="Computed Field Three",
             template="{{ obj.name }}",
             fallback_value="error",
@@ -764,6 +761,15 @@ class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIView
             },
         ]
 
+    # TODO: Either improve test base or or write a more specific test for this model.
+    @skip("DynamicGroupMembership has a `name` property but it's the Group name and not exposed on the API")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DynamicGroupMembership has a `name` property but it's the Group name and not exposed on the API")
+    def test_list_objects_descending_ordered(self):
+        pass
+
 
 class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
     model = ExportTemplate
@@ -1111,6 +1117,15 @@ class ImageAttachmentTest(
             image_height=100,
             image_width=100,
         )
+
+    # TODO: Unskip after resolving #2908, #2909
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_descending_ordered(self):
+        pass
 
 
 class JobTest(
@@ -2116,6 +2131,15 @@ class ScheduledJobTest(
             approval_required=True,
             start_time=now(),
         )
+
+    # TODO: Unskip after resolving #2908, #2909
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_descending_ordered(self):
+        pass
 
 
 class JobApprovalTest(APITestCase):

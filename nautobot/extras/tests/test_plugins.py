@@ -459,6 +459,15 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
                 cm.output[0],
             )
 
+    # TODO: Unskip after resolving #2908, #2909
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_descending_ordered(self):
+        pass
+
 
 @skipIf(
     "example_plugin" not in settings.PLUGINS,

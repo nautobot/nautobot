@@ -762,4 +762,5 @@ class NameSlugSearchFilterSet(django_filters.FilterSet):
     A base class for adding the search method to models which only expose the `name` and `slug` fields
     """
 
+    # TODO Modify and rename this class after slugs are removed from all models.
     q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})

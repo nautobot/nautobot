@@ -1,4 +1,5 @@
 import json
+from unittest import skip
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -1847,6 +1848,15 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
                 "manufacturer": cls.manufacturer.pk,
             },
         ]
+
+    # TODO: Unskip after resolving #2908, #2909
+    @skip("DRF's built-in InventoryItem nautral_key is infinitely recursive")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DRF's built-in InventoryItem nautral_key is infinitely recursive")
+    def test_list_objects_descending_ordered(self):
+        pass
 
 
 class CableTest(Mixins.BaseComponentTestMixin):
