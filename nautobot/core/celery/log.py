@@ -15,6 +15,8 @@ class NautobotDatabaseHandler(logging.Handler):
         try:
             self.format(record)
 
+            if record.task_id == "???":
+                return
             job_result = JobResult.objects.filter(id=record.task_id)
             if not job_result.exists():
                 return

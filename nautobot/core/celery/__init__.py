@@ -8,6 +8,7 @@ import sys
 from celery import Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.fixups.django import DjangoFixup
+from celery.utils.log import get_logger
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
@@ -79,15 +80,29 @@ def import_tasks_from_jobs_root(sender, **kwargs):
                 logger.exception(exc)
 
 
-@signals.after_setup_task_logger.connect
-def setup_nautobot_joblogentry_logger(sender, logger, loglevel, logfile, format, colorize, **kwargs):
-    # move the logging level check to the handlers so the database handler can see all messages
-    for handler in logger.handlers:
-        handler.setLevel(loglevel)
+def _add_nautobot_log_handler(logger, format):
+    """Add NautobotDatabaseHandler to a logger and update logger level filtering to send all log levels to our handler."""
+    if logger.level != logging.NOTSET:
+        for handler in logger.handlers:
+            handler.setLevel(logger.level)
     logger.setLevel(logging.DEBUG)
     handler = NautobotDatabaseHandler()
-    handler.setFormatter(TaskFormatter(format, use_color=colorize))
+    handler.setFormatter(TaskFormatter(format, use_color=False))
     logger.addHandler(handler)
+
+
+@signals.after_setup_task_logger.connect
+def setup_nautobot_joblogentry_logger(sender, logger, loglevel, logfile, format, colorize, **kwargs):
+    """Add nautobot database logger to celery task logger."""
+    _add_nautobot_log_handler(logger, format)
+
+
+@signals.celeryd_after_setup.connect
+def setup_nautobot_job_stdout_stderr_redirect(sender, instance, conf, **kwargs):
+    """Add nautobot database logger to celery stdout/stderr proxy logger."""
+    if conf.worker_redirect_stdouts:
+        logger = get_logger("celery.redirected")
+        _add_nautobot_log_handler(logger, conf.worker_task_log_format)
 
 
 @signals.worker_ready.connect
