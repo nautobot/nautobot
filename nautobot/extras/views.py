@@ -1491,7 +1491,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.select_related("job_model", "obj_type", "user").prefetch_related("logs")
+    queryset = JobResult.objects.defer("data").select_related("job_model", "obj_type", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable

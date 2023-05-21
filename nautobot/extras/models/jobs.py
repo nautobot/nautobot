@@ -342,7 +342,7 @@ class Job(PrimaryModel):
     @property
     def latest_result(self):
         if self._latest_result is None:
-            self._latest_result = self.results.first()
+            self._latest_result = self.results.only("status").first()
         return self._latest_result
 
     @property
