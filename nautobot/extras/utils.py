@@ -519,7 +519,7 @@ def remove_prefix_from_cf_key(field_name):
 def check_if_key_is_graphql_safe(model_name, key):
     """
     Helper method to check if a key field is Python/GraphQL safe.
-    Used in CustomField for now, should be used in ComputedField and Relationship as well.
+    Used in CustomField, ComputedField and Relationship models.
     """
     graphql_safe_pattern = re.compile("[_A-Za-z][_0-9A-Za-z]*")
     if not graphql_safe_pattern.fullmatch(key):

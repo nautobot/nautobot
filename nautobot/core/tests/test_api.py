@@ -488,3 +488,56 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+
+
+class APIOrderingTestCase(testing.APITestCase):
+    """
+    Testing integration with DRF's OrderingFilter.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse("circuits-api:provider-list")
+        cls.field_type_map = {
+            "CharField": "name",
+            "IntegerField": "asn",
+            "URLField": "portal_url",
+            "TextField": "admin_contact",
+            "DateTimeField": "created",
+        }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ascending_sort(self):
+        """Tests that results are returned in the expected ascending order."""
+
+        for field_type, field_name in self.field_type_map.items():
+            with self.subTest(f"Testing {field_type}"):
+                response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(
+                    list(map(lambda p: p["id"], response.data["results"])),
+                    list(
+                        map(
+                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
+                            Provider.objects.order_by(field_name).values_list("id", flat=True)[:10],
+                        )
+                    ),
+                )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_descending_sort(self):
+        """Tests that results are returned in the expected descending order."""
+
+        for field_type, field_name in self.field_type_map.items():
+            with self.subTest(f"Testing {field_type}"):
+                response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(
+                    list(map(lambda p: p["id"], response.data["results"])),
+                    list(
+                        map(
+                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
+                            Provider.objects.order_by(f"-{field_name}").values_list("id", flat=True)[:10],
+                        )
+                    ),
+                )

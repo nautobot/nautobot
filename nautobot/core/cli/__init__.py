@@ -27,7 +27,7 @@ SETTINGS_ENVVAR = "NAUTOBOT_CONFIG"
 BASE_DIR = os.path.dirname(__file__)
 
 # File path of template used to generate config emitted by `init`
-CONFIG_TEMPLATE = os.path.join(BASE_DIR, "templates/nautobot_config.py.j2")
+CONFIG_TEMPLATE = os.path.join(BASE_DIR, "../templates/nautobot_config.py.j2")
 
 DESCRIPTION = """
 Nautobot server management utility.

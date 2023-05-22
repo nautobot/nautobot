@@ -1,7 +1,7 @@
-import { Card } from '@chakra-ui/react';  // TODO: import from nautobot-ui when available.
+import { Box } from '@nautobot/nautobot-ui';
 
 export function MyFancyCard(props) {
-    return <Card body>I am a full-fledge component provided by the default example App. The ID of the object I am displaying is: {props.id}</Card>;
+    return <Box body>I am a full-fledged component provided by the default example App. The ID of the object I am displaying is: {props.id}</Box>;
 }
 
 export default MyFancyCard;

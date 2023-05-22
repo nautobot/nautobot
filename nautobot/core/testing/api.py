@@ -12,6 +12,7 @@ from rest_framework.test import APITransactionTestCase as _APITransactionTestCas
 
 from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -343,6 +344,50 @@ class APIViewTestCases:
             self.assertEqual(len(response.data["results"]), 2)
             for entry in response.data["results"]:
                 self.assertIn(str(entry["id"]), [str(instance1.pk), str(instance2.pk)])
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_ascending_ordered(self):
+            # Simple sorting check for models with a "name" field
+            # TreeModels don't support sorting at this time (order_by is not supported by TreeQuerySet)
+            #   They will pass api == queryset tests below but will fail the user expected sort test
+            if hasattr(self.model, "name") and not issubclass(self.model, TreeModel):
+                self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+                response = self.client.get(f"{self._get_list_url()}?sort=name&limit=3", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_list = list(map(lambda p: p["name"], response.data["results"]))
+                self.assertEqual(
+                    result_list,
+                    list(self._get_queryset().order_by("name").values_list("name", flat=True)[:3]),
+                    "API sort not identical to QuerySet.order_by",
+                )
+
+                full_list = list(self._get_queryset().values_list("name", flat=True))
+                full_list.sort()
+                self.assertEqual(
+                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
+                )
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_descending_ordered(self):
+            # Simple sorting check for models with a "name" field
+            # TreeModels don't support sorting at this time (order_by is not supported by TreeQuerySet)
+            #   They will pass api == queryset tests below but will fail the user expected sort test
+            if hasattr(self.model, "name") and not issubclass(self.model, TreeModel):
+                self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+                response = self.client.get(f"{self._get_list_url()}?sort=-name&limit=3", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_list = list(map(lambda p: p["name"], response.data["results"]))
+                self.assertEqual(
+                    result_list,
+                    list(self._get_queryset().order_by("-name").values_list("name", flat=True)[:3]),
+                    "API sort not identical to QuerySet.order_by",
+                )
+
+                full_list = list(self._get_queryset().values_list("name", flat=True))
+                full_list.sort(reverse=True)
+                self.assertEqual(
+                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
+                )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):

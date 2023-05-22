@@ -83,14 +83,14 @@ class ComputedFieldTestCase(
             ComputedField(
                 content_type=obj_type,
                 label="Computed Field One",
-                slug="computed_field_one",
+                key="computed_field_one",
                 template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
                 weight=100,
             ),
             ComputedField(
                 content_type=obj_type,
-                slug="computed_field_two",
+                key="computed_field_two",
                 label="Computed Field Two",
                 template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
@@ -98,7 +98,7 @@ class ComputedFieldTestCase(
             ),
             ComputedField(
                 content_type=obj_type,
-                slug="computed_field_three",
+                key="computed_field_three",
                 label="Computed Field Three",
                 template="Location name is {{ obj.name }}",
                 weight=100,
@@ -120,7 +120,7 @@ class ComputedFieldTestCase(
 
         cls.form_data = {
             "content_type": obj_type.pk,
-            "slug": "computed_field_four",
+            "key": "computed_field_four",
             "label": "Computed Field Four",
             "template": "{{ obj.name }} is the best Location!",
             "fallback_value": ":skull_emoji:",

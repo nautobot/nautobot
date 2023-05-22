@@ -22,7 +22,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.device = create_test_device()
         self.computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
-            slug="device_computed_field",
+            key="device_computed_field",
             label="Device Computed Field",
             template="{{ obj.name }} is awesome!",
         )
