@@ -65,7 +65,6 @@ class NameColorContentTypesModel(
 
     objects = BaseManager.from_queryset(ContentTypeRelatedQuerySet)()
 
-    csv_headers = ["name", "color", "content_types", "description"]
     clone_fields = ["color", "content_types"]
 
     class Meta:
@@ -77,11 +76,3 @@ class NameColorContentTypesModel(
 
     def get_content_types(self):
         return ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.all())
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.color,
-            self.get_content_types(),
-            self.description,
-        )

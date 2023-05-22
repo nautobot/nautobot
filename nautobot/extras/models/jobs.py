@@ -489,8 +489,6 @@ class JobLogEntry(BaseModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
-    csv_headers = ["created", "grouping", "log_level", "log_object", "message"]
-
     def __str__(self):
         return self.message
 
@@ -498,10 +496,6 @@ class JobLogEntry(BaseModel):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
-
-    def to_csv(self):
-        """Indicates model fields to return as csv."""
-        return (str(self.created), self.grouping, self.log_level, self.log_object, self.message)
 
 
 #
@@ -1065,6 +1059,9 @@ class ScheduledJob(BaseModel):
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
+
+    # TODO: there's currently no natural key for ScheduledJob
+    natural_key_field_names = ["id"]
 
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""

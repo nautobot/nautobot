@@ -13,7 +13,6 @@ from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.filters import LocationFilterSet
-from nautobot.dcim.forms import LocationCSVForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
@@ -903,6 +902,61 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Value must be a string", str(response.content))
 
+    def test_create_without_required_field(self):
+        self.cf_text.default = None
+        self.cf_text.required = True
+        self.cf_text.save()
+
+        data = {
+            "name": "Location N",
+            "slug": "location-n",
+            "location_type": self.lt.pk,
+            "status": self.statuses[0].pk,
+        }
+        url = reverse("dcim-api:location-list")
+        self.add_permissions("dcim.add_location")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Required field cannot be empty", str(response.content))
+
+        # Try in CSV format too
+        csvdata = "\n".join(
+            [
+                "name,slug,location_type,status",
+                f"Location N,location-n,{self.lt.natural_key_slug},{self.statuses[0].name}",
+            ]
+        )
+        response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Required field cannot be empty", str(response.content))
+
+    def test_create_invalid_select_choice(self):
+        data = {
+            "name": "Location N",
+            "slug": "location-n",
+            "location_type": self.lt.pk,
+            "status": self.statuses[0].pk,
+            "custom_fields": {
+                "choice_cf": "Frobozz",
+            },
+        }
+        url = reverse("dcim-api:location-list")
+        self.add_permissions("dcim.add_location")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid choice", str(response.content))
+
+        # Try in CSV format too
+        csvdata = "\n".join(
+            [
+                "name,slug,location_type,status,cf_choice_cf",
+                f"Location N,location-n,{self.lt.natural_key_slug},{self.statuses[0].name},Frobozz",
+            ]
+        )
+        response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid choice", str(response.content))
+
 
 class CustomFieldImportTest(TestCase):
     """
@@ -1005,7 +1059,10 @@ class CustomFieldImportTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Validate data for location 1
-        location1 = Location.objects.get(name="Location 1")
+        try:
+            location1 = Location.objects.get(name="Location 1")
+        except Location.DoesNotExist:
+            self.fail(str(response.content))
         if "example_plugin" in settings.PLUGINS:
             self.assertEqual(len(location1.cf), 8)
         else:
@@ -1039,34 +1096,6 @@ class CustomFieldImportTest(TestCase):
         # No custom field data should be set for location 3
         location3 = Location.objects.get(name="Location 3")
         self.assertFalse(any(location3.cf.values()))
-
-    def test_import_missing_required(self):
-        """
-        Attempt to import an object missing a required custom field.
-        """
-        # Set one of our CustomFields to required
-        CustomField.objects.filter(label="Text").update(required=True)
-        lt = LocationType.objects.get(name="Campus")
-        form_data = {
-            "name": "Location 1",
-            "slug": "location-1",
-            "location_type": lt.pk,
-        }
-
-        form = LocationCSVForm(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("cf_text", form.errors)
-
-    def test_import_invalid_choice(self):
-        """
-        Attempt to import an object with an invalid choice selection.
-        """
-        lt = LocationType.objects.get(name="Campus")
-        form_data = {"name": "Location 1", "slug": "location-1", "location_type": lt.name, "cf_select": "Choice X"}
-
-        form = LocationCSVForm(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("cf_select", form.errors)
 
 
 class CustomFieldModelTest(TestCase):

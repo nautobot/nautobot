@@ -324,8 +324,11 @@ def nested_serializer_factory(relation_info, nested_depth):
 
 def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
     """
-    Return a URL for a ForeignKeyField or a list of URLs for a ManytoManyField when depth = 0
-    Return a Nested serializer for a ForeignKeyField or a list of Nested serializers for a ManytoManyField when depth > 0
+    Handle serialization of GenericForeignKey fields at an appropriate depth.
+
+    When depth = 0, return the URL for the related object.
+    When depth > 0, return the data for the appropriate nested serializer, plus a "generic_foreign_key = True" field.
+
     Args:
         serializer: BaseSerializer
         depth: Levels of nested serialization
@@ -333,29 +336,16 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
         obj_related_field: Related object needs to be serialized
         obj_related_field_name: Object's field name that represents the related object.
     """
-    if obj_related_field.__class__.__name__ == "RelatedManager":
-        result = []
-        if depth == 0:
-            result = [entry.get_absolute_url(api=True) for entry in obj_related_field.all()]
-            if serializer.context.get("request"):
-                result = [serializer.context.get("request").build_absolute_uri(url) for url in result]
-        else:
-            for entry in obj_related_field.all():
-                relation_info = get_relation_info_for_nested_serializers(obj, entry, obj_related_field_name)
-                field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)
-                result.append(
-                    field_class(entry, context={"request": serializer.context.get("request")}, **field_kwargs).data
-                )
+    if depth == 0:
+        result = obj_related_field.get_absolute_url(api=True)
+        if serializer.context.get("request"):
+            result = serializer.context.get("request").build_absolute_uri(result)
         return result
     else:
-        if depth == 0:
-            result = obj_related_field.get_absolute_url(api=True)
-            if serializer.context.get("request"):
-                result = serializer.context.get("request").build_absolute_uri(result)
-            return result
-        else:
-            relation_info = get_relation_info_for_nested_serializers(obj, obj_related_field, obj_related_field_name)
-            field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)
-            return field_class(
-                obj_related_field, context={"request": serializer.context.get("request")}, **field_kwargs
-            ).data
+        relation_info = get_relation_info_for_nested_serializers(obj, obj_related_field, obj_related_field_name)
+        field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)
+        data = field_class(
+            obj_related_field, context={"request": serializer.context.get("request")}, **field_kwargs
+        ).data
+        data["generic_foreign_key"] = True
+        return data

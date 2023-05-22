@@ -56,7 +56,6 @@ class TenantGroupDeleteView(generic.ObjectDeleteView):
 
 class TenantGroupBulkImportView(generic.BulkImportView):
     queryset = TenantGroup.objects.all()
-    model_form = forms.TenantGroupCSVForm
     table = tables.TenantGroupTable
 
 
@@ -117,7 +116,6 @@ class TenantDeleteView(generic.ObjectDeleteView):
 
 class TenantBulkImportView(generic.BulkImportView):
     queryset = Tenant.objects.all()
-    model_form = forms.TenantCSVForm
     table = tables.TenantTable
 
 

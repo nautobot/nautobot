@@ -341,9 +341,9 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "virtual_machine,name,status",
-            f"Virtual Machine 2,Interface 4,{statuses[0].name}",
-            f"Virtual Machine 2,Interface 5,{statuses[0].name}",
-            f"Virtual Machine 2,Interface 6,{statuses[0].name}",
+            f"{virtualmachines[1].natural_key_slug},Interface 4,{statuses[0].name}",
+            f"{virtualmachines[1].natural_key_slug},Interface 5,{statuses[0].name}",
+            f"{virtualmachines[1].natural_key_slug},Interface 6,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {

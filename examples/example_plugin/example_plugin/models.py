@@ -12,22 +12,14 @@ from nautobot.apps.models import extras_features, OrganizationalModel
     "webhooks",
 )
 class ExampleModel(OrganizationalModel):
-    name = models.CharField(max_length=20, help_text="The name of this Example.")
+    name = models.CharField(max_length=20, help_text="The name of this Example.", unique=True)
     number = models.IntegerField(default=100, help_text="The number of this Example.")
-
-    csv_headers = ["name", "number"]
 
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} - {self.number}"
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.number,
-        )
 
 
 @extras_features(
@@ -39,8 +31,11 @@ class ExampleModel(OrganizationalModel):
     "relationships",  # Defined here to ensure no clobbering: https://github.com/nautobot/nautobot/issues/3592
 )
 class AnotherExampleModel(OrganizationalModel):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=20, unique=True)
     number = models.IntegerField(default=100)
+
+    # by default the natural key would just be "name" since it's a unique field. But we can override it:
+    natural_key_field_names = ["name", "number"]
 
     class Meta:
         ordering = ["name"]

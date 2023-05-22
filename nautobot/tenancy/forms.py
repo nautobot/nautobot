@@ -2,14 +2,12 @@ from django import forms
 
 from nautobot.core.forms import (
     CommentField,
-    CSVModelChoiceField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     TagFilterField,
 )
 from nautobot.extras.forms import (
     NautobotFilterForm,
-    CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     TagsBulkEditFormMixin,
@@ -34,19 +32,6 @@ class TenantGroupForm(NautobotModelForm):
         ]
 
 
-class TenantGroupCSVForm(CustomFieldModelCSVForm):
-    parent = CSVModelChoiceField(
-        queryset=TenantGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent group",
-    )
-
-    class Meta:
-        model = TenantGroup
-        fields = TenantGroup.csv_headers
-
-
 #
 # Tenants
 #
@@ -65,19 +50,6 @@ class TenantForm(NautobotModelForm):
             "comments",
             "tags",
         )
-
-
-class TenantCSVForm(CustomFieldModelCSVForm):
-    tenant_group = CSVModelChoiceField(
-        queryset=TenantGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned group",
-    )
-
-    class Meta:
-        model = Tenant
-        fields = Tenant.csv_headers
 
 
 class TenantBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):

@@ -108,22 +108,6 @@ class ObjectChange(BaseModel):
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
-    csv_headers = [
-        "time",
-        "user",
-        "user_name",
-        "request_id",
-        "action",
-        "changed_object_type",
-        "changed_object_id",
-        "related_object_type",
-        "related_object_id",
-        "object_repr",
-        "object_data",
-        "change_context",
-        "change_context_detail",
-    ]
-
     class Meta:
         ordering = ["-time"]
         get_latest_by = "time"
@@ -157,23 +141,6 @@ class ObjectChange(BaseModel):
             self.object_repr = str(self.changed_object)[:CHANGELOG_MAX_OBJECT_REPR]
 
         return super().save(*args, **kwargs)
-
-    def to_csv(self):
-        return (
-            self.time,
-            self.user,
-            self.user_name,
-            self.request_id,
-            self.get_action_display(),
-            self.changed_object_type,
-            self.changed_object_id,
-            self.related_object_type,
-            self.related_object_id,
-            self.object_repr,
-            self.object_data,
-            self.change_context,
-            self.change_context_detail,
-        )
 
     def get_action_class(self):
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)
