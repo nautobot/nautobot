@@ -836,6 +836,8 @@ class VLAN(PrimaryModel):
         "description",
     ]
 
+    natural_key_field_names = ["vid", "vlan_group"]
+
     class Meta:
         ordering = (
             "location",

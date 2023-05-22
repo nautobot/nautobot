@@ -267,7 +267,7 @@ def common_test_data(cls):
         Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type, location=loc1),
     )
 
-    vm_status = Status.objects.get_for_model(VirtualMachine)
+    vm_status = Status.objects.get_for_model(VirtualMachine).first()
     VirtualMachine.objects.create(
         cluster=clusters[0], name="VM 1", role=cls.device_roles[0], platform=platforms[0], status=vm_status
     )
@@ -278,24 +278,26 @@ def common_test_data(cls):
         cluster=clusters[0], name="VM 3", role=cls.device_roles[2], platform=platforms[2], status=vm_status
     )
 
-    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), location=loc0)
-    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), location=loc0)
-    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), location=loc1)
+    prefix_status = Status.objects.get_for_model(Prefix).first()
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), location=loc0, status=prefix_status)
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), location=loc0, status=prefix_status)
+    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), location=loc1, status=prefix_status)
 
     # TODO: remove these once we have a Sites fixture; for now SiteTestCase needs VLANGroups and VLANs with Sites
     VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=loc0)
     VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=loc0)
     VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", location=loc1)
 
-    vlan_status = Status.objects.get_for_model(VLAN)
+    vlan_status = Status.objects.get_for_model(VLAN).first()
     VLAN.objects.create(name="VLAN 101", vid=101, location=loc0, status=vlan_status)
     VLAN.objects.create(name="VLAN 102", vid=102, location=loc0, status=vlan_status)
     VLAN.objects.create(name="VLAN 103", vid=103, location=loc1, status=vlan_status)
 
+    pf_status = Status.objects.get_for_model(PowerFeed).first()
     power_feeds = (
-        PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=power_panels[0]),
-        PowerFeed.objects.create(name="Power Feed 2", rack=racks[1], power_panel=power_panels[1]),
-        PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=power_panels[2]),
+        PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=power_panels[0], status=pf_status),
+        PowerFeed.objects.create(name="Power Feed 2", rack=racks[1], power_panel=power_panels[1], status=pf_status),
+        PowerFeed.objects.create(name="Power Feed 3", rack=racks[2], power_panel=power_panels[2], status=pf_status),
     )
     power_feeds[0].tags.set(Tag.objects.get_for_model(PowerFeed))
     power_feeds[1].tags.set(Tag.objects.get_for_model(PowerFeed)[:3])
@@ -1342,11 +1344,12 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
         # Assign primary IPs for filtering
         interfaces = Interface.objects.all()
+        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
         ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24"),
-            IPAddress.objects.create(address="192.0.2.2/24"),
-            IPAddress.objects.create(address="2600::1/120"),
-            IPAddress.objects.create(address="2600::0100/120"),
+            IPAddress.objects.create(address="192.0.2.1/24", status=ipaddr_status),
+            IPAddress.objects.create(address="192.0.2.2/24", status=ipaddr_status),
+            IPAddress.objects.create(address="2600::1/120", status=ipaddr_status),
+            IPAddress.objects.create(address="2600::0100/120", status=ipaddr_status),
         )
 
         interfaces[0].add_ip_addresses([ipaddresses[0], ipaddresses[2]])
@@ -2001,23 +2004,27 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         """Assert only interfaces belonging to devices with common VC are returned"""
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         devices = (
             Device.objects.create(
                 name="Device in vc 1",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=self.loc1,
             ),
             Device.objects.create(
                 name="Device in vc 2",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=self.loc1,
             ),
             Device.objects.create(
                 name="Device not in vc",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=self.loc1,
             ),
         )
@@ -2027,10 +2034,11 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Device.objects.filter(pk=devices[0].pk).update(virtual_chassis=virtual_chassis, vc_position=1, vc_priority=1)
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis, vc_position=2, vc_priority=2)
 
-        Interface.objects.create(device=devices[0], name="int1")
-        Interface.objects.create(device=devices[0], name="int2")
-        Interface.objects.create(device=devices[1], name="int3")
-        Interface.objects.create(device=devices[2], name="int4")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        Interface.objects.create(device=devices[0], name="int1", status=interface_status)
+        Interface.objects.create(device=devices[0], name="int2", status=interface_status)
+        Interface.objects.create(device=devices[1], name="int3", status=interface_status)
+        Interface.objects.create(device=devices[2], name="int4", status=interface_status)
 
         params = {"device_with_common_vc": devices[0].pk}
         queryset = self.filterset(params, self.queryset).qs
@@ -2523,6 +2531,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         )
 
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -2532,6 +2541,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 name="Device 4",
                 device_type=device_types[0],
                 role=device_role,
+                status=device_status,
                 tenant=tenants[0],
                 location=cls.locations[0],
                 rack=racks[0],
@@ -2541,6 +2551,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 name="Device 5",
                 device_type=device_types[1],
                 role=device_role,
+                status=device_status,
                 tenant=tenants[1],
                 location=cls.locations[1],
                 rack=racks[1],
@@ -2550,6 +2561,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 name="Device 6",
                 device_type=device_types[2],
                 role=device_role,
+                status=device_status,
                 tenant=tenants[2],
                 location=cls.locations[2],
                 rack=racks[2],
@@ -2557,6 +2569,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
+        interface_status = Status.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.get(device__name="Device 1"),
             Interface.objects.get(device__name="Device 2"),
@@ -2568,31 +2581,37 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 device=devices[0],
                 name="Interface 7",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[1],
                 name="Interface 8",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[2],
                 name="Interface 9",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[3],
                 name="Interface 10",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[4],
                 name="Interface 11",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[5],
                 name="Interface 12",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
         )
 

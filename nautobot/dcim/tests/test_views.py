@@ -94,15 +94,19 @@ def create_test_device(name):
     Convenience method for creating a Device (e.g. for component testing).
     """
     location_type, _ = LocationType.objects.get_or_create(name="Campus")
+    location_status = Status.objects.get_for_model(Location).first()
     location, _ = Location.objects.get_or_create(
-        name="Test Location 1", slug="test-location-1", location_type=location_type
+        name="Test Location 1", slug="test-location-1", location_type=location_type, status=location_status
     )
     manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
     devicerole, _ = Role.objects.get_or_create(name="Device Role")
     device_ct = ContentType.objects.get_for_model(Device)
     devicerole.content_types.add(device_ct)
-    device = Device.objects.create(name=name, location=location, device_type=devicetype, role=devicerole)
+    devicestatus = Status.objects.get_for_model(Device).first()
+    device = Device.objects.create(
+        name=name, location=location, device_type=devicetype, role=devicerole, status=devicestatus
+    )
 
     return device
 
@@ -258,7 +262,8 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         rack_group = RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
 
-        rack = Rack.objects.create(name="Rack 1", location=location, rack_group=rack_group)
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Rack 1", location=location, rack_group=rack_group, status=rack_status)
 
         RackReservation.objects.create(rack=rack, user=user2, units=[1, 2, 3], description="Reservation 1")
         RackReservation.objects.create(rack=rack, user=user2, units=[4, 5, 6], description="Reservation 2")
@@ -458,6 +463,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         # Create Power Port for device
         powerport1 = PowerPort.objects.create(device=devices[0], name="Power Port 11")
+        pf_status = Status.objects.get_for_model(PowerFeed).first()
         powerfeed1 = PowerFeed.objects.create(
             power_panel=self.powerpanels[0],
             name="Power Feed 11",
@@ -465,6 +471,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             voltage=240,
             amperage=20,
             rack=self.racks[0],
+            status=pf_status,
         )
         powerfeed2 = PowerFeed.objects.create(
             power_panel=self.powerpanels[0],
@@ -473,6 +480,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             voltage=240,
             amperage=20,
             rack=self.racks[0],
+            status=pf_status,
         )
 
         # Create power outlet to the power port
@@ -1156,9 +1164,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1", slug="rack-group-1")
 
+        rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
-            Rack.objects.create(name="Rack 1", location=locations[0], rack_group=rack_group),
-            Rack.objects.create(name="Rack 2", location=locations[1]),
+            Rack.objects.create(name="Rack 1", location=locations[0], rack_group=rack_group, status=rack_status),
+            Rack.objects.create(name="Rack 2", location=locations[1], status=rack_status),
         )
 
         manufacturer = Manufacturer.objects.first()
@@ -1238,10 +1247,11 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         for relationship in cls.relationships:
             relationship.validated_save()
 
+        cls.ipaddr_status = Status.objects.get_for_model(IPAddress).first()
         ipaddresses = (
-            IPAddress.objects.create(address="1.1.1.1/32"),
-            IPAddress.objects.create(address="2.2.2.2/32"),
-            IPAddress.objects.create(address="3.3.3.3/32"),
+            IPAddress.objects.create(address="1.1.1.1/32", status=cls.ipaddr_status),
+            IPAddress.objects.create(address="2.2.2.2/32", status=cls.ipaddr_status),
+            IPAddress.objects.create(address="3.3.3.3/32", status=cls.ipaddr_status),
         )
 
         for device, ipaddress in zip(devices, ipaddresses):
@@ -1346,9 +1356,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_device_interfaces(self):
         device = Device.objects.first()
 
-        Interface.objects.create(device=device, name="Interface 1")
-        Interface.objects.create(device=device, name="Interface 2")
-        Interface.objects.create(device=device, name="Interface 3")
+        intf_status = Status.objects.get_for_model(Interface).first()
+        Interface.objects.create(device=device, name="Interface 1", status=intf_status)
+        Interface.objects.create(device=device, name="Interface 2", status=intf_status)
+        Interface.objects.create(device=device, name="Interface 3", status=intf_status)
 
         url = reverse("dcim:device_interfaces", kwargs={"pk": device.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -1424,8 +1435,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         # Create an interface and assign an IP to it.
         device = Device.objects.first()
-        interface = Interface.objects.create(device=device, name="Interface 1")
-        ip_address = IPAddress.objects.create(address="1.2.3.4/32")
+        intf_status = Status.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(device=device, name="Interface 1", status=intf_status)
+        ip_address = IPAddress.objects.create(address="1.2.3.4/32", status=self.ipaddr_status)
         interface.ip_addresses.add(ip_address)
 
         # Dupe the form data and populated primary_ip4 w/ ip_address
@@ -1709,21 +1721,26 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         status_active = statuses[0]
 
         interfaces = (
-            Interface.objects.create(device=device, name="Interface 1"),
-            Interface.objects.create(device=device, name="Interface 2"),
-            Interface.objects.create(device=device, name="Interface 3"),
-            Interface.objects.create(device=device, name="LAG", type=InterfaceTypeChoices.TYPE_LAG),
-            Interface.objects.create(device=device, name="BRIDGE", type=InterfaceTypeChoices.TYPE_BRIDGE),
+            Interface.objects.create(device=device, name="Interface 1", status=status_active),
+            Interface.objects.create(device=device, name="Interface 2", status=status_active),
+            Interface.objects.create(device=device, name="Interface 3", status=status_active),
+            Interface.objects.create(
+                device=device, name="LAG", status=status_active, type=InterfaceTypeChoices.TYPE_LAG
+            ),
+            Interface.objects.create(
+                device=device, name="BRIDGE", status=status_active, type=InterfaceTypeChoices.TYPE_BRIDGE
+            ),
         )
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = interfaces
         cls.selected_objects_parent_name = device.name
 
+        vlan_status = Status.objects.get_for_model(VLAN).first()
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN1", location=device.location),
-            VLAN.objects.create(vid=101, name="VLAN101", location=device.location),
-            VLAN.objects.create(vid=102, name="VLAN102", location=device.location),
-            VLAN.objects.create(vid=103, name="VLAN103", location=device.location),
+            VLAN.objects.create(vid=1, name="VLAN1", location=device.location, status=vlan_status),
+            VLAN.objects.create(vid=101, name="VLAN101", location=device.location, status=vlan_status),
+            VLAN.objects.create(vid=102, name="VLAN102", location=device.location, status=vlan_status),
+            VLAN.objects.create(vid=103, name="VLAN103", location=device.location, status=vlan_status),
         )
 
         cls.form_data = {
@@ -2027,6 +2044,7 @@ class CableTestCase(
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
@@ -2034,107 +2052,127 @@ class CableTestCase(
                 location=location,
                 device_type=devicetype,
                 role=devicerole,
+                status=devicestatus,
             ),
             Device.objects.create(
                 name="Device 2",
                 location=location,
                 device_type=devicetype,
                 role=devicerole,
+                status=devicestatus,
             ),
             Device.objects.create(
                 name="Device 3",
                 location=location,
                 device_type=devicetype,
                 role=devicerole,
+                status=devicestatus,
             ),
             Device.objects.create(
                 name="Device 4",
                 location=location,
                 device_type=devicetype,
                 role=devicerole,
+                status=devicestatus,
             ),
         )
 
+        interface_status = Status.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.create(
                 device=devices[0],
                 name="Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[0],
                 name="Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[0],
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[1],
                 name="Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[1],
                 name="Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[1],
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[2],
                 name="Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[2],
                 name="Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[2],
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[3],
                 name="Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[3],
                 name="Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[3],
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
         )
+
+        statuses = Status.objects.get_for_model(Cable)
 
         Cable.objects.create(
             termination_a=interfaces[0],
             termination_b=interfaces[3],
             type=CableTypeChoices.TYPE_CAT6,
+            status=statuses[0],
         )
         Cable.objects.create(
             termination_a=interfaces[1],
             termination_b=interfaces[4],
             type=CableTypeChoices.TYPE_CAT6,
+            status=statuses[0],
         )
         Cable.objects.create(
             termination_a=interfaces[2],
             termination_b=interfaces[5],
             type=CableTypeChoices.TYPE_CAT6,
+            status=statuses[0],
         )
-
-        statuses = Status.objects.get_for_model(Cable)
 
         # interface_ct = ContentType.objects.get_for_model(Interface)
         cls.form_data = {
@@ -2176,14 +2214,18 @@ class CableTestCase(
         location = Location.objects.first()
         device = Device.objects.first()
 
+        interface_status = Status.objects.get_for_model(Interface).first()
         interfaces = [
-            Interface.objects.create(device=device, name="eth0"),
-            Interface.objects.create(device=device, name="eth1"),
+            Interface.objects.create(device=device, name="eth0", status=interface_status),
+            Interface.objects.create(device=device, name="eth1", status=interface_status),
         ]
 
         provider = Provider.objects.first()
         circuittype = CircuitType.objects.first()
-        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+        circuit = Circuit.objects.create(
+            cid="Circuit 1", provider=provider, circuit_type=circuittype, status=circuit_status
+        )
 
         circuit_terminations = [
             CircuitTermination.objects.create(
@@ -2311,7 +2353,8 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
 
         powerpanel = PowerPanel.objects.create(location=location, name="Power Panel 1")
-        powerfeed = PowerFeed.objects.create(power_panel=powerpanel, name="Power Feed 1")
+        pf_status = Status.objects.get_for_model(PowerFeed).first()
+        powerfeed = PowerFeed.objects.create(power_panel=powerpanel, name="Power Feed 1", status=pf_status)
 
         status_connected = Status.objects.get(name="Connected")
 
@@ -2345,20 +2388,30 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         device_1 = create_test_device("Device 1")
         device_2 = create_test_device("Device 2")
 
+        interface_status = Status.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=device_1, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP),
-            Interface.objects.create(device=device_1, name="Interface 2", type=InterfaceTypeChoices.TYPE_1GE_SFP),
-            Interface.objects.create(device=device_1, name="Interface 3", type=InterfaceTypeChoices.TYPE_1GE_SFP),
+            Interface.objects.create(
+                device=device_1, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+            ),
+            Interface.objects.create(
+                device=device_1, name="Interface 2", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+            ),
+            Interface.objects.create(
+                device=device_1, name="Interface 3", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+            ),
         )
 
         cls.device_2_interface = Interface.objects.create(
-            device=device_2, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP
+            device=device_2, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
         )
         rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
 
         provider = Provider.objects.first()
         circuittype = CircuitType.objects.first()
-        circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuittype)
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+        circuit = Circuit.objects.create(
+            cid="Circuit 1", provider=provider, circuit_type=circuittype, status=circuit_status
+        )
         circuittermination = CircuitTermination.objects.create(
             circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location
         )
@@ -2417,11 +2470,13 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         cls.devices = [
             Device.objects.create(
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 name=f"Device {num}",
                 location=location,
             )
@@ -2470,8 +2525,9 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         """
         self.user.is_superuser = True
         self.user.save()
-        Interface.objects.create(device=self.devices[0], name="eth0")
-        Interface.objects.create(device=self.devices[0], name="eth1")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        Interface.objects.create(device=self.devices[0], name="eth0", status=interface_status)
+        Interface.objects.create(device=self.devices[0], name="eth1", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
         self.assertIn("<th >Device</th>", str(response.content))
 
@@ -2482,8 +2538,9 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         """
         self.user.is_superuser = True
         self.user.save()
-        Interface.objects.create(device=self.devices[1], name="eth2")
-        Interface.objects.create(device=self.devices[1], name="eth3")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        Interface.objects.create(device=self.devices[1], name="eth2", status=interface_status)
+        Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
         self.assertNotIn("<th >Device</th>", str(response.content))
         # Sanity check:
@@ -2543,21 +2600,26 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Assign power panels generated to the class object for use later.
         cls.powerpanels = powerpanels
 
+        rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
-            Rack.objects.create(location=location, name="Rack 1"),
-            Rack.objects.create(location=location, name="Rack 2"),
+            Rack.objects.create(location=location, name="Rack 1", status=rack_status),
+            Rack.objects.create(location=location, name="Rack 2", status=rack_status),
         )
-
-        powerfeed_1 = PowerFeed.objects.create(name="Power Feed 1", power_panel=powerpanels[0], rack=racks[0])
-        powerfeed_2 = PowerFeed.objects.create(name="Power Feed 2", power_panel=powerpanels[0], rack=racks[0])
-        PowerFeed.objects.create(name="Power Feed 3", power_panel=powerpanels[0], rack=racks[0])
-
-        # Assign power feeds for the tests later
-        cls.powerfeeds = (powerfeed_1, powerfeed_2)
 
         statuses = Status.objects.get_for_model(PowerFeed)
         cls.status = statuses
         status_planned = statuses[0]
+
+        powerfeed_1 = PowerFeed.objects.create(
+            name="Power Feed 1", power_panel=powerpanels[0], rack=racks[0], status=status_planned
+        )
+        powerfeed_2 = PowerFeed.objects.create(
+            name="Power Feed 2", power_panel=powerpanels[0], rack=racks[0], status=status_planned
+        )
+        PowerFeed.objects.create(name="Power Feed 3", power_panel=powerpanels[0], rack=racks[0], status=status_planned)
+
+        # Assign power feeds for the tests later
+        cls.powerfeeds = (powerfeed_1, powerfeed_2)
 
         cls.form_data = {
             "name": "Power Feed X",
@@ -2600,9 +2662,11 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         device = Device.objects.create(
             device_type=device_type,
             role=device_role,
+            status=device_status,
             name="Device1",
             location=self.location,
         )

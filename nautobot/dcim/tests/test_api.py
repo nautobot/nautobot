@@ -83,12 +83,20 @@ class Mixins:
                 location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
                 device_type=DeviceType.objects.first(),
                 role=Role.objects.get_for_model(Device).first(),
+                status=Status.objects.get_for_model(Device).first(),
                 name="Peer Device",
             )
             if self.peer_termination_type is None:
                 raise NotImplementedError("Test case must set peer_termination_type")
-            peer_obj = self.peer_termination_type.objects.create(device=peer_device, name="Peer Termination")
-            cable = Cable(termination_a=obj, termination_b=peer_obj, label="Cable 1")
+            if self.peer_termination_type is Interface:
+                intf_status = Status.objects.get_for_model(Interface).first()
+                peer_obj = self.peer_termination_type.objects.create(
+                    device=peer_device, name="Peer Termination", status=intf_status
+                )
+            else:
+                peer_obj = self.peer_termination_type.objects.create(device=peer_device, name="Peer Termination")
+            cable_status = Status.objects.get_for_model(Cable).first()
+            cable = Cable(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=cable_status)
             cable.save()
 
             self.add_permissions(f"dcim.view_{self.model._meta.model_name}")
@@ -118,8 +126,13 @@ class Mixins:
             cls.manufacturer = cls.device_type.manufacturer
             cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
             cls.device_role = Role.objects.get_for_model(Device).first()
+            cls.device_status = Status.objects.get_for_model(Device).first()
             cls.device = Device.objects.create(
-                device_type=cls.device_type, role=cls.device_role, name="Device 1", location=cls.location
+                device_type=cls.device_type,
+                role=cls.device_role,
+                name="Device 1",
+                location=cls.location,
+                status=cls.device_status,
             )
 
     class BasePortTestMixin(ComponentTraceMixin, BaseComponentTestMixin):
@@ -601,10 +614,11 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        rack_status = Status.objects.get_for_model(Rack).first()
 
         cls.racks = (
-            Rack.objects.create(location=location, name="Rack 1"),
-            Rack.objects.create(location=location, name="Rack 2"),
+            Rack.objects.create(location=location, name="Rack 1", status=rack_status),
+            Rack.objects.create(location=location, name="Rack 2", status=rack_status),
         )
 
         RackReservation.objects.create(rack=cls.racks[0], units=[1, 2, 3], user=user, description="Reservation #1")
@@ -1024,9 +1038,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
+        rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
-            Rack.objects.create(name="Rack 1", location=locations[0]),
-            Rack.objects.create(name="Rack 2", location=locations[1]),
+            Rack.objects.create(name="Rack 1", location=locations[0], status=rack_status),
+            Rack.objects.create(name="Rack 2", location=locations[1], status=rack_status),
         )
 
         device_statuses = Status.objects.get_for_model(Device)
@@ -1202,8 +1217,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("dcim.change_device")
 
         dev = Device.objects.get(name="Device 3")
-        dev_intf = Interface.objects.create(name="Ethernet1", device=dev, type="1000base-t")
-        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24")
+        intf_status = Status.objects.get_for_model(Interface).first()
+        dev_intf = Interface.objects.create(name="Ethernet1", device=dev, type="1000base-t", status=intf_status)
+        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=ipaddr_status)
         dev_intf.add_ip_addresses(dev_ip_addr)
 
         patch_data = {"primary_ip4": dev_ip_addr.pk}
@@ -1384,10 +1401,18 @@ class InterfaceTest(Mixins.BasePortTestMixin):
         cls.devices = (
             cls.device,
             Device.objects.create(
-                device_type=cls.device_type, role=cls.device_role, name="Device 2", location=cls.location
+                device_type=cls.device_type,
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 2",
+                location=cls.location,
             ),
             Device.objects.create(
-                device_type=cls.device_type, role=cls.device_role, name="Device 3", location=cls.location
+                device_type=cls.device_type,
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 3",
+                location=cls.location,
             ),
         )
 
@@ -1444,10 +1469,11 @@ class InterfaceTest(Mixins.BasePortTestMixin):
             ),
         )
 
+        vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1),
-            VLAN.objects.create(name="VLAN 2", vid=2),
-            VLAN.objects.create(name="VLAN 3", vid=3),
+            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status),
+            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status),
+            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status),
         )
 
         cls.create_data = [
@@ -1626,6 +1652,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 name="Tagged Interface",
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=Status.objects.get_for_model(Interface).first(),
             )
             interface.tagged_vlans.add(self.vlans[0])
             payload = {"mode": None, "tagged_vlans": [self.vlans[2].pk]}
@@ -1770,24 +1797,28 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
             Device.objects.create(
                 device_type=device_types[0],
                 role=cls.device_role,
+                status=cls.device_status,
                 name="Device 2",
                 location=cls.location,
             ),
             Device.objects.create(
                 device_type=device_types[1],
                 role=cls.device_role,
+                status=cls.device_status,
                 name="Device 3",
                 location=cls.location,
             ),
             Device.objects.create(
                 device_type=device_types[1],
                 role=cls.device_role,
+                status=cls.device_status,
                 name="Device 4",
                 location=cls.location,
             ),
             Device.objects.create(
                 device_type=device_types[1],
                 role=cls.device_role,
+                status=cls.device_status,
                 name="Device 5",
                 location=cls.location,
             ),
@@ -1874,18 +1905,21 @@ class CableTest(Mixins.BaseComponentTestMixin):
             Device.objects.create(
                 device_type=cls.device_type,
                 role=cls.device_role,
+                status=cls.device_status,
                 name="Device 2",
                 location=cls.location,
             ),
             Device.objects.create(
                 device_type=cls.device_type,
                 role=cls.device_role,
+                status=cls.device_status,
                 name="Device 3",
                 location=cls.location,
             ),
         )
 
         interfaces = []
+        interface_status = Status.objects.get_for_model(Interface).first()
         for device in devices:
             for i in range(0, 10):
                 interfaces.append(
@@ -1893,6 +1927,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                         device=device,
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         name=f"eth{i}",
+                        status=interface_status,
                     )
                 )
 
@@ -1952,23 +1987,27 @@ class ConnectedDeviceTest(APITestCase):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
 
         self.device1 = Device.objects.create(
             device_type=device_type,
             role=device_role,
+            status=device_status,
             name="TestDevice1",
             location=location,
         )
         device2 = Device.objects.create(
             device_type=device_type,
             role=device_role,
+            status=device_status,
             name="TestDevice2",
             location=location,
         )
-        interface1 = Interface.objects.create(device=self.device1, name="eth0")
-        interface2 = Interface.objects.create(device=device2, name="eth0")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interface1 = Interface.objects.create(device=self.device1, name="eth0", status=interface_status)
+        interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
 
         cable = Cable(termination_a=interface1, termination_b=interface2, status=cable_status)
         cable.validated_save()
@@ -1989,83 +2028,97 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 name="Device 1",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 4",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 5",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 6",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 7",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 8",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 9",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 10",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 11",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
             Device.objects.create(
                 name="Device 12",
                 device_type=device_type,
                 role=device_role,
+                status=device_status,
                 location=location,
             ),
         )
 
         # Create 12 interfaces per device
+        interface_status = Status.objects.get_for_model(Interface).first()
         interfaces = []
         for i, device in enumerate(devices):
             for j in range(0, 13):
@@ -2075,6 +2128,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
                         device=device,
                         name=f"{i%3+1}/{j}",
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                        status=interface_status,
                     )
                 )
 
@@ -2218,12 +2272,21 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         rackgroup = RackGroup.objects.create(location=location, name="Rack Group 1", slug="rack-group-1")
         rackrole = Role.objects.get_for_model(Rack).first()
+        rackstatus = Status.objects.get_for_model(Rack).first()
 
         racks = (
-            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 1"),
-            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 2"),
-            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 3"),
-            Rack.objects.create(location=location, rack_group=rackgroup, role=rackrole, name="Rack 4"),
+            Rack.objects.create(
+                location=location, rack_group=rackgroup, role=rackrole, name="Rack 1", status=rackstatus
+            ),
+            Rack.objects.create(
+                location=location, rack_group=rackgroup, role=rackrole, name="Rack 2", status=rackstatus
+            ),
+            Rack.objects.create(
+                location=location, rack_group=rackgroup, role=rackrole, name="Rack 3", status=rackstatus
+            ),
+            Rack.objects.create(
+                location=location, rack_group=rackgroup, role=rackrole, name="Rack 4", status=rackstatus
+            ),
         )
 
         power_panels = (

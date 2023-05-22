@@ -93,8 +93,9 @@ class CableLengthTestCase(TestCase):
         cable.validated_save()
 
     def test_cable_full_clean(self):
-        interface3 = Interface.objects.create(device=self.device1, name="eth1")
-        interface4 = Interface.objects.create(device=self.device2, name="eth1")
+        interfacestatus = Status.objects.get_for_model(Interface).first()
+        interface3 = Interface.objects.create(device=self.device1, name="eth1", status=interfacestatus)
+        interface4 = Interface.objects.create(device=self.device2, name="eth1", status=interfacestatus)
         cable = Cable(
             termination_a=interface3,
             termination_b=interface4,
@@ -213,6 +214,7 @@ class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
         """
         cls.location_type_a = LocationType.objects.get(name="Campus")
         cls.location_a = Location.objects.filter(location_type=cls.location_type_a).first()
+        cls.location_status = Status.objects.get_for_model(Location).first()
         cls.rackgroup_a1 = RackGroup(location=cls.location_a, name="RackGroup A1", slug="rackgroup-a1")
         cls.rackgroup_a1.save()
         cls.rackgroup_a2 = RackGroup(location=cls.location_a, parent=cls.rackgroup_a1, name="RackGroup A2")
@@ -234,7 +236,9 @@ class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
         """Check that rack group locations are validated correctly."""
         # Group location, if specified, must permit RackGroups
         location_type_c = LocationType.objects.get(name="Elevator")
-        location_c = Location.objects.create(name="Location C", location_type=location_type_c)
+        location_c = Location.objects.create(
+            name="Location C", location_type=location_type_c, status=self.location_status
+        )
         child = RackGroup(parent=self.rackgroup_a1, location=location_c, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
@@ -243,7 +247,9 @@ class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
         # Child group location must descend from parent group location
         location_type_d = LocationType.objects.get(name="Room")
         location_type_d.content_types.add(ContentType.objects.get_for_model(RackGroup))
-        location_d = Location.objects.create(name="Location D", location_type=location_type_d, parent=location_c)
+        location_d = Location.objects.create(
+            name="Location D", location_type=location_type_d, parent=location_c, status=self.location_status
+        )
         child = RackGroup(parent=self.rackgroup_a1, location=location_d, name="Child Group")
         with self.assertRaises(ValidationError) as cm:
             child.validated_save()
@@ -258,7 +264,9 @@ class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
 
         In this test, the new Location permits Racks and PowerPanels so the Location should match.
         """
-        location_b = Location.objects.create(name="Location B", location_type=self.location_type_a)
+        location_b = Location.objects.create(
+            name="Location B", location_type=self.location_type_a, status=self.location_status
+        )
 
         self.rackgroup_a1.location = location_b
         self.rackgroup_a1.save()
@@ -277,7 +285,9 @@ class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
         """
         location_type_c = LocationType.objects.create(name="Location Type C", parent=self.location_type_a)
         location_type_c.content_types.add(ContentType.objects.get_for_model(RackGroup))
-        location_c = Location.objects.create(name="Location C", location_type=location_type_c, parent=self.location_a)
+        location_c = Location.objects.create(
+            name="Location C", location_type=location_type_c, parent=self.location_a, status=self.location_status
+        )
 
         self.rackgroup_a1.location = location_c
         with self.assertRaises(ValidationError) as cm:
@@ -426,6 +436,7 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             rack=self.rack,
             device_type=self.device_type["cc5000"],
             role=self.device_roles[3],
+            status=self.device_status,
         )
 
         # Move self.rack to a new location
@@ -452,7 +463,10 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         # Move self.rack to a new location that permits Racks but not Devices
         location_type_b = LocationType.objects.create(name="Location Type B")
         location_type_b.content_types.add(ContentType.objects.get_for_model(Rack))
-        self.rack.location = self.location2
+        location3 = Location.objects.create(
+            name="Location3", location_type=location_type_b, status=self.location_status
+        )
+        self.rack.location = location3
         with self.assertRaises(ValidationError) as cm:
             self.rack.save()
         self.assertIn(f'Devices may not associate to locations of type "{location_type_b}"', str(cm.exception))
@@ -469,7 +483,9 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
 
         # Location type must permit Racks
         location_type_b = LocationType.objects.create(name="Location Type B")
-        locationb = Location.objects.create(name="Location2", location_type=location_type_b)
+        locationb = Location.objects.create(
+            name="Location3", location_type=location_type_b, status=self.location_status
+        )
         rack = Rack(name="Rack", location=locationb, status=self.status)
         with self.assertRaises(ValidationError) as cm:
             rack.validated_save()
@@ -928,6 +944,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             role=devicerole,
             name="TestPatchPanel",
             location=location,
+            status=devicestatus,
         )
         cls.rear_port1 = RearPort.objects.create(device=cls.patch_panel, name="RP1", type="8p8c")
         cls.front_port1 = FrontPort.objects.create(
@@ -964,8 +981,13 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         cls.provider = Provider.objects.first()
         provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=cls.provider)
         cls.circuittype = CircuitType.objects.first()
-        cls.circuit1 = Circuit.objects.create(provider=cls.provider, circuit_type=cls.circuittype, cid="1")
-        cls.circuit2 = Circuit.objects.create(provider=cls.provider, circuit_type=cls.circuittype, cid="2")
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+        cls.circuit1 = Circuit.objects.create(
+            provider=cls.provider, circuit_type=cls.circuittype, cid="1", status=circuit_status
+        )
+        cls.circuit2 = Circuit.objects.create(
+            provider=cls.provider, circuit_type=cls.circuittype, cid="2", status=circuit_status
+        )
         cls.circuittermination1 = CircuitTermination.objects.create(
             circuit=cls.circuit1, location=location, term_side="A"
         )
@@ -1131,16 +1153,19 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         Status.objects.get(name=connected_status_name).delete()
         device = Device.objects.first()
 
+        interface_status = Status.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.create(
                 device=device,
                 name="eth-0",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
             Interface.objects.create(
                 device=device,
                 name="eth-1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
             ),
         )
 
@@ -1148,6 +1173,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             termination_a=interfaces[0],
             termination_b=interfaces[1],
             type=CableTypeChoices.TYPE_CAT6,
+            status=Status.objects.get_for_model(Cable).first(),
         )
 
         self.assertTrue(Cable.objects.filter(id=cable.pk).exists())
@@ -1199,7 +1225,9 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             name="Other Location VLAN",
             vid=100,
             location=Location.objects.create(
-                name="Other Location", location_type=LocationType.objects.get(name="Campus")
+                name="Other Location",
+                location_type=LocationType.objects.get(name="Campus"),
+                status=Status.objects.get_for_model(Location).first(),
             ),
             status=vlan_status,
         )
@@ -1209,6 +1237,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
         )
         with self.assertRaises(ValidationError) as err:
             interface.tagged_vlans.add(self.vlan)
@@ -1222,6 +1251,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
                 name="Test Interface",
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 device=self.device,
+                status=Status.objects.get_for_model(Interface).first(),
             )
             interface.tagged_vlans.add(self.other_location_vlan)
         self.assertEqual(
@@ -1236,6 +1266,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
         )
         ips = list(IPAddress.objects.all()[:10])
 
@@ -1260,6 +1291,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
         )
         ips = list(IPAddress.objects.all()[:10])
 
