@@ -373,9 +373,21 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
         interface_status = Status.objects.get_for_model(Interface).first()
         interfaces = (
-            Interface.objects.create(device=devices[0], name="Interface 1", status=interface_status,),
-            Interface.objects.create(device=devices[1], name="Interface 2", status=interface_status,),
-            Interface.objects.create(device=devices[2], name="Interface 3", status=interface_status,),
+            Interface.objects.create(
+                device=devices[0],
+                name="Interface 1",
+                status=interface_status,
+            ),
+            Interface.objects.create(
+                device=devices[1],
+                name="Interface 2",
+                status=interface_status,
+            ),
+            Interface.objects.create(
+                device=devices[2],
+                name="Interface 3",
+                status=interface_status,
+            ),
         )
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1")

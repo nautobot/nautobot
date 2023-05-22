@@ -12,7 +12,6 @@ from nautobot.extras.models import Role, Status
 
 
 class NaturalOrderingTestCase(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()

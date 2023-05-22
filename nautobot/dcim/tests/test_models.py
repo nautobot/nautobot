@@ -50,7 +50,6 @@ from nautobot.tenancy.models import Tenant
 
 
 class CableLengthTestCase(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1204,7 +1203,6 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
 
 
 class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
-
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
