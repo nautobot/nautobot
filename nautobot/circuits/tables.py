@@ -9,7 +9,7 @@ from nautobot.core.tables import (
 )
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from .models import Circuit, CircuitType, Provider, ProviderNetwork
+from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 CIRCUIT_TERMINATION_PARENT = """
 {% load helpers %}
@@ -140,4 +140,42 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "circuit_termination_a",
             "circuit_termination_z",
             "description",
+        )
+
+
+#
+# Circuit Terminations
+#
+
+
+class CircuitTerminationTable(BaseTable):
+    pk = ToggleColumn()
+    circuit = tables.Column(linkify=True)
+    term_side = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
+    provider_network = tables.Column(linkify=True)
+    cable = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = CircuitTermination
+        fields = (
+            "pk",
+            "circuit",
+            "term_side",
+            "location",
+            "provider_network",
+            "cable",
+            "port_speed",
+            "upstream_speed",
+            "xconnect_id",
+            "pp_info",
+            "description",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "circuit",
+            "term_side",
+            "location",
+            "provider_network",
         )

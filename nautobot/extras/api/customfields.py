@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework.fields import Field
@@ -39,20 +40,27 @@ class CustomFieldDefaultValues:
 
 @extend_schema_field(OpenApiTypes.OBJECT)
 class CustomFieldsDataField(Field):
-    def _get_custom_fields(self):
+    @property
+    def custom_field_keys(self):
         """
-        Cache CustomFields assigned to this model to avoid redundant database queries
+        Cache CustomField keys assigned to this model to avoid redundant database queries
         """
-        if not hasattr(self, "_custom_fields"):
+        if not hasattr(self, "_custom_field_keys"):
             content_type = ContentType.objects.get_for_model(self.parent.Meta.model)
-            self._custom_fields = CustomField.objects.filter(content_types=content_type)
-        return self._custom_fields
+            self._custom_field_keys = CustomField.objects.filter(content_types=content_type).values_list(
+                "key", flat=True
+            )
+        return self._custom_field_keys
 
     def to_representation(self, obj):
-        return {cf.key: obj.get(cf.key) for cf in self._get_custom_fields()}
+        return {key: obj.get(key) for key in self.custom_field_keys}
 
     def to_internal_value(self, data):
         """Support updates to individual fields on an existing instance without needing to provide the entire dict."""
+
+        # Discard any entries in data that do not align with actual CustomFields - this matches the REST API behavior
+        # for top-level serializer fields that do not exist or are not writable
+        data = {key: value for key, value in data.items() if key in self.custom_field_keys}
 
         # If updating an existing instance, start with existing _custom_field_data
         if self.parent.instance:

@@ -1,4 +1,5 @@
 from copy import deepcopy
+from io import BytesIO
 import logging
 import re
 
@@ -12,7 +13,7 @@ from django.core.exceptions import (
 )
 from django.db import transaction, IntegrityError
 from django.db.models import ManyToManyField, ProtectedError
-from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
+from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import escape
@@ -20,7 +21,10 @@ from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
+from rest_framework.exceptions import ParseError
 
+from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.forms import SearchForm
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
@@ -43,8 +47,13 @@ from nautobot.core.utils.requests import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
-from nautobot.core.views.utils import check_filter_for_display, csv_format, handle_protectederror, prepare_cloned_fields
-from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.core.views.utils import (
+    check_filter_for_display,
+    get_csv_form_fields_from_serializer_class,
+    handle_protectederror,
+    prepare_cloned_fields,
+)
+from nautobot.extras.models import ExportTemplate
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
@@ -157,6 +166,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
 
+    # TODO: remove this as well?
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -164,35 +174,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         yaml_data = [obj.to_yaml() for obj in self.queryset]
 
         return "---\n".join(yaml_data)
-
-    def queryset_to_csv(self):
-        """
-        Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
-        """
-        csv_data = []
-        custom_field_keys = []
-
-        # Start with the column headers
-        headers = self.queryset.model.csv_headers.copy()
-
-        # Add custom field headers, if any
-        if hasattr(self.queryset.model, "_custom_field_data"):
-            for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append(custom_field.add_prefix_to_cf_key())
-                custom_field_keys.append(custom_field.key)
-
-        csv_data.append(",".join(headers))
-
-        # Iterate through the queryset appending each object
-        for obj in self.queryset:
-            data = obj.to_csv()
-
-            for custom_field_key in custom_field_keys:
-                data += (obj.cf.get(custom_field_key, ""),)
-
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
 
     def validate_action_buttons(self, request):
         """Verify actions in self.action_buttons are valid view actions."""
@@ -266,13 +247,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         elif "export" in request.GET and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.yaml"
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
-        # Fall back to built-in CSV formatting if export requested but no template specified
-        elif "export" in request.GET and hasattr(model, "to_csv"):
-            response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.csv"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
@@ -806,30 +780,30 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     Import objects in bulk (CSV format).
 
     queryset: Base queryset for the model
-    model_form: The form used to create each imported object
     table: The django-tables2 Table used to render the list of imported objects
     template_name: The name of the template
-    widget_attrs: A dict of attributes to apply to the import widget (e.g. to require a session key)
     """
 
     queryset = None
-    model_form = None
     table = None
     template_name = "generic/object_bulk_import.html"
-    widget_attrs = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.serializer_class = get_serializer_for_model(self.queryset.model)
+        self.fields = get_csv_form_fields_from_serializer_class(self.serializer_class)
+        self.required_field_names = [
+            field["name"]
+            for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
+            if field["required"]
+        ]
 
     def _import_form(self, *args, **kwargs):
         class CSVImportForm(BootstrapMixin, Form):
-            csv_data = CSVDataField(from_form=self.model_form, widget=Textarea(attrs=self.widget_attrs))
-            csv_file = CSVFileField(from_form=self.model_form)
+            csv_data = CSVDataField(required_field_names=self.required_field_names)
+            csv_file = CSVFileField()
 
         return CSVImportForm(*args, **kwargs)
-
-    def _save_obj(self, obj_form, request):
-        """
-        Provide a hook to modify the object immediately before saving it (e.g. to encrypt secret data).
-        """
-        return obj_form.save()
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
@@ -840,8 +814,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             self.template_name,
             {
                 "form": self._import_form(),
-                "fields": self.model_form().fields,
-                "obj_type": self.model_form._meta.model._meta.verbose_name,
+                "fields": self.fields,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
             },
@@ -862,18 +836,24 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                         field_name = "csv_file"
                     else:
                         field_name = "csv_data"
-                    headers, records = form.cleaned_data[field_name]
-                    for row, data in enumerate(records, start=1):
-                        obj_form = self.model_form(data, headers=headers)
-                        restrict_form_fields(obj_form, request.user)
+                    csvtext = form.cleaned_data[field_name]
 
-                        if obj_form.is_valid():
-                            obj = self._save_obj(obj_form, request)
-                            new_objs.append(obj)
+                    try:
+                        data = NautobotCSVParser().parse(
+                            stream=BytesIO(csvtext.encode("utf-8")),
+                            parser_context={"request": request, "serializer_class": self.serializer_class},
+                        )
+                        serializer = self.serializer_class(data=data, context={"request": request}, many=True)
+                        if serializer.is_valid():
+                            new_objs = serializer.save()
                         else:
-                            for field, err in obj_form.errors.items():
-                                form.add_error(field_name, f"Row {row} {field}: {err[0]}")
+                            for row, errors in enumerate(serializer.errors, start=1):
+                                for field, err in errors.items():
+                                    form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
                             raise ValidationError("")
+                    except ParseError as exc:
+                        form.add_error(None, str(exc))
+                        raise ValidationError("")
 
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
@@ -912,8 +892,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             self.template_name,
             {
                 "form": form,
-                "fields": self.model_form().fields,
-                "obj_type": self.model_form._meta.model._meta.verbose_name,
+                "fields": self.fields,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-file" if form.has_error("csv_file") else "csv-data",
             },

@@ -735,7 +735,10 @@ class RelationshipAssociation(BaseModel):
         return None
 
     def get_absolute_url(self, api=False):
-        return self.relationship.get_absolute_url(api=api)
+        # TODO: in the new UI we should be able to have an actual UI URL for this model
+        if not api:
+            return self.relationship.get_absolute_url(api=api)
+        return super().get_absolute_url(api=api)
 
     def get_source(self):
         """Accessor for self.source - returns None if the object cannot be located."""

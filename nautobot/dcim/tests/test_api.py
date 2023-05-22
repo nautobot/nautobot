@@ -1382,9 +1382,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
         interface_status = Status.objects.get_for_model(Interface).first()
 
         cls.devices = (
-            Device.objects.create(
-                device_type=cls.device_type, role=cls.device_role, name="Device 1", location=cls.location
-            ),
+            cls.device,
             Device.objects.create(
                 device_type=cls.device_type, role=cls.device_role, name="Device 2", location=cls.location
             ),
@@ -1768,14 +1766,9 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         )
 
         devices = (
+            # "Device 1" was already created in super().setUpTestData
             Device.objects.create(
                 device_type=device_types[0],
-                role=cls.device_role,
-                name="Device 1",
-                location=cls.location,
-            ),
-            Device.objects.create(
-                device_type=device_types[1],
                 role=cls.device_role,
                 name="Device 2",
                 location=cls.location,
@@ -1790,6 +1783,12 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 device_type=device_types[1],
                 role=cls.device_role,
                 name="Device 4",
+                location=cls.location,
+            ),
+            Device.objects.create(
+                device_type=device_types[1],
+                role=cls.device_role,
+                name="Device 5",
                 location=cls.location,
             ),
         )
