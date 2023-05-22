@@ -21,6 +21,7 @@ export default function SidebarNav() {
     const isLoggedIn = useSelector(isLoggedInSelector);
     const currentContext = useSelector(getCurrentContextSelector);
     const menuInfo = useSelector(getMenuInfoSelector);
+    const location = useLocation();
 
     let CurrentContextIcon = <></>;
 
@@ -72,6 +73,10 @@ export default function SidebarNav() {
                                                                 menu_arr.length -
                                                                     1
                                                             }
+                                                            active={
+                                                                menu[1] ===
+                                                                location.pathname
+                                                            }
                                                         >
                                                             {menu[0]}
                                                         </SidebarButton>
@@ -89,13 +94,6 @@ export default function SidebarNav() {
                                                                             menu_arr.length -
                                                                                 1
                                                                         }
-                                                                        sx={{
-                                                                            color:
-                                                                                location.pathname ===
-                                                                                submenu[1]
-                                                                                    ? "orange-0"
-                                                                                    : "gray-1",
-                                                                        }}
                                                                     >
                                                                         {
                                                                             menu[0]
@@ -129,6 +127,10 @@ export default function SidebarNav() {
                                                                                     submenu_idx ===
                                                                                     submenu_arr.length -
                                                                                         1
+                                                                                }
+                                                                                active={
+                                                                                    submenu[1] ===
+                                                                                    location.pathname
                                                                                 }
                                                                             >
                                                                                 {
