@@ -4,13 +4,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.utils.timezone import now
+from rest_framework import HTTP_HEADER_ENCODING, status
 
 from nautobot.core.testing import APIViewTestCases, APITestCase, get_deletable_objects
 from nautobot.core.utils.data import deepmerge
 from nautobot.users.filters import GroupFilterSet
 from nautobot.users.models import ObjectPermission, Token
-
-from rest_framework import HTTP_HEADER_ENCODING
 
 
 # Use the proper swappable User model
@@ -30,18 +30,31 @@ class UserTest(APIViewTestCases.APIViewTestCase):
     validation_excluded_fields = ["password"]
     create_data = [
         {
-            "username": "User_4",
+            "username": "user_4",
             "password": "password4",
+            "is_superuser": True,
+            "is_staff": True,
+            "is_active": False,
+            "first_name": "Fourth",
+            "last_name": "User",
+            "email": "fourth.user@example.com",
+            "config_data": {
+                "tables": {
+                    "CircuitTable": {
+                        "columns": ["cid", "provider", "status", "tags"],
+                    },
+                },
+            },
+            "date_joined": now(),
         },
         {
-            "username": "User_5",
+            "username": "user_5",
             "password": "password5",
         },
         {
-            "username": "User_6",
+            "username": "user_6",
         },
     ]
-    update_data = {"username": "User_22"}
 
     @classmethod
     def setUpTestData(cls):
@@ -54,6 +67,22 @@ class UserTest(APIViewTestCases.APIViewTestCase):
         user3 = User.objects.create(username="User_3")
         user3.set_password(None)
         user3.save()
+        group = Group.objects.create(name="Group 22")
+        cls.update_data = {
+            "username": "user_22",
+            "password": "password22",
+            "is_staff": False,
+            "is_superuser": False,
+            "is_active": True,
+            "groups": [group.pk],
+            "config_data": {
+                "tables": {
+                    "ProviderTable": {
+                        "columns": ["name", "asn", "tags"],
+                    },
+                },
+            },
+        }
 
     def get_deletable_object(self):
         """Get an instance that can be deleted, being sure not to delete the test user!"""
@@ -61,6 +90,7 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 
     def test_create_object(self):
         """Add validation of the password on the created users."""
+        self.maxDiff = None
         super().test_create_object()
         for entry in self.create_data:
             user = User.objects.get(username=entry["username"])
@@ -76,12 +106,17 @@ class UserTest(APIViewTestCases.APIViewTestCase):
         self.assertFalse(user.has_usable_password())
 
     def test_update_object(self):
-        """Add validation that a partial update doesn't screw up the password."""
+        """Add validation that a partial update can change the password if requested."""
         user = self._get_queryset().first()
-        hashed_password = user.password
         super().test_update_object()
         user.refresh_from_db()
-        self.assertEqual(hashed_password, user.password)
+        self.assertTrue(user.check_password(self.update_data["password"]))
+        # Make sure the password *isn't* changed if we make a PATCH without a specified password
+        response = self.client.patch(self._get_detail_url(user), {}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertNotIn("password", response.json())
+        user.refresh_from_db()
+        self.assertTrue(user.check_password(self.update_data["password"]))
 
     def test_get_put_round_trip(self):
         """Add validation that the password is cleared by a PUT with no specified password."""
