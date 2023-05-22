@@ -2,14 +2,16 @@ import React from "react";
 import { Box, Text, Select } from "@nautobot/nautobot-ui";
 import { useSearchParams } from "react-router-dom";
 
-export default function PaginatorForm({ start, end, total_count }) {
+export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
     let [searchParams, setSearchParams] = useSearchParams();
     let paginator_string = `Showing ${start} - ${end} of ${total_count}`;
     function onPageSizeChange(event) {
         let offset = searchParams.get("offset");
-        document
-            .getElementById("ObjectListContainer")
-            .scrollIntoView({ alignToTop: true });
+        // Scroll to the top of the ObjectListTable Container on table reload
+        scroll_ref.current.scrollIntoView({
+            alignToTop: true,
+            behavior: "smooth",
+        });
         setSearchParams({
             limit: event.target.value,
             offset: offset ? offset : 0,

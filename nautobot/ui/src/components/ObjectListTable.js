@@ -2,7 +2,7 @@ import { RouterButton } from "./RouterButton";
 import { ButtonGroup, SkeletonText } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     Box,
     Heading,
@@ -52,6 +52,8 @@ export default function ObjectListTable({
 }) {
     let location = useLocation();
     const columnHelper = useMemo(() => createColumnHelper(), []);
+    // Reference point to scroll to on table reload
+    const topRef = useRef();
 
     const [columnVisibility, setColumnVisibility] = useState({});
     useEffect(() => {
@@ -130,12 +132,7 @@ export default function ObjectListTable({
     });
 
     return (
-        <Box
-            background="white-0"
-            borderRadius="md"
-            padding="md"
-            id="ObjectListContainer"
-        >
+        <Box background="white-0" borderRadius="md" padding="md" ref={topRef}>
             {!include_button ? null : (
                 <Box display="flex" justifyContent="space-between" mb="sm">
                     <Heading
@@ -198,6 +195,7 @@ export default function ObjectListTable({
                 data_count={totalCount}
                 page_size={page_size}
                 active_page={active_page_number}
+                scroll_ref={topRef}
             ></Paginator>
         </Box>
     );
