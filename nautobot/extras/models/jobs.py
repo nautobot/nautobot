@@ -341,6 +341,7 @@ class Job(PrimaryModel):
 
     @property
     def latest_result(self):
+        """Return the most recent JobResult object associated with this Job."""
         if self._latest_result is None:
             self._latest_result = self.results.only("status").first()
         return self._latest_result
