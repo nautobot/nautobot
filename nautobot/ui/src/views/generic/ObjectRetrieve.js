@@ -75,7 +75,7 @@ function render_header(value) {
     return value;
 }
 
-function DetailFieldValue(value) {
+export function DetailFieldValue(value) {
     const ref = useRef();
     if (value === undefined) {
         return <>&mdash;</>;
@@ -204,7 +204,6 @@ export default function ObjectRetrieve({ api_url }) {
         app_name: "extras",
         model_name: "object-changes",
         schema: true,
-        plugin: isPluginView,
     });
     // Note Data
     const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
@@ -222,7 +221,6 @@ export default function ObjectRetrieve({ api_url }) {
         app_name: "extras",
         model_name: "notes",
         schema: true,
-        plugin: isPluginView,
     });
 
     if (error || note_error || changelog_error) {
