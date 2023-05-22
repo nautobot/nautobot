@@ -32,50 +32,67 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         super().setUp()
 
         self.location_type = dcim_models.LocationType.objects.get(name="Campus")
+        status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
         self.parent_location_1 = dcim_models.Location.objects.create(
-            name="Test Parent Location 1", slug="test-parent-location-1", location_type=self.location_type
+            name="Test Parent Location 1",
+            slug="test-parent-location-1",
+            location_type=self.location_type,
+            status=status,
         )
         self.parent_location_2 = dcim_models.Location.objects.create(
-            name="Test Parent Location 2", slug="test-parent-location-2", location_type=self.location_type
+            name="Test Parent Location 2",
+            slug="test-parent-location-2",
+            location_type=self.location_type,
+            status=status,
         )
         self.parent_location_2a = dcim_models.Location.objects.create(
             name="Test Parent Location 2A",
             slug="test-parent-location-2a",
             parent=self.parent_location_2,
             location_type=self.location_type,
+            status=status,
         )
         self.parent_location_2ab = dcim_models.Location.objects.create(
             name="Test Parent Location 2A-B",
             slug="test-parent-location-2a-b",
             parent=self.parent_location_2a,
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_1 = dcim_models.Location.objects.create(
             parent=self.parent_location_1,
             name="Test Child Location 1",
             slug="test-child-location-1",
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_2 = dcim_models.Location.objects.create(
             parent=self.parent_location_2,
             name="Test Child Location 2",
             slug="test-child-location-2",
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_2a = dcim_models.Location.objects.create(
             parent=self.parent_location_2a,
             name="Test Child Location 2a",
             slug="test-child-location-2a",
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_2ab = dcim_models.Location.objects.create(
             parent=self.parent_location_2ab,
             name="Test Child Location 2a-b",
             slug="test-child-location-2a-b",
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_0 = dcim_models.Location.objects.create(
-            parent=None, name="Test Child Location 0", slug="test-child-location0", location_type=self.location_type
+            parent=None,
+            name="Test Child Location 0",
+            slug="test-child-location0",
+            location_type=self.location_type,
+            status=status,
         )
         self.queryset = dcim_models.Location.objects.filter(name__icontains="Test Child Location")
 
@@ -790,10 +807,11 @@ class DynamicFilterLookupExpressionTest(TestCase):
         cls.locations[1].asn = 65101
         cls.locations[2].asn = 65201
 
+        rack_status = extras_models.Status.objects.get_for_model(dcim_models.Rack).first()
         racks = (
-            dcim_models.Rack(name="Rack 1", location=cls.locations[0]),
-            dcim_models.Rack(name="Rack 2", location=cls.locations[1]),
-            dcim_models.Rack(name="Rack 3", location=cls.locations[2]),
+            dcim_models.Rack(name="Rack 1", location=cls.locations[0], status=rack_status),
+            dcim_models.Rack(name="Rack 2", location=cls.locations[1], status=rack_status),
+            dcim_models.Rack(name="Rack 3", location=cls.locations[2], status=rack_status),
         )
         dcim_models.Rack.objects.bulk_create(racks)
 
@@ -844,13 +862,26 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         dcim_models.Device.objects.bulk_create(devices)
 
+        intf_status = extras_models.Status.objects.get_for_model(dcim_models.Interface).first()
         interfaces = (
-            dcim_models.Interface(device=devices[0], name="Interface 1", mac_address="00-00-00-00-00-01"),
-            dcim_models.Interface(device=devices[0], name="Interface 2", mac_address="aa-00-00-00-00-01"),
-            dcim_models.Interface(device=devices[1], name="Interface 3", mac_address="00-00-00-00-00-02"),
-            dcim_models.Interface(device=devices[1], name="Interface 4", mac_address="bb-00-00-00-00-02"),
-            dcim_models.Interface(device=devices[2], name="Interface 5", mac_address="00-00-00-00-00-03"),
-            dcim_models.Interface(device=devices[2], name="Interface 6", mac_address="cc-00-00-00-00-03"),
+            dcim_models.Interface(
+                device=devices[0], name="Interface 1", mac_address="00-00-00-00-00-01", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[0], name="Interface 2", mac_address="aa-00-00-00-00-01", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[1], name="Interface 3", mac_address="00-00-00-00-00-02", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[1], name="Interface 4", mac_address="bb-00-00-00-00-02", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[2], name="Interface 5", mac_address="00-00-00-00-00-03", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[2], name="Interface 6", mac_address="cc-00-00-00-00-03", status=intf_status
+            ),
         )
         dcim_models.Interface.objects.bulk_create(interfaces)
 
@@ -1167,7 +1198,10 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
     def test_insufficient_unique_values(self):
         location_type = dcim_models.LocationType.objects.get(name="Campus")
         dcim_models.Location.objects.create(
-            name="getfiltersettestUniqueLocation", description="UniqueLocation description", location_type=location_type
+            name="getfiltersettestUniqueLocation",
+            description="UniqueLocation description",
+            location_type=location_type,
+            status=self.status,
         )
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
@@ -1200,11 +1234,12 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
     def setUp(self):
         super().setUp()
         self.lt = dcim_models.LocationType.objects.get(name="Campus")
+        status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
         self.parent_location_1 = dcim_models.Location.objects.create(
-            name="Test Parent Location 1", slug="test-parent-location-1", location_type=self.lt
+            name="Test Parent Location 1", slug="test-parent-location-1", location_type=self.lt, status=status
         )
         self.parent_location_2 = dcim_models.Location.objects.create(
-            name="Test Parent Location 2", slug="test-parent-location-2", location_type=self.lt
+            name="Test Parent Location 2", slug="test-parent-location-2", location_type=self.lt, status=status
         )
         self.child_location_1 = dcim_models.Location.objects.create(
             parent=self.parent_location_1,
@@ -1212,6 +1247,7 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             slug="test-child-location1",
             location_type=self.lt,
             asn=1234,
+            status=status,
         )
         self.child_location_2 = dcim_models.Location.objects.create(
             parent=self.parent_location_2,
@@ -1219,18 +1255,21 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             slug="test-child-location2",
             location_type=self.lt,
             asn=12345,
+            status=status,
         )
         self.child_location_3 = dcim_models.Location.objects.create(
             parent=None,
             name="Test Child Location 3",
             slug="test-child-location3",
             location_type=self.lt,
+            status=status,
         )
         self.child_location_4 = dcim_models.Location.objects.create(
             parent=None,
             name="Test Child Location4",
             slug="test-child-location4",
             location_type=self.lt,
+            status=status,
         )
         self.queryset = dcim_models.Location.objects.all()
 

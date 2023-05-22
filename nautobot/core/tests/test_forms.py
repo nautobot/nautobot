@@ -393,13 +393,15 @@ class DynamicModelChoiceFieldTest(TestCase):
 
     def test_prepare_value_valid_uuid(self):
         """A UUID PK referring to an actual object should be handled correctly."""
-        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24")
+        status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status)
         self.assertEqual(self.field.prepare_value(address.pk), address.pk)
         self.assertEqual(self.field_with_to_field_name.prepare_value(address.pk), address.address)
 
     def test_prepare_value_valid_object(self):
         """An object reference should be handled correctly."""
-        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24")
+        status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status)
         self.assertEqual(self.field.prepare_value(address), address.pk)
         self.assertEqual(self.field_with_to_field_name.prepare_value(address), address.address)
 
@@ -421,8 +423,9 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
 
     def test_prepare_value_multiple_object(self):
         """A list of object values should be translated to a list of PKs."""
-        address_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24")
-        address_2 = ipam_models.IPAddress.objects.create(address="10.1.1.2/24")
+        status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        address_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status)
+        address_2 = ipam_models.IPAddress.objects.create(address="10.1.1.2/24", status=status)
         self.assertEqual(
             self.field.prepare_value([address_1, address_2]),
             [address_1.pk, address_2.pk],
@@ -495,7 +498,8 @@ class AddressFieldMixinTest(TestCase):
 
     def setUp(self):
         """Setting up shared variables for the AddressFieldMixin."""
-        self.ip = ipam_models.IPAddress.objects.create(address="10.0.0.1/24")
+        status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        self.ip = ipam_models.IPAddress.objects.create(address="10.0.0.1/24", status=status)
         self.initial = {"address": self.ip.address}
 
     def test_address_initial(self):
@@ -519,7 +523,8 @@ class PrefixFieldMixinTest(TestCase):
 
     def setUp(self):
         """Setting up shared variables for the PrefixFieldMixin."""
-        self.prefix = ipam_models.Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"))
+        status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
+        self.prefix = ipam_models.Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"), status=status)
         self.initial = {"prefix": self.prefix.prefix}
 
     def test_prefix_initial(self):
