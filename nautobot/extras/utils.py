@@ -531,7 +531,7 @@ def check_if_key_is_graphql_safe(model_name, key):
         )
 
 
-def fixup_null_statuses(*, model, status_model):
+def fixup_null_statuses(*, model, model_contenttype, status_model):
     """For instances of model that have an invalid NULL status field, create and use a special status_model instance."""
     instances_to_fixup = model.objects.filter(status__isnull=True)
     if instances_to_fixup.exists():
@@ -542,6 +542,7 @@ def fixup_null_statuses(*, model, status_model):
                 "description": "Created by Nautobot to replace invalid null references",
             },
         )
+        null_status.content_types.add(model_contenttype)
         updated_count = instances_to_fixup.update(status=null_status)
         print(f"    Found and fixed {updated_count} instances of {model.__name__} that had null 'status' fields.")
 
