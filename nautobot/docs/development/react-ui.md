@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Nautobot 2.0 introduces a new user interface built on React. This new UI is a complete replacement for the previous Django-based UI, and is the recommended interface for all users. The Django UI will be removed in a future release.
+Nautobot 2.0 introduces a new user interface built on React. This new UI will eventually be a complete replacement for the previous Django-based UI. It currently prioritizes read-only operations for core views. In subsequent releases, more operations and features will become available in this new UI.
 
 ## Design Patterns
 
@@ -31,7 +31,7 @@ These sections are known as "slices" of state, and have their own methods for up
 
 ### Hooks
 
-The React UI uses hooks to manage state and side effects. Hooks are functions that let you “hook into” React state and lifecycle features. To learn more about hooks, see the [React Hooks documentation](https://react.dev/reference/react).
+The React UI uses hooks to manage state and side effects. Hooks are functions that let you "hook into" React state and lifecycle features. To learn more about hooks, see the [React Hooks documentation](https://react.dev/reference/react).
 
 ## Getting Started With Development
 
