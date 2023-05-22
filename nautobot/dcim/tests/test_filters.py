@@ -127,7 +127,10 @@ def common_test_data(cls):
 
     provider = Provider.objects.first()
     circuit_type = CircuitType.objects.first()
-    circuit = Circuit.objects.create(provider=provider, circuit_type=circuit_type, cid="Test Circuit 1")
+    circuit_status = Status.objects.get_for_model(Circuit).first()
+    circuit = Circuit.objects.create(
+        provider=provider, circuit_type=circuit_type, cid="Test Circuit 1", status=circuit_status
+    )
     CircuitTermination.objects.create(circuit=circuit, location=loc0, term_side="A")
     CircuitTermination.objects.create(circuit=circuit, location=loc1, term_side="Z")
 
@@ -264,9 +267,16 @@ def common_test_data(cls):
         Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type, location=loc1),
     )
 
-    VirtualMachine.objects.create(cluster=clusters[0], name="VM 1", role=cls.device_roles[0], platform=platforms[0])
-    VirtualMachine.objects.create(cluster=clusters[0], name="VM 2", role=cls.device_roles[1], platform=platforms[1])
-    VirtualMachine.objects.create(cluster=clusters[0], name="VM 3", role=cls.device_roles[2], platform=platforms[2])
+    vm_status = Status.objects.get_for_model(VirtualMachine)
+    VirtualMachine.objects.create(
+        cluster=clusters[0], name="VM 1", role=cls.device_roles[0], platform=platforms[0], status=vm_status
+    )
+    VirtualMachine.objects.create(
+        cluster=clusters[0], name="VM 2", role=cls.device_roles[1], platform=platforms[1], status=vm_status
+    )
+    VirtualMachine.objects.create(
+        cluster=clusters[0], name="VM 3", role=cls.device_roles[2], platform=platforms[2], status=vm_status
+    )
 
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), location=loc0)
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), location=loc0)
@@ -277,9 +287,10 @@ def common_test_data(cls):
     VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=loc0)
     VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", location=loc1)
 
-    VLAN.objects.create(name="VLAN 101", vid=101, location=loc0)
-    VLAN.objects.create(name="VLAN 102", vid=102, location=loc0)
-    VLAN.objects.create(name="VLAN 103", vid=103, location=loc1)
+    vlan_status = Status.objects.get_for_model(VLAN)
+    VLAN.objects.create(name="VLAN 101", vid=101, location=loc0, status=vlan_status)
+    VLAN.objects.create(name="VLAN 102", vid=102, location=loc0, status=vlan_status)
+    VLAN.objects.create(name="VLAN 103", vid=103, location=loc1, status=vlan_status)
 
     power_feeds = (
         PowerFeed.objects.create(name="Power Feed 1", rack=racks[0], power_panel=power_panels[0]),
@@ -2406,6 +2417,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
         devices = (
@@ -2415,6 +2427,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
                 role=device_role,
                 location=cls.locations[0],
                 vc_position=1,
+                status=device_status,
             ),
             Device.objects.create(
                 name="Device 2",
@@ -2422,6 +2435,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
                 role=device_role,
                 location=cls.locations[0],
                 vc_position=2,
+                status=device_status,
             ),
             Device.objects.create(
                 name="Device 3",
@@ -2429,6 +2443,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
                 role=device_role,
                 location=cls.locations[1],
                 vc_position=1,
+                status=device_status,
             ),
             Device.objects.create(
                 name="Device 4",
@@ -2436,6 +2451,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
                 role=device_role,
                 location=cls.locations[1],
                 vc_position=2,
+                status=device_status,
             ),
             Device.objects.create(
                 name="Device 5",
@@ -2443,6 +2459,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
                 role=device_role,
                 location=cls.locations[2],
                 vc_position=1,
+                status=device_status,
             ),
             Device.objects.create(
                 name="Device 6",
@@ -2450,6 +2467,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
                 role=device_role,
                 location=cls.locations[2],
                 vc_position=2,
+                status=device_status,
             ),
         )
 

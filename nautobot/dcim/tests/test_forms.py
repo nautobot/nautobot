@@ -28,7 +28,8 @@ class DeviceTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        cls.rack = Rack.objects.create(name="Rack 1", location=cls.location)
+        rack_status = Status.objects.get_for_model(Rack).first()
+        cls.rack = Rack.objects.create(name="Rack 1", location=cls.location, status=rack_status)
 
         # Platforms that have a manufacturer.
         mfr_platforms = Platform.objects.filter(manufacturer__isnull=False)
@@ -158,11 +159,13 @@ class LabelTestCase(TestCase):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 2",
             device_type=device_type,
             role=device_role,
             location=location,
+            status=device_status,
         )
 
     def test_interface_label_count_valid(self):
@@ -199,27 +202,33 @@ class TestCableCSVForm(TestCase):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         cls.device_1 = Device.objects.create(
             name="Device 1",
             device_type=device_type,
             role=device_role,
             location=location,
+            status=device_status,
         )
         cls.device_2 = Device.objects.create(
             name="Device 2",
             device_type=device_type,
             role=device_role,
             location=location,
+            status=device_status,
         )
+        interface_status = Status.objects.get_for_model(Interface).first()
         cls.interface_1 = Interface.objects.create(
             device=cls.device_1,
             name="Interface 1",
             type=InterfaceTypeChoices.TYPE_LAG,
+            status=interface_status,
         )
         cls.interface_2 = Interface.objects.create(
             device=cls.device_2,
             name="Interface 2",
             type=InterfaceTypeChoices.TYPE_LAG,
+            status=interface_status,
         )
 
     def test_add_error_method_converts_error_fields_to_equivalent_in_CableCSVForm(self):
@@ -254,6 +263,7 @@ class TestInterfaceCSVForm(TestCase):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         cls.devices = (
             Device.objects.create(
@@ -261,18 +271,21 @@ class TestInterfaceCSVForm(TestCase):
                 device_type=device_type,
                 role=device_role,
                 location=location,
+                status=device_status,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
                 role=device_role,
                 location=location,
+                status=device_status,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
                 role=device_role,
                 location=location,
+                status=device_status,
             ),
         )
 
@@ -288,26 +301,31 @@ class TestInterfaceCSVForm(TestCase):
                 device=cls.devices[0],
                 name="Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                status=cls.status,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
                 name="Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=cls.status,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_LAG,
+                status=cls.status,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
                 name="Interface 4",
                 type=InterfaceTypeChoices.TYPE_LAG,
+                status=cls.status,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
                 name="Interface 5",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=cls.status,
             ),
         )
         cls.headers_1 = {
