@@ -20,7 +20,7 @@ import { uiUrl } from "@utils/url";
 
 export default function HomeChangelogPanel() {
     const { data, isError } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: "object-changes",
         limit: 10,
         depth: 1,
