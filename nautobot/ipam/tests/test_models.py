@@ -63,14 +63,14 @@ class IPAddressToInterfaceTest(TestCase):
 class TestVarbinaryIPField(TestCase):
     """Tests for `nautobot.ipam.fields.VarbinaryIPField`."""
 
-    def setUp(self):
-        super().setUp()
-
+    @classmethod
+    def setUpTestData(cls):
         # Field is a VarbinaryIPField we'll use to test.
-        self.prefix = Prefix.objects.create(prefix="10.0.0.0/24")
-        self.field = self.prefix._meta.get_field("network")
-        self.network = self.prefix.network
-        self.network_packed = bytes(self.prefix.prefix.network)
+        status = Status.objects.get_for_model(Prefix).first()
+        cls.prefix = Prefix.objects.create(prefix="10.0.0.0/24", status=status)
+        cls.field = cls.prefix._meta.get_field("network")
+        cls.network = cls.prefix.network
+        cls.network_packed = bytes(cls.prefix.prefix.network)
 
     def test_db_type(self):
         """Test `VarbinaryIPField.db_type`."""
@@ -170,17 +170,16 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     def test_prefix_validation(self):
         location_type = LocationType.objects.get(name="Room")
         location = Location.objects.filter(location_type=location_type).first()
-        prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location)
-        prefix.status = self.statuses[0]
+        prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location, status=self.statuses[0])
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
     def test_get_duplicates(self):
         prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0]),
         )
         duplicate_prefix_pks = [p.pk for p in prefixes[0].get_duplicates()]
 
@@ -189,11 +188,15 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     def test_get_child_prefixes(self):
         vrfs = VRF.objects.all()[:3]
         prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), type=PrefixTypeChoices.TYPE_CONTAINER),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), vrf=None),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.1.0/24"), vrf=vrfs[0]),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.2.0/24"), vrf=vrfs[1]),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.3.0/24"), vrf=vrfs[2]),
+            Prefix.objects.create(
+                prefix=netaddr.IPNetwork("10.0.0.0/16"),
+                type=PrefixTypeChoices.TYPE_CONTAINER,
+                status=self.statuses[0],
+            ),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), vrf=None, status=self.statuses[0]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.1.0/24"), vrf=vrfs[0], status=self.statuses[0]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.2.0/24"), vrf=vrfs[1], status=self.statuses[0]),
+            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.3.0/24"), vrf=vrfs[2], status=self.statuses[0]),
         )
         child_prefix_pks = {p.pk for p in prefixes[0].get_child_prefixes()}
 
@@ -213,13 +216,14 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     def test_get_child_ips(self):
         vrfs = VRF.objects.all()[:3]
         parent_prefix = Prefix.objects.create(
-            prefix=netaddr.IPNetwork("10.0.0.0/16"), type=PrefixTypeChoices.TYPE_CONTAINER
+            prefix=netaddr.IPNetwork("10.0.0.0/16"), type=PrefixTypeChoices.TYPE_CONTAINER, status=self.statuses[0]
         )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
         ips = (
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.0.1/24"), vrf=None),
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.1.1/24"), vrf=vrfs[0]),
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.2.1/24"), vrf=vrfs[1]),
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.3.1/24"), vrf=vrfs[2]),
+            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.0.1/24"), vrf=None, status=ip_status),
+            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.1.1/24"), vrf=vrfs[0], status=ip_status),
+            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.2.1/24"), vrf=vrfs[1], status=ip_status),
+            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.3.1/24"), vrf=vrfs[2], status=ip_status),
         )
         child_ip_pks = {p.pk for p in parent_prefix.get_child_ips()}
 
@@ -235,11 +239,11 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
 
         # Make sure /31 is handled correctly
         parent_prefix_31 = Prefix.objects.create(
-            prefix=netaddr.IPNetwork("10.0.4.0/31"), type=PrefixTypeChoices.TYPE_CONTAINER
+            prefix=netaddr.IPNetwork("10.0.4.0/31"), type=PrefixTypeChoices.TYPE_CONTAINER, status=self.statuses[0]
         )
         ips_31 = (
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.0/31"), vrf=None),
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.1/31"), vrf=None),
+            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.0/31"), vrf=None, status=ip_status),
+            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.1/31"), vrf=None, status=ip_status),
         )
 
         child_ip_pks = {p.pk for p in parent_prefix_31.get_child_ips()}
@@ -248,10 +252,10 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     def test_get_available_prefixes(self):
         prefixes = Prefix.objects.bulk_create(
             (
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/20")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.32.0/20")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.128.0/18")),
+                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=self.statuses[0]),  # Parent prefix
+                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/20"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("10.0.32.0/20"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("10.0.128.0/18"), status=self.statuses[0]),
             )
         )
         missing_prefixes = netaddr.IPSet(
@@ -267,16 +271,17 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(available_prefixes, missing_prefixes)
 
     def test_get_available_ips(self):
-        parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/28"))
+        parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/28"), status=self.statuses[0])
+        ip_status = Status.objects.get_for_model(IPAddress).first()
         IPAddress.objects.bulk_create(
             (
-                IPAddress(address=netaddr.IPNetwork("10.0.0.1/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.3/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.5/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.7/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.9/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.11/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.13/26")),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.1/26"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.3/26"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.5/26"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.7/26"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.9/26"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.11/26"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.13/26"), status=ip_status),
             )
         )
         missing_ips = netaddr.IPSet(
@@ -297,38 +302,41 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
     def test_get_first_available_prefix(self):
         prefixes = Prefix.objects.bulk_create(
             (
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/24")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.1.0/24")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.2.0/24")),
+                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=self.statuses[0]),  # Parent prefix
+                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/24"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("10.0.1.0/24"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("10.0.2.0/24"), status=self.statuses[0]),
             )
         )
         self.assertEqual(prefixes[0].get_first_available_prefix(), netaddr.IPNetwork("10.0.3.0/24"))
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.3.0/24"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.3.0/24"), status=self.statuses[0])
         self.assertEqual(prefixes[0].get_first_available_prefix(), netaddr.IPNetwork("10.0.4.0/22"))
 
     def test_get_first_available_ip(self):
-        parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"))
+        parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), status=self.statuses[0])
+        ip_status = Status.objects.get_for_model(IPAddress).first()
         IPAddress.objects.bulk_create(
             (
-                IPAddress(address=netaddr.IPNetwork("10.0.0.1/24")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.2/24")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.3/24")),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.1/24"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.2/24"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.3/24"), status=ip_status),
             )
         )
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.4/24")
 
-        IPAddress.objects.create(address=netaddr.IPNetwork("10.0.0.4/24"))
+        IPAddress.objects.create(address=netaddr.IPNetwork("10.0.0.4/24"), status=ip_status)
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.5/24")
 
     def test_get_utilization(self):
         # Container Prefix
-        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), type=PrefixTypeChoices.TYPE_CONTAINER)
+        prefix = Prefix.objects.create(
+            prefix=netaddr.IPNetwork("10.0.0.0/24"), type=PrefixTypeChoices.TYPE_CONTAINER, status=self.statuses[0]
+        )
         Prefix.objects.bulk_create(
             (
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/26")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.128/26")),
+                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/26"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("10.0.0.128/26"), status=self.statuses[0]),
             )
         )
         self.assertEqual(prefix.get_utilization(), (128, 256))
@@ -336,13 +344,17 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         # IPv4 Non-container Prefix /24
         prefix.type = PrefixTypeChoices.TYPE_NETWORK
         prefix.save()
+        ip_status = Status.objects.get_for_model(IPAddress).first()
         IPAddress.objects.bulk_create(
             # Create 32 IPAddresses within the Prefix
-            [IPAddress(address=netaddr.IPNetwork(f"10.0.0.{i}/24")) for i in range(1, 33)]
+            [IPAddress(address=netaddr.IPNetwork(f"10.0.0.{i}/24"), status=ip_status) for i in range(1, 33)]
         )
         # Create IPAddress objects for network and broadcast addresses
         IPAddress.objects.bulk_create(
-            (IPAddress(address=netaddr.IPNetwork("10.0.0.0/32")), IPAddress(address=netaddr.IPNetwork("10.0.0.255/32")))
+            (
+                IPAddress(address=netaddr.IPNetwork("10.0.0.0/32"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.0.255/32"), status=ip_status),
+            )
         )
         self.assertEqual(prefix.get_utilization(), (32, 254))
 
@@ -352,61 +364,71 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
         self.assertEqual(prefix.get_utilization(), (34, 256))
 
         # IPv4 Non-container Prefix /31, network and broadcast addresses count toward utilization
-        prefix = Prefix.objects.create(prefix="10.0.1.0/31")
+        prefix = Prefix.objects.create(prefix="10.0.1.0/31", status=self.statuses[0])
         IPAddress.objects.bulk_create(
-            (IPAddress(address=netaddr.IPNetwork("10.0.1.0/32")), IPAddress(address=netaddr.IPNetwork("10.0.1.1/32")))
+            (
+                IPAddress(address=netaddr.IPNetwork("10.0.1.0/32"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("10.0.1.1/32"), status=ip_status),
+            )
         )
         self.assertEqual(prefix.get_utilization(), (2, 2))
 
         # IPv6 Non-container Prefix, network and broadcast addresses count toward utilization
-        prefix = Prefix.objects.create(prefix="aaaa::/124")
+        prefix = Prefix.objects.create(prefix="aaaa::/124", status=self.statuses[0])
         IPAddress.objects.bulk_create(
-            (IPAddress(address=netaddr.IPNetwork("aaaa::0/128")), IPAddress(address=netaddr.IPNetwork("aaaa::f/128")))
+            (
+                IPAddress(address=netaddr.IPNetwork("aaaa::0/128"), status=ip_status),
+                IPAddress(address=netaddr.IPNetwork("aaaa::f/128"), status=ip_status),
+            )
         )
         self.assertEqual(prefix.get_utilization(), (2, 16))
 
         # Large Prefix
-        large_prefix = Prefix.objects.create(prefix="22.0.0.0/8", type=PrefixTypeChoices.TYPE_CONTAINER)
+        large_prefix = Prefix.objects.create(
+            prefix="22.0.0.0/8", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.statuses[0]
+        )
 
         # 25% utilization
         Prefix.objects.bulk_create(
             (
-                Prefix(prefix=netaddr.IPNetwork("22.0.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.16.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.32.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.48.0.0/12")),
+                Prefix(prefix=netaddr.IPNetwork("22.0.0.0/12"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("22.16.0.0/12"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("22.32.0.0/12"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("22.48.0.0/12"), status=self.statuses[0]),
             )
         )
         self.assertEqual(large_prefix.get_utilization(), (4194304, 16777216))
 
         # 50% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.64.0.0/10")),))
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.64.0.0/10"), status=self.statuses[0]),))
         self.assertEqual(large_prefix.get_utilization(), (8388608, 16777216))
 
         # 100% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.128.0.0/9")),))
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.128.0.0/9"), status=self.statuses[0]),))
         self.assertEqual(large_prefix.get_utilization(), (16777216, 16777216))
 
         # IPv6 Large Prefix
-        large_prefix_v6 = Prefix.objects.create(prefix="ab00::/8", type=PrefixTypeChoices.TYPE_CONTAINER)
+        large_prefix_v6 = Prefix.objects.create(
+            prefix="ab00::/8", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.statuses[0]
+        )
 
         # 25% utilization
         Prefix.objects.bulk_create(
             (
-                Prefix(prefix=netaddr.IPNetwork("ab00::/12")),
-                Prefix(prefix=netaddr.IPNetwork("ab10::/12")),
-                Prefix(prefix=netaddr.IPNetwork("ab20::/12")),
-                Prefix(prefix=netaddr.IPNetwork("ab30::/12")),
+                Prefix(prefix=netaddr.IPNetwork("ab00::/12"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("ab10::/12"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("ab20::/12"), status=self.statuses[0]),
+                Prefix(prefix=netaddr.IPNetwork("ab30::/12"), status=self.statuses[0]),
             )
         )
         self.assertEqual(large_prefix_v6.get_utilization(), (2**118, 2**120))
 
         # 50% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("ab40::/10")),))
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("ab40::/10"), status=self.statuses[0]),))
         self.assertEqual(large_prefix_v6.get_utilization(), (2**119, 2**120))
 
         # 100% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("ab80::/9")),))
+        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("ab80::/9"), status=self.statuses[0]),))
         self.assertEqual(large_prefix_v6.get_utilization(), (2**120, 2**120))
 
     #
@@ -415,37 +437,41 @@ class TestPrefix(TestCase):  # TODO change to BaseModelTestCase
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=False)
     def test_duplicate_global(self):
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0])
+        duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0])
         self.assertIsNone(duplicate_prefix.clean())
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_global_unique(self):
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0])
+        duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0])
         self.assertRaises(ValidationError, duplicate_prefix.clean)
 
     def test_duplicate_vrf(self):
         vrf = VRF.objects.filter(enforce_unique=False).first()
-        Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
+        Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0])
+        duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0])
         self.assertIsNone(duplicate_prefix.clean())
 
     def test_duplicate_vrf_unique(self):
         vrf = VRF.objects.filter(enforce_unique=True).first()
-        Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
+        Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0])
+        duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"), status=self.statuses[0])
         self.assertRaises(ValidationError, duplicate_prefix.clean)
 
 
 class TestIPAddress(ModelTestCases.BaseModelTestCase):
     model = IPAddress
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.status = Status.objects.get_for_model(IPAddress).first()
+
     def test_get_duplicates(self):
         ips = (
-            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
-            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
-            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
+            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status),
+            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status),
+            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status),
         )
         duplicate_ip_pks = [p.pk for p in ips[0].get_duplicates()]
 
@@ -457,48 +483,48 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=False)
     def test_duplicate_global(self):
-        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
+        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status)
+        duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status)
         self.assertIsNone(duplicate_ip.clean())
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_global_unique(self):
-        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
+        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status)
+        duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status)
         self.assertRaises(ValidationError, duplicate_ip.clean)
 
     def test_duplicate_vrf(self):
         vrf = VRF.objects.filter(enforce_unique=False).first()
-        IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
+        IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status)
+        duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status)
         self.assertIsNone(duplicate_ip.clean())
 
     def test_duplicate_vrf_unique(self):
         vrf = VRF.objects.filter(enforce_unique=True).first()
-        IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
+        IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status)
+        duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"), status=self.status)
         self.assertRaises(ValidationError, duplicate_ip.clean)
 
     @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_nonunique_role(self):
         roles = Role.objects.get_for_model(IPAddress)
-        IPAddress.objects.create(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=roles[0],
-        )
-        IPAddress.objects.create(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=roles[1],
-        )
+        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), role=roles[0], status=self.status)
+        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), role=roles[1], status=self.status)
 
     def test_multiple_nat_outside_list(self):
         """
         Test suite to test supporing nat_outside_list.
         """
-        nat_inside = IPAddress.objects.create(address=netaddr.IPNetwork("192.168.0.1/24"))
-        nat_outside1 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), nat_inside=nat_inside)
-        nat_outside2 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.2/24"), nat_inside=nat_inside)
-        nat_outside3 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.3/24"), nat_inside=nat_inside)
+        nat_inside = IPAddress.objects.create(address=netaddr.IPNetwork("192.168.0.1/24"), status=self.status)
+        nat_outside1 = IPAddress.objects.create(
+            address=netaddr.IPNetwork("192.0.2.1/24"), nat_inside=nat_inside, status=self.status
+        )
+        nat_outside2 = IPAddress.objects.create(
+            address=netaddr.IPNetwork("192.0.2.2/24"), nat_inside=nat_inside, status=self.status
+        )
+        nat_outside3 = IPAddress.objects.create(
+            address=netaddr.IPNetwork("192.0.2.3/24"), nat_inside=nat_inside, status=self.status
+        )
         nat_inside.refresh_from_db()
         self.assertEqual(nat_inside.nat_outside_list.count(), 3)
         self.assertEqual(nat_inside.nat_outside_list.all()[0], nat_outside1)
@@ -509,7 +535,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         slaac_status_name = IPAddressStatusChoices.as_dict()[IPAddressStatusChoices.STATUS_SLAAC]
         IPAddress.objects.filter(status__name=slaac_status_name).delete()
         Status.objects.get(name=slaac_status_name).delete()
-        IPAddress.objects.create(address="1.1.1.1/32")
+        IPAddress.objects.create(address="1.1.1.1/32", status=self.status)
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
 
 
@@ -526,17 +552,18 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
 
     def test_get_next_available_vid(self):
         vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
+        status = Status.objects.get_for_model(VLAN).first()
         VLAN.objects.bulk_create(
             (
-                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup),
-                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup),
-                VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup),
-                VLAN(name="VLAN 5", vid=5, vlan_group=vlangroup),
+                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 5", vid=5, vlan_group=vlangroup, status=status),
             )
         )
         self.assertEqual(vlangroup.get_next_available_vid(), 4)
 
-        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup),))
+        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup, status=status),))
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
 
 
@@ -557,7 +584,8 @@ class VLANTestCase(ModelTestCases.BaseModelTestCase):
         location_type.content_types.add(ContentType.objects.get_for_model(VLAN))
         group = VLANGroup.objects.create(name="Group 1")
         vlan.vlan_group = group
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type)
+        location_status = Status.objects.get_for_model(Location).first()
+        location_2 = Location.objects.create(name="Location 2", location_type=location_type, status=location_status)
         group.location = location_2
         group.save()
         with self.assertRaises(ValidationError) as cm:

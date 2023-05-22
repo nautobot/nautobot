@@ -315,8 +315,10 @@ class ParallelPrefixTest(APITransactionTestCase):
     """
 
     def test_create_multiple_available_prefixes_parallel(self):
-        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL)
         prefix_status = Status.objects.get_for_model(Prefix).first()
+        prefix = Prefix.objects.create(
+            prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL, status=prefix_status
+        )
 
         # 5 Prefixes
         requests = [
@@ -331,8 +333,10 @@ class ParallelPrefixTest(APITransactionTestCase):
         self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
 
     def test_create_multiple_available_ips_parallel(self):
-        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL)
         prefix_status = Status.objects.get_for_model(Prefix).first()
+        prefix = Prefix.objects.create(
+            prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL, status=prefix_status
+        )
 
         # 8 IPs
         requests = [{"description": f"Test IP {i}", "status": prefix_status.pk} for i in range(1, 9)]

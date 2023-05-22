@@ -5,6 +5,7 @@ import netaddr
 from django.db import connection
 
 from nautobot.core.testing import TestCase
+from nautobot.extras.models import Status
 from nautobot.ipam.models import Prefix, IPAddress
 
 
@@ -15,15 +16,16 @@ class IPAddressQuerySet(TestCase):
     def setUpTestData(cls):
         cls.queryset.delete()
 
+        status = Status.objects.get_for_model(IPAddress).first()
         cls.ips = {
-            "10.0.0.1/24": IPAddress.objects.create(address="10.0.0.1/24", vrf=None, tenant=None),
-            "10.0.0.1/25": IPAddress.objects.create(address="10.0.0.1/25", vrf=None, tenant=None),
-            "10.0.0.2/24": IPAddress.objects.create(address="10.0.0.2/24", vrf=None, tenant=None),
-            "10.0.0.3/24": IPAddress.objects.create(address="10.0.0.3/24", vrf=None, tenant=None),
-            "10.0.0.4/24": IPAddress.objects.create(address="10.0.0.4/24", vrf=None, tenant=None),
-            "2001:db8::1/64": IPAddress.objects.create(address="2001:db8::1/64", vrf=None, tenant=None),
-            "2001:db8::2/64": IPAddress.objects.create(address="2001:db8::2/64", vrf=None, tenant=None),
-            "2001:db8::3/64": IPAddress.objects.create(address="2001:db8::3/64", vrf=None, tenant=None),
+            "10.0.0.1/24": IPAddress.objects.create(address="10.0.0.1/24", vrf=None, tenant=None, status=status),
+            "10.0.0.1/25": IPAddress.objects.create(address="10.0.0.1/25", vrf=None, tenant=None, status=status),
+            "10.0.0.2/24": IPAddress.objects.create(address="10.0.0.2/24", vrf=None, tenant=None, status=status),
+            "10.0.0.3/24": IPAddress.objects.create(address="10.0.0.3/24", vrf=None, tenant=None, status=status),
+            "10.0.0.4/24": IPAddress.objects.create(address="10.0.0.4/24", vrf=None, tenant=None, status=status),
+            "2001:db8::1/64": IPAddress.objects.create(address="2001:db8::1/64", vrf=None, tenant=None, status=status),
+            "2001:db8::2/64": IPAddress.objects.create(address="2001:db8::2/64", vrf=None, tenant=None, status=status),
+            "2001:db8::3/64": IPAddress.objects.create(address="2001:db8::3/64", vrf=None, tenant=None, status=status),
         }
 
     def test_ip_family(self):
@@ -229,7 +231,8 @@ class IPAddressQuerySet(TestCase):
             self.ips.values(),
         )
 
-        extra_ip = IPAddress.objects.create(address="192.168.0.1/24", vrf=None, tenant=None)
+        status = Status.objects.get_for_model(IPAddress).first()
+        extra_ip = IPAddress.objects.create(address="192.168.0.1/24", vrf=None, tenant=None, status=status)
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["192.168.0.0/31"]),
             [extra_ip],
@@ -437,19 +440,20 @@ class PrefixQuerysetTestCase(TestCase):
     def setUpTestData(cls):
         cls.queryset.delete()
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"))
+        status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), status=status)
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.0/24"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.0/24"), status=status)
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.192/28"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.208/28"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.224/28"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.192/28"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.208/28"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.224/28"), status=status)
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/64"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/120"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/122"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/64"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/120"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/122"), status=status)
 
     def test_net_equals(self):
         self.assertEqual(self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
