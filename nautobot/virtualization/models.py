@@ -44,19 +44,11 @@ class ClusterType(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "description"]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.description,
-        )
 
 
 #
@@ -76,19 +68,11 @@ class ClusterGroup(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "description"]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.description,
-        )
 
 
 #
@@ -135,7 +119,6 @@ class Cluster(PrimaryModel):
     )
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "cluster_type", "cluster_group", "location", "tenant", "comments"]
     clone_fields = [
         "cluster_type",
         "cluster_group",
@@ -176,16 +159,6 @@ class Cluster(PrimaryModel):
                         f'but belong to a location other than "{self.location}".'
                     }
                 )
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.cluster_type.name,
-            self.cluster_group.name if self.cluster_group else None,
-            self.location.name if self.location else None,
-            self.tenant.name if self.tenant else None,
-            self.comments,
-        )
 
 
 #
@@ -252,18 +225,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
 
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
-    csv_headers = [
-        "name",
-        "status",
-        "role",
-        "cluster",
-        "tenant",
-        "platform",
-        "vcpus",
-        "memory",
-        "disk",
-        "comments",
-    ]
     clone_fields = [
         "cluster",
         "tenant",
@@ -320,20 +281,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
                             field: f"The specified IP address ({ip}) is not assigned to this VM.",
                         }
                     )
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            self.cluster.name,
-            self.tenant.name if self.tenant else None,
-            self.platform.name if self.platform else None,
-            self.vcpus,
-            self.memory,
-            self.disk,
-            self.comments,
-        )
 
     @property
     def primary_ip(self):
@@ -401,19 +348,6 @@ class VMInterface(PrimaryModel, BaseInterface):
         verbose_name="IP Addresses",
     )
 
-    csv_headers = [
-        "virtual_machine",
-        "name",
-        "enabled",
-        "mac_address",
-        "mtu",
-        "description",
-        "mode",
-        "status",
-        "parent_interface",
-        "bridge",
-    ]
-
     class Meta:
         verbose_name = "VM interface"
         ordering = ("virtual_machine", CollateAsChar("_name"))
@@ -421,20 +355,6 @@ class VMInterface(PrimaryModel, BaseInterface):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.virtual_machine.name,
-            self.name,
-            self.enabled,
-            self.mac_address,
-            self.mtu,
-            self.description,
-            self.get_mode_display(),
-            self.get_status_display(),
-            self.parent_interface.name if self.parent_interface else None,
-            self.bridge.name if self.bridge else None,
-        )
 
     def to_objectchange(self, action, **kwargs):
         # Annotate the parent VirtualMachine

@@ -113,10 +113,16 @@ def export_button(context, content_type=None):
     if content_type is not None:
         user = context["request"].user
         export_templates = models.ExportTemplate.objects.restrict(user, "view").filter(content_type=content_type)
+        try:
+            export_url = reverse(lookup.get_route_for_model(content_type.model_class(), "list", api=True))
+        except NoReverseMatch:
+            export_url = None
     else:
         export_templates = []
+        export_url = None
 
     return {
+        "export_url": export_url,
         "url_params": context["request"].GET,
         "export_templates": export_templates,
     }

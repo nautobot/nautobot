@@ -1334,10 +1334,12 @@ class DeviceRedundancyGroupStatusChoices(ChoiceSet):
 
 
 class DeviceRedundancyGroupFailoverStrategyChoices(ChoiceSet):
+    FAILOVER_UNSPECIFIED = ""
     FAILOVER_ACTIVE_ACTIVE = "active-active"
     FAILOVER_ACTIVE_PASSIVE = "active-passive"
 
     CHOICES = (
+        (FAILOVER_UNSPECIFIED, "(unspecified)"),
         (FAILOVER_ACTIVE_ACTIVE, "Active/Active"),
         (FAILOVER_ACTIVE_PASSIVE, "Active/Passive"),
     )

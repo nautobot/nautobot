@@ -46,7 +46,9 @@
             </a>
         {% endif %}
     {% endif %}
-    {% export_button %}
+    <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ result.pk }}&format=csv" class="btn btn-success">
+        <span class="mdi mdi-database-export" aria-hidden="true"></span> Export
+    </a>
     {{ block.super }}
 {% endblock buttons %}
 

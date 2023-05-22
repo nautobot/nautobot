@@ -93,19 +93,6 @@ class Cable(PrimaryModel):
         to=Device, on_delete=models.CASCADE, related_name="+", blank=True, null=True
     )
 
-    csv_headers = [
-        "termination_a_type",
-        "termination_a_id",
-        "termination_b_type",
-        "termination_b_id",
-        "type",
-        "status",
-        "label",
-        "color",
-        "length",
-        "length_unit",
-    ]
-
     class Meta:
         ordering = [
             "termination_a_type",
@@ -272,20 +259,6 @@ class Cable(PrimaryModel):
 
         # Update the private pk used in __str__ in case this is a new object (i.e. just got its pk)
         self._pk = self.pk
-
-    def to_csv(self):
-        return (
-            f"{self.termination_a_type.app_label}.{self.termination_a_type.model}",
-            self.termination_a_id,
-            f"{self.termination_b_type.app_label}.{self.termination_b_type.model}",
-            self.termination_b_id,
-            self.get_type_display(),
-            self.get_status_display(),
-            self.label,
-            self.color,
-            self.length,
-            self.length_unit,
-        )
 
     def get_compatible_types(self):
         """

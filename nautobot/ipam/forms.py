@@ -5,8 +5,6 @@ from nautobot.core.forms import (
     AddressFieldMixin,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
-    CSVChoiceField,
-    CSVModelChoiceField,
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -22,21 +20,17 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
-    LocatableModelCSVFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
 from nautobot.dcim.models import Device, Location, Rack
 from nautobot.extras.forms import (
-    CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,
     RoleModelBulkEditFormMixin,
-    RoleModelCSVFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
@@ -101,19 +95,6 @@ class VRFForm(NautobotModelForm, TenancyForm):
         }
 
 
-class VRFCSVForm(CustomFieldModelCSVForm):
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = VRF
-        fields = VRF.csv_headers
-
-
 class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -157,19 +138,6 @@ class RouteTargetForm(NautobotModelForm, TenancyForm):
             "tenant",
             "tags",
         ]
-
-
-class RouteTargetCSVForm(CustomFieldModelCSVForm):
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = RouteTarget
-        fields = RouteTarget.csv_headers
 
 
 class RouteTargetBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -217,15 +185,6 @@ class RIRForm(NautobotModelForm):
             "is_private",
             "description",
         ]
-
-
-class RIRCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = RIR
-        fields = RIR.csv_headers
-        help_texts = {
-            "name": "RIR name",
-        }
 
 
 class RIRFilterForm(NautobotFilterForm):
@@ -298,56 +257,6 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         super().__init__(*args, **kwargs)
 
         self.fields["vrf"].empty_label = "Global"
-
-
-class PrefixCSVForm(
-    PrefixFieldMixin,
-    LocatableModelCSVFormMixin,
-    StatusModelCSVFormMixin,
-    RoleModelCSVFormMixin,
-    CustomFieldModelCSVForm,
-):
-    vrf = CSVModelChoiceField(
-        queryset=VRF.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned VRF",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-    vlan_group = CSVModelChoiceField(
-        queryset=VLANGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="VLAN's group (if any)",
-    )
-    vlan = CSVModelChoiceField(
-        queryset=VLAN.objects.all(),
-        required=False,
-        to_field_name="vid",
-        help_text="Assigned VLAN",
-    )
-    type = CSVChoiceField(choices=PrefixTypeChoices, required=False)
-    rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
-
-    class Meta:
-        model = Prefix
-        fields = Prefix.csv_headers
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit vlan queryset by assigned location and vlan_group
-            params = {
-                f"location__{self.fields['location'].to_field_name}": data.get("location"),
-                f"vlan_group__{self.fields['vlan_group'].to_field_name}": data.get("vlan_group"),
-            }
-            self.fields["vlan"].queryset = self.fields["vlan"].queryset.filter(**params)
 
 
 class PrefixBulkEditForm(
@@ -580,33 +489,6 @@ class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
         self.fields["vrf"].empty_label = "Global"
 
 
-class IPAddressCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, AddressFieldMixin, CustomFieldModelCSVForm):
-    vrf = CSVModelChoiceField(
-        queryset=VRF.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned VRF",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = IPAddress
-        fields = [
-            "address",
-            "vrf",
-            "tenant",
-            "status",
-            "role",
-            "dns_name",
-            "description",
-        ]
-
-
 class IPAddressBulkEditForm(
     TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm
 ):
@@ -706,12 +588,6 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
         ]
 
 
-class VLANGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
-    class Meta:
-        model = VLANGroup
-        fields = VLANGroup.csv_headers
-
-
 class VLANGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = VLANGroup
 
@@ -750,37 +626,6 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "status": "Operational status of this VLAN",
             "role": "The primary function of this VLAN",
         }
-
-
-class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
-    vlan_group = CSVModelChoiceField(
-        queryset=VLANGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned VLAN group",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = VLAN
-        fields = VLAN.csv_headers
-        help_texts = {
-            "vid": "Numeric VLAN ID (1-4095)",
-            "name": "VLAN name",
-        }
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-            # Limit vlan queryset by assigned group
-            params = {f"location__{self.fields['location'].to_field_name}": data.get("location")}
-            self.fields["vlan_group"].queryset = self.fields["vlan_group"].queryset.filter(**params)
 
 
 class VLANBulkEditForm(
@@ -895,26 +740,6 @@ class ServiceFilterForm(NautobotFilterForm):
         required=False,
     )
     tag = TagFilterField(model)
-
-
-class ServiceCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Required if not assigned to a VM",
-    )
-    virtual_machine = CSVModelChoiceField(
-        queryset=VirtualMachine.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Required if not assigned to a device",
-    )
-    protocol = CSVChoiceField(choices=ServiceProtocolChoices, help_text="IP protocol")
-
-    class Meta:
-        model = Service
-        fields = Service.csv_headers
 
 
 class ServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):

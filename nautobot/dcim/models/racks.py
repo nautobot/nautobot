@@ -56,8 +56,6 @@ class RackGroup(TreeModel, OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["location", "parent", "name", "slug", "description"]
-
     class Meta:
         ordering = ("name",)
         unique_together = [
@@ -70,15 +68,6 @@ class RackGroup(TreeModel, OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.location.name,
-            self.parent.name if self.parent else "",
-            self.name,
-            self.slug,
-            self.description,
-        )
 
     def clean(self):
         super().clean()
@@ -187,25 +176,6 @@ class Rack(PrimaryModel):
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    csv_headers = [
-        "location",
-        "rack_group",
-        "name",
-        "facility_id",
-        "tenant",
-        "status",
-        "role",
-        "type",
-        "serial",
-        "asset_tag",
-        "width",
-        "u_height",
-        "desc_units",
-        "outer_width",
-        "outer_depth",
-        "outer_unit",
-        "comments",
-    ]
     clone_fields = [
         "location",
         "rack_group",
@@ -273,27 +243,6 @@ class Rack(PrimaryModel):
                     raise ValidationError(
                         {"u_height": f"Rack must be at least {min_height}U tall to house currently installed devices."}
                     )
-
-    def to_csv(self):
-        return (
-            self.location.name,
-            self.rack_group.name if self.rack_group else None,
-            self.name,
-            self.facility_id,
-            self.tenant.name if self.tenant else None,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            self.get_type_display() if self.type else None,
-            self.serial,
-            self.asset_tag,
-            self.width,
-            self.u_height,
-            str(self.desc_units),
-            self.outer_width,
-            self.outer_depth,
-            self.outer_unit,
-            self.comments,
-        )
 
     @property
     def units(self):
@@ -529,18 +478,11 @@ class RackReservation(PrimaryModel):
     user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="rack_reservations")
     description = models.CharField(max_length=200)
 
-    csv_headers = [
-        "location",
-        "rack_group",
-        "rack",
-        "units",
-        "tenant",
-        "user",
-        "description",
-    ]
-
     class Meta:
         ordering = ["created"]
+
+    # TODO: no appropriate natural-key for RackReservation?
+    natural_key_field_names = ["id"]
 
     def __str__(self):
         return f"Reservation for rack {self.rack}"
@@ -567,17 +509,6 @@ class RackReservation(PrimaryModel):
             if conflicting_units:
                 error = ", ".join([str(u) for u in conflicting_units])
                 raise ValidationError({"units": f"The following units have already been reserved: {error}"})
-
-    def to_csv(self):
-        return (
-            self.rack.location.name,
-            self.rack.rack_group if self.rack.rack_group else None,
-            self.rack.name,
-            ",".join([str(u) for u in self.units]),
-            self.tenant.name if self.tenant else None,
-            self.user.username,
-            self.description,
-        )
 
     @property
     def unit_list(self):

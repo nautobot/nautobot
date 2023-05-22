@@ -60,16 +60,11 @@ class Manufacturer(OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "description"]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (self.name, self.description)
 
 
 @extras_features(
@@ -350,28 +345,11 @@ class Platform(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = [
-        "name",
-        "manufacturer",
-        "napalm_driver",
-        "napalm_args",
-        "description",
-    ]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.manufacturer.name if self.manufacturer else None,
-            self.napalm_driver,
-            self.napalm_args,
-            self.description,
-        )
 
 
 @extras_features(
@@ -510,27 +488,6 @@ class Device(PrimaryModel, ConfigContextModel):
 
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
-    csv_headers = [
-        "name",
-        "role",
-        "tenant",
-        "manufacturer",
-        "device_type",
-        "platform",
-        "serial",
-        "asset_tag",
-        "status",
-        "location",
-        "rack_group",
-        "rack_name",
-        "position",
-        "face",
-        "device_redundancy_group",
-        "device_redundancy_group_priority",
-        "secrets_group",
-        "primary_ip",
-        "comments",
-    ]
     clone_fields = [
         "device_type",
         "role",
@@ -542,6 +499,8 @@ class Device(PrimaryModel, ConfigContextModel):
         "cluster",
         "secrets_group",
     ]
+
+    natural_key_field_names = ["name", "tenant", "location"]  # location should be last since it's variadic
 
     class Meta:
         ordering = ("_name",)  # Name may be null
@@ -763,29 +722,6 @@ class Device(PrimaryModel, ConfigContextModel):
             device.rack = self.rack
             device.save()
 
-    def to_csv(self):
-        return (
-            self.name or "",
-            self.role.name,
-            self.tenant.name if self.tenant else None,
-            self.device_type.manufacturer.name,
-            self.device_type.model,
-            self.platform.name if self.platform else None,
-            self.serial,
-            self.asset_tag,
-            self.get_status_display(),
-            self.location.name,
-            self.rack.rack_group.name if self.rack and self.rack.rack_group else None,
-            self.rack.name if self.rack else None,
-            self.position,
-            self.get_face_display(),
-            self.device_redundancy_group.slug if self.device_redundancy_group else None,
-            self.device_redundancy_group_priority,
-            self.secrets_group.name if self.secrets_group else None,
-            self.primary_ip if self.primary_ip else None,
-            self.comments,
-        )
-
     @property
     def display(self):
         if self.name:
@@ -901,8 +837,6 @@ class VirtualChassis(PrimaryModel):
     name = models.CharField(max_length=64, db_index=True)
     domain = models.CharField(max_length=30, blank=True)
 
-    csv_headers = ["name", "domain", "master"]
-
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "virtual chassis"
@@ -937,13 +871,6 @@ class VirtualChassis(PrimaryModel):
             )
 
         return super().delete(*args, **kwargs)
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.domain,
-            self.master.name if self.master else None,
-        )
 
 
 @extras_features(
@@ -988,8 +915,6 @@ class DeviceRedundancyGroup(PrimaryModel):
         "secrets_group",
     ]
 
-    csv_headers = ["name", "failover_strategy", "status", "secrets_group", "comments"]
-
     class Meta:
         ordering = ("name",)
 
@@ -999,12 +924,3 @@ class DeviceRedundancyGroup(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.failover_strategy,
-            self.get_status_display(),
-            self.secrets_group.name if self.secrets_group else None,
-            self.comments,
-        )

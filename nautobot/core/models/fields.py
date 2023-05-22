@@ -321,7 +321,7 @@ class JSONArrayField(models.JSONField):
                 # Assume we're deserializing
                 vals = json.loads(value)
                 value = [self.base_field.to_python(val) for val in vals]
-            except json.JSONDecodeError as e:
+            except (TypeError, json.JSONDecodeError) as e:
                 raise exceptions.ValidationError(e)
         return value
 

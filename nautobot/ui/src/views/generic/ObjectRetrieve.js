@@ -75,7 +75,7 @@ function render_header(value) {
     return value;
 }
 
-function DetailFieldValue(value) {
+export function DetailFieldValue(value) {
     const ref = useRef();
     if (value === undefined) {
         return <>&mdash;</>;
@@ -146,8 +146,14 @@ function RenderRow(props) {
     var value = props.value;
 
     if (
-        ["id", "url", "display", "slug", "notes_url"].includes(key) ^
-        !!props.advanced
+        [
+            "id",
+            "url",
+            "display",
+            "natural_key_slug",
+            "slug",
+            "notes_url",
+        ].includes(key) ^ !!props.advanced
     ) {
         return null;
     }
@@ -204,7 +210,6 @@ export default function ObjectRetrieve({ api_url }) {
         app_name: "extras",
         model_name: "object-changes",
         schema: true,
-        plugin: isPluginView,
     });
     // Note Data
     const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
@@ -222,7 +227,6 @@ export default function ObjectRetrieve({ api_url }) {
         app_name: "extras",
         model_name: "notes",
         schema: true,
-        plugin: isPluginView,
     });
 
     if (error || note_error || changelog_error) {

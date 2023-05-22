@@ -851,6 +851,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
                 "slug": "new-git-repository-1",
                 "remote_url": "https://example.com/newrepo1.git",
                 "secrets_group": secrets_groups[1].pk,
+                "provided_contents": ["extras.configcontext", "extras.exporttemplate"],
             },
             {
                 "name": "New Git Repository 2",

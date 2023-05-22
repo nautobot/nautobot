@@ -72,7 +72,6 @@ class VRFDeleteView(generic.ObjectDeleteView):
 
 class VRFBulkImportView(generic.BulkImportView):
     queryset = VRF.objects.all()
-    model_form = forms.VRFCSVForm
     table = tables.VRFTable
 
 
@@ -125,7 +124,6 @@ class RouteTargetDeleteView(generic.ObjectDeleteView):
 
 class RouteTargetBulkImportView(generic.BulkImportView):
     queryset = RouteTarget.objects.all()
-    model_form = forms.RouteTargetCSVForm
     table = tables.RouteTargetTable
 
 
@@ -185,7 +183,6 @@ class RIRDeleteView(generic.ObjectDeleteView):
 
 class RIRBulkImportView(generic.BulkImportView):
     queryset = RIR.objects.all()
-    model_form = forms.RIRCSVForm
     table = tables.RIRTable
 
 
@@ -389,7 +386,6 @@ class PrefixDeleteView(generic.ObjectDeleteView):
 
 class PrefixBulkImportView(generic.BulkImportView):
     queryset = Prefix.objects.all()
-    model_form = forms.PrefixCSVForm
     table = tables.PrefixTable
 
 
@@ -552,7 +548,6 @@ class IPAddressBulkCreateView(generic.BulkCreateView):
 
 class IPAddressBulkImportView(generic.BulkImportView):
     queryset = IPAddress.objects.all()
-    model_form = forms.IPAddressCSVForm
     table = tables.IPAddressTable
 
 
@@ -657,7 +652,6 @@ class VLANGroupDeleteView(generic.ObjectDeleteView):
 
 class VLANGroupBulkImportView(generic.BulkImportView):
     queryset = VLANGroup.objects.all()
-    model_form = forms.VLANGroupCSVForm
     table = tables.VLANGroupTable
 
 
@@ -758,7 +752,6 @@ class VLANDeleteView(generic.ObjectDeleteView):
 
 class VLANBulkImportView(generic.BulkImportView):
     queryset = VLAN.objects.all()
-    model_form = forms.VLANCSVForm
     table = tables.VLANTable
 
 
@@ -822,7 +815,6 @@ class ServiceEditView(generic.ObjectEditView):
 
 class ServiceBulkImportView(generic.BulkImportView):
     queryset = Service.objects.all()
-    model_form = forms.ServiceCSVForm
     table = tables.ServiceTable
 
 

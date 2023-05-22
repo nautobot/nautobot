@@ -1,3 +1,4 @@
+from io import BytesIO
 import logging
 
 from django.contrib import messages
@@ -11,7 +12,7 @@ from django.core.exceptions import (
 )
 from django.db import transaction
 from django.db.models import ManyToManyField, ProtectedError
-from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
+from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
@@ -29,6 +30,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
 
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -40,8 +42,12 @@ from nautobot.core.forms import (
 from nautobot.core.utils import lookup, permissions
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
-from nautobot.core.views.utils import csv_format, handle_protectederror, prepare_cloned_fields
-from nautobot.extras.models import CustomField, ExportTemplate
+from nautobot.core.views.utils import (
+    get_csv_form_fields_from_serializer_class,
+    handle_protectederror,
+    prepare_cloned_fields,
+)
+from nautobot.extras.models import ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
@@ -525,12 +531,15 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         if self.action in ["create", "update"]:
             form_class = getattr(self, "form_class", None)
         elif self.action == "bulk_create":
+            required_field_names = [
+                field["name"]
+                for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
+                if field["required"]
+            ]
 
             class BulkCreateForm(BootstrapMixin, Form):
-                csv_data = CSVDataField(
-                    from_form=self.bulk_create_form_class, widget=Textarea(attrs=self.bulk_create_widget_attrs)
-                )
-                csv_file = CSVFileField(from_form=self.bulk_create_form_class)
+                csv_data = CSVDataField(required_field_names=required_field_names)
+                csv_file = CSVFileField()
 
             form_class = BulkCreateForm
         else:
@@ -625,13 +634,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
-        # Fall back to built-in CSV formatting if export requested but no template specified
-        elif "export" in request.GET and hasattr(model, "to_csv"):
-            response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = f"nautobot_{queryset.model._meta.verbose_name_plural}.csv"
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
         return None
 
     def queryset_to_yaml(self):
@@ -642,35 +644,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         yaml_data = [obj.to_yaml() for obj in queryset]
 
         return "---\n".join(yaml_data)
-
-    def queryset_to_csv(self):
-        """
-        Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
-        """
-        queryset = self.filter_queryset(self.get_queryset())
-        csv_data = []
-        custom_fields = []
-        # Start with the column headers
-        headers = queryset.model.csv_headers.copy()
-
-        # Add custom field headers, if any
-        if hasattr(queryset.model, "_custom_field_data"):
-            for custom_field in CustomField.objects.get_for_model(queryset.model):
-                headers.append(custom_field.add_prefix_to_cf_key())
-                custom_fields.append(custom_field.key)
-
-        csv_data.append(",".join(headers))
-
-        # Iterate through the queryset appending each object
-        for obj in queryset:
-            data = obj.to_csv()
-
-            for custom_field in custom_fields:
-                data += (obj.cf.get(custom_field, ""),)
-
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
 
     def list(self, request, *args, **kwargs):
         """
@@ -904,8 +877,6 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
     """
 
     bulk_create_active_tab = "csv-data"
-    bulk_create_form_class = None
-    bulk_create_widget_attrs = {}
 
     def _process_bulk_create_form(self, form):
         # Iterate through CSV data and bind each row to a new model form instance.
@@ -921,18 +892,24 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
                 self.bulk_create_active_tab = "csv-file"
             else:
                 field_name = "csv_data"
-            headers, records = form.cleaned_data[field_name]
-            for row, data in enumerate(records, start=1):
-                obj_form = self.bulk_create_form_class(data, headers=headers)
-                restrict_form_fields(obj_form, request.user)
 
-                if obj_form.is_valid():
-                    obj = self.form_save(obj_form)
-                    new_objs.append(obj)
+            csvtext = form.cleaned_data[field_name]
+            try:
+                data = NautobotCSVParser().parse(
+                    stream=BytesIO(csvtext.encode("utf-8")),
+                    parser_context={"request": request, "serializer_class": self.serializer_class},
+                )
+                serializer = self.serializer_class(data=data, context={"request": request}, many=True)
+                if serializer.is_valid():
+                    new_objs = serializer.save()
                 else:
-                    for field, err in obj_form.errors.items():
-                        form.add_error(field_name, f"Row {row} {field}: {err[0]}")
+                    for row, errors in enumerate(serializer.errors, start=1):
+                        for field, err in errors.items():
+                            form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
                     raise ValidationError("")
+            except exceptions.ParseError as exc:
+                form.add_error(None, str(exc))
+                raise ValidationError("")
 
             # Enforce object-level permissions
             if queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
