@@ -1,3 +1,8 @@
+import { useSelector } from "react-redux";
+import {
+    Link as ReactRouterLink,
+    NavLink as ReactRouterNavLink,
+} from "react-router-dom";
 import {
     AutomationIcon,
     DcimIcon,
@@ -17,14 +22,18 @@ import {
     SearchIcon,
     SecurityIcon,
 } from "@nautobot/nautobot-ui";
-import {
-    Link as ReactRouterLink,
-    NavLink as ReactRouterNavLink,
-} from "react-router-dom";
-import RouterButton from "@components/RouterButton";
 
-export function Navbar({ session, currentContext }) {
-    const isLoggedIn = !!session?.logged_in;
+import RouterButton from "@components/RouterButton";
+import {
+    isLoggedInSelector,
+    getCurrentContextSelector,
+    currentUserSelector,
+} from "@utils/store";
+
+export function Navbar() {
+    const isLoggedIn = useSelector(isLoggedInSelector);
+    const currentContext = useSelector(getCurrentContextSelector);
+    const currentUser = useSelector(currentUserSelector);
 
     return (
         <UINavbar>
@@ -81,23 +90,10 @@ export function Navbar({ session, currentContext }) {
             {isLoggedIn && (
                 <Menu>
                     <MenuButton as={NavbarMenuButton} isDisabled={!isLoggedIn}>
-                        {session?.user?.display ||
-                            [
-                                ...(session?.user?.firstName
-                                    ? [session?.user?.firstName]
-                                    : []),
-                                ...(session?.user?.lastName
-                                    ? [session?.user?.lastName]
-                                    : []),
-                            ].join(" ") ||
-                            session?.user?.username}
+                        {currentUser?.display || currentUser?.username}
                     </MenuButton>
                     <MenuList>
                         {[
-                            {
-                                children: "Profile",
-                                to: "/user/profile",
-                            },
                             {
                                 children: "Log Out",
                                 color: "red-1",

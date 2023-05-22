@@ -1,0 +1,4 @@
+Fixed inability to set the `failover_strategy` field as unspecified/blank when creating/updating `DeviceRedundancyGroup` via the REST API.
+Fixed incorrect interim natural key definition for `Device` and `VRF` models.
+Fixed the possibility of setting values for nonexistent custom fields via the REST API.
+Fixed incorrect password-handling logic when creating/updating a `User` via the REST API.

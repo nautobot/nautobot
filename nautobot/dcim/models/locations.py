@@ -45,23 +45,11 @@ class LocationType(TreeModel, OrganizationalModel):
         help_text="Allow Locations of this type to be parents/children of other Locations of this same type",
     )
 
-    csv_headers = ["name", "slug", "parent", "description", "nestable", "content_types"]
-
     class Meta:
         ordering = ("name",)
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.parent.name if self.parent else None,
-            self.description,
-            self.nestable,
-            ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.order_by("app_label", "model")),
-        )
 
     def clean(self):
         """
@@ -206,27 +194,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
 
     objects = LocationManager()
 
-    csv_headers = [
-        "name",
-        "slug",
-        "location_type",
-        "status",
-        "parent",
-        "tenant",
-        "description",
-        "facility",
-        "asn",
-        "time_zone",
-        "physical_address",
-        "shipping_address",
-        "latitude",
-        "longitude",
-        "contact_name",
-        "contact_phone",
-        "contact_email",
-        "comments",
-    ]
-
     clone_fields = [
         "location_type",
         "status",
@@ -279,28 +246,6 @@ class Location(TreeModel, StatusModel, PrimaryModel):
         while len(args) > len(natural_key_field_lookups):
             natural_key_field_lookups.append(f"parent__{natural_key_field_lookups[-1]}")
         return dict(zip(natural_key_field_lookups, args))
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.location_type.name,
-            self.get_status_display(),
-            self.parent.name if self.parent else None,
-            self.tenant.name if self.tenant else None,
-            self.description,
-            self.facility,
-            self.asn,
-            self.time_zone,
-            self.physical_address,
-            self.shipping_address,
-            self.latitude,
-            self.longitude,
-            self.contact_name,
-            self.contact_phone,
-            self.contact_email,
-            self.comments,
-        )
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.

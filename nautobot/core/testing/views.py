@@ -1,6 +1,4 @@
-import csv
 import re
-from io import StringIO
 from typing import Optional, Sequence
 from unittest import skipIf
 import uuid
@@ -18,7 +16,6 @@ from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
 from nautobot.core import testing
-from nautobot.core.views import utils as view_utils
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
@@ -793,39 +790,6 @@ class ViewTestCases:
                 f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
             )
 
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_queryset_to_csv(self):
-            # Built-in CSV export
-            if not hasattr(self.model, "csv_headers"):
-                self.skipTest(f"{self.model} has no csv_headers attribute?")
-            response = self.client.get(f"{self._get_url('list')}?export")
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.get("Content-Type"), "text/csv")
-            instance1 = self._get_queryset().first()
-            # With filtering
-            response = self.client.get(f"{self._get_url('list')}?export&id={instance1.pk}")
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.get("Content-Type"), "text/csv")
-            response_body = response.content.decode(response.charset)
-            reader = csv.DictReader(StringIO(response_body))
-            # This line will make data a dictionary with csv headers as keys and corresponding csv values as values.
-            # For example:
-            # {'name': 'AFRINIC', 'slug': 'afrinic', 'is_private': '', 'description': ...'}
-            data = [dict(row) for row in reader][0]
-
-            # Get expected data
-            instance1_unformatted_data = [
-                *instance1.to_csv(),
-                *instance1.get_custom_fields().values(),
-            ]
-            # Format expected data using `csv_format`, parse back with `csv` and get first row
-            instance1_csv_data = next(iter(csv.reader([view_utils.csv_format(instance1_unformatted_data)])))
-
-            instance1_cf_headers = [cf.add_prefix_to_cf_key() for cf in instance1.get_custom_fields().keys()]
-            instance1_csv_headers = list(self.model.csv_headers) + instance1_cf_headers
-            self.assertEqual(instance1_csv_headers, list(data.keys()))
-            self.assertEqual(instance1_csv_data, list(data.values()))
-
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
         Create multiple instances using a single form. Expects the creation of three new instances by default.
@@ -921,6 +885,9 @@ class ViewTestCases:
         """
         Create multiple instances from imported data.
 
+        Note that CSV import, since it's now implemented via the REST API,
+        is also exercised by APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_csv().
+
         :csv_data: A list of CSV-formatted lines (starting with the headers) to be used for bulk object import.
         """
 
@@ -982,8 +949,13 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.get(self._get_url("import")), 200)
 
             # Test POST with permission
-            self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
-            self.assertEqual(self._get_queryset().count(), initial_count + len(self.csv_data) - 1)
+            response = self.client.post(self._get_url("import"), data)
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(
+                self._get_queryset().count(),
+                initial_count + len(self.csv_data) - 1,
+                testing.extract_page_body(response.content.decode(response.charset)),
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_import_objects_with_constrained_permission(self):

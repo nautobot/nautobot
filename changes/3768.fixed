@@ -1,0 +1,1 @@
+Fixed new UI homepage breaks if recent object-changes reference objects that no longer exist.

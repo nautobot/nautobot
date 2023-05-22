@@ -30,7 +30,7 @@ import GenericView from "@views/generic/GenericView";
 
 export default function Home() {
     const { data: jobResultData } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: "job-results",
         limit: 1,
         depth: 0,

@@ -4,41 +4,30 @@ import {
     FormLabel,
     Input,
     Box,
+    Spinner,
 } from "@nautobot/nautobot-ui";
-import axios from "axios";
 
-import { useGetSessionQuery } from "@utils/api";
-import { useNavigate } from "react-router-dom";
-
-axios.defaults.withCredentials = true;
-axios.defaults.xsrfCookieName = "csrftoken";
-axios.defaults.xsrfHeaderName = "X-CSRFToken";
+import { useGetSessionQuery, useLoginMutation } from "@utils/api";
 
 export default function Login() {
     const { refetch: refetchSession } = useGetSessionQuery();
-    const navigate = useNavigate();
+    const [login, { isLoading }] = useLoginMutation();
 
-    // TODO: Places like this might be best to stick with Axios calls but we should have a generic Axios object
-    //   for global cookie management, etc.
+    /** Handle the form submission. */
     const handleSubmit = (e) => {
         e.preventDefault();
-        axios
-            .post("/api/users/tokens/authenticate/", {
-                username: e.target.username.value,
-                password: e.target.password.value,
-            })
-            .then(() => {
-                refetchSession().then(() => {
-                    navigate("/");
-                });
-            })
-            .catch((err) =>
-                alert(err.response?.data?.non_field_errors || err.message)
-            );
+        login({
+            username: e.target.username.value,
+            password: e.target.password.value,
+        })
+            .then(refetchSession)
+            .catch(console.log);
     };
 
     return (
         <Box boxShadow="base" p="6" rounded="md" bg="white">
+            {/* Show that we're trying to log in while we wait for the server to respond. */}
+            {isLoading && <Spinner />}
             <form method="POST" onSubmit={handleSubmit}>
                 <FormControl>
                     <FormLabel>Username</FormLabel>
@@ -57,9 +46,3 @@ export default function Login() {
         </Box>
     );
 }
-
-// TODO: This should be all that's needed to support SSO backends but doesn't work well with NodeJS dev mode for the time being
-//   Has worked with built version served by Django
-// { isSuccess && sessionInfo.backends.length > 0 ?
-//   sessionInfo.backends.map((backend, idx) => { return (<Link key={idx} href={backend}>Login with {backend}</Link>) })
-// : <></> }

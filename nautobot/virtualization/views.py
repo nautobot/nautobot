@@ -69,7 +69,6 @@ class ClusterTypeDeleteView(generic.ObjectDeleteView):
 
 class ClusterTypeBulkImportView(generic.BulkImportView):
     queryset = ClusterType.objects.all()
-    model_form = forms.ClusterTypeCSVForm
     table = tables.ClusterTypeTable
 
 
@@ -128,7 +127,6 @@ class ClusterGroupDeleteView(generic.ObjectDeleteView):
 
 class ClusterGroupBulkImportView(generic.BulkImportView):
     queryset = ClusterGroup.objects.all()
-    model_form = forms.ClusterGroupCSVForm
     table = tables.ClusterGroupTable
 
 
@@ -183,7 +181,6 @@ class ClusterDeleteView(generic.ObjectDeleteView):
 
 class ClusterBulkImportView(generic.BulkImportView):
     queryset = Cluster.objects.all()
-    model_form = forms.ClusterCSVForm
     table = tables.ClusterTable
 
 
@@ -356,7 +353,6 @@ class VirtualMachineDeleteView(generic.ObjectDeleteView):
 
 class VirtualMachineBulkImportView(generic.BulkImportView):
     queryset = VirtualMachine.objects.all()
-    model_form = forms.VirtualMachineCSVForm
     table = tables.VirtualMachineTable
 
 
@@ -443,7 +439,6 @@ class VMInterfaceDeleteView(generic.ObjectDeleteView):
 
 class VMInterfaceBulkImportView(generic.BulkImportView):
     queryset = VMInterface.objects.all()
-    model_form = forms.VMInterfaceCSVForm
     table = tables.VMInterfaceTable
 
 

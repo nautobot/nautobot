@@ -37,7 +37,7 @@ function jobResultStatusTag(status) {
 
 export default function JobHistoryTable() {
     const { data, isError } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: "job-results",
         limit: 10,
         depth: 1,

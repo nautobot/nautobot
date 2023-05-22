@@ -23,20 +23,11 @@ class TenantGroup(TreeModel, OrganizationalModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "parent", "description"]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.parent.name if self.parent else "",
-            self.description,
-        )
 
 
 @extras_features(
@@ -63,7 +54,6 @@ class Tenant(PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
 
-    csv_headers = ["name", "tenant_group", "description", "comments"]
     clone_fields = [
         "tenant_group",
         "description",
@@ -74,11 +64,3 @@ class Tenant(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.tenant_group.name if self.tenant_group else None,
-            self.description,
-            self.comments,
-        )

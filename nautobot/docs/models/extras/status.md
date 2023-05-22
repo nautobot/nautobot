@@ -12,9 +12,10 @@ Statuses may be managed by navigating to **Organization > Statuses** in the navi
 
 ### Importing Objects with a `status` Field
 
-When using CSV import to reference a `status` field on an object, the `Status.slug` field is used.
+When using CSV import to reference a `status` field on an object, the `Status.name` field is used.
 
-For example, the default **Active** status has a slug of `active`, so the `active` value would be used for import.
++/- 2.0.0
+    Changed the CSV import reference for Statuses from `Status.slug` to `Status.name`.
 
 ## Customizing Statuses
 
@@ -60,8 +61,6 @@ Any model form that is intended to have a `status` field must inherit from one o
 +/- 1.4.0
     In prior Nautobot versions these mixins were named `StatusFilterFormMixin` and `StatusBulkEditFormMixin`; the old names are still available as aliases but will be removed in a future major release.
 
-- FIXME: CSV import forms
-
 ### Table field
 
 If you wish for a table to include a `status` field, your table must inherit from `nautobot.extras.tables.StatusTableMixin`. This includes a `ColorColumn` on the table.
@@ -78,7 +77,6 @@ To fully integrate a model to include a `status` field, assert the following:
 ### Forms
 
 - Generic model forms will automatically include a `StatusField`
-- CSV model import forms must inherit from `nautobot.extras.forms.StatusModelCSVFormMixin`
 - Bulk edit model forms must inherit from `nautobot.extras.forms.StatusModelBulkEditFormMixin`
 - Filter forms must inherit from `nautobot.extras.forms.StatusModelFilterFormMixin`
 

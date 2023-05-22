@@ -57,7 +57,6 @@ class GitRepository(PrimaryModel):
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
 
-    csv_headers = ["name", "slug", "remote_url", "branch", "secrets_group", "provided_contents"]
     clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 
     class Meta:
@@ -75,16 +74,6 @@ class GitRepository(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.remote_url,
-            self.branch,
-            self.secrets_group.name if self.secrets_group else None,
-            self.provided_contents,
-        )
 
     @property
     def filesystem_path(self):

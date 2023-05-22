@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import is_safe_url
 from django_tables2 import RequestConfig
 
 
@@ -28,7 +29,6 @@ class CircuitTypeUIViewSet(
     view_mixins.ObjectChangeLogViewMixin,
     view_mixins.ObjectNotesViewMixin,
 ):
-    bulk_create_form_class = forms.CircuitTypeCSVForm
     filterset_class = filters.CircuitTypeFilterSet
     form_class = forms.CircuitTypeForm
     queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "circuit_type"))
@@ -60,14 +60,20 @@ class CircuitTypeUIViewSet(
 
 class CircuitTerminationUIViewSet(
     view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectListViewMixin,
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectBulkDestroyViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,
     view_mixins.ObjectChangeLogViewMixin,
     view_mixins.ObjectNotesViewMixin,
 ):
+    action_buttons = ("import", "export")
+    filterset_class = filters.CircuitTerminationFilterSet
     form_class = forms.CircuitTerminationForm
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
+    table_class = tables.CircuitTerminationTable
 
     def get_object(self):
         obj = super().get_object()
@@ -75,12 +81,20 @@ class CircuitTerminationUIViewSet(
             obj.circuit = get_object_or_404(Circuit, pk=self.kwargs["circuit"])
         return obj
 
-    def get_return_url(self, request, obj):
-        return obj.circuit.get_absolute_url()
+    def get_return_url(self, request, obj=None):
+        # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
+        # considered safe.
+        query_param = request.GET.get("return_url") or request.POST.get("return_url")
+        if query_param and is_safe_url(url=query_param, allowed_hosts=request.get_host()):
+            return query_param
+
+        if obj is not None and obj.present_in_database and obj.pk:
+            return obj.circuit.get_absolute_url()
+
+        return super().get_return_url(request, obj=obj)
 
 
 class ProviderUIViewSet(NautobotUIViewSet):
-    bulk_create_form_class = forms.ProviderCSVForm
     bulk_update_form_class = forms.ProviderBulkEditForm
     filterset_class = filters.ProviderFilterSet
     filterset_form_class = forms.ProviderFilterForm
@@ -112,7 +126,6 @@ class ProviderUIViewSet(NautobotUIViewSet):
 
 
 class CircuitUIViewSet(NautobotUIViewSet):
-    bulk_create_form_class = forms.CircuitCSVForm
     bulk_update_form_class = forms.CircuitBulkEditForm
     filterset_class = filters.CircuitFilterSet
     filterset_form_class = forms.CircuitFilterForm
@@ -165,7 +178,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
 
 class ProviderNetworkUIViewSet(NautobotUIViewSet):
     model = ProviderNetwork
-    bulk_create_form_class = forms.ProviderNetworkCSVForm
     bulk_update_form_class = forms.ProviderNetworkBulkEditForm
     filterset_class = filters.ProviderNetworkFilterSet
     filterset_form_class = forms.ProviderNetworkFilterForm

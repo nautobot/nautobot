@@ -8,6 +8,7 @@ export default function Pagination({
     siblingCount = 1,
     currentPage,
     pageSize,
+    scroll_ref,
 }) {
     let [searchParams, setSearchParams] = useSearchParams();
 
@@ -25,6 +26,11 @@ export default function Pagination({
     function onPageNumberChange(pageNumber) {
         let limit = searchParams.get("limit");
         /* TODO: we need a REST API endpoint to query get_settings_or_config("PAGINATE_COUNT") rather than hard-coding this to 50. */
+        // Scroll to the top of the ObjectListTable Container on table reload
+        scroll_ref.current.scrollIntoView({
+            alignToTop: true,
+            behavior: "smooth",
+        });
         setSearchParams({
             offset: pageSize * (pageNumber - 1),
             limit: limit ? limit : 50,
