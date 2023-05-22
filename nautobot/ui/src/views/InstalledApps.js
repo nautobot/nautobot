@@ -16,7 +16,7 @@ import GenericView from "@views/generic/GenericView";
 
 export default function InstalledApps() {
     const { data, isLoading } = useGetRESTAPIQuery({
-        app_name: "plugins",
+        app_label: "plugins",
         model_name: "installed-plugins",
     });
 

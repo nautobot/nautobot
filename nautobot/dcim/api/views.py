@@ -622,6 +622,7 @@ class InventoryItemViewSet(NautobotModelViewSet):
 
 #
 # Connections
+# TODO: remove these in favor of using the ConsolePort/PowerPort/Interface API endpoints and/or Cable endpoint.
 #
 
 

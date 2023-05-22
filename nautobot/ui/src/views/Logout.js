@@ -1,34 +1,20 @@
-import axios from "axios";
+import { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 
-import { useGetSessionQuery } from "@utils/api";
-import { useNavigate } from "react-router-dom";
-
-axios.defaults.withCredentials = true;
-axios.defaults.xsrfCookieName = "csrftoken";
-axios.defaults.xsrfHeaderName = "X-CSRFToken";
+import { useLogoutMutation } from "@utils/api";
+import { isLoggedInSelector, flushSessionState } from "@utils/store";
 
 export default function Logout() {
-    const {
-        data: sessionInfo,
-        isSuccess: sessionLoaded,
-        refetch: refetchSession,
-    } = useGetSessionQuery();
-    const navigate = useNavigate();
+    const isLoggedIn = useSelector(isLoggedInSelector); // While the router _should_ never try to render this view if we aren't logged in, we should still check.
+    const [logout] = useLogoutMutation();
+    const dispatch = useDispatch();
 
-    // TODO: Places like this might be best to stick with Axios calls but we should have a generic Axios object
-    //   for global cookie management, etc.
-    if (sessionLoaded && sessionInfo.logged_in) {
-        axios
-            .get("/logout/")
-            .then(() => {
-                refetchSession().then(() => {
-                    navigate("/login/");
-                });
-            })
-            .catch((err) => console.log(err.detail));
-    } else {
-        navigate("/login/");
-    }
+    /** Log out only when mounting the component, we should be logged out by the time it tries to render. */
+    useEffect(() => {
+        if (isLoggedIn) {
+            logout().then(dispatch(flushSessionState())).catch(console.log);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only run on mount
 
-    return <span>Logging out...</span>;
+    return <></>;
 }

@@ -19,6 +19,12 @@ menu_items = (
                         link="plugins:example_plugin:examplemodel_list",
                         permissions=["example_plugin.view_examplemodel"],
                     ),
+                    NavMenuItem(
+                        name="Another Example Model",
+                        weight=150,
+                        link="plugins:example_plugin:anotherexamplemodel_list",
+                        permissions=["example_plugin.view_anotherexamplemodel"],
+                    ),
                 ),
             ),
         ),

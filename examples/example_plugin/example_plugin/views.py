@@ -69,7 +69,6 @@ class ExamplePluginConfigView(View):
 
 
 class ExampleModelUIViewSet(views.NautobotUIViewSet):
-    bulk_create_form_class = forms.ExampleModelCSVForm
     bulk_update_form_class = forms.ExampleModelBulkEditForm
     filterset_class = filters.ExampleModelFilterSet
     filterset_form_class = forms.ExampleModelFilterForm

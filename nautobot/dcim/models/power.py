@@ -46,21 +46,12 @@ class PowerPanel(PrimaryModel):
     )
     name = models.CharField(max_length=100, db_index=True)
 
-    csv_headers = ["location", "rack_group", "name"]
-
     class Meta:
         ordering = ["location", "name"]
         unique_together = ["location", "name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.location.name,
-            self.rack_group.name if self.rack_group else None,
-            self.name,
-        )
 
     def clean(self):
         super().clean()
@@ -132,21 +123,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     available_power = models.PositiveIntegerField(default=0, editable=False)
     comments = models.TextField(blank=True)
 
-    csv_headers = [
-        "location",
-        "power_panel",
-        "rack_group",
-        "rack",
-        "name",
-        "status",
-        "type",
-        "supply",
-        "phase",
-        "voltage",
-        "amperage",
-        "max_utilization",
-        "comments",
-    ]
     clone_fields = [
         "power_panel",
         "rack",
@@ -166,23 +142,6 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.power_panel.location.name,
-            self.power_panel.name,
-            self.rack.rack_group.name if self.rack and self.rack.rack_group else None,
-            self.rack.name if self.rack else None,
-            self.name,
-            self.get_status_display(),
-            self.get_type_display(),
-            self.get_supply_display(),
-            self.get_phase_display(),
-            self.voltage,
-            self.amperage,
-            self.max_utilization,
-            self.comments,
-        )
 
     def clean(self):
         super().clean()

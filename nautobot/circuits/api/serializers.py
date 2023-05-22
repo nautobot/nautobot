@@ -61,3 +61,4 @@ class CircuitTerminationSerializer(
     class Meta:
         model = CircuitTermination
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}

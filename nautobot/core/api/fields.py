@@ -7,6 +7,7 @@ from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
 
 
+# TODO: why is this not a serializers.ChoiceField subclass??
 class ChoiceField(serializers.Field):
     """
     Represent a ChoiceField as {'value': <DB value>, 'label': <string>}. Accepts a single value on write.

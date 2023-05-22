@@ -1,0 +1,7 @@
+{% extends 'generic/object_list.html' %}
+
+{% block export_button %}
+<a href="{% url 'dcim-api:cable-list' %}?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}termination_type=dcim.consoleport&format=csv" class="btn btn-success">
+    <span class="mdi mdi-database-export" aria-hidden="true"></span> Export
+</a>
+{% endblock export_button %}
