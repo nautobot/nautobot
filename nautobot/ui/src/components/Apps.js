@@ -8,7 +8,7 @@ function get_components() {
     base["FullWidthComponents"] = {};
     base["CustomViews"] = {};
 
-    for (const [app_name, import_promise] of Object.entries(NautobotApps)) {
+    for (const [app_label, import_promise] of Object.entries(NautobotApps)) {
         import_promise.then((value) => {
             if (value?.default?.view_overrides) {
                 // eslint-disable-next-line

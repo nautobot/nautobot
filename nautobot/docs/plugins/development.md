@@ -1081,7 +1081,6 @@ from yourapp import filters, forms, models, tables
 from yourapp.api import serializers
 
 class YourAppModelUIViewSet(NautobotUIViewSet):
-    bulk_create_form_class = forms.YourAppModelCSVForm
     bulk_update_form_class = forms.YourAppModelBulkEditForm
     filterset_class = filters.YourAppModelFilterSet
     filterset_form_class = forms.YourAppModelFilterForm
