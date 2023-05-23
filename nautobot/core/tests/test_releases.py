@@ -155,6 +155,7 @@ class GetReleasesTestCase(SimpleTestCase):
             releases = get_releases()
 
         # Check log entry
+        print(cm.output)
         self.assertEqual(len(cm.output), 1)
         log_output = cm.output[0]
         last_log_line = log_output.split("\n")[-1]
