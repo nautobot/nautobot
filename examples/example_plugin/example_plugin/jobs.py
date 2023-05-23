@@ -35,8 +35,9 @@ class ExampleDryRunJob(Job):
                     if not dryrun:
                         device.serial = ""
                         device.save()
-        except Exception:
+        except Exception as err:
             logger.error("%s failed. Database changes rolled back.", self.__name__)
+            raise err
 
 
 class ExampleJob(Job):
