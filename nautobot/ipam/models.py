@@ -789,21 +789,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         return query
 
-    # FIXME(jathan); Restored for data migration work.
-    def get_child_prefixes(self):
-        """
-        Return all Prefixes within this Prefix and VRF. If this Prefix is a container in the global table, return child
-        Prefixes belonging to any VRF.
-        """
-        if self.vrf is None and self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            return Prefix.objects.net_contained(self.prefix)
-        else:
-            return Prefix.objects.net_contained(self.prefix).filter(vrf=self.vrf)
-
-    def get_child_ips(self):
-        """Return all IPAddresses directly contained within this Prefix and Namespace."""
-        return self.ip_addresses.all()
-
     def get_available_prefixes(self):
         """
         Return all available Prefixes within this prefix as an IPSet.
@@ -819,7 +804,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         Return all available IPs within this prefix as an IPSet.
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()])
+        child_ips = netaddr.IPSet([ip.address.ip for ip in self.ip_addresses.all()])
         available_ips = prefix - child_ips
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable

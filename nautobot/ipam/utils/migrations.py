@@ -159,7 +159,7 @@ def validate_cidr(apps, value):
         raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
 
 
-def get_closest_parent(apps, cidr, namespace, max_prefix_length=0, tenant=None):
+def get_closest_parent(apps, obj, namespace, max_prefix_length=0, tenant=None):
     """
     This is forklifted from `Prefix.objects.get_closest_parent()` so that it can safely be used in
     migrations.
@@ -167,13 +167,13 @@ def get_closest_parent(apps, cidr, namespace, max_prefix_length=0, tenant=None):
     Return the closest matching parent Prefix for a `cidr` even if it doesn't exist in the database.
 
     Args:
-        cidr (str): IPv4/IPv6 CIDR string
+        obj (str): IPv4/IPv6 CIDR string
         namespace (Namespace): Namespace instance
         max_prefix_length (int): Maximum prefix length depth for closest parent lookup
         tenant (Tenant): Tenant instance
     """
     # Validate that it's a real CIDR
-    cidr = validate_cidr(apps, cidr)
+    cidr = validate_cidr(apps, obj)
     broadcast = str(cidr.broadcast or cidr.ip)
     ip_version = cidr.version
 
@@ -194,6 +194,9 @@ def get_closest_parent(apps, cidr, namespace, max_prefix_length=0, tenant=None):
     networks = {str(s.network) for s in supernets}
     del supernets  # Free the memory because it could be quite large.
 
+    IPAddress = apps.get_model("ipam", "IPAddress")
+    Prefix = apps.get_model("ipam", "Prefix")
+
     # Prepare the queryset filter
     lookup_kwargs = {
         "network__in": networks,
@@ -206,15 +209,19 @@ def get_closest_parent(apps, cidr, namespace, max_prefix_length=0, tenant=None):
         "namespace": namespace,
     }
 
+    if obj.vrf is not None:
+        lookup_kwargs["vrf"] = obj.vrf
+
     # Search for possible ancestors by network/prefix, returning them in reverse order, so that
     # we can choose the first one.
-    Prefix = apps.get_model("ipam", "Prefix")
     possible_ancestors = Prefix.objects.filter(**lookup_kwargs).order_by("-prefix_length", "tenant")
 
     # Account for trying to pair up IPs with parent Prefixes that have matching Tenants. e.g. We
     # want this number to be as low as reasonably possible:
     # >>> IPAddress.objects.exclude(parent__tenant=F("tenant"))
     tenant_ancestors = possible_ancestors.filter(tenant=tenant)
+    # if str(cidr) == "10.0.0.1/32":
+    #    breakpoint()
     if tenant_ancestors.exists():
         # tenant_name = getattr(tenant, "name", "null")
         # print (f"    Matched Tenant {tenant_name!r} with possible ancestors for IPAddress {cidr}.")
@@ -242,8 +249,15 @@ def process_namespaces(apps, schema_editor):
     # Prefixes
     process_prefixes(apps)
 
+    # Found/missing parents (IP, parent)
+    # collected_ips = collect_ips(apps)
+
     # IPAddresses
+    # process_ip_addresses(apps, collected_ips)
     process_ip_addresses(apps)
+
+    # Matching/mismatched VRFs between IP/parent
+    # collected_vrfs = collect_matching_vrfs(apps, collected_ips.found_parents)
 
     # [VM]Interfaces
     # process_interfaces(apps)
@@ -266,6 +280,7 @@ def process_vrfs(apps):
         print(f"    VRF {vrf.name!r} migrated to Namespace {vrf.namespace.name!r}")
 
     # Case 00: Unique fields vs. Namespaces (name/rd) move to a Cleanup Namespace.
+    # Case 1 is not included here because it is a no-op.
     for vrf in non_unique_vrfs:
         print(f">>> Processing migration for VRF {vrf.name!r}, Namespace {vrf.namespace.name!r}")
         original_namespace = vrf.namespace
@@ -287,7 +302,7 @@ def process_prefixes(apps):
     for dupe in dupe_prefixes:
         print(f">>> Processing Namespace migration for duplicate Prefix {dupe!r}")
         network, prefix_length = dupe.split("/")
-        objects = Prefix.objects.filter(network=network, prefix_length=prefix_length)
+        objects = Prefix.objects.filter(network=network, prefix_length=prefix_length).order_by("tenant")
 
         for cnt, obj in enumerate(objects):
             # Skip the first one, to leave it in the Global Namespace. :|
@@ -299,14 +314,28 @@ def process_prefixes(apps):
             print(f"    Prefix {dupe!r} migrated from Global Namespace to Namespace {obj.namespace.name!r}")
 
 
+CollectedIPs = collections.namedtuple("CollectedIPs", "found_parents missing_parents")
+
+
 def collect_ips(apps):
+    """
+    Enumerate all IPAddress objects in the database and cycle through Namespaces, starting with the
+    "Global" Namespace to attempt to map IPs to parent Prefix objects in a Namespace.
+
+    This will bucket them into IPs with "found" and "missing" parents.
+
+    Args:
+        apps: Django apps module
+
+    Returns:
+        ColllectedIPs
+    """
     IPAddress = apps.get_model("ipam", "IPAddress")
     Namespace = apps.get_model("ipam", "Namespace")
     Prefix = apps.get_model("ipam", "Prefix")
     found_parents = []
     missing_parents = []
 
-    # TODO(jathan): Account for trying to pair up IPs with parent Prefixes that have matching VRFs
     # TODO(jathan): This could be very memory intensive; we might want to stash these in Redis/shelve
     namespaces = list(Namespace.objects.all())
     global_namespace = Namespace.objects.get(name="Global")
@@ -315,7 +344,7 @@ def collect_ips(apps):
     namespaces.insert(0, global_namespace)
 
     print("\n>>> Processing IPAddresses, please standby...")
-    for ip in IPAddress.objects.all():
+    for ip in IPAddress.objects.all().order_by("tenant"):
         for namespace in namespaces:
             try:
                 parent = get_closest_parent(apps, ip, namespace=namespace, tenant=ip.tenant)
@@ -327,16 +356,28 @@ def collect_ips(apps):
         else:
             missing_parents.append(ip)
 
-    return found_parents, missing_parents
+    return CollectedIPs(found_parents, missing_parents)
 
 
+# def process_ip_addresses(apps, collected_ips):
 def process_ip_addresses(apps):
+    """
+    Enumerate collected IPs and parent them.
+
+    - For IPs with found parents: Set that parent and save the `IPAddress`.
+    - For orphand IPs (missing parents):
+        - Generate a `Prefix` from the `IPAddress`
+        - Get or create the parent `Prefix`
+        - Set that as the parent and save the `IPAddress`
+
+    """
     # Find the correct namespace for each IPAddress and move it if necessary.
     IPAddress = apps.get_model("ipam", "IPAddress")
     Prefix = apps.get_model("ipam", "Prefix")
+    # found_parents, missing_parents = collected_ips
     found_parents, missing_parents = collect_ips(apps)
 
-    # Explicitly set the parent for those that were fond and save.
+    # Explicitly set the parent for those that were found and save them.
     for found_ip, found_parent in found_parents:
         # TODO(jathan): Print message for parenting updates here (it's going to be noisy).
         found_ip.parent = found_parent
@@ -371,21 +412,50 @@ def process_ip_addresses(apps):
         raise SystemExit("OH NOES we still have orphaned IPs! Stop everything and find out why!")
 
 
-def process_interfaces(apps):
-    # Numbered interfaces
+CollectedVRFs = collections.namedtuple("CollectedVRFs", "matching_vrfs mismatched_vrfs")
+
+
+def collect_matching_vrfs(apps, found_parents):
+    """Return a list of good/bad IPs/parents where VRFs are matched or not."""
+    matching_vrfs = []
+    mismatched_vrfs = []
+
+    for ip, parent in found_parents:
+        if ip.vrf and (ip.vrf != parent.vrf):
+            mismatched_vrfs.append((ip, parent))
+        elif ip.vrf == parent.vrf:
+            matching_vrfs.append((ip, parent))
+        else:
+            raise RuntimeError("Unexpected parent/child VRF situation. Call the police.")
+
+    return CollectedVRFs(matching_vrfs, mismatched_vrfs)
+
+
+def has_mismatched_parent_vrf(ip):
+    if ip.vrf is not None:
+        return ip.vrf.prefixes.filter(pk=ip.parent.pk).exists()
+    return False
+
+
+def process_interfaces(apps, collected_vrfs):
+    """Process [VM]Interface objects."""
     Interface = apps.get_model("dcim", "Interface")
     VMInterface = apps.get_model("virtualization", "VMInterface")
     VRFDeviceAssignment = apps.get_model("ipam", "VRFDeviceAssignment")
 
+    matching_vrfs, mismatched_vrfs = collected_vrfs
+    mismatched_map = dict(mismatched_vrfs)
+
+    # Numbered interfaces
     ip_interfaces = Interface.objects.filter(ip_addresses__vrf__isnull=False)
     ip_vminterfaces = VMInterface.objects.filter(ip_addresses__vrf__isnull=False)
 
+    # TODO(jathan): We need to also account for whether that IP's parent does not have a conflict
+    # where the parent's VRF doesn't match the VRF of the IPAddress assigned to the [VM]Interface.
+
     # Case 2: Interface has one or more IP address assigned to it that result in a single assigned
-    # VRF (none is excluded) to it Interface should adopt the VRF of the IP Address assigned to it,
+    # VRF (none is excluded) to its Interface should adopt the VRF of the IP Address assigned to it,
     # Device should adopt an assocation to the VRF (VRFDeviceAssignment) as well.
-    # TODO(jathan): We may need to move interfaces VRFs until AFTER IPAddresses are parented because
-    # of the potential conflict where a parent's VRF doesn't match that of the IPAddress assigned to
-    # the [VM]Interface.
     for ifc in ip_interfaces:
         print(f">>> Processing VRF migration for numbered Interface {ifc.name!r}")
         # Case 3: Interface has many IP addresses assigned to it with different VRFs = ???
@@ -394,6 +464,9 @@ def process_interfaces(apps):
 
         # Set the Interface VRF to that of the first assigned IPAddress.
         first_ip = ifc.ip_addresses.first()
+        # if has_mismatched_parent_vrf(first_ip):
+        #     raise SystemExit("You cannot migrate Interfaces that have IPs with conflicting VRFs between with the parent Prefix.")
+
         ifc_vrf = first_ip.vrf
         ifc.vrf = ifc_vrf
         ifc.save()
@@ -412,6 +485,9 @@ def process_interfaces(apps):
 
         # Set the VMInterface VRF to that of the first assigned IPAddress.
         first_ip = ifc.ip_addresses.first()
+        # if has_mismatched_parent_vrf(first_ip):
+        #     raise SystemExit("You cannot migrate VMInterfaces that have IPs with conflicting VRFs between with the parent Prefix.")
+
         ifc_vrf = first_ip.vrf
         ifc.vrf = ifc_vrf
         ifc.save()
