@@ -17,8 +17,10 @@ class Paginator extends React.Component {
         let data_count;
         let page_size;
         let active_page;
+        let scroll_ref;
         data_count = this.props.data_count;
         active_page = this.props.active_page;
+        scroll_ref = this.props.scroll_ref;
         if (!active_page) {
             active_page = 0;
         }
@@ -58,6 +60,7 @@ class Paginator extends React.Component {
                             totalDataCount={data_count}
                             currentPage={active_page}
                             pageSize={page_size}
+                            scroll_ref={scroll_ref}
                         ></Pagination>
                     </NautobotGridItem>
                     <NautobotGridItem colSpan="4">
@@ -65,6 +68,7 @@ class Paginator extends React.Component {
                             start={start_range}
                             end={end_range}
                             total_count={data_count}
+                            scroll_ref={scroll_ref}
                         ></PaginatorForm>
                     </NautobotGridItem>
                 </NautobotGrid>
