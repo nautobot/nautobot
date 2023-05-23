@@ -5,6 +5,7 @@ from django_celery_results.managers import TaskResultManager, transaction_retry
 
 from nautobot.core.models import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.extras.models.jobs import Job
 
 
 class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResultManager):
@@ -84,7 +85,6 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             "user_id": user_id,
             "worker": worker,
         }
-        from nautobot.extras.models.jobs import Job
 
         job = Job.objects.get(name=task_name)
         if job.has_sensitive_variables:
