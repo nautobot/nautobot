@@ -19,7 +19,6 @@ from nautobot.extras.forms import (
     RelationshipModelBulkEditFormMixin,
     RelationshipModelFormMixin,
     StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
     TagsBulkEditFormMixin,
 )
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
@@ -45,7 +44,6 @@ __all__ = (
     "RelationshipModelBulkEditFormMixin",
     "RelationshipModelFormMixin",
     "StatusModelBulkEditFormMixin",
-    "StatusModelCSVFormMixin",
     "TagsBulkEditFormMixin",
     "TagFilterField",
     "TimePicker",

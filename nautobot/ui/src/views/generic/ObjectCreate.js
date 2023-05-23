@@ -14,7 +14,7 @@ const fetcher = (url) =>
     axios.options(url, { withCredentials: true }).then((res) => res.data);
 
 export default function GenericObjectCreateView({ list_url }) {
-    const { app_name, model_name } = useParams();
+    const { app_label, model_name } = useParams();
     const location = useLocation();
     const [formData, setFormData] = useState(null);
     const [extraErrors, setExtraErrors] = useState({});
@@ -22,12 +22,12 @@ export default function GenericObjectCreateView({ list_url }) {
     const pluginPrefix = isPluginView ? "plugins/" : "";
 
     if (!list_url) {
-        list_url = `/api/${pluginPrefix}${app_name}/${model_name}/`;
+        list_url = `/api/${pluginPrefix}${app_label}/${model_name}/`;
     }
 
     const { data, error } = useSWR(list_url, fetcher);
 
-    if (!app_name || !model_name) {
+    if (!app_label || !model_name) {
         return <GenericView />;
     }
 

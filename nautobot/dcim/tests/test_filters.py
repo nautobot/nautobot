@@ -2721,6 +2721,12 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         with self.subTest():
             params = {"termination_b_type": [type_interface]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        with self.subTest():
+            params = {"termination_type": [type_interface]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        with self.subTest():
+            params = {"termination_type": [type_console_port, type_console_server_port]}
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class PowerPanelTestCase(FilterTestCases.FilterTestCase):

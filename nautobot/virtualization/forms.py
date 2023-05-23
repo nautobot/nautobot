@@ -8,8 +8,6 @@ from nautobot.core.forms import (
     BulkRenameForm,
     CommentField,
     ConfirmationForm,
-    CSVChoiceField,
-    CSVModelChoiceField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
@@ -24,14 +22,12 @@ from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
 from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
-    LocatableModelCSVFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
 from nautobot.dcim.models import Device, Location, Platform, Rack
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
-    CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,
@@ -39,10 +35,8 @@ from nautobot.extras.forms import (
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
     RoleModelBulkEditFormMixin,
-    RoleModelCSVFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
@@ -67,12 +61,6 @@ class ClusterTypeForm(NautobotModelForm):
         ]
 
 
-class ClusterTypeCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = ClusterType
-        fields = ClusterType.csv_headers
-
-
 #
 # Cluster groups
 #
@@ -85,12 +73,6 @@ class ClusterGroupForm(NautobotModelForm):
             "name",
             "description",
         ]
-
-
-class ClusterGroupCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = ClusterGroup
-        fields = ClusterGroup.csv_headers
 
 
 #
@@ -114,30 +96,6 @@ class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "comments",
             "tags",
         )
-
-
-class ClusterCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
-    cluster_type = CSVModelChoiceField(
-        queryset=ClusterType.objects.all(),
-        to_field_name="name",
-        help_text="Type of cluster",
-    )
-    cluster_group = CSVModelChoiceField(
-        queryset=ClusterGroup.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned cluster group",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = Cluster
-        fields = Cluster.csv_headers
 
 
 class ClusterBulkEditForm(
@@ -327,30 +285,6 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             self.fields["primary_ip4"].widget.attrs["readonly"] = True
             self.fields["primary_ip6"].choices = []
             self.fields["primary_ip6"].widget.attrs["readonly"] = True
-
-
-class VirtualMachineCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
-    cluster = CSVModelChoiceField(
-        queryset=Cluster.objects.all(),
-        to_field_name="name",
-        help_text="Assigned cluster",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-    platform = CSVModelChoiceField(
-        queryset=Platform.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned platform",
-    )
-
-    class Meta:
-        model = VirtualMachine
-        fields = VirtualMachine.csv_headers
 
 
 class VirtualMachineBulkEditForm(
@@ -587,32 +521,6 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         if location:
             self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
             self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
-
-
-class VMInterfaceCSVForm(CustomFieldModelCSVForm, StatusModelCSVFormMixin):
-    virtual_machine = CSVModelChoiceField(queryset=VirtualMachine.objects.all(), to_field_name="name")
-    parent_interface = CSVModelChoiceField(
-        queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Parent interface"
-    )
-    bridge = CSVModelChoiceField(
-        queryset=VMInterface.objects.all(), required=False, to_field_name="name", help_text="Bridge interface"
-    )
-    mode = CSVChoiceField(
-        choices=InterfaceModeChoices,
-        required=False,
-        help_text="IEEE 802.1Q operational mode (for L2 interfaces)",
-    )
-
-    class Meta:
-        model = VMInterface
-        fields = VMInterface.csv_headers
-
-    def clean_enabled(self):
-        # Make sure enabled is True when it's not included in the uploaded data
-        if "enabled" not in self.data:
-            return True
-        else:
-            return self.cleaned_data["enabled"]
 
 
 class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):

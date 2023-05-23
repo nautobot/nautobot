@@ -4,6 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.db.models import Sum
+from django.utils.functional import classproperty
 
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import PrimaryModel
@@ -215,20 +216,9 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
         help_text="Physical port type",
     )
 
-    csv_headers = ["device", "name", "label", "type", "description"]
-
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def to_csv(self):
-        return (
-            self.device.identifier,
-            self.name,
-            self.label,
-            self.type,
-            self.description,
-        )
 
     @property
     def parent(self):
@@ -253,20 +243,9 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
         help_text="Physical port type",
     )
 
-    csv_headers = ["device", "name", "label", "type", "description"]
-
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def to_csv(self):
-        return (
-            self.device.identifier,
-            self.name,
-            self.label,
-            self.type,
-            self.description,
-        )
 
     @property
     def parent(self):
@@ -309,30 +288,9 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
         help_text="Allocated power draw (watts)",
     )
 
-    csv_headers = [
-        "device",
-        "name",
-        "label",
-        "type",
-        "maximum_draw",
-        "allocated_draw",
-        "description",
-    ]
-
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def to_csv(self):
-        return (
-            self.device.identifier,
-            self.name,
-            self.label,
-            self.get_type_display(),
-            self.maximum_draw,
-            self.allocated_draw,
-            self.description,
-        )
 
     @property
     def parent(self):
@@ -443,30 +401,9 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
         help_text="Phase (for three-phase feeds)",
     )
 
-    csv_headers = [
-        "device",
-        "name",
-        "label",
-        "type",
-        "power_port",
-        "feed_leg",
-        "description",
-    ]
-
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def to_csv(self):
-        return (
-            self.device.identifier,
-            self.name,
-            self.label,
-            self.get_type_display(),
-            self.power_port.name if self.power_port else None,
-            self.get_feed_leg_display(),
-            self.description,
-        )
 
     @property
     def parent(self):
@@ -606,44 +543,9 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         verbose_name="IP Addresses",
     )
 
-    csv_headers = [
-        "device",
-        "name",
-        "label",
-        "lag",
-        "type",
-        "enabled",
-        "mac_address",
-        "mtu",
-        "mgmt_only",
-        "description",
-        "mode",
-        "status",
-        "parent_interface",
-        "bridge",
-    ]
-
     class Meta:
         ordering = ("device", CollateAsChar("_name"))
         unique_together = ("device", "name")
-
-    def to_csv(self):
-        return (
-            self.device.identifier if self.device else None,
-            self.name,
-            self.label,
-            self.lag.name if self.lag else None,
-            self.get_type_display(),
-            self.enabled,
-            self.mac_address,
-            self.mtu,
-            str(self.mgmt_only),
-            self.description,
-            self.get_mode_display(),
-            self.get_status_display(),
-            self.parent_interface.name if self.parent_interface else None,
-            self.bridge.name if self.bridge else None,
-        )
 
     def clean(self):
         super().clean()
@@ -875,32 +777,11 @@ class FrontPort(CableTermination, ComponentModel):
         ],
     )
 
-    csv_headers = [
-        "device",
-        "name",
-        "label",
-        "type",
-        "rear_port",
-        "rear_port_position",
-        "description",
-    ]
-
     class Meta:
         ordering = ("device", "_name")
         unique_together = (
             ("device", "name"),
             ("rear_port", "rear_port_position"),
-        )
-
-    def to_csv(self):
-        return (
-            self.device.identifier,
-            self.name,
-            self.label,
-            self.get_type_display(),
-            self.rear_port.name,
-            self.rear_port_position,
-            self.description,
         )
 
     @property
@@ -939,8 +820,6 @@ class RearPort(CableTermination, ComponentModel):
         ],
     )
 
-    csv_headers = ["device", "name", "label", "type", "positions", "description"]
-
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
@@ -957,16 +836,6 @@ class RearPort(CableTermination, ComponentModel):
                     f"({front_port_count})"
                 }
             )
-
-    def to_csv(self):
-        return (
-            self.device.identifier,
-            self.name,
-            self.label,
-            self.get_type_display(),
-            self.positions,
-            self.description,
-        )
 
     @property
     def parent(self):
@@ -992,20 +861,9 @@ class DeviceBay(ComponentModel):
         null=True,
     )
 
-    csv_headers = ["device", "name", "label", "installed_device", "description"]
-
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    def to_csv(self):
-        return (
-            self.device.identifier,
-            self.name,
-            self.label,
-            self.installed_device.identifier if self.installed_device else None,
-            self.description,
-        )
 
     def clean(self):
         super().clean()
@@ -1074,31 +932,15 @@ class InventoryItem(TreeModel, ComponentModel):
     )
     discovered = models.BooleanField(default=False, help_text="This item was automatically discovered")
 
-    csv_headers = [
-        "device",
-        "name",
-        "label",
-        "manufacturer",
-        "part_id",
-        "serial",
-        "asset_tag",
-        "discovered",
-        "description",
-    ]
-
     class Meta:
         ordering = ("_name",)
         unique_together = ("device", "parent", "name")
 
-    def to_csv(self):
-        return (
-            self.device.name or f"{{{self.device.pk}}}",
-            self.name,
-            self.label,
-            self.manufacturer.name if self.manufacturer else None,
-            self.part_id,
-            self.serial,
-            self.asset_tag,
-            str(self.discovered),
-            self.description,
-        )
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
+        """
+        Due to the recursive nature of InventoryItem.unique_together, we need a custom implementation of this property.
+
+        For the time being we just use the PK as a natural key.
+        """
+        return ["pk"]

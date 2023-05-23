@@ -37,12 +37,6 @@ class Secret(PrimaryModel):
     provider = models.CharField(max_length=100)
     parameters = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
 
-    csv_headers = [
-        "name",
-        "description",
-        "provider",
-        "parameters",
-    ]
     clone_fields = [
         "provider",
     ]
@@ -52,14 +46,6 @@ class Secret(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.description,
-            self.provider,
-            self.parameters,
-        )
 
     def rendered_parameters(self, obj=None):
         """Render self.parameters as a Jinja2 template with the given object as context."""
@@ -113,13 +99,8 @@ class SecretsGroup(OrganizationalModel):
         to=Secret, related_name="secrets_groups", through="extras.SecretsGroupAssociation", blank=True
     )
 
-    csv_headers = ["name", "description"]
-
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (self.name, self.description)
 
     def get_secret_value(self, access_type, secret_type, obj=None, **kwargs):
         """Helper method to retrieve a specific secret from this group.
@@ -143,6 +124,8 @@ class SecretsGroupAssociation(BaseModel):
 
     access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
     secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)
+
+    natural_key_field_names = ["secrets_group", "access_type", "secret_type", "secret"]
 
     class Meta:
         unique_together = (

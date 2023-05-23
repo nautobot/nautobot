@@ -4,7 +4,7 @@ import re
 from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
-from drf_spectacular.plumbing import build_array_type, build_media_type_object, is_serializer
+from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer
 from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
@@ -53,6 +53,40 @@ class NautobotAutoSchema(AutoSchema):
         if self.is_bulk_action:
             return None
         return super()._get_paginator()
+
+    def get_description(self):
+        """
+        Get the appropriate description for a given API endpoint.
+
+        By default, if a specific action doesn't have its own docstring, and neither does the view class,
+        drf-spectacular will walk up the MRO of the view class until it finds a docstring, and use that.
+        Most of our viewsets (for better or for worse) do not have docstrings, and so it'll find and use the generic
+        docstring of the `NautobotModelViewSet` class, which isn't very useful to the end user. Instead of doing that,
+        we only use the docstring of the view itself (ignoring its parent class docstrings), or if none exists, we
+        make an attempt at rendering a basically accurate default description.
+        """
+        action_or_method = getattr(self.view, getattr(self.view, "action", self.method.lower()), None)
+        action_doc = get_doc(action_or_method)
+        if action_doc:
+            return action_doc
+
+        if self.view.__doc__:
+            view_doc = get_doc(self.view.__class__)
+            if view_doc:
+                return view_doc
+
+        # Fall back to a generic default description
+        if hasattr(self.view, "queryset") and self.method.lower() in self.method_mapping:
+            action = self.method_mapping[self.method.lower()].replace("_", " ").capitalize()
+            model_name = self.view.queryset.model._meta.verbose_name
+            if action == "Create":
+                return f"{action} one or more {model_name} objects."
+            if "{id}" in self.path:
+                return f"{action} a {model_name} object."
+            return f"{action} a list of {model_name} objects."
+
+        # Give up
+        return super().get_description()
 
     def get_filter_backends(self):
         """Nautobot's custom bulk operations, even though they return a list of records, are NOT filterable."""

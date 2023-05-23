@@ -1,5 +1,5 @@
 import uuid
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -25,7 +25,6 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import csv_format
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
@@ -190,7 +189,6 @@ class LocationTypeDeleteView(generic.ObjectDeleteView):
 
 class LocationTypeBulkImportView(generic.BulkImportView):
     queryset = LocationType.objects.all()
-    model_form = forms.LocationTypeCSVForm
     table = tables.LocationTypeTable
 
 
@@ -280,7 +278,6 @@ class LocationBulkEditView(generic.BulkEditView):
 
 class LocationBulkImportView(generic.BulkImportView):
     queryset = Location.objects.all()
-    model_form = forms.LocationCSVForm
     table = tables.LocationTable
 
 
@@ -338,7 +335,6 @@ class RackGroupDeleteView(generic.ObjectDeleteView):
 
 class RackGroupBulkImportView(generic.BulkImportView):
     queryset = RackGroup.objects.all()
-    model_form = forms.RackGroupCSVForm
     table = tables.RackGroupTable
 
 
@@ -463,7 +459,6 @@ class RackDeleteView(generic.ObjectDeleteView):
 
 class RackBulkImportView(generic.BulkImportView):
     queryset = Rack.objects.all()
-    model_form = forms.RackCSVForm
     table = tables.RackTable
 
 
@@ -515,18 +510,7 @@ class RackReservationDeleteView(generic.ObjectDeleteView):
 
 class RackReservationImportView(generic.BulkImportView):
     queryset = RackReservation.objects.all()
-    model_form = forms.RackReservationCSVForm
     table = tables.RackReservationTable
-
-    def _save_obj(self, obj_form, request):
-        """
-        Assign the currently authenticated user to the RackReservation.
-        """
-        instance = obj_form.save(commit=False)
-        instance.user = request.user
-        instance.save()
-
-        return instance
 
 
 class RackReservationBulkEditView(generic.BulkEditView):
@@ -592,7 +576,6 @@ class ManufacturerDeleteView(generic.ObjectDeleteView):
 
 class ManufacturerBulkImportView(generic.BulkImportView):
     queryset = Manufacturer.objects.all()
-    model_form = forms.ManufacturerCSVForm
     table = tables.ManufacturerTable
 
 
@@ -1069,7 +1052,6 @@ class PlatformDeleteView(generic.ObjectDeleteView):
 
 class PlatformBulkImportView(generic.BulkImportView):
     queryset = Platform.objects.all()
-    model_form = forms.PlatformCSVForm
     table = tables.PlatformTable
 
 
@@ -1401,26 +1383,7 @@ class DeviceDeleteView(generic.ObjectDeleteView):
 
 class DeviceBulkImportView(generic.BulkImportView):
     queryset = Device.objects.all()
-    model_form = forms.DeviceCSVForm
     table = tables.DeviceImportTable
-    template_name = "dcim/device_import.html"
-
-
-class ChildDeviceBulkImportView(generic.BulkImportView):
-    queryset = Device.objects.all()
-    model_form = forms.ChildDeviceCSVForm
-    table = tables.DeviceImportTable
-    template_name = "dcim/device_import_child.html"
-
-    def _save_obj(self, obj_form, request):
-        obj = obj_form.save()
-
-        # Save the reverse relation to the parent device bay
-        device_bay = obj.parent_bay
-        device_bay.installed_device = obj
-        device_bay.save()
-
-        return obj
 
 
 class DeviceBulkEditView(generic.BulkEditView):
@@ -1477,7 +1440,6 @@ class ConsolePortDeleteView(generic.ObjectDeleteView):
 
 class ConsolePortBulkImportView(generic.BulkImportView):
     queryset = ConsolePort.objects.all()
-    model_form = forms.ConsolePortCSVForm
     table = tables.ConsolePortTable
 
 
@@ -1541,7 +1503,6 @@ class ConsoleServerPortDeleteView(generic.ObjectDeleteView):
 
 class ConsoleServerPortBulkImportView(generic.BulkImportView):
     queryset = ConsoleServerPort.objects.all()
-    model_form = forms.ConsoleServerPortCSVForm
     table = tables.ConsoleServerPortTable
 
 
@@ -1605,7 +1566,6 @@ class PowerPortDeleteView(generic.ObjectDeleteView):
 
 class PowerPortBulkImportView(generic.BulkImportView):
     queryset = PowerPort.objects.all()
-    model_form = forms.PowerPortCSVForm
     table = tables.PowerPortTable
 
 
@@ -1669,7 +1629,6 @@ class PowerOutletDeleteView(generic.ObjectDeleteView):
 
 class PowerOutletBulkImportView(generic.BulkImportView):
     queryset = PowerOutlet.objects.all()
-    model_form = forms.PowerOutletCSVForm
     table = tables.PowerOutletTable
 
 
@@ -1763,7 +1722,6 @@ class InterfaceDeleteView(generic.ObjectDeleteView):
 
 class InterfaceBulkImportView(generic.BulkImportView):
     queryset = Interface.objects.all()
-    model_form = forms.InterfaceCSVForm
     table = tables.InterfaceTable
 
 
@@ -1828,7 +1786,6 @@ class FrontPortDeleteView(generic.ObjectDeleteView):
 
 class FrontPortBulkImportView(generic.BulkImportView):
     queryset = FrontPort.objects.all()
-    model_form = forms.FrontPortCSVForm
     table = tables.FrontPortTable
 
 
@@ -1892,7 +1849,6 @@ class RearPortDeleteView(generic.ObjectDeleteView):
 
 class RearPortBulkImportView(generic.BulkImportView):
     queryset = RearPort.objects.all()
-    model_form = forms.RearPortCSVForm
     table = tables.RearPortTable
 
 
@@ -2041,7 +1997,6 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
 
 class DeviceBayBulkImportView(generic.BulkImportView):
     queryset = DeviceBay.objects.all()
-    model_form = forms.DeviceBayCSVForm
     table = tables.DeviceBayTable
 
 
@@ -2100,7 +2055,6 @@ class InventoryItemDeleteView(generic.ObjectDeleteView):
 
 class InventoryItemBulkImportView(generic.BulkImportView):
     queryset = InventoryItem.objects.all()
-    model_form = forms.InventoryItemCSVForm
     table = tables.InventoryItemTable
 
 
@@ -2377,7 +2331,6 @@ class CableDeleteView(generic.ObjectDeleteView):
 
 class CableBulkImportView(generic.BulkImportView):
     queryset = Cable.objects.all()
-    model_form = forms.CableCSVForm
     table = tables.CableTable
 
 
@@ -2400,56 +2353,7 @@ class CableBulkDeleteView(generic.BulkDeleteView):
 
 
 class ConnectionsListView(generic.ObjectListView):
-    CSVRow = namedtuple("CSVRow", ["device", "name", "dest_device", "dest_name", "reachable"])
-
-    def queryset_to_csv_body_data(self):
-        """
-        The headers may differ from view to view but the formatting of the CSV data is the same.
-        """
-        csv_body_data = []
-        for obj in self.queryset:
-            # The connected endpoint may or may not be associated with a Device (e.g., CircuitTerminations are not)
-            # and may or may not have a name of its own (e.g., CircuitTerminations do not)
-            dest_device = None
-            dest_name = None
-            if obj.connected_endpoint:
-                if hasattr(obj.connected_endpoint, "device"):
-                    dest_device = obj.connected_endpoint.device.identifier
-                if hasattr(obj.connected_endpoint, "name"):
-                    dest_name = obj.connected_endpoint.name
-
-            # In the case where a connection exists between two like endpoints,
-            # for consistency of output we want to ensure that it's always represented as
-            # ("device a", "interface a", "device b", "interface b") rather than
-            # ("device b", "interface b", "device a", "interface a")
-            if obj.__class__ == obj.connected_endpoint.__class__ and (
-                obj.device.identifier > obj.connected_endpoint.device.identifier
-                or (
-                    obj.device.identifier == obj.connected_endpoint.device.identifier
-                    and obj.name > obj.connected_endpoint.name
-                )
-            ):
-                # Swap the two endpoints around for consistent output as described above
-                row = self.CSVRow(
-                    device=dest_device,
-                    name=dest_name,
-                    dest_device=obj.device.identifier,
-                    dest_name=obj.name,
-                    reachable=str(obj.path.is_active),
-                )
-            else:
-                # Existing order of endpoints is fine and correct
-                row = self.CSVRow(
-                    device=obj.device.identifier,
-                    name=obj.name,
-                    dest_device=dest_device,
-                    dest_name=dest_name,
-                    reachable=str(obj.path.is_active),
-                )
-
-            csv_body_data.append(csv_format(row))
-
-        return sorted(csv_body_data)
+    pass
 
 
 class ConsoleConnectionsListView(ConnectionsListView):
@@ -2457,16 +2361,8 @@ class ConsoleConnectionsListView(ConnectionsListView):
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
+    template_name = "dcim/console_port_connection_list.html"
     action_buttons = ("export",)
-
-    def queryset_to_csv(self):
-        csv_data = [
-            # Headers
-            ",".join(["device", "console_port", "console_server", "port", "reachable"])
-        ]
-        csv_data.extend(self.queryset_to_csv_body_data())
-
-        return "\n".join(csv_data)
 
     def extra_context(self):
         return {
@@ -2481,16 +2377,8 @@ class PowerConnectionsListView(ConnectionsListView):
     filterset = filters.PowerConnectionFilterSet
     filterset_form = forms.PowerConnectionFilterForm
     table = tables.PowerConnectionTable
+    template_name = "dcim/power_port_connection_list.html"
     action_buttons = ("export",)
-
-    def queryset_to_csv(self):
-        csv_data = [
-            # Headers
-            ",".join(["device", "power_port", "pdu", "outlet", "reachable"])
-        ]
-        csv_data.extend(self.queryset_to_csv_body_data())
-
-        return "\n".join(csv_data)
 
     def extra_context(self):
         return {
@@ -2505,6 +2393,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
     filterset = filters.InterfaceConnectionFilterSet
     filterset_form = forms.InterfaceConnectionFilterForm
     table = tables.InterfaceConnectionTable
+    template_name = "dcim/interface_connection_list.html"
     action_buttons = ("export",)
 
     def __init__(self, *args, **kwargs):
@@ -2520,8 +2409,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
             # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
             # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
             # used for reverse querying.
-            # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A);
-            # we fix it up to be consistently (A, B) in queryset_to_csv_body_data().
+            # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A)
             # TODO: this is very problematic when filtering the view via FilterSet - if the filterset matches (A), then
             #       the connection will appear in the table, but if it only matches (B) then the connection will not!
             _path__destination_type=ContentType.objects.get_for_model(Interface),
@@ -2531,15 +2419,6 @@ class InterfaceConnectionsListView(ConnectionsListView):
             self.queryset = qs
 
         return self.queryset
-
-    def queryset_to_csv(self):
-        csv_data = [
-            # Headers
-            ",".join(["device_a", "interface_a", "device_b", "interface_b", "reachable"])
-        ]
-        csv_data.extend(self.queryset_to_csv_body_data())
-
-        return "\n".join(csv_data)
 
     def extra_context(self):
         return {
@@ -2773,7 +2652,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
 
 class VirtualChassisBulkImportView(generic.BulkImportView):
     queryset = VirtualChassis.objects.all()
-    model_form = forms.VirtualChassisCSVForm
     table = tables.VirtualChassisTable
 
 
@@ -2829,7 +2707,6 @@ class PowerPanelDeleteView(generic.ObjectDeleteView):
 
 class PowerPanelBulkImportView(generic.BulkImportView):
     queryset = PowerPanel.objects.all()
-    model_form = forms.PowerPanelCSVForm
     table = tables.PowerPanelTable
 
 
@@ -2876,7 +2753,6 @@ class PowerFeedDeleteView(generic.ObjectDeleteView):
 
 class PowerFeedBulkImportView(generic.BulkImportView):
     queryset = PowerFeed.objects.all()
-    model_form = forms.PowerFeedCSVForm
     table = tables.PowerFeedTable
 
 
@@ -2894,7 +2770,6 @@ class PowerFeedBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
-    bulk_create_form_class = forms.DeviceRedundancyGroupCSVForm
     bulk_update_form_class = forms.DeviceRedundancyGroupBulkEditForm
     filterset_class = filters.DeviceRedundancyGroupFilterSet
     filterset_form_class = forms.DeviceRedundancyGroupFilterForm

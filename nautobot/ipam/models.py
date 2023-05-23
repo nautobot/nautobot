@@ -132,14 +132,14 @@ class VRF(PrimaryModel):
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
     export_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="exporting_vrfs", blank=True)
 
-    csv_headers = ["name", "rd", "tenant", "description"]
     clone_fields = [
         "tenant",
         "description",
     ]
+    natural_key_field_names = ["name", "rd"]  # default auto-key is just "rd", but it's nullable!
 
     class Meta:
-        ordering = ("namespace", "name")  # (name, rd) may be non-unique
+        ordering = ("namespace", "name", "rd")  # (name, rd) may be non-unique
         unique_together = [
             ["namespace", "name"],
             ["namespace", "rd"],
@@ -149,14 +149,6 @@ class VRF(PrimaryModel):
 
     def __str__(self):
         return self.display or super().__str__()
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.rd,
-            self.tenant.name if self.tenant else None,
-            self.description,
-        )
 
     @property
     def display(self):
@@ -299,20 +291,11 @@ class RouteTarget(PrimaryModel):
         null=True,
     )
 
-    csv_headers = ["name", "description", "tenant"]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.description,
-            self.tenant.name if self.tenant else None,
-        )
 
 
 @extras_features(
@@ -333,8 +316,6 @@ class RIR(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "is_private", "description"]
-
     objects = BaseManager.from_queryset(RIRQuerySet)()
 
     class Meta:
@@ -344,13 +325,6 @@ class RIR(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            str(self.is_private),
-            self.description,
-        )
 
 
 @extras_features(
@@ -445,20 +419,9 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     objects = BaseManager.from_queryset(PrefixQuerySet)()
 
-    csv_headers = [
-        "prefix",
-        "namespace",
-        "type",
-        "tenant",
-        "location",
-        "vlan_group",
-        "vlan",
-        "status",
-        "role",
-        "rir",
-        "date_allocated",
-        "description",
-    ]
+    # TODO: The current Prefix model has no appropriate natural key available yet.
+    natural_key_field_names = ["id"]
+
     clone_fields = [
         "date_allocated",
         "description",
@@ -589,22 +552,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         self.reparent_subnets()
         # Determine the child IPs and reparent them to this prefix.
         self.reparent_ips()
-
-    def to_csv(self):
-        return (
-            self.prefix,
-            self.namespace.name if self.namespace else None,
-            self.get_type_display(),
-            self.tenant.name if self.tenant else None,
-            self.location.name if self.location else None,
-            self.vlan.vlan_group.name if self.vlan and self.vlan.vlan_group else None,
-            self.vlan.vid if self.vlan else None,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            self.rir.name if self.rir else None,
-            str(self.date_allocated),
-            self.description,
-        )
 
     @property
     def cidr_str(self):
@@ -930,15 +877,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = [
-        "address",
-        "tenant",
-        "status",
-        "role",
-        "is_primary",
-        "dns_name",
-        "description",
-    ]
     clone_fields = [
         "tenant",
         "status",
@@ -993,14 +931,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
 
     # TODO: The current IPAddress model has no appropriate natural key available yet.
-    #       However, by default all BaseModel subclasses now have a `natural_key` property;
-    #       but for this model, accessing the natural_key will raise an exception.
-    #       The below is a hacky way to "remove" the natural_key property from this model class for the time being.
-    class AttributeRemover:
-        def __get__(self, instance, owner):
-            raise AttributeError("IPAddress doesn't yet have a natural key!")
-
-    natural_key = AttributeRemover()
+    natural_key_field_names = ["id"]
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
@@ -1056,24 +987,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         self.parent = Prefix.objects.get_closest_parent(self.host, namespace=namespace)
 
         super().save(*args, **kwargs)
-
-    def to_csv(self):
-        # Determine if this IP is primary for a Device
-        is_primary = False
-        if self.address.version == 4 and getattr(self, "primary_ip4_for", False):
-            is_primary = True
-        elif self.address.version == 6 and getattr(self, "primary_ip6_for", False):
-            is_primary = True
-
-        return (
-            self.address,
-            self.tenant.name if self.tenant else None,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            str(is_primary),
-            self.dns_name,
-            self.description,
-        )
 
     @property
     def address(self):
@@ -1216,8 +1129,6 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = ["name", "slug", "location", "description"]
-
     class Meta:
         ordering = (
             "location",
@@ -1247,14 +1158,6 @@ class VLANGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.location.name if self.location else None,
-            self.description,
-        )
 
     def get_next_available_vid(self):
         """
@@ -1313,16 +1216,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = [
-        "location",
-        "vlan_group",
-        "vid",
-        "name",
-        "tenant",
-        "status",
-        "role",
-        "description",
-    ]
     clone_fields = [
         "location",
         "vlan_group",
@@ -1372,18 +1265,6 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
                     "vlan_group": f'The assigned group belongs to a location that does not include location "{self.location}".'
                 }
             )
-
-    def to_csv(self):
-        return (
-            self.location.name if self.location else None,
-            self.vlan_group.name if self.vlan_group else None,
-            self.vid,
-            self.name,
-            self.tenant.name if self.tenant else None,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            self.description,
-        )
 
     @property
     def display(self):
@@ -1445,15 +1326,6 @@ class Service(PrimaryModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = [
-        "device",
-        "virtual_machine",
-        "name",
-        "protocol",
-        "ports",
-        "description",
-    ]
-
     class Meta:
         ordering = (
             "protocol",
@@ -1467,6 +1339,8 @@ class Service(PrimaryModel):
     def parent(self):
         return self.device or self.virtual_machine
 
+    natural_key_field_names = ["name", "device", "virtual_machine"]
+
     def clean(self):
         super().clean()
 
@@ -1475,16 +1349,6 @@ class Service(PrimaryModel):
             raise ValidationError("A service cannot be associated with both a device and a virtual machine.")
         if not self.device and not self.virtual_machine:
             raise ValidationError("A service must be associated with either a device or a virtual machine.")
-
-    def to_csv(self):
-        return (
-            self.device.name if self.device else None,
-            self.virtual_machine.name if self.virtual_machine else None,
-            self.name,
-            self.get_protocol_display(),
-            self.ports,
-            self.description,
-        )
 
     @property
     def port_list(self):
