@@ -88,8 +88,8 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
 
         job = Job.objects.get(id=job_model_id)
         if job.has_sensitive_variables:
-            fields.pop("task_args")
-            fields.pop("task_kwargs")
+            del fields["task_args"]
+            del fields["task_kwargs"]
 
         obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
 
