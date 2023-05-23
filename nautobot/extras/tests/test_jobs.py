@@ -79,11 +79,12 @@ class JobTest(TransactionTestCase):
 
     def test_job_result_manager_censor_sensitive_variables(self):
         """
-        Job test with pass result.
+        Job test with JobResult Censored Sensitive Variables.
         """
         module = "test_has_sensitive_variables"
         name = "TestHasSensitiveVariables"
-        job_result = create_job_result_and_run_job(module, name, kwarg_1=1, kwarg_2="2")
+        # This function create_job_result_and_run_job and the subsequent functions' arguments are very messy
+        job_result = create_job_result_and_run_job(module, name, "local", 1, 2, "3", kwarg_1=1, kwarg_2="2")
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual(job_result.task_args, [])
         self.assertEqual(job_result.task_kwargs, {})
