@@ -6,8 +6,7 @@ import logging
 import os
 
 from celery import schedules
-from celery.app.log import TaskFormatter
-from celery.utils.log import get_logger, get_task_logger, LoggingProxy
+from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -20,10 +19,10 @@ from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
 from nautobot.core.celery import (
+    add_nautobot_log_handler,
     app,
     NautobotKombuJSONEncoder,
-    setup_nautobot_job_stdout_stderr_redirect,
-    setup_nautobot_joblogentry_logger,
+    setup_nautobot_job_logging,
 )
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
@@ -737,23 +736,15 @@ class JobResult(BaseModel, CustomFieldModel):
             job_celery_kwargs.update(celery_kwargs)
 
         if synchronous:
-            # setup synchronous task logging
-            task_logger = get_task_logger(job_model.job_task.__module__)
-            setup_nautobot_joblogentry_logger(None, task_logger, None, None, None, None)
-            redirect_logger = get_logger("celery.redirected")
-            app.log.setup_handlers(
-                redirect_logger,
-                logfile=None,
-                format=app.conf.worker_task_log_format,
-                formatter=TaskFormatter,
-                colorize=False,
-            )
-            setup_nautobot_job_stdout_stderr_redirect(None, None, app.conf)
-
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
             job_result.save()
+
+            # setup synchronous task logging
+            redirect_logger = get_logger("celery.redirected")
+            add_nautobot_log_handler(redirect_logger)
+            setup_nautobot_job_logging(None, None, app.conf)
 
             # redirect stdout/stderr to logger and run task
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)

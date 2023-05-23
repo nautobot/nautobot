@@ -65,9 +65,9 @@ DjangoFixup(app).install()
 app.autodiscover_tasks()
 
 
-# Load jobs from JOBS_ROOT on celery workers
 @signals.import_modules.connect
 def import_tasks_from_jobs_root(sender, **kwargs):
+    """Load jobs from JOBS_ROOT on celery workers."""
     jobs_root = settings.JOBS_ROOT
     if jobs_root and os.path.exists(jobs_root):
         if jobs_root not in sys.path:
@@ -80,7 +80,7 @@ def import_tasks_from_jobs_root(sender, **kwargs):
                 logger.exception(exc)
 
 
-def _add_nautobot_log_handler(logger, format=None):
+def add_nautobot_log_handler(logger, format=None):
     """Add NautobotDatabaseHandler to logger and update logger level filtering to send all log levels to our handler."""
     if any([isinstance(h, NautobotDatabaseHandler) for h in logger.handlers]):
         return
@@ -96,18 +96,14 @@ def _add_nautobot_log_handler(logger, format=None):
     logger.addHandler(handler)
 
 
-@signals.after_setup_task_logger.connect
-def setup_nautobot_joblogentry_logger(sender, logger, loglevel, logfile, format, colorize, **kwargs):
-    """Add nautobot database logging handler to celery task logger."""
-    _add_nautobot_log_handler(logger, format)
-
-
 @signals.celeryd_after_setup.connect
-def setup_nautobot_job_stdout_stderr_redirect(sender, instance, conf, **kwargs):
-    """Add nautobot database logging handler to celery stdout/stderr redirect logger."""
+def setup_nautobot_job_logging(sender, instance, conf, **kwargs):
+    """Add nautobot database logging handler to celery stdout/stderr redirect logger and celery task logger."""
+    task_logger = get_logger("celery.task")
+    add_nautobot_log_handler(task_logger)
     if conf.worker_redirect_stdouts:
-        logger = get_logger("celery.redirected")
-        _add_nautobot_log_handler(logger)
+        redirect_logger = get_logger("celery.redirected")
+        add_nautobot_log_handler(redirect_logger)
 
 
 @signals.worker_ready.connect
