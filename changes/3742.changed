@@ -1,2 +1,3 @@
-Replaced existing spinner in LoadingWidget component with spinning-nautobot.
+Centered the LoadingWidget component in UI.
+Lightened the color of the LoadingWidget text to gray-3.
 Lightened the color of the skeleton component when loading tables.
