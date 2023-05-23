@@ -12,7 +12,7 @@ class TestHasSensitiveVariables(Job):
     class Meta:
         has_sensitive_variables = True
 
-    def run(self):
+    def run(self, *args, **kwargs):
         """
         Job function.
         """
