@@ -25,6 +25,11 @@ module.exports = {
             webpackConfig.output.chunkFilename =
                 "static/js/[id]-[chunkhash].js"; // DO have Webpack hash chunk filename
 
+            webpackConfig.cache = {
+                "type":  'filesystem',
+                "cacheDirectory": '/tmp/nautobot-webpack-cache'
+            };
+
             // Sourcemaps are our friend: https://blog.teamtreehouse.com/introduction-source-maps
             // Prefer a sourcemap file so we can analyze our apps bundle size in dev with `npm run analyze`.
             webpackConfig.devtool = "eval-source-map";

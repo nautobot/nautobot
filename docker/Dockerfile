@@ -167,6 +167,14 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
+# Install node.js 18.x (LTS)
+# hadolint ignore=DL3008,DL4006
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install --no-install-recommends -y nodejs && \
+    apt-get autoremove -y && \
+    apt-get clean all && \
+    rm -rf /var/lib/apt/lists/*
+
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image
 # We install more dependencies here and can copy where needed
@@ -228,12 +236,8 @@ FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
 
 # Install node.js 18.x (LTS)
 # hadolint ignore=DL3008,DL4006
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install --no-install-recommends -y nodejs && \
-    apt-get autoremove -y && \
-    apt-get clean all && \
-    rm -rf /var/lib/apt/lists/* && \
-    npm install --global markdownlint-cli@0.31.1
+COPY package.json package-lock.json /source/
+RUN npm install
 
 # Nautobot wheel build is no longer a direct previous layer
 # /source from build-nautobot will include docs from build-docs as well
