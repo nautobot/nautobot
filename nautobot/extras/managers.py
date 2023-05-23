@@ -69,7 +69,6 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         """
 
         # Prepare the fields for creating/updating a `JobResult`.
-        # TODO: task_args and task_kwargs MUST be censored here, but must wait until task_name matches Job.name
         fields = {
             "status": status,
             "result": result,
