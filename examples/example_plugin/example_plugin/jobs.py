@@ -1,3 +1,4 @@
+import sys
 import time
 
 from celery.utils.log import get_task_logger
@@ -26,7 +27,7 @@ class ExampleDryRunJob(Job):
         try:
             with transaction.atomic():
                 devices_with_serial = Device.objects.exclude(serial="")
-                log_msg = "Removing serial on %d devices."
+                log_msg = "Removing serial on %s devices."
                 if dryrun:
                     log_msg += " (DRYRUN)"
                 logger.info(log_msg, devices_with_serial.count())
@@ -77,10 +78,12 @@ class ExampleLoggingJob(Job):
         ]
 
     def run(self, interval):
-        logger.debug("Running for %d seconds.", interval)
+        logger.debug("Running for %s seconds.", interval)
         for step in range(1, interval + 1):
             time.sleep(1)
-            logger.info("Step %d", step)
+            logger.info("Step %s", step)
+            print("stdout logging for step %s task: %s" % (step, self.request.id))
+            print("stderr logging for step %s task: %s" % (step, self.request.id), file=sys.stderr)
         logger.info("Success", extra={"object": self.job_model})
         return f"Ran for {interval} seconds"
 
