@@ -42,7 +42,11 @@ export default function Home() {
     } = useGetObjectCountsQuery();
 
     if (isLoading) {
-        return <LoadingWidget />;
+        return (
+            <GenericView>
+                <LoadingWidget />
+            </GenericView>
+        );
     }
 
     if (isError) {
