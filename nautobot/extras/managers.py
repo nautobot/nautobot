@@ -86,10 +86,15 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         }
         from nautobot.extras.models.jobs import Job
 
-        job = Job.objects.get(id=job_model_id)
-        if job.has_sensitive_variables:
-            del fields["task_args"]
-            del fields["task_kwargs"]
+        # Need to have a try/except block here
+        # because sometimes job_model_id will be None.
+        try:
+            job = Job.objects.get(id=job_model_id)
+            if job.has_sensitive_variables:
+                del fields["task_args"]
+                del fields["task_kwargs"]
+        except Job.DoesNotExist:
+            pass
 
         obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
 

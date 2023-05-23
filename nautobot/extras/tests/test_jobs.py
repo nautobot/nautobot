@@ -77,6 +77,17 @@ class JobTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
 
+    def test_job_result_manager_censor_sensitive_variables(self):
+        """
+        Job test with pass result.
+        """
+        module = "test_has_sensitive_variables"
+        name = "TestHasSensitiveVariables"
+        job_result = create_job_result_and_run_job(module, name, kwarg_1=1, kwarg_2="2")
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(job_result.task_args, [])
+        self.assertEqual(job_result.task_kwargs, {})
+
     def test_job_fail(self):
         """
         Job test with fail result.
