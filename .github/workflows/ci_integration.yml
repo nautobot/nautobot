@@ -293,6 +293,9 @@ jobs:
       - name: "Setup base app_imports for mock"
         working-directory: ./nautobot/ui
         run: "echo 'export const NautobotApps = {}; export default NautobotApps;' > src/app_imports.js"
+      - name: "Setup app_routes.json for test"
+        working-directory: ./nautobot/ui
+        run: "echo '{}' > src/app_routes.json"
       - name: "Run unittest-ui"
         working-directory: ./nautobot/ui
         run: "poetry run invoke unittest-ui"
