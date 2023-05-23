@@ -315,8 +315,8 @@ if TESTING:
     LOGGING = {
         "version": 1,
         "disable_existing_loggers": False,
-        "handlers": {"console": {"level": "DEBUG", "class": "logging.NullHandler"}},
-        "loggers": {"nautobot": {"handlers": ["console"], "level": "DEBUG"}},
+        "handlers": {"console": {"level": "INFO", "class": "logging.NullHandler"}},
+        "loggers": {"nautobot": {"handlers": ["console"], "level": "INFO"}},
     }
 else:
     LOGGING = {
