@@ -489,8 +489,9 @@ class PluginCustomValidationTest(TestCase):
             location.clean()
 
     def test_relationship_association_validator_raises_exception(self):
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"), status=prefix_status)
         status = Status.objects.get_for_model(IPAddress).first()
-        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
         ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status)
         relationship = Relationship.objects.create(
             label="Test Relationship",
@@ -521,31 +522,35 @@ class FilterExtensionTest(TestCase):
             Tenant.objects.create(name="Tenant 3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"),
         )
         location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
             name="Location 1",
             slug="location-1",
             tenant=tenants[0],
             location_type=location_type,
+            status=location_status,
         )
         Location.objects.create(
             name="Location 2",
             slug="location-2",
             tenant=tenants[1],
             location_type=location_type,
+            status=location_status,
         )
         Location.objects.create(
             name="Location 3",
             slug="location-3",
             tenant=tenants[2],
             location_type=location_type,
+            status=location_status,
         )
 
-        manufactures = Manufacturer.objects.all()[:3]
+        manufacturers = Manufacturer.objects.all()[:3]
 
         roles = Role.objects.get_for_model(Device)
 
         DeviceType.objects.create(
-            manufacturer=manufactures[0],
+            manufacturer=manufacturers[0],
             model="Model 1",
             slug="model-1",
             part_number="Part Number 1",
@@ -553,7 +558,7 @@ class FilterExtensionTest(TestCase):
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=manufactures[1],
+            manufacturer=manufacturers[1],
             model="Model 2",
             slug="model-2",
             part_number="Part Number 2",
@@ -561,7 +566,7 @@ class FilterExtensionTest(TestCase):
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=manufactures[2],
+            manufacturer=manufacturers[2],
             model="Model 3",
             slug="model-3",
             part_number="Part Number 3",
@@ -569,12 +574,14 @@ class FilterExtensionTest(TestCase):
             is_full_depth=False,
         )
 
+        device_status = Status.objects.get_for_model(Device).first()
         Device.objects.create(
             name="Device 1",
             device_type=DeviceType.objects.get(slug="model-1"),
             role=roles[0],
             tenant=tenants[0],
             location=Location.objects.get(slug="location-1"),
+            status=device_status,
         )
         Device.objects.create(
             name="Device 2",
@@ -582,6 +589,7 @@ class FilterExtensionTest(TestCase):
             role=roles[1],
             tenant=tenants[1],
             location=Location.objects.get(slug="location-2"),
+            status=device_status,
         )
         Device.objects.create(
             name="Device 3",
@@ -589,6 +597,7 @@ class FilterExtensionTest(TestCase):
             role=roles[3],
             tenant=tenants[2],
             location=Location.objects.get(slug="location-3"),
+            status=device_status,
         )
 
     def test_basic_custom_filter(self):

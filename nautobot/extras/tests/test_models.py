@@ -154,39 +154,43 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
     model = ConfigContext
 
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        self.devicetype = DeviceType.objects.create(
+        cls.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
-        self.devicerole = Role.objects.get_for_model(Device).first()
+        cls.devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.create(name="Location Type 1")
-        self.location = Location.objects.create(name="Location 1", location_type=location_type)
-        self.platform = Platform.objects.first()
-        self.tenant = Tenant.objects.first()
-        self.tenantgroup = self.tenant.tenant_group
-        self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
-        self.dynamic_groups = DynamicGroup.objects.create(
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
+        cls.platform = Platform.objects.first()
+        cls.tenant = Tenant.objects.first()
+        cls.tenantgroup = cls.tenant.tenant_group
+        cls.tag, cls.tag2 = Tag.objects.get_for_model(Device)[:2]
+        cls.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
             content_type=ContentType.objects.get_for_model(Device),
             filter={"name": ["Device 1", "Device 2"]},
         )
-        self.dynamic_group_2 = DynamicGroup.objects.create(
+        cls.dynamic_group_2 = DynamicGroup.objects.create(
             name="Dynamic Group 2",
             content_type=ContentType.objects.get_for_model(Device),
             filter={"name": ["Device 2"]},
         )
-        self.vm_dynamic_group = DynamicGroup.objects.create(
+        cls.vm_dynamic_group = DynamicGroup.objects.create(
             name="VM Dynamic Group",
             content_type=ContentType.objects.get_for_model(VirtualMachine),
             filter={"name": ["VM 1"]},
         )
 
-        self.device = Device.objects.create(
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
             name="Device 1",
-            device_type=self.devicetype,
-            role=self.devicerole,
-            location=self.location,
+            device_type=cls.devicetype,
+            role=cls.devicerole,
+            location=cls.location,
+            status=cls.device_status,
         )
 
         ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
@@ -256,6 +260,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -296,12 +301,14 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         )
         dynamic_group_context.dynamic_groups.add(self.vm_dynamic_group)
 
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = VirtualMachine.objects.create(
             name="VM 1",
             cluster=cluster,
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=vm_status,
         )
         virtual_machine.tags.add(self.tag)
 
@@ -340,6 +347,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -371,6 +379,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -394,6 +403,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         dynamic_group_context = ConfigContext.objects.create(
@@ -955,7 +965,8 @@ class JobResultTest(TestCase):
         self.assertIsNone(job_result.related_object)
 
         # Case 3: Related object with no name, identified by PK/ID
-        ip_address = IPAddress.objects.create(address="1.1.1.1/32")
+        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        ip_address = IPAddress.objects.create(address="1.1.1.1/32", status=ipaddr_status)
         job_result = JobResult(
             name="irrelevant",
             obj_type=ContentType.objects.get_for_model(ip_address),

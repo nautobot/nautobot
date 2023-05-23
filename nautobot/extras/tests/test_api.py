@@ -204,8 +204,11 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        device = Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location)
+        device = Device.objects.create(
+            name="Device 1", device_type=devicetype, role=devicerole, status=devicestatus, location=location
+        )
 
         # Test default config contexts (created at test setup)
         rendered_context = device.get_config_context()
@@ -373,31 +376,33 @@ class ContentTypeTest(APITestCase):
 
 
 class CreatedUpdatedFilterTest(APITestCase):
-    def setUp(self):
-        super().setUp()
-
-        self.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        self.rackgroup1 = RackGroup.objects.create(
-            location=self.location1, name="Test Rack Group 1", slug="test-rack-group-1"
+    @classmethod
+    def setUpTestData(cls):
+        cls.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.rackgroup1 = RackGroup.objects.create(
+            location=cls.location1, name="Test Rack Group 1", slug="test-rack-group-1"
         )
-        self.rackrole1 = Role.objects.get_for_model(Rack).first()
-        self.rack1 = Rack.objects.create(
-            location=self.location1,
-            rack_group=self.rackgroup1,
-            role=self.rackrole1,
+        cls.rackrole1 = Role.objects.get_for_model(Rack).first()
+        cls.rackstatus1 = Status.objects.get_for_model(Rack).first()
+        cls.rack1 = Rack.objects.create(
+            location=cls.location1,
+            rack_group=cls.rackgroup1,
+            role=cls.rackrole1,
+            status=cls.rackstatus1,
             name="Test Rack 1",
             u_height=42,
         )
-        self.rack2 = Rack.objects.create(
-            location=self.location1,
-            rack_group=self.rackgroup1,
-            role=self.rackrole1,
+        cls.rack2 = Rack.objects.create(
+            location=cls.location1,
+            rack_group=cls.rackgroup1,
+            role=cls.rackrole1,
+            status=cls.rackstatus1,
             name="Test Rack 2",
             u_height=42,
         )
 
         # change the created and last_updated of one
-        Rack.objects.filter(pk=self.rack2.pk).update(
+        Rack.objects.filter(pk=cls.rack2.pk).update(
             created=make_aware(datetime(2001, 2, 3, 0, 1, 2, 3)),
             last_updated=make_aware(datetime(2001, 2, 3, 1, 2, 3, 4)),
         )
@@ -608,10 +613,17 @@ class DynamicGroupTestMixin:
     def setUpTestData(cls):
         # Create the objects required for devices.
         location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(name="Location 1", slug="location-1", location_type=location_type),
-            Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
-            Location.objects.create(name="Location 3", slug="location-3", location_type=location_type),
+            Location.objects.create(
+                name="Location 1", slug="location-1", location_type=location_type, status=location_status
+            ),
+            Location.objects.create(
+                name="Location 2", slug="location-2", location_type=location_type, status=location_status
+            ),
+            Location.objects.create(
+                name="Location 3", slug="location-3", location_type=location_type, status=location_status
+            ),
         )
 
         manufacturer = Manufacturer.objects.first()
