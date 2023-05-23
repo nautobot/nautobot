@@ -62,13 +62,7 @@ class Command(BaseCommand):
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
 
         if options["local"]:
-            job_result = JobResult.execute_job(
-                job_model=job_model,
-                user=user,
-                profile=options["profile"],
-                **data,
-            )
-
+            job_result = JobResult.execute_job(job_model, user, profile=options["profile"], **data)
         else:
             job_result = JobResult.enqueue_job(job_model, user, profile=options["profile"], **data)
 
@@ -81,13 +75,14 @@ class Command(BaseCommand):
         groups = set(JobLogEntry.objects.filter(job_result=job_result).values_list("grouping", flat=True))
         for group in sorted(groups):
             logs = JobLogEntry.objects.filter(job_result__pk=job_result.pk, grouping=group)
-            success_count = logs.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+            debug_count = logs.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
             info_count = logs.filter(log_level=LogLevelChoices.LOG_INFO).count()
             warning_count = logs.filter(log_level=LogLevelChoices.LOG_WARNING).count()
-            failure_count = logs.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
+            error_count = logs.filter(log_level=LogLevelChoices.LOG_ERROR).count()
+            critical_count = logs.filter(log_level=LogLevelChoices.LOG_CRITICAL).count()
 
             self.stdout.write(
-                f"\t{group}: {success_count} success, {info_count} info, {warning_count} warning, {failure_count} failure"
+                f"\t{group}: {debug_count} debug, {info_count} info, {warning_count} warning, {error_count} error, {critical_count} critical"
             )
 
             for log_entry in logs:

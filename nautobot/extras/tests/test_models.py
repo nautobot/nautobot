@@ -1355,7 +1355,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
 
     def test_log_entry_creation(self):
         log = JobLogEntry(
-            log_level=LogLevelChoices.LOG_SUCCESS,
+            log_level=LogLevelChoices.LOG_INFO,
             job_result=self.job_result,
             grouping="run",
             message="This is a test",
@@ -1370,11 +1370,11 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
 
     def test_to_csv_no_log_object(self):
         """Check that `to_csv` returns the correct data from the JobLogEntry model."""
-        expected_data = ("2020-01-26 15:37:36", "run", "success", "", "Django Test")
+        expected_data = ("2020-01-26 15:37:36", "run", "info", "", "Django Test")
 
         joblogentry_a = JobLogEntry(
             job_result=self.job_result,
-            log_level=LogLevelChoices.LOG_SUCCESS,
+            log_level=LogLevelChoices.LOG_INFO,
             grouping="run",
             message="Django Test",
             created=datetime.datetime(2020, 1, 26, 15, 37, 36),
@@ -1387,11 +1387,11 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
 
     def test_to_csv_with_log_object(self):
         """Check that `to_csv` returns the correct data from the JobLogEntry model."""
-        expected_data = ("2030-05-26 15:37:36", "run", "success", "ams01-dist-01", "Django Test 2")
+        expected_data = ("2030-05-26 15:37:36", "run", "info", "ams01-dist-01", "Django Test 2")
 
         joblogentry_a = JobLogEntry(
             job_result=self.job_result,
-            log_level=LogLevelChoices.LOG_SUCCESS,
+            log_level=LogLevelChoices.LOG_INFO,
             grouping="run",
             message="Django Test 2",
             created=datetime.datetime(2030, 5, 26, 15, 37, 36),

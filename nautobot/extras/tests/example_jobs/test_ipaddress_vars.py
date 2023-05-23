@@ -58,7 +58,7 @@ class TestIPAddresses(Job):
         logger.warning("IPv6: %s", ipv6_with_mask)
         logger.warning("IPv6: %s", ipv6_network)
 
-        logger.success("Job didn't crash!")
+        logger.info("Job didn't crash!")
 
         return "Nice IPs, bro."
 

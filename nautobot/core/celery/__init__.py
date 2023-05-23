@@ -80,12 +80,17 @@ def import_tasks_from_jobs_root(sender, **kwargs):
                 logger.exception(exc)
 
 
-def _add_nautobot_log_handler(logger, format):
-    """Add NautobotDatabaseHandler to a logger and update logger level filtering to send all log levels to our handler."""
-    if logger.level != logging.NOTSET:
+def _add_nautobot_log_handler(logger, format=None):
+    """Add NautobotDatabaseHandler to logger and update logger level filtering to send all log levels to our handler."""
+    if any([isinstance(h, NautobotDatabaseHandler) for h in logger.handlers]):
+        return
+    if logger.level not in (logging.NOTSET, logging.DEBUG):
         for handler in logger.handlers:
             handler.setLevel(logger.level)
     logger.setLevel(logging.DEBUG)
+
+    if format is None:
+        format = app.conf.worker_task_log_format
     handler = NautobotDatabaseHandler()
     handler.setFormatter(TaskFormatter(format, use_color=False))
     logger.addHandler(handler)
@@ -93,16 +98,16 @@ def _add_nautobot_log_handler(logger, format):
 
 @signals.after_setup_task_logger.connect
 def setup_nautobot_joblogentry_logger(sender, logger, loglevel, logfile, format, colorize, **kwargs):
-    """Add nautobot database logger to celery task logger."""
+    """Add nautobot database logging handler to celery task logger."""
     _add_nautobot_log_handler(logger, format)
 
 
 @signals.celeryd_after_setup.connect
 def setup_nautobot_job_stdout_stderr_redirect(sender, instance, conf, **kwargs):
-    """Add nautobot database logger to celery stdout/stderr proxy logger."""
+    """Add nautobot database logging handler to celery stdout/stderr redirect logger."""
     if conf.worker_redirect_stdouts:
         logger = get_logger("celery.redirected")
-        _add_nautobot_log_handler(logger, conf.worker_task_log_format)
+        _add_nautobot_log_handler(logger)
 
 
 @signals.worker_ready.connect

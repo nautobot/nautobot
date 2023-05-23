@@ -324,14 +324,11 @@ class JobTest(TransactionTestCase):
         module = "test_object_var_required"
         name = "TestRequiredObjectVar"
         data = {"location": None}
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, **data)
-        logging.disable(logging.NOTSET)
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        log_failure = JobLogEntry.objects.filter(grouping="initialization", log_level=LogLevelChoices.LOG_ERROR).first()
-        self.assertIn("location is a required field", log_failure.message)
+        self.assertIn("location is a required field", job_result.traceback)
 
     def test_job_latest_result_property(self):
         """
@@ -548,10 +545,10 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestPass"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command("--no-color", "--username", self.user.username, job_model.class_path)
+        out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
-        self.assertIn("run: 1 success, 1 info, 0 warning, 0 failure", out)
-        self.assertIn("success: None", out)
+        self.assertIn("run: 0 debug, 1 info, 0 warning, 0 error, 0 critical", out)
+        self.assertIn("info: Success", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 
@@ -569,20 +566,21 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command("--no-color", "--username", self.user.username, job_model.class_path)
+        out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         # Changed job to actually log data. Can't display empty results if no logs were created.
-        self.assertIn("run: 1 success, 1 info, 0 warning, 0 failure", out)
+        self.assertIn("run: 0 debug, 1 info, 0 warning, 0 error, 0 critical", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 
-        success_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).first()
-        self.assertEqual(success_log.message, "Status created successfully.")
+        success_log = JobLogEntry.objects.filter(
+            log_level=LogLevelChoices.LOG_INFO, message="Status created successfully."
+        )
+        self.assertTrue(success_log.exists())
+        self.assertEqual(success_log.count(), 1)
 
         status = Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
-
-        status.delete()
 
 
 class JobLocationCustomFieldTest(TransactionTestCase):

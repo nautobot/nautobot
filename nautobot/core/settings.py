@@ -304,7 +304,12 @@ LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
 if TESTING:
     # keep log quiet by default when running unit/integration tests
-    LOGGING = {}
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {"console": {"level": "DEBUG", "class": "logging.NullHandler"}},
+        "loggers": {"nautobot": {"handlers": ["console"], "level": "DEBUG"}},
+    }
 else:
     LOGGING = {
         "version": 1,
