@@ -3,14 +3,10 @@ import { lazy } from "react";
 import { getComponentFromModule } from "./app-import";
 import { LoadingWidget } from "@components/LoadingWidget";
 
+const app_routes = require("../app_routes.json");
+
 export function getPluginRoutes() {
     let react_routes = [];
-    let app_routes = [];
-    try {
-        app_routes = require("../app_routes.json");
-    } catch (error) {
-        console.warn("app_routes.json not found");
-    }
 
     for (const [app_name, routes] of Object.entries(app_routes)) {
         for (const { path, component } of routes) {

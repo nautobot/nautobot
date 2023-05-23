@@ -1,6 +1,4 @@
 import { Navigate, useRoutes } from "react-router-dom";
-import { useGetSessionQuery } from "@utils/api";
-import Home from "@views/Home";
 import { useSelector } from "react-redux";
 import { isLoggedInSelector } from "@utils/store";
 import CreateView from "@views/generic/ObjectCreate";

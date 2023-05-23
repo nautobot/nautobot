@@ -22,7 +22,7 @@ function get_components() {
                                 base["CustomViews"][route][view_action] = lazy(
                                     () =>
                                         getComponentFromModule(
-                                            app_name,
+                                            app_label,
                                             component
                                         )
                                 );
@@ -43,7 +43,7 @@ function get_components() {
                         components.map((component) => {
                             base["FullWidthComponents"][route].push(
                                 lazy(() =>
-                                    getComponentFromModule(app_name, component)
+                                    getComponentFromModule(app_label, component)
                                 )
                             );
                         });
