@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0084_job__commit_default_data_migration'),
+        ("extras", "0084_job__commit_default_data_migration"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='joblogentry',
-            name='log_level',
-            field=models.CharField(db_index=True, default='info', max_length=32),
+            model_name="joblogentry",
+            name="log_level",
+            field=models.CharField(db_index=True, default="info", max_length=32),
         ),
     ]
