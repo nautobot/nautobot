@@ -17,7 +17,6 @@ class TestHasSensitiveVariables(Job):
         Job function.
         """
         self.log_success(obj=None)
-        self.status = "complete"
 
 
 register_jobs(TestHasSensitiveVariables)
