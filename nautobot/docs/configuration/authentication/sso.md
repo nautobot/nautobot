@@ -171,6 +171,112 @@ SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = 'https://<Okta URL>/oauth2/<Authenticat
 
 The `/default` authentication server can be used for testing, however, it should not be used in production.
 
+#### Okta - SAML
+
+See [SAML Prerequisites](https://docs.nautobot.com/projects/core/en/stable/configuration/authentication/sso/#saml) for common setup.
+
+Setup SAML in Okta
+
+1. Visit your Okta Admin Dasboard.
+2. Create a new application (Create App Integration) and select SAML 2.0.
+3. Give you application a name and logo if you choose.
+4. Configure the SAML Settings as follows.
+    - **Single Sign-on URL**: `https://nautobot.example.com/complete/saml/`
+    - **Audience URI**: `https://nautobot.example.com`
+    - **Default RelayState**: `okta`
+    - **Name ID Format**: `Unspecified`
+    - **Application Username**: `Okta Username`
+5. Under Atribute Statements configure the following:
+    - `firstName` - Basic - `user.firstName`
+    - `lastName` - Basic - `user.lastName`
+    - `emailAddress` - Basic `user.email`
+6. (Optional) Configure group Attribute statements.
+    - `groups` - Basic - Startswith - `nautobot` (example, needs to be adjusted to your environment)
+7. Select internal application and then finish.
+8. Don't forget to assign users/groups to the application so they have access.
+9. Lastly, look at the `Sign On` tab, then Show Details under Metadata details for detail you will need to configure Nautobot.
+
+Edit your `nautobot_config.py` as follows:
+
+```python
+# Django authentication backends
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.saml.SAMLAuth",
+    "nautobot.core.authentication.ObjectPermissionBackend",
+]
+
+# The https FQDN to your Nautobot instance
+SOCIAL_AUTH_SAML_SP_ENTITY_ID = "https://nautobot.example.com/"
+
+# X.509 cert/key pair used for host verification are not used for this example because
+# Nautobot is directly authenticating itself to Google. Set them to empty strings.
+SOCIAL_AUTH_SAML_SP_PUBLIC_CERT = ""
+SOCIAL_AUTH_SAML_SP_PRIVATE_KEY = ""
+
+# A dictionary that contains information about your app. You must specify values for
+# English at a minimum.
+SOCIAL_AUTH_SAML_ORG_INFO = {
+    "en-US": {
+        "name": "Nautobot",
+        "displayname": "Nautobot",
+        "url": "https://nautobot.example.com",
+    }
+}
+
+# Technical point of contact
+SOCIAL_AUTH_SAML_TECHNICAL_CONTACT = {
+    "givenName": "Bob Jones",
+    "emailAddress": "bob@example.com"
+}
+
+# Support point of contact
+SOCIAL_AUTH_SAML_SUPPORT_CONTACT = {
+    "givenName": "Alice Jenkins",
+    "emailAddress": "alice@example.com"
+}
+
+# The Issuer URL for Okta from step 9
+OKTA_ENTITY_ID = "<Issuer from Okta>"
+
+# The Sign On URL for Okta from step 9
+OKTA_SSO_URL = "<Sign On URL from Okta>"
+
+# The Signing Certificate for  Okta from step 9
+OKTA_CERTIFICATE = "<Signing Certificate from Okta>"
+
+# The most important setting. List the Entity ID (Issuer), SSO URL (Sign On URL), and x.509 public key certificate
+# for each provider that you app wants to support. 
+SOCIAL_AUTH_SAML_ENABLED_IDPS = {
+    "okta": {
+        'force_authn': "true",
+        'allow_unsolicited': "true",
+        'requested_authn_context': "false",
+        "entity_id": OKTA_ENTITY_ID,
+        "url": OKTA_SSO_URL,
+        "x509cert": OKTA_CERTIFICATE,
+        # These are used to map to User object fields in Nautobot using Google
+        # attribute fields we configured in step 8 of "Setup SAML in Google".
+        "attr_user_permanent_id": "emailAddress",
+        "attr_first_name": "firstName",
+        "attr_last_name": "lastName",
+        "attr_username": "emailAddress",
+        "attr_email": "emailAddress",
+    }
+}
+
+# Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need
+# these depending on your production deployment. They are provided here just in case.
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+```
+
+Login with Okta SAML¶
+Note the provider entry we configured in SOCIAL_AUTH_SAML_ENABLED_IDPS as okta. This will be used to login and will be referenced in the query parameter using idp=okta. For example /login/saml/?idp=okta.
+
+This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Google, ask you to "Choose an account", log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
+
+Be sure to configure EXTERNAL_AUTH_DEFAULT_GROUPS and EXTERNAL_AUTH_DEFAULT_PERMISSIONS next.
+
 #### Okta - Additional Scopes
 
 It is possible to get additional OAuth scopes from okta by adding them to the `SOCIAL_AUTH_{BACKEND}_SCOPE` list. For example to get the `groups` scope from Okta using OAuth2 add the following to your `nautobot_config.py`:
