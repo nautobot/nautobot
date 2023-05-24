@@ -181,17 +181,17 @@ Setup SAML in Okta
 2. Create a new application (Create App Integration) and select SAML 2.0.
 3. Give you application a name and logo if you choose.
 4. Configure the SAML Settings as follows.
-    - **Single Sign-on URL**: `https://nautobot.example.com/complete/saml/`
-    - **Audience URI**: `https://nautobot.example.com`
-    - **Default RelayState**: `okta`
-    - **Name ID Format**: `Unspecified`
-    - **Application Username**: `Okta Username`
+    * **Single Sign-on URL**: `https://nautobot.example.com/complete/saml/`
+    * **Audience URI**: `https://nautobot.example.com`
+    * **Default RelayState**: `okta`
+    * **Name ID Format**: `Unspecified`
+    * **Application Username**: `Okta Username`
 5. Under Atribute Statements configure the following:
-    - `firstName` - Basic - `user.firstName`
-    - `lastName` - Basic - `user.lastName`
-    - `emailAddress` - Basic `user.email`
+    * `firstName` - Basic - `user.firstName`
+    * `lastName` - Basic - `user.lastName`
+    * `emailAddress` - Basic `user.email`
 6. (Optional) Configure group Attribute statements.
-    - `groups` - Basic - Startswith - `nautobot` (example, needs to be adjusted to your environment)
+    * `groups` - Basic - Startswith - `nautobot` (example, needs to be adjusted to your environment)
 7. Select internal application and then finish.
 8. Don't forget to assign users/groups to the application so they have access.
 9. Lastly, look at the `Sign On` tab, then Show Details under Metadata details for detail you will need to configure Nautobot.
