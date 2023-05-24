@@ -97,7 +97,7 @@ class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
         name = "Example Simple Job Button Receiver"
 
     def receive_job_button(self, obj):
-        self.log_info(obj=obj, message="Running Job Button Receiver.")
+        self.logger.info("Running Job Button Receiver.", extra={"object": obj})
         # Add job logic here
 ```
 
@@ -115,24 +115,24 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         name = "Example Complex Job Button Receiver"
 
     def _run_site_job(self, obj):
-        self.log_info(obj=obj, message="Running Site Job Button Receiver.")
+        self.logger.info("Running Site Job Button Receiver.", extra={"object": obj})
         # Run Site Job function
 
     def _run_device_job(self, obj):
-        self.log_info(obj=obj, message="Running Device Job Button Receiver.")
+        self.logger.info("Running Device Job Button Receiver.", extra={"object": obj})
         # Run Device Job function
 
     def receive_job_button(self, obj):
         user = self.request.user
         if isinstance(obj, Site):
             if not user.has_perm("dcim.add_site"):
-                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Site.")
+                self.logger.error("User '%s' does not have permission to add a Site.", user, extra={"object": obj})
             else:
                 self._run_site_job(obj)
         if isinstance(obj, Device):
             if not user.has_perm("dcim.add_device"):
-                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Device.")
+                self.logger.error("User '%s' does not have permission to add a Device.", user, extra={"object": obj})
             else:
                 self._run_device_job(obj)
-        self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
+        self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
 ```

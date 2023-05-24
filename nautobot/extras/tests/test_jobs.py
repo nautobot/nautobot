@@ -53,7 +53,7 @@ class JobTest(TransactionTestCase):
 
     def test_job_hard_time_limit_less_than_soft_time_limit(self):
         """
-        Job test which produces a log_warning because the time_limit is less than the soft_time_limit.
+        Job test which produces a warning log message because the time_limit is less than the soft_time_limit.
         """
         module = "test_soft_time_limit_greater_than_time_limit"
         name = "TestSoftTimeLimitGreaterThanHardTimeLimit"

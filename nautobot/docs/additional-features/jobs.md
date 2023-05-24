@@ -447,16 +447,21 @@ Again, defining user variables is totally optional; you may create a job with a 
 
 ### Logging
 
-The following instance methods are available to log results from an executing job to be stored into [`JobLogEntry`](../models/extras/joblogentry.md) records associated with the current [`JobResult`](../models/extras/jobresult.md):
+Messages logged from a job's logger will be stored in [`JobLogEntry`](../models/extras/joblogentry.md) records associated with the current [`JobResult`](../models/extras/jobresult.md).
 
-* `self.log(message)`
-* `self.log_debug(message)`
-* `self.log_success(obj=None, message=None)`
-* `self.log_info(obj=None, message=None)`
-* `self.log_warning(obj=None, message=None)`
-* `self.log_failure(obj=None, message=None)`
+The logger can be accessed either by using the `logger` property on the job class or retrieved with `celery.utils.log.get_task_logger(__name__)`. Both will return the same logger instance.
 
-Messages recorded with `log()` or `log_debug()` will appear in a job's results but are never associated with a particular object; the other `log_*` functions may be invoked with or without a provided object to associate the message with.
+An optional `grouping` and/or `object` may be provided in log messages by passing them in the log function call's `extra` kwarg. If a `grouping` is not provided it will default to the function name that logged the message. The `object` will default to `None`.
+
+!!! example
+    ```py
+    from nautobot.extras.jobs import BaseJob
+
+
+    class MyJob(BaseJob):
+        def run(self):
+            logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
+    ```
 
 It is advised to log a message for each object that is evaluated so that the results will reflect how many objects are being manipulated or reported on.
 
@@ -465,24 +470,24 @@ Markdown rendering is supported for log messages.
 +/- 1.3.4
     As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
 
-!!! note
-    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising any exception (e.g. `ValueError` for malformed input values) will ensure that any database changes are rolled back as part of the process of ending the job. `AbortTransaction` from Nautobot, which was recommended in past versions of the docs, should explicitly **not** be used, as it is only intended for use by Nautobot's internal job handling.
++/- 2.0.0
+    The convenience method to mark a job as failed, `log_failure()` has been removed. To replace the functionality of this method, you can log an error message with `self.logger.error()` and then raise an exception to fail the job. Note that it is no longer possible to manually set the job result status as failed without raising an exception in the job.
 
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
 
-### Accessing Request Data
+### Accessing User and Job Result
 
-Details of the current HTTP request (the one being made to execute the job) are available as the instance attribute `self.request`. This can be used to infer, for example, the user executing the job and their client IP address:
++/- 2.0.0
+    The web request is no longer accessible to running jobs.
 
-```python
-username = self.request.user.username
-ip_address = self.request.META.get('HTTP_X_FORWARDED_FOR') or \
-    self.request.META.get('REMOTE_ADDR')
-self.log_info(f"Running as user {username} (IP: {ip_address})...")
+The user that initiated the job and the job result associated to the job can be accessed through properties on the job class:
+
+```py
+username = self.user.username
+job_result_id = self.job_result.id
+self.logger.info("Job %s initiated by user %s is running.", job_result_id, username)
 ```
-
-For a complete list of available request parameters, please see the [Django documentation](https://docs.djangoproject.com/en/stable/ref/request-response/).
 
 ### Reading Data from Files
 
@@ -829,7 +834,7 @@ class NewBranch(Job):
             status=STATUS_PLANNED,
         )
         site.validated_save()
-        self.log_success(obj=site, message="Created new site")
+        self.logger.info("Created new site", extra={"object": site})
 
         # Create access switches
         device_ct = ContentType.objects.get_for_model(Device)
@@ -844,7 +849,7 @@ class NewBranch(Job):
                 role=switch_role
             )
             switch.validated_save()
-            self.log_success(obj=switch, message="Created new switch")
+            self.logger.info("Created new switch", extra={"object": switch})
 
         # Generate a CSV table of new devices
         output = [
@@ -880,17 +885,23 @@ class DeviceConnectionsReport(Job):
         # Check that every console port for every active device has a connection defined.
         for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=STATUS_ACTIVE):
             if console_port.connected_endpoint is None:
-                self.log_failure(
-                    obj=console_port.device,
-                    message="No console connection defined for {}".format(console_port.name)
+                self.logger.error(
+                    "No console connection defined for %s",
+                    console_port.name,
+                    extra={"object": console_port.device},
                 )
             elif not console_port.connection_status:
-                self.log_warning(
-                    obj=console_port.device,
-                    message="Console connection for {} marked as planned".format(console_port.name)
+                self.logger.warning(
+                    "Console connection for %s marked as planned",
+                    console_port.name,
+                    extra={"object": console_port.device},
                 )
             else:
-                self.log_success(obj=console_port.device)
+                self.logger.info(
+                    "Console port %s has a connection defined",
+                    console_port.name,
+                    extra={"object": console_port.device},
+                )
 
     def test_power_connections(self):
         STATUS_ACTIVE = Status.objects.get(name='Active')
@@ -902,15 +913,17 @@ class DeviceConnectionsReport(Job):
                 if power_port.connected_endpoint is not None:
                     connected_ports += 1
                     if not power_port.connection_status:
-                        self.log_warning(
-                            obj=device,
-                            message="Power connection for {} marked as planned".format(power_port.name)
+                        self.logger.warning(
+                            "Power connection for %s marked as planned",
+                            power_port.name,
+                            extra={"object": device},
                         )
             if connected_ports < 2:
-                self.log_failure(
-                    obj=device,
-                    message="{} connected power supplies found (2 needed)".format(connected_ports)
+                self.logger.error(
+                    "%s connected power supplies found (2 needed)",
+                    connected_ports,
+                    extra={"object": device},
                 )
             else:
-                self.log_success(obj=device)
+                self.logger.info("At least two connected power supplies found", extra={"object": device})
 ```
