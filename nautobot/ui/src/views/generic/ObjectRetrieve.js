@@ -53,9 +53,15 @@ import RouterLink from "@components/RouterLink";
 import GenericView from "@views/generic/GenericView";
 
 const fetcher = (url) =>
-    fetch(url, { credentials: "include" }).then((res) =>
-        res.ok ? res.json() : null
-    );
+    fetch(url, { credentials: "include" }).then((res) => {
+        // We have to do this here because 4xx and 5xx errors
+        // are considered as a successful request.
+        if (!res.ok) {
+            throw new Error("Something Went Wrong");
+        } else {
+            return res.json();
+        }
+    });
 
 function render_header(value) {
     value = toTitleCase(value, "_");
@@ -175,18 +181,21 @@ export default function ObjectRetrieve({ api_url }) {
     // Object Data
     const {
         data: objectData,
-        isError: error,
+        error: error,
         isLoading: objectDataLoading,
     } = useSWR(() => api_url, fetcher);
     const ui_url = objectData?.url
         ? `${objectData.url}detail-view-config/`
         : null;
-    var { data: appConfig } = useSWR(() => ui_url, fetcher);
+    const { data: appConfig, error: appConfigError } = useSWR(
+        () => ui_url,
+        fetcher
+    );
     // ChangeLog Data
     const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}&depth=1`;
     const {
         data: changelogData,
-        isError: changelog_error,
+        error: changelog_error,
         isLoading: changelogDataLoading,
         isFetching: changelogDataFetching,
     } = useSWR(() => changelog_url, fetcher);
@@ -203,7 +212,7 @@ export default function ObjectRetrieve({ api_url }) {
     const notes_url = `/api/${pluginPrefix}${app_label}/${model_name}/${object_id}/notes/`;
     const {
         data: noteData,
-        isError: note_error,
+        error: note_error,
         isLoading: noteDataLoading,
         isFetching: noteDataFetching,
     } = useSWR(() => notes_url, fetcher);
@@ -217,7 +226,7 @@ export default function ObjectRetrieve({ api_url }) {
         schema: true,
     });
 
-    if (error || note_error || changelog_error) {
+    if (error || appConfigError) {
         return (
             <GenericView objectData={objectData}>
                 <div>Failed to load {api_url}</div>
@@ -311,8 +320,16 @@ export default function ObjectRetrieve({ api_url }) {
                         {Object.keys(appConfig).map((key, idx) => (
                             <Tab key={idx}>{render_header(key)}</Tab>
                         ))}
-                        <Tab>Notes</Tab>
-                        <Tab>Change Log</Tab>
+                        {noteData && noteHeaderData ? (
+                            <Tab>Notes</Tab>
+                        ) : (
+                            () => {}
+                        )}
+                        {changelogData && changelogHeaderData ? (
+                            <Tab>Change Log</Tab>
+                        ) : (
+                            () => {}
+                        )}
                     </TabList>
                     <TabPanels>
                         {Object.keys(appConfig).map((tab, idx) => (
@@ -405,74 +422,84 @@ export default function ObjectRetrieve({ api_url }) {
                                 </Card>
                             </TabPanel>
                         ))}
-                        <TabPanel key="notes">
-                            <Card>
-                                <CardHeader>
-                                    <Heading
-                                        display="flex"
-                                        alignItems="center"
-                                        gap="5px"
-                                    >
-                                        <NtcThumbnailIcon
-                                            width="25px"
-                                            height="30px"
-                                        />{" "}
-                                        Notes
-                                    </Heading>
-                                </CardHeader>
-                                <ObjectListTable
-                                    tableData={noteData.results}
-                                    defaultHeaders={
-                                        noteHeaderData.view_options
-                                            .list_display_fields
-                                    }
-                                    tableHeaders={
-                                        noteHeaderData.view_options.fields
-                                    }
-                                    totalCount={noteData.count}
-                                    active_page_number={0}
-                                    page_size={50}
-                                    tableTitle={"Notes"}
-                                    include_button={false}
-                                    data_loaded={noteDataLoaded}
-                                    data_fetched={!noteDataFetching}
-                                />
-                            </Card>
-                        </TabPanel>
-                        <TabPanel key="change_log">
-                            <Card>
-                                <CardHeader>
-                                    <Heading
-                                        display="flex"
-                                        alignItems="center"
-                                        gap="5px"
-                                    >
-                                        <NtcThumbnailIcon
-                                            width="25px"
-                                            height="30px"
-                                        />{" "}
-                                        Change Log
-                                    </Heading>
-                                </CardHeader>
-                                <ObjectListTable
-                                    tableData={changelogData.results}
-                                    defaultHeaders={
-                                        changelogHeaderData.view_options
-                                            .list_display_fields
-                                    }
-                                    tableHeaders={
-                                        changelogHeaderData.view_options.fields
-                                    }
-                                    totalCount={changelogData.count}
-                                    active_page_number={0}
-                                    page_size={50}
-                                    tableTitle={"Change Logs"}
-                                    include_button={false}
-                                    data_loaded={changelogDataLoaded}
-                                    data_fetched={!changelogDataFetching}
-                                />
-                            </Card>
-                        </TabPanel>
+                        {(noteData && noteHeaderData) || !note_error ? (
+                            <TabPanel key="notes">
+                                <Card>
+                                    <CardHeader>
+                                        <Heading
+                                            display="flex"
+                                            alignItems="center"
+                                            gap="5px"
+                                        >
+                                            <NtcThumbnailIcon
+                                                width="25px"
+                                                height="30px"
+                                            />{" "}
+                                            Notes
+                                        </Heading>
+                                    </CardHeader>
+                                    <ObjectListTable
+                                        tableData={noteData.results}
+                                        defaultHeaders={
+                                            noteHeaderData.view_options
+                                                .list_display_fields
+                                        }
+                                        tableHeaders={
+                                            noteHeaderData.view_options.fields
+                                        }
+                                        totalCount={noteData.count}
+                                        active_page_number={0}
+                                        page_size={50}
+                                        tableTitle={"Notes"}
+                                        include_button={false}
+                                        data_loaded={noteDataLoaded}
+                                        data_fetched={!noteDataFetching}
+                                    />
+                                </Card>
+                            </TabPanel>
+                        ) : (
+                            () => {}
+                        )}
+                        {(changelogData && changelogHeaderData) ||
+                        !changelog_error ? (
+                            <TabPanel key="change_log">
+                                <Card>
+                                    <CardHeader>
+                                        <Heading
+                                            display="flex"
+                                            alignItems="center"
+                                            gap="5px"
+                                        >
+                                            <NtcThumbnailIcon
+                                                width="25px"
+                                                height="30px"
+                                            />{" "}
+                                            Change Log
+                                        </Heading>
+                                    </CardHeader>
+                                    <ObjectListTable
+                                        tableData={changelogData.results}
+                                        defaultHeaders={
+                                            changelogHeaderData.view_options
+                                                .list_display_fields
+                                        }
+                                        tableHeaders={
+                                            changelogHeaderData.view_options
+                                                .fields
+                                        }
+                                        totalCount={changelogData.count}
+                                        active_page_number={0}
+                                        page_size={50}
+                                        tableTitle={"Change Logs"}
+                                        include_button={false}
+                                        data_loaded={changelogDataLoaded}
+                                        data_fetched={!changelogDataFetching}
+                                    />
+                                </Card>
+                            </TabPanel>
+                        ) : (
+                            () => {}
+                        )}
                     </TabPanels>
                 </Tabs>
             </Box>

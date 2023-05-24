@@ -1,0 +1,2 @@
+Enhanced error handling for fetcher in React UI `ObjectRetrieveView`.
+Moved `detail-view-config` API endpoint to `DetailViewConfigMixin`.
