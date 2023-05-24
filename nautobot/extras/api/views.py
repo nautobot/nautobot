@@ -330,9 +330,7 @@ class CustomFieldModelViewSet(ModelViewSet):
         return context
 
 
-class NautobotModelViewSet(
-    CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin, TableFieldsViewSetMixin, 
-):
+class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin, TableFieldsViewSetMixin):
     """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
 
     Can also be used for models derived from BaseModel, so long as they support Notes.
