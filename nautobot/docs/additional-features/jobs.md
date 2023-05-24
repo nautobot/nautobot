@@ -457,7 +457,6 @@ An optional `grouping` and/or `object` may be provided in log messages by passin
     ```py
     from nautobot.extras.jobs import BaseJob
 
-
     class MyJob(BaseJob):
         def run(self):
             logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
