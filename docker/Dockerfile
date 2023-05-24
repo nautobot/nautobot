@@ -94,16 +94,20 @@ ARG PYTHON_VER
 ################################ Stage: base (intermediate build target; basis for all other images herein)
 
 FROM python:${PYTHON_VER}-slim as base
+ARG PYTHON_VER
 
 ENV PYTHONUNBUFFERED=1 \
     NAUTOBOT_ROOT=/opt/nautobot \
     prometheus_multiproc_dir=/prom_cache
 
 # Install all OS package upgrades and dependencies needed to run Nautobot in production
-# hadolint ignore=DL3005,DL3008,DL3013
+# hadolint ignore=DL3005,DL3008,DL3013,DL4006
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y git mime-support curl libxml2 libmariadb3 openssl && \
+    apt-get install --no-install-recommends -y curl
+
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
@@ -155,6 +159,7 @@ RUN poetry config virtualenvs.create false && \
     poetry config installer.no-binary pyuwsgi
 
 COPY pyproject.toml poetry.lock README.md /source/
+COPY nautobot/ui/package.json nautobot/ui/package-lock.json /source/nautobot/ui/
 
 # The example_plugin is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
 COPY examples /source/examples
@@ -167,13 +172,12 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
-# Install node.js 18.x (LTS)
-# hadolint ignore=DL3008,DL4006
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install --no-install-recommends -y nodejs && \
-    apt-get autoremove -y && \
-    apt-get clean all && \
-    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /source/nautobot/ui
+
+RUN npm install
+
+WORKDIR /source
 
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image
@@ -281,6 +285,7 @@ ARG PYTHON_VER
 # Copy from "build-nautobot" the built Nautobot wheel
 COPY --from=dependencies /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
 COPY --from=dependencies /usr/local/bin /usr/local/bin
+COPY --from=dependencies /source/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
 COPY --from=build-nautobot /source/dist/*.whl /tmp
 
 # Install the Nautobot wheel

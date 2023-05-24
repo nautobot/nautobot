@@ -23,9 +23,6 @@ HOSTNAME = platform.node()
 # Set the base directory two levels up (i.e. the base nautobot/ directory)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# The directory where the Nautobot UI packaging is stored.
-NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "ui")
-
 # Set the swapable User model to the Nautobot custom User model
 AUTH_USER_MODEL = "users.User"
 
@@ -61,6 +58,9 @@ ALLOWED_URL_SCHEMES = (
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+
+# The directory where the Nautobot UI packaging is stored.
+NAUTOBOT_UI_DIR = os.path.join(NAUTOBOT_ROOT, "ui")
 
 # Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
 # when a large number of dynamic groups are present

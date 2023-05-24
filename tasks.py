@@ -35,7 +35,7 @@ except ModuleNotFoundError:
 # Base directory path from this file.
 BASE_DIR = os.path.join(os.path.dirname(__file__))
 
-# Base directorh path for Nautobot UI.
+# Base directory path for Nautobot UI.
 NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "nautobot/ui")
 
 
