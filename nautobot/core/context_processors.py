@@ -33,10 +33,11 @@ def settings(request):
     """
     Expose Django settings in the template context. Example: {{ settings.DEBUG }}
     """
+    use_base_template = request.path.endswith("/edit/") or request.path.endswith("/add/") or not request.COOKIES.get("newui", False)
 
     return {
         "settings": django_settings,
-        "root_template": "base_react.html" if request.COOKIES.get("newui", False) else "base_django.html",
+        "root_template": "base_django.html" if use_base_template else "base_react.html",
     }
 
 

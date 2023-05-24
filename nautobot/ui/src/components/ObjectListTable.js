@@ -158,14 +158,20 @@ export default function ObjectListTable({
                             Actions
                         </UIButton>
                         <Icon.TbMinusVertical />
-
-                        <RouterButton
+                        
+                        <UIButton
                             to={`${location.pathname}add/`}
                             size="sm"
                             leftIcon={<PlusIcon />}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if (process.env.NODE_ENV === "production") {
+                                    document.location.href += "add/"
+                                }
+                            }}
                         >
                             Add {tableTitle}
-                        </RouterButton>
+                        </UIButton>
                     </ButtonGroup>
                 </Box>
             )}
