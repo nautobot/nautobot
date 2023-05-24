@@ -1,1 +1,1 @@
-Added `DetailViewConfigMixin` to appropriate ModelViewSets.
+Added `detail-view-config` API endpoint to `ModelViewSetMixin`.

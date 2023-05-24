@@ -13,6 +13,7 @@ from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import NoReverseMatch, reverse as django_reverse
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -33,6 +34,7 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.config import get_settings_or_config
@@ -265,6 +267,80 @@ class ModelViewSetMixin:
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
             self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
+    
+    @action(detail=True, url_path="detail-view-config")
+    def detail_view_config(self, request, pk):
+        """
+        Return a JSON of the ObjectDetailView configuration
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+        obj_serializer_class = get_serializer_for_model(obj)
+        obj_serializer = obj_serializer_class(data=None)
+        response = self.get_detail_view_config(obj_serializer)
+        response = Response(response)
+        return response
+
+    def get_detail_view_config(self, obj_serializer):
+        all_fields = list(obj_serializer.get_fields().keys())
+        header_fields = ["display", "status", "created", "last_updated"]
+        extra_fields = ["object_type", "relationships", "computed_fields", "custom_fields"]
+        advanced_fields = ["id", "url", "display", "natural_key_slug", "slug", "notes_url"]
+        plugin_tab_1_fields = ["field_1", "field_2", "field_3"]
+        plugin_tab_2_fields = ["field_1", "field_2", "field_3"]
+        main_fields = [
+            field
+            for field in all_fields
+            if field not in header_fields and field not in extra_fields and field not in advanced_fields
+        ]
+        response = {
+            "main": [
+                {
+                    "name": obj_serializer.Meta.model._meta.model_name,
+                    "fields": main_fields,
+                    "colspan": 2,
+                    "rowspan": len(main_fields),
+                },
+                {
+                    "name": "extra",
+                    "fields": extra_fields,
+                    "colspan": 2,
+                    "rowspan": len(extra_fields),
+                },
+            ],
+            "advanced": [
+                {
+                    "name": "advanced data",
+                    "fields": advanced_fields,
+                    "colspan": 3,
+                    "rowspan": len(advanced_fields),
+                    "advanced": "true",
+                }
+            ],
+            "plugin_tab_1": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": 3,
+                    "rowspan": len(plugin_tab_1_fields),
+                },
+                {
+                    "name": "extra_plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": 1,
+                    "rowspan": len(plugin_tab_1_fields),
+                },
+            ],
+            "plugin_tab_2": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_2_fields,
+                    "colspan": 3,
+                    "rowspan": len(plugin_tab_2_fields),
+                }
+            ],
+        }
+        return response
+
 
 
 class ModelViewSet(

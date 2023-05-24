@@ -21,7 +21,6 @@ from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
-from nautobot.core.api.mixins import DetailViewConfigMixin
 from nautobot.core.api.utils import get_data_for_serializer_parameter, get_serializer_for_model
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
@@ -199,7 +198,7 @@ class TableFieldsViewSetMixin:
 #
 
 
-class ComputedFieldViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class ComputedFieldViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -255,7 +254,7 @@ class ConfigContextQuerySetMixin:
         return queryset.annotate_config_context_data()
 
 
-class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContext.objects.prefetch_related(
         "locations",
         "roles",
@@ -273,7 +272,7 @@ class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixi
 #
 
 
-class ConfigContextSchemaViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class ConfigContextSchemaViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     filterset_class = filters.ConfigContextSchemaFilterSet
@@ -284,7 +283,7 @@ class ConfigContextSchemaViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConf
 #
 
 
-class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet, DetailViewConfigMixin):
+class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Read-only list of ContentTypes. Limit results to ContentTypes pertinent to Nautobot objects.
     """
@@ -300,13 +299,13 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet, DetailViewConfigMixin):
 #
 
 
-class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
 
 
-class CustomFieldChoiceViewSet(ModelViewSet, DetailViewConfigMixin):
+class CustomFieldChoiceViewSet(ModelViewSet):
     queryset = CustomFieldChoice.objects.all()
     serializer_class = serializers.CustomFieldChoiceSerializer
     filterset_class = filters.CustomFieldChoiceFilterSet
@@ -332,7 +331,7 @@ class CustomFieldModelViewSet(ModelViewSet):
 
 
 class NautobotModelViewSet(
-    CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin, TableFieldsViewSetMixin, DetailViewConfigMixin
+    CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin, TableFieldsViewSetMixin, 
 ):
     """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
 
@@ -356,7 +355,7 @@ class NautobotModelViewSet(
 #
 
 
-class CustomLinkViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class CustomLinkViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -371,7 +370,7 @@ class CustomLinkViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
 #
 
 
-class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -396,7 +395,7 @@ class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin
         return self.get_paginated_response(member_serializer.data)
 
 
-class DynamicGroupMembershipViewSet(ModelViewSet, DetailViewConfigMixin):
+class DynamicGroupMembershipViewSet(ModelViewSet):
     """
     Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -411,7 +410,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet, DetailViewConfigMixin):
 #
 
 
-class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
@@ -453,7 +452,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
 #
 
 
-class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = GraphQLQuery.objects.all()
     serializer_class = serializers.GraphQLQuerySerializer
     filterset_class = filters.GraphQLQueryFilterSet
@@ -481,7 +480,7 @@ class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin
 #
 
 
-class ImageAttachmentViewSet(ModelViewSet, DetailViewConfigMixin):
+class ImageAttachmentViewSet(ModelViewSet):
     queryset = ImageAttachment.objects.all()
     serializer_class = serializers.ImageAttachmentSerializer
     filterset_class = filters.ImageAttachmentFilterSet
@@ -729,7 +728,6 @@ class JobViewSet(
     # Base class
     ReadOnlyModelViewSet,
     NotesViewSetMixin,
-    DetailViewConfigMixin,
 ):
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer
@@ -889,7 +887,7 @@ class JobHooksViewSet(NautobotModelViewSet):
 #
 
 
-class JobLogEntryViewSet(ReadOnlyModelViewSet, DetailViewConfigMixin):
+class JobLogEntryViewSet(ReadOnlyModelViewSet):
     """
     Retrieve a list of job log entries.
     """
@@ -907,7 +905,6 @@ class JobResultViewSet(
     BulkDestroyModelMixin,
     # Base class
     ReadOnlyModelViewSet,
-    DetailViewConfigMixin,
 ):
     """
     Retrieve a list of job results
@@ -930,7 +927,7 @@ class JobResultViewSet(
 #
 
 
-class JobButtonViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class JobButtonViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Job Buttons through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -945,7 +942,7 @@ class JobButtonViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
 #
 
 
-class ScheduledJobViewSet(ReadOnlyModelViewSet, DetailViewConfigMixin):
+class ScheduledJobViewSet(ReadOnlyModelViewSet):
     """
     Retrieve a list of scheduled jobs
     """
@@ -1102,7 +1099,7 @@ class NoteViewSet(ModelViewSet, TableFieldsViewSetMixin):
 #
 
 
-class ObjectChangeViewSet(ReadOnlyModelViewSet, TableFieldsViewSetMixin, DetailViewConfigMixin):
+class ObjectChangeViewSet(ReadOnlyModelViewSet, TableFieldsViewSetMixin):
     """
     Retrieve a list of recent changes.
     """
@@ -1117,13 +1114,13 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet, TableFieldsViewSetMixin, DetailV
 #
 
 
-class RelationshipViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
     queryset = Relationship.objects.all()
     serializer_class = serializers.RelationshipSerializer
     filterset_class = filters.RelationshipFilterSet
 
 
-class RelationshipAssociationViewSet(ModelViewSet, DetailViewConfigMixin):
+class RelationshipAssociationViewSet(ModelViewSet):
     queryset = RelationshipAssociation.objects.all()
     serializer_class = serializers.RelationshipAssociationSerializer
     filterset_class = filters.RelationshipAssociationFilterSet
@@ -1190,7 +1187,7 @@ class SecretsGroupViewSet(NautobotModelViewSet):
     filterset_class = filters.SecretsGroupFilterSet
 
 
-class SecretsGroupAssociationViewSet(ModelViewSet, DetailViewConfigMixin):
+class SecretsGroupAssociationViewSet(ModelViewSet):
     """
     Manage Secrets Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -1231,7 +1228,7 @@ class TagViewSet(NautobotModelViewSet):
 #
 
 
-class WebhooksViewSet(ModelViewSet, NotesViewSetMixin, DetailViewConfigMixin):
+class WebhooksViewSet(ModelViewSet, NotesViewSetMixin):
     """
     Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
     """
