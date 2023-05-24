@@ -306,7 +306,7 @@ DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
 
-TESTING = any((len(sys.argv) > 1 and sys.argv[1] == "test", len(sys.argv) > 4 and sys.argv[4] == "test"))
+TESTING = "test" in sys.argv
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
