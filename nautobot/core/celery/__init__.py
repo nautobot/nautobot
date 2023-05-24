@@ -80,20 +80,20 @@ def import_tasks_from_jobs_root(sender, **kwargs):
                 logger.exception(exc)
 
 
-def add_nautobot_log_handler(logger, format=None):
+def add_nautobot_log_handler(logger_instance, log_format=None):
     """Add NautobotDatabaseHandler to logger and update logger level filtering to send all log levels to our handler."""
-    if any([isinstance(h, NautobotDatabaseHandler) for h in logger.handlers]):
+    if any(isinstance(h, NautobotDatabaseHandler) for h in logger_instance.handlers):
         return
-    if logger.level not in (logging.NOTSET, logging.DEBUG):
-        for handler in logger.handlers:
-            handler.setLevel(logger.level)
-    logger.setLevel(logging.DEBUG)
+    if logger_instance.level not in (logging.NOTSET, logging.DEBUG):
+        for handler in logger_instance.handlers:
+            handler.setLevel(logger_instance.level)
+    logger_instance.setLevel(logging.DEBUG)
 
-    if format is None:
-        format = app.conf.worker_task_log_format
+    if log_format is None:
+        log_format = app.conf.worker_task_log_format
     handler = NautobotDatabaseHandler()
-    handler.setFormatter(TaskFormatter(format, use_color=False))
-    logger.addHandler(handler)
+    handler.setFormatter(TaskFormatter(log_format, use_color=False))
+    logger_instance.addHandler(handler)
 
 
 @signals.celeryd_after_setup.connect

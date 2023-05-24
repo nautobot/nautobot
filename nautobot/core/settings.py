@@ -298,17 +298,17 @@ DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
 
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+TESTING = "test" in sys.argv
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
 if TESTING:
-    # keep log quiet by default when running unit/integration tests
+    # Log to null handler instead of stderr during testing
     LOGGING = {
         "version": 1,
         "disable_existing_loggers": False,
-        "handlers": {"console": {"level": "DEBUG", "class": "logging.NullHandler"}},
-        "loggers": {"nautobot": {"handlers": ["console"], "level": "DEBUG"}},
+        "handlers": {"console": {"level": "INFO", "class": "logging.NullHandler"}},
+        "loggers": {"nautobot": {"handlers": ["console"], "level": "INFO"}},
     }
 else:
     LOGGING = {

@@ -83,8 +83,8 @@ class ExampleLoggingJob(Job):
         for step in range(1, interval + 1):
             time.sleep(1)
             logger.info("Step %s", step)
-            print("stdout logging for step %s task: %s" % (step, self.request.id))
-            print("stderr logging for step %s task: %s" % (step, self.request.id), file=sys.stderr)
+            print(f"stdout logging for step {step}, task: {self.request.id}")
+            print(f"stderr logging for step {step}, task: {self.request.id}", file=sys.stderr)
         logger.info("Success", extra={"object": self.job_model})
         return f"Ran for {interval} seconds"
 
