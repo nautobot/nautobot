@@ -14,11 +14,11 @@ from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
-from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.models import Interface
 from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
-from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.virtualization.models import VMInterface
 from .constants import (
     IPADDRESS_ROLES_NONUNIQUE,
     SERVICE_PORT_MAX,
