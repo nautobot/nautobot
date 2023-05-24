@@ -238,9 +238,9 @@ class ModelViewSetMixin:
         """
         # Restrict the view's QuerySet to allow only the permitted objects for the given user, if applicable
         if request.user.is_authenticated:
-            action = HTTP_ACTIONS[request.method]
-            if action:
-                self.queryset = self.queryset.restrict(request.user, action)
+            http_action = HTTP_ACTIONS[request.method]
+            if http_action:
+                self.queryset = self.queryset.restrict(request.user, http_action)
 
     def initial(self, request, *args, **kwargs):
         """
