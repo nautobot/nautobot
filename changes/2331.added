@@ -1,0 +1,1 @@
+Added job stdout/stderr redirection to database `JobLogEntry` records.
