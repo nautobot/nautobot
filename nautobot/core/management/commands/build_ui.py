@@ -129,7 +129,8 @@ class Command(BaseCommand):
         loglevel = f"--loglevel {verbosity_map[verbosity]}"
 
         self.run_command(
-            f"cp -r {Path(settings.BASE_DIR, 'ui')}/. {Path(settings.NAUTOBOT_UI_DIR)}", ">>> Copying UI source files..."
+            f"cp -r {Path(settings.BASE_DIR, 'ui')}/. {Path(settings.NAUTOBOT_UI_DIR)}",
+            ">>> Copying UI source files...",
         )
 
         # Generate `app_imports.js`
