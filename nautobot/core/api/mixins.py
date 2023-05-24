@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class DetailViewConfigMixin:
+    """
+    API Endpoint for UI 2.0 ObjectRetrieve Layout.
+    """
     @action(detail=True, url_path="detail-view-config")
     def detail_view_config(self, request, pk):
         """
