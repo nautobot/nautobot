@@ -1,5 +1,10 @@
+from celery.utils.log import get_task_logger
+
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
+
+
+logger = get_task_logger(__name__)
 
 
 class TestHasSensitiveVariables(Job):
@@ -16,7 +21,7 @@ class TestHasSensitiveVariables(Job):
         """
         Job function.
         """
-        self.log_success(obj=None)
+        logger.info("Success")
 
 
 register_jobs(TestHasSensitiveVariables)
