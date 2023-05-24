@@ -101,11 +101,12 @@ ENV PYTHONUNBUFFERED=1 \
     prometheus_multiproc_dir=/prom_cache
 
 # Install all OS package upgrades and dependencies needed to run Nautobot in production
-# hadolint ignore=DL3005,DL3008,DL3013,DL4006
+# hadolint ignore=DL3005,DL3008,DL3009,DL3013,DL4006
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install --no-install-recommends -y curl
 
+# hadolint ignore=DL3008,DL3009,DL3013,DL3059,DL4006
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y && \
