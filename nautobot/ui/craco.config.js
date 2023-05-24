@@ -25,17 +25,12 @@ module.exports = {
             webpackConfig.output.chunkFilename =
                 "static/js/[id]-[chunkhash].js"; // DO have Webpack hash chunk filename
 
-            webpackConfig.cache = {
-                "type":  'filesystem',
-                "cacheDirectory": '/tmp/nautobot-webpack-cache'
-            };
-
             // Sourcemaps are our friend: https://blog.teamtreehouse.com/introduction-source-maps
             // Prefer a sourcemap file so we can analyze our apps bundle size in dev with `npm run analyze`.
-            webpackConfig.devtool = "eval-source-map";
-            if (!process.env.NAUTOBOT_DEBUG) {
+            webpackConfig.devtool = "hidden-source-map";
+            if (process.env.NAUTOBOT_DEBUG) {
                 // Smaller sourcemap for production and not linked so browsers don't try to fetch it.
-                webpackConfig.devtool = "hidden-source-map";
+                webpackConfig.devtool = "eval-source-map";
             }
 
             // Plugin item 5 is the `MiniCssExtractPlugin`. Overload it to not hash the CSS filename.
