@@ -270,7 +270,8 @@ SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 ```
 
-Login with Okta SAML¶
+#### Login with Okta SAML
+
 Note the provider entry we configured in SOCIAL_AUTH_SAML_ENABLED_IDPS as okta. This will be used to login and will be referenced in the query parameter using idp=okta. For example /login/saml/?idp=okta.
 
 This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Google, ask you to "Choose an account", log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
