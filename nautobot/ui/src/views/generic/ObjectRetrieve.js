@@ -181,7 +181,7 @@ export default function ObjectRetrieve({ api_url }) {
     // Object Data
     const {
         data: objectData,
-        error: error,
+        error: objectDataError,
         isLoading: objectDataLoading,
     } = useSWR(() => api_url, fetcher);
     const ui_url = objectData?.url
@@ -226,7 +226,7 @@ export default function ObjectRetrieve({ api_url }) {
         schema: true,
     });
 
-    if (error || appConfigError) {
+    if (objectDataError || appConfigError) {
         return (
             <GenericView objectData={objectData}>
                 <div>Failed to load {api_url}</div>

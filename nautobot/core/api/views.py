@@ -267,7 +267,7 @@ class ModelViewSetMixin:
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
             self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
-    
+
     @action(detail=True, url_path="detail-view-config")
     def detail_view_config(self, request, pk):
         """
@@ -340,7 +340,6 @@ class ModelViewSetMixin:
             ],
         }
         return response
-
 
 
 class ModelViewSet(
