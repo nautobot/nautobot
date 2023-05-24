@@ -2,6 +2,7 @@ import re
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from timezone_field import TimeZoneFormField
 
@@ -2195,6 +2196,25 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         # Add current location to VLANs query params
         self.fields["untagged_vlan"].widget.add_query_param("location", device.location.pk)
         self.fields["tagged_vlans"].widget.add_query_param("location", device.location.pk)
+
+    def clean(self):
+        super().clean()
+        ip_addresses = self.cleaned_data.get("ip_addresses", [])
+        device = self.cleaned_data.get("device")
+        # IP address validation
+        if device:
+            if device.primary_ip4 and device.primary_ip4 not in ip_addresses:
+                raise ValidationError(
+                    {
+                        "ip_addresses": f"IP address {device.primary_ip4} is primary for device {device} but not assigned to it!"
+                    }
+                )
+            if device.primary_ip6 and device.primary_ip6 not in ip_addresses:
+                raise ValidationError(
+                    {
+                        "ip_addresses": f"IP address {device.primary_ip6} is primary for device {device} but not assigned to it!"
+                    }
+                )
 
 
 class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):

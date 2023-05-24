@@ -592,27 +592,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
                     vrf = f"VRF {self.vrf}" if self.vrf else "global table"
                     raise ValidationError({"address": f"Duplicate IP address found in {vrf}: {duplicate_ips.first()}"})
 
-        # TODO: update to work with interface M2M
-        # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
-        # `primary_ip{version}` field on `self.assigned_object.parent` has been nullified but not yet saved.
-        primary_ip_unset_by_form = getattr(self, "_primary_ip_unset_by_form", False)
-
-        # Check for primary IP assignment that doesn't match the assigned device/VM if and only if
-        # "_primary_ip_unset" has not been set by the caller.
-        if self.present_in_database and not primary_ip_unset_by_form:
-            device = Device.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
-            if device:
-                if getattr(self.assigned_object, "device", None) != device:
-                    raise ValidationError(
-                        {"interface": f"IP address is primary for device {device} but not assigned to it!"}
-                    )
-            vm = VirtualMachine.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
-            if vm:
-                if getattr(self.assigned_object, "virtual_machine", None) != vm:
-                    raise ValidationError(
-                        {"vminterface": f"IP address is primary for virtual machine {vm} but not assigned to it!"}
-                    )
-
         # Validate IP status selection
         if self.status == IPAddress.STATUS_SLAAC and self.family != 6:
             raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC status"})

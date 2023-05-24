@@ -263,15 +263,19 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
 
     def clean(self):
         super().clean()
+        from nautobot.ipam.models import IPAddressToInterface
 
         # Validate primary IP addresses
-        interfaces = self.interfaces.all()
         for field in ["primary_ip4", "primary_ip6"]:
             ip = getattr(self, field)
             if ip is not None:
-                if ip.assigned_object in interfaces:
+                assignment = IPAddressToInterface.objects.filter(ip_address=ip, vm_interface__isnull=False).first()
+                nat_inside_assignment = IPAddressToInterface.objects.filter(
+                    ip_address=ip.nat_inside, vm_interface__isnull=False
+                ).first()
+                if assignment:
                     pass
-                elif ip.nat_inside is not None and ip.nat_inside.assigned_object in interfaces:
+                elif ip.nat_inside is not None and nat_inside_assignment:
                     pass
                 else:
                     raise ValidationError(

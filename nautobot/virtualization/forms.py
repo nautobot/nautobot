@@ -449,6 +449,21 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
             self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
 
+    def clean(self):
+        super().clean()
+        ip_addresses = self.cleaned_data.get("ip_addresses", [])
+        vm = self.cleaned_data.get("virtual_machine")
+        # IP address validation
+        if vm:
+            if vm.primary_ip4 and vm.primary_ip4 not in ip_addresses:
+                raise ValidationError(
+                    {"ip_addresses": f"IP address {vm.primary_ip4} is primary for vm {vm} but not assigned to it!"}
+                )
+            if vm.primary_ip6 and vm.primary_ip6 not in ip_addresses:
+                raise ValidationError(
+                    {"ip_addresses": f"IP address {vm.primary_ip6} is primary for vm {vm} but not assigned to it!"}
+                )
+
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())

@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
 from nautobot.dcim.choices import InterfaceModeChoices
@@ -82,3 +83,20 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
                 )
             }
         )
+
+
+def validate_removed_ip_address_not_primary(interface, ip_address):
+    # Circular Import
+    from nautobot.dcim.models.devices import Device
+    from nautobot.virtualization.models import VirtualMachine
+
+    device = Device.objects.filter(Q(primary_ip4=ip_address) | Q(primary_ip6=ip_address)).first()
+    if device:
+        if getattr(interface, "device", None) != device:
+            raise ValidationError({"interface": f"IP address is primary for device {device} but not assigned to it!"})
+    vm = VirtualMachine.objects.filter(Q(primary_ip4=ip_address) | Q(primary_ip6=ip_address)).first()
+    if vm:
+        if getattr(interface, "virtual_machine", None) != vm:
+            raise ValidationError(
+                {"vminterface": f"IP address is primary for virtual machine {vm} but not assigned to it!"}
+            )
