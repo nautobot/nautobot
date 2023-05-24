@@ -158,7 +158,6 @@ export default function ObjectListTable({
                             Actions
                         </UIButton>
                         <Icon.TbMinusVertical />
-                        
                         <UIButton
                             to={`${location.pathname}add/`}
                             size="sm"
