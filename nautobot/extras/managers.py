@@ -69,7 +69,6 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         """
 
         # Prepare the fields for creating/updating a `JobResult`.
-        # TODO: task_args and task_kwargs MUST be censored here, but must wait until task_name matches Job.name
         fields = {
             "status": status,
             "result": result,
@@ -85,6 +84,17 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             "user_id": user_id,
             "worker": worker,
         }
+        from nautobot.extras.models.jobs import Job
+
+        # Need to have a try/except block here
+        # because sometimes job_model_id will be None.
+        try:
+            job = Job.objects.get(id=job_model_id)
+            if job.has_sensitive_variables:
+                del fields["task_args"]
+                del fields["task_kwargs"]
+        except Job.DoesNotExist:
+            pass
 
         obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
 
