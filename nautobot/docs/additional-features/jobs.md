@@ -462,8 +462,6 @@ An optional `grouping` and/or `object` may be provided in log messages by passin
             logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
     ```
 
-It is advised to log a message for each object that is evaluated so that the results will reflect how many objects are being manipulated or reported on.
-
 Markdown rendering is supported for log messages.
 
 +/- 1.3.4
