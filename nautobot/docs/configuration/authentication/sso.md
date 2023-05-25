@@ -192,7 +192,7 @@ Setup SAML in Okta
     * `emailAddress` - Basic `user.email`
 6. (Optional) Configure group Attribute statements.
     * `groups` - Basic - Startswith - `nautobot` (example, needs to be adjusted to your environment)
-7. Select internal application and then finish.
+7. Select `internal application` and then `finish`.
 8. Don't forget to assign users/groups to the application so they have access.
 9. Lastly, look at the `Sign On` tab, then Show Details under Metadata details for detail you will need to configure Nautobot.
 
