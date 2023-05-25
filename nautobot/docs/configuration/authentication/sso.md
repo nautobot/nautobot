@@ -186,7 +186,7 @@ Setup SAML in Okta
     * **Default RelayState**: `okta`
     * **Name ID Format**: `Unspecified`
     * **Application Username**: `Okta Username`
-5. Under Atribute Statements configure the following:
+5. Under Attribute Statements, configure the following:
     * `firstName` - Basic - `user.firstName`
     * `lastName` - Basic - `user.lastName`
     * `emailAddress` - Basic `user.email`
