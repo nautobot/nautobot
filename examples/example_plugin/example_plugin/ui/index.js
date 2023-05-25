@@ -8,11 +8,11 @@ const app_config = {
         "dcim:devices": ["ExampleAppFullWidthPageComponent"]
     },
     /**
-     * The key of 'routes_view_components' is the app's app_name:url_name, 
+     * The key of 'routes_view_components' is the app's base_url:url_name, 
      * and the value is the View Component associated with that url path.
      */
     routes_view_components: {
-        "example_plugin:home": "ExampleAppCustomRouteView",
+        "example-plugin:home": "ExampleAppCustomRouteView",
     },
     view_overrides: {
         "example-plugin:other-models": {
