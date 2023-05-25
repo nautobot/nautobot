@@ -49,7 +49,9 @@
         {% import_button content_type.model_class|validated_viewname:"import" %}
     {% endif %}
     {% if 'export' in action_buttons %}
-        {% export_button content_type %}
+        {% block export_button %}
+            {% export_button content_type %}
+        {% endblock export_button %}
     {% endif %}
 </div>
 <h1>{% block title %}{{ title }}{% endblock %}</h1>

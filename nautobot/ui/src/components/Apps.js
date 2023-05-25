@@ -21,7 +21,7 @@ function get_components() {
     base["FullWidthComponents"] = {};
     base["CustomViews"] = {};
 
-    for (const [app_name, import_promise] of Object.entries(NautobotApps)) {
+    for (const [app_label, import_promise] of Object.entries(NautobotApps)) {
         import_promise.then((value) => {
             if (value?.default?.view_overrides) {
                 // eslint-disable-next-line
@@ -35,7 +35,7 @@ function get_components() {
                                 base["CustomViews"][route][view_action] = lazy(
                                     () =>
                                         my_import_as_function(
-                                            app_name,
+                                            app_label,
                                             component
                                         )
                                 );
@@ -55,7 +55,7 @@ function get_components() {
                         components.map((component) => {
                             base["FullWidthComponents"][route].push(
                                 lazy(() =>
-                                    my_import_as_function(app_name, component)
+                                    my_import_as_function(app_label, component)
                                 )
                             );
                         });

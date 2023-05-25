@@ -1,3 +1,5 @@
+import csv
+from io import StringIO
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
@@ -11,7 +13,9 @@ from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -344,6 +348,50 @@ class APIViewTestCases:
             for entry in response.data["results"]:
                 self.assertIn(str(entry["id"]), [str(instance1.pk), str(instance2.pk)])
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_ascending_ordered(self):
+            # Simple sorting check for models with a "name" field
+            # TreeModels don't support sorting at this time (order_by is not supported by TreeQuerySet)
+            #   They will pass api == queryset tests below but will fail the user expected sort test
+            if hasattr(self.model, "name") and not issubclass(self.model, TreeModel):
+                self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+                response = self.client.get(f"{self._get_list_url()}?sort=name&limit=3", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_list = list(map(lambda p: p["name"], response.data["results"]))
+                self.assertEqual(
+                    result_list,
+                    list(self._get_queryset().order_by("name").values_list("name", flat=True)[:3]),
+                    "API sort not identical to QuerySet.order_by",
+                )
+
+                full_list = list(self._get_queryset().values_list("name", flat=True))
+                full_list.sort()
+                self.assertEqual(
+                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
+                )
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_descending_ordered(self):
+            # Simple sorting check for models with a "name" field
+            # TreeModels don't support sorting at this time (order_by is not supported by TreeQuerySet)
+            #   They will pass api == queryset tests below but will fail the user expected sort test
+            if hasattr(self.model, "name") and not issubclass(self.model, TreeModel):
+                self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+                response = self.client.get(f"{self._get_list_url()}?sort=-name&limit=3", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_list = list(map(lambda p: p["name"], response.data["results"]))
+                self.assertEqual(
+                    result_list,
+                    list(self._get_queryset().order_by("-name").values_list("name", flat=True)[:3]),
+                    "API sort not identical to QuerySet.order_by",
+                )
+
+                full_list = list(self._get_queryset().values_list("name", flat=True))
+                full_list.sort(reverse=True)
+                self.assertEqual(
+                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
+                )
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
             """
@@ -385,6 +433,64 @@ class APIViewTestCases:
             """
             response = self.client.options(self._get_list_url(), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_csv(self):
+            """
+            GET a list of objects in CSV format as an authenticated user with permission to view some objects.
+            """
+            self.assertGreaterEqual(
+                self._get_queryset().count(),
+                3,
+                f"Test requires the creation of at least three {self.model} instances",
+            )
+            instance1, instance2, instance3 = self._get_queryset()[:3]
+
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(
+                name="Test permission",
+                constraints={"pk__in": [instance1.pk, instance2.pk]},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try filtered GET to objects specifying CSV format as a query parameter
+            response_1 = self.client.get(
+                f"{self._get_list_url()}?format=csv&id={instance1.pk}&id={instance3.pk}", **self.header
+            )
+            self.assertHttpStatus(response_1, status.HTTP_200_OK)
+            self.assertEqual(response_1.get("Content-Type"), "text/csv; charset=UTF-8")
+
+            # Try same request specifying CSV format via the ACCEPT header
+            response_2 = self.client.get(
+                f"{self._get_list_url()}?id={instance1.pk}&id={instance3.pk}", **self.header, HTTP_ACCEPT="text/csv"
+            )
+            self.assertHttpStatus(response_2, status.HTTP_200_OK)
+            self.assertEqual(response_2.get("Content-Type"), "text/csv; charset=UTF-8")
+
+            self.maxDiff = None
+            # This check is more useful than it might seem. Any related object that wasn't CSV-converted correctly
+            # will likely be rendered incorrectly as an API URL, and that API URL *will* differ between the
+            # two responses based on the inclusion or omission of the "?format=csv" parameter.
+            self.assertEqual(
+                response_1.content.decode(response_1.charset), response_2.content.decode(response_2.charset)
+            )
+
+            # Load the csv data back into a list of object dicts
+            reader = csv.DictReader(StringIO(response_1.content.decode(response_1.charset)))
+            rows = list(reader)
+            # Should only have one entry (instance1) since we filtered out instance2 and permissions block instance3
+            self.assertEqual(1, len(rows))
+            self.assertEqual(rows[0]["id"], str(instance1.pk))
+            self.assertEqual(rows[0]["display"], getattr(instance1, "display", str(instance1)))
+            if hasattr(self.model, "_custom_field_data"):
+                custom_fields = extras_models.CustomField.objects.get_for_model(self.model)
+                for cf in custom_fields:
+                    self.assertIn(f"cf_{cf.key}", rows[0])
+                    self.assertEqual(rows[0][f"cf_{cf.key}"], instance1._custom_field_data.get(cf.key) or "")
+            # TODO what other generic tests should we run on the data?
 
     class CreateObjectViewTestCase(APITestCase):
         create_data = []
@@ -467,6 +573,56 @@ class APIViewTestCases:
                     objectchanges = lookup.get_changes_for_model(instance)
                     self.assertEqual(len(objectchanges), 1)
                     self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
+
+        def test_recreate_object_csv(self):
+            """CSV export an object, delete it, and recreate it via CSV import."""
+            if hasattr(self, "get_deletable_object"):
+                # provided by DeleteObjectViewTestCase mixin
+                instance = self.get_deletable_object()
+            else:
+                # try to do it ourselves
+                instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+            if instance is None:
+                self.fail("Couldn't find a single deletable object!")
+
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add", "view"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(self._get_detail_url(instance) + "?format=csv", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            csv_data = response.content.decode(response.charset)
+
+            serializer_class = get_serializer_for_model(self.model)
+            old_serializer = serializer_class(instance, context={"request": None})
+            old_data = old_serializer.data
+            instance.delete()
+
+            response = self.client.post(self._get_list_url(), csv_data, content_type="text/csv", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED, csv_data)
+            # Note that create via CSV is always treated as a bulk-create, and so the response is always a list of dicts
+            new_instance = self._get_queryset().get(pk=response.data[0]["id"])
+            self.assertNotEqual(new_instance.pk, instance.pk)
+
+            new_serializer = serializer_class(new_instance, context={"request": None})
+            new_data = new_serializer.data
+            for field_name, field in new_serializer.fields.items():
+                if field.read_only or field.write_only:
+                    continue
+                if field_name in ["created", "last_updated"]:
+                    self.assertNotEqual(
+                        old_data[field_name],
+                        new_data[field_name],
+                        f"{field_name} should have been updated on delete/recreate but it didn't change!",
+                    )
+                else:
+                    self.assertEqual(
+                        old_data[field_name],
+                        new_data[field_name],
+                        f"{field_name} should have been unchanged on delete/recreate but it differs!",
+                    )
 
         def test_bulk_create_objects(self):
             """

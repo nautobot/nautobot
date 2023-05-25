@@ -28,6 +28,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
+from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
@@ -62,9 +63,9 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         limit_choices_to=FeatureQuery("custom_fields"),
         related_name="computed_fields",
     )
-    slug = AutoSlugField(
+    key = AutoSlugField(
         populate_from="label",
-        help_text="Internal field name. Please use underscores rather than dashes in this slug.",
+        help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
     label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
@@ -88,7 +89,7 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
     clone_fields = ["content_type", "description", "template", "fallback_value", "weight"]
 
     class Meta:
-        ordering = ["weight", "slug"]
+        ordering = ["weight", "key"]
         unique_together = ("content_type", "label")
 
     def __str__(self):
@@ -101,12 +102,17 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
             # Doesn't raise an exception either most likely due to using Undefined rather
             # than StrictUndefined, but return fallback_value if None is returned
             if rendered is None:
-                logger.warning("Failed to render computed field %s", self.slug)
+                logger.warning("Failed to render computed field %s", self.key)
                 return self.fallback_value
             return rendered
         except Exception as exc:
-            logger.warning("Failed to render computed field %s: %s", self.slug, exc)
+            logger.warning("Failed to render computed field %s: %s", self.key, exc)
             return self.fallback_value
+
+    def clean(self):
+        super().clean()
+        if self.key != "":
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
 
 
 class CustomFieldModel(models.Model):
@@ -221,7 +227,7 @@ class CustomFieldModel(models.Model):
                 logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                custom_fields[field_key].validate(value)
+                self._custom_field_data[field_key] = custom_fields[field_key].validate(value)
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
@@ -247,15 +253,15 @@ class CustomFieldModel(models.Model):
     def has_computed_fields_advanced(self):
         return self.has_computed_fields(advanced_ui=True)
 
-    def get_computed_field(self, slug, render=True):
+    def get_computed_field(self, key, render=True):
         """
-        Get a computed field for this model, lookup via slug.
+        Get a computed field for this model, lookup via key.
         Returns the template of this field if render is False, otherwise returns the rendered value.
         """
         try:
-            computed_field = ComputedField.objects.get_for_model(self).get(slug=slug)
+            computed_field = ComputedField.objects.get_for_model(self).get(key=key)
         except ComputedField.DoesNotExist:
-            logger.warning("Computed Field with slug %s does not exist for model %s", slug, self._meta.verbose_name)
+            logger.warning("Computed Field with key %s does not exist for model %s", key, self._meta.verbose_name)
             return None
         if render:
             return computed_field.render(context={"obj": self})
@@ -264,7 +270,7 @@ class CustomFieldModel(models.Model):
     def get_computed_fields(self, label_as_key=False, advanced_ui=None):
         """
         Return a dictionary of all computed fields and their rendered values for this model.
-        Keys are the `slug` value of each field. If label_as_key is True, `label` values of each field are used as keys.
+        Keys are the `key` value of each field. If label_as_key is True, `label` values of each field are used as keys.
         """
         computed_fields_dict = {}
         computed_fields = ComputedField.objects.get_for_model(self)
@@ -273,7 +279,7 @@ class CustomFieldModel(models.Model):
         if not computed_fields:
             return {}
         for cf in computed_fields:
-            computed_fields_dict[cf.label if label_as_key else cf.slug] = cf.render(context={"obj": self})
+            computed_fields_dict[cf.label if label_as_key else cf.key] = cf.render(context={"obj": self})
         return computed_fields_dict
 
 
@@ -413,7 +419,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         # Validate the field's default value (if any)
         if self.default is not None:
             try:
-                self.validate(self.default)
+                self.default = self.validate(self.default)
             except ValidationError as err:
                 raise ValidationError({"default": f'Invalid default value "{self.default}": {err.message}'})
 
@@ -451,11 +457,14 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     ):
         """
         Return a form field suitable for setting a CustomField's value for an object.
-        set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
-        enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
-        for_csv_import: Return a form field suitable for bulk import of objects in CSV format.
-        simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
-        label: Set the input label manually (if required) otherwise it will default to field's __str__() implementation.
+
+        Args:
+            set_initial: Set initial date for the field. This should be False when generating a field for bulk editing.
+            enforce_required: Honor the value of CustomField.required. Set to False for filtering/bulk editing.
+            for_csv_import: Return a form field suitable for bulk import of objects. Despite the parameter name,
+                this is *not* used for CSV imports since 2.0, but it *is* used for JSON/YAML import of DeviceTypes.
+            simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
+            label: Set the input label manually (if required); otherwise, defaults to field's __str__() implementation.
         """
         initial = self.default if set_initial else None
         required = self.required if enforce_required else False
@@ -551,6 +560,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def validate(self, value):
         """
         Validate a value according to the field's type validation rules.
+
+        Returns the value, possibly cleaned up
         """
         if value not in [None, "", []]:
             # Validate text field
@@ -564,7 +575,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             # Validate integer
             if self.type == CustomFieldTypeChoices.TYPE_INTEGER:
                 try:
-                    int(value)
+                    value = int(value)
                 except ValueError:
                     raise ValidationError("Value must be an integer.")
                 if self.validation_minimum is not None and value < self.validation_minimum:
@@ -573,13 +584,11 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     raise ValidationError(f"Value must not exceed {self.validation_maximum}")
 
             # Validate boolean
-            if self.type == CustomFieldTypeChoices.TYPE_BOOLEAN and value not in [
-                True,
-                False,
-                1,
-                0,
-            ]:
-                raise ValidationError("Value must be true or false.")
+            if self.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+                try:
+                    value = is_truthy(value)
+                except ValueError as exc:
+                    raise ValidationError("Value must be true or false.") from exc
 
             # Validate date
             if self.type == CustomFieldTypeChoices.TYPE_DATE:
@@ -597,6 +606,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     )
 
             if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+                if isinstance(value, str):
+                    value = value.split(",")
                 if not set(value).issubset(self.custom_field_choices.values_list("value", flat=True)):
                     raise ValidationError(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
@@ -604,6 +615,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         elif self.required:
             raise ValidationError("Required field cannot be empty.")
+
+        return value
 
     def delete(self, *args, **kwargs):
         """

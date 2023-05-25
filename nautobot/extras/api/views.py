@@ -12,6 +12,7 @@ from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
+from rest_framework.filters import OrderingFilter
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -232,7 +233,7 @@ class ConfigContextQuerySetMixin:
     data annotation or not.
     """
 
-    filter_backends = [ConfigContextFilterBackend]
+    filter_backends = [ConfigContextFilterBackend, OrderingFilter]
 
     def get_queryset(self):
         """
@@ -359,7 +360,7 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormField
         all_fields = list(obj_serializer.get_fields().keys())
         header_fields = ["display", "status", "created", "last_updated"]
         extra_fields = ["object_type", "relationships", "computed_fields", "custom_fields"]
-        advanced_fields = ["id", "url", "display", "slug", "notes_url"]
+        advanced_fields = ["id", "url", "display", "natural_key_slug", "slug", "notes_url"]
         plugin_tab_1_fields = ["field_1", "field_2", "field_3"]
         plugin_tab_2_fields = ["field_1", "field_2", "field_3"]
         main_fields = [

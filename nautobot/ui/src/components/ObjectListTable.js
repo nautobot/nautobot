@@ -2,7 +2,7 @@ import { RouterButton } from "./RouterButton";
 import { ButtonGroup, SkeletonText } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     Box,
     Heading,
@@ -21,6 +21,7 @@ import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
 
 import TableItem from "@components/TableItem";
+import LoadingWidget from "./LoadingWidget";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
@@ -46,10 +47,13 @@ export default function ObjectListTable({
     page_size,
     tableTitle,
     data_loaded,
+    data_fetched,
     include_button = true,
 }) {
     let location = useLocation();
     const columnHelper = useMemo(() => createColumnHelper(), []);
+    // Reference point to scroll to on table reload
+    const topRef = useRef();
 
     const [columnVisibility, setColumnVisibility] = useState({});
     useEffect(() => {
@@ -128,7 +132,7 @@ export default function ObjectListTable({
     });
 
     return (
-        <Box background="white-0" borderRadius="md" padding="md">
+        <Box background="white-0" borderRadius="md" padding="md" ref={topRef}>
             {!include_button ? null : (
                 <Box display="flex" justifyContent="space-between" mb="sm">
                     <Heading
@@ -174,6 +178,13 @@ export default function ObjectListTable({
                 mt="3"
                 isLoaded={data_loaded}
             >
+                {!data_fetched && data_loaded ? (
+                    <Box background="white-0" borderRadius="md" padding="md">
+                        <LoadingWidget name={tableTitle} />
+                    </Box>
+                ) : (
+                    () => {}
+                )}
                 <TableRenderer
                     table={table}
                     containerProps={{ overflow: "auto" }}
@@ -184,6 +195,7 @@ export default function ObjectListTable({
                 data_count={totalCount}
                 page_size={page_size}
                 active_page={active_page_number}
+                scroll_ref={topRef}
             ></Paginator>
         </Box>
     );

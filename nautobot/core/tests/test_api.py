@@ -1,3 +1,5 @@
+import csv
+from io import BytesIO, StringIO
 import json
 
 from django.contrib.contenttypes.models import ContentType
@@ -8,13 +10,18 @@ from django.urls import reverse
 from constance import config
 from constance.test import override_config
 from rest_framework import status
+from rest_framework.exceptions import ParseError
 
 from nautobot.circuits.models import Provider
 from nautobot.core import testing
+from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.dcim import models as dcim_models
+from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices
 from nautobot.extras import models as extras_models
 from nautobot.ipam import models as ipam_models
+from nautobot.ipam.api import serializers as ipam_serializers
 
 
 class AppTest(testing.APITestCase):
@@ -361,6 +368,101 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             )
 
 
+class NautobotCSVParserTest(TestCase):
+    """
+    Some unit tests for the NautobotCSVParser.
+
+    The class is also exercised by APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_csv for each API.
+    """
+
+    def test_serializer_class_required(self):
+        with self.assertRaises(ParseError) as cm:
+            NautobotCSVParser().parse(BytesIO(b""))
+        self.assertEqual(str(cm.exception), "No serializer_class was provided by the parser_context")
+
+        with self.assertRaises(ParseError) as cm:
+            NautobotCSVParser().parse(BytesIO(b""), parser_context={"serializer_class": None})
+        self.assertEqual(str(cm.exception), "Serializer class for this parser_context is None, unable to proceed")
+
+    def test_parse_success(self):
+        status = extras_models.Status.objects.first()  # pylint: disable=redefined-outer-name
+        tags = extras_models.Tag.objects.get_for_model(ipam_models.VLAN)
+        csv_data = "\n".join(
+            [
+                # the "foobar" column is not understood by the serializer; per usual REST API behavior, it'll be skipped
+                "vid,name,foobar,description,status,tags,tenant",
+                f'22,hello,huh?,"It, I say, is a living!",{status.name},"{tags.first().name},{tags.last().name}",',
+            ]
+        )
+
+        data = NautobotCSVParser().parse(
+            BytesIO(csv_data.encode("utf-8")),
+            parser_context={"serializer_class": ipam_serializers.VLANSerializer},
+        )
+
+        self.assertEqual(
+            data,
+            [
+                {
+                    "vid": "22",  # parser could be enhanced to turn this to an int, but the serializer can handle it
+                    "name": "hello",
+                    "description": "It, I say, is a living!",
+                    "status": {"name": status.name},
+                    "tags": [{"name": tags.first().name}, {"name": tags.last().name}],
+                    "tenant": None,
+                },
+            ],
+        )
+
+    def test_parse_bad_header(self):
+        csv_data = "\n".join(
+            [
+                "vid,name,,description",
+                "22,hello,huh?,a description",
+            ]
+        )
+        with self.assertRaises(ParseError) as cm:
+            NautobotCSVParser().parse(
+                BytesIO(csv_data.encode("utf-8")),
+                parser_context={"serializer_class": ipam_serializers.VLANSerializer},
+            )
+        self.assertEqual(str(cm.exception), "Row 1: Column 3: missing/empty header for this column")
+
+
+class NautobotCSVRendererTest(TestCase):
+    """
+    Some unit tests for the NautobotCSVParser.
+
+    The class is also exercised by APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_csv and
+    APIViewTestCases.ListObjectsViewTestCase.test_list_objects_csv for each API.
+    """
+
+    def test_render_success(self):
+        location_type = dcim_models.LocationType.objects.filter(parent__isnull=False).first()
+        data = dcim_serializers.LocationTypeSerializer(instance=location_type, context={"request": None}).data
+        csv_text = NautobotCSVRenderer().render(data)
+
+        # Make sure a) it's well-constructed parsable CSV and b) it contains what we expect it to, within reason
+        reader = csv.DictReader(StringIO(csv_text))
+        read_data = list(reader)[0]
+        self.assertIn("id", read_data)
+        self.assertEqual(read_data["id"], str(location_type.id))
+        self.assertIn("display", read_data)
+        self.assertEqual(read_data["display"], location_type.display)
+        self.assertIn("natural_key_slug", read_data)
+        self.assertEqual(read_data["natural_key_slug"], location_type.natural_key_slug)
+        self.assertIn("name", read_data)
+        self.assertEqual(read_data["name"], location_type.name)
+        self.assertIn("content_types", read_data)
+        # rendering/parsing of content-types field is tested elsewhere
+        self.assertIn("description", read_data)
+        self.assertEqual(read_data["description"], location_type.description)
+        self.assertIn("nestable", read_data)
+        self.assertEqual(read_data["nestable"], str(location_type.nestable))
+        self.assertIn("parent", read_data)
+        self.assertEqual(read_data["parent"], location_type.parent.natural_key_slug)
+
+
 class WritableNestedSerializerTest(testing.APITestCase):
     """
     Test the operation of WritableNestedSerializer using VLANSerializer as our test subject.
@@ -488,3 +590,56 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+
+
+class APIOrderingTestCase(testing.APITestCase):
+    """
+    Testing integration with DRF's OrderingFilter.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse("circuits-api:provider-list")
+        cls.field_type_map = {
+            "CharField": "name",
+            "IntegerField": "asn",
+            "URLField": "portal_url",
+            "TextField": "admin_contact",
+            "DateTimeField": "created",
+        }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ascending_sort(self):
+        """Tests that results are returned in the expected ascending order."""
+
+        for field_type, field_name in self.field_type_map.items():
+            with self.subTest(f"Testing {field_type}"):
+                response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(
+                    list(map(lambda p: p["id"], response.data["results"])),
+                    list(
+                        map(
+                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
+                            Provider.objects.order_by(field_name).values_list("id", flat=True)[:10],
+                        )
+                    ),
+                )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_descending_sort(self):
+        """Tests that results are returned in the expected descending order."""
+
+        for field_type, field_name in self.field_type_map.items():
+            with self.subTest(f"Testing {field_type}"):
+                response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(
+                    list(map(lambda p: p["id"], response.data["results"])),
+                    list(
+                        map(
+                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
+                            Provider.objects.order_by(f"-{field_name}").values_list("id", flat=True)[:10],
+                        )
+                    ),
+                )

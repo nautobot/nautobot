@@ -182,15 +182,16 @@ Type 'yes' to continue, or 'no' to cancel: """
             call_command("flush", "--no-input")
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
+            self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
             call_command("loaddata", options["fixture_file"])
         else:
             self._generate_factory_data(options["seed"])
 
             if options["cache_test_fixtures"]:
+                self.stdout.write(self.style.WARNING(f"Saving factory data to file {options['fixture_file']}"))
+
                 call_command(
                     "dumpdata",
-                    "--natural-foreign",
-                    "--natural-primary",
                     indent=2,
                     format="json",
                     exclude=["contenttypes", "auth.permission", "extras.job", "extras.customfield"],

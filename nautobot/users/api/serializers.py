@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
@@ -15,7 +16,18 @@ class UserSerializer(ValidatedModelSerializer):
     class Meta:
         model = get_user_model()
         exclude = ["user_permissions"]
-        extra_kwargs = {"password": {"write_only": True, "required": False}}
+        extra_kwargs = {"password": {"write_only": True, "required": False, "allow_null": True}}
+
+    def validate(self, data):
+        """Handle omission of a password by setting it to the unusable None value."""
+        mock_password = False
+        if "password" not in data and not self.partial:
+            data["password"] = make_password(None)
+            mock_password = True
+        validated_data = super().validate(data)
+        if mock_password:
+            validated_data["password"] = None
+        return validated_data
 
     def create(self, validated_data):
         """
@@ -27,6 +39,23 @@ class UserSerializer(ValidatedModelSerializer):
         user.save()
 
         return user
+
+    def update(self, instance, validated_data):
+        """
+        Extract the password from validated data and set it separately to ensure proper hash generation.
+        """
+        update_password = False
+        if "password" in validated_data:
+            update_password = True
+            password = validated_data.pop("password")
+        elif not self.partial:
+            update_password = True
+            password = None
+        super().update(instance, validated_data)
+        if update_password:
+            instance.set_password(password)
+            instance.save()
+        return instance
 
 
 class GroupSerializer(ValidatedModelSerializer):

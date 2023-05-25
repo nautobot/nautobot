@@ -1,7 +1,6 @@
 import datetime
 from io import StringIO
 import json
-import logging
 from pathlib import Path
 import re
 from unittest import mock
@@ -95,9 +94,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_fail"
         name = "TestFail"
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name)
-        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
     def test_field_default(self):
@@ -683,9 +680,7 @@ class JobButtonReceiverTest(TransactionTestCase):
     def test_missing_receive_job_button_method(self):
         module = "test_job_button_receiver"
         name = "TestJobButtonReceiverFail"
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, **self.data)
-        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
@@ -749,9 +744,7 @@ class JobHookReceiverTest(TransactionTestCase):
     def test_missing_receive_job_hook_method(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverFail"
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, **self.data)
-        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 

@@ -95,7 +95,7 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="computed_field_one",
+            key="computed_field_one",
             label="Computed Field One",
             template="{{ obj.name }} is the name of this location.",
             fallback_value="An error occurred while rendering this template.",
@@ -104,7 +104,7 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
         # Field whose template will raise a TemplateError
         ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="bad_computed_field",
+            key="bad_computed_field",
             label="Bad Computed Field",
             template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
             fallback_value="This template has errored",
@@ -113,7 +113,7 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
         # Field whose template will raise a TypeError
         ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="worse_computed_field",
+            key="worse_computed_field",
             label="Worse Computed Field",
             template="{{ obj.images | list }}",
             fallback_value="Another template error",
@@ -121,15 +121,15 @@ class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
         )
         ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
-            slug="device_computed_field",
+            key="device_computed_field",
             label="Device Computed Field",
             template="Hello, world.",
             fallback_value="This template has errored",
             weight=100,
         )
 
-    def test_slug(self):
-        params = {"slug": ["device_computed_field", "worse_computed_field"]}
+    def test_key(self):
+        params = {"key": ["device_computed_field", "worse_computed_field"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_content_type(self):

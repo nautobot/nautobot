@@ -13,7 +13,6 @@ from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.filters import LocationFilterSet
-from nautobot.dcim.forms import LocationCSVForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
@@ -903,6 +902,61 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Value must be a string", str(response.content))
 
+    def test_create_without_required_field(self):
+        self.cf_text.default = None
+        self.cf_text.required = True
+        self.cf_text.save()
+
+        data = {
+            "name": "Location N",
+            "slug": "location-n",
+            "location_type": self.lt.pk,
+            "status": self.statuses[0].pk,
+        }
+        url = reverse("dcim-api:location-list")
+        self.add_permissions("dcim.add_location")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Required field cannot be empty", str(response.content))
+
+        # Try in CSV format too
+        csvdata = "\n".join(
+            [
+                "name,slug,location_type,status",
+                f"Location N,location-n,{self.lt.natural_key_slug},{self.statuses[0].name}",
+            ]
+        )
+        response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Required field cannot be empty", str(response.content))
+
+    def test_create_invalid_select_choice(self):
+        data = {
+            "name": "Location N",
+            "slug": "location-n",
+            "location_type": self.lt.pk,
+            "status": self.statuses[0].pk,
+            "custom_fields": {
+                "choice_cf": "Frobozz",
+            },
+        }
+        url = reverse("dcim-api:location-list")
+        self.add_permissions("dcim.add_location")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid choice", str(response.content))
+
+        # Try in CSV format too
+        csvdata = "\n".join(
+            [
+                "name,slug,location_type,status,cf_choice_cf",
+                f"Location N,location-n,{self.lt.natural_key_slug},{self.statuses[0].name},Frobozz",
+            ]
+        )
+        response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid choice", str(response.content))
+
 
 class CustomFieldImportTest(TestCase):
     """
@@ -1005,7 +1059,10 @@ class CustomFieldImportTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Validate data for location 1
-        location1 = Location.objects.get(name="Location 1")
+        try:
+            location1 = Location.objects.get(name="Location 1")
+        except Location.DoesNotExist:
+            self.fail(str(response.content))
         if "example_plugin" in settings.PLUGINS:
             self.assertEqual(len(location1.cf), 8)
         else:
@@ -1040,34 +1097,6 @@ class CustomFieldImportTest(TestCase):
         location3 = Location.objects.get(name="Location 3")
         self.assertFalse(any(location3.cf.values()))
 
-    def test_import_missing_required(self):
-        """
-        Attempt to import an object missing a required custom field.
-        """
-        # Set one of our CustomFields to required
-        CustomField.objects.filter(label="Text").update(required=True)
-        lt = LocationType.objects.get(name="Campus")
-        form_data = {
-            "name": "Location 1",
-            "slug": "location-1",
-            "location_type": lt.pk,
-        }
-
-        form = LocationCSVForm(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("cf_text", form.errors)
-
-    def test_import_invalid_choice(self):
-        """
-        Attempt to import an object with an invalid choice selection.
-        """
-        lt = LocationType.objects.get(name="Campus")
-        form_data = {"name": "Location 1", "slug": "location-1", "location_type": lt.name, "cf_select": "Choice X"}
-
-        form = LocationCSVForm(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("cf_select", form.errors)
-
 
 class CustomFieldModelTest(TestCase):
     """
@@ -1090,7 +1119,7 @@ class CustomFieldModelTest(TestCase):
         self.location1 = Location.objects.create(name="NYC", location_type=self.lt)
         self.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="computed_field_one",
+            key="computed_field_one",
             label="Computed Field One",
             template="{{ obj.name }} is the name of this location.",
             fallback_value="An error occurred while rendering this template.",
@@ -1099,7 +1128,7 @@ class CustomFieldModelTest(TestCase):
         # Field whose template will raise a TemplateError
         self.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="bad_computed_field",
+            key="bad_computed_field",
             label="Bad Computed Field",
             template="{{ something_that_throws_an_err | not_a_real_filter }} bad data",
             fallback_value="This template has errored",
@@ -1108,7 +1137,7 @@ class CustomFieldModelTest(TestCase):
         # Field whose template will raise a TypeError
         self.worse_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="worse_computed_field",
+            key="worse_computed_field",
             label="Worse Computed Field",
             template="{{ obj.images | list }}",
             fallback_value="Another template error",
@@ -1116,7 +1145,7 @@ class CustomFieldModelTest(TestCase):
         )
         self.non_location_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
-            slug="device_computed_field",
+            key="device_computed_field",
             label="Device Computed Field",
             template="Hello, world.",
             fallback_value="This template has errored",
@@ -1125,7 +1154,7 @@ class CustomFieldModelTest(TestCase):
         # Field whose template will return None, with fallback_value defaulting to empty string
         self.bad_attribute_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="bad_attribute_computed_field",
+            key="bad_attribute_computed_field",
             label="Bad Attribute Computed Field",
             template="{{ obj.location }}",
             weight=200,
@@ -1216,7 +1245,7 @@ class CustomFieldModelTest(TestCase):
         self.assertDictEqual(self.location1.get_computed_fields(label_as_key=True), expected_renderings)
 
     def test_get_computed_fields_only_returns_fields_for_content_type(self):
-        self.assertTrue(self.non_location_computed_field.slug not in self.location1.get_computed_fields())
+        self.assertTrue(self.non_location_computed_field.key not in self.location1.get_computed_fields())
 
     def test_check_if_key_is_graphql_safe(self):
         """
@@ -1822,7 +1851,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
         cf.save()
-        logging.disable(logging.ERROR)
         cf.content_types.set([obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
         location = Location(
@@ -1838,7 +1866,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location.refresh_from_db()
 
         self.assertTrue("cf1" not in location.cf)
-        logging.disable(logging.NOTSET)
 
     def test_update_custom_field_choice_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)

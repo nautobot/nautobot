@@ -23,6 +23,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
+    CableTypeChoices,
     ConsolePortTypeChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
@@ -245,7 +246,7 @@ class RackSerializer(
     TaggedModelSerializerMixin,
 ):
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
-    width = ChoiceField(choices=RackWidthChoices, required=False)
+    width = ChoiceField(choices=RackWidthChoices, required=False, help_text="Rail-to-rail width (in inches)")
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
     device_count = serializers.IntegerField(read_only=True)
     power_feed_count = serializers.IntegerField(read_only=True)
@@ -286,6 +287,19 @@ class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMi
         model = RackReservation
         fields = "__all__"
         list_display_fields = ["pk", "rack", "units", "user", "description"]
+        extra_kwargs = {
+            "units": {"help_text": "List of rack unit numbers to reserve"},
+            "user": {
+                "help_text": "User to associate to reservations. If unspecified, the current user will be used.",
+                "required": False,
+            },
+        }
+
+    def to_internal_value(self, data):
+        """Add the requesting user as the owner of the RackReservation if not otherwise specified."""
+        if "user" not in data and not self.partial:
+            data["user"] = self.context["request"].user.id
+        return super().to_internal_value(data)
 
 
 class RackElevationDetailFilterSerializer(serializers.Serializer):
@@ -452,7 +466,11 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = ["name", "status", "tenant", "location", "rack", "role", "device_type", "primary_ip"]
         validators = []
-        extra_kwargs = {"parent_bay": {"read_only": True}}
+        extra_kwargs = {
+            "parent_bay": {"required": False, "allow_null": True},
+            "vc_position": {"label": "Virtual chassis position"},
+            "vc_priority": {"label": "Virtual chassis priority"},
+        }
 
     def get_field_names(self, declared_fields, info):
         """As parent_bay is the reverse side of a OneToOneField, DRF can handle it but it isn't auto-included."""
@@ -505,6 +523,7 @@ class ConsoleServerPortSerializer(
     class Meta:
         model = ConsoleServerPort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class ConsolePortSerializer(
@@ -518,6 +537,7 @@ class ConsolePortSerializer(
     class Meta:
         model = ConsolePort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class PowerOutletSerializer(
@@ -532,6 +552,7 @@ class PowerOutletSerializer(
     class Meta:
         model = PowerOutlet
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class PowerPortSerializer(
@@ -545,6 +566,7 @@ class PowerPortSerializer(
     class Meta:
         model = PowerPort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -580,6 +602,7 @@ class InterfaceSerializer(
         model = Interface
         fields = "__all__"
         list_display_fields = ["device", "name", "status", "label", "enabled", "type", "description"]
+        extra_kwargs = {"cable": {"read_only": True}}
 
     def validate(self, data):
         # Validate many-to-many VLAN assignments
@@ -604,6 +627,7 @@ class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Ca
     class Meta:
         model = RearPort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
@@ -612,13 +636,18 @@ class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, C
     class Meta:
         model = FrontPort
         fields = "__all__"
+        extra_kwargs = {"cable": {"read_only": True}}
 
 
 class DeviceRedundancyGroupSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
-    failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices)
+    failover_strategy = ChoiceField(
+        choices=DeviceRedundancyGroupFailoverStrategyChoices,
+        allow_blank=True,
+        default=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_UNSPECIFIED,
+    )
 
     class Meta:
         model = DeviceRedundancyGroup
@@ -661,15 +690,20 @@ class CableSerializer(
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
 ):
+    # TODO: termination_a_type/termination_b_type are a bit redundant with the full termination_a/termination_b dicts
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_a = serializers.SerializerMethodField(read_only=True)
     termination_b = serializers.SerializerMethodField(read_only=True)
     length_unit = ChoiceField(choices=CableLengthUnitChoices, allow_blank=True, required=False)
+    type = ChoiceField(choices=CableTypeChoices, allow_blank=True, required=False)
 
     class Meta:
         model = Cable
         fields = "__all__"
+        extra_kwargs = {
+            "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
+        }
         list_display_fields = [
             "label",
             "termination_a",

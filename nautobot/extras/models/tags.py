@@ -42,15 +42,10 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
         blank=True,
     )
 
-    csv_headers = ["name", "slug", "color", "description"]
-
     objects = BaseManager.from_queryset(TagQuerySet)()
 
     class Meta:
         ordering = ["name"]
-
-    def to_csv(self):
-        return (self.name, self.slug, self.color, self.description)
 
     def validate_content_types_removal(self, content_types_id):
         """Validate content_types to be removed are not tagged to a model"""

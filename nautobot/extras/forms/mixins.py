@@ -8,8 +8,6 @@ from django.db.models import Q
 from nautobot.core.forms import (
     BulkEditForm,
     CommentField,
-    CSVModelChoiceField,
-    CSVModelForm,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
@@ -44,7 +42,6 @@ __all__ = (
     "RelationshipModelFormMixin",
     "StatusModelBulkEditFormMixin",
     "StatusModelFilterFormMixin",
-    "StatusModelCSVFormMixin",
     "TagsBulkEditFormMixin",
     # 2.0 TODO: remove the below deprecated aliases
     "AddRemoveTagsForm",
@@ -53,9 +50,7 @@ __all__ = (
     "CustomFieldModelForm",
     "RelationshipModelForm",
     "RoleModelBulkEditFormMixin",
-    "RoleModelCSVFormMixin",
     "RoleModelFilterFormMixin",
-    "RoleRequiredRoleModelCSVFormMixin",
     "StatusBulkEditFormMixin",
     "StatusFilterFormMixin",
 )
@@ -723,22 +718,6 @@ class RoleModelFilterFormMixin(forms.Form):
         self.order_fields(self.field_order)  # Reorder fields again
 
 
-class RoleModelCSVFormMixin(CSVModelForm):
-    """Mixin to add a non-required `role` choice field to CSV import forms."""
-
-    role = CSVModelChoiceField(
-        queryset=Role.objects.all(), to_field_name="name", required=False, help_text="Assigned role"
-    )
-
-
-class RoleRequiredRoleModelCSVFormMixin(CSVModelForm):
-    """Mixin to add a required `role` choice field to CSV import forms."""
-
-    role = CSVModelChoiceField(
-        queryset=Role.objects.all(), to_field_name="name", required=True, help_text="Assigned role"
-    )
-
-
 class StatusModelBulkEditFormMixin(forms.Form):
     """Mixin to add non-required `status` choice field to forms."""
 
@@ -766,16 +745,6 @@ class StatusModelFilterFormMixin(forms.Form):
             to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
-
-
-class StatusModelCSVFormMixin(CSVModelForm):
-    """Mixin to add a required `status` choice field to CSV import forms."""
-
-    status = CSVModelChoiceField(
-        queryset=Status.objects.all(),
-        to_field_name="name",
-        help_text="Operational status",
-    )
 
 
 class TagsBulkEditFormMixin(forms.Form):

@@ -20,7 +20,7 @@ import { uiUrl } from "@utils/url";
 
 export default function HomeChangelogPanel() {
     const { data, isError } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: "object-changes",
         limit: 10,
         depth: 1,
@@ -76,13 +76,17 @@ export default function HomeChangelogPanel() {
                                     {objectChange.changed_object_type}
                                 </Td>
                                 <Td colSpan={3}>
-                                    <Link
-                                        href={uiUrl(
-                                            objectChange.changed_object.url
-                                        )}
-                                    >
-                                        {objectChange.object_repr}
-                                    </Link>
+                                    {objectChange.changed_object ? (
+                                        <Link
+                                            href={uiUrl(
+                                                objectChange.changed_object.url
+                                            )}
+                                        >
+                                            {objectChange.object_repr}
+                                        </Link>
+                                    ) : (
+                                        objectChange.object_repr
+                                    )}
                                 </Td>
                             </Tr>,
                         ])}

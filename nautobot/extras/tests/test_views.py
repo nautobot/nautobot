@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import urllib.parse
 import uuid
 
@@ -83,14 +83,14 @@ class ComputedFieldTestCase(
             ComputedField(
                 content_type=obj_type,
                 label="Computed Field One",
-                slug="computed_field_one",
+                key="computed_field_one",
                 template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
                 weight=100,
             ),
             ComputedField(
                 content_type=obj_type,
-                slug="computed_field_two",
+                key="computed_field_two",
                 label="Computed Field Two",
                 template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
@@ -98,7 +98,7 @@ class ComputedFieldTestCase(
             ),
             ComputedField(
                 content_type=obj_type,
-                slug="computed_field_three",
+                key="computed_field_three",
                 label="Computed Field Three",
                 template="Location name is {{ obj.name }}",
                 weight=100,
@@ -120,7 +120,7 @@ class ComputedFieldTestCase(
 
         cls.form_data = {
             "content_type": obj_type.pk,
-            "slug": "computed_field_four",
+            "key": "computed_field_four",
             "label": "Computed Field Four",
             "template": "{{ obj.name }} is the best Location!",
             "fallback_value": ":skull_emoji:",
@@ -948,7 +948,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
@@ -956,7 +956,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
@@ -964,7 +964,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
     def test_only_enabled_is_listed(self):
@@ -978,7 +978,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
         response = self.client.get(self._get_url("list"))
@@ -1028,7 +1028,7 @@ class ScheduledJobTestCase(
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
             crontab="*/15 9,17 3 * 1-5",
         )
 
@@ -1066,7 +1066,7 @@ class ApprovalQueueTestCase(
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
@@ -1076,7 +1076,7 @@ class ApprovalQueueTestCase(
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
     def test_only_approvable_is_listed(self):
@@ -1090,7 +1090,7 @@ class ApprovalQueueTestCase(
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=False,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
         response = self.client.get(self._get_url("list"))
@@ -1767,7 +1767,7 @@ class JobTestCase(
         data = {
             "_schedule_type": "future",
             "_schedule_name": "test",
-            "_schedule_start_time": str(datetime.now() - timedelta(minutes=1)),
+            "_schedule_start_time": str(timezone.now() - timedelta(minutes=1)),
         }
 
         for run_url in self.run_urls:
@@ -2222,10 +2222,10 @@ class StatusTestCase(
 
         cls.csv_data = (
             "name,color,content_types"
-            'test_status1,ffffff,"dcim.device"'
-            'test_status2,ffffff,"dcim.device"'
-            'test_status3,ffffff,"dcim.device"'
-            'test_status4,ffffff,"dcim.device"'
+            "test_status1,ffffff,dcim.device"
+            'test_status2,ffffff,"dcim.device,dcim.location"'
+            "test_status3,ffffff,dcim.device"
+            "test_status4,ffffff,dcim.device"
         )
 
         cls.bulk_edit_data = {
@@ -2247,10 +2247,10 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,color,description",
-            "Tag 4,tag-4,ff0000,Fourth tag",
-            "Tag 5,tag-5,00ff00,Fifth tag",
-            "Tag 6,tag-6,0000ff,Sixth tag",
+            "name,slug,color,description,content_types",
+            "Tag 4,tag-4,ff0000,Fourth tag,dcim.device",
+            'Tag 5,tag-5,00ff00,Fifth tag,"dcim.device,dcim.location"',
+            "Tag 6,tag-6,0000ff,Sixth tag,dcim.location",
         )
 
         cls.bulk_edit_data = {
@@ -2391,7 +2391,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "name,weight,color,content_types,description",
-            'test_role1,1000,ffffff,"dcim.device",A Role',
+            "test_role1,1000,ffffff,dcim.device,A Role",
             'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
             'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
             'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',

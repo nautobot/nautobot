@@ -162,7 +162,7 @@ class ComputedFieldFilterSet(BaseFilterSet):
         model = ComputedField
         fields = (
             "content_type",
-            "slug",
+            "key",
             "template",
             "fallback_value",
             "weight",

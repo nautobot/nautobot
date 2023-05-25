@@ -1,6 +1,5 @@
 import os
 import tempfile
-import datetime
 from unittest import mock
 
 from django.conf import settings
@@ -67,7 +66,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     def setUp(self):
         self.good_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="good_computed_field",
+            key="good_computed_field",
             label="Good Computed Field",
             template="{{ obj.name }} is awesome!",
             fallback_value="This template has errored",
@@ -75,7 +74,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         )
         self.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="bad_computed_field",
+            key="bad_computed_field",
             label="Bad Computed Field",
             template="{{ not_in_context | not_a_filter }} is horrible!",
             fallback_value="An error occurred while rendering this template.",
@@ -83,7 +82,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         )
         self.blank_fallback_value = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
-            slug="blank_fallback_value",
+            key="blank_fallback_value",
             label="Blank Fallback Value",
             template="{{ obj.location }}",
             weight=50,
@@ -101,6 +100,47 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     def test_render_method_bad_template(self):
         rendered_value = self.bad_computed_field.render(context={"obj": self.location1})
         self.assertEqual(rendered_value, self.bad_computed_field.fallback_value)
+
+    def test_check_if_key_is_graphql_safe(self):
+        """
+        Check the GraphQL validation method on CustomField Key Attribute.
+        """
+        # Check if it catches the cpf.key starting with a digit.
+        cpf1 = ComputedField(
+            label="Test 1",
+            key="12_test_1",
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+        with self.assertRaises(ValidationError) as error:
+            cpf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cpf.key with whitespace.
+        cpf1.key = "test 1"
+        with self.assertRaises(ValidationError) as error:
+            cpf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cpf.key with hyphens.
+        cpf1.key = "test-1-computed-field"
+        with self.assertRaises(ValidationError) as error:
+            cpf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
+        # Check if it catches the cpf.key with special characters
+        cpf1.key = "test_1_computed_f)(&d"
+        with self.assertRaises(ValidationError) as error:
+            cpf1.validated_save()
+        self.assertIn(
+            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
+            str(error.exception),
+        )
 
 
 class ConfigContextTest(ModelTestCases.BaseModelTestCase):
@@ -1367,40 +1407,6 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         self.assertEqual(log_object.message, log.message)
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)
-
-    def test_to_csv_no_log_object(self):
-        """Check that `to_csv` returns the correct data from the JobLogEntry model."""
-        expected_data = ("2020-01-26 15:37:36", "run", "info", "", "Django Test")
-
-        joblogentry_a = JobLogEntry(
-            job_result=self.job_result,
-            log_level=LogLevelChoices.LOG_INFO,
-            grouping="run",
-            message="Django Test",
-            created=datetime.datetime(2020, 1, 26, 15, 37, 36),
-            log_object="",
-            absolute_url="",
-        )
-        joblogentry_a.validated_save()
-        csv_data = joblogentry_a.to_csv()
-        self.assertEqual(expected_data, csv_data)
-
-    def test_to_csv_with_log_object(self):
-        """Check that `to_csv` returns the correct data from the JobLogEntry model."""
-        expected_data = ("2030-05-26 15:37:36", "run", "info", "ams01-dist-01", "Django Test 2")
-
-        joblogentry_a = JobLogEntry(
-            job_result=self.job_result,
-            log_level=LogLevelChoices.LOG_INFO,
-            grouping="run",
-            message="Django Test 2",
-            created=datetime.datetime(2030, 5, 26, 15, 37, 36),
-            log_object="ams01-dist-01",
-            absolute_url="https://nautobot.io/dcim/devices/8d769e14-286a-489c-b705-bd15c476abbb",
-        )
-        joblogentry_a.validated_save()
-        csv_data = joblogentry_a.to_csv()
-        self.assertEqual(expected_data, csv_data)
 
 
 class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
