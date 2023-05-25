@@ -173,7 +173,7 @@ The `/default` authentication server can be used for testing, however, it should
 
 #### Okta - SAML
 
-See [SAML Prerequisites](https://docs.nautobot.com/projects/core/en/stable/configuration/authentication/sso/#saml) for common setup.
+See [SAML Prerequisites](#saml) for common setup.
 
 Setup SAML in Okta
 
