@@ -1,0 +1,2 @@
+Added `pre_delete` signals to catch invalid operation to remove device's `primary_ip` from interface's `ip_addresses` m2m field.
+Added validations to `InterfaceForm` and `VMInterfaceForm` `clean()` methods to catch invalid operation to remove device's `primary_ip` from interface's `ip_addresses` m2m field.
