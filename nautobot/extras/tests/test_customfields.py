@@ -1839,8 +1839,8 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 class CustomFieldBackgroundTasks(TransactionTestCase):
     def test_provision_field_task(self):
         location_type = LocationType.objects.create(name="Root Type 1")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Location 1", slug="location-1", location_type=location_type, status=status)
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Location 1", slug="location-1", location_type=location_type, status=location_status)
         location.save()
 
         obj_type = ContentType.objects.get_for_model(Location)
@@ -1861,12 +1861,12 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         cf.save()
         cf.content_types.set([obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
-        status = Status.objects.get_for_model(Location).first()
+        location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
             slug="location-1",
             location_type=location_type,
-            status=status,
+            status=location_status,
             _custom_field_data={"cf1": "foo"},
         )
         location.save()
@@ -1889,12 +1889,12 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         choice = CustomFieldChoice(custom_field=cf, value="Foo")
         choice.save()
         location_type = LocationType.objects.create(name="Root Type 3")
-        status = Status.objects.get_for_model(Location).first()
+        location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
             slug="location-1",
             location_type=location_type,
-            status=status,
+            status=location_status,
             _custom_field_data={"cf1": "Foo"},
         )
         location.save()

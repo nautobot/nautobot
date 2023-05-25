@@ -82,16 +82,16 @@ class GraphQLTestCase(TestCase):
         GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
         GraphQLQuery.objects.create(name="GQL 2", query="query ($name: [String!]) { locations(name:$name) {name} }")
         self.location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
+        location_status = Status.objects.get_for_model(Location).first()
         self.locations = (
             Location.objects.create(
-                name="Location-1", slug="location-1", location_type=self.location_type, status=status
+                name="Location-1", slug="location-1", location_type=self.location_type, status=location_status
             ),
             Location.objects.create(
-                name="Location-2", slug="location-2", location_type=self.location_type, status=status
+                name="Location-2", slug="location-2", location_type=self.location_type, status=location_status
             ),
             Location.objects.create(
-                name="Location-3", slug="location-3", location_type=self.location_type, status=status
+                name="Location-3", slug="location-3", location_type=self.location_type, status=location_status
             ),
         )
 
