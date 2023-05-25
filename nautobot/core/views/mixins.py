@@ -131,6 +131,7 @@ class ObjectPermissionRequiredMixin(AccessMixin):
     """
 
     additional_permissions = []
+    use_legacy_ui = False
 
     def get_required_permission(self):
         """

@@ -1,3 +1,4 @@
+from importlib import import_module
 from django.conf import settings as django_settings
 
 from nautobot.core.settings_funcs import sso_auth_enabled
@@ -33,11 +34,23 @@ def settings(request):
     """
     Expose Django settings in the template context. Example: {{ settings.DEBUG }}
     """
-    use_base_template = request.path.endswith("/edit/") or request.path.endswith("/add/") or not request.COOKIES.get("newui", False)
+    print("")
+    try:
+        view_class = request.resolver_match.func.view_class
+    except AttributeError:
+        # Use this method to import the view class as apps (like example_plugin)
+        # do not have the 'view_class' attribute.
+        view_func = request.resolver_match.func
+        module_path = view_func.__module__
+        view_name = view_func.__name__
+        module = import_module(module_path)
+        view_class = getattr(module, view_name, None)
+    use_legacy_ui = getattr(view_class, "use_legacy_ui", False)
+    use_legacy_ui = use_legacy_ui or not request.COOKIES.get("newui", False)
 
     return {
         "settings": django_settings,
-        "root_template": "base_django.html" if use_base_template else "base_react.html",
+        "root_template": "base_django.html" if use_legacy_ui else "base_react.html",
     }
 
 

@@ -324,6 +324,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     queryset = None
     model_form = None
     template_name = "generic/object_edit.html"
+    use_legacy_ui = True
 
     def get_required_permission(self):
         # self._permission_action is set by dispatch() to either "add" or "change" depending on whether
