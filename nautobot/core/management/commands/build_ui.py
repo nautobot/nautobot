@@ -70,7 +70,7 @@ class Command(BaseCommand):
             str: The view component associated with the specified route name, or None if not found.
 
         Example:
-            >>> get_app_component(file_path="/src/example_plugin/example_plugin/ui/index.js", route_name="examplemodel_list")
+            >>> get_app_component(file_path="/src/example_plugin/example_plugin/ui/index.js", route_name="example_plugin:examplemodel_list")
             "ExampleModelListView"
         """
         with open(file_path, "r") as f:
@@ -112,8 +112,8 @@ class Command(BaseCommand):
         base_url = app_config.base_url or app_config.label
         for urlpattern in module.urlpatterns:
             if component := self.get_app_component(
-                app_base_path / "ui/index.js",
-                urlpattern.name,
+                app_base_path / "ui/index.js", 
+                f"{app_name}:{urlpattern.name}",
             ):
                 path_regex = urlpattern.pattern.regex
                 url_path = self.convert_django_url_regex_to_react_route_path(path_regex)
