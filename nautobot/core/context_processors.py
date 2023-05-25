@@ -34,7 +34,7 @@ def settings(request):
     """
     Expose Django settings in the template context. Example: {{ settings.DEBUG }}
     """
-    print("")
+
     try:
         view_class = request.resolver_match.func.view_class
     except AttributeError:
