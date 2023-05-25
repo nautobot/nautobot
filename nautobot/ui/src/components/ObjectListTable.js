@@ -1,4 +1,3 @@
-import { RouterButton } from "./RouterButton";
 import { ButtonGroup, SkeletonText } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
@@ -165,7 +164,7 @@ export default function ObjectListTable({
                             onClick={(e) => {
                                 e.preventDefault();
                                 if (process.env.NODE_ENV === "production") {
-                                    document.location.href += "add/"
+                                    document.location.href += "add/";
                                 }
                             }}
                         >
