@@ -1859,7 +1859,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
         cf.save()
-        logging.disable(logging.ERROR)
         cf.content_types.set([obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
         status = Status.objects.get_for_model(Location).first()
@@ -1877,7 +1876,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location.refresh_from_db()
 
         self.assertTrue("cf1" not in location.cf)
-        logging.disable(logging.NOTSET)
 
     def test_update_custom_field_choice_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)

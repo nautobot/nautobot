@@ -1,44 +1,30 @@
 import { Navigate, useRoutes } from "react-router-dom";
-// import { lazy } from 'react'
+import { useSelector } from "react-redux";
 
-import { useGetSessionQuery } from "@utils/api";
-import Home from "@views/Home";
+import { isLoggedInSelector } from "@utils/store";
 import CreateView from "@views/generic/ObjectCreate";
 import DetailView from "@views/generic/ObjectRetrieve";
 import ListView from "@views/generic/ObjectList";
+import Home from "@views/Home";
 import InstalledApps from "@views/InstalledApps";
 import Login from "@views/Login";
 import Logout from "@views/Logout";
 
-// TODO: Dynamic route injection
 export default function NautobotRouter() {
-    const {
-        data: sessionInfo,
-        isSuccess: sessionLoaded,
-        isError: sessionError,
-    } = useGetSessionQuery();
+    const isLoggedIn = useSelector(isLoggedInSelector);
 
     let element = useRoutes([
         {
             path: "/login/",
-            element:
-                sessionError || (sessionLoaded && !sessionInfo.logged_in) ? (
-                    <Login />
-                ) : (
-                    <Navigate to="/" />
-                ),
+            element: !isLoggedIn ? <Login /> : <Navigate to="/" />,
         },
         {
             path: "/logout/",
-            element: <Logout />,
+            element: isLoggedIn ? <Logout /> : <Navigate to="/login/" />,
         },
         {
             path: "/",
-            element:
-                sessionError ||
-                (sessionLoaded && !sessionInfo.logged_in && (
-                    <Navigate to="/login/" />
-                )),
+            element: !isLoggedIn && <Navigate to="/login/" />,
             children: [
                 {
                     path: "",
@@ -46,17 +32,17 @@ export default function NautobotRouter() {
                     children: [],
                 },
                 {
-                    path: "/:app_name/:model_name/",
+                    path: "/:app_label/:model_name/",
                     element: <ListView />,
                     children: [],
                 },
                 {
-                    path: "/:app_name/:model_name/add/",
+                    path: "/:app_label/:model_name/add/",
                     element: <CreateView />,
                     children: [],
                 },
                 {
-                    path: "/:app_name/:model_name/:object_id/",
+                    path: "/:app_label/:model_name/:object_id/",
                     element: <DetailView />,
                     children: [],
                 },
@@ -68,17 +54,17 @@ export default function NautobotRouter() {
                             element: <InstalledApps />,
                         },
                         {
-                            path: ":app_name/:model_name/",
+                            path: ":app_label/:model_name/",
                             element: <ListView />,
                             children: [],
                         },
                         {
-                            path: ":app_name/:model_name/add/",
+                            path: ":app_label/:model_name/add/",
                             element: <CreateView />,
                             children: [],
                         },
                         {
-                            path: ":app_name/:model_name/:object_id/",
+                            path: ":app_label/:model_name/:object_id/",
                             element: <DetailView />,
                             children: [],
                         },

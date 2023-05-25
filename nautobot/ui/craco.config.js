@@ -4,7 +4,7 @@ const {
 
 // Suppress console logging unless debugging is explicitly enabled.
 if (!process.env.NAUTOBOT_DEBUG) {
-    // console.log = function () {};
+    console.log = function () {};
 }
 
 module.exports = {
@@ -25,8 +25,13 @@ module.exports = {
             webpackConfig.output.chunkFilename =
                 "static/js/[id]-[chunkhash].js"; // DO have Webpack hash chunk filename
 
-            // TODO: tradeoffs here for performance, see https://webpack.js.org/configuration/devtool/
-            webpackConfig.devtool = "eval-cheap-module-source-map";
+            // Sourcemaps are our friend: https://blog.teamtreehouse.com/introduction-source-maps
+            // Prefer a sourcemap file so we can analyze our apps bundle size in dev with `npm run analyze`.
+            webpackConfig.devtool = "eval-source-map";
+            if (!process.env.NAUTOBOT_DEBUG) {
+                // Smaller sourcemap for production and not linked so browsers don't try to fetch it.
+                webpackConfig.devtool = "hidden-source-map";
+            }
 
             // Plugin item 5 is the `MiniCssExtractPlugin`. Overload it to not hash the CSS filename.
             webpackConfig.plugins[5].options.filename = "static/css/[name].css";

@@ -1,4 +1,7 @@
-import { Card, CardHeader, SkeletonText } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
+import useSWR from "swr";
+import { useRef } from "react";
+import { useLocation, useParams } from "react-router-dom";
+
 import {
     faCheck,
     faCalendarPlus,
@@ -6,6 +9,12 @@ import {
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    Card,
+    CardHeader,
+    SkeletonText,
+    useDisclosure,
+} from "@chakra-ui/react"; // TODO: use nautobot-ui when available
 import {
     Box,
     Button as UIButton,
@@ -32,42 +41,21 @@ import {
     NautobotGridItem,
     NtcThumbnailIcon,
 } from "@nautobot/nautobot-ui";
-import { ReferenceDataTag } from "@components/ReferenceDataTag";
-import { useLocation, useParams } from "react-router-dom";
-import useSWR from "swr";
-import { useRef } from "react";
-// import AppFullWidthComponentsWithProps from "@components/AppFullWidthComponents";
+
 import AppComponents from "@components/Apps";
-import { toTitleCase } from "@utils/string";
-import GenericView from "@views/generic/GenericView";
+import { ReferenceDataTag } from "@components/ReferenceDataTag";
 import ObjectListTable from "@components/ObjectListTable";
 import { useGetRESTAPIQuery } from "@utils/api";
 import { humanFriendlyDate } from "@utils/date";
+import { toTitleCase } from "@utils/string";
 import { uiUrl } from "@utils/url";
 import RouterLink from "@components/RouterLink";
-import { useDisclosure } from "@chakra-ui/react";
+import GenericView from "@views/generic/GenericView";
 
 const fetcher = (url) =>
     fetch(url, { credentials: "include" }).then((res) =>
         res.ok ? res.json() : null
     );
-// const fetcherHTML = (url) =>
-//     fetch(url, { credentials: "include" }).then((res) =>
-//         res.ok ? res.text() : null
-//     );
-// const fetcherTabs = (url) =>
-//     fetch(url, { credentials: "include" }).then((res) => {
-//         return res.json().then((data) => {
-//             let tabs = data.tabs.map((tab_top) =>
-//                 Object.keys(tab_top).map(function (tab_key) {
-//                     let tab = tab_top[tab_key];
-//                     let tab_component = create_app_tab({ tab: tab });
-//                     return tab_component;
-//                 })
-//             );
-//             return tabs;
-//         });
-//     });
 
 function render_header(value) {
     value = toTitleCase(value, "_");
@@ -171,13 +159,13 @@ function RenderRow(props) {
 }
 
 export default function ObjectRetrieve({ api_url }) {
-    const { app_name, model_name, object_id } = useParams();
+    const { app_label, model_name, object_id } = useParams();
     const { isOpen, onClose, onOpen } = useDisclosure();
     const location = useLocation();
     const isPluginView = location.pathname.includes("/plugins/");
     const pluginPrefix = isPluginView ? "plugins/" : "";
-    if (!!app_name && !!model_name && !!object_id && !api_url) {
-        api_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/?depth=1`;
+    if (!!app_label && !!model_name && !!object_id && !api_url) {
+        api_url = `/api/${pluginPrefix}${app_label}/${model_name}/${object_id}/?depth=1`;
     }
     // const { data: appHTML } = useSWR(
     //     () => (api_url ? api_url + "app_full_width_fragment/" : null),
@@ -207,12 +195,12 @@ export default function ObjectRetrieve({ api_url }) {
         isFetching: changelogHeaderDataFetching,
         isLoading: changelogHeaderDataLoading,
     } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: "object-changes",
         schema: true,
     });
     // Note Data
-    const notes_url = `/api/${pluginPrefix}${app_name}/${model_name}/${object_id}/notes/`;
+    const notes_url = `/api/${pluginPrefix}${app_label}/${model_name}/${object_id}/notes/`;
     const {
         data: noteData,
         isError: note_error,
@@ -224,7 +212,7 @@ export default function ObjectRetrieve({ api_url }) {
         isFetching: noteHeaderDataFetching,
         isLoading: noteHeaderDataLoading,
     } = useGetRESTAPIQuery({
-        app_name: "extras",
+        app_label: "extras",
         model_name: "notes",
         schema: true,
     });
@@ -250,7 +238,7 @@ export default function ObjectRetrieve({ api_url }) {
             </GenericView>
         );
     }
-    const route_name = `${app_name}:${model_name}`;
+    const route_name = `${app_label}:${model_name}`;
     let obj = objectData;
     let changelogDataLoaded =
         !(changelogDataLoading || changelogDataFetching) &&
@@ -447,6 +435,7 @@ export default function ObjectRetrieve({ api_url }) {
                                     tableTitle={"Notes"}
                                     include_button={false}
                                     data_loaded={noteDataLoaded}
+                                    data_fetched={!noteDataFetching}
                                 />
                             </Card>
                         </TabPanel>
@@ -480,6 +469,7 @@ export default function ObjectRetrieve({ api_url }) {
                                     tableTitle={"Change Logs"}
                                     include_button={false}
                                     data_loaded={changelogDataLoaded}
+                                    data_fetched={!changelogDataFetching}
                                 />
                             </Card>
                         </TabPanel>
