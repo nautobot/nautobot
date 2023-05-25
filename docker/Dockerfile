@@ -312,6 +312,8 @@ WORKDIR /opt/nautobot
 
 COPY --from=final-dev --chown=nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
 
+RUN nautobot-server build_ui
+
 # Run Nautobot server under uwsgi by default
 EXPOSE 8080 8443
 CMD ["nautobot-server", "start", "--ini", "/opt/nautobot/uwsgi.ini"]
