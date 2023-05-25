@@ -94,7 +94,6 @@ ARG PYTHON_VER
 ################################ Stage: base (intermediate build target; basis for all other images herein)
 
 FROM python:${PYTHON_VER}-slim as base
-ARG PYTHON_VER
 
 ENV PYTHONUNBUFFERED=1 \
     NAUTOBOT_ROOT=/opt/nautobot \
@@ -247,6 +246,7 @@ RUN npm install
 # Nautobot wheel build is no longer a direct previous layer
 # /source from build-nautobot will include docs from build-docs as well
 COPY --from=build-nautobot /source /source
+COPY --from=dependencies /source/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
 
 # Run Nautobot development server by default
 EXPOSE 8080
