@@ -2,7 +2,6 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 
 from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
 from nautobot.dcim.choices import InterfaceModeChoices

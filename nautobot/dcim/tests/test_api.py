@@ -3,7 +3,6 @@ from unittest import skip
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status

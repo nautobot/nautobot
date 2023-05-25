@@ -7,8 +7,6 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
-from django.db.models.signals import pre_delete, pre_save
-from django.dispatch import receiver
 from django.utils.functional import classproperty
 
 from nautobot.core.models import BaseManager, BaseModel
