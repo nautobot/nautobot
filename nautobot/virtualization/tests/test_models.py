@@ -13,7 +13,8 @@ class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
     def test_cluster_validation(self):
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         location_type = LocationType.objects.create(name="Location Type 1")
-        location = Location.objects.create(name="Location 1", location_type=location_type)
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
         cluster = Cluster(name="Test Cluster 1", cluster_type=cluster_type, location=location)
         with self.assertRaises(ValidationError) as cm:
             cluster.validated_save()
@@ -65,15 +66,21 @@ class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
 
 
 class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        self.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location)
+        vlan_status = Status.objects.get_for_model(VLAN).first()
+        cls.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location, status=vlan_status)
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
-        self.virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        cls.virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1", status=vm_status)
+        cls.int_status = Status.objects.get_for_model(VMInterface).first()
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
-        interface = VMInterface.objects.create(virtual_machine=self.virtualmachine, name="Interface 1")
+        interface = VMInterface.objects.create(
+            virtual_machine=self.virtualmachine, name="Interface 1", status=self.int_status
+        )
         with self.assertRaises(ValidationError) as err:
             interface.tagged_vlans.add(self.vlan)
         self.assertEqual(
@@ -82,7 +89,9 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
 
     def test_add_ip_addresses(self):
         """Test the `add_ip_addresses` helper method on `VMInterface`"""
-        vm_interface = VMInterface.objects.create(name="Int1", virtual_machine=self.virtualmachine)
+        vm_interface = VMInterface.objects.create(
+            name="Int1", virtual_machine=self.virtualmachine, status=self.int_status
+        )
         ips = list(IPAddress.objects.all()[:10])
 
         # baseline (no vm_interface to ip address relationships exists)
@@ -102,7 +111,9 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
 
     def test_remove_ip_addresses(self):
         """Test the `remove_ip_addresses` helper method on `VMInterface`"""
-        vm_interface = VMInterface.objects.create(name="Int1", virtual_machine=self.virtualmachine)
+        vm_interface = VMInterface.objects.create(
+            name="Int1", virtual_machine=self.virtualmachine, status=self.int_status
+        )
         ips = list(IPAddress.objects.all()[:10])
 
         # baseline (no vm_interface to ip address relationships exists)
