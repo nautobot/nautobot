@@ -112,7 +112,7 @@ class Command(BaseCommand):
         base_url = app_config.base_url or app_config.label
         for urlpattern in module.urlpatterns:
             if component := self.get_app_component(
-                app_base_path / "ui/index.js", 
+                app_base_path / "ui/index.js",
                 f"{base_url}:{urlpattern.name}",
             ):
                 path_regex = urlpattern.pattern.regex
