@@ -137,7 +137,10 @@ class BulkRenameForm(forms.Form):
 
 class CSVModelForm(forms.ModelForm):
     """
-    ModelForm used for the import of objects in CSV format.
+    ModelForm used for the import of objects.
+
+    Note: the name is misleading as since 2.0 this is no longer used for CSV imports; however it *is* still used for
+    JSON/YAML imports of DeviceTypes and their component templates.
     """
 
     def __init__(self, *args, headers=None, **kwargs):

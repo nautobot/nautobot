@@ -57,7 +57,6 @@ class GitRepository(PrimaryModel):
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
 
-    csv_headers = ["name", "slug", "remote_url", "branch", "secrets_group", "provided_contents"]
     clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 
     class Meta:

@@ -1,5 +1,3 @@
-import csv
-from io import StringIO
 import json
 import re
 
@@ -50,20 +48,22 @@ __all__ = (
 
 class CSVDataField(django_forms.CharField):
     """
-    A CharField (rendered as a Textarea) which accepts CSV-formatted data. It returns data as a two-tuple: The first
-    item is a dictionary of column headers, mapping field names to the attribute by which they match a related object
-    (where applicable). The second item is a list of dictionaries, each representing a discrete row of CSV data.
+    A CharField (rendered as a Textarea) which expects CSV-formatted data.
 
-    :param from_form: The form from which the field derives its validation rules.
+    Initial value is a list of headers corresponding to the required fields for the given serializer class.
+
+    This no longer actually does any CSV parsing or validation on its own,
+    as that is now handled by the NautobotCSVParser class and the REST API serializers.
+
+    Args:
+        required_field_names: List of field names representing required fields for this import.
     """
 
     widget = django_forms.Textarea
 
-    def __init__(self, from_form, *args, **kwargs):
-        form = from_form()
-        self.model = form.Meta.model
-        self.fields = form.fields
-        self.required_fields = [name for name, field in form.fields.items() if field.required]
+    def __init__(self, *args, required_field_names="", **kwargs):
+        self.required_field_names = required_field_names
+        kwargs.setdefault("required", False)
 
         super().__init__(*args, **kwargs)
 
@@ -71,7 +71,7 @@ class CSVDataField(django_forms.CharField):
         if not self.label:
             self.label = ""
         if not self.initial:
-            self.initial = ",".join(self.required_fields) + "\n"
+            self.initial = ",".join(self.required_field_names) + "\n"
         if not self.help_text:
             self.help_text = (
                 "Enter the list of column headers followed by one line per record to be imported, using "
@@ -79,36 +79,17 @@ class CSVDataField(django_forms.CharField):
                 "in double quotes."
             )
 
-    def to_python(self, value):
-        if value is None:
-            return None
-        reader = csv.reader(StringIO(value.strip()))
-        return forms.parse_csv(reader)
-
-    def validate(self, value):
-        if value is None:
-            return None
-        headers, _records = value
-        forms.validate_csv(headers, self.fields, self.required_fields)
-
-        return value
-
 
 class CSVFileField(django_forms.FileField):
     """
-    A FileField (rendered as a ClearableFileInput) which accepts a file containing CSV-formatted data. It returns
-    data as a two-tuple: The first item is a dictionary of column headers, mapping field names to the attribute
-    by which they match a related object (where applicable). The second item is a list of dictionaries, each
-    representing a discrete row of CSV data.
+    A FileField (rendered as a ClearableFileInput) which expects a file containing CSV-formatted data.
 
-    :param from_form: The form from which the field derives its validation rules.
+    This no longer actually does any CSV parsing or validation on its own,
+    as that is now handled by the NautobotCSVParser class and the REST API serializers.
     """
 
-    def __init__(self, from_form, *args, **kwargs):
-        form = from_form()
-        self.model = form.Meta.model
-        self.fields = form.fields
-        self.required_fields = [name for name, field in form.fields.items() if field.required]
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("required", False)
 
         super().__init__(*args, **kwargs)
 
@@ -122,37 +103,19 @@ class CSVFileField(django_forms.FileField):
             )
 
     def to_python(self, file):
+        """For parity with CSVDataField, this returns the CSV text rather than an UploadedFile object."""
         if file is None:
             return None
 
         file = super().to_python(file)
-        csv_str = file.read().decode("utf-8-sig").strip()
-        # Check if there is only one column of input
-        # If so a delimiter cannot be determined and it will raise an exception.
-        # In that case we will use csv.excel class
-        # Which defines the usual properties of an Excel-generated CSV file.
-        try:
-            dialect = csv.Sniffer().sniff(csv_str, delimiters=",")
-        except csv.Error:
-            dialect = csv.excel
-        reader = csv.reader(csv_str.splitlines(), dialect)
-        headers, records = forms.parse_csv(reader)
-
-        return headers, records
-
-    def validate(self, value):
-        if value is None:
-            return None
-
-        headers, _records = value
-        forms.validate_csv(headers, self.fields, self.required_fields)
-
-        return value
+        return file.read().decode("utf-8-sig").strip()
 
 
 class CSVChoiceField(django_forms.ChoiceField):
     """
     Invert the provided set of choices to take the human-friendly label as input, and return the database value.
+
+    Despite the name, this is no longer used in CSV imports since 2.0, but *is* used in JSON/YAML import of DeviceTypes.
     """
 
     STATIC_CHOICES = True
@@ -164,7 +127,10 @@ class CSVChoiceField(django_forms.ChoiceField):
 
 class CSVMultipleChoiceField(CSVChoiceField):
     """
-    A version of CSVChoiceField that supports and emits a list of choice values
+    A version of CSVChoiceField that supports and emits a list of choice values.
+
+    As with CSVChoiceField, the name is misleading, as this is no longer used for CSV imports, but is used for
+    JSON/YAML import of DeviceTypes still.
     """
 
     def to_python(self, value):
@@ -182,6 +148,9 @@ class CSVMultipleChoiceField(CSVChoiceField):
 class CSVModelChoiceField(django_forms.ModelChoiceField):
     """
     Provides additional validation for model choices entered as CSV data.
+
+    Note: class name is misleading; the subclass CSVContentTypeField (below) is also used in FilterSets, where it has
+    nothing to do with CSV data.
     """
 
     default_error_messages = {
@@ -198,6 +167,8 @@ class CSVModelChoiceField(django_forms.ModelChoiceField):
 class CSVContentTypeField(CSVModelChoiceField):
     """
     Reference a ContentType in the form `{app_label}.{model}`.
+
+    Note: class name is misleading; this field is also used in numerous FilterSets where it has nothing to do with CSV.
     """
 
     STATIC_CHOICES = True
@@ -313,6 +284,9 @@ class MultiValueCharField(django_forms.CharField):
 class CSVMultipleContentTypeField(MultipleContentTypeField):
     """
     Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
+
+    Note: This is unused in Nautobot core at this time, but some apps (data-validation-engine) use this for non-CSV
+    purposes, similar to CSVContentTypeField above.
     """
 
     def prepare_value(self, value):

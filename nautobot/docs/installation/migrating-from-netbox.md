@@ -69,27 +69,15 @@ The following backwards-incompatible changes have been made to the data model in
 
 ### Status Fields
 
-!!! tip
-    Status names are now lower-cased when setting the `status` field on CSV imports. The `slug` value is used for create/update of objects and for filtering in the API.
-
-A new [`Status`](../models/extras/status.md) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), and a `slug` field (e.g. `active`).
+A new [`Status`](../models/extras/status.md) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), a `color`, a `description`, and a set of `content_types` that it can be applied to (for example, `Device` and `Location`).
 
 ### Display name
 
 Several models such as device type and VLAN exposed a `display_name` property, which has now been renamed to `display`. In fact, there are several other instances, especially in the REST API, where the `display_name` field was used and as such, all instances have been renamed to `display`.
 
-#### CSV Imports
-
-When using CSV import to define a `status` field on imported objects, such as when importing Devices or Prefixes, the `Status.slug` field is used.
-
-For example, the built-in **Active** status has a slug of `active`, so the `active` value would be used for import.
-
 #### Default Choices
 
 Because `status` fields are now stored in the database, they cannot have a default value, just like other similar objects like Device Roles or Device Types. In cases where `status` was not required to be set because it would use the default value, you must now provide a `status` yourself.  
-
-!!! note
-    For consistency in the API, the `slug` value of a `status` is used when creating or updating an object.
 
 #### Choices in Code
 

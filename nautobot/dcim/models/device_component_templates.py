@@ -76,7 +76,10 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
         return super().to_objectchange(action, related_object=device_type, **kwargs)
 
     def get_absolute_url(self, api=False):
-        return self.device_type.get_absolute_url(api=api)
+        # TODO: in the new UI, this should be able to link directly to the object, instead of the device-type.
+        if not api:
+            return self.device_type.get_absolute_url(api=api)
+        return super().get_absolute_url(api=api)
 
     def instantiate_model(self, model, device, **kwargs):
         """

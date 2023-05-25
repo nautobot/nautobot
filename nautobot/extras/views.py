@@ -30,7 +30,7 @@ from nautobot.core.views import generic, viewsets
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import csv_format, prepare_cloned_fields
+from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
@@ -48,7 +48,7 @@ from .datasources import (
     get_datasource_contents,
 )
 from .filters import RoleFilterSet
-from .forms import RoleBulkEditForm, RoleCSVForm, RoleForm
+from .forms import RoleBulkEditForm, RoleForm
 from .jobs import get_job
 from .models import (
     ComputedField,
@@ -63,7 +63,6 @@ from .models import (
     ImageAttachment,
     JobButton,
     JobHook,
-    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
@@ -845,16 +844,7 @@ class GitRepositoryDeleteView(generic.ObjectDeleteView):
 
 class GitRepositoryBulkImportView(generic.BulkImportView):
     queryset = GitRepository.objects.all()
-    model_form = forms.GitRepositoryCSVForm
     table = tables.GitRepositoryBulkTable
-
-    def _save_obj(self, obj_form, request):
-        """Each GitRepository needs to know the originating request when it's saved so that it can enqueue using it."""
-        instance = obj_form.save(commit=False)
-        instance.request = request
-        instance.save()
-
-        return instance
 
 
 class GitRepositoryBulkEditView(generic.BulkEditView):
@@ -1494,34 +1484,6 @@ class JobResultView(generic.ObjectView):
     queryset = JobResult.objects.prefetch_related("job_model", "user")
     template_name = "extras/jobresult.html"
 
-    def instance_to_csv(self, instance):
-        """Format instance to csv."""
-        csv_data = []
-        headers = JobLogEntry.csv_headers.copy()
-        csv_data.append(",".join(headers))
-
-        for log_entry in instance.job_log_entries.all():
-            data = log_entry.to_csv()
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
-
-    def get(self, request, *args, **kwargs):
-        """
-        Generic GET handler for accessing an object by PK or slug
-        """
-        instance = get_object_or_404(self.queryset, **kwargs)
-
-        if "export" in request.GET:
-            response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
-            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
-            formated_completion_time = instance.date_done.strftime("%Y-%m-%d_%H_%M")
-            filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
-            response["Content-Disposition"] = f"attachment; filename={filename}"
-            return response
-
-        return super().get(request, *args, **kwargs)
-
     def get_extra_context(self, request, instance):
         associated_record = None
         job_class = None
@@ -1817,7 +1779,6 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     """`Roles` UIViewSet."""
 
     queryset = Role.objects.all()
-    bulk_create_form_class = RoleCSVForm
     bulk_update_form_class = RoleBulkEditForm
     filterset_class = RoleFilterSet
     form_class = RoleForm
@@ -1962,7 +1923,6 @@ class SecretDeleteView(generic.ObjectDeleteView):
 
 class SecretBulkImportView(generic.BulkImportView):
     queryset = Secret.objects.all()
-    model_form = forms.SecretCSVForm
     table = tables.SecretTable
 
 
@@ -2137,7 +2097,6 @@ class StatusBulkImportView(generic.BulkImportView):
     """Bulk CSV import of multiple `Status` objects."""
 
     queryset = Status.objects.all()
-    model_form = forms.StatusCSVForm
     table = tables.StatusTable
 
 
@@ -2198,7 +2157,6 @@ class TagDeleteView(generic.ObjectDeleteView):
 
 class TagBulkImportView(generic.BulkImportView):
     queryset = Tag.objects.all()
-    model_form = forms.TagCSVForm
     table = tables.TagTable
 
 

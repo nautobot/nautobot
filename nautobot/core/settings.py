@@ -181,20 +181,28 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
-    "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
+    "DEFAULT_FILTER_BACKENDS": (
+        "nautobot.core.api.filter_backends.NautobotFilterBackend",
+        "rest_framework.filters.OrderingFilter",
+    ),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
     "DEFAULT_RENDERER_CLASSES": (
         "nautobot.core.api.renderers.NautobotJSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
+        "nautobot.core.api.renderers.NautobotCSVRenderer",
     ),
-    "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
+    "DEFAULT_PARSER_CLASSES": (
+        "rest_framework.parsers.JSONParser",
+        "nautobot.core.api.parsers.NautobotCSVParser",
+    ),
     "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
     # Version to use if the client doesn't request otherwise.
     # This should only change (if at all) with Nautobot major (breaking) releases.
     "DEFAULT_VERSION": "2.0",
     "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
+    "ORDERING_PARAM": "sort",  # This is not meant to be changed by users, but is used internally by the API
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings
@@ -298,13 +306,18 @@ DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
 
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+TESTING = "test" in sys.argv
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
 if TESTING:
-    # keep log quiet by default when running unit/integration tests
-    LOGGING = {}
+    # Log to null handler instead of stderr during testing
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {"console": {"level": "INFO", "class": "logging.NullHandler"}},
+        "loggers": {"nautobot": {"handlers": ["console"], "level": "INFO"}},
+    }
 else:
     LOGGING = {
         "version": 1,

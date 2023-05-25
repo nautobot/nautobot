@@ -35,14 +35,6 @@ class ProviderNetwork(PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
 
-    csv_headers = [
-        "provider",
-        "name",
-        "slug",
-        "description",
-        "comments",
-    ]
-
     class Meta:
         ordering = ("provider", "name")
         constraints = (
@@ -52,15 +44,6 @@ class ProviderNetwork(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.provider.name,
-            self.name,
-            self.slug,
-            self.description,
-            self.comments,
-        )
 
     @property
     def display(self):
@@ -94,15 +77,6 @@ class Provider(PrimaryModel):
     admin_contact = models.TextField(blank=True, verbose_name="Admin contact")
     comments = models.TextField(blank=True)
 
-    csv_headers = [
-        "name",
-        "asn",
-        "account",
-        "portal_url",
-        "noc_contact",
-        "admin_contact",
-        "comments",
-    ]
     clone_fields = [
         "asn",
         "account",
@@ -116,17 +90,6 @@ class Provider(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.asn,
-            self.account,
-            self.portal_url,
-            self.noc_contact,
-            self.admin_contact,
-            self.comments,
-        )
 
 
 @extras_features("custom_validators", "graphql")
@@ -142,19 +105,11 @@ class CircuitType(OrganizationalModel):
         blank=True,
     )
 
-    csv_headers = ["name", "description"]
-
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.description,
-        )
 
 
 @extras_features(
@@ -206,17 +161,6 @@ class Circuit(PrimaryModel, StatusModel):
         null=True,
     )
 
-    csv_headers = [
-        "cid",
-        "provider",
-        "circuit_type",
-        "status",
-        "tenant",
-        "install_date",
-        "commit_rate",
-        "description",
-        "comments",
-    ]
     clone_fields = [
         "provider",
         "circuit_type",
@@ -233,19 +177,6 @@ class Circuit(PrimaryModel, StatusModel):
 
     def __str__(self):
         return self.cid
-
-    def to_csv(self):
-        return (
-            self.cid,
-            self.provider.name,
-            self.circuit_type.name,
-            self.get_status_display(),
-            self.tenant.name if self.tenant else None,
-            self.install_date,
-            self.commit_rate,
-            self.description,
-            self.comments,
-        )
 
 
 @extras_features(

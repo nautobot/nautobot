@@ -28,8 +28,6 @@ class ExampleModel(OrganizationalModel):
     name = models.CharField(max_length=20, help_text="The name of this Example.")
     number = models.IntegerField(default=100, help_text="The number of this Example.")
 
-    csv_headers = ["name", "number"]
-
     class Meta:
         ordering = ["name"]
 ```

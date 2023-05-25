@@ -10,6 +10,7 @@ from nautobot.circuits.models import (
     ProviderNetwork,
 )
 from nautobot.core.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
+from nautobot.dcim.models import Location
 from nautobot.extras.models import Status, Tag
 
 
@@ -170,17 +171,38 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.slug_source = "name"
 
 
-class CircuitTerminationTestCase(NautobotTestCase):
-    def setUp(self):
-        super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
+class CircuitTerminationTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectNotesViewTestCase,
+    # create/edit views are special cases, not currently tested
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkImportObjectsViewTestCase,
+    # No bulk-edit support currently
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = CircuitTermination
+
+    @classmethod
+    def setUpTestData(cls):
+        circuit = Circuit.objects.filter(circuit_terminations__isnull=True).first()
+        provider_network = ProviderNetwork.objects.filter(circuit_terminations__isnull=True).first()
+        location = Location.objects.get_for_model(CircuitTermination).first()
+
+        cls.csv_data = (
+            "term_side,circuit,location,provider_network,port_speed",
+            f"A,{circuit.natural_key_slug},{location.natural_key_slug}",
+            f"Z,{circuit.natural_key_slug},,{provider_network.natural_key_slug},1000",
+        )
 
     def test_circuit_termination_detail_200(self):
         """
         This tests that a circuit termination's detail page (with a provider
         network instead of a site) returns a 200 response and doesn't contain the connect menu button.
         """
+        self.user.is_superuser = True
+        self.user.save()
 
         # Set up the required objects:
         provider = Provider.objects.first()

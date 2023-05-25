@@ -18,9 +18,17 @@ menu_items = (
                         ],
                     ),
                     NavMenuItem(
+                        link="circuits:circuittermination_list",
+                        name="Circuit Terminations",
+                        weight=200,
+                        permissions=[
+                            "circuits.view_circuittermination",
+                        ],
+                    ),
+                    NavMenuItem(
                         link="circuits:circuittype_list",
                         name="Circuit Types",
-                        weight=200,
+                        weight=300,
                         permissions=[
                             "circuits.view_circuittype",
                         ],
@@ -28,7 +36,7 @@ menu_items = (
                     NavMenuItem(
                         link="circuits:provider_list",
                         name="Providers",
-                        weight=300,
+                        weight=400,
                         permissions=[
                             "circuits.view_provider",
                         ],
@@ -36,7 +44,7 @@ menu_items = (
                     NavMenuItem(
                         link="circuits:providernetwork_list",
                         name="Provider Networks",
-                        weight=400,
+                        weight=500,
                         permissions=[
                             "circuits.view_providernetwork",
                         ],

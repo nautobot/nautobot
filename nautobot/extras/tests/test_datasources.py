@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import tempfile
 from unittest import mock
@@ -493,12 +492,10 @@ class GitTest(TransactionTestCase):
 
                 # Run the Git operation and refresh the object from the DB
                 job_model = GitRepositorySync().job_model
-                logging.disable(logging.ERROR)
                 job_result = run_job_for_testing(
                     job=job_model,
                     repository=self.repo.pk,
                 )
-                logging.disable(logging.NOTSET)
                 job_result.refresh_from_db()
 
                 self.assertEqual(

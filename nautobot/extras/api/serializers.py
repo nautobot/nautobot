@@ -245,21 +245,14 @@ class DynamicGroupSerializer(NautobotModelSerializer):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
     )
-    # Read-only because m2m is hard. Easier to just create # `DynamicGroupMemberships` explicitly
-    # using their own endpoint at /api/extras/dynamic-group-memberships/.
-    children = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(DynamicGroupMembershipSerializer)
-    def get_children(self, obj):
-        depth = get_nested_serializer_depth(self)
-        return return_nested_serializer_data_based_on_depth(
-            self, depth, obj, obj.dynamic_group_memberships, "dynamic_group_memberships"
-        )
 
     class Meta:
         model = DynamicGroup
         fields = "__all__"
-        extra_kwargs = {"filter": {"read_only": False}}
+        extra_kwargs = {
+            "children": {"source": "dynamic_group_memberships", "read_only": True},
+            "filter": {"read_only": False},
+        }
 
 
 #
@@ -612,15 +605,9 @@ class JobMultiPartInputSerializer(serializers.Serializer):
 
 
 class JobLogEntrySerializer(BaseModelSerializer):
-    display = serializers.SerializerMethodField()
-
     class Meta:
         model = JobLogEntry
         fields = "__all__"
-
-    @extend_schema_field(serializers.CharField)
-    def get_display(self, obj):
-        return obj.created.isoformat()
 
 
 #
@@ -759,6 +746,9 @@ class RoleSerializer(NautobotModelSerializer):
     class Meta:
         model = Role
         fields = "__all__"
+        extra_kwargs = {
+            "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
+        }
 
 
 #
@@ -785,23 +775,17 @@ class SecretsGroupAssociationSerializer(ValidatedModelSerializer):
 class SecretsGroupSerializer(NautobotModelSerializer):
     """Serializer for `SecretsGroup` objects."""
 
-    # TODO: it would be **awesome** if we could create/update SecretsGroupAssociations
-    # alongside creating/updating the base SecretsGroup, but since this is a ManyToManyField with
-    # a `through` table, that appears very non-trivial to implement. For now we have this as a
-    # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
-    # api/extras/secrets-group-associations/ REST endpoint as appropriate.
-    secrets = serializers.SerializerMethodField(read_only=True)
-
-    @extend_schema_field(SecretsGroupAssociationSerializer)
-    def get_secrets(self, obj):
-        depth = get_nested_serializer_depth(self)
-        return return_nested_serializer_data_based_on_depth(
-            self, depth, obj, obj.secrets_group_associations, "secrets_group_associations"
-        )
-
     class Meta:
         model = SecretsGroup
         fields = "__all__"
+        # TODO: it would be **awesome** if we could create/update SecretsGroupAssociations
+        # alongside creating/updating the base SecretsGroup, but since this is a ManyToManyField with
+        # a `through` table, that appears very non-trivial to implement. For now we have this as a
+        # read-only field; to create/update SecretsGroupAssociations you must make separate calls to the
+        # api/extras/secrets-group-associations/ REST endpoint as appropriate.
+        extra_kwargs = {
+            "secrets": {"source": "secrets_group_associations", "read_only": True},
+        }
 
 
 #
@@ -820,6 +804,9 @@ class StatusSerializer(NautobotModelSerializer):
     class Meta:
         model = Status
         fields = "__all__"
+        extra_kwargs = {
+            "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
+        }
 
 
 #
@@ -838,6 +825,9 @@ class TagSerializer(NautobotModelSerializer):
     class Meta:
         model = Tag
         fields = "__all__"
+        extra_kwargs = {
+            "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
+        }
 
     def validate(self, data):
         data = super().validate(data)
