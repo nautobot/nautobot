@@ -69,8 +69,12 @@ class IPAddressToInterfaceTest(TestCase):
         self.assertIsNotNone(ip_to_interface)
         self.test_device.primary_ip4 = dev_ip_addr
         self.test_device.save()
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as cm:
             ip_to_interface.delete()
+        self.assertIn(
+            f"IP address {self.test_device.primary_ip4} is primary for Device {self.test_device} but not assigned to it!",
+            str(cm.exception),
+        )
 
     def test_removing_ip_addresses_containing_host_virtual_machine_primary_ip_not_allowed(self):
         """
@@ -82,8 +86,36 @@ class IPAddressToInterfaceTest(TestCase):
         self.assertIsNotNone(ip_to_vminterface)
         self.test_vm.primary_ip4 = vm_ip_addr
         self.test_vm.save()
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as cm:
             ip_to_vminterface.delete()
+        self.assertIn(
+            f"IP address {self.test_vm.primary_ip4} is primary for Virtual Machine {self.test_vm} but not assigned to it!",
+            str(cm.exception),
+        )
+
+    def test_ip_address_to_interface_uniqueness_constraint(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24")
+        IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_addr)
+        with self.assertRaises(ValidationError):
+            IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, interface=self.test_int1, ip_address=ip_addr
+            )
+        IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=ip_addr)
+        with self.assertRaises(ValidationError):
+            IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=ip_addr)
+
+    def test_pre_save_signal_invoked_on_ip_address_to_interface_manual_creation(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24")
+        with self.assertRaises(ValidationError) as cm:
+            IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, interface=self.test_int1, ip_address=ip_addr
+            )
+        self.assertIn(
+            "Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            IPAddressToInterface.objects.create(vm_interface=None, interface=None, ip_address=ip_addr)
+        self.assertIn("Must associate to either an Interface or a VMInterface.", str(cm.exception))
 
 
 class TestVarbinaryIPField(TestCase):
