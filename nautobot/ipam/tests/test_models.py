@@ -11,7 +11,7 @@ from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressStatusChoices, PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, Prefix, VLAN, VLANGroup, VRF
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
@@ -58,6 +58,32 @@ class IPAddressToInterfaceTest(TestCase):
             virtual_machine=cls.test_vm,
             status=vmint_status,
         )
+
+    def test_removing_ip_addresses_containing_host_device_primary_ip_not_allowed(self):
+        """
+        Validate we cannot remove an IPAddress from an Interface that is the host Device's primary ip.
+        """
+        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24")
+        self.test_int1.add_ip_addresses(dev_ip_addr)
+        ip_to_interface = IPAddressToInterface.objects.get(interface=self.test_int1, ip_address=dev_ip_addr)
+        self.assertIsNotNone(ip_to_interface)
+        self.test_device.primary_ip4 = dev_ip_addr
+        self.test_device.save()
+        with self.assertRaises(ValidationError):
+            ip_to_interface.delete()
+
+    def test_removing_ip_addresses_containing_host_virtual_machine_primary_ip_not_allowed(self):
+        """
+        Validate we cannot remove an IPAddress from an Interface that is the host Virtual Machine's primary ip.
+        """
+        vm_ip_addr = IPAddress.objects.create(address="192.0.2.1/24")
+        self.test_vmint1.add_ip_addresses(vm_ip_addr)
+        ip_to_vminterface = IPAddressToInterface.objects.get(vm_interface=self.test_vmint1, ip_address=vm_ip_addr)
+        self.assertIsNotNone(ip_to_vminterface)
+        self.test_vm.primary_ip4 = vm_ip_addr
+        self.test_vm.save()
+        with self.assertRaises(ValidationError):
+            ip_to_vminterface.delete()
 
 
 class TestVarbinaryIPField(TestCase):

@@ -30,7 +30,6 @@ from nautobot.dcim.constants import (
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
-from nautobot.dcim.utils import validate_removed_ip_address_not_primary
 from nautobot.extras.models import (
     RelationshipModel,
     Status,
@@ -714,7 +713,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             ip_addresses = [ip_addresses]
         with transaction.atomic():
             for ip in ip_addresses:
-                validate_removed_ip_address_not_primary(self, ip)
                 qs = self.ip_addresses.through.objects.filter(ip_address=ip, interface=self)
                 deleted_count, _ = qs.delete()
                 count += deleted_count

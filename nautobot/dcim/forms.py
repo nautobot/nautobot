@@ -2202,6 +2202,8 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         ip_addresses = self.cleaned_data.get("ip_addresses", [])
         device = self.cleaned_data.get("device")
         # IP address validation
+        # We do have the pre_delete signal ip_address_to_interface_pre_delete_validation
+        # to handle this scenario, but we want the ValidationError to bubble up on the form.
         if device:
             if device.primary_ip4 and device.primary_ip4 not in ip_addresses:
                 raise ValidationError(
