@@ -100,12 +100,19 @@ ENV PYTHONUNBUFFERED=1 \
     prometheus_multiproc_dir=/prom_cache
 
 # Install all OS package upgrades and dependencies needed to run Nautobot in production
-# hadolint ignore=DL3005,DL3008,DL3009,DL3013,DL4006
+# DL3008 - Require pinned dependencies for apt instal
+# DL3009 - Delete the apt-get lists after installing something
+# hadolint ignore=DL3008,DL3009
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install --no-install-recommends -y curl
 
-# hadolint ignore=DL3008,DL3009,DL3013,DL3059,DL4006
+# DL3008 - Require pinned dependencies for apt instal
+# DL3009 - Delete the apt-get lists after installing something
+# DL3013 - pin all Python package versions
+# DL3059 - Multiple consecutive RUN instructions
+# DL4006 - Set the SHELL option -o pipefail before RUN with a pipe in
+# hadolint ignore=DL3008,DL3013,DL3059,DL4006
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y && \
@@ -175,6 +182,7 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
 
 WORKDIR /source/nautobot/ui
 
+# Install (non-development) Node dependencies of Nautobot UI
 RUN npm install
 
 WORKDIR /source
@@ -238,8 +246,7 @@ RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/dow
 # hadolint ignore=DL3006
 FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
 
-# Install node.js 18.x (LTS)
-# hadolint ignore=DL3008,DL4006
+# Install our developer node dependencies (markdownlint-cli, etc)
 COPY package.json package-lock.json /source/
 RUN npm install
 

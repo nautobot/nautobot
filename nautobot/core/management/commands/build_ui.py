@@ -128,6 +128,9 @@ class Command(BaseCommand):
         }
         loglevel = f"--loglevel {verbosity_map[verbosity]}"
 
+        if not os.path.exists(Path(settings.NAUTOBOT_UI_DIR)):
+            os.makedirs(Path(settings.NAUTOBOT_UI_DIR))
+
         self.run_command(
             f"cp -r {Path(settings.BASE_DIR, 'ui')}/. {Path(settings.NAUTOBOT_UI_DIR)}",
             ">>> Copying UI source files...",
