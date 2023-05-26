@@ -2310,7 +2310,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "type",
         "enabled",
         "parent_interface",
-        "ip_addresses",
         "bridge",
         "lag",
         "mtu",
