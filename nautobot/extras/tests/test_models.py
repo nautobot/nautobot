@@ -11,7 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings
-
+from django.test.utils import isolate_apps
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase, TransactionTestCase
@@ -1445,6 +1445,7 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.status.save()
             self.assertEqual(str(self.status), test)
 
+    @isolate_apps("nautobot.extras.tests")
     def test_deprecated_mixin_class(self):
         """Test that inheriting from StatusModel raises a DeprecationWarning."""
         with warnings.catch_warnings(record=True) as warn_list:

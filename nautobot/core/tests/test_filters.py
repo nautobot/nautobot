@@ -4,6 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models as django_models
 from django.shortcuts import reverse
 from django.test import TestCase
+from django.test.utils import isolate_apps
+
 import django_filters
 from tree_queries.models import TreeNodeForeignKey
 
@@ -352,35 +354,37 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         )
 
 
-class TestModel(django_models.Model):
-    """
-    Test model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
-    """
-
-    charfield = django_models.CharField(max_length=10)
-    choicefield = django_models.IntegerField(choices=(("A", 1), ("B", 2), ("C", 3)))
-    charchoicefield = django_models.CharField(
-        choices=(("1", "Option 1"), ("2", "Option 2"), ("3", "Option 3")), max_length=10
-    )
-    datefield = django_models.DateField()
-    datetimefield = django_models.DateTimeField()
-    decimalfield = django_models.DecimalField(max_digits=9, decimal_places=6)
-    floatfield = django_models.FloatField()
-    integerfield = django_models.IntegerField()
-    macaddressfield = core_fields.MACAddressCharField()
-    textfield = django_models.TextField()
-    timefield = django_models.TimeField()
-    treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
-
-    tags = core_fields.TagsField()
-
-
+@isolate_apps("nautobot.core.tests")
 class BaseFilterSetTest(TestCase):
     """
     Ensure that a BaseFilterSet automatically creates the expected set of filters for each filter type.
     """
 
     class TestFilterSet(filters.BaseFilterSet):
+        """Filterset for testing various fields."""
+
+        class TestModel(django_models.Model):
+            """
+            Test model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
+            """
+
+            charfield = django_models.CharField(max_length=10)
+            choicefield = django_models.IntegerField(choices=(("A", 1), ("B", 2), ("C", 3)))
+            charchoicefield = django_models.CharField(
+                choices=(("1", "Option 1"), ("2", "Option 2"), ("3", "Option 3")), max_length=10
+            )
+            datefield = django_models.DateField()
+            datetimefield = django_models.DateTimeField()
+            decimalfield = django_models.DecimalField(max_digits=9, decimal_places=6)
+            floatfield = django_models.FloatField()
+            integerfield = django_models.IntegerField()
+            macaddressfield = core_fields.MACAddressCharField()
+            textfield = django_models.TextField()
+            timefield = django_models.TimeField()
+            treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
+
+            tags = core_fields.TagsField()
+
         charfield = django_filters.CharFilter()
         macaddressfield = filters.MACAddressFilter()
         modelchoicefield = django_filters.ModelChoiceFilter(
@@ -395,26 +399,32 @@ class BaseFilterSetTest(TestCase):
         multivaluecharfield = filters.MultiValueCharFilter(field_name="charfield")
         treeforeignkeyfield = filters.TreeNodeMultipleChoiceFilter(queryset=TestModel.objects.all())
 
-        class Meta:
-            model = TestModel
-            fields = (
-                "charfield",
-                "choicefield",
-                "charchoicefield",
-                "datefield",
-                "datetimefield",
-                "decimalfield",
-                "floatfield",
-                "integerfield",
-                "macaddressfield",
-                "modelchoicefield",
-                "modelmultiplechoicefield",
-                "multiplechoicefield",
-                "tags",
-                "textfield",
-                "timefield",
-                "treeforeignkeyfield",
-            )
+        # declared this way because `class Meta: model = TestModel` gives a NameError otherwise.
+        Meta = type(
+            "Meta",
+            (),
+            {
+                "model": TestModel,
+                "fields": (
+                    "charfield",
+                    "choicefield",
+                    "charchoicefield",
+                    "datefield",
+                    "datetimefield",
+                    "decimalfield",
+                    "floatfield",
+                    "integerfield",
+                    "macaddressfield",
+                    "modelchoicefield",
+                    "modelmultiplechoicefield",
+                    "multiplechoicefield",
+                    "tags",
+                    "textfield",
+                    "timefield",
+                    "treeforeignkeyfield",
+                ),
+            },
+        )
 
     @classmethod
     def setUpTestData(cls):
