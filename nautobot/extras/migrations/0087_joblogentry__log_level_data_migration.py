@@ -17,10 +17,8 @@ def migrate_job_log_entry_log_levels(apps, schema_editor):
     """
     JobLogEntry = apps.get_model("extras", "JobLogEntry")
 
-    for entry in JobLogEntry.objects.all():
-        if entry.log_level in LOG_LEVEL_MAPPING:
-            entry.log_level = LOG_LEVEL_MAPPING[entry.log_level]
-            entry.save()
+    for old_log_level, new_log_level in LOG_LEVEL_MAPPING.items():
+        JobLogEntry.objects.filter(log_level=old_log_level).update(log_level=new_log_level)
 
 
 class Migration(migrations.Migration):

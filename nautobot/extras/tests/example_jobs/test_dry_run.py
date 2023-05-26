@@ -1,7 +1,5 @@
-from celery.utils.log import get_task_logger
-
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import DryRunVar, Job
+from nautobot.extras.jobs import DryRunVar, Job, get_task_logger
 from nautobot.extras.models import Status
 
 

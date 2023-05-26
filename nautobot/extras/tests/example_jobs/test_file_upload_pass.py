@@ -1,7 +1,5 @@
-from celery.utils.log import get_task_logger
-
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, FileVar
+from nautobot.extras.jobs import Job, FileVar, get_task_logger
 
 
 logger = get_task_logger(__name__)

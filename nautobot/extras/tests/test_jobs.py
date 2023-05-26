@@ -280,6 +280,19 @@ class JobTest(TransactionTestCase):
             if log.message != "Job completed":
                 self.assertEqual(log.message, "The secret is (redacted)")
 
+    def test_log_skip_db_logging(self):
+        """
+        Test that an attempt is made at log redaction.
+        """
+        module = "test_log_skip_db_logging"
+        name = "TestLogSkipDBLogging"
+        job_result = create_job_result_and_run_job(module, name)
+
+        logs = job_result.job_log_entries
+        self.assertGreater(logs.count(), 0)
+        self.assertFalse(logs.filter(message="I should NOT be logged to the database").exists())
+        self.assertTrue(logs.filter(message="I should be logged to the database").exists())
+
     def test_object_vars(self):
         """
         Test that Object variable fields behave as expected.

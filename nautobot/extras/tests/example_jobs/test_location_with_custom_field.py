@@ -1,12 +1,10 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
-from celery.utils.log import get_task_logger
-
 from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.jobs import Job
+from nautobot.extras.jobs import Job, get_task_logger
 from nautobot.extras.models import CustomField
 
 

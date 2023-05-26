@@ -1,7 +1,5 @@
-from celery.utils.log import get_task_logger
-
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, ObjectVar
+from nautobot.extras.jobs import Job, ObjectVar, get_task_logger
 from nautobot.dcim.models import Location
 
 

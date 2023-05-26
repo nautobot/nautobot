@@ -809,12 +809,7 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save(using=JOB_LOGS)
 
         if logger:
-            if level_choice == LogLevelChoices.LOG_ERROR:
-                log_level = logging.ERROR
-            elif level_choice == LogLevelChoices.LOG_WARNING:
-                log_level = logging.WARNING
-            else:
-                log_level = logging.INFO
+            log_level = getattr(logging, level_choice.upper(), logging.INFO)
             logger.log(log_level, message)
 
 

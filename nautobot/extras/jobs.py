@@ -782,7 +782,7 @@ class BaseJob(Task):
         for fp in files:
             fp.delete()  # Call delete() on each, so `FileAttachment` is reaped
             num += 1
-        self.logger.debug("Deleted %d file proxies", num)
+        self.logger.debug("Deleted %d file proxies", num, extra={"grouping": "post_run"})
         return num
 
     # Convenience functions

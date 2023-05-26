@@ -449,7 +449,7 @@ Again, defining user variables is totally optional; you may create a job with a 
 
 Messages logged from a job's logger will be stored in [`JobLogEntry`](../models/extras/joblogentry.md) records associated with the current [`JobResult`](../models/extras/jobresult.md).
 
-The logger can be accessed either by using the `logger` property on the job class or retrieved with `celery.utils.log.get_task_logger(__name__)`. Both will return the same logger instance.
+The logger can be accessed either by using the `logger` property on the job class or `nautobot.extras.jobs.get_task_logger(__name__)`. Both will return the same logger instance. For more information on the standard Python logging module, see the [Python documentation](https://docs.python.org/3/library/logging.html).
 
 An optional `grouping` and/or `object` may be provided in log messages by passing them in the log function call's `extra` kwarg. If a `grouping` is not provided it will default to the function name that logged the message. The `object` will default to `None`.
 
@@ -462,16 +462,47 @@ An optional `grouping` and/or `object` may be provided in log messages by passin
             logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
     ```
 
+To skip writing a log entry to the database, set the `skip_db_logging` key in the "extra" kwarg to `True` when calling the log function. The output will still be written to the console.
+
+!!! example
+    ```py
+    from nautobot.extras.jobs import BaseJob
+
+    class MyJob(BaseJob):
+        def run(self):
+            logger.info("This job is running!", extra={"skip_db_logging": True})
+    ```
+
 Markdown rendering is supported for log messages.
 
 +/- 1.3.4
     As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
 
 +/- 2.0.0
-    The convenience method to mark a job as failed, `log_failure()` has been removed. To replace the functionality of this method, you can log an error message with `self.logger.error()` and then raise an exception to fail the job. Note that it is no longer possible to manually set the job result status as failed without raising an exception in the job.
+    The logging functions (example: `self.log(message)`, `self.log_success(obj=None, message=message)`, etc) have been removed. Also, the convenience method to mark a job as failed, `log_failure()`, has been removed. To replace the functionality of this method, you can log an error message with `self.logger.error()` and then raise an exception to fail the job. Note that it is no longer possible to manually set the job result status as failed without raising an exception in the job.
 
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
+
+### Marking a Job as Failed
+
+To mark a job as failed, raise an exception from within the `run()` method. The exception message will be logged to the traceback of the job result. The job result status will be set to `failed`. To output a job log message you can use the `self.logger.error()` method.
+
+```python
+
+As an example, the following job will fail if the user does not put the word "Taco" in `var1`:
+
+```python
+from nautobot.extras.jobs import Job, StringVar
+
+class MyJob(Job):
+    var1 = StringVar(...)
+
+    def run(self, var1):
+        if var1 != "Taco":
+            self.logger.error("var1 must be 'Taco'")
+            raise Exception("Argument input validation failed.")
+```
 
 ### Accessing User and Job Result
 
