@@ -2,6 +2,7 @@ import os
 import tempfile
 from unittest import mock
 import uuid
+import warnings
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -46,6 +47,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
@@ -1442,6 +1444,21 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.status.clean()
             self.status.save()
             self.assertEqual(str(self.status), test)
+
+    def test_deprecated_mixin_class(self):
+        """Test that inheriting from StatusModel raises a DeprecationWarning."""
+        with warnings.catch_warnings(record=True) as warn_list:
+            warnings.simplefilter("always")
+
+            class MyModel(StatusModel):  # pylint: disable=unused-variable
+                pass
+
+        self.assertEqual(len(warn_list), 1)
+        warning = warn_list[0]
+        self.assertTrue(issubclass(warning.category, DeprecationWarning))
+        self.assertIn("StatusModel is deprecated", str(warning))
+        self.assertIn("Instead of deriving MyModel from StatusModel", str(warning))
+        self.assertIn("please directly declare `status = StatusField(...)` on your model instead", str(warning))
 
 
 class TagTest(ModelTestCases.BaseModelTestCase):
