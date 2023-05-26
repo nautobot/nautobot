@@ -22,8 +22,8 @@ class APITestJob(Job):
     def run(self, var1, var2, var3, var4):
         logger.debug(var1)
         logger.info(var2)
-        logger.info(var3)
-        logger.warning(var4)
+        logger.warning(var3)
+        logger.error(var4)
 
         return "Job complete"
 
