@@ -507,7 +507,7 @@ class GitTest(TransactionTestCase):
                 # Check for specific log messages
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
                 warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
-                failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_FAILURE)
+                failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_ERROR)
 
                 warning_logs.get(
                     grouping="config contexts", message__contains='Found "devices" directory in the repository root'

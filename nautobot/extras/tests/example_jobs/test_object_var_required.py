@@ -1,6 +1,9 @@
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, ObjectVar
+from nautobot.extras.jobs import Job, ObjectVar, get_task_logger
 from nautobot.dcim.models import Location
+
+
+logger = get_task_logger(__name__)
 
 
 class TestRequiredObjectVar(Job):
@@ -11,7 +14,7 @@ class TestRequiredObjectVar(Job):
     )
 
     def run(self, location):
-        self.log_info(obj=location, message="The Location that the user provided.")
+        logger.info("The Location that the user provided.", extra={"object": location})
         return "Nice Location!"
 
 

@@ -52,7 +52,7 @@ class JobTest(TransactionTestCase):
 
     def test_job_hard_time_limit_less_than_soft_time_limit(self):
         """
-        Job test which produces a log_warning because the time_limit is less than the soft_time_limit.
+        Job test which produces a warning log message because the time_limit is less than the soft_time_limit.
         """
         module = "test_soft_time_limit_greater_than_time_limit"
         name = "TestSoftTimeLimitGreaterThanHardTimeLimit"
@@ -280,6 +280,19 @@ class JobTest(TransactionTestCase):
             if log.message != "Job completed":
                 self.assertEqual(log.message, "The secret is (redacted)")
 
+    def test_log_skip_db_logging(self):
+        """
+        Test that an attempt is made at log redaction.
+        """
+        module = "test_log_skip_db_logging"
+        name = "TestLogSkipDBLogging"
+        job_result = create_job_result_and_run_job(module, name)
+
+        logs = job_result.job_log_entries
+        self.assertGreater(logs.count(), 0)
+        self.assertFalse(logs.filter(message="I should NOT be logged to the database").exists())
+        self.assertTrue(logs.filter(message="I should be logged to the database").exists())
+
     def test_object_vars(self):
         """
         Test that Object variable fields behave as expected.
@@ -337,10 +350,7 @@ class JobTest(TransactionTestCase):
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        log_failure = JobLogEntry.objects.filter(
-            grouping="initialization", log_level=LogLevelChoices.LOG_FAILURE
-        ).first()
-        self.assertIn("location is a required field", log_failure.message)
+        self.assertIn("location is a required field", job_result.traceback)
 
     def test_job_latest_result_property(self):
         """
@@ -557,10 +567,10 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestPass"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command("--no-color", "--username", self.user.username, job_model.class_path)
+        out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
-        self.assertIn("run: 1 success, 1 info, 0 warning, 0 failure", out)
-        self.assertIn("success: None", out)
+        self.assertIn("run: 0 debug, 1 info, 0 warning, 0 error, 0 critical", out)
+        self.assertIn("info: Success", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 
@@ -578,20 +588,21 @@ class RunJobManagementCommandTest(TransactionTestCase):
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
-        out, err = self.run_command("--no-color", "--username", self.user.username, job_model.class_path)
+        out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
         self.assertIn(f"Running {job_model.class_path}...", out)
         # Changed job to actually log data. Can't display empty results if no logs were created.
-        self.assertIn("run: 1 success, 1 info, 0 warning, 0 failure", out)
+        self.assertIn("run: 0 debug, 1 info, 0 warning, 0 error, 0 critical", out)
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 
-        success_log = JobLogEntry.objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).first()
-        self.assertEqual(success_log.message, "Status created successfully.")
+        success_log = JobLogEntry.objects.filter(
+            log_level=LogLevelChoices.LOG_INFO, message="Status created successfully."
+        )
+        self.assertTrue(success_log.exists())
+        self.assertEqual(success_log.count(), 1)
 
         status = Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
-
-        status.delete()
 
 
 class JobLocationCustomFieldTest(TransactionTestCase):
@@ -780,7 +791,7 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
                 ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
                 ("info", "action: create"),
                 ("info", f"jobresult.user: {self.user.username}"),
-                ("success", "Test Job Hook Location 1"),
+                ("info", "Test Job Hook Location 1"),
                 ("info", "Job completed"),
             ]
             log_messages = JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")

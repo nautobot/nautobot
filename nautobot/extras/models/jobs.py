@@ -1,10 +1,12 @@
 # Data models relating to Jobs
 
+import contextlib
 from datetime import timedelta
 import logging
 import os
 
 from celery import schedules
+from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -16,7 +18,12 @@ from django.utils import timezone
 from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
-from nautobot.core.celery import app, NautobotKombuJSONEncoder
+from nautobot.core.celery import (
+    add_nautobot_log_handler,
+    app,
+    NautobotKombuJSONEncoder,
+    setup_nautobot_job_logging,
+)
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -478,7 +485,7 @@ class JobLogEntry(BaseModel):
 
     job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="job_log_entries")
     log_level = models.CharField(
-        max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT, db_index=True
+        max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_INFO, db_index=True
     )
     grouping = models.CharField(max_length=JOB_LOG_MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
@@ -725,11 +732,29 @@ class JobResult(BaseModel, CustomFieldModel):
             job_celery_kwargs.update(celery_kwargs)
 
         if synchronous:
-            # synchronous tasks are run before the JobResult is saved, so we have to add any fields required by the job before calling `apply()`
+            # synchronous tasks are run before the JobResult is saved, so any fields required by
+            # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
             job_result.save()
-            job_model.job_task.apply(args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs)
+
+            # setup synchronous task logging
+            redirect_logger = get_logger("celery.redirected")
+            add_nautobot_log_handler(redirect_logger)
+            setup_nautobot_job_logging(None, None, app.conf)
+
+            # redirect stdout/stderr to logger and run task
+            proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
+            with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
+                eager_result = job_model.job_task.apply(
+                    args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                )
+
+            # copy fields from eager result to job result
             job_result.refresh_from_db()
+            for field in ["status", "result", "traceback", "worker"]:
+                setattr(job_result, field, getattr(eager_result, field, None))
+            job_result.date_done = timezone.now()
+            job_result.save()
         else:
             # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
             transaction.on_commit(
@@ -744,7 +769,7 @@ class JobResult(BaseModel, CustomFieldModel):
         self,
         message,
         obj=None,
-        level_choice=LogLevelChoices.LOG_DEFAULT,
+        level_choice=LogLevelChoices.LOG_INFO,
         grouping="main",
         logger=None,  # pylint: disable=redefined-outer-name
     ):
@@ -784,12 +809,7 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save(using=JOB_LOGS)
 
         if logger:
-            if level_choice == LogLevelChoices.LOG_FAILURE:
-                log_level = logging.ERROR
-            elif level_choice == LogLevelChoices.LOG_WARNING:
-                log_level = logging.WARNING
-            else:
-                log_level = logging.INFO
+            log_level = getattr(logging, level_choice.upper(), logging.INFO)
             logger.log(log_level, message)
 
 

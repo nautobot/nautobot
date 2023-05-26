@@ -6,7 +6,9 @@ import pkgutil
 import sys
 
 from celery import Celery, shared_task, signals
+from celery.app.log import TaskFormatter
 from celery.fixups.django import DjangoFixup
+from celery.utils.log import get_logger
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
@@ -14,6 +16,7 @@ from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
+from nautobot.core.celery.log import NautobotDatabaseHandler
 
 
 logger = logging.getLogger(__name__)
@@ -62,9 +65,9 @@ DjangoFixup(app).install()
 app.autodiscover_tasks()
 
 
-# Load jobs from JOBS_ROOT on celery workers
 @signals.import_modules.connect
 def import_tasks_from_jobs_root(sender, **kwargs):
+    """Load jobs from JOBS_ROOT on celery workers."""
     jobs_root = settings.JOBS_ROOT
     if jobs_root and os.path.exists(jobs_root):
         if jobs_root not in sys.path:
@@ -75,6 +78,32 @@ def import_tasks_from_jobs_root(sender, **kwargs):
             except Exception as exc:
                 # logger.error(f"Unable to load module '{module_name}' from {jobs_root}: {exc:}")
                 logger.exception(exc)
+
+
+def add_nautobot_log_handler(logger_instance, log_format=None):
+    """Add NautobotDatabaseHandler to logger and update logger level filtering to send all log levels to our handler."""
+    if any(isinstance(h, NautobotDatabaseHandler) for h in logger_instance.handlers):
+        return
+    if logger_instance.level not in (logging.NOTSET, logging.DEBUG):
+        for handler in logger_instance.handlers:
+            handler.setLevel(logger_instance.level)
+    logger_instance.setLevel(logging.DEBUG)
+
+    if log_format is None:
+        log_format = app.conf.worker_task_log_format
+    handler = NautobotDatabaseHandler()
+    handler.setFormatter(TaskFormatter(log_format, use_color=False))
+    logger_instance.addHandler(handler)
+
+
+@signals.celeryd_after_setup.connect
+def setup_nautobot_job_logging(sender, instance, conf, **kwargs):
+    """Add nautobot database logging handler to celery stdout/stderr redirect logger and celery task logger."""
+    task_logger = get_logger("celery.task")
+    add_nautobot_log_handler(task_logger)
+    if conf.worker_redirect_stdouts:
+        redirect_logger = get_logger("celery.redirected")
+        add_nautobot_log_handler(redirect_logger)
 
 
 @signals.worker_ready.connect

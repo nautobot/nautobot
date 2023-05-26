@@ -242,26 +242,26 @@ class JobResultStatusChoices(ChoiceSet):
 
 
 class LogLevelChoices(ChoiceSet):
-    LOG_DEFAULT = "default"
-    LOG_SUCCESS = "success"
+    LOG_DEBUG = "debug"
     LOG_INFO = "info"
     LOG_WARNING = "warning"
-    LOG_FAILURE = "failure"
+    LOG_ERROR = "error"
+    LOG_CRITICAL = "critical"
 
     CHOICES = (
-        (LOG_DEFAULT, "Default"),
-        (LOG_SUCCESS, "Success"),
+        (LOG_DEBUG, "Debug"),
         (LOG_INFO, "Info"),
         (LOG_WARNING, "Warning"),
-        (LOG_FAILURE, "Failure"),
+        (LOG_ERROR, "Error"),
+        (LOG_CRITICAL, "Critical"),
     )
 
     CSS_CLASSES = {
-        LOG_DEFAULT: "default",
-        LOG_SUCCESS: "success",
+        LOG_DEBUG: "debug",
         LOG_INFO: "info",
         LOG_WARNING: "warning",
-        LOG_FAILURE: "danger",
+        LOG_ERROR: "error",
+        LOG_CRITICAL: "critical",
     }
 
 

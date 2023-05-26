@@ -1395,7 +1395,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
 
     def test_log_entry_creation(self):
         log = JobLogEntry(
-            log_level=LogLevelChoices.LOG_SUCCESS,
+            log_level=LogLevelChoices.LOG_INFO,
             job_result=self.job_result,
             grouping="run",
             message="This is a test",

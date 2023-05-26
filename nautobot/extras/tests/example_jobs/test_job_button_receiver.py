@@ -1,21 +1,24 @@
 from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Device, Location
-from nautobot.extras.jobs import JobButtonReceiver
+from nautobot.extras.jobs import JobButtonReceiver, get_task_logger
+
+
+logger = get_task_logger(__name__)
 
 
 class TestJobButtonReceiverSimple(JobButtonReceiver):
     def receive_job_button(self, obj):
-        self.log_info(f"request.user: {self.request.user.username}")
-        self.log_success(obj.name)
+        logger.info("request.user: %s", self.request.user.username)
+        logger.info(obj.name)
 
 
 class TestJobButtonReceiverComplex(JobButtonReceiver):
     def receive_job_button(self, obj):
-        self.log_info(f"request.user: {self.request.user.username}")
+        logger.info("request.user: %s", self.request.user.username)
         if isinstance(obj, Device):
-            self.log_success(f"Device: {obj}")
+            logger.info("Device: %s", obj)
         elif isinstance(obj, Location):
-            self.log_success(f"Location: {obj}")
+            logger.info("Location: %s", obj)
 
 
 class TestJobButtonReceiverFail(JobButtonReceiver):

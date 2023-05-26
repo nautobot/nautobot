@@ -8,7 +8,6 @@ import os
 import shutil
 import tempfile
 from textwrap import dedent
-import traceback
 import warnings
 
 from billiard.einfo import ExceptionInfo
@@ -40,7 +39,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
 )
 from nautobot.core.utils.lookup import get_model_from_name
-from nautobot.extras.choices import LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import change_logging, JobChangeContext, JobHookChangeContext
 from nautobot.extras.datasources.git import ensure_git_repository
 from nautobot.extras.forms import JobForm
@@ -115,9 +114,6 @@ class BaseJob(Task):
     def __init__(self):
         self.logger = get_task_logger(self.__module__)
 
-        self.active_test = "main"
-        self.failed = False
-
     def __call__(self, *args, **kwargs):
         # Attempt to resolve serialized data back into original form by creating querysets or model instances
         # If we fail to find any objects, we consider this a job execution error, and fail.
@@ -125,10 +121,8 @@ class BaseJob(Task):
         # or it might be bad input from an API request, or manual execution.
         try:
             deserialized_kwargs = self.deserialize_data(kwargs)
-        except Exception:
-            stacktrace = traceback.format_exc()
-            self.log_failure(f"Error initializing job:\n```\n{stacktrace}\n```")
-        self.active_test = "run"
+        except Exception as err:
+            raise RunJobTaskFailed("Error initializing job") from err
         context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
         change_context = context_class(user=self.user, context_detail=self.class_path)
 
@@ -139,14 +133,16 @@ class BaseJob(Task):
                 # TODO: This should probably be available as a file download rather than dumped to the hard drive.
                 # Pending this: https://github.com/nautobot/nautobot/issues/3352
                 profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
-                self.log_info(obj=None, message=f"Writing profiling information to {profiling_path}.")
+                self.logger.info(
+                    "Writing profiling information to %s.", profiling_path, extra={"grouping": "initialization"}
+                )
 
                 with cProfile.Profile() as pr:
                     try:
                         output = self.run(*args, **deserialized_kwargs)
-                    except Exception as e:
+                    except Exception as err:
                         pr.dump_stats(profiling_path)
-                        raise e
+                        raise err
                     else:
                         pr.dump_stats(profiling_path)
                         return output
@@ -203,7 +199,6 @@ class BaseJob(Task):
         """
         self.clear_cache()
 
-        self.active_test = "initialization"
         try:
             self.job_result
         except ObjectDoesNotExist as err:
@@ -215,21 +210,25 @@ class BaseJob(Task):
             raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
 
         if not self.job_model.enabled:
-            self.log_failure(
-                message=f"Job {self.job_model} is not enabled to be run!",
-                obj=self.job_model,
+            self.logger.error(
+                "Job %s is not enabled to be run!",
+                self.job_model,
+                extra={"object": self.job_model, "grouping": "initialization"},
             )
 
         soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
         time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
         if time_limit <= soft_time_limit:
-            self.log_warning(
-                f"The hard time limit of {time_limit} seconds is less than "
-                f"or equal to the soft time limit of {soft_time_limit} seconds. "
-                f"This job will fail silently after {time_limit} seconds.",
+            self.logger.warning(
+                "The hard time limit of %s seconds is less than "
+                "or equal to the soft time limit of %s seconds. "
+                "This job will fail silently after %s seconds.",
+                time_limit,
+                soft_time_limit,
+                time_limit,
+                extra={"grouping": "initialization"},
             )
-
-        self.log_info("Running job")
+        self.logger.info("Running job", extra={"grouping": "initialization"})
 
     def run(self, *args, **kwargs):
         """
@@ -308,7 +307,7 @@ class BaseJob(Task):
         if file_ids:
             self.delete_files(*file_ids)
 
-        self.log_info("Job completed")
+        self.logger.info("Job completed", extra={"grouping": "post_run"})
 
         # TODO(gary): document this in job author docs
         # Super.after_return must be called for chords to function properly
@@ -769,8 +768,7 @@ class BaseJob(Task):
         fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
         return fp.pk
 
-    @staticmethod
-    def delete_files(*files_to_delete):
+    def delete_files(self, *files_to_delete):
         """Given an unpacked list of primary keys for `FileProxy` objects, delete them.
 
         Args:
@@ -784,75 +782,8 @@ class BaseJob(Task):
         for fp in files:
             fp.delete()  # Call delete() on each, so `FileAttachment` is reaped
             num += 1
-        logger.debug(f"Deleted {num} file proxies")
+        self.logger.debug("Deleted %d file proxies", num, extra={"grouping": "post_run"})
         return num
-
-    # Logging
-
-    def _log(self, obj, message, level_choice=LogLevelChoices.LOG_DEFAULT):
-        """
-        Log a message. Do not call this method directly; use one of the log_* wrappers below.
-        """
-        self.job_result.log(
-            message,
-            obj=obj,
-            level_choice=level_choice,
-            grouping=self.active_test,
-            logger=self.logger,
-        )
-
-    def log(self, message):
-        """
-        Log a generic message which is not associated with a particular object.
-        """
-        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT)
-
-    def log_debug(self, message):
-        """
-        Log a debug message which is not associated with a particular object.
-        """
-        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT)
-
-    def log_success(self, obj=None, message=None):
-        """
-        Record a successful test against an object. Logging a message is optional.
-        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
-        """
-        if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_SUCCESS)
-        else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS)
-
-    def log_info(self, obj=None, message=None):
-        """
-        Log an informational message.
-        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
-        """
-        if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_INFO)
-        else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO)
-
-    def log_warning(self, obj=None, message=None):
-        """
-        Log a warning.
-        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
-        """
-        if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_WARNING)
-        else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING)
-
-    def log_failure(self, obj=None, message=None):
-        """
-        Log a failure. Calling this method will automatically mark the overall job as failed.
-        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
-        """
-        if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_FAILURE)
-        else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
-        raise RunJobTaskFailed(message)
 
     # Convenience functions
 

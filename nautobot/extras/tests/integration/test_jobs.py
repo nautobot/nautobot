@@ -1,9 +1,8 @@
-from datetime import datetime
-
+from django.utils import timezone
 from selenium.webdriver.common.keys import Keys
 
 from nautobot.core.testing.integration import SeleniumTestCase
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models.jobs import Job, JobLogEntry, JobResult
 
 
@@ -35,16 +34,19 @@ class JobResultTest(SeleniumTestCase):
         job_result.save()
 
         # Create fake log entries
-        for i, log_level in enumerate(["default", "info", "success", "warning"]):
-            JobLogEntry.objects.create(
-                log_level=log_level,
-                grouping="run",
-                job_result=job_result,
-                message=f"Log {i + 1}",
+        log_entries = []
+        for i, log_level in enumerate(LogLevelChoices.values()):
+            log_entries.append(
+                JobLogEntry.objects.create(
+                    log_level=log_level,
+                    grouping="run",
+                    job_result=job_result,
+                    message=f"Log {i + 1}",
+                )
             )
 
         # Complete the job
-        job_result.date_done = datetime.now()
+        job_result.date_done = timezone.now()
         job_result.status = JobResultStatusChoices.STATUS_SUCCESS
         job_result.save()
 
@@ -67,33 +69,33 @@ class JobResultTest(SeleniumTestCase):
         message_column = 5
 
         # Sanity check
-        self.assertEqual(4, len(visible_rows()))
+        self.assertEqual(len(LogLevelChoices.values()), len(visible_rows()))
 
         # Test for message (one row should be visible)
         filter_element.fill("")
-        filter_element.type("Log 1")
+        filter_element.type(log_entries[0].message)
         self.assertEqual(1, len(visible_rows()))
         # Check whether the filtered row is visible
-        self.assertEqual("Default", get_cell_value(1, log_level_column))
-        self.assertEqual("Log 1", get_cell_value(1, message_column))
+        self.assertEqual(log_entries[0].log_level.title(), get_cell_value(1, log_level_column))
+        self.assertEqual(log_entries[0].message, get_cell_value(1, message_column))
 
         # Test for log level (one row should be visible)
         filter_element.fill("")
-        filter_element.type("Warning")
+        filter_element.type(log_entries[3].log_level.title())
         self.assertEqual(1, len(visible_rows()))
         # Check whether the filtered row is visible
-        self.assertEqual("Warning", get_cell_value(1, log_level_column))
-        self.assertEqual("Log 4", get_cell_value(1, message_column))
+        self.assertEqual(log_entries[3].log_level.title(), get_cell_value(1, log_level_column))
+        self.assertEqual(log_entries[3].message, get_cell_value(1, message_column))
 
         # Test for log level or message with regex (two rows should be visible)
         filter_element.fill("")
-        filter_element.type("(Log 2)|(Suc)")
+        filter_element.type(f"({log_entries[1].message})|({log_entries[2].log_level[:3].title()})")
         self.assertEqual(2, len(visible_rows()))
         # Check whether the filtered rows are visible
-        self.assertEqual("Info", get_cell_value(1, log_level_column))
-        self.assertEqual("Log 2", get_cell_value(1, message_column))
-        self.assertEqual("Success", get_cell_value(2, log_level_column))
-        self.assertEqual("Log 3", get_cell_value(2, message_column))
+        self.assertEqual(log_entries[1].log_level.title(), get_cell_value(1, log_level_column))
+        self.assertEqual(log_entries[1].message, get_cell_value(1, message_column))
+        self.assertEqual(log_entries[2].log_level.title(), get_cell_value(2, log_level_column))
+        self.assertEqual(log_entries[2].message, get_cell_value(2, message_column))
 
         # Test hitting return while the filter input is focused doesn't submit the form (producing a 405)
         active_web_element = self.browser.driver.switch_to.active_element

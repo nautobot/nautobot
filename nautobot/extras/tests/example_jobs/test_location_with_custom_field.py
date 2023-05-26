@@ -4,8 +4,11 @@ from django.db import transaction
 from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.jobs import Job
+from nautobot.extras.jobs import Job, get_task_logger
 from nautobot.extras.models import CustomField
+
+
+logger = get_task_logger(__name__)
 
 
 class TestCreateLocationWithCustomField(Job):
@@ -20,7 +23,7 @@ class TestCreateLocationWithCustomField(Job):
             cf.validated_save()
             cf.content_types.set([obj_type])
 
-            self.log_success(obj=cf, message="CustomField created successfully.")
+            logger.info("CustomField created successfully.", extra={"object": cf})
 
             location_type = LocationType.objects.create(name="Test Location Type 1")
             location_1 = Location.objects.create(
@@ -28,12 +31,12 @@ class TestCreateLocationWithCustomField(Job):
             )
             location_1.cf[cf.key] = "some-value"
             location_1.save()
-            self.log_success(obj=location_1, message="Created a new location")
+            logger.info("Created a new location", extra={"object": location_1})
 
             location_2 = Location.objects.create(
                 name="Test Site Two", slug="test-location-two", location_type=location_type
             )
-            self.log_success(obj=location_2, message="Created another new location")
+            logger.info("Created another new location", extra={"object": location_2})
 
             return "Job completed."
 

@@ -1000,7 +1000,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(name="test")
 
-        for log_level in ("debug", "info", "success", "warning"):
+        for log_level in ("debug", "info", "warning", "error", "critical"):
             JobLogEntry.objects.create(
                 log_level=log_level,
                 grouping="run",
@@ -1009,24 +1009,36 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_log_level(self):
-        params = {"log_level": ["success"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"log_level": ["debug"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(log_level="debug")
+        )
 
     def test_grouping(self):
         params = {"grouping": ["run"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(grouping="run")
+        )
 
     def test_message(self):
-        params = {"message": ["I am a success log."]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"message": ["I am a debug log."]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(message="I am a debug log.")
+        )
 
     def test_search(self):
         params = {"q": "run"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(grouping__icontains="run")
+        )
         params = {"q": "warning log"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"q": "success"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(message__icontains="warning log")
+        )
+        params = {"q": "debug"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(log_level__icontains="debug")
+        )
 
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
