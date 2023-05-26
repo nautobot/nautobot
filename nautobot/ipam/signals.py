@@ -38,13 +38,13 @@ def ip_address_to_interface_pre_delete_validation(instance, raw=False, **kwargs)
         if host.primary_ip4 and host.primary_ip4 == ip_address and not other_assignments_exist:
             raise ValidationError(
                 {
-                    "ip_addresses": f"Cannot remove IP address {ip_address} from interface {int_or_vm_int} on {model_name} {host} because it is marked as its primary IPv{ip_address.family} address"
+                    "ip_addresses": f"Cannot remove IP address {ip_address} from interface {int_or_vm_int} on {model_name} {host} because it is marked as its primary IPv4 address"
                 }
             )
         if host.primary_ip6 and host.primary_ip6 == ip_address and not other_assignments_exist:
             raise ValidationError(
                 {
-                    "ip_addresses": f"Cannot remove IP address {ip_address} from interface {int_or_vm_int} on {model_name} {host} because it is marked as its primary IPv{ip_address.family} address"
+                    "ip_addresses": f"Cannot remove IP address {ip_address} from interface {int_or_vm_int} on {model_name} {host} because it is marked as its primary IPv6 address"
                 }
             )
 

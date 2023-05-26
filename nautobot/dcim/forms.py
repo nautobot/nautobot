@@ -2200,16 +2200,9 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
     def clean(self):
         super().clean()
         ip_addresses = self.cleaned_data.get("ip_addresses")
-        # If there is no ip_addresses field here
-        # we know it is a CreateForm
-        if ip_addresses is None:
-            pass
-        # EditForm Primary IP validation logic.
-        else:
-            device = self.cleaned_data.get("device")
-            name = self.cleaned_data.get("name")
-            # device and name are guaranteed to have an unique interface
-            interface = Interface.objects.get(device=device, name=name)
+        device = self.cleaned_data.get("device")
+        interface = self.instance
+        if interface is not None:
             # Check if the ip address exist on other interfaces that are assigned to the device.
             other_assignments_ip4_exist = IPAddressToInterface.objects.filter(
                 interface__device=device, ip_address=device.primary_ip4
@@ -2224,15 +2217,18 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
                 if device.primary_ip4 and device.primary_ip4 not in ip_addresses and not other_assignments_ip4_exist:
                     raise ValidationError(
                         {
-                            "ip_addresses": f"Cannot remove IP address {device.primary_ip4} from interface {interface} on Device {device.name} because it is marked as its primary IPv{device.primary_ip4.family} address"
+                            "ip_addresses": f"Cannot remove IP address {device.primary_ip4} from interface {interface} on Device {device.name} because it is marked as its primary IPv4 address"
                         }
                     )
                 if device.primary_ip6 and device.primary_ip6 not in ip_addresses and not other_assignments_ip6_exist:
                     raise ValidationError(
                         {
-                            "ip_addresses": f"Cannot remove IP address {device.primary_ip6} from interface {interface} on Device {device.name} because it is marked as its primary IPv{device.primary_ip6.family} address"
+                            "ip_addresses": f"Cannot remove IP address {device.primary_ip6} from interface {interface} on Device {device.name} because it is marked as its primary IPv6 address"
                         }
                     )
+        else:
+            # Interface does not exist yet so it is a CreateForm not an EditForm
+            pass
 
 
 class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):

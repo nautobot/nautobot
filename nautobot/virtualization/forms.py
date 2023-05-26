@@ -452,16 +452,9 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
     def clean(self):
         super().clean()
         ip_addresses = self.cleaned_data.get("ip_addresses")
-        # If there is no ip_addresses field here
-        # we know it is a CreateForm
-        if ip_addresses is None:
-            pass
-        # EditForm Primary IP validation logic.
-        else:
-            vm = self.cleaned_data.get("virtual machine")
-            name = self.cleaned_data.get("name")
-            # Virtual Machine and name are guaranteed to have an unique VMInterface
-            vm_interface = VMInterface.objects.get(virtual_machine=vm, name=name)
+        vm = self.cleaned_data.get("virtual machine")
+        vm_interface = self.instance
+        if vm_interface is not None:
             # Check if the ip address exist on other VMInterfaces that are assigned to the virtual machine.
             other_assignments_ip4_exist = IPAddressToInterface.objects.filter(
                 vm_interface__virtual_machine=vm, ip_address=vm.primary_ip4
@@ -476,15 +469,18 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
                 if vm.primary_ip4 and vm.primary_ip4 not in ip_addresses and not other_assignments_ip4_exist:
                     raise ValidationError(
                         {
-                            "ip_addresses": f"Cannot remove IP address {vm.primary_ip4} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv{vm.primary_ip4.family} address"
+                            "ip_addresses": f"Cannot remove IP address {vm.primary_ip4} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv4 address"
                         }
                     )
                 if vm.primary_ip6 and vm.primary_ip6 not in ip_addresses and not other_assignments_ip6_exist:
                     raise ValidationError(
                         {
-                            "ip_addresses": f"Cannot remove IP address {vm.primary_ip4} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv{vm.primary_ip6.family} address"
+                            "ip_addresses": f"Cannot remove IP address {vm.primary_ip6} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv6 address"
                         }
                     )
+        else:
+            # VMInterface does not exist yet so it is a CreateForm not an EditForm
+            pass
 
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
