@@ -880,7 +880,7 @@ class DeviceConnectionsReport(Job):
         STATUS_ACTIVE = Status.objects.get(name='Active')
 
         # Check that every console port for every active device has a connection defined.
-        for console_port in ConsolePort.objects.prefetch_related('device').filter(device__status=STATUS_ACTIVE):
+        for console_port in ConsolePort.objects.select_related('device').filter(device__status=STATUS_ACTIVE):
             if console_port.connected_endpoint is None:
                 self.logger.error(
                     "No console connection defined for %s",

@@ -1000,7 +1000,7 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         cls.job_result = JobResult.objects.create(name="test")
 
-        for log_level in ("debug", "info", "error", "warning", "critical"):
+        for log_level in ("debug", "info", "warning", "error", "critical"):
             JobLogEntry.objects.create(
                 log_level=log_level,
                 grouping="run",

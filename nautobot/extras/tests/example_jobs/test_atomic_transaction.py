@@ -27,9 +27,9 @@ class TestAtomicDecorator(Job):
             Status.objects.create(name="Test database atomic rollback 1")
             if fail:
                 raise SimulatedError("simulated failure")
-        except Exception as err:
+        except Exception:
             logger.error("Job failed, all database changes have been rolled back.")
-            raise err
+            raise
         logger.info("Job succeeded.")
 
 
