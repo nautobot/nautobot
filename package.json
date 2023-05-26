@@ -9,7 +9,8 @@
   "devDependencies": {
     "eslint": "^8.37.0",
     "eslint-config-react-app": "^7.0.1",
-    "prettier": "^2.8.7"
+    "prettier": "^2.8.7",
+    "markdownlint-cli": "^0.31.1"
   },
   "eslintConfig": {
     "extends": [
