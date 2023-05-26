@@ -627,7 +627,9 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                 ):
                     pass
                 else:
-                    raise ValidationError({f"{field}": f"The specified IP address ({ip}) is not assigned to this device."})
+                    raise ValidationError(
+                        {f"{field}": f"The specified IP address ({ip}) is not assigned to this device."}
+                    )
 
         # Validate manufacturer/platform
         if hasattr(self, "device_type") and self.platform:

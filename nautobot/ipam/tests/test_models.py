@@ -78,8 +78,10 @@ class IPAddressToInterfaceTest(TestCase):
             f"Cannot remove IP address {dev_ip_addr} from interface {self.test_int1} on Device {self.test_device.name} because it is marked as its primary IPv{dev_ip_addr.family} address",
             str(cm.exception),
         )
-    
-    def test_removing_ip_addresses_containing_host_device_primary_ip_allowed_if_multiple_interfaces_contain_such_ip(self):
+
+    def test_removing_ip_addresses_containing_host_device_primary_ip_allowed_if_multiple_interfaces_contain_such_ip(
+        self,
+    ):
         """
         Validate we can remove an IPAddress from an Interface that is the host Device's primary ip
         if the device's other interfaces have the IPAddress assigned to them.
@@ -99,7 +101,7 @@ class IPAddressToInterfaceTest(TestCase):
         # You can delete IPAddress from the first Interface
         # Since the second Interface still contains that IPAddress
         self.test_int1.remove_ip_addresses(dev_ip_addr)
-         # This operation should raise an error since test_int2 is the only Interface
+        # This operation should raise an error since test_int2 is the only Interface
         # that contains the primary ip
         with self.assertRaises(ValidationError) as cm:
             self.test_int2.remove_ip_addresses(dev_ip_addr)
@@ -127,8 +129,10 @@ class IPAddressToInterfaceTest(TestCase):
             f"Cannot remove IP address {vm_ip_addr} from interface {self.test_vmint1} on Virtual Machine {self.test_vm.name} because it is marked as its primary IPv{vm_ip_addr.family} address",
             str(cm.exception),
         )
-    
-    def test_removing_ip_addresses_containing_host_virtual_machine_primary_ip_allowed_if_multiple_vm_interfaces_contain_such_ip(self):
+
+    def test_removing_ip_addresses_containing_host_virtual_machine_primary_ip_allowed_if_multiple_vm_interfaces_contain_such_ip(
+        self,
+    ):
         """
         Validate we cannot remove an IPAddress from an Interface that is the host Virtual Machine's primary ip.
         """
