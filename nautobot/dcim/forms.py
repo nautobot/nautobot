@@ -2199,24 +2199,40 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
 
     def clean(self):
         super().clean()
-        ip_addresses = self.cleaned_data.get("ip_addresses", [])
-        device = self.cleaned_data.get("device")
-        # IP address validation
-        # We do have the pre_delete signal ip_address_to_interface_pre_delete_validation
-        # to handle this scenario, but we want the ValidationError to bubble up on the form.
-        if device:
-            if device.primary_ip4 and device.primary_ip4 not in ip_addresses:
-                raise ValidationError(
-                    {
-                        "ip_addresses": f"IP address {device.primary_ip4} is primary for device {device} but not assigned to it!"
-                    }
-                )
-            if device.primary_ip6 and device.primary_ip6 not in ip_addresses:
-                raise ValidationError(
-                    {
-                        "ip_addresses": f"IP address {device.primary_ip6} is primary for device {device} but not assigned to it!"
-                    }
-                )
+        ip_addresses = self.cleaned_data.get("ip_addresses")
+        # If there is no ip_addresses field here
+        # we know it is a CreateForm
+        if ip_addresses is None:
+            pass
+        # EditForm Primary IP validation logic.
+        else:
+            device = self.cleaned_data.get("device")
+            name = self.cleaned_data.get("name")
+            # device and name are guaranteed to have an unique interface
+            interface = Interface.objects.get(device=device, name=name)
+            # Check if the ip address exist on other interfaces that are assigned to the device.
+            other_assignments_ip4_exist = IPAddressToInterface.objects.filter(
+                interface__device=device, ip_address=device.primary_ip4
+            ).exclude(interface=interface)
+            other_assignments_ip6_exist = IPAddressToInterface.objects.filter(
+                interface__device=device, ip_address=device.primary_ip6
+            ).exclude(interface=interface)
+            # IP address validation
+            # We do have the pre_delete signal ip_address_to_interface_pre_delete_validation
+            # to handle this scenario, but we want the ValidationError to bubble up on the form.
+            if device:
+                if device.primary_ip4 and device.primary_ip4 not in ip_addresses and not other_assignments_ip4_exist:
+                    raise ValidationError(
+                        {
+                            "ip_addresses": f"Cannot remove IP address {device.primary_ip4} from interface {interface} on Device {device.name} because it is marked as its primary IPv{device.primary_ip4.family} address"
+                        }
+                    )
+                if device.primary_ip6 and device.primary_ip6 not in ip_addresses and not other_assignments_ip6_exist:
+                    raise ValidationError(
+                        {
+                            "ip_addresses": f"Cannot remove IP address {device.primary_ip6} from interface {interface} on Device {device.name} because it is marked as its primary IPv{device.primary_ip6.family} address"
+                        }
+                    )
 
 
 class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
@@ -2294,6 +2310,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "type",
         "enabled",
         "parent_interface",
+        "ip_addresses",
         "bridge",
         "lag",
         "mtu",

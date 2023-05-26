@@ -451,20 +451,40 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
 
     def clean(self):
         super().clean()
-        ip_addresses = self.cleaned_data.get("ip_addresses", [])
-        vm = self.cleaned_data.get("virtual_machine")
-        # IP address validation
-        # We do have the pre_delete signal ip_address_to_interface_pre_delete_validation
-        # to handle this scenario, but we want the ValidationError to bubble up on the form.
-        if vm:
-            if vm.primary_ip4 and vm.primary_ip4 not in ip_addresses:
-                raise ValidationError(
-                    {"ip_addresses": f"IP address {vm.primary_ip4} is primary for vm {vm} but not assigned to it!"}
-                )
-            if vm.primary_ip6 and vm.primary_ip6 not in ip_addresses:
-                raise ValidationError(
-                    {"ip_addresses": f"IP address {vm.primary_ip6} is primary for vm {vm} but not assigned to it!"}
-                )
+        ip_addresses = self.cleaned_data.get("ip_addresses")
+        # If there is no ip_addresses field here
+        # we know it is a CreateForm
+        if ip_addresses is None:
+            pass
+        # EditForm Primary IP validation logic.
+        else:
+            vm = self.cleaned_data.get("virtual machine")
+            name = self.cleaned_data.get("name")
+            # Virtual Machine and name are guaranteed to have an unique VMInterface
+            vm_interface = VMInterface.objects.get(virtual_machine=vm, name=name)
+            # Check if the ip address exist on other VMInterfaces that are assigned to the virtual machine.
+            other_assignments_ip4_exist = IPAddressToInterface.objects.filter(
+                vm_interface__virtual_machine=vm, ip_address=vm.primary_ip4
+            ).exclude(vm_interface=vm_interface)
+            other_assignments_ip6_exist = IPAddressToInterface.objects.filter(
+                vm_interface__virtual_machine=vm, ip_address=vm.primary_ip6
+            ).exclude(vm_interface=vm_interface)
+            # IP address validation
+            # We do have the pre_delete signal ip_address_to_interface_pre_delete_validation
+            # to handle this scenario, but we want the ValidationError to bubble up on the form.
+            if vm:
+                if vm.primary_ip4 and vm.primary_ip4 not in ip_addresses and not other_assignments_ip4_exist:
+                    raise ValidationError(
+                        {
+                            "ip_addresses": f"Cannot remove IP address {vm.primary_ip4} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv{vm.primary_ip4.family} address"
+                        }
+                    )
+                if vm.primary_ip6 and vm.primary_ip6 not in ip_addresses and not other_assignments_ip6_exist:
+                    raise ValidationError(
+                        {
+                            "ip_addresses": f"Cannot remove IP address {vm.primary_ip4} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv{vm.primary_ip6.family} address"
+                        }
+                    )
 
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):

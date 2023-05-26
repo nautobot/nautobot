@@ -72,7 +72,7 @@ class IPAddressToInterfaceTest(TestCase):
         with self.assertRaises(ValidationError) as cm:
             ip_to_interface.delete()
         self.assertIn(
-            f"IP address {self.test_device.primary_ip4} is primary for Device {self.test_device} but not assigned to it!",
+            f"Cannot remove IP address {self.test_device.primary_ip4} from interface {self.test_int1} on Device {self.test_device.name} because it is marked as its primary IPv{self.test_device.primary_ip4.family} address",
             str(cm.exception),
         )
 
@@ -89,7 +89,7 @@ class IPAddressToInterfaceTest(TestCase):
         with self.assertRaises(ValidationError) as cm:
             ip_to_vminterface.delete()
         self.assertIn(
-            f"IP address {self.test_vm.primary_ip4} is primary for Virtual Machine {self.test_vm} but not assigned to it!",
+            f"Cannot remove IP address {self.test_vm.primary_ip4} from interface {self.test_vmint1} on Virtual Machine {self.test_vm.name} because it is marked as its primary IPv{self.test_vm.primary_ip4.family} address",
             str(cm.exception),
         )
 

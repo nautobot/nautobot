@@ -15,24 +15,36 @@ def ip_address_to_interface_pre_delete_validation(instance, raw=False, **kwargs)
 
     if getattr(instance, "interface"):
         host = instance.interface.device
+        int_or_vm_int = instance.interface
+        other_assignments_exist = (
+            IPAddressToInterface.objects.filter(interface__device=host, ip_address=instance.ip_address)
+            .exclude(id=instance.id)
+            .exists()
+        )
         model_name = "Device"
     else:
         host = instance.vm_interface.virtual_machine
+        int_or_vm_int = instance.vm_interface
+        other_assignments_exist = (
+            IPAddressToInterface.objects.filter(vm_interface__virtual_machine=host, ip_address=instance.ip_address)
+            .exclude(id=instance.id)
+            .exists()
+        )
         model_name = "Virtual Machine"
 
     ip_address = instance.ip_address
     # IP address validation
     if host:
-        if host.primary_ip4 and host.primary_ip4 == ip_address:
+        if host.primary_ip4 and host.primary_ip4 == ip_address and not other_assignments_exist:
             raise ValidationError(
                 {
-                    "ip_addresses": f"IP address {host.primary_ip4} is primary for {model_name} {host} but not assigned to it!"
+                    "ip_addresses": f"Cannot remove IP address {ip_address} from interface {int_or_vm_int} on {model_name} {host} because it is marked as its primary IPv{ip_address.family} address"
                 }
             )
-        if host.primary_ip6 and host.primary_ip6 == ip_address:
+        if host.primary_ip6 and host.primary_ip6 == ip_address and not other_assignments_exist:
             raise ValidationError(
                 {
-                    "ip_addresses": f"IP address {host.primary_ip6} is primary for {model_name} {host} but not assigned to it!"
+                    "ip_addresses": f"Cannot remove IP address {ip_address} from interface {int_or_vm_int} on {model_name} {host} because it is marked as its primary IPv{ip_address.family} address"
                 }
             )
 
