@@ -12,11 +12,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="ipaddress",
-            name="ip_version",
-            field=models.IntegerField(db_index=True, editable=False, null=True),
-        ),
-        migrations.AddField(
-            model_name="ipaddress",
             name="parent",
             field=models.ForeignKey(
                 blank=True,
