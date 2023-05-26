@@ -3,7 +3,10 @@ import { lazy } from "react";
 import { getComponentFromModule } from "./app-import";
 import { LoadingWidget } from "@components/LoadingWidget";
 
-const app_routes = require("../app_routes.json");
+let app_routes = {};
+try {
+    app_routes = require("../app_routes.json");
+} catch {}
 
 export function getPluginRoutes() {
     let react_routes = [];
