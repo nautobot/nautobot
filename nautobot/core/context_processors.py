@@ -45,12 +45,12 @@ def settings(request):
         view_name = view_func.__name__
         module = import_module(module_path)
         view_class = getattr(module, view_name, None)
-    use_legacy_ui = getattr(view_class, "use_legacy_ui", False)
-    use_legacy_ui = use_legacy_ui or not request.COOKIES.get("newui", False)
+    use_new_ui = request.COOKIES.get("newui", False)
+    use_new_ui = use_new_ui and getattr(view_class, "use_new_ui", False)
 
     return {
         "settings": django_settings,
-        "root_template": "base_django.html" if use_legacy_ui else "base_react.html",
+        "root_template": "base_react.html" if use_new_ui else "base_django.html",
     }
 
 
