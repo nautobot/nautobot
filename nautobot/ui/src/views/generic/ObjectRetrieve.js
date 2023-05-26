@@ -165,9 +165,7 @@ function RenderRow(props) {
 }
 
 function construct_detail_view_tabs({ isAvailable, configuration, data }) {
-    {
-        /* If instance data is available, but detail view layout endpoint is not loaded correctly */
-    }
+    /* If instance data is available, but detail view layout endpoint is not loaded correctly */
     if (!isAvailable && data) {
         return <Tab>Main</Tab>;
     } else {
@@ -178,9 +176,7 @@ function construct_detail_view_tabs({ isAvailable, configuration, data }) {
 }
 
 function construct_detail_view_tabpanels({ isAvailable, configuration, data }) {
-    {
-        /* If instance data is available, but detail view layout endpoint is not loaded correctly */
-    }
+    /* If instance data is available, but detail view layout endpoint is not loaded correctly */
     if (!isAvailable && data) {
         return (
             <TabPanel padding="none" key="main">
