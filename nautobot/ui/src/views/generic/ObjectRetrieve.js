@@ -185,12 +185,13 @@ export default function ObjectRetrieve({ api_url }) {
         isLoading: objectDataLoading,
     } = useSWR(() => api_url, fetcher);
     const ui_url = objectData?.url
-        ? `${objectData.url}detail-view-config/`
+        ? `${objectData.url}detail-view-onfig/`
         : null;
-    const { data: appConfig, error: appConfigError } = useSWR(
-        () => ui_url,
-        fetcher
-    );
+    const {
+        data: appConfig,
+        error: appConfigError,
+        isLoading: appConfigLoading,
+    } = useSWR(() => ui_url, fetcher);
     // ChangeLog Data
     const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}&depth=1`;
     const {
@@ -226,7 +227,7 @@ export default function ObjectRetrieve({ api_url }) {
         schema: true,
     });
 
-    if (objectDataError || appConfigError) {
+    if (objectDataError) {
         return (
             <GenericView objectData={objectData}>
                 <div>Failed to load {api_url}</div>
@@ -234,7 +235,12 @@ export default function ObjectRetrieve({ api_url }) {
         );
     }
 
-    if (objectDataLoading || !objectData || !appConfig) {
+    if (
+        objectDataLoading ||
+        appConfigLoading ||
+        !objectData ||
+        (!appConfig && !appConfigError)
+    ) {
         return (
             <GenericView>
                 <SkeletonText
@@ -314,12 +320,16 @@ export default function ObjectRetrieve({ api_url }) {
                         </Modal>
                     </ButtonGroup>
                 </Box>
-
                 <Tabs>
                     <TabList pl="md">
-                        {Object.keys(appConfig).map((key, idx) => (
-                            <Tab key={idx}>{render_header(key)}</Tab>
-                        ))}
+                        {/* If instance data is available, but detail view layout endpoint is not loaded correctly */}
+                        {appConfigError && objectData ? (
+                            <Tab>Main</Tab>
+                        ) : (
+                            Object.keys(appConfig).map((key, idx) => (
+                                <Tab key={idx}>{render_header(key)}</Tab>
+                            ))
+                        )}
                         {noteData && noteHeaderData ? (
                             <Tab>Notes</Tab>
                         ) : (
@@ -332,64 +342,97 @@ export default function ObjectRetrieve({ api_url }) {
                         )}
                     </TabList>
                     <TabPanels>
-                        {Object.keys(appConfig).map((tab, idx) => (
-                            <TabPanel padding="none" key={tab}>
+                        {/* If instance data is available, but detail view layout endpoint is not loaded correctly */}
+                        {appConfigError && objectData ? (
+                            <TabPanel padding="none" key="main">
                                 <Card>
                                     <NautobotGrid row={{ count: 5 }}>
-                                        {Object.keys(appConfig[tab]).map(
-                                            (item, idx) => (
-                                                <NautobotGridItem
-                                                    colSpan={
-                                                        appConfig[tab][item]
-                                                            .colspan
-                                                    }
-                                                    rowSpan={
-                                                        appConfig[tab][item]
-                                                            .rowspan
-                                                    }
-                                                    key={idx}
-                                                >
-                                                    <Heading
-                                                        display="flex"
-                                                        alignItems="center"
-                                                    >
-                                                        <NtcThumbnailIcon
-                                                            width="25px"
-                                                            height="30px"
-                                                        />
-                                                        &nbsp;
-                                                        {render_header(
+                                        <NautobotGridItem colSpan={4}>
+                                            <Heading
+                                                display="flex"
+                                                alignItems="center"
+                                            >
+                                                <NtcThumbnailIcon
+                                                    width="25px"
+                                                    height="30px"
+                                                />
+                                                &nbsp;
+                                                {render_header(
+                                                    objectData.display
+                                                )}
+                                            </Heading>
+                                            <br />
+                                            <TableContainer>
+                                                <Table>
+                                                    <Tbody>
+                                                        {Object.entries(
+                                                            objectData
+                                                        ).map((key, idx) => (
+                                                            <RenderRow
+                                                                identifier={
+                                                                    key[0]
+                                                                }
+                                                                value={key[1]}
+                                                                advanced={false}
+                                                                key={`${key}_${idx}`}
+                                                            />
+                                                        ))}
+                                                    </Tbody>
+                                                </Table>
+                                            </TableContainer>
+                                        </NautobotGridItem>
+                                    </NautobotGrid>
+                                </Card>
+                            </TabPanel>
+                        ) : (
+                            Object.keys(appConfig).map((tab, idx) => (
+                                <TabPanel padding="none" key={tab}>
+                                    <Card>
+                                        <NautobotGrid row={{ count: 5 }}>
+                                            {Object.keys(appConfig[tab]).map(
+                                                (item, idx) => (
+                                                    <NautobotGridItem
+                                                        colSpan={
                                                             appConfig[tab][item]
-                                                                .name
-                                                        )}
-                                                    </Heading>
-                                                    <br />
-                                                    <TableContainer>
-                                                        <Table>
-                                                            <Tbody>
-                                                                {Object.keys(
-                                                                    appConfig[
-                                                                        tab
-                                                                    ][item]
-                                                                        .fields
-                                                                ).map(
-                                                                    (
-                                                                        key,
-                                                                        idx
-                                                                    ) => (
-                                                                        <RenderRow
-                                                                            identifier={
-                                                                                appConfig[
-                                                                                    tab
-                                                                                ][
-                                                                                    item
-                                                                                ]
-                                                                                    .fields[
-                                                                                    key
-                                                                                ]
-                                                                            }
-                                                                            value={
-                                                                                obj[
+                                                                .colspan
+                                                        }
+                                                        rowSpan={
+                                                            appConfig[tab][item]
+                                                                .rowspan
+                                                        }
+                                                        key={idx}
+                                                    >
+                                                        <Heading
+                                                            display="flex"
+                                                            alignItems="center"
+                                                        >
+                                                            <NtcThumbnailIcon
+                                                                width="25px"
+                                                                height="30px"
+                                                            />
+                                                            &nbsp;
+                                                            {render_header(
+                                                                appConfig[tab][
+                                                                    item
+                                                                ].name
+                                                            )}
+                                                        </Heading>
+                                                        <br />
+                                                        <TableContainer>
+                                                            <Table>
+                                                                <Tbody>
+                                                                    {Object.keys(
+                                                                        appConfig[
+                                                                            tab
+                                                                        ][item]
+                                                                            .fields
+                                                                    ).map(
+                                                                        (
+                                                                            key,
+                                                                            idx
+                                                                        ) => (
+                                                                            <RenderRow
+                                                                                identifier={
                                                                                     appConfig[
                                                                                         tab
                                                                                     ][
@@ -398,31 +441,43 @@ export default function ObjectRetrieve({ api_url }) {
                                                                                         .fields[
                                                                                         key
                                                                                     ]
-                                                                                ]
-                                                                            }
-                                                                            advanced={
-                                                                                appConfig[
-                                                                                    tab
-                                                                                ][
-                                                                                    item
-                                                                                ]
-                                                                                    .advanced
-                                                                            }
-                                                                            key={`${tab}_${idx}`}
-                                                                        />
-                                                                    )
-                                                                )}
-                                                            </Tbody>
-                                                        </Table>
-                                                    </TableContainer>
-                                                </NautobotGridItem>
-                                            )
-                                        )}
-                                    </NautobotGrid>
-                                </Card>
-                            </TabPanel>
-                        ))}
-                        {(noteData && noteHeaderData) || !note_error ? (
+                                                                                }
+                                                                                value={
+                                                                                    obj[
+                                                                                        appConfig[
+                                                                                            tab
+                                                                                        ][
+                                                                                            item
+                                                                                        ]
+                                                                                            .fields[
+                                                                                            key
+                                                                                        ]
+                                                                                    ]
+                                                                                }
+                                                                                advanced={
+                                                                                    appConfig[
+                                                                                        tab
+                                                                                    ][
+                                                                                        item
+                                                                                    ]
+                                                                                        .advanced
+                                                                                }
+                                                                                key={`${tab}_${idx}`}
+                                                                            />
+                                                                        )
+                                                                    )}
+                                                                </Tbody>
+                                                            </Table>
+                                                        </TableContainer>
+                                                    </NautobotGridItem>
+                                                )
+                                            )}
+                                        </NautobotGrid>
+                                    </Card>
+                                </TabPanel>
+                            ))
+                        )}
+                        {noteData && noteHeaderData && !note_error ? (
                             <TabPanel key="notes">
                                 <Card>
                                     <CardHeader>
@@ -460,7 +515,8 @@ export default function ObjectRetrieve({ api_url }) {
                         ) : (
                             () => {}
                         )}
-                        {(changelogData && changelogHeaderData) ||
+                        {changelogData &&
+                        changelogHeaderData &&
                         !changelog_error ? (
                             <TabPanel key="change_log">
                                 <Card>
