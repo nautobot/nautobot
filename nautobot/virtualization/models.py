@@ -263,21 +263,31 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel, RoleModelMix
 
     def clean(self):
         super().clean()
+        from nautobot.ipam.models import IPAddressToInterface
 
         # Validate primary IP addresses
-        interfaces = self.interfaces.all()
+        vm_interfaces = VMInterface.objects.filter(virtual_machine=self)
         for field in ["primary_ip4", "primary_ip6"]:
             ip = getattr(self, field)
             if ip is not None:
-                if ip.assigned_object in interfaces:
+                if field == "primary_ip4":
+                    if ip.family != 4:
+                        raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
+                else:
+                    if ip.family != 6:
+                        raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
+                if IPAddressToInterface.objects.filter(ip_address=ip, vm_interface__in=vm_interfaces).exists():
                     pass
-                elif ip.nat_inside is not None and ip.nat_inside.assigned_object in interfaces:
+                elif (
+                    ip.nat_inside is not None
+                    and IPAddressToInterface.objects.filter(
+                        ip_address=ip.nat_inside, vm_interface__in=vm_interfaces
+                    ).exists()
+                ):
                     pass
                 else:
                     raise ValidationError(
-                        {
-                            field: f"The specified IP address ({ip}) is not assigned to this VM.",
-                        }
+                        {f"{field}": f"The specified IP address ({ip}) is not assigned to this virtual machine."}
                     )
 
     @property

@@ -608,42 +608,28 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
 
         # Validate primary IP addresses
         vc_interfaces = self.vc_interfaces.all()
-        if self.primary_ip4:
-            if self.primary_ip4.family != 4:
-                raise ValidationError({"primary_ip4": f"{self.primary_ip4} is not an IPv4 address."})
-            if ipam_models.IPAddressToInterface.objects.filter(
-                ip_address=self.primary_ip4, interface__in=vc_interfaces
-            ).exists():
-                pass
-            elif (
-                self.primary_ip4.nat_inside is not None
-                and ipam_models.IPAddressToInterface.objects.filter(
-                    ip_address=self.primary_ip4.nat_inside, interface__in=vc_interfaces
-                ).exists()
-            ):
-                pass
-            else:
-                raise ValidationError(
-                    {"primary_ip4": f"The specified IP address ({self.primary_ip4}) is not assigned to this device."}
-                )
-        if self.primary_ip6:
-            if self.primary_ip6.family != 6:
-                raise ValidationError({"primary_ip6": f"{self.primary_ip6} is not an IPv6 address."})
-            if ipam_models.IPAddressToInterface.objects.filter(
-                ip_address=self.primary_ip6, interface__in=vc_interfaces
-            ).exists():
-                pass
-            elif (
-                self.primary_ip6.nat_inside is not None
-                and ipam_models.IPAddressToInterface.objects.filter(
-                    ip_address=self.primary_ip6.nat_inside, interface__in=vc_interfaces
-                ).exists()
-            ):
-                pass
-            else:
-                raise ValidationError(
-                    {"primary_ip6": f"The specified IP address ({self.primary_ip6}) is not assigned to this device."}
-                )
+        for field in ["primary_ip4", "primary_ip6"]:
+            ip = getattr(self, field)
+            if ip is not None:
+                if field == "primary_ip4":
+                    if ip.family != 4:
+                        raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
+                else:
+                    if ip.family != 6:
+                        raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
+                if ipam_models.IPAddressToInterface.objects.filter(ip_address=ip, interface__in=vc_interfaces).exists():
+                    pass
+                elif (
+                    ip.nat_inside is not None
+                    and ipam_models.IPAddressToInterface.objects.filter(
+                        ip_address=ip.nat_inside, interface__in=vc_interfaces
+                    ).exists()
+                ):
+                    pass
+                else:
+                    raise ValidationError(
+                        {f"{field}": f"The specified IP address ({ip}) is not assigned to this device."}
+                    )
 
         # Validate manufacturer/platform
         if hasattr(self, "device_type") and self.platform:
