@@ -343,7 +343,7 @@ class Job(PrimaryModel):
     def latest_result(self):
         """
         Return the most recent JobResult object associated with this Job.
-        
+
         Note that, as a performance optimization for this function's repeated use in
         JobListview, the returned object only includes its `status` field.
         """
