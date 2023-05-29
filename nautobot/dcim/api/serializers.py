@@ -199,6 +199,18 @@ class LocationSerializer(
         list_display_fields = ["name", "status", "parent", "tenant", "description", "tags"]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
+        detail_view_config = [
+            {
+                "Location": {"fields": ["name", "display", "rack_count", "parent"]},
+                "Management": {"fields": ["status", "prefix_count", "device_count"]},
+                "Others": {"fields": ["tenant", "natural_key_slug", "url"]},
+            },
+            {
+                "Tags": {"fields": ["tags"]},
+                "Comments": {"fields": ["comments"]},
+                "Contact": {"fields": ["contact_name", "contact_phone", "contact_email"]},
+            },
+        ]
 
     def validate(self, data):
         # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.

@@ -9,6 +9,9 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
+from nautobot.core.api.serializers import NautobotHyperlinkedRelatedField
+from nautobot.core.api.utils import SerializerDetailViewConfig
+
 
 # FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
 # works reliably.
@@ -71,6 +74,14 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
                 result["required"] = type_map_obj.get("required", [])
             result["items"] = self._get_field_properties(field.child_relation, "")
             result["uniqueItems"] = True
+        elif isinstance(field, NautobotHyperlinkedRelatedField):
+            result["format"] = type_map_obj["format"]
+            model_options = field.queryset.model._meta
+            # Custom Keyword: modelName and appName
+            # This Keyword represents the model name of the uuid model
+            # and appName represents the app_name of the model
+            result["modelName"] = model_options.model_name
+            result["appName"] = model_options.app_label
         else:
             if field.allow_null:
                 result["type"] = [result["type"], "null"]
@@ -234,6 +245,7 @@ class NautobotMetadata(SimpleMetadata):
             column_data = processor._get_column_properties(field, field_name)
             fields.append(column_data)
 
+        view_options["retrieve"] = self.determine_detail_view_schema(serializer)
         view_options["list_display_fields"] = list_display
         view_options["fields"] = fields
 
@@ -256,7 +268,6 @@ class NautobotMetadata(SimpleMetadata):
             metadata.update(
                 {
                     "schema": NautobotSchemaProcessor(serializer, request.parser_context).get_schema(),
-                    # "uiSchema": NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema(),
                     "uiSchema": ui_schema,
                 }
             )
@@ -264,3 +275,11 @@ class NautobotMetadata(SimpleMetadata):
             metadata["view_options"] = self.determine_view_options(request, serializer)
 
         return metadata
+
+    def determine_detail_view_schema(self, serializer):
+        view_config = getattr(
+            serializer.Meta,
+            "detail_view_config",
+            SerializerDetailViewConfig(serializer).view_config(),
+        )
+        return view_config

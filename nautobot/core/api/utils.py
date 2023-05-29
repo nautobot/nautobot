@@ -7,6 +7,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.relations import ManyRelatedField
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
@@ -348,4 +349,39 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
             obj_related_field, context={"request": serializer.context.get("request")}, **field_kwargs
         ).data
         data["generic_foreign_key"] = True
+        return data
+
+
+class SerializerDetailViewConfig:
+    def __init__(
+        self,
+        serializer,
+    ):
+        self.serializer = serializer
+
+    def get_m2m_and_other_fields(self):
+        m2m_fields = []
+        other_fields = []
+
+        for field_name, field in self.serializer.fields.items():
+            if isinstance(field, ManyRelatedField):
+                m2m_fields.append({"name": field_name, "label": field.label or field_name})
+            else:
+                other_fields.append({"name": field_name, "label": field.label or field_name})
+
+        return m2m_fields, other_fields
+
+    def view_config(self):
+        m2m_fields, other_fields = self.get_m2m_and_other_fields()
+        model_verbose_name = self.serializer.Meta.model._meta.verbose_name
+        data = [
+            {
+                model_verbose_name.capitalize(): {
+                    "fields": [field["name"] for field in other_fields],
+                    "template": "list",
+                }
+            },
+        ]
+
+        data.extend({field["label"]: {"fields": [field["name"]], "template": "list"}} for field in m2m_fields)
         return data
