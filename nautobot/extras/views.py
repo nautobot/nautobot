@@ -1503,7 +1503,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.all()
+    queryset = JobResult.objects.defer("data").all()
     table = tables.JobResultTable
 
 
