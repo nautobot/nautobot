@@ -353,26 +353,47 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
 
 
 class SerializerDetailViewConfig:
+    """
+    Class for generating detail UI view schema based on a serializer's fields.
+
+    Args:
+        serializer: The serializer instance.
+    """
+
     def __init__(
         self,
         serializer,
     ):
         self.serializer = serializer
 
-    def get_m2m_and_other_fields(self):
+    def get_m2m_and_non_m2m_fields(self):
+        """
+        Retrieve the many-to-many (m2m) fields and other non-m2m fields from the serializer.
+
+        Returns:
+            A tuple containing two lists: m2m_fields and non m2m fields.
+                - m2m_fields: A list of dictionaries, each containing the name and label of an m2m field.
+                - non_m2m_fields: A list of dictionaries, each containing the name and label of a non m2m field.
+        """
         m2m_fields = []
-        other_fields = []
+        non_m2m_fields = []
 
         for field_name, field in self.serializer.fields.items():
             if isinstance(field, ManyRelatedField):
                 m2m_fields.append({"name": field_name, "label": field.label or field_name})
             else:
-                other_fields.append({"name": field_name, "label": field.label or field_name})
+                non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
 
-        return m2m_fields, other_fields
+        return m2m_fields, non_m2m_fields
 
     def view_config(self):
-        m2m_fields, other_fields = self.get_m2m_and_other_fields()
+        """
+        Generate detail view config for the view based on the serializer's fields.
+
+        Returns:
+            A list representing the view config.
+        """
+        m2m_fields, other_fields = self.get_m2m_and_non_m2m_fields()
         model_verbose_name = self.serializer.Meta.model._meta.verbose_name
         data = [
             {
