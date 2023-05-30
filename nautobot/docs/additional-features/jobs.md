@@ -35,7 +35,7 @@ In any case, each module holds one or more Jobs (Python classes), each of which 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
 +/- 2.0.0
-    All job classes must now be registered with `nautobot.core.celery.register_jobs` on module import. For plugins providing jobs, the module containg the jobs must be imported by the plugin's `__init__.py` and the `register_jobs` method called at import time. The `register_jobs` method accepts one or more job classes as arguments.
+    All job classes must now be registered with `nautobot.core.celery.register_jobs` on module import. For plugins providing jobs, the module containing the jobs must be imported by the plugin's `__init__.py` and the `register_jobs` method called at import time. The `register_jobs` method accepts one or more job classes as arguments.
 
 !!! warning
     Make sure you are *not* inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
@@ -685,7 +685,7 @@ The simplest way to test the entire execution of Jobs from 1.3.3 on is via calli
 +/- 2.0.0
     `run_job_for_testing` was moved from the `nautobot.utilities.testing` module to `nautobot.core.testing`.
 
-Because of the way `run_job_for_testing` and more specifically celery tasks work, which is somewhat complex behind the scenes, you need to inherit from `nautobot.core.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
+Because of the way `run_job_for_testing` and more specifically Celery tasks work, which is somewhat complex behind the scenes, you need to inherit from `nautobot.core.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
 
 When using `TransactionTestCase` (whether from Django or from Nautobot) each tests runs on a completely empty database. Furthermore, Nautobot requires new jobs to be enabled before they can run. Therefore, we need to make sure the job is enabled before each run which `run_job_for_testing` handles for us.
 
@@ -773,7 +773,7 @@ class NewBranch(Job):
         STATUS_PLANNED = Status.objects.get(name="Planned")
 
         # Create the new location
-        root_type = LocationType.objects.create(name="Campus")
+        root_type = LocationType.objects.get_or_create(name="Campus")
         location = Location(
             name=location_name,
             location_type=root_type,
