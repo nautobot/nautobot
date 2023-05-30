@@ -78,11 +78,4 @@ class Migration(migrations.Migration):
                 blank=True, default=list, encoder=nautobot.core.celery.encoders.NautobotKombuJSONEncoder
             ),
         ),
-        migrations.AlterField(
-            model_name="jobresult",
-            name="task_kwargs",
-            field=models.JSONField(
-                blank=True, default=dict, encoder=nautobot.core.celery.encoders.NautobotKombuJSONEncoder
-            ),
-        ),
     ]

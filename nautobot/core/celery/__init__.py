@@ -178,6 +178,6 @@ nautobot_task = shared_task
 
 
 def register_jobs(*jobs):
-    """Helper method to register multiple jobs."""
+    """Helper method to register jobs with Celery"""
     for job in jobs:
         app.register_task(job)
