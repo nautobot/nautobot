@@ -1,0 +1,1 @@
+Fixed MySQL `Out of sort memory` error on `JobListView` and `JobResultListView`.
