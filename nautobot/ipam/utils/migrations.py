@@ -27,12 +27,12 @@ def process_namespaces(apps, schema_editor):
     process_prefix_duplicates(apps)
     reparent_prefixes(apps)
 
+    # Make another pass across all VRFs to duplicate it if it has prefixes
+    # in another namespace (non-unique VRFs with duplicate Prefixes)
+    copy_vrfs_to_cleanup_namespaces(apps)
+
     # [VM]Interfaces
     process_interfaces(apps)
-
-    # TODO(jathan): Make another pass across all Prefixes to duplicate a VRF if
-    # it the namespace doesn't match (non-unique VRFs with duplicate Prefixes).
-    # We'll need multiple Namespaces with that prefix + VRF(name, rd).
 
 
 def check_interface_vrfs(apps):
@@ -260,6 +260,39 @@ def reparent_prefixes(apps):
             pfx.save()
         except Prefix.DoesNotExist:
             continue
+
+
+def copy_vrfs_to_cleanup_namespaces(apps):
+    """Enumerate every Prefix with a non-null vrf and if the vrf namespace doesn't match the prefix namespace, make
+    a copy of the vrf in the cleanup namespace.
+    """
+
+    Prefix = apps.get_model("ipam", "Prefix")
+    VRF = apps.get_model("ipam", "VRF")
+    Namespace = apps.get_model("ipam", "Namespace")
+
+    for vrf in VRF.objects.all():
+        if not vrf.prefixes.exclude(namespace=vrf.namespace).exists():
+            continue
+
+        namespaces = (
+            vrf.prefixes.exclude(namespace=vrf.namespace).order_by().values_list("namespace", flat=True).distinct()
+        )
+        for namespace_pk in namespaces:
+            namespace = Namespace.objects.get(pk=namespace_pk)
+            print(f">>> Copying VRF {vrf.name!r} to namespace {namespace.name!r}")
+            vrf_copy = VRF.objects.create(
+                namespace=namespace,
+                name=vrf.name,
+                rd=vrf.rd,
+                tenant=vrf.tenant,
+                enforce_unique=vrf.enforce_unique,
+                _custom_field_data=vrf._custom_field_data,
+                description="Created by Nautobot data migrations.",
+            )
+            vrf_copy.import_targets.set(vrf.import_targets.all())
+            vrf_copy.export_targets.set(vrf.export_targets.all())
+            Prefix.objects.filter(vrf=vrf).update(vrf=vrf_copy)
 
 
 def process_interfaces(apps):

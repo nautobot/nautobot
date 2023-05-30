@@ -264,13 +264,17 @@ class VRFDeviceAssignmentTable(BaseTable):
 
     vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
     device = tables.Column(linkify=lambda record: record.device.get_absolute_url(), accessor="device.name")
+    # TODO: fix this table to handle virtual_machine properly
+    virtual_machine = tables.Column(
+        linkify=lambda record: record.virtual_machine.get_absolute_url(), accessor="virtual_machine.name"
+    )
     rd = tables.Column(verbose_name="VRF RD")
     tenant = TenantColumn(accessor="vrf.tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFDeviceAssignment
         orderable = False
-        fields = ("vrf", "device", "rd", "tenant")
+        fields = ("vrf", "device", "virtual_machine", "rd", "tenant")
 
 
 class VRFPrefixAssignmentTable(BaseTable):
