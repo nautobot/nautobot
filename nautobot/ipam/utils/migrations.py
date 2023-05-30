@@ -346,6 +346,20 @@ def process_interfaces(apps):
         print(f"    VRF {ifc_vrf.name!r} migrated from IPAddress {first_ip.host!r} to VMInterface {ifc.name!r}")
 
 
+def process_vrfs_prefixes_m2m(apps):
+    """
+    Convert the Prefix->VRF FK relationship to a M2M relationship.
+    """
+
+    VRF = apps.get_model("ipam", "VRF")
+
+    vrfs_with_prefixes = VRF.objects.filter(prefixes__isnull=False).order_by().distinct()
+
+    for vrf in vrfs_with_prefixes:
+        print(f"    Converting Prefix relationships to VRF {vrf.name} to M2M.")
+        vrf.prefixes_m2m.set(vrf.prefixes.all())
+
+
 def compare_duplicate_prefixes(a, b):
     set_a = set(get_prefixes(a))
     set_b = set(get_prefixes(b))
@@ -553,17 +567,3 @@ def validate_cidr(apps, value):
         return netaddr.IPNetwork(value)
     except netaddr.AddrFormatError as err:
         raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
-
-
-def process_vrfs_prefixes_m2m(apps):
-    """
-    Convert the Prefix->VRF FK relationship to a M2M relationship.
-    """
-
-    VRF = apps.get_model("ipam", "VRF")
-
-    vrfs_with_prefixes = VRF.objects.filter(prefixes__isnull=False).order_by().distinct()
-
-    for vrf in vrfs_with_prefixes:
-        print(f"    Converting Prefix relationships to VRF {vrf.name} to M2M.")
-        vrf.prefixes_m2m.set(vrf.prefixes.all())
