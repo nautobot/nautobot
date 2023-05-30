@@ -8,10 +8,10 @@ from nautobot.extras.jobs import (
     IPAddressVar,
     IPAddressWithMaskVar,
     IPNetworkVar,
+    Job,
     MultiChoiceVar,
     MultiObjectVar,
     ObjectVar,
-    Job,
     StringVar,
     TextVar,
 )
