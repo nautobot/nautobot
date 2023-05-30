@@ -59,7 +59,7 @@ function TableColumnDisplay({ obj }) {
 }
 
 export default function TableItem({ name, obj, url }) {
-    if (url) {
+    if (url && obj) {
         return (
             <Link to={url}>
                 <TableColumnDisplay obj={obj} />
