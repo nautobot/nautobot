@@ -379,8 +379,8 @@ device = ObjectVar(
 Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Location` `ObjectVar` for its `location_type` and `tenant_group`.
 
 ```python
-region = ObjectVar(
-    model=Region
+location_type = ObjectVar(
+    model=LocationType
 )
 tenant_group = ObjectVar(
     model=TenantGroup
