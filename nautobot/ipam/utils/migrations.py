@@ -34,6 +34,9 @@ def process_namespaces(apps, schema_editor):
     # it the namespace doesn't match (non-unique VRFs with duplicate Prefixes).
     # We'll need multiple Namespaces with that prefix + VRF(name, rd).
 
+    # VRF-Prefix M2M
+    process_vrfs_prefixes_m2m(apps)
+
 
 def check_interface_vrfs(apps):
     """
@@ -517,3 +520,17 @@ def validate_cidr(apps, value):
         return netaddr.IPNetwork(value)
     except netaddr.AddrFormatError as err:
         raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
+
+
+def process_vrfs_prefixes_m2m(apps):
+    """
+    Convert the Prefix->VRF FK relationship to a M2M relationship.
+    """
+
+    VRF = apps.get_model("ipam", "VRF")
+
+    vrfs_with_prefixes = VRF.objects.filter(prefixes__isnull=False).order_by().distinct()
+
+    for vrf in vrfs_with_prefixes:
+        print(f"    Converting Prefix relationships to VRF {vrf.name} to M2M.")
+        vrf.prefixes_m2m.set(vrf.prefixes.all())

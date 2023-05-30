@@ -123,22 +123,17 @@ class VRF(PrimaryModel):
         through="ipam.VRFDeviceAssignment",
         through_fields=("vrf", "virtual_machine"),
     )
-    # prefixes = models.ManyToManyField(
-    #     to="ipam.Prefix",
-    #     related_name="vrfs",
-    #     through="ipam.VRFPrefixAssignment",
-    # )
+    prefixes = models.ManyToManyField(
+        to="ipam.Prefix",
+        related_name="vrfs",
+        through="ipam.VRFPrefixAssignment",
+    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
         related_name="vrfs",
         blank=True,
         null=True,
-    )
-    enforce_unique = models.BooleanField(
-        default=True,
-        verbose_name="Enforce unique space",
-        help_text="Prevent duplicate prefixes/IP addresses within this VRF",
     )
     description = models.CharField(max_length=200, blank=True)
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
@@ -439,14 +434,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         blank=True,
         null=True,
     )
-    vrf = models.ForeignKey(
-        to="ipam.VRF",
-        on_delete=models.PROTECT,
-        related_name="prefixes",
-        blank=True,
-        null=True,
-        verbose_name="VRF",
-    )
     namespace = models.ForeignKey(
         to="ipam.Namespace",
         on_delete=models.PROTECT,
@@ -518,7 +505,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
             ["network", "broadcast", "prefix_length"],
             ["namespace", "network", "broadcast", "prefix_length"],
         ]
-        # unique_together = ["namespace", "network", "prefix_length"]
+        unique_together = ["namespace", "network", "prefix_length"]
         verbose_name_plural = "prefixes"
 
     def validate_unique(self, exclude=None):
@@ -899,14 +886,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     )
     broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
     prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
-    vrf = models.ForeignKey(
-        to="ipam.VRF",
-        on_delete=models.PROTECT,
-        related_name="ip_addresses",
-        blank=True,
-        null=True,
-        verbose_name="VRF",
-    )
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
