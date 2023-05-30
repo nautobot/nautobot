@@ -1,1 +1,0 @@
-Fixed Exception `unsupported operand type(s) for -: 'list' and 'list'` for MultiObjectVar with missing UUID.

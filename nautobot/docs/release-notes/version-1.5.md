@@ -148,6 +148,24 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.20 (2023-05-30)
+
+### Added
+
+- [#na](https://github.com/nautobot/nautobot/issues/na) - Add troubleshooting steps for Azure AD SSO Group Sync example.
+- [#3400](https://github.com/nautobot/nautobot/issues/3400) - Added documentation on how to enable Jobs and Job hooks.
+
+### Changed
+
+- [#3680](https://github.com/nautobot/nautobot/issues/3680) - Changed device component instantiation to be a separate method.
+
+### Fixed
+
+- [#3503](https://github.com/nautobot/nautobot/issues/3503) - Fixed FieldError when sorting VMs list by primary IP.
+- [#3616](https://github.com/nautobot/nautobot/issues/3616) - Fixed `location` filter on `CircuitFilterSet` and `ProviderFilterSet`.
+- [#3787](https://github.com/nautobot/nautobot/issues/3787) - Fixed MySQL `Out of sort memory` error on `JobListView` and `JobResultListView`.
+- [#3789](https://github.com/nautobot/nautobot/issues/3789) - Fixed Exception `unsupported operand type(s) for -: 'list' and 'list'` for MultiObjectVar with missing UUID.
+
 ## v1.5.19 (2023-05-16)
 
 ### Added
