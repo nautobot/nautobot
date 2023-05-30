@@ -5,7 +5,7 @@ from django.db import migrations
 
 def migrate_existing_scheduled_jobs(apps, schema_editor):
     """
-    Migrate the existing ScheduledJobs to support the new format
+    Migrate the existing ScheduledJobs to support the new format.
     1. set sj.kwargs attribute to the old sj.kwargs["data"].
     2. delete sj.kwargs["commit"].
     3. set sj.user to the old sj.kwargs["user"] if the user is not already set.
@@ -16,10 +16,27 @@ def migrate_existing_scheduled_jobs(apps, schema_editor):
         old_kwargs = sj.kwargs
         sj.kwargs = old_kwargs.get("data", {})
         del sj.kwargs["commit"]
-        if sj.user is not None:
+        if sj.user is None:
             sj.user = old_kwargs.get("user")
         sj.queue = old_kwargs.get("task_queue", "")
         sj.celery_kwargs["queue"] = old_kwargs.get("task_queue", "")
+        sj.save()
+
+
+def reverse_migrate_existing_scheduled_jobs(apps, schema_editor):
+    """
+    Reverse the ScheduledJob Migration / Restore the removed keys in sj.kwargs.
+    1. Restore the "data" key from sj.kwargs.
+    2. Restore the "commit" key to False.
+    3. Restore the "user" key from sj.user.
+    4. Restore the "task_queue" from sj.queue.
+    """
+    ScheduledJob = apps.get_model("extras", "ScheduledJob")
+    for sj in ScheduledJob.objects.all():
+        sj.kwargs["data"] = sj.kwargs
+        sj.kwargs["commit"] = False
+        sj.kwargs["user"] = sj.user
+        sj.kwargs["task_queue"] = sj.queue or sj.celery_kwargs["queue"]
         sj.save()
 
 
@@ -31,6 +48,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(
             code=migrate_existing_scheduled_jobs,
-            reverse_code=migrations.operations.special.RunPython.noop,
+            reverse_code=reverse_migrate_existing_scheduled_jobs,
         )
     ]
