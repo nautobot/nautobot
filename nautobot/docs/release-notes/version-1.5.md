@@ -152,8 +152,8 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 
 ### Added
 
-- [#na](https://github.com/nautobot/nautobot/issues/na) - Add troubleshooting steps for Azure AD SSO Group Sync example.
 - [#3400](https://github.com/nautobot/nautobot/issues/3400) - Added documentation on how to enable Jobs and Job hooks.
+- [#3766](https://github.com/nautobot/nautobot/issues/3766) - Add troubleshooting steps for Azure AD SSO Group Sync example.
 
 ### Changed
 
