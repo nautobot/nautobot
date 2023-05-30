@@ -509,6 +509,27 @@ When a new Job record is created for a newly discovered Job class, it defaults t
 
 An administrator or user with `extras.change_job` permission can edit the Job to change it to `enabled = True`, permitting running of the Job, when they have completed any appropriate review of the new Job to ensure that it meets their standards. Similarly, an obsolete or no-longer-used Job can be prevented from inadvertent execution by changing it back to `enabled = False`.
 
+ By default when a Job is installed into Nautobot it is installed in a disabled state. In order to enable a Job:
+
+* Navigate to Jobs > Jobs menu
+* Select a job that has been installed
+* Select **Edit** button
+* In the second section titled _Job_, select the **Enabled** checkbox
+* Select **Update** button at the bottom
+
+#### Enabling Job Hooks
+
+ Job hooks are enabled in a similar fashion, but by using the _default_ filters when navigating to the Jobs page the Job Hooks will not be visible. To enable job hooks:
+
+* Navigate to Jobs > Jobs menu
+* Select the **Filter** button to bring up the Filter Jobs context
+* Look for **Is job hook receiver** and change the drop down to **Yes**
+* Select **Apply** button
+* Select a job that has been installed
+* Select **Edit** button
+* In the second section titled _Job_, select the **Enabled** checkbox
+* Select **Update** button at the bottom
+
 ### Overriding Metadata
 
 An administrator or user with `extras.change_job` permission can also edit a Job database record to optionally override any or all of the following metadata attributes defined by the Job module or class:
