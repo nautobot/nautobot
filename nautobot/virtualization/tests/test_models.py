@@ -111,6 +111,22 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         vm_interface.add_ip_addresses(ips)
         self.assertEqual(IPAddressToInterface.objects.filter(vm_interface=vm_interface).count(), 10)
 
+        # Test the pre_delete signal for IPAddressToInterface instances
+        self.virtualmachine.primary_ip4 = vm_interface.ip_addresses.all().filter(host__family=4).first()
+        self.virtualmachine.primary_ip6 = vm_interface.ip_addresses.all().filter(host__family=6).first()
+        self.virtualmachine.save()
+
+        with self.assertRaises(ValidationError):
+            vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip4)
+        with self.assertRaises(ValidationError):
+            vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip6)
+        with self.assertRaises(ValidationError):
+            vm_interface.remove_ip_addresses([self.virtualmachine.primary_ip4, self.virtualmachine.primary_ip6])
+
+        self.virtualmachine.primary_ip4 = None
+        self.virtualmachine.primary_ip6 = None
+        self.virtualmachine.save()
+
         # remove single instance
         count = vm_interface.remove_ip_addresses(ips[-1])
         self.assertEqual(count, 1)

@@ -73,23 +73,8 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "role",
         "tenant",
     ).prefetch_related("tags")
+    serializer_class = serializers.VirtualMachineSerializer
     filterset_class = filters.VirtualMachineFilterSet
-
-    def get_serializer_class(self):
-        """
-        Select the specific serializer based on the request context.
-
-        If the `exclude` query param includes `config_context` as a value, return the VirtualMachineSerializer
-
-        Else, return the VirtualMachineWithConfigContextSerializer
-        """
-
-        request = self.get_serializer_context()["request"]
-
-        if request is not None and "config_context" in request.query_params.get("exclude", []):
-            return serializers.VirtualMachineSerializer
-
-        return serializers.VirtualMachineWithConfigContextSerializer
 
 
 class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):

@@ -30,7 +30,6 @@ from nautobot.dcim.constants import (
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
-
 from nautobot.extras.models import (
     RelationshipModel,
     Status,

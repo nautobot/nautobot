@@ -1,20 +1,7 @@
 import { lazy } from "react";
 
 import NautobotApps from "../app_imports";
-
-function EmptyElement() {
-    return <></>;
-}
-
-function findOrEmpty(module, key) {
-    return key in module ? module[key] : EmptyElement;
-}
-
-function my_import_as_function(module_name, component_name) {
-    return NautobotApps[module_name]
-        .then((module) => ({ default: findOrEmpty(module, component_name) }))
-        .catch({ default: EmptyElement });
-}
+import { getComponentFromModule } from "../utils";
 
 function get_components() {
     var base = {};
@@ -34,7 +21,7 @@ function get_components() {
                                     base["CustomViews"][route] = {};
                                 base["CustomViews"][route][view_action] = lazy(
                                     () =>
-                                        my_import_as_function(
+                                        getComponentFromModule(
                                             app_label,
                                             component
                                         )
@@ -49,13 +36,14 @@ function get_components() {
                 // eslint-disable-next-line
                 Object.entries(value.default.full_width_components).map(
                     ([route, components]) => {
-                        if (!base["FullWidthComponents"][route])
+                        if (!base["FullWidthComponents"][route]) {
                             base["FullWidthComponents"][route] = [];
+                        }
                         // eslint-disable-next-line
                         components.map((component) => {
                             base["FullWidthComponents"][route].push(
                                 lazy(() =>
-                                    my_import_as_function(app_label, component)
+                                    getComponentFromModule(app_label, component)
                                 )
                             );
                         });
