@@ -97,6 +97,7 @@ class JobVariablesTest(TestCase):
         data = {"var1": "taupe"}
         form = ChoiceVarJob().as_form(data)
         self.assertFalse(form.is_valid())
+        self.assertIn("var1", form.errors)
 
     def test_multichoicevar(self):
         # Validate single choice
@@ -115,12 +116,9 @@ class JobVariablesTest(TestCase):
         data = {"var1": "taupe"}
         form = MultiChoiceVarJob().as_form(data)
         self.assertFalse(form.is_valid())
+        self.assertIn("var1", form.errors)
 
     def test_objectvar(self):
-        # Populate some objects
-        for i in range(1, 6):
-            Role(name=f"Device Role {i}").save()
-
         # Validate valid data
         data = {"var1": Role.objects.get_for_model(Device).first().pk}
         form = ObjectVarJob().as_form(data)
@@ -128,10 +126,6 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"].pk, data["var1"])
 
     def test_multiobjectvar(self):
-        # Populate some objects
-        for i in range(1, 6):
-            Role(name=f"Device Role {i}").save()
-
         # Validate valid data
         data = {"var1": [role.pk for role in Role.objects.all()[:3]]}
         form = MultiObjectVarJob().as_form(data)
