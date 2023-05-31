@@ -14,13 +14,16 @@ def process_namespaces(apps, schema_editor):
     # Fail if any interface or vm interface has IPs with different VRFs
     check_interface_vrfs(apps)
 
+    # Prefix Broadcast is a derived field, so we should update it before we start
+    ensure_correct_prefix_broadcast(apps)
+
+    # Cleanup Prefixes and IPAddresses version fields
+    add_prefix_and_ip_address_version(apps)
+
     # VRFs
     process_vrfs(apps)
 
-    add_prefix_and_ip_address_version(apps)
-
     # IPAddresses
-    # TODO: deduplicate IP addresses
     process_ip_addresses(apps)
 
     # Prefixes
@@ -163,6 +166,9 @@ def process_ip_addresses(apps):
         new_parent = generate_parent_prefix(apps, orphaned_ip)
         network = new_parent.network
         prefix_length = new_parent.prefixlen
+        broadcast = new_parent[
+            -1
+        ]  # For when we need to create a new Prefix, since we won't be calling Prefix._deconstruct_prefix()
         potential_parents = Prefix.objects.filter(network=network, prefix_length=prefix_length).exclude(
             ip_addresses__host=orphaned_ip.host
         )
@@ -173,6 +179,7 @@ def process_ip_addresses(apps):
             new_parent = Prefix.objects.create(
                 ip_version=orphaned_ip.ip_version,
                 network=network,
+                broadcast=broadcast,
                 tenant=orphaned_ip.tenant,
                 vrf=orphaned_ip.vrf,
                 prefix_length=prefix_length,
@@ -574,3 +581,22 @@ def validate_cidr(apps, value):
         return netaddr.IPNetwork(value)
     except netaddr.AddrFormatError as err:
         raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
+
+
+def ensure_correct_prefix_broadcast(apps):
+    """
+    Ensure that the prefix broadcast address is correct.
+
+    Args:
+        apps: Django apps module
+    """
+    Prefix = apps.get_model("ipam", "Prefix")
+
+    for prefix in Prefix.objects.all():
+        true_broadcast = str(netaddr.IPNetwork(f"{prefix.network}/{prefix.prefix_length}")[-1])
+        if prefix.broadcast != true_broadcast:
+            print(
+                f"Updating {prefix.network}/{prefix.prefix_length} broadcast from {prefix.broadcast} to {true_broadcast}"
+            )
+            prefix.broadcast = true_broadcast
+            prefix.save()
