@@ -171,6 +171,7 @@ def process_ip_addresses(apps):
 
         else:
             new_parent = Prefix.objects.create(
+                ip_version=orphaned_ip.ip_version,
                 network=network,
                 tenant=orphaned_ip.tenant,
                 vrf=orphaned_ip.vrf,

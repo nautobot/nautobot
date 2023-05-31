@@ -28,8 +28,8 @@ def reverse_it(apps, schema_editor):
     VMInterface.objects.update(vrf=None)
 
     # Clear parenting.
-    IPAddress.objects.update(parent=None)
-    Prefix.objects.update(parent=None)
+    IPAddress.objects.update(parent=None, ip_version=None)
+    Prefix.objects.update(parent=None, ip_version=None)
 
     # Remove objects created by migrations.
     Prefix.objects.filter(description__startswith="Created by Nautobot").delete()
