@@ -61,40 +61,64 @@ class IPAddressToInterfaceTest(TestCase):
 
     def test_removing_ip_addresses_containing_host_device_primary_ip_nullifies_host_device_primary_ip(self):
         """
-        Validate we cannot remove an IPAddress from an Interface that is the host Device's primary ip.
+        Test that removing IPAddress from an Interface that is the host Device's primary ip nullifies the primary_ip field.
         """
-        dev_ip_addr = IPAddress.objects.first()
+        dev_ip_addr = IPAddress.objects.last()
         self.test_int1.add_ip_addresses(dev_ip_addr)
-        ip_to_interface = IPAddressToInterface.objects.get(interface=self.test_int1, ip_address=dev_ip_addr)
-        self.assertIsNotNone(ip_to_interface)
+        self.test_int2.add_ip_addresses(dev_ip_addr)
+        ip_to_interface_1 = IPAddressToInterface.objects.get(interface=self.test_int1, ip_address=dev_ip_addr)
+        ip_to_interface_2 = IPAddressToInterface.objects.get(interface=self.test_int2, ip_address=dev_ip_addr)
+        self.assertIsNotNone(ip_to_interface_1)
+        self.assertIsNotNone(ip_to_interface_2)
         if dev_ip_addr.family == 4:
             self.test_device.primary_ip4 = dev_ip_addr
         else:
             self.test_device.primary_ip6 = dev_ip_addr
         self.test_device.save()
+        # You can delete IPAddress from the first Interface without nullifying primary_ip field
+        # Since the second Interface still contains that IPAddress
         self.test_int1.remove_ip_addresses(dev_ip_addr)
+        self.test_device.refresh_from_db()
+        if dev_ip_addr.family == 4:
+            self.assertEqual(self.test_device.primary_ip4, dev_ip_addr)
+        else:
+            self.assertEqual(self.test_device.primary_ip6, dev_ip_addr)
+        # This operation should nullify the device's primary_ip field since test_int2 is the only Interface
+        # that contains the primary ip
+        self.test_int2.remove_ip_addresses(dev_ip_addr)
         self.test_device.refresh_from_db()
         if dev_ip_addr.family == 4:
             self.assertEqual(self.test_device.primary_ip4, None)
         else:
             self.assertEqual(self.test_device.primary_ip6, None)
 
-    def test_removing_ip_addresses_containing_host_virtual_machine_primary_ip_nullifies_host_virtual_machine_primary_ip(
-        self,
-    ):
+    def test_removing_ip_addresses_containing_host_vm_primary_ip_nullifies_host_vm_primary_ip(self):
         """
-        Validate we cannot remove an IPAddress from an Interface that is the host Virtual Machine's primary ip.
+        Test that removing IPAddress from an Interface that is the host Virtual Machine's primary ip nullifies the primary_ip field.
         """
-        vm_ip_addr = IPAddress.objects.first()
+        vm_ip_addr = IPAddress.objects.last()
         self.test_vmint1.add_ip_addresses(vm_ip_addr)
-        ip_to_vminterface = IPAddressToInterface.objects.get(vm_interface=self.test_vmint1, ip_address=vm_ip_addr)
-        self.assertIsNotNone(ip_to_vminterface)
+        self.test_vmint2.add_ip_addresses(vm_ip_addr)
+        ip_to_vminterface_1 = IPAddressToInterface.objects.get(vm_interface=self.test_vmint1, ip_address=vm_ip_addr)
+        ip_to_vminterface_2 = IPAddressToInterface.objects.get(vm_interface=self.test_vmint2, ip_address=vm_ip_addr)
+        self.assertIsNotNone(ip_to_vminterface_1)
+        self.assertIsNotNone(ip_to_vminterface_2)
         if vm_ip_addr.family == 4:
             self.test_vm.primary_ip4 = vm_ip_addr
         else:
             self.test_vm.primary_ip6 = vm_ip_addr
         self.test_vm.save()
+        # You can delete IPAddress from the first Interface without nullifying primary_ip field
+        # Since the second Interface still contains that IPAddress
         self.test_vmint1.remove_ip_addresses(vm_ip_addr)
+        self.test_vm.refresh_from_db()
+        if vm_ip_addr.family == 4:
+            self.assertEqual(self.test_vm.primary_ip4, vm_ip_addr)
+        else:
+            self.assertEqual(self.test_vm.primary_ip6, vm_ip_addr)
+        # This operation should nullify the device's primary_ip field since test_int2 is the only Interface
+        # that contains the primary ip
+        self.test_vmint2.remove_ip_addresses(vm_ip_addr)
         self.test_vm.refresh_from_db()
         if vm_ip_addr.family == 4:
             self.assertEqual(self.test_vm.primary_ip4, None)

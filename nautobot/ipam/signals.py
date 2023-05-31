@@ -14,12 +14,23 @@ def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
 
     if getattr(instance, "interface"):
         host = instance.interface.device
+        other_assignments_exist = (
+            IPAddressToInterface.objects.filter(interface__device=host, ip_address=instance.ip_address)
+            .exclude(id=instance.id)
+            .exists()
+        )
     else:
         host = instance.vm_interface.virtual_machine
+        other_assignments_exist = (
+            IPAddressToInterface.objects.filter(vm_interface__virtual_machine=host, ip_address=instance.ip_address)
+            .exclude(id=instance.id)
+            .exists()
+        )
 
-    if instance.ip_address == host.primary_ip4:
+    # Only nullify the primary_ip field if no other interfaces/vm_interfaces have the ip_address
+    if not other_assignments_exist and instance.ip_address == host.primary_ip4:
         host.primary_ip4 = None
-    elif instance.ip_address == host.primary_ip6:
+    elif not other_assignments_exist and instance.ip_address == host.primary_ip6:
         host.primary_ip6 = None
     host.save()
 
