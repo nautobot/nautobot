@@ -81,7 +81,6 @@ def process_vrfs(apps):
     global_ns_vrfs = vrfs.filter(namespace__name="Global")
 
     # Case 0: VRFs with enforce_unique move to their own Namespace.
-    # TODO(jathan): Should we also check for Prefix overlap here, too?
     for vrf in unique_non_empty_vrfs:
         print(f">>> Processing migration for VRF {vrf.name!r}, Namespace {vrf.namespace.name!r}")
         vrf.namespace = create_vrf_namespace(apps, vrf)
@@ -89,7 +88,7 @@ def process_vrfs(apps):
         vrf.prefixes.update(namespace=vrf.namespace)
         print(f"    VRF {vrf.name!r} migrated to Namespace {vrf.namespace.name!r}")
 
-    # Case 00: Unique fields vs. Namespaces (name/rd) move to a Cleanup Namespace.
+    # Case 00: VRFs with duplicate names or prefixes move to a Cleanup Namespace.
     # Case 1 is not included here because it is a no-op.
     for vrf in global_ns_vrfs.annotate(prefix_count=models.Count("prefixes")).order_by("-prefix_count"):
         print(f">>> Processing migration for VRF {vrf.name!r}, Namespace {vrf.namespace.name!r}")
@@ -133,7 +132,7 @@ def process_ip_addresses(apps):
 
     - For IPs with found parents: Set that parent and save the `IPAddress`.
     - For orphaned IPs (missing parents):
-        - Generate a `Prefix` from the `IPAddress`
+        - Generate a network from the `IPAddress`
         - Get or create the parent `Prefix`
         - Set that as the parent and save the `IPAddress`
 
@@ -150,7 +149,6 @@ def process_ip_addresses(apps):
         for prefix in potential_parents:
             if not prefix.ip_addresses.filter(host=ip.host).exists():
                 ip.parent = prefix
-                ip.ip_version = prefix.ip_version
                 ip.save()
                 break
 
@@ -180,7 +178,6 @@ def process_ip_addresses(apps):
                 description="Created by Nautobot data migrations.",
             )
         orphaned_ip.parent = new_parent
-        orphaned_ip.ip_version = new_parent.ip_version
         orphaned_ip.save()
 
         parent_repr = str(validate_cidr(apps, new_parent))
@@ -216,35 +213,34 @@ def process_prefix_duplicates(apps):
     for ns in namespaces:
         dupe_prefixes = find_duplicate_prefixes(apps, ns)
 
-        # process tenant with the fewest prefixes first
-        for tenant in (
+        # process tenants in order of number of related prefixes (fewest first)
+        tenant_ids_sorted = (
             Prefix.objects.filter(namespace=ns)
             .values("tenant")
             .annotate(tenant_count=models.Count("tenant"))
             .order_by("tenant_count")
             .values_list("tenant", flat=True)
-        ):
-            for dupe in dupe_prefixes:
-                print(f">>> Processing Namespace migration for duplicate Prefix {dupe!r}")
-                network, prefix_length = dupe.split("/")
-                objects = Prefix.objects.filter(
-                    network=network, prefix_length=prefix_length, namespace=ns, tenant_id=tenant
-                )
+        )
+        for dupe in dupe_prefixes:
+            print(f">>> Processing Namespace migration for duplicate Prefix {dupe!r}")
+            network, prefix_length = dupe.split("/")
+            objects = Prefix.objects.filter(network=network, prefix_length=prefix_length, namespace=ns)
+            # Leave the last instance of the Prefix in the original Namespace
+            last_prefix = objects.filter(tenant_id=tenant_ids_sorted.last()).last()
 
-                for _, obj in enumerate(objects):
-                    # Leave the last instance of the Prefix in the Namespace
-                    prefix_count = Prefix.objects.filter(
-                        namespace=ns, network=obj.network, prefix_length=obj.prefix_length
-                    ).count()
-                    if prefix_count == 1:
+            for tenant_id in tenant_ids_sorted:
+                for _, prefix in enumerate(objects):
+                    if prefix == last_prefix or prefix.tenant_id != tenant_id:
                         continue
 
-                    base_name = "Cleanup Namespace"
-                    if obj.tenant is not None:
-                        base_name += f" {obj.tenant.name}"
-                    obj.namespace = get_next_prefix_namespace(apps, obj, base_name=base_name)
-                    obj.save()
-                    print(f"    Prefix {dupe!r} migrated from Namespace {ns.name} to Namespace {obj.namespace.name!r}")
+                    namespace_base_name = BASE_NAME
+                    if prefix.tenant is not None:
+                        namespace_base_name += f" {prefix.tenant.name}"
+                    prefix.namespace = get_next_prefix_namespace(apps, prefix, base_name=namespace_base_name)
+                    prefix.save()
+                    print(
+                        f"    Prefix {dupe!r} migrated from Namespace {ns.name} to Namespace {prefix.namespace.name!r}"
+                    )
 
 
 def reparent_prefixes(apps):
@@ -318,9 +314,9 @@ def process_interfaces(apps):
     # TODO(jathan): We need to also account for whether that IP's parent does not have a conflict
     # where the parent's VRF doesn't match the VRF of the IPAddress assigned to the [VM]Interface.
 
-    # Case 2: Interface has one or more IP address assigned to it that result in a single assigned
-    # VRF (none is excluded) to its Interface should adopt the VRF of the IP Address assigned to it,
-    # Device should adopt an assocation to the VRF (VRFDeviceAssignment) as well.
+    # Case 2: Interface has one or more IP address assigned to it with no more than 1 distinct associated VRF (none is excluded)
+    # The interface's VRF foreign key should be set to the VRF of any related IP Address with a non-null VRF.
+    # The interface's parent device or virtual machine should adopt an assocation to the VRF (VRFDeviceAssignment) as well.
     for ifc in ip_interfaces:
         print(f">>> Processing VRF migration for numbered Interface {ifc.name!r}")
         # Set the Interface VRF to that of the first assigned IPAddress.
