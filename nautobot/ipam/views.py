@@ -32,8 +32,9 @@ from .utils import (
 # Namespaces
 #
 
+
 def get_namespace_related_counts(instance, request):
-    """ Return counts of all IPAM objects related to the given Namespace. """
+    """Return counts of all IPAM objects related to the given Namespace."""
     return {
         "vrf_count": instance.vrfs.restrict(request.user, "view").count(),
         "prefix_count": instance.prefixes.restrict(request.user, "view").count(),
@@ -71,10 +72,7 @@ class NamespaceIPAddressesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Namespace
-        ip_addresses = (
-            instance.ip_addresses.restrict(request.user, "view")
-            .select_related("status")
-        )
+        ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("status")
 
         ip_address_table = tables.IPAddressTable(ip_addresses)
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
@@ -97,12 +95,14 @@ class NamespaceIPAddressesView(generic.ObjectView):
         bulk_querystring = f"namespace={instance.id}"
 
         context = super().get_extra_context(request, instance)
-        context.update({
-            "ip_address_table": ip_address_table,
-            "permissions": permissions,
-            "bulk_querystring": bulk_querystring,
-            "active_tab": "ip-addresses"
-        })
+        context.update(
+            {
+                "ip_address_table": ip_address_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "ip-addresses",
+            }
+        )
         context.update(get_namespace_related_counts(instance, request))
 
         return context
@@ -114,10 +114,7 @@ class NamespacePrefixesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all Prefixes belonging to this Namespace
-        prefixes = (
-            instance.prefixes.restrict(request.user, "view")
-            .select_related("status")
-        )
+        prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
 
         prefix_table = tables.PrefixTable(prefixes)
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
@@ -140,12 +137,14 @@ class NamespacePrefixesView(generic.ObjectView):
         bulk_querystring = f"namespace={instance.id}"
 
         context = super().get_extra_context(request, instance)
-        context.update({
-            "prefix_table": prefix_table,
-            "permissions": permissions,
-            "bulk_querystring": bulk_querystring,
-            "active_tab": "prefixes"
-        })
+        context.update(
+            {
+                "prefix_table": prefix_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "prefixes",
+            }
+        )
         context.update(get_namespace_related_counts(instance, request))
 
         return context
@@ -157,9 +156,7 @@ class NamespaceVRFsView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all VRFs belonging to this Namespace
-        vrfs = (
-            instance.vrfs.restrict(request.user, "view")
-        )
+        vrfs = instance.vrfs.restrict(request.user, "view")
 
         vrf_table = tables.VRFTable(vrfs)
         if request.user.has_perm("ipam.change_vrf") or request.user.has_perm("ipam.delete_vrf"):
@@ -180,17 +177,20 @@ class NamespaceVRFsView(generic.ObjectView):
             "delete": request.user.has_perm("ipam.delete_vrf"),
         }
         bulk_querystring = f"namespace={instance.id}"
-        
+
         context = super().get_extra_context(request, instance)
-        context.update({
-            "vrf_table": vrf_table,
-            "permissions": permissions,
-            "bulk_querystring": bulk_querystring,
-            "active_tab": "vrfs"
-        })
+        context.update(
+            {
+                "vrf_table": vrf_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "vrfs",
+            }
+        )
         context.update(get_namespace_related_counts(instance, request))
 
         return context
+
 
 #
 # VRFs
