@@ -6,6 +6,7 @@ from django.db.models import F, ProtectedError, Q
 from django.db.models.functions import Length
 
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.models.tree_queries import TreeManager, TreeQuerySet
 from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 
 
@@ -194,7 +195,7 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         return self.filter(the_filter)
 
 
-class PrefixQuerySet(BaseNetworkQuerySet):
+class PrefixQuerySet(TreeQuerySet, BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
 
     def ip_family(self, family):
@@ -379,6 +380,10 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             return possible_ancestors[0]
         except IndexError:
             raise self.model.DoesNotExist(f"Could not determine parent Prefix for {cidr}")
+
+
+class PrefixManager(TreeManager.from_queryset(PrefixQuerySet)):
+    pass
 
 
 class IPAddressQuerySet(BaseNetworkQuerySet):

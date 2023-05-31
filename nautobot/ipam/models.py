@@ -13,6 +13,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import RoleModelMixin, Status, StatusModel
@@ -25,7 +26,7 @@ from .constants import (
     VRF_RD_MAX_LENGTH,
 )
 from .fields import VarbinaryIPField
-from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
+from .querysets import IPAddressQuerySet, PrefixManager, RIRQuerySet
 from .validators import DNSValidator
 
 
@@ -392,7 +393,7 @@ class RIR(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
+class Prefix(TreeModel, PrimaryModel, StatusModel, RoleModelMixin):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
     Prefixes can optionally be assigned to Locations and VRFs.
@@ -472,7 +473,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    objects = BaseManager.from_queryset(PrefixQuerySet)()
+    objects = PrefixManager()
 
     # TODO: The current Prefix model has no appropriate natural key available yet.
     natural_key_field_names = ["id"]
@@ -497,10 +498,10 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     class Meta:
         ordering = (
-            "namespace",
-            "ip_version",
+            # "namespace",
             "network",
-            "prefix_length",
+            # "ip_version",
+            # "prefix_length",
         )
         index_together = [
             ["network", "broadcast", "prefix_length"],
@@ -731,28 +732,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         """
         return self.parent is None
 
-    def ancestors(self, ascending=False, include_self=False):
-        """
-        Return my ancestors descending from larger to smaller prefix lengths.
-
-        Args:
-            ascending (bool): If set, reverses the return order.
-            include_self (bool): Whether to include this Prefix in the list of subnets.
-        """
-        query = self.supernets(include_self=include_self)
-        if ascending:
-            query = query.reverse()
-        return query
-
-    def descendants(self, include_self=False):
-        """
-        Return all of my children!
-
-        Args:
-            include_self (bool): Whether to include this Prefix in the list of subnets.
-        """
-        return self.subnets(include_self=include_self)
-
     @cached_property
     def descendants_count(self):
         """Display count of descendants."""
@@ -763,19 +742,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         Returns the root node (the parent of all of my ancestors).
         """
         return self.ancestors().first()
-
-    def siblings(self, include_self=False):
-        """
-        Return my siblings. Root nodes are siblings to other root nodes.
-
-        Args:
-            include_self (bool): Whether to include this Prefix in the list of subnets.
-        """
-        query = Prefix.objects.filter(parent=self.parent)
-        if not include_self:
-            query = query.exclude(id=self.id)
-
-        return query
 
     def get_available_prefixes(self):
         """
