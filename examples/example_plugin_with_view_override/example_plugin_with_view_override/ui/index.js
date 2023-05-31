@@ -1,7 +1,8 @@
-export { default as PluginFullWidthPageComponent } from "./FullWidthPage.jsx";
+export { default as PluginFullWidthPageComponent } from "./FullWidthPage";
 export { default as ExamplePluginRetrieveViewOverride } from "./CustomView"
+export { default as ExamplePluginNonModelView } from "./NonModelView"
 
-const plugin_config = {
+const app_config = {
     full_width_components: {
         "dcim:sites": ["PluginFullWidthPageComponent"]
     },
@@ -11,7 +12,7 @@ const plugin_config = {
         "ipam:ip-addresses": {
             "retrieve": "ExamplePluginRetrieveViewOverride"
         }
-    }
+    },
 }
 
-export default plugin_config
+export default app_config

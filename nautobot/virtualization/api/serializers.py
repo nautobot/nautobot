@@ -54,19 +54,17 @@ class ClusterSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class VirtualMachineSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    config_context = serializers.SerializerMethodField()
+
     class Meta:
         model = VirtualMachine
         fields = "__all__"
         validators = []
 
-
-class VirtualMachineWithConfigContextSerializer(VirtualMachineSerializer):
-    config_context = serializers.SerializerMethodField()
-
     def get_field_names(self, declared_fields, info):
-        """Ensure that "config_contexts" is always included appropriately."""
+        """Config context is expensive to compute and so it's opt-in only."""
         fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "config_context")
+        self.extend_field_names(fields, "config_context", opt_in_only=True)
         return fields
 
     @extend_schema_field(serializers.DictField)

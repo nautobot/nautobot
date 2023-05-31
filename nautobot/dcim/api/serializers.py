@@ -472,6 +472,7 @@ class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
+    config_context = serializers.SerializerMethodField()
 
     class Meta:
         model = Device
@@ -485,10 +486,20 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         }
 
     def get_field_names(self, declared_fields, info):
-        """As parent_bay is the reverse side of a OneToOneField, DRF can handle it but it isn't auto-included."""
+        """
+        Add a couple of special fields to the serializer.
+
+        - As parent_bay is the reverse side of a OneToOneField, DRF can handle it but it isn't auto-included.
+        - Config context is expensive to compute and so it's opt-in only.
+        """
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "parent_bay")
+        self.extend_field_names(fields, "config_context", opt_in_only=True)
         return fields
+
+    @extend_schema_field(serializers.DictField)
+    def get_config_context(self, obj):
+        return obj.get_config_context()
 
     def validate(self, data):
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
@@ -504,20 +515,6 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         super().validate(data)
 
         return data
-
-
-class DeviceWithConfigContextSerializer(DeviceSerializer):
-    config_context = serializers.SerializerMethodField()
-
-    def get_field_names(self, declared_fields, info):
-        """Ensure that "config_contexts" is always included appropriately."""
-        fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "config_context")
-        return fields
-
-    @extend_schema_field(serializers.DictField)
-    def get_config_context(self, obj):
-        return obj.get_config_context()
 
 
 class DeviceNAPALMSerializer(serializers.Serializer):
