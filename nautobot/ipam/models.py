@@ -99,7 +99,6 @@ class VRF(PrimaryModel):
     name = models.CharField(max_length=100, db_index=True)
     rd = models.CharField(
         max_length=VRF_RD_MAX_LENGTH,
-        # unique=True,
         blank=True,
         null=True,
         verbose_name="Route distinguisher",
@@ -141,11 +140,8 @@ class VRF(PrimaryModel):
 
     clone_fields = [
         "tenant",
-        "enforce_unique",
         "description",
     ]
-    # TODO(jathan): Remove/revise this to account for Namespaces.
-    natural_key_field_names = ["name", "rd"]  # default auto-key is just "rd", but it's nullable!
 
     class Meta:
         ordering = ("namespace", "name", "rd")  # (name, rd) may be non-unique
@@ -928,7 +924,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     description = models.CharField(max_length=200, blank=True)
 
     clone_fields = [
-        "vrf",
         "tenant",
         "status",
         "role",

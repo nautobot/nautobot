@@ -263,10 +263,13 @@ class VRFDeviceAssignmentTable(BaseTable):
     """Table for displaying VRF Device Assignments with RD."""
 
     vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
-    device = tables.Column(linkify=lambda record: record.device.get_absolute_url(), accessor="device.name")
-    # TODO: fix this table to handle virtual_machine properly
+    device = tables.Column(
+        linkify=lambda record: record.device.get_absolute_url(), accessor="device.name", verbose_name="Device"
+    )
     virtual_machine = tables.Column(
-        linkify=lambda record: record.virtual_machine.get_absolute_url(), accessor="virtual_machine.name"
+        linkify=lambda record: record.virtual_machine.get_absolute_url(),
+        accessor="virtual_machine.name",
+        verbose_name="Virtual Machine",
     )
     rd = tables.Column(verbose_name="VRF RD")
     tenant = TenantColumn(accessor="vrf.tenant")

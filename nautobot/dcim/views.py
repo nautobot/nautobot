@@ -1110,8 +1110,7 @@ class DeviceView(generic.ObjectView):
 
         # VRF assignments
         vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
-        vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
-        vrf_table.exclude = ("device",)
+        vrf_table = VRFDeviceAssignmentTable(vrf_assignments, exclude=("virtual_machine", "device"))
 
         return {
             "services": services,
