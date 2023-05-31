@@ -163,12 +163,9 @@ def process_ip_addresses(apps):
         ip_repr = str(validate_cidr(apps, orphaned_ip))
         print(f">>> Processing Parent migration for orphaned IPAddress {ip_repr!r}")
 
-        new_parent = generate_parent_prefix(apps, orphaned_ip)
-        network = new_parent.network
-        prefix_length = new_parent.prefixlen
-        broadcast = new_parent[
-            -1
-        ]  # For when we need to create a new Prefix, since we won't be calling Prefix._deconstruct_prefix()
+        new_parent_cidr = generate_parent_prefix(apps, orphaned_ip)
+        network = new_parent_cidr.network
+        prefix_length = new_parent_cidr.prefixlen
         potential_parents = Prefix.objects.filter(network=network, prefix_length=prefix_length).exclude(
             ip_addresses__host=orphaned_ip.host
         )
@@ -176,6 +173,7 @@ def process_ip_addresses(apps):
             new_parent = potential_parents.first()
 
         else:
+            broadcast = new_parent_cidr[-1]
             new_parent = Prefix.objects.create(
                 ip_version=orphaned_ip.ip_version,
                 network=network,
