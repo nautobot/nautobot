@@ -6,7 +6,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models
 
-from nautobot.core.models.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import extras_features
 
@@ -24,7 +24,11 @@ class GitRepository(PrimaryModel):
         max_length=100,
         unique=True,
     )
-    slug = AutoSlugField(populate_from="name")
+    slug = AutoSlugField(
+        populate_from="name",
+        help_text="Internal field name. Please use underscores rather than dashes in this key.",
+        slugify_function=slugify_dashes_to_underscores,
+    )
 
     remote_url = models.URLField(
         max_length=255,

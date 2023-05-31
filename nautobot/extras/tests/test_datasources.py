@@ -192,6 +192,12 @@ class GitTest(TransactionTestCase):
         os.remove(os.path.join(path, "jobs", "__init__.py"))
         return mock.DEFAULT
 
+    def assert_repo_slug_valid_python_package_name(self):
+        git_repository = GitRepository.objects.create(
+            name="1 Very-Bad Git_____Repo Name (2)", remote_url="http://localhost/git.git"
+        )
+        self.assertEqual(git_repository.slug, "a1_very_bad_git_____repo_name_2")
+
     def assert_config_context_schema_record_exists(self, name):
         """Helper Func to assert ConfigContextSchema with name=name exists"""
         config_context_schema_record = ConfigContextSchema.objects.get(
