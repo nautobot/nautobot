@@ -121,7 +121,7 @@ class Command(BaseCommand):
                     data.append({"path": base_url + url_path, "component": component})
             return data
         except (AttributeError, ModuleNotFoundError):
-            # If an app does not include a url or its url.py file does not include a urlspattern, skip.
+            # If an app does not include a url or its url.py file does not include a urlpatterns, skip.
             return data
 
     def render_app_imports(self):
