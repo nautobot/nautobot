@@ -55,7 +55,7 @@ def check_interface_vrfs(apps):
     )
 
     if interfaces_with_multiple_vrfs.exists() or vm_interfaces_with_multiple_vrfs.exists():
-        raise Exception(
+        raise ValidationError(
             "You cannot migrate Interfaces or VMInterfaces that have IPs with differing VRFs.",
             list(interfaces_with_multiple_vrfs),
             list(vm_interfaces_with_multiple_vrfs),
@@ -189,7 +189,7 @@ def process_ip_addresses(apps):
 
     # By this point we should arrive at NO orphaned IPAddress objects.
     if IPAddress.objects.filter(parent__isnull=True).exists():
-        raise SystemExit("OH NOES we still have orphaned IPs! Stop everything and find out why!")
+        raise SystemExit("Unexpected orphaned IPAddress objects found.")
 
 
 def process_prefix_duplicates(apps):
@@ -257,7 +257,7 @@ def reparent_prefixes(apps):
         try:
             parent = get_closest_parent(apps, pfx, pfx.namespace.prefixes.all())
             if pfx.namespace != parent.namespace:
-                raise Exception("Prefix and parent are in different Namespaces")
+                raise ValidationError("Prefix and parent are in different Namespaces")
             print(f"\n>>> {pfx.network}/{pfx.prefix_length} parent: {parent.network}/{parent.prefix_length}")
             pfx.parent = parent
             pfx.save()
