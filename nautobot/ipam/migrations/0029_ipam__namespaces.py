@@ -148,11 +148,6 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "prefixes",
             },
         ),
-        # >>> Prefix unique_together must be deferred until after Namespace is created
-        # migrations.AlterUniqueTogether(
-        #     name="prefix",
-        #     unique_together={("namespace", "network", "prefix_length")},
-        # ),
         migrations.AddField(
             model_name="vrf",
             name="devices",
@@ -175,12 +170,6 @@ class Migration(migrations.Migration):
                 to="ipam.namespace",
             ),
         ),
-        # >>> VRF prefixes m2m can't be added until after processing.
-        # migrations.AddField(
-        #     model_name="vrf",
-        #     name="prefixes",
-        #     field=models.ManyToManyField(related_name="vrfs", through="ipam.VRFPrefixAssignment", to="ipam.Prefix"),
-        # ),
         migrations.AlterField(
             model_name="vrf",
             name="rd",
@@ -188,29 +177,13 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name="vrf",
-            options={"ordering": ("namespace", "name"), "verbose_name": "VRF", "verbose_name_plural": "VRFs"},
+            options={"ordering": ("namespace", "name", "rd"), "verbose_name": "VRF", "verbose_name_plural": "VRFs"},
         ),
-        # >>> VRF unique_together can't be altered until after processing.
-        # migrations.AlterUniqueTogether(
-        #     name="vrf",
-        #     unique_together={("namespace", "name"), ("namespace", "rd")},
-        # ),
-        # >>> VRF relations can't be removed until after processing.
-        # migrations.RemoveField(
-        #     model_name="ipaddress",
-        #     name="vrf",
-        # ),
-        # migrations.RemoveField(
-        #     model_name="prefix",
-        #     name="vrf",
-        # ),
-        # migrations.RemoveField(
-        #     model_name="vrf",
-        #     name="enforce_unique",
-        # ),
-        #
-        # Folded in from 0030_ipam__prefix__add_parent.py
-        #
+        migrations.AddField(
+            model_name="vrf",
+            name="prefixes_m2m",
+            field=models.ManyToManyField(related_name="vrfs_m2m", through="ipam.VRFPrefixAssignment", to="ipam.Prefix"),
+        ),
         migrations.AddField(
             model_name="prefix",
             name="parent",
@@ -255,9 +228,5 @@ class Migration(migrations.Migration):
                 "verbose_name": "IP address",
                 "verbose_name_plural": "IP addresses",
             },
-        ),
-        migrations.AlterUniqueTogether(
-            name="ipaddress",
-            unique_together={("parent", "host")},
         ),
     ]
