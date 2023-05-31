@@ -213,16 +213,22 @@ def process_prefix_duplicates(apps):
     namespaces.insert(0, global_namespace)
 
     for ns in namespaces:
-        # move prefixes without a tenant on the second pass if necessary
-        for tenant_isnull in (False, True):
-            dupe_prefixes = find_duplicate_prefixes(apps, ns)
+        dupe_prefixes = find_duplicate_prefixes(apps, ns)
 
+        # process tenant with the fewest prefixes first
+        for tenant in (
+            Prefix.objects.filter(namespace=ns)
+            .values("tenant")
+            .annotate(tenant_count=models.Count("tenant"))
+            .order_by("tenant_count")
+            .values_list("tenant", flat=True)
+        ):
             for dupe in dupe_prefixes:
                 print(f">>> Processing Namespace migration for duplicate Prefix {dupe!r}")
                 network, prefix_length = dupe.split("/")
                 objects = Prefix.objects.filter(
-                    network=network, prefix_length=prefix_length, tenant__isnull=tenant_isnull, namespace=ns
-                ).order_by("tenant")
+                    network=network, prefix_length=prefix_length, namespace=ns, tenant_id=tenant
+                )
 
                 for _, obj in enumerate(objects):
                     # Leave the last instance of the Prefix in the Namespace
@@ -233,7 +239,7 @@ def process_prefix_duplicates(apps):
                         continue
 
                     base_name = "Cleanup Namespace"
-                    if not tenant_isnull:
+                    if obj.tenant is not None:
                         base_name += f" {obj.tenant.name}"
                     obj.namespace = get_next_prefix_namespace(apps, obj, base_name=base_name)
                     obj.save()
