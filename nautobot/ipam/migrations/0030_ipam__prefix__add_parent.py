@@ -33,6 +33,7 @@ def reverse_it(apps, schema_editor):
 
     # Remove objects created by migrations.
     Prefix.objects.filter(description__startswith="Created by Nautobot").delete()
+    VRF.objects.filter(description__startswith="Created by Nautobot").delete()
 
 
 class Migration(migrations.Migration):
