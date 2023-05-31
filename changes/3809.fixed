@@ -1,0 +1,1 @@
+Fixed a bug that prevented  `__init__()` function of `bulk_create_form_class` being overridden in NautobotUIViewSet.
