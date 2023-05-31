@@ -819,6 +819,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     }
     choices_fields = ["provided_contents"]
     slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
