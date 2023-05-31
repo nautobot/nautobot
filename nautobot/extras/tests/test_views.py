@@ -581,6 +581,7 @@ class GitRepositoryTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = GitRepository
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
