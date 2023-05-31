@@ -66,6 +66,11 @@ class Namespace(PrimaryModel):
         null=True,
     )
 
+    @property
+    def ip_addresses(self):
+        """Return all IPAddresses in this Namespace."""
+        return IPAddress.objects.filter(parent__namespace=self).distinct()
+
     class Meta:
         ordering = ("name",)
 
