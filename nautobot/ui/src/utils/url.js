@@ -7,7 +7,7 @@ export function uiUrl(apiUrl) {
 export function buildUrl(appLabel, modelName, pk = null, isPlugin = false) {
     let url = `/${appLabel}/${modelName}/`;
     if (isPlugin) {
-        url = "/plugin" + url;
+        url = "/plugins" + url;
     }
     if (pk) {
         url += pk + "/";

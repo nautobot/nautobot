@@ -399,7 +399,6 @@ class SerializerDetailViewConfig:
             {
                 model_verbose_name.capitalize(): {
                     "fields": [field["name"] for field in other_fields],
-                    "template": "list",
                 }
             },
         ]

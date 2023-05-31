@@ -115,9 +115,70 @@ function ObjectRetrieveHeading({ data }) {
     );
 }
 
+function RenderTable({ fields, schema, data }) {
+    return (
+        <Table>
+            <Tbody>
+                {fields.map((fieldName, idx) => {
+                    const fieldSchema = schema[fieldName];
+                    const fieldData = data[fieldName];
+                    let url = null;
+                    if (fieldSchema?.appLabel) {
+                        url = buildUrl(
+                            fieldSchema.appLabel,
+                            fieldSchema.modelName,
+                            fieldData?.id
+                        );
+                    }
+                    return (
+                        <Tr key={idx}>
+                            <Td>{fieldSchema?.title}</Td>
+                            <Td>
+                                <TableItem obj={fieldData} url={url} />
+                            </Td>
+                        </Tr>
+                    );
+                })}
+            </Tbody>
+        </Table>
+    );
+}
 
+function RenderGroup({ fields, title, schema, data }) {
+    return (
+        <Card marginBottom="10">
+            <CardHeader marginBottom="3">
+                <Heading display="flex" alignItems="center" gap="5px">
+                    <NtcThumbnailIcon width="25px" height="30px" /> {title}
+                </Heading>
+            </CardHeader>
+            <TableContainer>
+                <RenderTable fields={fields} schema={schema} data={data} />
+            </TableContainer>
+        </Card>
+    );
+}
 
-function ObjectRetrieveTab({ layoutSchema, schema, data }) {
+function RenderCol({ tabData, data, schema }) {
+    return (
+        <NautobotGrid columns="2">
+            {tabData.map((group, idx) => (
+                <NautobotGridItem key={idx}>
+                    {Object.entries(group).map(([title, { fields }], idx) => (
+                        <RenderGroup
+                            fields={fields}
+                            data={data}
+                            schema={schema}
+                            title={title}
+                        />
+                    ))}
+                </NautobotGridItem>
+            ))}
+        </NautobotGrid>
+    );
+}
+
+function RenderTabs({ layoutSchema, schema, data }) {
     return (
         <Tabs>
             <TabList pl="md">
@@ -128,91 +189,11 @@ function ObjectRetrieveTab({ layoutSchema, schema, data }) {
             <TabPanels>
                 {Object.entries(layoutSchema.tabs).map(([_, tabData], idx) => (
                     <TabPanel key={idx}>
-                        <NautobotGrid columns="2">
-                            {tabData.map((group, idx) => (
-                                <NautobotGridItem key={idx}>
-                                    {Object.entries(group).map(
-                                        ([title, { fields }], idx) => (
-                                            <Card key={idx} marginBottom="10">
-                                                <CardHeader marginBottom="3">
-                                                    <Heading
-                                                        display="flex"
-                                                        alignItems="center"
-                                                        gap="5px"
-                                                    >
-                                                        <NtcThumbnailIcon
-                                                            width="25px"
-                                                            height="30px"
-                                                        />{" "}
-                                                        {title}
-                                                    </Heading>
-                                                </CardHeader>
-                                                <TableContainer>
-                                                    <Table>
-                                                        <Tbody>
-                                                            {fields.map(
-                                                                (
-                                                                    fieldName,
-                                                                    idx
-                                                                ) => {
-                                                                    // Only render a row if field exists in the schema
-                                                                    const fieldSchema =
-                                                                        schema[
-                                                                            fieldName
-                                                                        ];
-                                                                    if (!fieldSchema) {
-                                                                        return null;
-                                                                    }
-                                                                    const fieldData =
-                                                                        data[
-                                                                            fieldName
-                                                                        ];
-                                                                    let url =
-                                                                        null;
-                                                                    if (
-                                                                        fieldSchema?.appLabel
-                                                                    ) {
-                                                                        url =
-                                                                            buildUrl(
-                                                                                fieldSchema.appLabel,
-                                                                                fieldSchema.modelName,
-                                                                                fieldData?.id
-                                                                            );
-                                                                    }
-                                                                    return (
-                                                                        <Tr
-                                                                            key={
-                                                                                idx
-                                                                            }
-                                                                        >
-                                                                            <Td>
-                                                                                {
-                                                                                    fieldSchema.title
-                                                                                }
-                                                                            </Td>
-                                                                            <Td>
-                                                                                <TableItem
-                                                                                    obj={
-                                                                                        fieldData
-                                                                                    }
-                                                                                    url={
-                                                                                        url
-                                                                                    }
-                                                                                />
-                                                                            </Td>
-                                                                        </Tr>
-                                                                    );
-                                                                }
-                                                            )}
-                                                        </Tbody>
-                                                    </Table>
-                                                </TableContainer>
-                                            </Card>
-                                        )
-                                    )}
-                                </NautobotGridItem>
-                            ))}
-                        </NautobotGrid>
+                        <RenderCol
+                            tabData={tabData}
+                            data={data}
+                            schema={schema}
+                        />
                     </TabPanel>
                 ))}
             </TabPanels>
@@ -230,10 +211,10 @@ export default function ObjectRetrieve({ api_url }) {
         model_name,
         uuid: object_id,
     });
-    const { 
+    const {
         data: schemaData,
-        isLoading: schemaIsLoading, 
-        isError: schemaIsError, 
+        isLoading: schemaIsLoading,
+        isError: schemaIsError,
     } = useGetRESTAPIQuery({
         app_label,
         model_name,
@@ -275,7 +256,6 @@ export default function ObjectRetrieve({ api_url }) {
     const objectRetrieveTabSchema = {
         tabs: {
             Location: schemaData.view_options.retrieve,
-            Advanced: [],
             Notes: [],
             "Change Logs": [],
         },
@@ -285,8 +265,7 @@ export default function ObjectRetrieve({ api_url }) {
         <GenericView objectData={data}>
             <Box background="white-0" borderRadius="md">
                 <ObjectRetrieveHeading data={data} />
-                
-                <ObjectRetrieveTab
+                <RenderTabs
                     schema={schemaData.schema.properties}
                     layoutSchema={objectRetrieveTabSchema}
                     data={data}

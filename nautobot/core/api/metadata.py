@@ -74,14 +74,16 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
                 result["required"] = type_map_obj.get("required", [])
             result["items"] = self._get_field_properties(field.child_relation, "")
             result["uniqueItems"] = True
-        elif isinstance(field, NautobotHyperlinkedRelatedField):
+        elif isinstance(field, drf_serializers.RelatedField):
             result["format"] = type_map_obj["format"]
+            result["uniqueItems"] = True
             model_options = field.queryset.model._meta
-            # Custom Keyword: modelName and appName
+            result["required"] = field.required
+            # Custom Keyword: modelName and appLabel
             # This Keyword represents the model name of the uuid model
-            # and appName represents the app_name of the model
+            # and appLabel represents the app_name of the model
             result["modelName"] = model_options.model_name
-            result["appName"] = model_options.app_label
+            result["appLabel"] = model_options.app_label
         else:
             if field.allow_null:
                 result["type"] = [result["type"], "null"]
@@ -277,9 +279,8 @@ class NautobotMetadata(SimpleMetadata):
         return metadata
 
     def determine_detail_view_schema(self, serializer):
-        view_config = getattr(
-            serializer.Meta,
-            "detail_view_config",
-            SerializerDetailViewConfig(serializer).view_config(),
-        )
+        if hasattr(serializer.Meta, "detail_view_config"):
+            view_config = serializer.Meta.detail_view_config
+        else:
+            view_config = SerializerDetailViewConfig(serializer).view_config()
         return view_config
