@@ -54,7 +54,21 @@ class Migration(migrations.Migration):
                 (
                     "device",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, related_name="vrf_assignments", to="dcim.device"
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="vrf_assignments",
+                        to="dcim.device",
+                    ),
+                ),
+                (
+                    "virtual_machine",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="vrf_assignments",
+                        to="virtualization.virtualmachine",
                     ),
                 ),
                 (
@@ -65,7 +79,12 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "unique_together": {("device", "rd", "name"), ("vrf", "device")},
+                "unique_together": {
+                    ("device", "rd", "name"),
+                    ("vrf", "virtual_machine"),
+                    ("virtual_machine", "rd", "name"),
+                    ("vrf", "device"),
+                },
             },
         ),
         migrations.CreateModel(
@@ -129,14 +148,17 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "prefixes",
             },
         ),
-        migrations.AlterUniqueTogether(
-            name="prefix",
-            unique_together={("namespace", "network", "prefix_length")},
-        ),
         migrations.AddField(
             model_name="vrf",
             name="devices",
             field=models.ManyToManyField(related_name="vrfs", through="ipam.VRFDeviceAssignment", to="dcim.Device"),
+        ),
+        migrations.AddField(
+            model_name="vrf",
+            name="virtual_machines",
+            field=models.ManyToManyField(
+                related_name="vrfs", through="ipam.VRFDeviceAssignment", to="virtualization.VirtualMachine"
+            ),
         ),
         migrations.AddField(
             model_name="vrf",
@@ -148,11 +170,6 @@ class Migration(migrations.Migration):
                 to="ipam.namespace",
             ),
         ),
-        migrations.AddField(
-            model_name="vrf",
-            name="prefixes",
-            field=models.ManyToManyField(related_name="vrfs", through="ipam.VRFPrefixAssignment", to="ipam.Prefix"),
-        ),
         migrations.AlterField(
             model_name="vrf",
             name="rd",
@@ -160,22 +177,56 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name="vrf",
-            options={"ordering": ("namespace", "name"), "verbose_name": "VRF", "verbose_name_plural": "VRFs"},
+            options={"ordering": ("namespace", "name", "rd"), "verbose_name": "VRF", "verbose_name_plural": "VRFs"},
         ),
-        migrations.AlterUniqueTogether(
-            name="vrf",
-            unique_together={("namespace", "name"), ("namespace", "rd")},
-        ),
-        migrations.RemoveField(
-            model_name="ipaddress",
-            name="vrf",
-        ),
-        migrations.RemoveField(
-            model_name="prefix",
-            name="vrf",
-        ),
-        migrations.RemoveField(
+        migrations.AddField(
             model_name="vrf",
-            name="enforce_unique",
+            name="prefixes_m2m",
+            field=models.ManyToManyField(related_name="vrfs_m2m", through="ipam.VRFPrefixAssignment", to="ipam.Prefix"),
+        ),
+        migrations.AddField(
+            model_name="prefix",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="children",
+                to="ipam.prefix",
+            ),
+        ),
+        migrations.AlterIndexTogether(
+            name="prefix",
+            index_together={
+                ("network", "broadcast", "prefix_length"),
+                ("namespace", "network", "broadcast", "prefix_length"),
+            },
+        ),
+        #
+        #  Folded in from 0032_ipam__ipaddress__add_parent.py
+        #
+        migrations.AddField(
+            model_name="ipaddress",
+            name="ip_version",
+            field=models.IntegerField(db_index=True, editable=False, null=True),
+        ),
+        migrations.AddField(
+            model_name="ipaddress",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="ip_addresses",
+                to="ipam.prefix",
+            ),
+        ),
+        migrations.AlterModelOptions(
+            name="ipaddress",
+            options={
+                "ordering": ("ip_version", "host", "prefix_length"),
+                "verbose_name": "IP address",
+                "verbose_name_plural": "IP addresses",
+            },
         ),
     ]

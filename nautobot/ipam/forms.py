@@ -86,6 +86,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
     devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    virtual_machines = DynamicModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), required=False)
     prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
         required=False,
@@ -107,6 +108,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "tenant",
             "tags",
             "devices",
+            "virtual_machines",
             "prefixes",
         ]
         labels = {

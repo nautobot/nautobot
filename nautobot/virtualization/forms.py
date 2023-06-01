@@ -41,7 +41,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -207,6 +207,11 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         queryset=Cluster.objects.all(), query_params={"cluster_group_id": "$cluster_group"}
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        label="VRFs",
+    )
 
     class Meta:
         model = VirtualMachine
@@ -218,6 +223,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "role",
             "tenant_group",
             "tenant",
+            "vrfs",
             "platform",
             "primary_ip4",
             "primary_ip6",
@@ -279,12 +285,19 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                     ip_choices.append(("NAT IPs", nat_ips))
                 self.fields[f"primary_ip{ip_version}"].choices = ip_choices
 
+            self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
+
         else:
             # An object that doesn't exist yet can't have any IPs assigned to it
             self.fields["primary_ip4"].choices = []
             self.fields["primary_ip4"].widget.attrs["readonly"] = True
             self.fields["primary_ip6"].choices = []
             self.fields["primary_ip6"].widget.attrs["readonly"] = True
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.vrfs.set(self.cleaned_data["vrfs"])
+        return instance
 
 
 class VirtualMachineBulkEditForm(

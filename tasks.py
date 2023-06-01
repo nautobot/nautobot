@@ -774,22 +774,21 @@ def integration_test(
     # Enforce "integration" tag
     tag.append("integration")
 
-    # TODO: Uncomment when integration tests are ready
-    # unittest(
-    #     context,
-    #     cache_test_fixtures=cache_test_fixtures,
-    #     keepdb=keepdb,
-    #     label=label,
-    #     failfast=failfast,
-    #     buffer=buffer,
-    #     tag=tag,
-    #     exclude_tag=exclude_tag,
-    #     verbose=verbose,
-    #     append=append,
-    #     skip_docs_build=skip_docs_build,
-    #     performance_report=performance_report,
-    #     performance_snapshot=performance_snapshot,
-    # )
+    unittest(
+        context,
+        cache_test_fixtures=cache_test_fixtures,
+        keepdb=keepdb,
+        label=label,
+        failfast=failfast,
+        buffer=buffer,
+        tag=tag,
+        exclude_tag=exclude_tag,
+        verbose=verbose,
+        append=append,
+        skip_docs_build=skip_docs_build,
+        performance_report=performance_report,
+        performance_snapshot=performance_snapshot,
+    )
 
 
 @task(

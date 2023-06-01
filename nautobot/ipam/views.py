@@ -33,6 +33,15 @@ from .utils import (
 #
 
 
+def get_namespace_related_counts(instance, request):
+    """Return counts of all IPAM objects related to the given Namespace."""
+    return {
+        "vrf_count": instance.vrfs.restrict(request.user, "view").count(),
+        "prefix_count": instance.prefixes.restrict(request.user, "view").count(),
+        "ip_address_count": instance.ip_addresses.restrict(request.user, "view").count(),
+    }
+
+
 class NamespaceUIViewSet(
     view_mixins.ObjectDetailViewMixin,
     view_mixins.ObjectListViewMixin,
@@ -52,17 +61,133 @@ class NamespaceUIViewSet(
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve":
-            vrfs = instance.vrfs.restrict(request.user, "view")
-            vrf_table = tables.VRFTable(vrfs, orderable=False)
-            vrf_table.exclude = ("namespace",)
-            context["vrf_table"] = vrf_table
+            context.update(get_namespace_related_counts(instance, request))
 
-            prefixes = instance.prefixes.restrict(request.user, "view")
-            prefix_count = prefixes.count()
-            prefix_table = tables.PrefixTable(prefixes)
-            prefix_table.exclude = ("namespace",)
-            context["prefix_count"] = prefix_count
-            context["prefix_table"] = prefix_table
+        return context
+
+
+class NamespaceIPAddressesView(generic.ObjectView):
+    queryset = Namespace.objects.all()
+    template_name = "ipam/namespace_ipaddresses.html"
+
+    def get_extra_context(self, request, instance):
+        # Find all IPAddresses belonging to this Namespace
+        ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("status")
+
+        ip_address_table = tables.IPAddressTable(ip_addresses)
+        if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
+            ip_address_table.columns.show("pk")
+
+        ip_address_table.exclude = ("namespace",)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(ip_address_table)
+
+        # Compile permissions list for rendering the object table
+        permissions = {
+            "add": request.user.has_perm("ipam.add_ipaddress"),
+            "change": request.user.has_perm("ipam.change_ipaddress"),
+            "delete": request.user.has_perm("ipam.delete_ipaddress"),
+        }
+        bulk_querystring = f"namespace={instance.id}"
+
+        context = super().get_extra_context(request, instance)
+        context.update(
+            {
+                "ip_address_table": ip_address_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "ip-addresses",
+            }
+        )
+        context.update(get_namespace_related_counts(instance, request))
+
+        return context
+
+
+class NamespacePrefixesView(generic.ObjectView):
+    queryset = Namespace.objects.all()
+    template_name = "ipam/namespace_prefixes.html"
+
+    def get_extra_context(self, request, instance):
+        # Find all Prefixes belonging to this Namespace
+        prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
+
+        prefix_table = tables.PrefixTable(prefixes)
+        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
+            prefix_table.columns.show("pk")
+
+        prefix_table.exclude = ("namespace",)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(prefix_table)
+
+        # Compile permissions list for rendering the object table
+        permissions = {
+            "add": request.user.has_perm("ipam.add_prefix"),
+            "change": request.user.has_perm("ipam.change_prefix"),
+            "delete": request.user.has_perm("ipam.delete_prefix"),
+        }
+        bulk_querystring = f"namespace={instance.id}"
+
+        context = super().get_extra_context(request, instance)
+        context.update(
+            {
+                "prefix_table": prefix_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "prefixes",
+            }
+        )
+        context.update(get_namespace_related_counts(instance, request))
+
+        return context
+
+
+class NamespaceVRFsView(generic.ObjectView):
+    queryset = Namespace.objects.all()
+    template_name = "ipam/namespace_vrfs.html"
+
+    def get_extra_context(self, request, instance):
+        # Find all VRFs belonging to this Namespace
+        vrfs = instance.vrfs.restrict(request.user, "view")
+
+        vrf_table = tables.VRFTable(vrfs)
+        if request.user.has_perm("ipam.change_vrf") or request.user.has_perm("ipam.delete_vrf"):
+            vrf_table.columns.show("pk")
+
+        vrf_table.exclude = ("namespace",)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(vrf_table)
+
+        # Compile permissions list for rendering the object table
+        permissions = {
+            "add": request.user.has_perm("ipam.add_vrf"),
+            "change": request.user.has_perm("ipam.change_vrf"),
+            "delete": request.user.has_perm("ipam.delete_vrf"),
+        }
+        bulk_querystring = f"namespace={instance.id}"
+
+        context = super().get_extra_context(request, instance)
+        context.update(
+            {
+                "vrf_table": vrf_table,
+                "permissions": permissions,
+                "bulk_querystring": bulk_querystring,
+                "active_tab": "vrfs",
+            }
+        )
+        context.update(get_namespace_related_counts(instance, request))
 
         return context
 
@@ -355,7 +480,7 @@ class PrefixIPAddressesView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
         ipaddresses = (
-            instance.get_child_ips()
+            instance.ip_addresses.all()
             .restrict(request.user, "view")
             .select_related("status")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")

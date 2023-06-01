@@ -327,47 +327,48 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         except netaddr.AddrFormatError as err:
             raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
 
-    def get_closest_parent(self, cidr, namespace, prefix_length=0):
+    def get_closest_parent(self, cidr, namespace, max_prefix_length=0):
         """
         Return the closest matching parent Prefix for a `cidr` even if it doesn't exist in the database.
 
         Args:
             cidr (str): IPv4/IPv6 CIDR string
             namespace (Namespace): Namespace instance
-            prefix_length (int): Maximum prefix length depth for closest parent lookup
+            max_prefix_length (int): Maximum prefix length depth for closest parent lookup
         """
         # Validate that it's a real CIDR
         cidr = self._validate_cidr(cidr)
-        broadcast = cidr.broadcast or cidr.ip
+        broadcast = str(cidr.broadcast or cidr.ip)
         ip_version = cidr.version
 
         try:
-            prefix_length = int(prefix_length)
+            max_prefix_length = int(max_prefix_length)
         except ValueError:
-            raise ValidationError({"prefix_length": f"Invalid prefix_length: {prefix_length}."})
+            raise ValidationError({"max_prefix_length": f"Invalid prefix_length: {max_prefix_length}."})
 
         # Walk the supernets backwrds from smallest to largest prefix.
         try:
-            supernets = cidr.supernet(prefixlen=prefix_length)
+            supernets = cidr.supernet(prefixlen=max_prefix_length)
         except ValueError as err:
-            raise ValidationError({"prefix_length": str(err)})
+            raise ValidationError({"max_prefix_length": str(err)})
         else:
             supernets.reverse()
 
         # Enumerate all unique networks and prefixes
         networks = {str(s.network) for s in supernets}
-        prefix_lengths = {s.prefixlen for s in supernets}
-        del supernets  # Free the memory because DevOps.
+        del supernets  # Free the memory because it could be quite large.
 
         # Prepare the queryset filter
         lookup_kwargs = {
             "network__in": networks,
-            "prefix_length__in": prefix_lengths,
+            # TODO(jathan): This might be flawed if an IPAddress has a prefix_length that excludes it from a
+            # parent that should otherwise contain it. If we encounter issues in the future for
+            # identifying closest parent prefixes, this might be a starting point.
+            "prefix_length__lte": cidr.prefixlen,
+            "broadcast__gte": broadcast,
             "ip_version": ip_version,
-            "broadcast__gte": str(broadcast),
+            "namespace": namespace,
         }
-        if namespace is not None:
-            lookup_kwargs["namespace"] = namespace
 
         # Search for possible ancestors by network/prefix, returning them in reverse order, so that
         # we can choose the first one.

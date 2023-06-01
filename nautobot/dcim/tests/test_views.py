@@ -362,10 +362,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         for relationship in cls.relationships:
             relationship.validated_save()
 
-        # for rack in racks:
-        #     RelationshipAssociation(
-        #         relationship=cls.relationships[0], source=rack, destination=cls.locations[1]
-        #     ).validated_save()
+        for rack in racks:
+            RelationshipAssociation(
+                relationship=cls.relationships[0], source=rack, destination=cls.locations[1]
+            ).validated_save()
 
         cls.form_data = {
             "name": "Rack X",

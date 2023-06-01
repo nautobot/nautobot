@@ -263,14 +263,21 @@ class VRFDeviceAssignmentTable(BaseTable):
     """Table for displaying VRF Device Assignments with RD."""
 
     vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
-    device = tables.Column(linkify=lambda record: record.device.get_absolute_url(), accessor="device.name")
+    device = tables.Column(
+        linkify=lambda record: record.device.get_absolute_url(), accessor="device.name", verbose_name="Device"
+    )
+    virtual_machine = tables.Column(
+        linkify=lambda record: record.virtual_machine.get_absolute_url(),
+        accessor="virtual_machine.name",
+        verbose_name="Virtual Machine",
+    )
     rd = tables.Column(verbose_name="VRF RD")
     tenant = TenantColumn(accessor="vrf.tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFDeviceAssignment
         orderable = False
-        fields = ("vrf", "device", "rd", "tenant")
+        fields = ("vrf", "device", "virtual_machine", "rd", "tenant")
 
 
 class VRFPrefixAssignmentTable(BaseTable):

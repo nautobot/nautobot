@@ -294,7 +294,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # VRF container is limited to its own VRF
         self.assertSetEqual(child_prefix_pks, {prefixes[2].pk})
 
-    def test_get_child_ips(self):
+    def test_child_ip_addresses(self):
         vrfs = VRF.objects.all()[:3]
         namespace = Namespace.objects.first()
         parent_prefix = Prefix.objects.create(
@@ -306,14 +306,14 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.2.1/24"), namespace=namespace, vrf=vrfs[1]),
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.3.1/24"), namespace=namespace, vrf=vrfs[2]),
         )
-        child_ip_pks = {p.pk for p in parent_prefix.get_child_ips()}
+        child_ip_pks = {p.pk for p in parent_prefix.ip_addresses.all()}
 
         # Global container should return all children
         self.assertSetEqual(child_ip_pks, {ips[0].pk, ips[1].pk, ips[2].pk, ips[3].pk})
 
         parent_prefix.vrf = vrfs[0]
         parent_prefix.save()
-        child_ip_pks = {p.pk for p in parent_prefix.get_child_ips()}
+        child_ip_pks = {p.pk for p in parent_prefix.ip_addresses.all()}
 
         # VRF container is limited to its own VRF
         self.assertSetEqual(child_ip_pks, {ips[1].pk})
@@ -327,7 +327,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.1/31"), namespace=namespace, vrf=None),
         )
 
-        child_ip_pks = {p.pk for p in parent_prefix_31.get_child_ips()}
+        child_ip_pks = {p.pk for p in parent_prefix_31.ip_addresses.all()}
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
     def test_get_available_prefixes(self):

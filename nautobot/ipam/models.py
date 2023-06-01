@@ -66,6 +66,11 @@ class Namespace(PrimaryModel):
         null=True,
     )
 
+    @property
+    def ip_addresses(self):
+        """Return all IPAddresses associated to this Namespace through their parent Prefix."""
+        return IPAddress.objects.filter(parent__namespace=self).distinct()
+
     class Meta:
         ordering = ("name",)
 
@@ -116,6 +121,12 @@ class VRF(PrimaryModel):
         through="ipam.VRFDeviceAssignment",
         through_fields=("vrf", "device"),
     )
+    virtual_machines = models.ManyToManyField(
+        to="virtualization.VirtualMachine",
+        related_name="vrfs",
+        through="ipam.VRFDeviceAssignment",
+        through_fields=("vrf", "virtual_machine"),
+    )
     prefixes = models.ManyToManyField(
         to="ipam.Prefix",
         related_name="vrfs",
@@ -136,7 +147,6 @@ class VRF(PrimaryModel):
         "tenant",
         "description",
     ]
-    natural_key_field_names = ["name", "rd"]  # default auto-key is just "rd", but it's nullable!
 
     class Meta:
         ordering = ("namespace", "name", "rd")  # (name, rd) may be non-unique
@@ -187,6 +197,37 @@ class VRF(PrimaryModel):
         instance = self.devices.through.objects.get(vrf=self, device=device)
         return instance.delete()
 
+    def add_virtual_machine(self, virtual_machine, rd="", name=""):
+        """
+        Add a `virtual_machine` to this VRF, optionally overloading `rd` and `name`.
+
+        If `rd` or `name` are not provided, the values from this VRF will be inherited.
+
+        Args:
+            virtual_machine (VirtualMachine): VirtualMachine instance
+            rd (str): (Optional) RD of the VRF when associated with this VirtualMachine
+            name (str): (Optional) Name of the VRF when associated with this VirtualMachine
+
+        Returns:
+            VRFDeviceAssignment instance
+        """
+        instance = self.virtual_machines.through(vrf=self, virtual_machine=virtual_machine, rd=rd, name=name)
+        instance.validated_save()
+        return instance
+
+    def remove_virtual_machine(self, virtual_machine):
+        """
+        Remove a `virtual_machine` from this VRF.
+
+        Args:
+            virtual_machine (VirtualMachine): VirtualMachine instance
+
+        Returns:
+            tuple (int, dict): Number of objects deleted and a dict with number of deletions.
+        """
+        instance = self.virtual_machines.through.objects.get(vrf=self, virtual_machine=virtual_machine)
+        return instance.delete()
+
     def add_prefix(self, prefix):
         """
         Add a `prefix` to this VRF. Each object must be in the same Namespace.
@@ -217,7 +258,12 @@ class VRF(PrimaryModel):
 
 class VRFDeviceAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="device_assignments")
-    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="vrf_assignments")
+    device = models.ForeignKey(
+        "dcim.Device", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
+    )
+    virtual_machine = models.ForeignKey(
+        "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
+    )
     rd = models.CharField(
         max_length=VRF_RD_MAX_LENGTH,
         blank=True,
@@ -230,11 +276,14 @@ class VRFDeviceAssignment(BaseModel):
     class Meta:
         unique_together = [
             ["vrf", "device"],
+            ["vrf", "virtual_machine"],
             ["device", "rd", "name"],
+            ["virtual_machine", "rd", "name"],
         ]
 
     def __str__(self):
-        return f"{self.vrf} [{self.device}] (rd: {self.rd}, name: {self.name})"
+        obj = self.device or self.virtual_machine
+        return f"{self.vrf} [{obj}] (rd: {self.rd}, name: {self.name})"
 
     def clean(self):
         super().clean()
@@ -246,6 +295,12 @@ class VRFDeviceAssignment(BaseModel):
         # If name is not set, inherit it from `vrf.name`.
         if not self.name:
             self.name = self.vrf.name
+
+        # A VRF must belong to a Device *or* to a VirtualMachine.
+        if all([self.device, self.virtual_machine]):
+            raise ValidationError("A VRF cannot be associated with both a device and a virtual machine.")
+        if not any([self.device, self.virtual_machine]):
+            raise ValidationError("A VRF must be associated with either a device or a virtual machine.")
 
 
 class VRFPrefixAssignment(BaseModel):
@@ -722,10 +777,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
         return query
 
-    def get_child_ips(self):
-        """Return all IPAddresses directly contained within this Prefix and Namespace."""
-        return self.ip_addresses.all()
-
     def get_available_prefixes(self):
         """
         Return all available Prefixes within this prefix as an IPSet.
@@ -741,7 +792,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         Return all available IPs within this prefix as an IPSet.
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_child_ips()])
+        child_ips = netaddr.IPSet([ip.address.ip for ip in self.ip_addresses.all()])
         available_ips = prefix - child_ips
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
