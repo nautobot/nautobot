@@ -72,7 +72,6 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
                 result["required"] = not getattr(field, "allow_empty", True)
             result["items"] = self._get_field_properties(field.child, "")
             result["uniqueItems"] = True
-            result["uniqueItems"] = True
         elif isinstance(field, drf_serializers.ManyRelatedField):
             if field.allow_empty:
                 result["required"] = type_map_obj.get("required", [])
