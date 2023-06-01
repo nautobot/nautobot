@@ -74,7 +74,7 @@
                                     {% for nat in object.primary_ip4.nat_outside_list.all %}
                                         <li>{{ nat|hyperlinked_object }}</li>
                                     {% endfor %}
-                                </ul>    
+                                </ul>
                             {% endif %}
                         {% else %}
                             <span class="text-muted">&mdash;</span>
@@ -118,6 +118,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
+        {% include 'panel_table.html' with table=vrf_table heading="Assigned VRFs" %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Cluster</strong>
