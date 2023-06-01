@@ -3,13 +3,12 @@
 import contextlib
 from datetime import timedelta
 import logging
-import os
 
 from celery import schedules
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -25,14 +24,13 @@ from nautobot.core.celery import (
     setup_nautobot_job_logging,
 )
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import AutoSlugField, JSONArrayField
+from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
     JobExecutionType,
     JobResultStatusChoices,
-    JobSourceChoices,
     LogLevelChoices,
 )
 from nautobot.extras.constants import (
@@ -41,18 +39,15 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
-    jobs_in_directory,
 )
 
 from .customfields import CustomFieldModel
@@ -241,7 +236,7 @@ class Job(PrimaryModel):
             return None
         try:
             return self.job_task.__class__
-        except:
+        except Exception:
             return None
 
     @property

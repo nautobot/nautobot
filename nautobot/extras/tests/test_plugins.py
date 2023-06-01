@@ -121,7 +121,7 @@ class PluginTest(TestCase):
 
         self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
         self.assertEqual(ExampleJob, get_job("example_plugin.jobs.ExampleJob"))
-        self.assertIn("example_plugins.jobs.ExampleJob", app.tasks)
+        self.assertIn("example_plugin.jobs.ExampleJob", app.tasks)
 
     def test_git_datasource_contents_registration(self):
         """

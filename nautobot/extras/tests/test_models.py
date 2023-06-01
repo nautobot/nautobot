@@ -781,10 +781,10 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.plugin_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "local/test_pass/TestPass")
+        self.assertEqual(self.local_job.class_path, "test_pass.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
-        self.assertEqual(self.plugin_job.class_path, "plugins/example_plugin.jobs/ExampleJob")
+        self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
         self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
 
     def test_latest_result(self):
@@ -852,7 +852,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         """Verify that cleaning enforces validation of potentially unsanitized user input."""
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name",
                 job_class_name="JobClass",
                 grouping="grouping",
@@ -862,7 +861,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="ThisIsARidiculouslyLongJobClassNameWhoWouldEverDoSuchAnUtterlyRidiculousThingButBetterSafeThanSorrySinceWeAreDealingWithUserInputHere",
                 grouping="grouping",
@@ -872,7 +870,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="OK now this is just ridiculous. Why would you ever want to deal with typing in 255+ characters of grouping information and have to copy-paste it to the other jobs in the same grouping or risk dealing with typos when typing out such a ridiculously long grouping string? Still, once again, better safe than sorry!",
@@ -882,7 +879,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="grouping",
@@ -892,7 +888,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="grouping",

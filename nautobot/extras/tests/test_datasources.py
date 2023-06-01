@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import tempfile
 from unittest import mock
 import uuid
@@ -112,16 +113,26 @@ class GitTest(TransactionTestCase):
             },
         }
 
+    def tearDown(self):
+        if f"{self.repo.slug}.jobs" in sys.modules:
+            del sys.modules[f"{self.repo.slug}.jobs"]
+        if f"{self.repo.slug}" in sys.modules:
+            del sys.modules[f"{self.repo.slug}"]
+
     def populate_repo(self, path, url, *args, **kwargs):
         os.makedirs(path)
 
-        # TODO(Glenn): populate Jobs as well?
         os.makedirs(os.path.join(path, "config_contexts"))
         os.makedirs(os.path.join(path, "config_contexts", "devices"))
         os.makedirs(os.path.join(path, "config_contexts", "locations"))
         os.makedirs(os.path.join(path, "config_context_schemas"))
         os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
         os.makedirs(os.path.join(path, "export_templates", "ipam", "vlan"))
+        os.makedirs(os.path.join(path, "jobs"))
+
+        with open(os.path.join(path, "__init__.py"), "w") as fd:
+            # Required for job importing
+            pass
 
         with open(os.path.join(path, "config_contexts", "context.yaml"), "w") as fd:
             yaml.dump(
@@ -163,9 +174,14 @@ class GitTest(TransactionTestCase):
         with open(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"), "w") as fd:
             fd.write("{% for vlan in queryset %}\n{{ vlan.name }}\n{% endfor %}")
 
+        with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
+            # Required for job importing
+            pass
+
         return mock.DEFAULT
 
     def empty_repo(self, path, url, *args, **kwargs):
+        os.remove(os.path.join(path, "__init__.py"))
         os.remove(os.path.join(path, "config_contexts", "context.yaml"))
         os.remove(os.path.join(path, "config_contexts", "locations", f"{self.location.slug}.json"))
         os.remove(os.path.join(path, "config_contexts", "devices", f"{self.device.name}.json"))
@@ -173,6 +189,7 @@ class GitTest(TransactionTestCase):
         os.remove(os.path.join(path, "export_templates", "dcim", "device", "template.j2"))
         os.remove(os.path.join(path, "export_templates", "dcim", "device", "template2.html"))
         os.remove(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"))
+        os.remove(os.path.join(path, "jobs", "__init__.py"))
         return mock.DEFAULT
 
     def assert_config_context_schema_record_exists(self, name):
@@ -261,7 +278,7 @@ class GitTest(TransactionTestCase):
 
     def test_pull_git_repository_and_refresh_data_with_no_data(self, MockGitRepo):
         """
-        The pull_git_repository_and_refresh_data job should succeed if the given repo is empty.
+        The pull_git_repository_and_refresh_data job should fail if the given repo is empty.
         """
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
@@ -284,16 +301,19 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.result,
+                    JobResultStatusChoices.STATUS_FAILURE,
+                    (
+                        job_result.result,
+                        list(job_result.job_log_entries.filter(log_level="error").values_list("message", flat=True)),
+                    ),
                 )
                 self.repo.refresh_from_db()
                 self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, job_result.result)
                 MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
-                warning_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
-                warning_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
+                failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_ERROR)
+                failure_logs.get(grouping="jobs", message__contains="Error in loading Jobs from Git repository: ")
 
     def test_pull_git_repository_and_refresh_data_with_secrets(self, MockGitRepo):
         """
@@ -340,6 +360,7 @@ class GitTest(TransactionTestCase):
                 )
 
                 self.repo.secrets_group = secrets_group
+                self.repo.provided_contents.remove("extras.job")  # avoid failing due to lack of jobs module
                 self.repo.save()
 
                 self.mock_request.id = uuid.uuid4()
@@ -354,7 +375,10 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.result,
+                    (
+                        job_result.result,
+                        list(job_result.job_log_entries.filter(log_level="error").values_list("message", flat=True)),
+                    ),
                 )
                 self.repo.refresh_from_db()
                 MockGitRepo.assert_called_with(
@@ -378,7 +402,10 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.result,
+                    (
+                        job_result.result,
+                        list(job_result.job_log_entries.filter(log_level="error").values_list("message", flat=True)),
+                    ),
                 )
 
                 # Make sure explicit ConfigContext was successfully loaded from file
@@ -414,7 +441,10 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.result,
+                    (
+                        job_result.result,
+                        list(job_result.job_log_entries.filter(log_level="error").values_list("message", flat=True)),
+                    ),
                 )
 
                 # Verify that objects have been removed from the database
@@ -458,6 +488,8 @@ class GitTest(TransactionTestCase):
                     # Incorrect directories
                     os.makedirs(os.path.join(path, "devices"))
                     os.makedirs(os.path.join(path, "dcim"))
+                    with open(os.path.join(path, "__init__.py"), "w") as fd:
+                        pass
                     # Malformed JSON
                     with open(os.path.join(path, "config_contexts", "context.json"), "w") as fd:
                         fd.write('{"data": ')
@@ -485,6 +517,8 @@ class GitTest(TransactionTestCase):
                         fd.write("print(")
                     with open(os.path.join(path, "jobs", "importerror.py"), "w") as fd:
                         fd.write("import nosuchmodule")
+                    with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
+                        fd.write("import .syntaxerror\nimport .importerror")
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
@@ -555,11 +589,7 @@ class GitTest(TransactionTestCase):
                 failure_logs.get(
                     grouping="jobs",
                     # The specific exception message differs between Python versions
-                    message__contains="Error in loading Jobs from `syntaxerror`: ",
-                )
-                failure_logs.get(
-                    grouping="jobs",
-                    message__contains="Error in loading Jobs from `importerror`: `No module named 'nosuchmodule'`",
+                    message__contains="Error in loading Jobs from Git repository: ",
                 )
 
     def test_delete_git_repository_cleanup(self, MockGitRepo):
@@ -571,11 +601,13 @@ class GitTest(TransactionTestCase):
 
                 def populate_repo(path, url):
                     os.makedirs(path)
-                    # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "config_contexts", "devices"))
                     os.makedirs(os.path.join(path, "config_context_schemas"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
+                    os.makedirs(os.path.join(path, "jobs"))
+                    with open(os.path.join(path, "__init__.py"), "w") as fd:
+                        pass
                     with open(os.path.join(path, "config_contexts", "context.yaml"), "w") as fd:
                         yaml.dump(
                             {
@@ -606,6 +638,9 @@ class GitTest(TransactionTestCase):
                         "w",
                     ) as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
+                        pass
+                    # TODO: create and register a mock Job
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
@@ -622,7 +657,10 @@ class GitTest(TransactionTestCase):
                 self.assertEqual(
                     job_result.status,
                     JobResultStatusChoices.STATUS_SUCCESS,
-                    job_result.result,
+                    (
+                        job_result.result,
+                        list(job_result.job_log_entries.filter(log_level="error").values_list("message", flat=True)),
+                    ),
                 )
 
                 # Make sure ConfigContext was successfully loaded from file
@@ -669,6 +707,8 @@ class GitTest(TransactionTestCase):
                 )
                 self.assertIsNotNone(export_template)
 
+                # TODO: Make sure Job is loaded and registered into Celery as well as the database
+
                 # Now delete the GitRepository
                 self.repo.delete()
 
@@ -694,6 +734,8 @@ class GitTest(TransactionTestCase):
                 self.assertIsNone(device.local_config_context_data)
                 self.assertIsNone(device.local_config_context_data_owner)
 
+                # TODO: assert the Job is removed from Celery and from the database
+
     def test_git_dry_run(self, MockGitRepo):
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
@@ -713,7 +755,14 @@ class GitTest(TransactionTestCase):
                 )
                 job_result.refresh_from_db()
 
-                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.result)
+                self.assertEqual(
+                    job_result.status,
+                    JobResultStatusChoices.STATUS_SUCCESS,
+                    (
+                        job_result.result,
+                        list(job_result.job_log_entries.filter(log_level="error").values_list("message", flat=True)),
+                    ),
+                )
 
                 MockGitRepo.return_value.checkout.assert_not_called()
                 MockGitRepo.assert_called_with(

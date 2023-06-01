@@ -19,7 +19,6 @@ from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
-    JobSourceChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -1492,7 +1491,6 @@ class JobTestCase(
 
         # Create an entry for a non-installed Job as well
         cls.test_not_installed = Job(
-            source=JobSourceChoices.SOURCE_LOCAL,
             module_name="nonexistent",
             job_class_name="NoSuchJob",
             grouping="Nonexistent Jobs",

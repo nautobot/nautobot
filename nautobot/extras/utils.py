@@ -1,9 +1,7 @@
 import collections
 import hashlib
 import hmac
-import inspect
 import logging
-import pkgutil
 import re
 import sys
 
@@ -21,7 +19,6 @@ from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.registry import registry
@@ -333,48 +330,6 @@ def task_queues_as_choices(task_queues):
         description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
         choices.append((queue, description))
     return choices
-
-
-# namedtuple class yielded by the jobs_in_directory generator function, below
-# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">, None)
-# Example: ("devices", None, None, None, "error at line 40")
-JobClassInfo = collections.namedtuple(
-    "JobClassInfo",
-    ["module_name", "module", "job_class_name", "job_class", "error"],
-    defaults=(None, None, None, None),  # all parameters except `module_name` are optional and default to None.
-)
-
-
-def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors=False):
-    """
-    Walk the available Python modules in the given directory, and for each module, walk its Job class members.
-
-    Args:
-        path (str): Directory to import modules from, outside of sys.path
-        module_name (str): Specific module name to select; if unspecified, all modules will be inspected
-        reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
-        report_errors (bool): If True, when an error is encountered, yield a JobClassInfo with the given error.
-                              If False (default), log the error but do not yield anything.
-
-    Yields:
-        JobClassInfo: (module_name, module, job_class_name, job_class, error)
-    """
-    from .jobs import is_job  # avoid circular import
-
-    for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
-        if module_name and discovered_module_name != module_name:
-            continue
-        if reload_modules and discovered_module_name in sys.modules:
-            del sys.modules[discovered_module_name]
-        try:
-            module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
-            # Get all members of the module that are Job subclasses
-            for job_class_name, job_class in inspect.getmembers(module, is_job):
-                yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
-        except Exception as exc:
-            logger.error(f"Unable to load module {discovered_module_name} from {path}: {exc}")
-            if report_errors:
-                yield JobClassInfo(module_name=discovered_module_name, error=exc)
 
 
 def refresh_job_model_from_job_class(job_model_class, job_class):

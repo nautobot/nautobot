@@ -36,9 +36,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if "." not in options["job"]:
-            raise CommandError(
-                'Job must be specified in the Python module form: "<module_name>.<JobClassName>"'
-            )
+            raise CommandError('Job must be specified in the Python module form: "<module_name>.<JobClassName>"')
         job_class = get_job(options["job"])
         if not job_class:
             raise CommandError(f'Job "{options["job"]}" not found')

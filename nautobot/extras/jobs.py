@@ -5,7 +5,6 @@ import inspect
 import json
 import logging
 import os
-import shutil
 import tempfile
 from textwrap import dedent
 import warnings
@@ -33,7 +32,7 @@ from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
-from nautobot.core.celery import app
+from nautobot.core.celery import app as celery_app
 from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -42,18 +41,15 @@ from nautobot.core.forms import (
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import change_logging, JobChangeContext, JobHookChangeContext
-from nautobot.extras.datasources.git import ensure_git_repository
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
-    GitRepository,
     Job as JobModel,
     JobHook,
     JobResult,
     ObjectChange,
 )
-from nautobot.extras.registry import registry
-from nautobot.extras.utils import ChangeLoggedModelsQuery, jobs_in_directory, task_queues_as_choices
+from nautobot.extras.utils import ChangeLoggedModelsQuery, task_queues_as_choices
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -1121,8 +1117,8 @@ def get_job(class_path):
     Retrieve a specific job class by its class_path (<module_name>.<JobClassName>).
     """
     try:
-        return app.tasks[class_path].__class__
-    except:
+        return celery_app.tasks[class_path].__class__
+    except Exception:
         return None
 
 

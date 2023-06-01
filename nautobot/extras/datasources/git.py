@@ -5,8 +5,10 @@ import logging
 import mimetypes
 import os
 import re
+import sys
 from urllib.parse import quote
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
@@ -16,7 +18,6 @@ import yaml
 from nautobot.core.utils.git import GitRepo
 from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
-    JobSourceChoices,
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -33,7 +34,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
-from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
+from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from .utils import files_from_contenttype_directories
@@ -817,10 +818,20 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     installed_jobs = []
     if "extras.job" in repository_record.provided_contents and not delete:
         from nautobot.core.celery import app
+
         found_jobs = False
-        # TODO: need to unload the previous version of the module, if present?
         try:
-            app.loader.import_task_module(f"{repository_record.slug}.jobs")
+            if settings.GIT_ROOT not in sys.path:
+                sys.path.append(settings.GIT_ROOT)
+
+            module_name = f"{repository_record.slug}"
+            # Unload any previous version of this module if present
+            if module_name in sys.modules:
+                del sys.modules[module_name]
+            module_name += ".jobs"
+            if module_name in sys.modules:
+                del sys.modules[module_name]
+            app.loader.import_task_module(module_name)
 
             for task_name, task in app.tasks.items():
                 if not task_name.startswith(f"{repository_record.slug}."):
@@ -858,11 +869,10 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     logger=logger,
                 )
         except Exception as exc:
-            logger.error("%s", exc)
             job_result.log(
-                "No `jobs` submodule found in Git repository",
+                f"Error in loading Jobs from Git repository: {exc}",
                 grouping="jobs",
-                level_choice=LogLevelChoices.LOG_WARNING,
+                level_choice=LogLevelChoices.LOG_ERROR,
                 logger=logger,
             )
 

@@ -812,7 +812,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
             ScheduledJob.objects.create(
                 name=f"test{i}",
                 task="test_pass.TestPass",
-                job_class="local/test_pass/TestPass",
+                job_class="test_pass.TestPass",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
                 start_time=timezone.now() - datetime.timedelta(days=i * 30),
@@ -822,7 +822,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         ScheduledJob.objects.create(
             name="test7",
             task="test_pass.TestPass",
-            job_class="local/test_pass/TestPass",
+            job_class="test_pass.TestPass",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
             start_time=timezone.now() - datetime.timedelta(days=180),
@@ -851,7 +851,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         scheduled_job = ScheduledJob.objects.create(
             name="weekly_interval",
             task="test_pass.TestPass",
-            job_class="local/test_pass/TestPass",
+            job_class="test_pass.TestPass",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,
             start_time=start_time,

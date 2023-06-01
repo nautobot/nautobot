@@ -1,4 +1,3 @@
-import inspect
 import logging
 import os
 
@@ -10,7 +9,6 @@ from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
-from django.utils.module_loading import import_string
 
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
@@ -613,6 +611,7 @@ class CoreConfig(NautobotConfig):
 
         # Register jobs last after everything else has been done.
         from nautobot.core.celery import app, import_jobs_as_celery_tasks
+
         import_jobs_as_celery_tasks(app)
 
 

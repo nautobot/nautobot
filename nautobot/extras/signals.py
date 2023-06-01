@@ -234,8 +234,8 @@ def refresh_job_models(sender, *, apps, **kwargs):
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
     from nautobot.extras.jobs import Job as JobClass  # avoid circular import
+
     Job = apps.get_model("extras", "Job")
-    GitRepository = apps.get_model("extras", "GitRepository")  # pylint: disable=redefined-outer-name
 
     # To make reverse migrations safe
     if not hasattr(Job, "job_class_name"):
@@ -245,7 +245,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     import_jobs_as_celery_tasks(app)
 
     job_models = []
-    for task_name, task in app.tasks.items():
+    for task in app.tasks.values():
         # Skip Celery tasks that aren't Jobs
         if not isinstance(task, JobClass):
             continue
@@ -254,8 +254,8 @@ def refresh_job_models(sender, *, apps, **kwargs):
         if job_model is not None:
             job_models.append(job_model)
 
-    for job_model in Job.objects.all():
-        if job_model.installed and job_model not in job_models:
+    for job_model in Job.objects.filter(installed=True):
+        if job_model not in job_models:
             logger.info(
                 "Job %s/%s is no longer installed",
                 job_model.module_name,

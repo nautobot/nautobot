@@ -903,7 +903,7 @@ class JobHookFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
 
     def test_job(self):
         jobs = Job.objects.filter(job_class_name__in=["TestJobHookReceiverLog", "TestJobHookReceiverChange"])[:2]
-        params = {"job": [jobs[0].slug, jobs[1].pk]}
+        params = {"job": [jobs[0].name, jobs[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type_create(self):
@@ -972,9 +972,9 @@ class JobButtonFilterTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(job__pk=job.pk)
         )
 
-        params = {"job": [job.slug]}
+        params = {"job": [job.name]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(job__slug=job.slug)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(job__name=job.name)
         )
 
     def test_weight(self):

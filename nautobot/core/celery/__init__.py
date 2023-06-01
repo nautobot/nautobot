@@ -91,8 +91,10 @@ def import_jobs_as_celery_tasks(sender, **kwargs):
     if git_root and os.path.exists(git_root):
         if git_root not in sys.path:
             sys.path.append(git_root)
+
         from nautobot.extras.datasources.git import ensure_git_repository
         from nautobot.extras.models import GitRepository
+
         for repo in GitRepository.objects.all():
             if "extras.job" in repo.provided_contents:
                 ensure_git_repository(repo, head=repo.current_head, logger=logger)

@@ -726,7 +726,6 @@ class JobForm(BootstrapMixin, forms.Form):
 
 
 class JobEditForm(NautobotModelForm):
-
     class Meta:
         model = Job
         fields = [
