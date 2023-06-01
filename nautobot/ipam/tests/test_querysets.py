@@ -8,7 +8,6 @@ from nautobot.core.testing import TestCase
 from nautobot.ipam.models import Prefix, IPAddress, Namespace
 
 
-@skip
 class IPAddressQuerySet(TestCase):
     queryset = IPAddress.objects.all()
 
@@ -16,34 +15,20 @@ class IPAddressQuerySet(TestCase):
     def setUpTestData(cls):
         cls.queryset.delete()
         cls.namespace = Namespace.objects.first()
+        cls.namespace2 = Namespace.objects.create(name="Namespace 2")
         cls.prefix4 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace)
+        cls.prefix4_2 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace2)
         cls.prefix6 = Prefix.objects.create(prefix="2001:db8::/64", namespace=cls.namespace)
 
         cls.ips = {
-            "10.0.0.1/24": IPAddress.objects.create(
-                address="10.0.0.1/24", namespace=cls.namespace, vrf=None, tenant=None
-            ),
-            "10.0.0.1/25": IPAddress.objects.create(
-                address="10.0.0.1/25", namespace=cls.namespace, vrf=None, tenant=None
-            ),
-            "10.0.0.2/24": IPAddress.objects.create(
-                address="10.0.0.2/24", namespace=cls.namespace, vrf=None, tenant=None
-            ),
-            "10.0.0.3/24": IPAddress.objects.create(
-                address="10.0.0.3/24", namespace=cls.namespace, vrf=None, tenant=None
-            ),
-            "10.0.0.4/24": IPAddress.objects.create(
-                address="10.0.0.4/24", namespace=cls.namespace, vrf=None, tenant=None
-            ),
-            "2001:db8::1/64": IPAddress.objects.create(
-                address="2001:db8::1/64", namespace=cls.namespace, vrf=None, tenant=None
-            ),
-            "2001:db8::2/64": IPAddress.objects.create(
-                address="2001:db8::2/64", namespace=cls.namespace, vrf=None, tenant=None
-            ),
-            "2001:db8::3/64": IPAddress.objects.create(
-                address="2001:db8::3/64", namespace=cls.namespace, vrf=None, tenant=None
-            ),
+            "10.0.0.1/24": IPAddress.objects.create(address="10.0.0.1/24", namespace=cls.namespace, tenant=None),
+            "10.0.0.1/25": IPAddress.objects.create(address="10.0.0.1/25", namespace=cls.namespace2, tenant=None),
+            "10.0.0.2/24": IPAddress.objects.create(address="10.0.0.2/24", namespace=cls.namespace, tenant=None),
+            "10.0.0.3/24": IPAddress.objects.create(address="10.0.0.3/24", namespace=cls.namespace, tenant=None),
+            "10.0.0.4/24": IPAddress.objects.create(address="10.0.0.4/24", namespace=cls.namespace, tenant=None),
+            "2001:db8::1/64": IPAddress.objects.create(address="2001:db8::1/64", namespace=cls.namespace, tenant=None),
+            "2001:db8::2/64": IPAddress.objects.create(address="2001:db8::2/64", namespace=cls.namespace, tenant=None),
+            "2001:db8::3/64": IPAddress.objects.create(address="2001:db8::3/64", namespace=cls.namespace, tenant=None),
         }
 
     def test_ip_family(self):
@@ -250,7 +235,7 @@ class IPAddressQuerySet(TestCase):
         )
 
         Prefix.objects.create(prefix="192.168.0.0/24", namespace=self.namespace)
-        extra_ip = IPAddress.objects.create(address="192.168.0.1/24", namespace=self.namespace, vrf=None, tenant=None)
+        extra_ip = IPAddress.objects.create(address="192.168.0.1/24", namespace=self.namespace, tenant=None)
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["192.168.0.0/31"]),
             [extra_ip],
@@ -449,6 +434,20 @@ class IPAddressQuerySet(TestCase):
             IPAddress.objects.select_related("nat_inside").filter(host__iregex=r"2001(.*)1"),
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )
+
+    def test_get_closest_parent(self):
+        # create prefixes with /24 through /32 lengths
+        for i in range(24, 33):
+            Prefix.objects.create(prefix=f"10.0.0.0/{i}", namespace=self.namespace)
+
+        for ip in self.ips.values():
+            with self.subTest(ip=ip):
+                self.assertEqual(
+                    Prefix.objects.get_closest_parent(ip.host, namespace=self.namespace),
+                    Prefix.objects.filter(network__lte=ip.host, broadcast__gte=ip.host, namespace=self.namespace)
+                    .order_by("-prefix_length")
+                    .first(),
+                )
 
 
 @skip

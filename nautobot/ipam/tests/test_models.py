@@ -509,7 +509,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertRaises(ValidationError, duplicate_prefix.full_clean)
 
 
-@skip
 class TestIPAddress(ModelTestCases.BaseModelTestCase):
     model = IPAddress
 
@@ -570,6 +569,19 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         Status.objects.get(name=slaac_status_name).delete()
         IPAddress.objects.create(address="1.1.1.1/32")
         self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
+
+    def test_get_closest_parent(self):
+        for ip in IPAddress.objects.all():
+            with self.subTest(ip=ip):
+                ip.save()
+                ip.refresh_from_db()
+                self.assertIsNotNone(ip.parent)
+                self.assertEqual(
+                    ip.parent,
+                    Prefix.objects.filter(network__lte=ip.host, broadcast__gte=ip.host)
+                    .order_by("-prefix_length")
+                    .first(),
+                )
 
 
 class TestVLANGroup(ModelTestCases.BaseModelTestCase):

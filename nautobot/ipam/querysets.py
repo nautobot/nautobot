@@ -252,7 +252,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         """
         if prefix:
             _prefix = netaddr.IPNetwork(prefix)
-            if str(_prefix) != prefix:
+            if str(_prefix) != str(prefix):
                 raise self.model.DoesNotExist()
             last_ip = self._get_last_ip(_prefix)
             kwargs["prefix_length"] = _prefix.prefixlen
