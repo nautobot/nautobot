@@ -179,7 +179,7 @@ def process_ip_addresses(apps):
                 tenant=orphaned_ip.tenant,
                 vrf=orphaned_ip.vrf,
                 prefix_length=prefix_length,
-                namespace=global_ns,
+                namespace=orphaned_ip.vrf.namespace if orphaned_ip.vrf else global_ns,
                 description="Created by Nautobot data migrations.",
             )
         orphaned_ip.parent = new_parent
