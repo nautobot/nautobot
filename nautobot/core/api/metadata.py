@@ -1,3 +1,4 @@
+import contextlib
 from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
@@ -9,7 +10,6 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
-from nautobot.core.api.serializers import NautobotHyperlinkedRelatedField
 from nautobot.core.api.utils import SerializerDetailViewConfig
 
 
@@ -59,15 +59,19 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
 
         This has been overloaded with an `elif` to account for `ManyRelatedField`.
         """
-        result = {}
         type_map_obj = self._get_type_map_value(field)
-        result["type"] = type_map_obj["type"]
-        result["title"] = self._get_title(field, name)
+        result = {
+            "type": type_map_obj["type"] or "string",
+            "title": self._get_title(field, name),
+        }
+        if field.read_only:
+            result["readOnly"] = True
 
-        if isinstance(field, drf_serializers.ListField):
+        elif isinstance(field, drf_serializers.ListField):
             if field.allow_empty:
                 result["required"] = not getattr(field, "allow_empty", True)
             result["items"] = self._get_field_properties(field.child, "")
+            result["uniqueItems"] = True
             result["uniqueItems"] = True
         elif isinstance(field, drf_serializers.ManyRelatedField):
             if field.allow_empty:
@@ -77,48 +81,44 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
         elif isinstance(field, drf_serializers.RelatedField):
             result["format"] = type_map_obj["format"]
             result["uniqueItems"] = True
-            model_options = field.queryset.model._meta
-            result["required"] = field.required
-            # Custom Keyword: modelName and appLabel
-            # This Keyword represents the model name of the uuid model
-            # and appLabel represents the app_name of the model
-            result["modelName"] = model_options.model_name
-            result["appLabel"] = model_options.app_label
+            if hasattr(field, "queryset"):
+                model_options = field.queryset.model._meta
+                result["required"] = field.required
+                # Custom Keyword: modelName and appLabel
+                # This Keyword represents the model name of the uuid model
+                # and appLabel represents the app_name of the model
+                result["modelName"] = model_options.model_name
+                result["appLabel"] = model_options.app_label
         else:
             if field.allow_null:
                 result["type"] = [result["type"], "null"]
-            enum = type_map_obj.get("enum")
-            if enum:
+            if enum := type_map_obj.get("enum"):
                 if enum == "choices":
                     choices = field.choices
                     result["enum"] = list(choices.keys())
                     result["enumNames"] = list(choices.values())
                 if isinstance(enum, (list, tuple)):
-                    if isinstance(enum, (list, tuple)):
-                        result["enum"] = [item[0] for item in enum]
-                        result["enumNames"] = [item[1] for item in enum]
-                    else:
-                        result["enum"] = enum
-                        result["enumNames"] = list(enum)
-
-            # Process "format"
-            format_ = type_map_obj["format"]
-            if format_:
+                    result["enum"] = [item[0] for item in enum]
+                    result["enumNames"] = [item[1] for item in enum]
+            if format_ := type_map_obj["format"]:
                 result["format"] = format_
 
-            # Process "readOnly"
-            read_only = type_map_obj["readOnly"]
-            if read_only:
+            if read_only := type_map_obj["readOnly"]:
                 result["readOnly"] = read_only
 
-            try:
+            with contextlib.suppress(drf_fields.SkipField):
                 result["default"] = field.get_default()
-            except drf_fields.SkipField:
-                pass
-
         result = self._set_validation_properties(field, result)
 
         return result
+
+    @staticmethod
+    def _filter_fields(all_fields):
+        """
+        Override super._filter_fields to return all fields, including read-only fields,
+        as read-only fields have to be displayed in Detail View.
+        """
+        return tuple((name, field) for name, field in all_fields)
 
 
 class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcessor):
@@ -212,7 +212,6 @@ class NautobotMetadata(SimpleMetadata):
 
     def determine_view_options(self, request, serializer):
         """Determine view options that will be used for non-form display metadata."""
-        view_options = {}
         list_display = []
         fields = []
 
@@ -247,11 +246,11 @@ class NautobotMetadata(SimpleMetadata):
             column_data = processor._get_column_properties(field, field_name)
             fields.append(column_data)
 
-        view_options["retrieve"] = self.determine_detail_view_schema(serializer)
-        view_options["list_display_fields"] = list_display
-        view_options["fields"] = fields
-
-        return view_options
+        return {
+            "retrieve": self.determine_detail_view_schema(serializer),
+            "list_display_fields": list_display,
+            "fields": fields,
+        }
 
     def determine_metadata(self, request, view):
         """This is the metadata that gets returned on an `OPTIONS` request."""

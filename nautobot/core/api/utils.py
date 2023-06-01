@@ -390,18 +390,31 @@ class SerializerDetailViewConfig:
         """
         Generate detail view config for the view based on the serializer's fields.
 
+        Examples:
+            >>> SerializerDetailViewConfig(DeviceSerializer()).view_config().
+            [
+                {
+                    Device: {
+                        "fields": ["name", "subdevice_role", "height", "comments"...]
+                    }
+                },
+                {
+                    Tags: {
+                        "fields": ["tags"]
+                    }
+                }
+            ]
+
         Returns:
             A list representing the view config.
         """
         m2m_fields, other_fields = self.get_m2m_and_non_m2m_fields()
         model_verbose_name = self.serializer.Meta.model._meta.verbose_name
-        data = [
+        return [
             {
                 model_verbose_name.capitalize(): {
                     "fields": [field["name"] for field in other_fields],
                 }
             },
+            {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
         ]
-
-        data.extend({field["label"]: {"fields": [field["name"]], "template": "list"}} for field in m2m_fields)
-        return data

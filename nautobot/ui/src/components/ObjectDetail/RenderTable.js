@@ -20,7 +20,7 @@ function RenderTable({ fields, schema, data }) {
                     }
                     return (
                         <Tr key={idx}>
-                            <Td>{fieldSchema?.title}</Td>
+                            <Td>{fieldSchema.title}</Td>
                             <Td>
                                 <TableItem obj={fieldData} url={url} />
                             </Td>

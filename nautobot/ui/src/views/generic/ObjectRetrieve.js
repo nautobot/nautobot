@@ -15,7 +15,7 @@ export default function ObjectRetrieve({ api_url }) {
         app_label,
         model_name,
         uuid: object_id,
-        plugin:isPluginView,
+        plugin: isPluginView,
     });
     const {
         data: schemaData,
@@ -26,7 +26,7 @@ export default function ObjectRetrieve({ api_url }) {
         model_name,
         uuid: object_id,
         schema: true,
-        plugin:isPluginView,
+        plugin: isPluginView,
     });
 
     const route_name = `${app_label}:${model_name}`;
@@ -62,7 +62,7 @@ export default function ObjectRetrieve({ api_url }) {
     }
 
     // NOTE: This acts as a schema that would be gotten form an OPTIONS call,
-    // which loads the tabs and its layout schema. 
+    // which loads the tabs and its layout schema.
     const objectRetrieveTabSchema = {
         tabs: {
             Location: schemaData.view_options.retrieve,

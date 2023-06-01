@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
     TableRenderer,
     useTableRenderer,
@@ -56,7 +56,11 @@ function renderActionButton({ cellContext }) {
 }
 
 // A standard Nautobot table. This _may_ be beneficial to move into nautobot-ui
-export default function NautobotTable({defaultHeaders, tableHeaders, tableData }) {
+export default function NautobotTable({
+    defaultHeaders,
+    tableHeaders,
+    tableData,
+}) {
     const columnHelper = useMemo(() => createColumnHelper(), []);
     const [columnVisibility, setColumnVisibility] = useState({});
     const columns = useMemo(
