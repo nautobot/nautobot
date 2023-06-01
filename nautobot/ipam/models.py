@@ -14,11 +14,11 @@ from nautobot.core.models.fields import AutoSlugField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
-from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.models import Interface
 from nautobot.extras.models import RoleModelMixin, Status, StatusModel
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
-from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.virtualization.models import VMInterface
 from .constants import (
     SERVICE_PORT_MAX,
     SERVICE_PORT_MIN,
@@ -998,26 +998,10 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     def clean(self):
         super().clean()
 
-        # TODO: update to work with interface M2M
-        # This attribute will have been set by `IPAddressForm.clean()` to indicate that the
-        # `primary_ip{version}` field on `self.assigned_object.parent` has been nullified but not yet saved.
-        primary_ip_unset_by_form = getattr(self, "_primary_ip_unset_by_form", False)
-
-        # Check for primary IP assignment that doesn't match the assigned device/VM if and only if
-        # "_primary_ip_unset" has not been set by the caller.
-        if self.present_in_database and not primary_ip_unset_by_form:
-            device = Device.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
-            if device:
-                if getattr(self.assigned_object, "device", None) != device:
-                    raise ValidationError(
-                        {"interface": f"IP address is primary for device {device} but not assigned to it!"}
-                    )
-            vm = VirtualMachine.objects.filter(Q(primary_ip4=self) | Q(primary_ip6=self)).first()
-            if vm:
-                if getattr(self.assigned_object, "virtual_machine", None) != vm:
-                    raise ValidationError(
-                        {"vminterface": f"IP address is primary for virtual machine {vm} but not assigned to it!"}
-                    )
+        if self.address:
+            # /0 masks are not acceptable
+            if self.address.prefixlen == 0:
+                raise ValidationError({"address": "Cannot create IP address with /0 mask."})
 
         # Validate IP status selection
         if self.status == IPAddress.STATUS_SLAAC and self.ip_version != 6:
@@ -1126,19 +1110,11 @@ class IPAddressToInterface(BaseModel):
     is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
     is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
 
-    def validate_unique(self, exclude=None):
-        """
-        Check uniqueness on combination of `ip_address`, `interface` and `vm_interface` fields
-        and raise ValidationError if check failed.
-        """
-        if IPAddressToInterface.objects.filter(
-            ip_address=self.ip_address,
-            interface=self.interface,
-            vm_interface=self.vm_interface,
-        ).exists():
-            raise ValidationError(
-                "IPAddressToInterface with this ip_address, interface and vm_interface already exists."
-            )
+    class Meta:
+        unique_together = [
+            ["ip_address", "interface"],
+            ["ip_address", "vm_interface"],
+        ]
 
     def clean(self):
         super().clean()

@@ -11,7 +11,7 @@ from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressStatusChoices, PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF, Namespace
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
@@ -59,6 +59,131 @@ class IPAddressToInterfaceTest(TestCase):
             virtual_machine=cls.test_vm,
             status=vmint_status,
         )
+
+    def test_removing_ip_addresses_containing_host_device_primary_ip_not_allowed(self):
+        """
+        Validate we cannot remove an IPAddress from an Interface that is the host Device's primary ip.
+        """
+        dev_ip_addr = IPAddress.objects.first()
+        self.test_int1.add_ip_addresses(dev_ip_addr)
+        ip_to_interface = IPAddressToInterface.objects.get(interface=self.test_int1, ip_address=dev_ip_addr)
+        self.assertIsNotNone(ip_to_interface)
+        if dev_ip_addr.family == 4:
+            self.test_device.primary_ip4 = dev_ip_addr
+        else:
+            self.test_device.primary_ip6 = dev_ip_addr
+        self.test_device.save()
+        with self.assertRaises(ValidationError) as cm:
+            self.test_int1.remove_ip_addresses(dev_ip_addr)
+        self.assertIn(
+            f"Cannot remove IP address {dev_ip_addr} from interface {self.test_int1} on Device {self.test_device.name} because it is marked as its primary IPv{dev_ip_addr.family} address",
+            str(cm.exception),
+        )
+
+    def test_removing_ip_addresses_containing_host_device_primary_ip_allowed_if_multiple_interfaces_contain_such_ip(
+        self,
+    ):
+        """
+        Validate we can remove an IPAddress from an Interface that is the host Device's primary ip
+        if the device's other interfaces have the IPAddress assigned to them.
+        """
+        dev_ip_addr = IPAddress.objects.last()
+        self.test_int1.add_ip_addresses(dev_ip_addr)
+        self.test_int2.add_ip_addresses(dev_ip_addr)
+        ip_to_interface_1 = IPAddressToInterface.objects.get(interface=self.test_int1, ip_address=dev_ip_addr)
+        ip_to_interface_2 = IPAddressToInterface.objects.get(interface=self.test_int2, ip_address=dev_ip_addr)
+        self.assertIsNotNone(ip_to_interface_1)
+        self.assertIsNotNone(ip_to_interface_2)
+        if dev_ip_addr.family == 4:
+            self.test_device.primary_ip4 = dev_ip_addr
+        else:
+            self.test_device.primary_ip6 = dev_ip_addr
+        self.test_device.save()
+        # You can delete IPAddress from the first Interface
+        # Since the second Interface still contains that IPAddress
+        self.test_int1.remove_ip_addresses(dev_ip_addr)
+        # This operation should raise an error since test_int2 is the only Interface
+        # that contains the primary ip
+        with self.assertRaises(ValidationError) as cm:
+            self.test_int2.remove_ip_addresses(dev_ip_addr)
+        self.assertIn(
+            f"Cannot remove IP address {dev_ip_addr} from interface {self.test_int2} on Device {self.test_device.name} because it is marked as its primary IPv{dev_ip_addr.family} address",
+            str(cm.exception),
+        )
+
+    def test_removing_ip_addresses_containing_host_virtual_machine_primary_ip_not_allowed(self):
+        """
+        Validate we cannot remove an IPAddress from an Interface that is the host Virtual Machine's primary ip.
+        """
+        vm_ip_addr = IPAddress.objects.first()
+        self.test_vmint1.add_ip_addresses(vm_ip_addr)
+        ip_to_vminterface = IPAddressToInterface.objects.get(vm_interface=self.test_vmint1, ip_address=vm_ip_addr)
+        self.assertIsNotNone(ip_to_vminterface)
+        if vm_ip_addr.family == 4:
+            self.test_vm.primary_ip4 = vm_ip_addr
+        else:
+            self.test_vm.primary_ip6 = vm_ip_addr
+        self.test_vm.save()
+        with self.assertRaises(ValidationError) as cm:
+            self.test_vmint1.remove_ip_addresses(vm_ip_addr)
+        self.assertIn(
+            f"Cannot remove IP address {vm_ip_addr} from interface {self.test_vmint1} on Virtual Machine {self.test_vm.name} because it is marked as its primary IPv{vm_ip_addr.family} address",
+            str(cm.exception),
+        )
+
+    def test_removing_ip_addresses_containing_host_virtual_machine_primary_ip_allowed_if_multiple_vm_interfaces_contain_such_ip(
+        self,
+    ):
+        """
+        Validate we cannot remove an IPAddress from an Interface that is the host Virtual Machine's primary ip.
+        """
+        vm_ip_addr = IPAddress.objects.last()
+        self.test_vmint1.add_ip_addresses(vm_ip_addr)
+        self.test_vmint2.add_ip_addresses(vm_ip_addr)
+        ip_to_vminterface_1 = IPAddressToInterface.objects.get(vm_interface=self.test_vmint1, ip_address=vm_ip_addr)
+        ip_to_vminterface_2 = IPAddressToInterface.objects.get(vm_interface=self.test_vmint2, ip_address=vm_ip_addr)
+        self.assertIsNotNone(ip_to_vminterface_1)
+        self.assertIsNotNone(ip_to_vminterface_2)
+        if vm_ip_addr.family == 4:
+            self.test_vm.primary_ip4 = vm_ip_addr
+        else:
+            self.test_vm.primary_ip6 = vm_ip_addr
+        self.test_vm.save()
+        # You can delete IPAddress from the first VMInterface
+        # Since the second VMInterface still contains that IPAddress
+        self.test_vmint1.remove_ip_addresses(vm_ip_addr)
+        # This operation should raise an error since test_vmint2 is the only VMInterface
+        # that contains the primary ip
+        with self.assertRaises(ValidationError) as cm:
+            self.test_vmint2.remove_ip_addresses(vm_ip_addr)
+        self.assertIn(
+            f"Cannot remove IP address {vm_ip_addr} from interface {self.test_vmint2} on Virtual Machine {self.test_vm.name} because it is marked as its primary IPv{vm_ip_addr.family} address",
+            str(cm.exception),
+        )
+
+    def test_ip_address_to_interface_uniqueness_constraint(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24")
+        IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_addr)
+        with self.assertRaises(ValidationError):
+            IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, interface=self.test_int1, ip_address=ip_addr
+            )
+        IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=ip_addr)
+        with self.assertRaises(ValidationError):
+            IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=ip_addr)
+
+    def test_pre_save_signal_invoked_on_ip_address_to_interface_manual_creation(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24")
+        with self.assertRaises(ValidationError) as cm:
+            IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, interface=self.test_int1, ip_address=ip_addr
+            )
+        self.assertIn(
+            "Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            IPAddressToInterface.objects.create(vm_interface=None, interface=None, ip_address=ip_addr)
+        self.assertIn("Must associate to either an Interface or a VMInterface.", str(cm.exception))
 
 
 class TestVarbinaryIPField(TestCase):

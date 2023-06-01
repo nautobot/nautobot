@@ -128,6 +128,10 @@ Check out the [Region and Site Related Data Model Migration Guide](../installati
 
 `nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../installation/upgrading-from-nautobot-v1.md#python-code-location-changes).
 
+#### REST API Versioning Behavior ([#2799](https://github.com/nautobot/nautobot/issues/2799))
+
+In Nautobot 2.0 and later, the REST API defaults, when the caller doesn't request a specific API version, to using the latest available version of the REST API. This is a change from Nautobot 1.x, where the default behavior was to use the 1.2 version of the REST API even when newer versions were available.
+
 #### Revamped CSV Import and Export ([#2569](https://github.com/nautobot/nautobot/issues/2569), [#3715](https://github.com/nautobot/nautobot/issues/3715))
 
 Exporting objects and lists of objects to CSV format has been totally reimplemented in a new framework for ease of use and maintainability. Instead of accessing `http://nautobot/<app>/<model>/?export` you will now use the URL pattern `http://nautobot/api/<app>/<model>/?format=csv`, as the new CSV renderer is based on the REST API serializer definitions. This results in substantially more comprehensive CSV representations of many models.

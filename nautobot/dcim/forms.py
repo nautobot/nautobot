@@ -2,6 +2,7 @@ import re
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from timezone_field import TimeZoneFormField
 
@@ -2211,6 +2212,38 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         # Add current location to VLANs query params
         self.fields["untagged_vlan"].widget.add_query_param("location", device.location.pk)
         self.fields["tagged_vlans"].widget.add_query_param("location", device.location.pk)
+
+    def clean(self):
+        super().clean()
+        ip_addresses = self.cleaned_data.get("ip_addresses")
+        device = self.cleaned_data.get("device")
+        interface = self.instance
+        if device is not None and interface is not None:
+            # Check if the ip address exist on other interfaces that are assigned to the device.
+            other_assignments_ip4_exist = IPAddressToInterface.objects.filter(
+                interface__device=device, ip_address=device.primary_ip4
+            ).exclude(interface=interface)
+            other_assignments_ip6_exist = IPAddressToInterface.objects.filter(
+                interface__device=device, ip_address=device.primary_ip6
+            ).exclude(interface=interface)
+            # IP address validation
+            # We do have the pre_delete signal ip_address_to_interface_pre_delete_validation
+            # to handle this scenario, but we want the ValidationError to bubble up on the form.
+            if device.primary_ip4 and device.primary_ip4 not in ip_addresses and not other_assignments_ip4_exist:
+                raise ValidationError(
+                    {
+                        "ip_addresses": f"Cannot remove IP address {device.primary_ip4} from interface {interface} on Device {device.name} because it is marked as its primary IPv4 address"
+                    }
+                )
+            if device.primary_ip6 and device.primary_ip6 not in ip_addresses and not other_assignments_ip6_exist:
+                raise ValidationError(
+                    {
+                        "ip_addresses": f"Cannot remove IP address {device.primary_ip6} from interface {interface} on Device {device.name} because it is marked as its primary IPv6 address"
+                    }
+                )
+        else:
+            # Interface does not exist yet so it is a CreateForm not an EditForm
+            pass
 
 
 class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):

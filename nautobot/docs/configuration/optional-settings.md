@@ -1023,6 +1023,9 @@ Default:
 +/- 1.4.10
     While running unit or integration tests via `nautobot-server test ...`, LOGGING will be set to `{}` instead of the above defaults, as verbose logging to the console is typically not desirable while running tests.
 
++/- 2.0.0
+    Unit/integration test logging was modified to send all nautobot logs to a `NullHandler` to prevent logs falling through to the last resort logger and being output to stderr.
+
 This translates to:
 
 * all messages from Django and from Nautobot of INFO severity or higher will be logged to the console.

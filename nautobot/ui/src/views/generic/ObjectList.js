@@ -25,16 +25,21 @@ export default function GenericObjectListView() {
         dispatch(updateCurrentContext(currentAppContext));
     }, [dispatch, currentAppContext]);
 
-    const { data: headerData, isLoading: headerDataLoading } =
-        useGetRESTAPIQuery(
-            {
-                app_label: app_label,
-                model_name: model_name,
-                schema: true,
-                plugin: isPluginView,
-            },
-            { keepUnusedDataFor: 600 } // Let's keep the header schema cached for longer than the default 60 seconds
-        );
+    // const { 0: searchParams } = useSearchParams(); // import { useSearchParams } from "react-router-dom";
+
+    const {
+        data: headerData,
+        isLoading: headerDataLoading,
+        isFetching: headerDataFetching,
+    } = useGetRESTAPIQuery(
+        {
+            app_label: app_label,
+            model_name: model_name,
+            schema: true,
+            plugin: isPluginView,
+        },
+        { keepUnusedDataFor: 600 } // Let's keep the header schema cached for longer than the default 60 seconds
+    );
     let [searchParams] = useSearchParams();
 
     // What page are we on?
@@ -63,8 +68,9 @@ export default function GenericObjectListView() {
     let data_loaded = !(
         listDataLoading ||
         headerDataLoading ||
-        listDataFetching
+        headerDataFetching
     );
+    let data_fetched = !listDataFetching;
 
     let table_name = toTitleCase(model_name, "-");
     if (!data_loaded) {
@@ -80,6 +86,7 @@ export default function GenericObjectListView() {
                         page_size={page_size}
                         tableTitle={table_name}
                         data_loaded={data_loaded}
+                        data_fetched={data_fetched}
                     />
                 </NautobotGridItem>
             </GenericView>
@@ -112,6 +119,7 @@ export default function GenericObjectListView() {
                     page_size={page_size}
                     tableTitle={table_name}
                     data_loaded={data_loaded}
+                    data_fetched={data_fetched}
                 />
             </NautobotGridItem>
         </GenericView>

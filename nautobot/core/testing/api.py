@@ -688,6 +688,7 @@ class APIViewTestCases:
                 this_object.pop("last_updated", None)
                 # PATCH response always includes "opt-in" fields, but GET response does not.
                 this_object.pop("computed_fields", None)
+                this_object.pop("config_context", None)
                 this_object.pop("relationships", None)
 
                 for value in this_object.values():
@@ -769,7 +770,10 @@ class APIViewTestCases:
             url = self._get_detail_url(instance)
 
             # GET object representation
-            get_response = self.client.get(url + "?include=computed_fields&include=relationships", **self.header)
+            opt_in_fields = getattr(get_serializer_for_model(self.model).Meta, "opt_in_fields", None)
+            if opt_in_fields:
+                url += "?" + "&".join([f"include={field}" for field in opt_in_fields])
+            get_response = self.client.get(url, **self.header)
             self.assertHttpStatus(get_response, status.HTTP_200_OK)
             initial_serialized_object = get_response.json()
 
