@@ -1,5 +1,4 @@
 import random
-from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -187,7 +186,6 @@ class DynamicGroupTestBase(TestCase):
         )
 
 
-@skip(reason="Content Types are BROKEN")
 class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?
     """DynamicGroup model tests."""
 
