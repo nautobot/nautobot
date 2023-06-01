@@ -4,14 +4,16 @@
 
 // Slugify
 function slugify(s, num_chars) {
-    s = s.replace(/[^\-\.\w\s]/g, '');          // Remove unneeded chars
+    s = s.replace(/[^_A-Za-z0-9\-\s\.]/g, '');  // Remove non-ascii chars
     s = s.replace(/^[\s\.]+|[\s\.]+$/g, '');    // Trim leading/trailing spaces
     s = s.replace(/[\-\.\s]+/g, '-');           // Convert spaces and decimals to hyphens
     s = s.toLowerCase();                        // Convert to lowercase
-    // Declare `const slugify_prefer_underscores = true` globally if you want to use underscores instead of hyphens
-    if (typeof slugify_prefer_underscores !== "undefined") {
-        s = s.replace(/-/g, '_');
+
+    if (/^[^_A-Za-z]/.test(s)) {
+        s = 'a' + s;
     }
+
+    s = s.replace(/-/g, '_');
     return s.substring(0, num_chars);           // Trim to first num_chars chars
 }
 

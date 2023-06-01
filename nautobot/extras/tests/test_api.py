@@ -831,17 +831,17 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         cls.repos = (
             GitRepository(
                 name="Repo 1",
-                slug="repo-1",
+                slug="repo_1",
                 remote_url="https://example.com/repo1.git",
                 secrets_group=secrets_groups[0],
             ),
             GitRepository(
                 name="Repo 2",
-                slug="repo-2",
+                slug="repo_2",
                 remote_url="https://example.com/repo2.git",
                 secrets_group=secrets_groups[0],
             ),
-            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+            GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
         )
         for repo in cls.repos:
             repo.save()
@@ -849,20 +849,20 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "New Git Repository 1",
-                "slug": "new-git-repository-1",
+                "slug": "new_git_repository_1",
                 "remote_url": "https://example.com/newrepo1.git",
                 "secrets_group": secrets_groups[1].pk,
                 "provided_contents": ["extras.configcontext", "extras.exporttemplate"],
             },
             {
                 "name": "New Git Repository 2",
-                "slug": "new-git-repository-2",
+                "slug": "new_git_repository_2",
                 "remote_url": "https://example.com/newrepo2.git",
                 "secrets_group": secrets_groups[1].pk,
             },
             {
                 "name": "New Git Repository 3",
-                "slug": "new-git-repository-3",
+                "slug": "new_git_repository_3",
                 "remote_url": "https://example.com/newrepo3.git",
                 "secrets_group": secrets_groups[1].pk,
             },
@@ -872,6 +872,13 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
                 "secrets_group": secrets_groups[1].pk,
             },
         ]
+
+        # slug is enforced non-editable in clean because we want it to be providable by the user on creation
+        # but not modified afterward
+        cls.update_data = {
+            "name": "A Different Repo Name",
+            "remote_url": "https://example.com/fake.git",
+        }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -924,7 +931,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = self._get_list_url()
         data = {
             "name": "plugin_test",
-            "slug": "plugin-test",
+            "slug": "plugin_test",
             "remote_url": "https://localhost/plugin-test",
             "provided_contents": ["example_plugin.textfile"],
         }

@@ -190,6 +190,12 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
             "advanced_ui",
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
+
 
 class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
     model = ComputedField
@@ -393,6 +399,12 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "validation_maximum",
             "validation_regex",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
@@ -609,6 +621,12 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
             "provided_contents",
             "tags",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["slug"].widget.attrs["readonly"] = True
 
     def save(self, commit=True):
         instance = super().save(commit=commit)
@@ -1149,6 +1167,12 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "destination_hidden",
             "destination_filter",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
 
     def save(self, commit=True):
         # TODO add support for owner when a CR is created in the UI
