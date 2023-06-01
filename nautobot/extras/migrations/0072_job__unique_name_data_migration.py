@@ -61,7 +61,7 @@ def update_slug_for_git_repository(apps, schema_editor):
     """
     GitRepository = apps.get_model("extras", "GitRepository")
     for git_repository in GitRepository.objects.all():
-        git_repository.slug = slugify_dashes_to_underscores(git_repository.name)
+        git_repository.slug = slugify_dashes_to_underscores(git_repository.slug)
         git_repository.save()
 
 
