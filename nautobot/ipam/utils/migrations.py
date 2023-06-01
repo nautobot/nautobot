@@ -87,6 +87,10 @@ def process_vrfs(apps):
     VRF = apps.get_model("ipam", "VRF")
     vrfs = VRF.objects.all().order_by("name", "rd")
     unique_non_empty_vrfs = vrfs.filter(enforce_unique=True).exclude(ip_addresses__isnull=True, prefixes__isnull=True)
+    # At the point in the migration where we iterate through vrfs in global_ns_vrfs, every vrf that
+    # has already been processed has been moved to a new namespace. Anything left in the global
+    # namespace has yet to be processed which is why we're iterating through this on the second
+    # loop.
     global_ns_vrfs = vrfs.filter(namespace__name="Global")
 
     # Case 0: VRFs with enforce_unique move to their own Namespace.
