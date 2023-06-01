@@ -998,11 +998,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     def clean(self):
         super().clean()
 
-        if self.address:
-            # /0 masks are not acceptable
-            if self.address.prefixlen == 0:
-                raise ValidationError({"address": "Cannot create IP address with /0 mask."})
-
         # Validate IP status selection
         if self.status == IPAddress.STATUS_SLAAC and self.ip_version != 6:
             raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC status"})
