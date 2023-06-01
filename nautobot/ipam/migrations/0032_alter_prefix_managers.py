@@ -7,14 +7,14 @@ import nautobot.ipam.querysets
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ipam', '0031_ipam__namespaces_finish'),
+        ("ipam", "0031_ipam__namespaces_finish"),
     ]
 
     operations = [
         migrations.AlterModelManagers(
-            name='prefix',
+            name="prefix",
             managers=[
-                ('objects', nautobot.ipam.querysets.PrefixManager()),
+                ("objects", nautobot.ipam.querysets.PrefixManager()),
             ],
         ),
     ]
