@@ -45,6 +45,12 @@ def check_interface_vrfs(apps):
     """
     Enumerate all Interface and VMInterface objects and raise an exception if any interface is found that is associated
     to more than one distinct VRF through the ip_address many-to-many relationship.
+
+    Args:
+        apps: Django apps module
+
+    Returns:
+        None
     """
 
     Interface = apps.get_model("dcim", "Interface")
@@ -96,7 +102,7 @@ def process_vrfs(apps):
     for vrf in global_ns_vrfs.annotate(prefix_count=models.Count("prefixes")).order_by("-prefix_count"):
         print(f">>> Processing migration for VRF {vrf.name!r}, Namespace {vrf.namespace.name!r}")
         original_namespace = vrf.namespace
-        vrf.namespace = get_next_cleanup_namespace(apps, vrf)
+        vrf.namespace = get_next_vrf_cleanup_namespace(apps, vrf)
         vrf.save()
         if vrf.namespace != original_namespace:
             vrf.prefixes.update(namespace=vrf.namespace)
@@ -139,6 +145,11 @@ def process_ip_addresses(apps):
         - Get or create the parent `Prefix`
         - Set that as the parent and save the `IPAddress`
 
+    Args:
+        apps: Django apps module
+
+    Returns:
+        None
     """
     # Find the correct namespace for each IPAddress and move it if necessary.
     IPAddress = apps.get_model("ipam", "IPAddress")
@@ -147,7 +158,6 @@ def process_ip_addresses(apps):
 
     # Explicitly set the parent for those that were found and save them.
     for ip in IPAddress.objects.filter(parent__isnull=True).order_by("-vrf", "-tenant"):
-        # TODO(jathan): Print message for parenting updates here (it's going to be noisy).
         potential_parents = get_closest_parent(apps, ip, Prefix.objects.all())
         for prefix in potential_parents:
             if not prefix.ip_addresses.filter(host=ip.host).exists():
@@ -241,7 +251,7 @@ def process_prefix_duplicates(apps):
                     namespace_base_name = BASE_NAME
                     if prefix.tenant is not None:
                         namespace_base_name += f" {prefix.tenant.name}"
-                    prefix.namespace = get_next_prefix_namespace(apps, prefix, base_name=namespace_base_name)
+                    prefix.namespace = get_next_prefix_cleanup_namespace(apps, prefix, base_name=namespace_base_name)
                     prefix.save()
                     print(
                         f"    Prefix {dupe!r} migrated from Namespace {ns.name} to Namespace {prefix.namespace.name!r}"
@@ -266,7 +276,7 @@ def reparent_prefixes(apps):
             parent = get_closest_parent(apps, pfx, pfx.namespace.prefixes.all())
             if pfx.namespace != parent.namespace:
                 raise ValidationError("Prefix and parent are in different Namespaces")
-            print(f"\n>>> {pfx.network}/{pfx.prefix_length} parent: {parent.network}/{parent.prefix_length}")
+            print(f">>> {pfx.network}/{pfx.prefix_length} parent: {parent.network}/{parent.prefix_length}")
             pfx.parent = parent
             pfx.save()
         except Prefix.DoesNotExist:
@@ -274,8 +284,15 @@ def reparent_prefixes(apps):
 
 
 def copy_vrfs_to_cleanup_namespaces(apps):
-    """Enumerate every Prefix with a non-null vrf and if the vrf namespace doesn't match the prefix namespace, make
+    """
+    Enumerate every Prefix with a non-null vrf and if the vrf namespace doesn't match the prefix namespace, make
     a copy of the vrf in the cleanup namespace.
+
+    Args:
+        apps: Django apps module
+
+    Returns:
+        None
     """
 
     Prefix = apps.get_model("ipam", "Prefix")
@@ -307,7 +324,15 @@ def copy_vrfs_to_cleanup_namespaces(apps):
 
 
 def process_interfaces(apps):
-    """Process [VM]Interface objects."""
+    """
+    Process [VM]Interface objects.
+
+    Args:
+        apps: Django apps module
+
+    Returns:
+        None
+    """
     Interface = apps.get_model("dcim", "Interface")
     VMInterface = apps.get_model("virtualization", "VMInterface")
     VRFDeviceAssignment = apps.get_model("ipam", "VRFDeviceAssignment")
@@ -315,9 +340,6 @@ def process_interfaces(apps):
     # Interfaces with vrfs
     ip_interfaces = Interface.objects.filter(ip_addresses__vrf__isnull=False)
     ip_vminterfaces = VMInterface.objects.filter(ip_addresses__vrf__isnull=False)
-
-    # TODO(jathan): We need to also account for whether that IP's parent does not have a conflict
-    # where the parent's VRF doesn't match the VRF of the IPAddress assigned to the [VM]Interface.
 
     # Case 2: Interface has one or more IP address assigned to it with no more than 1 distinct associated VRF (none is excluded)
     # The interface's VRF foreign key should be set to the VRF of any related IP Address with a non-null VRF.
@@ -356,7 +378,13 @@ def process_interfaces(apps):
 
 def process_vrfs_prefixes_m2m(apps):
     """
-    Convert the Prefix->VRF FK relationship to a M2M relationship.
+    Convert the Prefix -> VRF FK relationship to a M2M relationship.
+
+    Args:
+        apps: Django apps module
+
+    Returns:
+        None
     """
 
     VRF = apps.get_model("ipam", "VRF")
@@ -368,13 +396,46 @@ def process_vrfs_prefixes_m2m(apps):
         vrf.prefixes_m2m.set(vrf.prefixes.all())
 
 
-def compare_duplicate_prefixes(a, b):
+def get_prefixes(qs):
+    """
+    Given a queryset, return the prefixes as 2-tuples of (network, prefix_length).
+
+    Args:
+        qs (QuerySet): QuerySet of Prefix objects.
+
+    Returns:
+        list
+    """
+    return sorted(qs.values_list("network", "prefix_length"))
+
+
+def compare_prefix_querysets(a, b):
+    """
+    Compare two QuerySets of Prefix objects and return the set intersection of both.
+
+    Args:
+        a (QuerySet): Left-side QuerySet
+        b (QuerySet): Right-side QuerySet
+
+    Returns:
+        set(tuple)
+    """
     set_a = set(get_prefixes(a))
     set_b = set(get_prefixes(b))
     return set_a.intersection(set_b)
 
 
 def create_vrf_namespace(apps, vrf):
+    """
+    Given a VRF, get or create a unique "VRF Namespace" for it.
+
+    Args:
+        apps: Django apps module
+        vrf (VRF): VRF instance
+
+    Returns:
+        Namespace
+    """
     Namespace = apps.get_model("ipam", "Namespace")
     base_name = f"VRF Namespace {vrf.name}"
     counter = 1
@@ -392,6 +453,16 @@ def create_vrf_namespace(apps, vrf):
 
 
 def find_duplicate_prefixes(apps, namespace):
+    """
+    Return a list of duplicate prefixes for a given Namespace.
+
+    Args:
+        apps: Django apps module
+        namespace (Namespace): Namespace instance
+
+    Returns:
+        list(str)
+    """
     Prefix = apps.get_model("ipam", "Prefix")
     prefixes = Prefix.objects.filter(namespace=namespace).values_list("network", "prefix_length")
     counter = collections.Counter(prefixes)
@@ -400,7 +471,16 @@ def find_duplicate_prefixes(apps, namespace):
 
 
 def generate_parent_prefix(apps, address):
-    """For a given `address`, generate a containing parent network address."""
+    """
+    For a given `address`, generate a containing parent network address.
+
+    Args:
+        apps: Django apps module
+        address: Prefix/IPAddress instance or string
+
+    Returns:
+        netaddr.IPNetwork
+    """
     cidr = validate_cidr(apps, address)
     return cidr.cidr
 
@@ -414,9 +494,10 @@ def get_closest_parent(apps, obj, qs):
 
     Args:
         obj: Prefix/IPAddress instance
-        namespace (Namespace): Namespace instance
-        max_prefix_length (int): Maximum prefix length depth for closest parent lookup
-        tenant (Tenant): Tenant instance
+        qs (QuerySet): QuerySet of Prefix objects
+
+    Returns:
+        Prefix or a filtered queryset
     """
     # Validate that it's a real CIDR
     cidr = validate_cidr(apps, obj)
@@ -470,9 +551,14 @@ def get_closest_parent(apps, obj, qs):
         raise Prefix.DoesNotExist(f"Could not determine parent Prefix for {cidr}")
 
 
-def get_next_cleanup_namespace(apps, vrf):
+def get_next_vrf_cleanup_namespace(apps, vrf):
     """
-    Try to get the next available Cleanup Namespace based on `vrf`.
+    Try to get the next available Cleanup Namespace based on `vrf` found in the "Global" Namespace.
+
+    The Global Namespace is always scanned first to check for duplicates. If none are found then the
+    Global Namespace will be returned, otherwise Cleanup Namespaces will be iterated until one
+    without a duplicate is found. If a Namespace without duplicates cannot be found, a new one will
+    be created.
 
     Args:
         apps: Django apps module
@@ -489,7 +575,7 @@ def get_next_cleanup_namespace(apps, vrf):
 
     global_ns = Namespace.objects.get(name="Global")
     global_ns_prefixes = global_ns.prefixes.exclude(vrf=vrf)
-    global_dupe_prefixes = compare_duplicate_prefixes(vrf_prefixes, global_ns_prefixes)
+    global_dupe_prefixes = compare_prefix_querysets(vrf_prefixes, global_ns_prefixes)
     global_dupe_vrfs = VRF.objects.filter(namespace=global_ns, name=vrf.name).exclude(pk=vrf.pk).exists()
 
     if global_dupe_prefixes:
@@ -506,13 +592,14 @@ def get_next_cleanup_namespace(apps, vrf):
     # - If a VRF has duplicates, it moves to a new namespace
     while True:
         base_name = f"{BASE_NAME} ({counter})"
-        namespaces = Namespace.objects.filter(name=base_name)
+        namespace, created = Namespace.objects.get_or_create(
+            name=base_name, defaults={"description": "Created by Nautobot."}
+        )
+        if created:
+            return namespace
 
-        if not namespaces.exists():
-            return Namespace.objects.create(name=base_name, description="Created by Nautobot.")
-        namespace = namespaces.get()
         ns_prefixes = namespace.prefixes.exclude(vrf=vrf)
-        dupe_prefixes = compare_duplicate_prefixes(vrf_prefixes, ns_prefixes)
+        dupe_prefixes = compare_prefix_querysets(vrf_prefixes, ns_prefixes)
         dupe_vrfs = VRF.objects.filter(namespace=namespace, name=vrf.name).exclude(pk=vrf.pk).exists()
 
         if dupe_prefixes:
@@ -528,17 +615,33 @@ def get_next_cleanup_namespace(apps, vrf):
         return namespace
 
 
-def get_next_prefix_namespace(apps, prefix, base_name=BASE_NAME):
+def get_next_prefix_cleanup_namespace(apps, prefix, base_name=BASE_NAME):
+    """
+    Try to ge the next avialable Cleanup Namespace based on `prefix` found in the "Global" Namespace.
+
+    It is implied that the Prefix will be in the Global Namespace, so Cleanup Namespaces are
+    automatically iterated to find a suitable match that has no duplicates. If a Namespace without
+    duplicates cannot be found, a new one will be created.
+
+    Args:
+        apps: Django apps module
+        prefix (Prefix): Prefix instance
+        base_name (str): Base name to use for the Namespace
+
+    Returns:
+        Namespace
+    """
     Namespace = apps.get_model("ipam", "Namespace")
 
     counter = 1
     while True:
         name = f"{base_name} ({counter})"
-        namespaces = Namespace.objects.filter(name=name)
+        namespace, created = Namespace.objects.get_or_create(
+            name=name, defaults={"description": "Created by Nautobot."}
+        )
+        if created:
+            return namespace
 
-        if not namespaces.exists():
-            return Namespace.objects.create(name=name, description="Created by Nautobot.")
-        namespace = namespaces.get()
         cidr = f"{prefix.network}/{prefix.prefix_length}"
         has_dupe = namespace.prefixes.filter(network=prefix.network, prefix_length=prefix.prefix_length).exists()
 
@@ -550,16 +653,15 @@ def get_next_prefix_namespace(apps, prefix, base_name=BASE_NAME):
         return namespace
 
 
-def get_prefixes(qs):
-    return sorted(qs.values_list("network", "prefix_length"))
-
-
 def validate_cidr(apps, value):
     """
     Validate whether `value` is a valid IPv4/IPv6 CIDR.
 
     Args:
         value (str): IP address
+
+    Returns:
+        netaddr.IPNetwork
     """
     IPAddress = apps.get_model("ipam", "IPAddress")
     Prefix = apps.get_model("ipam", "Prefix")
@@ -583,6 +685,9 @@ def ensure_correct_prefix_broadcast(apps):
 
     Args:
         apps: Django apps module
+
+    Returns:
+        None
     """
     Prefix = apps.get_model("ipam", "Prefix")
 
