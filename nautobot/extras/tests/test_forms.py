@@ -1,6 +1,5 @@
 import json
 import warnings
-from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
@@ -289,7 +288,6 @@ class NoteModelBulkEditFormMixinTestCase(TestCase):
         self.assertEqual("Test", notes[1].note)
 
 
-@skip(reason="Content Types are BROKEN")
 class RelationshipModelFormTestCase(TestCase):
     """
     Test RelationshipModelForm validation and saving.
@@ -332,13 +330,13 @@ class RelationshipModelFormTestCase(TestCase):
             status=cls.device_status,
         )
 
-        namespace = ipam_models.Namespace.objects.first()
-        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=namespace)
+        cls.namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace)
         cls.ipaddress_1 = ipam_models.IPAddress.objects.create(
-            address="10.1.1.1/24", namespace=namespace, status=cls.ipaddress_status
+            address="10.1.1.1/24", namespace=cls.namespace, status=cls.ipaddress_status
         )
         cls.ipaddress_2 = ipam_models.IPAddress.objects.create(
-            address="10.2.2.2/24", namespace=namespace, status=cls.ipaddress_status
+            address="10.2.2.2/24", namespace=cls.namespace, status=cls.ipaddress_status
         )
 
         cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(
@@ -388,6 +386,7 @@ class RelationshipModelFormTestCase(TestCase):
         }
         cls.ipaddress_form_base_data = {
             "address": "10.3.3.3/24",
+            "namespace": cls.namespace.pk,
             "status": cls.ipaddress_status.pk,
         }
         cls.vlangroup_form_base_data = {
@@ -638,6 +637,7 @@ class RelationshipModelFormTestCase(TestCase):
             data={
                 "address": self.ipaddress_1.address,
                 "status": self.ipaddress_status,
+                "namespace": self.namespace.pk,
                 f"cr_{self.relationship_1.key}__source": self.device_2.pk,
             },
         )
@@ -742,7 +742,6 @@ class RelationshipModelFormTestCase(TestCase):
         )
 
 
-@skip(reason="Content Types are BROKEN")
 class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     """
     Test RelationshipModelBulkEditFormMixin validation and saving.

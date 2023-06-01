@@ -488,11 +488,11 @@ class PluginCustomValidationTest(TestCase):
         with self.assertRaises(ValidationError):
             location.clean()
 
-    @skip
     def test_relationship_association_validator_raises_exception(self):
         status = Status.objects.get_for_model(IPAddress).first()
         namespace = Namespace.objects.first()
-        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.22.0/24"), namespace=namespace)
+        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"), namespace=namespace)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.22.0/24"), namespace=namespace)
         ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status, namespace=namespace)
         relationship = Relationship.objects.create(
             label="Test Relationship",

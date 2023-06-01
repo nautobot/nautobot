@@ -1,6 +1,6 @@
 import os
 import tempfile
-from unittest import mock, skip
+from unittest import mock
 import uuid
 
 from django.conf import settings
@@ -58,7 +58,6 @@ from nautobot.virtualization.models import (
 )
 
 
-@skip(reason="Content Types are BROKEN")
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `ComputedField` Model
