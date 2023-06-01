@@ -6,8 +6,8 @@ import netaddr
 
 
 BASE_NAME = "Cleanup Namespace"
-
 DESCRIPTION = "Created by Nautobot 2.0 IPAM data migrations."
+GLOBAL_NS = "Global"
 
 
 def process_namespaces(apps, schema_editor):
@@ -93,7 +93,7 @@ def process_vrfs(apps):
     # has already been processed has been moved to a new namespace. Anything left in the global
     # namespace has yet to be processed which is why we're iterating through this on the second
     # loop.
-    global_ns_vrfs = vrfs.filter(namespace__name="Global")
+    global_ns_vrfs = vrfs.filter(namespace__name=GLOBAL_NS)
 
     # Case 0: VRFs with enforce_unique move to their own Namespace.
     for vrf in unique_non_empty_vrfs:
@@ -172,7 +172,7 @@ def process_ip_addresses(apps):
                 break
 
     # For IPs with no discovered parent, create one and assign it to the IP.
-    global_ns = Namespace.objects.get(name="Global")
+    global_ns = Namespace.objects.get(name=GLOBAL_NS)
     for orphaned_ip in IPAddress.objects.filter(parent__isnull=True):
         ip_repr = str(validate_cidr(apps, orphaned_ip))
         print(f">>> Processing Parent migration for orphaned IPAddress {ip_repr!r}")
@@ -226,7 +226,7 @@ def process_prefix_duplicates(apps):
     """
     Namespace = apps.get_model("ipam", "Namespace")
     Prefix = apps.get_model("ipam", "Prefix")
-    global_namespace = Namespace.objects.get(name="Global")
+    global_namespace = Namespace.objects.get(name=GLOBAL_NS)
 
     namespaces = list(Namespace.objects.all())
     # Always start with the Global Namespace.
@@ -581,7 +581,7 @@ def get_next_vrf_cleanup_namespace(apps, vrf):
     counter = 1
     vrf_prefixes = vrf.prefixes.all()
 
-    global_ns = Namespace.objects.get(name="Global")
+    global_ns = Namespace.objects.get(name=GLOBAL_NS)
     global_ns_prefixes = global_ns.prefixes.exclude(vrf=vrf)
     global_dupe_prefixes = compare_prefix_querysets(vrf_prefixes, global_ns_prefixes)
     global_dupe_vrfs = VRF.objects.filter(namespace=global_ns, name=vrf.name).exclude(pk=vrf.pk).exists()
