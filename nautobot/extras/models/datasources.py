@@ -8,7 +8,7 @@ from django.db import models
 
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, check_if_key_is_graphql_safe
 
 
 @extras_features(
@@ -76,6 +76,12 @@ class GitRepository(PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+
+        if self.slug != "":
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
 
     def get_latest_sync(self):
         """

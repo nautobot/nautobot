@@ -461,7 +461,7 @@ def remove_prefix_from_cf_key(field_name):
     return field_name[3:]
 
 
-def check_if_key_is_graphql_safe(model_name, key):
+def check_if_key_is_graphql_safe(model_name, key, field_name="key"):
     """
     Helper method to check if a key field is Python/GraphQL safe.
     Used in CustomField, ComputedField and Relationship models.
@@ -470,7 +470,7 @@ def check_if_key_is_graphql_safe(model_name, key):
     if not graphql_safe_pattern.fullmatch(key):
         raise ValidationError(
             {
-                "key": "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace"
+                f"{field_name}": f"This {field_name} is not Python/GraphQL safe. Please do not start the {field_name} with a digit and do not use hyphens or whitespace"
             }
         )
 
