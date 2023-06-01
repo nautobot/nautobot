@@ -278,6 +278,7 @@ def copy_vrfs_to_cleanup_namespaces(apps):
     a copy of the vrf in the cleanup namespace.
     """
 
+    IPAddress = apps.get_model("ipam", "IPAddress")
     Prefix = apps.get_model("ipam", "Prefix")
     VRF = apps.get_model("ipam", "VRF")
     Namespace = apps.get_model("ipam", "Namespace")
@@ -303,7 +304,8 @@ def copy_vrfs_to_cleanup_namespaces(apps):
             )
             vrf_copy.import_targets.set(vrf.import_targets.all())
             vrf_copy.export_targets.set(vrf.export_targets.all())
-            Prefix.objects.filter(vrf=vrf).update(vrf=vrf_copy)
+            Prefix.objects.filter(vrf=vrf, namespace_id=namespace_pk).update(vrf=vrf_copy)
+            IPAddress.objects.filter(vrf=vrf, parent__namespace_id=namespace_pk).update(vrf=vrf_copy)
 
 
 def process_interfaces(apps):
