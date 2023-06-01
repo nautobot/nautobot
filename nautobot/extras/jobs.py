@@ -33,6 +33,7 @@ from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
+from nautobot.core.celery import app
 from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,

@@ -811,7 +811,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         for i in range(1, 7):
             ScheduledJob.objects.create(
                 name=f"test{i}",
-                task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+                task="test_pass.TestPass",
                 job_class="local/test_pass/TestPass",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
@@ -821,7 +821,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         ScheduledJob.objects.create(
             name="test7",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
@@ -850,7 +850,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = ScheduledJob.objects.create(
             name="weekly_interval",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="test_pass.TestPass",
             job_class="local/test_pass/TestPass",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,

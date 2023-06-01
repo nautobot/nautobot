@@ -5,7 +5,7 @@ from netaddr import IPAddress, IPNetwork
 from nautobot.dcim.models import Device
 from nautobot.extras.models import Role
 
-from .example_jobs.test_job_variables import (
+from test_job_variables import (
     BooleanVarJob,
     ChoiceVarJob,
     FileVarJob,

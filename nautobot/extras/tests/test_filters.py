@@ -767,7 +767,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+class JobFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Job.objects.all()
     filterset = JobFilterSet
 
@@ -813,7 +813,6 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"q": "file"}
         expected_matches = (
             Q(name__icontains="file")  # pylint: disable=unsupported-binary-operation
-            | Q(slug__icontains="file")
             | Q(grouping__icontains="file")
             | Q(description__icontains="file")
         )
@@ -849,7 +848,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
         jobs = list(self.jobs[:2])
         filter_params = [
             {"job_model_id": [jobs[0].pk, jobs[1].pk]},
-            {"job_model": [jobs[0].pk, jobs[1].slug]},
+            {"job_model": [jobs[0].pk, jobs[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(

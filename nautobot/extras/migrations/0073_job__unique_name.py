@@ -15,6 +15,10 @@ class Migration(migrations.Migration):
             name="name",
             field=models.CharField(max_length=100, unique=True),
         ),
+        migrations.AlterUniqueTogether(
+            name="job",
+            unique_together={("module_name", "job_class_name")},
+        ),
         migrations.RemoveField(
             model_name="job",
             name="git_repository",
@@ -26,9 +30,5 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name="job",
             name="source",
-        ),
-        migrations.AlterUniqueTogether(
-            name="job",
-            unique_together={("module_name", "job_class_name")},
         ),
     ]

@@ -239,7 +239,10 @@ class Job(PrimaryModel):
         """Get the Job class (source code) associated with this Job model."""
         if not self.installed:
             return None
-        return self.job_task.__class__
+        try:
+            return self.job_task.__class__
+        except:
+            return None
 
     @property
     def class_path(self):

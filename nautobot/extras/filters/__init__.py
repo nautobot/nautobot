@@ -623,8 +623,9 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=Job.objects.all(),
-        label="Job (ID or slug)",
+        label="Job (name or ID)",
     )
     job_model_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Job.objects.all(),
@@ -662,9 +663,9 @@ class ScheduledJobFilterSet(BaseFilterSet):
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="job_model__slug",
+        to_field_name="name",
         queryset=Job.objects.all(),
-        label="Job (ID or slug)",
+        label="Job (name or ID)",
     )
     job_model_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Job.objects.all(),
@@ -693,7 +694,11 @@ class JobButtonFilterSet(BaseFilterSet):
         },
     )
     content_types = ContentTypeFilter()
-    job = NaturalKeyOrPKMultipleChoiceFilter(queryset=Job.objects.all(), label="Job (slug or ID)")
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
 
     class Meta:
         model = JobButton

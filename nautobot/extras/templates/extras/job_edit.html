@@ -7,21 +7,6 @@
         <div class="panel-heading"><strong>Job Source</strong></div>
         <div class="panel-body">
             <div class="form-group">
-                <label class="col-md-3 control-label">Source</label>
-                <div class="col-md-9" style="padding-top: 7px">
-                    {{ obj.source | split:"." | first | bettertitle }}
-                    <span class="help-block">Source of the Python code for this job</span>
-                </div>
-            </div>
-            {% if obj.source == "git" %}
-                <div class="form-group">
-                    <label class="col-md-3 control-label">Repository</label>
-                    <div class="col-md-9" style="padding-top: 7px">
-                        <td>{{ obj.git_repository | placeholder }}</td>
-                    </div>
-                </div>
-            {% endif %}
-            <div class="form-group">
                 <label class="col-md-3 control-label">Module</label>
                 <div class="col-md-9" style="padding-top: 7px">
                     <code>{{ obj.module_name }}</code>

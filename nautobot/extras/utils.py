@@ -12,7 +12,6 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
 from django.db.models import Q
-from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 
@@ -458,7 +457,6 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
         module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
         job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         defaults={
-            "slug": slugify(job_name)[:JOB_MAX_NAME_LENGTH],
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
             "name": job_name,
             "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),

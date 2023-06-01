@@ -944,24 +944,24 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
-            job_class="local/test_pass/TestPass",
+            task="test_pass.TestPass",
+            job_class="test_pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
-            job_class="local/test_pass/TestPass",
+            task="test_pass.TestPass",
+            job_class="test_pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
-            job_class="local/test_pass/TestPass",
+            task="test_pass.TestPass",
+            job_class="test_pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
@@ -974,8 +974,8 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
-            job_class="local/test_pass/TestPass",
+            task="test_pass.TestPass",
+            job_class="test_pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -992,8 +992,8 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
-                job_class="local/test_pass/TestPass",
+                task="test_pass.TestPass",
+                job_class="test_pass.TestPass",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -1024,8 +1024,8 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
-            job_class="local/test_pass/TestPass",
+            task="test_pass.TestPass",
+            job_class="test_pass.TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -1055,12 +1055,12 @@ class ApprovalQueueTestCase(
 
     def setUp(self):
         super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/test_dry_run/TestDryRun")
-        self.job_model_2 = Job.objects.get_for_class_path("local/test_fail/TestFail")
+        self.job_model = Job.objects.get_for_class_path("test_dry_run.TestDryRun")
+        self.job_model_2 = Job.objects.get_for_class_path("test_fail.TestFail")
 
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.tests.example_jobs.test_dry_run.TestDryRun",
+            task="test_dry_run.TestDryRun",
             job_model=self.job_model,
             job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -1070,7 +1070,7 @@ class ApprovalQueueTestCase(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.tests.example_jobs.test_fail.TestFail",
+            task="test_fail.TestFail",
             job_model=self.job_model_2,
             job_class=self.job_model_2.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -1084,7 +1084,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="test_pass.TestPass",
             job_model=self.job_model,
             job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -1439,8 +1439,8 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="local/test_pass/TestPass")
-        JobResult.objects.create(name="local/test_fail/TestFail")
+        JobResult.objects.create(name="test_pass.TestPass")
+        JobResult.objects.create(name="test_fail.TestFail")
 
 
 class JobTestCase(
@@ -1658,14 +1658,14 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
 
         for run_url in (
-            reverse("extras:job", kwargs={"class_path": "local/test_fail/TestFail"}),
+            reverse("extras:job", kwargs={"class_path": "test_fail.TestFail"}),
             reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Job is not enabled to be run", response_body)
-            self.assertFalse(JobResult.objects.filter(name="local/test_fail/TestFail").exists())
+            self.assertFalse(JobResult.objects.filter(name="test_fail.TestFail").exists())
 
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")

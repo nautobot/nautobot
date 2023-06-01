@@ -726,12 +726,10 @@ class JobForm(BootstrapMixin, forms.Form):
 
 
 class JobEditForm(NautobotModelForm):
-    slug = SlugField()
 
     class Meta:
         model = Job
         fields = [
-            "slug",
             "enabled",
             "name_override",
             "name",

@@ -1133,7 +1133,6 @@ class JobEditFormTestCase(TestCase):
             "grouping": "Overridden grouping",
             "name_override": True,
             "name": "Overridden name",
-            "slug": "overridden-slug",
             "description_override": True,
             "description": "This is an overridden description.",
             "enabled": True,

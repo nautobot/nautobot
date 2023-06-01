@@ -187,8 +187,8 @@ def git_repository_pre_delete(instance, **kwargs):
 
     # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
-    # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
-    # to clean up other clones as they're encountered.
+    # For now we just delete the one that we have locally and rely on other methods
+    # (TODO: do we still have any after removing get_jobs()?) to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)
 
@@ -238,7 +238,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     GitRepository = apps.get_model("extras", "GitRepository")  # pylint: disable=redefined-outer-name
 
     # To make reverse migrations safe
-    if not hasattr(Job, "job_class_name") or not hasattr(Job, "git_repository"):
+    if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
