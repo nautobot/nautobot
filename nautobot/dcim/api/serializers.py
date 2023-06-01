@@ -199,6 +199,7 @@ class LocationSerializer(
         list_display_fields = ["name", "status", "parent", "tenant", "description", "tags"]
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
+        # TODO: Add documentation of this schema 
         detail_view_config = [
             {
                 "Location": {"fields": ["name", "rack_count", "parent"]},
