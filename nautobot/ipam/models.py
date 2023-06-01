@@ -474,9 +474,6 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
 
     objects = BaseManager.from_queryset(PrefixQuerySet)()
 
-    # TODO: The current Prefix model has no appropriate natural key available yet.
-    natural_key_field_names = ["id"]
-
     clone_fields = [
         "date_allocated",
         "description",
