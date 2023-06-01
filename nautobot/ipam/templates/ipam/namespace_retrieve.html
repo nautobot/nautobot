@@ -23,7 +23,20 @@
         </div>
 {% endblock content_left_page %}
 
-{% block content_full_width_page %}
-    {% include "utilities/obj_table.html" with table=vrf_table table_template="panel_table.html" heading="VRFs" disable_pagination=False %}
-    {% include "utilities/obj_table.html" with table=prefix_table table_template="panel_table.html" heading="Prefixes" disable_pagination=False %}
-{% endblock content_full_width_page %}
+{% block extra_nav_tabs %}
+{% if perms.ipam.view_vrf %}
+    <li role="presentation"{% if active_tab == 'vrfs' %} class="active"{% endif %}>
+        <a href="{% url 'ipam:namespace_vrfs' pk=object.pk %}">VRFs <span class="badge">{{ vrf_count }}</span></a>
+    </li>
+{% endif %}
+{% if perms.ipam.view_prefix %}
+    <li role="presentation"{% if active_tab == 'prefixes' %} class="active"{% endif %}>
+        <a href="{% url 'ipam:namespace_prefixes' pk=object.pk %}">Prefixes <span class="badge">{{ prefix_count }}</span></a>
+    </li>
+{% endif %}
+{% if perms.ipam.view_ipaddress %}
+    <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
+        <a href="{% url 'ipam:namespace_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ ip_address_count }}</span></a>
+    </li>
+{% endif %}
+{% endblock extra_nav_tabs %}
