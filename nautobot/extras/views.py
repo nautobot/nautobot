@@ -1067,8 +1067,8 @@ class JobView(ObjectPermissionRequiredMixin, View):
         job_model = self._get_job_model_or_404(class_path, pk)
 
         try:
-            job_class = job_model.job_class()
-            initial = normalize_querydict(request.GET, form_class=job_class.as_form_class())
+            job_instance = job_model.job_class()
+            initial = normalize_querydict(request.GET, form_class=job_instance.as_form_class())
             if "kwargs_from_job_result" in initial:
                 job_result_pk = initial.pop("kwargs_from_job_result")
                 try:
@@ -1089,11 +1089,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     )
 
             template_name = "extras/job.html"
-            job_form = job_class.as_form(initial=initial)
-            if hasattr(job_class, "template_name"):
+            job_form = job_instance.as_form(initial=initial)
+            if hasattr(job_instance, "template_name"):
                 try:
-                    get_template(job_class.template_name)
-                    template_name = job_class.template_name
+                    get_template(job_instance.template_name)
+                    template_name = job_instance.template_name
                 except TemplateDoesNotExist as err:
                     messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:

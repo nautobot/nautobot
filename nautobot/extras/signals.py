@@ -12,6 +12,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 
+from nautobot.core.celery import app, import_jobs_as_celery_tasks
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
@@ -232,6 +233,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     """
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
+    from nautobot.extras.jobs import Job as JobClass  # avoid circular import
     Job = apps.get_model("extras", "Job")
     GitRepository = apps.get_model("extras", "GitRepository")  # pylint: disable=redefined-outer-name
 
@@ -240,32 +242,22 @@ def refresh_job_models(sender, *, apps, **kwargs):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
-    from nautobot.extras.jobs import get_jobs
+    import_jobs_as_celery_tasks(app)
 
-    # TODO(Glenn): eventually this should be inverted so that get_jobs() relies on the database models...
-    job_classes = get_jobs()
     job_models = []
-    for source, modules in job_classes.items():
-        git_repository = None
-        if source.startswith("git."):
-            try:
-                git_repository = GitRepository.objects.get(slug=source[4:])
-            except GitRepository.DoesNotExist:
-                logger.warning('GitRepository "%s" not found?', source[4:])
-            source = "git"
+    for task_name, task in app.tasks.items():
+        # Skip Celery tasks that aren't Jobs
+        if not isinstance(task, JobClass):
+            continue
 
-        for module_details in modules.values():
-            for job_class in module_details["jobs"].values():
-                job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
-                if job_model is not None:
-                    job_models.append(job_model)
+        job_model, _ = refresh_job_model_from_job_class(Job, task.__class__)
+        if job_model is not None:
+            job_models.append(job_model)
 
     for job_model in Job.objects.all():
         if job_model.installed and job_model not in job_models:
             logger.info(
-                "Job %s%s/%s/%s is no longer installed",
-                job_model.source,
-                f"/{job_model.git_repository.slug}" if job_model.git_repository is not None else "",
+                "Job %s/%s is no longer installed",
                 job_model.module_name,
                 job_model.job_class_name,
             )

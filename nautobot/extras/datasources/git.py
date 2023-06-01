@@ -816,24 +816,17 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     installed_jobs = []
     if "extras.job" in repository_record.provided_contents and not delete:
-        jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
-        if os.path.isdir(jobs_path):
-            for job_info in jobs_in_directory(jobs_path, report_errors=True):
-                if job_info.error is not None:
-                    job_result.log(
-                        message=f"Error in loading Jobs from `{job_info.module_name}`: `{job_info.error}`",
-                        grouping="jobs",
-                        level_choice=LogLevelChoices.LOG_ERROR,
-                        logger=logger,
-                    )
-                    continue
+        from nautobot.core.celery import app
+        found_jobs = False
+        # TODO: need to unload the previous version of the module, if present?
+        try:
+            app.loader.import_task_module(f"{repository_record.slug}.jobs")
 
-                job_model, created = refresh_job_model_from_job_class(
-                    Job,
-                    JobSourceChoices.SOURCE_GIT,
-                    job_info.job_class,
-                    git_repository=repository_record,
-                )
+            for task_name, task in app.tasks.items():
+                if not task_name.startswith(f"{repository_record.slug}."):
+                    continue
+                found_jobs = True
+                job_model, created = refresh_job_model_from_job_class(Job, task.__class__)
 
                 if job_model is None:
                     job_result.log(
@@ -856,15 +849,24 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     logger=logger,
                 )
                 installed_jobs.append(job_model)
-        else:
+
+            if not found_jobs:
+                job_result.log(
+                    "No jobs were registered on loading the `jobs` submodule. Did you miss a `register_jobs()` call?",
+                    grouping="jobs",
+                    level_choice=LogLevelChoices.LOG_WARNING,
+                    logger=logger,
+                )
+        except Exception as exc:
+            logger.error("%s", exc)
             job_result.log(
-                "No `jobs` subdirectory found in Git repository",
+                "No `jobs` submodule found in Git repository",
                 grouping="jobs",
                 level_choice=LogLevelChoices.LOG_WARNING,
                 logger=logger,
             )
 
-    for job_model in Job.objects.filter(source=JobSourceChoices.SOURCE_GIT, git_repository=repository_record):
+    for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:
             job_result.log(
                 message="Marking Job record as no longer installed",

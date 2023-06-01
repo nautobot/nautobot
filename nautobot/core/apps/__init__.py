@@ -26,22 +26,6 @@ MENU_TABS = ("Inventory", "Networks", "Security", "Automation", "Platform")
 logger = logging.getLogger(__name__)
 registry["nav_menu"] = dict({tab: {"groups": {}, "permissions": set()} for tab in MENU_TABS})
 registry["homepage_layout"] = {"panels": {}}
-registry["system_jobs"] = []
-
-
-def register_jobs(class_list):
-    """
-    Register a list of Job classes
-    """
-    from nautobot.extras.jobs import Job
-
-    for job in class_list:
-        if not inspect.isclass(job):
-            raise TypeError(f"Job class {job} was passed as an instance!")
-        if not issubclass(job, Job):
-            raise TypeError(f"{job} is not a subclass of extras.jobs.Job!")
-
-        registry["system_jobs"].append(job)
 
 
 class NautobotConfig(AppConfig):
@@ -628,8 +612,8 @@ class CoreConfig(NautobotConfig):
         super().ready()
 
         # Register jobs last after everything else has been done.
-        jobs = import_string("nautobot.core.jobs.jobs")
-        register_jobs(jobs)
+        from nautobot.core.celery import app, import_jobs_as_celery_tasks
+        import_jobs_as_celery_tasks(app)
 
 
 class NautobotConstanceConfig(ConstanceConfig):

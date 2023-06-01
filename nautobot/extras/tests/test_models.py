@@ -1389,7 +1389,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     def setUp(self):
         module = "test_pass"
         name = "TestPass"
-        job_class = get_job(f"local/{module}/{name}")
+        job_class = get_job(f"{module}.{name}")
 
         self.job_result = JobResult.objects.create(name=job_class.class_path, user=None)
 

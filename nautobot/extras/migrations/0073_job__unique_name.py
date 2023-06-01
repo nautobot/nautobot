@@ -15,15 +15,20 @@ class Migration(migrations.Migration):
             name="name",
             field=models.CharField(max_length=100, unique=True),
         ),
-        migrations.AlterField(
+        migrations.RemoveField(
+            model_name="job",
+            name="git_repository",
+        ),
+        migrations.RemoveField(
             model_name="job",
             name="slug",
-            field=nautobot.core.models.fields.AutoSlugField(
-                blank=True, max_length=100, populate_from="name", unique=True
-            ),
+        ),
+        migrations.RemoveField(
+            model_name="job",
+            name="source",
         ),
         migrations.AlterUniqueTogether(
             name="job",
-            unique_together={("source", "git_repository", "module_name", "job_class_name")},
+            unique_together={("module_name", "job_class_name")},
         ),
     ]

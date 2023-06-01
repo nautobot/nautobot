@@ -1170,7 +1170,7 @@ class JobTest(
 
     def setUp(self):
         super().setUp()
-        self.default_job_name = "local/api_test_job/APITestJob"
+        self.default_job_name = "api_test_job.APITestJob"
         self.job_class = get_job(self.default_job_name)
         self.job_model = Job.objects.get_for_class_path(self.default_job_name)
         self.job_model.enabled = True
@@ -1178,7 +1178,7 @@ class JobTest(
 
     run_success_response_status = status.HTTP_201_CREATED
 
-    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+    def get_run_url(self, class_path="api_test_job.APITestJob"):
         job_model = Job.objects.get_for_class_path(class_path)
         return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
 
@@ -1198,7 +1198,7 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model = Job.objects.get_for_class_path("api_test_job.APITestJob")
         job_model.has_sensitive_variables = True
         job_model.has_sensitive_variables_override = True
         job_model.validated_save()
@@ -1220,7 +1220,7 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model = Job.objects.get_for_class_path("api_test_job.APITestJob")
         job_model.approval_required = True
         job_model.approval_required_override = True
         job_model.validated_save()

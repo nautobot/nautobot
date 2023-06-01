@@ -378,7 +378,7 @@ def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors
                 yield JobClassInfo(module_name=discovered_module_name, error=exc)
 
 
-def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):
+def refresh_job_model_from_job_class(job_model_class, job_class):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
 
@@ -392,13 +392,6 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     )  # imported here to prevent circular import problem
 
     # Unrecoverable errors
-    if len(job_source) > JOB_MAX_SOURCE_LENGTH:  # Should NEVER happen
-        logger.error(
-            'Unable to store Jobs from "%s" as Job models because the source exceeds %d characters in length!',
-            job_source,
-            JOB_MAX_SOURCE_LENGTH,
-        )
-        return (None, False)
     if len(job_class.__module__) > JOB_MAX_NAME_LENGTH:
         logger.error(
             'Unable to store Jobs from module "%s" as Job models because the module exceeds %d characters in length!',
@@ -443,8 +436,6 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     existing_job_names = (
         job_model_class.objects.filter(name__startswith=job_name)
         .exclude(
-            source=job_source[:JOB_MAX_SOURCE_LENGTH],
-            git_repository=git_repository,
             module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
             job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         )
@@ -464,8 +455,6 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
         )
 
     job_model, created = job_model_class.objects.get_or_create(
-        source=job_source[:JOB_MAX_SOURCE_LENGTH],
-        git_repository=git_repository,
         module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
         job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         defaults={
@@ -500,12 +489,10 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     job_model.save()
 
     logger.info(
-        '%s Job "%s: %s" from <%s%s: %s>',
+        '%s Job "%s: %s" from <%s>',
         "Created" if created else "Refreshed",
         job_model.grouping,
         job_model.name,
-        job_source,
-        f" {git_repository.name}" if git_repository is not None else "",
         job_class.__name__,
     )
 

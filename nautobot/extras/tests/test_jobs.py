@@ -104,7 +104,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_field_default"
         name = "TestFieldDefault"
-        job_class = get_job(f"local/{module}/{name}")
+        job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
 
         self.assertInHTML(
@@ -123,7 +123,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_field_order"
         name = "TestFieldOrder"
-        job_class = get_job(f"local/{module}/{name}")
+        job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
         self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_profile"])
 
@@ -133,7 +133,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_no_field_order"
         name = "TestNoFieldOrder"
-        job_class = get_job(f"local/{module}/{name}")
+        job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
         self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_profile"])
 
@@ -143,7 +143,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_no_field_order"
         name = "TestDefaultFieldOrderWithInheritance"
-        job_class = get_job(f"local/{module}/{name}")
+        job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),

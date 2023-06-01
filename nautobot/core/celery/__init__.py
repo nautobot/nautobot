@@ -66,18 +66,42 @@ app.autodiscover_tasks()
 
 
 @signals.import_modules.connect
-def import_tasks_from_jobs_root(sender, **kwargs):
-    """Load jobs from JOBS_ROOT on celery workers."""
+def import_jobs_as_celery_tasks(sender, **kwargs):
+    """
+    Import system Jobs into Celery as well as Jobs from JOBS_ROOT and GIT_ROOT.
+
+    Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready()
+    """
+    logger.debug("Importing system Jobs")
+    sender.loader.import_task_module("nautobot.core.jobs")
+
     jobs_root = settings.JOBS_ROOT
     if jobs_root and os.path.exists(jobs_root):
         if jobs_root not in sys.path:
             sys.path.append(jobs_root)
         for _, module_name, _ in pkgutil.iter_modules([jobs_root]):
             try:
+                logger.debug("Importing Jobs from %s in JOBS_ROOT", module_name)
                 sender.loader.import_task_module(module_name)
             except Exception as exc:
                 # logger.error(f"Unable to load module '{module_name}' from {jobs_root}: {exc:}")
                 logger.exception(exc)
+
+    git_root = settings.GIT_ROOT
+    if git_root and os.path.exists(git_root):
+        if git_root not in sys.path:
+            sys.path.append(git_root)
+        from nautobot.extras.datasources.git import ensure_git_repository
+        from nautobot.extras.models import GitRepository
+        for repo in GitRepository.objects.all():
+            if "extras.job" in repo.provided_contents:
+                ensure_git_repository(repo, head=repo.current_head, logger=logger)
+                try:
+                    module_name = f"{repo.slug}.jobs"
+                    logger.debug("Importing Jobs from %s in GIT_ROOT", module_name)
+                    sender.loader.import_task_module(module_name)
+                except Exception as exc:
+                    logger.exception(exc)
 
 
 def add_nautobot_log_handler(logger_instance, log_format=None):
@@ -180,4 +204,5 @@ nautobot_task = shared_task
 def register_jobs(*jobs):
     """Helper method to register jobs with Celery"""
     for job in jobs:
+        logger.debug("Registering job %s.%s", job.__module__, job.__name__)
         app.register_task(job)

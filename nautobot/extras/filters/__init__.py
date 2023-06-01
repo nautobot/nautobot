@@ -553,7 +553,6 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "grouping": "icontains",
             "description": "icontains",
         },
@@ -563,10 +562,8 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         model = Job
         fields = [
             "id",
-            "source",
             "module_name",
             "job_class_name",
-            "slug",
             "name",
             "grouping",
             "installed",
@@ -599,8 +596,9 @@ class JobHookFilterSet(BaseFilterSet):
         choices=ChangeLoggedModelsQuery().get_choices,
     )
     job = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=Job.objects.all(),
-        label="Job (slug or ID)",
+        label="Job (name or ID)",
     )
 
     class Meta:

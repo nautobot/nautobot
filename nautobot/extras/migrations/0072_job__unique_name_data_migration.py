@@ -6,10 +6,9 @@ from django.template.defaultfilters import slugify
 from nautobot.extras.constants import JOB_MAX_NAME_LENGTH
 
 
-def generate_unique_job_names_and_update_slug(apps, schema_editor):
+def generate_unique_job_names(apps, schema_editor):
     """
     Make duplicate Job names unique by appending an incrementing counter to the end.
-    Also update slugs to be generated from the Job.name field.
     """
     Job = apps.get_model("extras", "Job")
     job_names = []
@@ -28,9 +27,32 @@ def generate_unique_job_names_and_update_slug(apps, schema_editor):
             )
             job_model.name = job_name
             job_model.name_override = True
-        job_model.slug = slugify(job_name)[:JOB_MAX_NAME_LENGTH]
         job_model.save()
         job_names.append(job_name)
+
+
+def fixup_job_module_names(apps, schema_editor):
+    """
+    Fix up the `module_name` of Jobs to reflect the pending removal of the `source` and `git_repository` fields.
+    """
+    Job = apps.get_model("extras", "Job")
+    # Local jobs, plugin jobs, and system jobs already have the right module name, just need to fix up git jobs
+    for job_model in Job.objects.filter(git_repository__isnull=False):
+        job_model.module_name = f"{job_model.git_repository.slug}.jobs.{job_model.module_name}"
+        job_model.save()
+
+
+def reverse_fixup_job_module_names(apps, schema_editor):
+    GitRepository = apps.get_model("extras", "GitRepository")
+    Job = apps.get_model("extras", "Job")
+    for repo in GitRepository.objects.all():
+        if "extras.job" not in repo.provided_contents:
+            continue
+        for job_model in Job.objects.filter(module_name__istartswith=f"{repo.slug}.jobs."):
+            job_model.source = "git"
+            job_model.git_repository = repo
+            job_model.module_name = job_model.module.name.replace(f"{repo.slug}.jobs.", "")
+            job_model.save()
 
 
 class Migration(migrations.Migration):
@@ -40,7 +62,11 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(
-            code=generate_unique_job_names_and_update_slug,
+            code=generate_unique_job_names,
             reverse_code=migrations.operations.special.RunPython.noop,
+        ),
+        migrations.RunPython(
+            code=fixup_job_module_names,
+            reverse_code=reverse_fixup_job_module_names,
         ),
     ]
