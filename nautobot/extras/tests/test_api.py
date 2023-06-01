@@ -90,7 +90,6 @@ class AppTest(APITestCase):
 #
 
 
-@skip(reason="Content Types are BROKEN")
 class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
     choices_fields = ["content_type"]
@@ -470,7 +469,6 @@ class CreatedUpdatedFilterTest(APITestCase):
         self.assertEqual(response.data["results"][0]["id"], str(self.rack2.pk))
 
 
-@skip(reason="Content Types are BROKEN")
 class CustomFieldTest(APIViewTestCases.APIViewTestCase):
     """Tests for the CustomField REST API."""
 
@@ -2706,7 +2704,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 self.assertEqual(str(device_for_association.id), associated_device["id"])
 
 
-@skip(reason="Content Types are BROKEN")
 class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     model = RelationshipAssociation
     choices_fields = ["destination_type", "source_type"]
