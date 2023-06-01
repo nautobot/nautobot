@@ -277,9 +277,48 @@ class NautobotMetadata(SimpleMetadata):
 
         return metadata
 
+    def restructure_view_config(self, view_config):
+        """
+        Restructure the view config by removing specific fields ("natural_key_slug", "url", "display", "status", "id")
+        from the view config and adding standard fields ("id", "natural_key_slug", "url") to the first item's fields.
+
+        This operation aims to establish a standardized and consistent way of displaying the fields "id", "natural_key_slug",
+        and "url" within the view config.
+
+        Example:
+            >>> view_config = [
+                {
+                    Location: {fields: ["display", "name",...]},
+                    Others: {fields: ["tenant", "tenant_group", "status"]}
+                },
+                ...
+            ]
+            >>> restructure_view_config(view_config)
+            [
+                {
+                    Location: {fields: ["name","id","natural_key_slug","url"]},
+                    Others: {fields: ["tenant", "tenant_group"]}
+                },
+                ...
+            ]
+        """
+        fields_to_remove = ["natural_key_slug", "url", "display", "status", "id"]
+        fields_to_add = ["id", "natural_key_slug", "url"]
+
+        for section_idx, section in enumerate(view_config):
+            for idx, data in enumerate(section.items()):
+                _, value = data
+                for field in fields_to_remove:
+                    if field in value["fields"]:
+                        value["fields"].remove(field)
+                        if section_idx == 0 and idx == 0:
+                            value["fields"].extend(fields_to_add)
+        return view_config
+
     def determine_detail_view_schema(self, serializer):
+        """Determine the layout option that would be used for the detail view"""
         if hasattr(serializer.Meta, "detail_view_config"):
             view_config = serializer.Meta.detail_view_config
         else:
             view_config = SerializerDetailViewConfig(serializer).view_config()
-        return view_config
+        return self.restructure_view_config(view_config)

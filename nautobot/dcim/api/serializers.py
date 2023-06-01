@@ -201,9 +201,9 @@ class LocationSerializer(
         validators = []
         detail_view_config = [
             {
-                "Location": {"fields": ["name", "display", "rack_count", "parent"]},
+                "Location": {"fields": ["name", "rack_count", "parent"]},
                 "Management": {"fields": ["status", "prefix_count", "device_count"]},
-                "Others": {"fields": ["tenant", "natural_key_slug", "url"]},
+                "Others": {"fields": ["tenant"]},
             },
             {
                 "Tags": {"fields": ["tags"]},
