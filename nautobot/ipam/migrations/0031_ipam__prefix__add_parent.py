@@ -45,7 +45,7 @@ def reverse_it(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0029_ipam__namespaces"),
+        ("ipam", "0030_ipam__namespaces"),
         ("dcim", "0041_ipam__namespaces"),
         ("virtualization", "0023_ipam__namespaces"),
     ]

@@ -6,7 +6,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0029_ipam__namespaces"),
+        ("ipam", "0030_ipam__namespaces"),
         ("virtualization", "0022_vminterface_timestamps_data_migration"),
     ]
 
