@@ -7,6 +7,8 @@ import netaddr
 
 BASE_NAME = "Cleanup Namespace"
 
+DESCRIPTION = "Created by Nautobot 2.0 IPAM data migrations."
+
 
 def process_namespaces(apps, schema_editor):
     print("\n", end="")
@@ -186,6 +188,8 @@ def process_ip_addresses(apps):
 
         else:
             broadcast = new_parent_cidr[-1]
+            # This can result in duplicate Prefixes being created in the global_ns but that will be
+            # cleaned up subsequently in `process_prefix_duplicates`.
             new_parent = Prefix.objects.create(
                 ip_version=orphaned_ip.ip_version,
                 network=network,
@@ -194,7 +198,7 @@ def process_ip_addresses(apps):
                 vrf=orphaned_ip.vrf,
                 prefix_length=prefix_length,
                 namespace=orphaned_ip.vrf.namespace if orphaned_ip.vrf else global_ns,
-                description="Created by Nautobot data migrations.",
+                description=DESCRIPTION,
             )
         orphaned_ip.parent = new_parent
         orphaned_ip.save()
@@ -320,7 +324,7 @@ def copy_vrfs_to_cleanup_namespaces(apps):
                 tenant=vrf.tenant,
                 enforce_unique=vrf.enforce_unique,
                 _custom_field_data=vrf._custom_field_data,
-                description="Created by Nautobot data migrations.",
+                description=DESCRIPTION,
             )
             vrf_copy.import_targets.set(vrf.import_targets.all())
             vrf_copy.export_targets.set(vrf.export_targets.all())
@@ -448,7 +452,7 @@ def create_vrf_namespace(apps, vrf):
     while not created:
         ns, created = Namespace.objects.get_or_create(
             name=name,
-            defaults={"description": "Created by Nautobot."},
+            defaults={"description": DESCRIPTION},
         )
         counter += 1
         name = f"{base_name} ({counter})"
@@ -597,7 +601,8 @@ def get_next_vrf_cleanup_namespace(apps, vrf):
     while True:
         base_name = f"{BASE_NAME} ({counter})"
         namespace, created = Namespace.objects.get_or_create(
-            name=base_name, defaults={"description": "Created by Nautobot."}
+            name=base_name,
+            defaults={"description": DESCRIPTION},
         )
         if created:
             return namespace
@@ -641,7 +646,8 @@ def get_next_prefix_cleanup_namespace(apps, prefix, base_name=BASE_NAME):
     while True:
         name = f"{base_name} ({counter})"
         namespace, created = Namespace.objects.get_or_create(
-            name=name, defaults={"description": "Created by Nautobot."}
+            name=name,
+            defaults={"description": DESCRIPTION},
         )
         if created:
             return namespace
