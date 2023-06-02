@@ -258,11 +258,7 @@ class Job(PrimaryModel):
 
     @property
     def runnable(self):
-        return (
-            self.enabled
-            and self.installed
-            and not (self.has_sensitive_variables and self.approval_required)
-        )
+        return self.enabled and self.installed and not (self.has_sensitive_variables and self.approval_required)
 
     @property
     def job_task(self):

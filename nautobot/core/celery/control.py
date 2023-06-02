@@ -9,9 +9,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-@control_command(
-    args=[("repository_pk", str), ("head", str)]
-)
+@control_command(args=[("repository_pk", str), ("head", str)])
 def refresh_git_repository(state, repository_pk, head):
     """
     Celery worker control event to ensure that all active workers have the correct head for a given Git repository.
@@ -26,7 +24,7 @@ def refresh_git_repository(state, repository_pk, head):
         changed = ensure_git_repository(repository, head=head, logger=logger)
         if changed:
             # Unload modules and tasks/jobs previously provided by the repository
-            for module_name in sys.modules.keys():
+            for module_name in sys.modules.keys():  # pylint: disable=consider-using-dict-items
                 if module_name == repository.slug or module_name.startswith(f"{repository.slug}."):
                     logger.debug("Unloading module %s", module_name)
                     del sys.modules[module_name]

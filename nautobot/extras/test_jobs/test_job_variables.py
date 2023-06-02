@@ -83,4 +83,6 @@ job_list = [
     TextVarJob,
 ]
 
-register_jobs(*job_list)
+# Avoid registering the jobs with Celery when this is imported directly as a file
+if __name__ == "test_job_variables":
+    register_jobs(*job_list)

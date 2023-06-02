@@ -8,12 +8,12 @@ function slugify(s, num_chars) {
     s = s.replace(/^[\s\.]+|[\s\.]+$/g, '');    // Trim leading/trailing spaces
     s = s.replace(/[\-\.\s]+/g, '-');           // Convert spaces and decimals to hyphens
     s = s.toLowerCase();                        // Convert to lowercase
+    s = s.replace(/-/g, '_');
 
-    if (/^[^_A-Za-z]/.test(s)) {
+    if (/^[^_A-Za-z]/.test(s)) {  // Slug must start with a letter or underscore only
         s = 'a' + s;
     }
 
-    s = s.replace(/-/g, '_');
     return s.substring(0, num_chars);           // Trim to first num_chars chars
 }
 

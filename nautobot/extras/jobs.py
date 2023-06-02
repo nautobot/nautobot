@@ -11,7 +11,7 @@ import warnings
 
 from billiard.einfo import ExceptionInfo
 from celery import states
-from celery.exceptions import Retry
+from celery.exceptions import NotRegistered, Retry
 from celery.result import EagerResult
 from celery.utils.functional import maybe_list
 from celery.utils.log import get_task_logger
@@ -396,6 +396,8 @@ class BaseJob(Task):
     def class_path_dotted(cls):  # pylint: disable=no-self-argument
         """
         Dotted class_path, suitable for use in things like Python logger names.
+
+        Deprecated as of Nautobot 2.0: just use .class_path instead.
         """
         return cls.class_path
 
@@ -1115,10 +1117,12 @@ def is_variable(obj):
 def get_job(class_path):
     """
     Retrieve a specific job class by its class_path (<module_name>.<JobClassName>).
+
+    May return None if the job isn't properly registered with Celery at this time.
     """
     try:
         return celery_app.tasks[class_path].__class__
-    except Exception:
+    except NotRegistered:
         return None
 
 

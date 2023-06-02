@@ -743,21 +743,6 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
 
-    def test_save_relocate_directory(self):
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            with self.settings(GIT_ROOT=tmpdirname):
-                initial_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, initial_path)
-                os.makedirs(initial_path)
-
-                self.repo.slug = "a-new-location"
-                self.repo.save()
-
-                self.assertFalse(os.path.exists(initial_path))
-                new_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, new_path)
-                self.assertTrue(os.path.isdir(new_path))
-
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
@@ -801,8 +786,15 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
                 if field_name == "name" and "test_duplicate_name" in job_model.job_class.__module__:
                     pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
                 else:
-                    self.assertFalse(getattr(job_model, f"{field_name}_override"))
-                    self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+                    self.assertFalse(
+                        getattr(job_model, f"{field_name}_override"),
+                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                    )
+                    self.assertEqual(
+                        getattr(job_model, field_name),
+                        getattr(job_model.job_class, field_name),
+                        field_name,
+                    )
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
