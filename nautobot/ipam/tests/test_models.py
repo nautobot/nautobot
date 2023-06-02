@@ -669,7 +669,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
                 self.assertEqual(
                     ip.parent,
                     Prefix.objects.filter(network__lte=ip.host, broadcast__gte=ip.host)
-                    .order_by("-prefix_length")
+                    .order_by("-mask_length")
                     .first(),
                 )
 

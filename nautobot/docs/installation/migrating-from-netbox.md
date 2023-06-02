@@ -133,10 +133,10 @@ All IPAM objects with network field types (`ipam.IPAddress`, and `ipam.Prefix`) 
 
 Below is a summary of the underlying technical changes to network fields. These will be explained in more detail in the following sections.
 
-- For `IPAddress`, the `address` field was exploded out to `host`, `broadcast`, and `prefix_length` fields; `address` was converted into a computed field.
+- For `IPAddress`, the `address` field was exploded out to `host`, and `mask_length` fields; `address` was converted into a computed field.
 - For `Prefix` objects, the `prefix` field was exploded out to `network`, `broadcast`, and `prefix_length` fields; `prefix` was converted into a computed field.
 - The `host`, `network`, and `broadcast` fields are now of a `varbinary` database type, which is represented as a packed binary integer (for example, the host `1.1.1.1` is packed as `b"\x01\x01\x01\x01"`)
-- Network membership queries are accomplished by triangulating the "position" of an address using the IP, broadcast, and prefix length of the source and target addresses.
+- Network membership queries are accomplished by triangulating the "position" of an address using the IP, and mask length of the source and target addresses.
 
 !!! note
     You should never have to worry about the binary nature of how the network fields are stored in the database! The Django database ORM takes care of it all!
@@ -147,7 +147,7 @@ The following fields have changed when working with `ipam.IPAddress` objects:
 
 ##### `address` is now a computed field
 
-This field is computed from `{host}/{prefix_length}` and is represented as a `netaddr.IPNetwork` object.
+This field is computed from `{host}/{mask_length}` and is represented as a `netaddr.IPNetwork` object.
 
 ```python
 >>> ip = IPAddress(address="1.1.1.1/30")
@@ -218,25 +218,6 @@ For example, if you have multiple `IPAddress` objects with the same `host` value
 >>> IPAddress.objects.filter(host="1.1.1.1", prefix_length=30)
 <IPAddressQuerySet [<IPAddress: 1.1.1.1/30>]>
 ```
-
-##### IPAddress `broadcast` contains the broadcast address
-
-If the prefix length is that of a host prefix (e.g. `/32`), `broadcast` will be the same as the `host` :
-
-```python
->>> IPAddress.objects.get(address="1.1.1.1/32").broadcast
-'1.1.1.1'
-```
-
-If the prefix length is any larger (e.g. `/24`), `broadcast` will be that of the containing network for that prefix length (e.g. `1.1.1.255`):
-
-```python
->>> IPAddress.objects.create(address="1.1.1.1/24").broadcast
-'1.1.1.255'
-```
-
-!!! note
-    This field is largely for internal use only for facilitating network membership queries and it is not recommend that you use it for filtering.
 
 #### Changes to `Aggregate` and `Prefix`
 

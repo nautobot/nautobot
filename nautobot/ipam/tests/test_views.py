@@ -179,7 +179,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             self.assertNotIn(prefix.get_absolute_url(), content, msg=content)
 
 
-@skip("Updated for Namespaces but still failing. Remove broadcast/prefix_length and revisit.")
+@skip("Updated for Namespaces but still failing. Remove broadcast and rename prefix_length to mask_length and revisit.")
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
 

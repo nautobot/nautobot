@@ -23,7 +23,16 @@ class Migration(migrations.Migration):
         ),
         migrations.RemoveField(
             model_name="ipaddress",
+            name="broadcast",
+        ),
+        migrations.RemoveField(
+            model_name="ipaddress",
             name="vrf",
+        ),
+        migrations.RenameField(
+            model_name="ipaddress",
+            old_name="prefix_length",
+            new_name="mask_length",
         ),
         migrations.RemoveField(
             model_name="prefix",
