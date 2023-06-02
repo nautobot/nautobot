@@ -94,8 +94,9 @@ def import_jobs_as_celery_tasks(sender, **kwargs):
             sys.path.append(git_root)
 
         from nautobot.extras.datasources.git import ensure_git_repository
+
         django_apps = kwargs.get("apps", global_apps)
-        GitRepository = apps.get_model("extras", "GitRepository")
+        GitRepository = django_apps.get_model("extras", "GitRepository")
 
         for repo in GitRepository.objects.all():
             if "extras.job" in repo.provided_contents:
