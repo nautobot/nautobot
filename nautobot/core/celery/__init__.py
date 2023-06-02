@@ -9,6 +9,7 @@ from celery import Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.fixups.django import DjangoFixup
 from celery.utils.log import get_logger
+from django.apps import apps as global_apps
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
@@ -93,7 +94,8 @@ def import_jobs_as_celery_tasks(sender, **kwargs):
             sys.path.append(git_root)
 
         from nautobot.extras.datasources.git import ensure_git_repository
-        from nautobot.extras.models import GitRepository
+        django_apps = kwargs.get("apps", global_apps)
+        GitRepository = apps.get_model("extras", "GitRepository")
 
         for repo in GitRepository.objects.all():
             if "extras.job" in repo.provided_contents:

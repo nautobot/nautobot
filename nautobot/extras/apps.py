@@ -56,3 +56,8 @@ class ExtrasConfig(NautobotConfig):
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)
+
+        # Register jobs last after everything else has been done.
+        from nautobot.core.celery import app, import_jobs_as_celery_tasks
+
+        import_jobs_as_celery_tasks(app)
