@@ -1,19 +1,9 @@
 import re
-import uuid
 
 import netaddr
-from django.db.models import (
-    Count,
-    ExpressionWrapper,
-    IntegerField,
-    F,
-    OuterRef,
-    Subquery,
-    Q,
-    UUIDField,
-    Value,
-)
-from django.db.models.functions import Coalesce, Length
+from django.core.exceptions import ValidationError
+from django.db.models import F, ProtectedError, Q
+from django.db.models.functions import Length
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
@@ -207,71 +197,6 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
 class PrefixQuerySet(BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
 
-    def annotate_tree(self):
-        """
-        Annotate the number of parent and child prefixes for each Prefix.
-
-        The UUID being used is fake for purposes of satisfying the COALESCE condition.
-        """
-        # The COALESCE needs a valid, non-zero, non-null UUID value to do the comparison.
-        # The value itself has no meaning, so we just generate a random UUID for the query.
-        FAKE_UUID = uuid.uuid4()
-
-        from nautobot.ipam.models import Prefix
-
-        return self.annotate(
-            parents=Subquery(
-                Prefix.objects.annotate(
-                    maybe_vrf=ExpressionWrapper(
-                        Coalesce(F("vrf_id"), FAKE_UUID),
-                        output_field=UUIDField(),
-                    )
-                )
-                .filter(
-                    Q(prefix_length__lt=OuterRef("prefix_length"))
-                    & Q(network__lte=OuterRef("network"))
-                    & Q(broadcast__gte=OuterRef("broadcast"))
-                    & Q(
-                        maybe_vrf=ExpressionWrapper(
-                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
-                            output_field=UUIDField(),
-                        )
-                    )
-                )
-                .order_by()
-                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("fake_group_by")
-                .annotate(count=Count("*"))
-                .values("count")[:1],
-                output_field=IntegerField(),
-            ),
-            children=Subquery(
-                Prefix.objects.annotate(
-                    maybe_vrf=ExpressionWrapper(
-                        Coalesce(F("vrf_id"), FAKE_UUID),
-                        output_field=UUIDField(),
-                    )
-                )
-                .filter(
-                    Q(prefix_length__gt=OuterRef("prefix_length"))
-                    & Q(network__gte=OuterRef("network"))
-                    & Q(broadcast__lte=OuterRef("broadcast"))
-                    & Q(
-                        maybe_vrf=ExpressionWrapper(
-                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
-                            output_field=UUIDField(),
-                        )
-                    )
-                )
-                .order_by()
-                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("fake_group_by")
-                .annotate(count=Count("*"))
-                .values("count")[:1],
-                output_field=IntegerField(),
-            ),
-        )
-
     def ip_family(self, family):
         try:
             byte_len = self.ip_family_map[family]
@@ -327,7 +252,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         """
         if prefix:
             _prefix = netaddr.IPNetwork(prefix)
-            if str(_prefix) != prefix:
+            if str(_prefix) != str(prefix):
                 raise self.model.DoesNotExist()
             last_ip = self._get_last_ip(_prefix)
             kwargs["prefix_length"] = _prefix.prefixlen
@@ -346,6 +271,114 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
             kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
+
+    # TODO(jathan): This was copied from `Prefix.delete()` but this won't work in the same way.
+    # Currently the issue is with `queryset.delete()` on bulk delete view from list view, how do we
+    # reference the "parent" that was deleted here? It's not in context on the `ProtectedError`.
+    # raised. This comment can be deleted after this has been successfully unit-tested.
+    def delete(self, *args, **kwargs):
+        """
+        A Prefix with children will be impossible to delete and raise a `ProtectedError`.
+
+        If a Prefix has children, this catch the error and explicitly update the
+        `protected_objects` from the exception setting their parent to the old parent of this
+        prefix, and then this prefix will be deleted.
+        """
+
+        try:
+            return super().delete(*args, **kwargs)
+        except ProtectedError as err:
+            # This will be either IPAddress or Prefix.
+            protected_instance = tuple(err.protected_objects)[0]
+            protected_model = protected_instance._meta.model
+            protected_parent = protected_instance.parent
+            new_parent = protected_parent.parent_id
+
+            # Prepare a queryset for the protected objects.
+            protected_pks = (po.pk for po in err.protected_objects)
+            protected_objects = protected_model.objects.filter(pk__in=protected_pks)
+
+            # IPAddress objects must have a parent.
+            if protected_model._meta.model_name == "ipaddress" and new_parent is None:
+                # If any of the child IPs would have a null parent after this change, raise an
+                # error.
+                raise ProtectedError(
+                    msg=(
+                        f"Cannot delete Prefix {protected_parent} because it has child IPAddress"
+                        " objects that would no longer have a parent."
+                    ),
+                    protected_objects=err.protected_objects,
+                ) from err
+
+            # Update protected objects to use grand-parent of the parent Prefix and delete the old
+            # parent. This should be equivalent at the row level of saying `parent=self.parent`.
+            protected_objects.update(parent=new_parent)
+            return super().delete(*args, **kwargs)
+
+    def _validate_cidr(self, value):
+        """
+        Validate whether `value` is a validr IPv4/IPv6 CIDR.
+
+        Args:
+            value (str): IP address
+        """
+        try:
+            return netaddr.IPNetwork(str(value))
+        except netaddr.AddrFormatError as err:
+            raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
+
+    def get_closest_parent(self, cidr, namespace, max_prefix_length=0):
+        """
+        Return the closest matching parent Prefix for a `cidr` even if it doesn't exist in the database.
+
+        Args:
+            cidr (str): IPv4/IPv6 CIDR string
+            namespace (Namespace): Namespace instance
+            max_prefix_length (int): Maximum prefix length depth for closest parent lookup
+        """
+        # Validate that it's a real CIDR
+        cidr = self._validate_cidr(cidr)
+        broadcast = str(cidr.broadcast or cidr.ip)
+        ip_version = cidr.version
+
+        try:
+            max_prefix_length = int(max_prefix_length)
+        except ValueError:
+            raise ValidationError({"max_prefix_length": f"Invalid prefix_length: {max_prefix_length}."})
+
+        # Walk the supernets backwrds from smallest to largest prefix.
+        try:
+            supernets = cidr.supernet(prefixlen=max_prefix_length)
+        except ValueError as err:
+            raise ValidationError({"max_prefix_length": str(err)})
+        else:
+            supernets.reverse()
+
+        # Enumerate all unique networks and prefixes
+        networks = {str(s.network) for s in supernets}
+        del supernets  # Free the memory because it could be quite large.
+
+        # Prepare the queryset filter
+        lookup_kwargs = {
+            "network__in": networks,
+            # TODO(jathan): This might be flawed if an IPAddress has a prefix_length that excludes it from a
+            # parent that should otherwise contain it. If we encounter issues in the future for
+            # identifying closest parent prefixes, this might be a starting point.
+            "prefix_length__lte": cidr.prefixlen,
+            "broadcast__gte": broadcast,
+            "ip_version": ip_version,
+            "namespace": namespace,
+        }
+
+        # Search for possible ancestors by network/prefix, returning them in reverse order, so that
+        # we can choose the first one.
+        possible_ancestors = self.filter(**lookup_kwargs).order_by("-prefix_length")
+
+        # If we've got any matches, the first one is our closest parent.
+        try:
+            return possible_ancestors[0]
+        except IndexError:
+            raise self.model.DoesNotExist(f"Could not determine parent Prefix for {cidr}")
 
 
 class IPAddressQuerySet(BaseNetworkQuerySet):

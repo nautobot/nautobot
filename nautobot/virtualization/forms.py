@@ -41,7 +41,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -207,6 +207,11 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         queryset=Cluster.objects.all(), query_params={"cluster_group_id": "$cluster_group"}
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        label="VRFs",
+    )
 
     class Meta:
         model = VirtualMachine
@@ -218,6 +223,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "role",
             "tenant_group",
             "tenant",
+            "vrfs",
             "platform",
             "primary_ip4",
             "primary_ip6",
@@ -243,7 +249,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
 
         if self.instance.present_in_database:
             # Compile list of choices for primary IPv4 and IPv6 addresses
-            for family in [4, 6]:
+            for ip_version in [4, 6]:
                 ip_choices = [(None, "---------")]
 
                 # Gather PKs of all interfaces belonging to this VM
@@ -260,7 +266,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                             f"{assignment.ip_address.address} ({assignment.vm_interface})",
                         )
                         for assignment in interface_ip_assignments
-                        if assignment.ip_address.family == family
+                        if assignment.ip_address.ip_version == ip_version
                     ]
                     ip_choices.append(("Interface IPs", ip_list))
 
@@ -273,11 +279,13 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                             [
                                 (ip.id, f"{ip.address} (NAT)")
                                 for ip in ip_assignment.ip_address.nat_outside_list.all()
-                                if ip.family == family
+                                if ip.ip_version == ip_version
                             ]
                         )
                     ip_choices.append(("NAT IPs", nat_ips))
-                self.fields[f"primary_ip{family}"].choices = ip_choices
+                self.fields[f"primary_ip{ip_version}"].choices = ip_choices
+
+            self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
         else:
             # An object that doesn't exist yet can't have any IPs assigned to it
@@ -285,6 +293,11 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             self.fields["primary_ip4"].widget.attrs["readonly"] = True
             self.fields["primary_ip6"].choices = []
             self.fields["primary_ip6"].widget.attrs["readonly"] = True
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.vrfs.set(self.cleaned_data["vrfs"])
+        return instance
 
 
 class VirtualMachineBulkEditForm(
@@ -448,42 +461,6 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         if location:
             self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
             self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
-
-    def clean(self):
-        super().clean()
-        ip_addresses = self.cleaned_data.get("ip_addresses")
-        vm = self.cleaned_data.get("virtual machine")
-        vm_interface = self.instance
-        if vm is not None and vm_interface is not None:
-            # Check if the ip address exist on other VMInterfaces that are assigned to the virtual machine.
-            other_assignments_ip4_exist = (
-                IPAddressToInterface.objects.filter(vm_interface__virtual_machine=vm, ip_address=vm.primary_ip4)
-                .exclude(vm_interface=vm_interface)
-                .exists()
-            )
-            other_assignments_ip6_exist = (
-                IPAddressToInterface.objects.filter(vm_interface__virtual_machine=vm, ip_address=vm.primary_ip6)
-                .exclude(vm_interface=vm_interface)
-                .exists()
-            )
-            # IP address validation
-            # We do have the pre_delete signal ip_address_to_interface_pre_delete_validation
-            # to handle this scenario, but we want the ValidationError to bubble up on the form.
-            if vm.primary_ip4 and vm.primary_ip4 not in ip_addresses and not other_assignments_ip4_exist:
-                raise ValidationError(
-                    {
-                        "ip_addresses": f"Cannot remove IP address {vm.primary_ip4} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv4 address"
-                    }
-                )
-            if vm.primary_ip6 and vm.primary_ip6 not in ip_addresses and not other_assignments_ip6_exist:
-                raise ValidationError(
-                    {
-                        "ip_addresses": f"Cannot remove IP address {vm.primary_ip6} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv6 address"
-                    }
-                )
-        else:
-            # VMInterface does not exist yet so it is a CreateForm not an EditForm
-            pass
 
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):

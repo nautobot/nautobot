@@ -287,6 +287,42 @@ Check out the specific changes documented in the table at [UI and REST API Filte
 Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully removed from Nautobot 2.0.
 
 <!-- towncrier release notes start -->
+## v2.0.0-alpha.3 (2023-04-13)
+
+### Added
+
+- [#3337](https://github.com/nautobot/nautobot/issues/3337) - Add `Namespace` model to IPAM.
+
+### Changed
+
+- [#2915](https://github.com/nautobot/nautobot/issues/2915) - Implemented a concrete `parent` relationship from `Prefix` to itself.
+- [#3337](https://github.com/nautobot/nautobot/issues/3337) - Changed Prefix and other model uniqueness to center around Namespace model.
+- [#3337](https://github.com/nautobot/nautobot/issues/3337) - TODO: Update with many more changes.
+- [#3439](https://github.com/nautobot/nautobot/issues/3439) - Changed the GraphQL `execute_saved_query` function's argument from `saved_query_slug` to `saved_query_name`.
+- [#3523](https://github.com/nautobot/nautobot/issues/3523) - Renamed `nat_outside` field on IPAddress serializer to `nat_outside_list` for self-consistency.
+
+### Dependencies
+
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Dropped support for Python 3.7. Python 3.8 is now the minimum version required by Nautobot.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `django-auth-ldap` dependency to `~4.2.0`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `django-cors-headers` dependency to `~3.14.0`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `django-filter` dependency to `~23.1`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `django-health-check` dependency to `~3.17.0`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `django-tables2` dependency to `~2.5.3`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `django-tree-queries` dependency to `~0.14.0`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Removed direct dependency on `importlib-metadata`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `pillow` dependency to `~9.5.0`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `prometheus-client` dependency to `~0.16.0`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `social-auth-core` dependency to `~4.4.1`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated `social-auth-app-django` dependency to `~5.2.0`.
+- [#2316](https://github.com/nautobot/nautobot/issues/2316) - Updated various development-only dependencies to the latest available versions.
+- [#3525](https://github.com/nautobot/nautobot/issues/3525) - Added explicit dependency on `packaging` that had been inadvertently omitted.
+
+### Removed
+
+- [#3439](https://github.com/nautobot/nautobot/issues/3439) - Removed `slug` field from many database models.
+- [#3523](https://github.com/nautobot/nautobot/issues/3523) - Removed `nat_outside` getter-setter in IPAddress model.
+
 ## v2.0.0-alpha.2 (2023-03-29)
 
 ### Added

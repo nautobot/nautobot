@@ -348,6 +348,13 @@ class VMInterface(PrimaryModel, BaseInterface):
         blank=True,
         verbose_name="Tagged VLANs",
     )
+    vrf = models.ForeignKey(
+        to="ipam.VRF",
+        related_name="vm_interfaces",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
     ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
         through="ipam.IPAddressToInterface",

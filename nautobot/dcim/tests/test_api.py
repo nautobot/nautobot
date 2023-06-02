@@ -51,7 +51,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
 
@@ -1204,7 +1204,9 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         dev = Device.objects.get(name="Device 3")
         dev_intf = Interface.objects.create(name="Ethernet1", device=dev, type="1000base-t")
-        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24")
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace)
+        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace)
         dev_intf.add_ip_addresses(dev_ip_addr)
 
         patch_data = {"primary_ip4": dev_ip_addr.pk}

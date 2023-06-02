@@ -16,7 +16,7 @@ from nautobot.core.factory import (
 from nautobot.dcim.models import Location
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF, Namespace
 from nautobot.tenancy.models import Tenant
 
 
@@ -97,8 +97,6 @@ class VRFFactory(PrimaryModelFactory):
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
-
-    enforce_unique = NautobotBoolIterator()
 
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
@@ -217,6 +215,18 @@ class VRFGetOrCreateFactory(VRFFactory):
         django_get_or_create = ("tenant",)
 
 
+class NamespaceFactory(PrimaryModelFactory):
+    """
+    Create random Namespace objects with randomized data.
+    """
+
+    class Meta:
+        model = Namespace
+        django_get_or_create = ("name",)
+
+    name = factory.Faker("text", max_nb_chars=20)
+
+
 class PrefixFactory(PrimaryModelFactory):
     """Create random Prefix objects with randomized data.
 
@@ -248,7 +258,7 @@ class PrefixFactory(PrimaryModelFactory):
         has_role = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
         has_vlan = NautobotBoolIterator()
-        has_vrf = NautobotBoolIterator()
+        # has_vrf = NautobotBoolIterator()
         is_container = NautobotBoolIterator()
         is_ipv6 = NautobotBoolIterator()
 
@@ -286,11 +296,13 @@ class PrefixFactory(PrimaryModelFactory):
         ),
         None,
     )
-    vrf = factory.Maybe(
-        "has_vrf",
-        factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
-        None,
-    )
+    namespace = factory.SubFactory(NamespaceFactory)
+    # TODO: Update for M2M tests
+    # vrf = factory.Maybe(
+    #     "has_vrf",
+    #     factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
+    #     None,
+    # )
     rir = factory.Maybe("has_rir", random_instance(RIR, allow_null=False), None)
     date_allocated = factory.Maybe("has_date_allocated", factory.Faker("date_time", tzinfo=datetime.timezone.utc), None)
 
@@ -322,7 +334,7 @@ class PrefixFactory(PrimaryModelFactory):
             return
 
         action = "create" if create else "build"
-        is_ipv6 = self.family == 6
+        is_ipv6 = self.ip_version == 6
 
         # Create child prefixes for containers, otherwise create child ip addresses
         child_factory = PrefixFactory if self.type == PrefixTypeChoices.TYPE_CONTAINER else IPAddressFactory
@@ -348,13 +360,13 @@ class PrefixFactory(PrimaryModelFactory):
                 children_remaining = child_count - created
                 # Randomly skip addresses if there's enough space left in the prefix
                 if faker.Faker().pybool() or addresses_available <= children_remaining:
-                    method(address=str(address), vrf=self.vrf, is_ipv6=is_ipv6, **kwargs)
+                    method(address=str(address), is_ipv6=is_ipv6, namespace=self.namespace, **kwargs)
                     created += 1
         else:
             # Calculate prefix length for child prefixes to allow them to fit in the parent prefix without creating duplicate prefix
             child_cidr = self.prefix_length + max(1, math.ceil(math.log(child_count, 2)))
             # Raise exception for invalid cidr length (>128 for ipv6, >32 for ipv4)
-            if child_cidr > 128 or self.family == 4 and child_cidr > 32:
+            if child_cidr > 128 or self.ip_version == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
             # Create child prefixes, preserving location, vrf and is_ipv6 from parent
@@ -366,8 +378,8 @@ class PrefixFactory(PrimaryModelFactory):
                     location=self.location,
                     children__max_count=4,
                     is_ipv6=is_ipv6,
-                    vrf=self.vrf,
                     has_rir=False,
+                    namespace=self.namespace,
                     **kwargs,
                 )
 
@@ -400,21 +412,23 @@ class IPAddressFactory(PrimaryModelFactory):
         has_nat_inside = NautobotBoolIterator()
         has_role = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
-        has_vrf = NautobotBoolIterator()
         is_ipv6 = NautobotBoolIterator()
 
-    address = factory.Maybe(
-        "is_ipv6",
-        UniqueFaker("ipv6"),
-        UniqueFaker("ipv4_private"),
-    )
+    # TODO: For some reason, this is not working as expected
+    # passing in an address from the PrefixFactory.children is ignored
+    # address = factory.Maybe(
+    #     "is_ipv6",
+    #     UniqueFaker("ipv6"),
+    #     UniqueFaker("ipv4_private"),
+    # )
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
     dns_name = factory.Maybe("has_dns_name", factory.Faker("hostname"), "")
-    nat_inside = factory.SubFactory(
-        "nautobot.ipam.factory.IPAddressFactory",
-        nat_inside=None,
-        is_ipv6=factory.SelfAttribute("..is_ipv6"),
-    )
+    # TODO: Needs to be made more robust because prefixes and namespaces need to exist first
+    # nat_inside = factory.SubFactory(
+    #     "nautobot.ipam.factory.IPAddressFactory",
+    #     nat_inside=None,
+    #     is_ipv6=factory.SelfAttribute("..is_ipv6"),
+    # )
     role = factory.Maybe(
         "has_role",
         random_instance(lambda: Role.objects.get_for_model(IPAddress), allow_null=False),
@@ -426,8 +440,5 @@ class IPAddressFactory(PrimaryModelFactory):
         random_instance(lambda: Status.objects.get_for_model(IPAddress).exclude(name="SLAAC"), allow_null=False),
     )
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
-    vrf = factory.Maybe(
-        "has_vrf",
-        factory.SubFactory(VRFGetOrCreateFactory, tenant=factory.SelfAttribute("..tenant")),
-        None,
-    )
+    # Obviously improve this
+    # namespace = Namespace.objects.first()
