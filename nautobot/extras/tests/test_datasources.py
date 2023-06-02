@@ -294,7 +294,7 @@ class GitTest(TransactionTestCase):
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = create_empty_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+                MockGitRepo.return_value.checkout.return_value = (self.COMMIT_HEXSHA, True)
 
                 # Run the Git operation and refresh the object from the DB
                 # pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
@@ -333,7 +333,7 @@ class GitTest(TransactionTestCase):
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = create_empty_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+                MockGitRepo.return_value.checkout.return_value = (self.COMMIT_HEXSHA, True)
 
                 with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
                     handle.write("núñez")
@@ -399,7 +399,7 @@ class GitTest(TransactionTestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
                 MockGitRepo.side_effect = self.populate_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+                MockGitRepo.return_value.checkout.return_value = (self.COMMIT_HEXSHA, True)
 
                 # Run the Git operation and refresh the object from the DB
                 job_model = GitRepositorySync().job_model
@@ -528,7 +528,7 @@ class GitTest(TransactionTestCase):
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+                MockGitRepo.return_value.checkout.return_value = (self.COMMIT_HEXSHA, True)
 
                 # Run the Git operation and refresh the object from the DB
                 job_model = GitRepositorySync().job_model
@@ -650,7 +650,7 @@ class GitTest(TransactionTestCase):
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
-                MockGitRepo.return_value.checkout.return_value = self.COMMIT_HEXSHA
+                MockGitRepo.return_value.checkout.return_value = (self.COMMIT_HEXSHA, True)
 
                 # Run the Git operation and refresh the object from the DB
                 job_model = GitRepositorySync().job_model

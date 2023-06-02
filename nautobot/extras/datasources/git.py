@@ -152,20 +152,25 @@ def ensure_git_repository(
     repository_record, job_result=None, logger=None, head=None  # pylint: disable=redefined-outer-name
 ):
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-    Note that this function may be called independently of the `pull_git_repository_and_refresh_data` job,
+
+    Note that this function may be called independently of the `GitRepositorySync` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
+
     Args:
       repository_record (GitRepository): Repository to ensure the state of.
       job_result (JobResult): Optional JobResult to store results into.
       logger (logging.Logger): Optional Logger to additionally log results to.
       head (str): Optional Git commit hash to check out instead of pulling branch latest.
+
+    Returns:
+      bool: Whether any change to the local repo actually occurred.
     """
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
 
     try:
         repo_helper = GitRepo(to_path, from_url)
-        head = repo_helper.checkout(from_branch, head)
+        head, changed = repo_helper.checkout(from_branch, head)
         if repository_record.current_head != head:
             repository_record.current_head = head
             repository_record.save()
@@ -182,19 +187,23 @@ def ensure_git_repository(
         raise
 
     if job_result:
-        job_result.log(
-            "Repository successfully refreshed",
-            level_choice=LogLevelChoices.LOG_INFO,
-            logger=logger,
-        )
+        if changed:
+            job_result.log(
+                "Repository successfully refreshed",
+                level_choice=LogLevelChoices.LOG_INFO,
+                logger=logger,
+            )
         job_result.log(
             f'The current Git repository hash is "{repository_record.current_head}"',
             level_choice=LogLevelChoices.LOG_INFO,
             logger=logger,
         )
     elif logger:
-        logger.info("Repository successfully refreshed")
+        if changed:
+            logger.info("Repository successfully refreshed")
         logger.info(f'The current Git repository hash is "{repository_record.current_head}"')
+
+    return changed
 
 
 def git_repository_dry_run(repository_record, job_result=None, logger=None):  # pylint: disable=redefined-outer-name

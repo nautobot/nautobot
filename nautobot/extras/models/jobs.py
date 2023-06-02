@@ -14,7 +14,7 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
 from django.utils import timezone
-from django.utils.module_loading import import_string
+from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
@@ -22,9 +22,9 @@ from nautobot.core.celery import (
     add_nautobot_log_handler,
     app,
     NautobotKombuJSONEncoder,
-    register_jobs,
     setup_nautobot_job_logging,
 )
+from nautobot.core.celery.control import refresh_git_repository
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -43,7 +43,7 @@ from nautobot.extras.constants import (
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
-from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models import ChangeLoggedModel, GitRepository
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
@@ -231,14 +231,15 @@ class Job(PrimaryModel):
     def __str__(self):
         return self.name
 
-    @property
+    @cached_property
     def job_class(self):
         """Get the Job class (source code) associated with this Job model."""
         if not self.installed:
             return None
         try:
             return self.job_task.__class__
-        except Exception:
+        except Exception as exc:
+            logger.error(str(exc))
             return None
 
     @property
@@ -260,22 +261,18 @@ class Job(PrimaryModel):
         return (
             self.enabled
             and self.installed
-            and self.job_class is not None
             and not (self.has_sensitive_variables and self.approval_required)
         )
 
     @property
     def job_task(self):
-        import_path = f"{self.module_name}.{self.job_class_name}"
-        # If Celery tasks were loaded before the database was ready, we couldn't load GitRepository-provided Jobs
-        # at that time. Try to backfill if needed. See also comments in import_jobs_as_celery_tasks().
-        if import_path not in app.tasks and self.installed:
-            logger.info("Job %s isn't registered with Celery yet despite being installed; attempting to fix that", self)
-            try:
-                job_class = import_string(import_path)
-                register_jobs(job_class)
-            except Exception as exc:
-                logger.error("Unable to import/register %s: %s", self, exc)
+        """Get the registered Celery task, refreshing it if necessary."""
+        try:
+            # If this Job comes from a Git repository, make sure we have the correct version of said code.
+            repo = GitRepository.objects.get(slug=self.module_name.split(".")[0])
+            refresh_git_repository(state=None, repository_pk=repo.pk, head=repo.current_head)
+        except GitRepository.DoesNotExist:
+            pass
         return app.tasks[f"{self.module_name}.{self.job_class_name}"]
 
     def clean(self):
