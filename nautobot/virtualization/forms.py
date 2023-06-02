@@ -462,42 +462,6 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
             self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
 
-    def clean(self):
-        super().clean()
-        ip_addresses = self.cleaned_data.get("ip_addresses")
-        vm = self.cleaned_data.get("virtual machine")
-        vm_interface = self.instance
-        if vm is not None and vm_interface is not None:
-            # Check if the ip address exist on other VMInterfaces that are assigned to the virtual machine.
-            other_assignments_ip4_exist = (
-                IPAddressToInterface.objects.filter(vm_interface__virtual_machine=vm, ip_address=vm.primary_ip4)
-                .exclude(vm_interface=vm_interface)
-                .exists()
-            )
-            other_assignments_ip6_exist = (
-                IPAddressToInterface.objects.filter(vm_interface__virtual_machine=vm, ip_address=vm.primary_ip6)
-                .exclude(vm_interface=vm_interface)
-                .exists()
-            )
-            # IP address validation
-            # We do have the pre_delete signal ip_address_to_interface_pre_delete_validation
-            # to handle this scenario, but we want the ValidationError to bubble up on the form.
-            if vm.primary_ip4 and vm.primary_ip4 not in ip_addresses and not other_assignments_ip4_exist:
-                raise ValidationError(
-                    {
-                        "ip_addresses": f"Cannot remove IP address {vm.primary_ip4} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv4 address"
-                    }
-                )
-            if vm.primary_ip6 and vm.primary_ip6 not in ip_addresses and not other_assignments_ip6_exist:
-                raise ValidationError(
-                    {
-                        "ip_addresses": f"Cannot remove IP address {vm.primary_ip6} from interface {vm_interface} on Virtual Machine {vm.name} because it is marked as its primary IPv6 address"
-                    }
-                )
-        else:
-            # VMInterface does not exist yet so it is a CreateForm not an EditForm
-            pass
-
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
