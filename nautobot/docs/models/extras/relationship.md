@@ -43,7 +43,7 @@ Required relationships are enforced in the following scenarios:
 
 Filters can be defined to restrict the type or selection of objects for either side of the connection.
 
-An important note is that the filters have to be defined in **FilterSet** rather than QuerySet format. In practice this means that you can use any of the filters that are valid in the REST API for a given object type, but cannot necessarily use complex nested attribute lookups (such as `interfaces__ip_addresses__prefix_length` on a Device, for example).
+An important note is that the filters have to be defined in **FilterSet** rather than QuerySet format. In practice this means that you can use any of the filters that are valid in the REST API for a given object type, but cannot necessarily use complex nested attribute lookups (such as `interfaces__ip_addresses__mask_length` on a Device, for example).
 
 As an example, let's create a relationship between Circuits and Devices.
 In our situation we only would terminate Circuits on Devices with the Device Role of `edge`.

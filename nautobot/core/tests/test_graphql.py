@@ -1351,19 +1351,19 @@ query {
             ),
             (
                 "mask_length: 24",
-                IPAddress.objects.filter(prefix_length=24).count(),
+                IPAddress.objects.filter(mask_length=24).count(),
             ),
             (
                 "mask_length: 30",
-                IPAddress.objects.filter(prefix_length=30).count(),
+                IPAddress.objects.filter(mask_length=30).count(),
             ),
             (
                 "mask_length: 32",
-                IPAddress.objects.filter(prefix_length=32).count(),
+                IPAddress.objects.filter(mask_length=32).count(),
             ),
             (
                 "mask_length: 28",
-                IPAddress.objects.filter(prefix_length=28).count(),
+                IPAddress.objects.filter(mask_length=28).count(),
             ),
             (
                 'parent: "10.0.0.0/16"',

@@ -34,6 +34,14 @@ class Migration(migrations.Migration):
             old_name="prefix_length",
             new_name="mask_length",
         ),
+        migrations.AlterModelOptions(
+            name="ipaddress",
+            options={
+                "ordering": ("ip_version", "host", "mask_length"),
+                "verbose_name": "IP address",
+                "verbose_name_plural": "IP addresses",
+            },
+        ),
         migrations.RemoveField(
             model_name="prefix",
             name="vrf",

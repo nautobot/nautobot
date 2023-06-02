@@ -173,7 +173,7 @@ IPNetwork('1.1.1.1/30')
 ```
 
 !!! note
-    If you use a `prefix_length` other than `/32` (IPv4) or `/128` (IPv6) it **must** be included in your lookups
+    If you use a `mask_length` other than `/32` (IPv4) or `/128` (IPv6) it **must** be included in your lookups
 
 This field *cannot be used in **nested** filter expressions*:
 
@@ -197,25 +197,25 @@ This field *can* be used in nested filter expressions, for example:
 >>> Device.objects.filter(primary_ip4__host="1.1.1.1")
 ```
 
-##### IPAddress `prefix_length` contains the prefix length
+##### IPAddress `mask_length` contains the prefix length
 
 This is an integer, such as `30` for `/30`.
 
 ```python
->>> ip.prefix_length
+>>> ip.mask_length
 30
 ```
 
-For IP addresses with a prefix length other than a host prefix, you will need to filter using `host` and `prefix_length` fields for greater accuracy.
+For IP addresses with a mask length other than a host prefix, you will need to filter using `host` and `mask_length` fields for greater accuracy.
 
-For example, if you have multiple `IPAddress` objects with the same `host` value but different `prefix_length`:
+For example, if you have multiple `IPAddress` objects with the same `host` value but different `mask_length`:
 
 ```python
 >>> IPAddress.objects.create(address="1.1.1.1/32")
 <IPAddress: 1.1.1.1/32>
 >>> IPAddress.objects.filter(host="1.1.1.1")
 <IPAddressQuerySet [<IPAddress: 1.1.1.1/30>, <IPAddress: 1.1.1.1/32>]>
->>> IPAddress.objects.filter(host="1.1.1.1", prefix_length=30)
+>>> IPAddress.objects.filter(host="1.1.1.1", mask_length=30)
 <IPAddressQuerySet [<IPAddress: 1.1.1.1/30>]>
 ```
 
@@ -318,7 +318,7 @@ Prefix.objects.filter(prefix__net_mask_length=value)
 Nautobot:
 
 ```python
-IPAddress.objects.filter(prefix_length=value)
+IPAddress.objects.filter(mask_length=value)
 # or
 Prefix.objects.filter(prefix_length=value)
 ```
