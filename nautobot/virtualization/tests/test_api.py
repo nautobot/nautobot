@@ -184,9 +184,9 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             "status": cls.statuses[1].pk,
         }
 
-    def test_config_context_included_by_default_in_list_view(self):
+    def test_config_context_excluded_by_default_in_list_view(self):
         """
-        Check that config context data is included by default in the virtual machines list.
+        Check that config context data is excluded by default in the virtual machines list.
         """
         virtualmachine = VirtualMachine.objects.first()
         reverse_url = reverse("virtualization-api:virtualmachine-list")
@@ -194,17 +194,18 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("virtualization.view_virtualmachine")
 
         response = self.client.get(url, **self.header)
-        self.assertEqual(response.data["results"][0].get("config_context", {}).get("A"), 1)
+        self.assertNotIn("config_context", response.data["results"][0])
 
-    def test_config_context_excluded(self):
+    def test_config_context_included(self):
         """
-        Check that config context data can be excluded by passing ?exclude=config_context.
+        Check that config context data can be included by passing ?include=config_context.
         """
-        url = reverse("virtualization-api:virtualmachine-list") + "?exclude=config_context"
+        url = reverse("virtualization-api:virtualmachine-list") + "?include=config_context"
         self.add_permissions("virtualization.view_virtualmachine")
 
         response = self.client.get(url, **self.header)
-        self.assertFalse("config_context" in response.data["results"][0])
+        self.assertIn("config_context", response.data["results"][0])
+        self.assertEqual(response.data["results"][0]["config_context"], {"A": 1})
 
     def test_unique_name_per_cluster_constraint(self):
         """

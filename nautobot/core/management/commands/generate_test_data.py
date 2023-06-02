@@ -61,6 +61,7 @@ class Command(BaseCommand):
             )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
+                NamespaceFactory,
                 PrefixFactory,
                 RIRFactory,
                 RouteTargetFactory,
@@ -100,6 +101,8 @@ class Command(BaseCommand):
         LocationFactory.create_batch(7, has_parent=True)
         LocationFactory.create_batch(40)
         LocationFactory.create_batch(10, has_parent=False)
+        self.stdout.write("Creating Namespaces...")
+        NamespaceFactory.create_batch(1)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
@@ -122,21 +125,21 @@ class Command(BaseCommand):
         self.stdout.write("Creating Manufacturers without Platforms...")
         ManufacturerFactory.create_batch(4)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
-        DeviceTypeFactory.create_batch(20)
+        DeviceTypeFactory.create_batch(30)
         self.stdout.write("Creating Manufacturers without DeviceTypes or Platforms...")
         ManufacturerFactory.create_batch(2)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
-        DeviceRedundancyGroupFactory.create_batch(10)
+        DeviceRedundancyGroupFactory.create_batch(20)
         self.stdout.write("Creating CircuitTypes...")
-        CircuitTypeFactory.create_batch(10)
+        CircuitTypeFactory.create_batch(20)
         self.stdout.write("Creating Providers...")
-        ProviderFactory.create_batch(10)
+        ProviderFactory.create_batch(20)
         self.stdout.write("Creating ProviderNetworks...")
-        ProviderNetworkFactory.create_batch(10)
+        ProviderNetworkFactory.create_batch(20)
         self.stdout.write("Creating Circuits...")
-        CircuitFactory.create_batch(20)
+        CircuitFactory.create_batch(40)
         self.stdout.write("Creating Providers without Circuits...")
-        ProviderFactory.create_batch(10)
+        ProviderFactory.create_batch(20)
         self.stdout.write("Creating CircuitTerminations...")
         CircuitTerminationFactory.create_batch(2, has_location=True, term_side="A")
         CircuitTerminationFactory.create_batch(2, has_location=True, term_side="Z")

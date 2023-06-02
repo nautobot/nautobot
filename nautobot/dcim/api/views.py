@@ -374,22 +374,8 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "secrets_group",
         "status",
     ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list")
+    serializer_class = serializers.DeviceSerializer
     filterset_class = filters.DeviceFilterSet
-
-    def get_serializer_class(self):
-        """
-        Select the specific serializer based on the request context.
-
-        If the `exclude` query param includes `config_context` as a value, return the DeviceSerializer
-
-        Else, return the DeviceWithConfigContextSerializer
-        """
-
-        request = self.get_serializer_context()["request"]
-        if request is not None and "config_context" in request.query_params.get("exclude", []):
-            return serializers.DeviceSerializer
-
-        return serializers.DeviceWithConfigContextSerializer
 
     @extend_schema(
         filters=False,

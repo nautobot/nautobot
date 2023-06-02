@@ -50,7 +50,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.extras.models import SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
@@ -1489,6 +1489,11 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         required=False,
         query_params={"group_id": "$cluster_group"},
     )
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        label="VRFs",
+    )
     comments = CommentField()
 
     class Meta:
@@ -1514,6 +1519,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "cluster",
             "tenant_group",
             "tenant",
+            "vrfs",
             "comments",
             "tags",
             "local_config_context_data",
@@ -1536,7 +1542,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
 
         if self.instance.present_in_database:
             # Compile list of choices for primary IPv4 and IPv6 addresses
-            for family in [4, 6]:
+            for ip_version in [4, 6]:
                 ip_choices = [(None, "---------")]
 
                 # Gather PKs of all interfaces belonging to this Device or a peer VirtualChassis member
@@ -1553,7 +1559,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                             f"{assignment.ip_address.address} ({assignment.interface})",
                         )
                         for assignment in interface_ip_assignments
-                        if assignment.ip_address.family == family
+                        if assignment.ip_address.ip_version == ip_version
                     ]
                     ip_choices.append(("Interface IPs", ip_list))
 
@@ -1566,11 +1572,11 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                             [
                                 (ip.id, f"{ip.address} (NAT)")
                                 for ip in ip_assignment.ip_address.nat_outside_list.all()
-                                if ip.family == family
+                                if ip.ip_version == ip_version
                             ]
                         )
                     ip_choices.append(("NAT IPs", nat_ips))
-                self.fields[f"primary_ip{family}"].choices = ip_choices
+                self.fields[f"primary_ip{ip_version}"].choices = ip_choices
 
             # If editing an existing device, exclude it from the list of occupied rack units. This ensures that a device
             # can be flipped from one face to another.
@@ -1587,6 +1593,8 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 self.initial["location"] = self.instance.parent_bay.device.location_id
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
+            self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
+
         else:
             # An object that doesn't exist yet can't have any IPs assigned to it
             self.fields["primary_ip4"].choices = []
@@ -1598,6 +1606,11 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         position = self.data.get("position") or self.initial.get("position")
         if position:
             self.fields["position"].widget.choices = [(position, f"U{position}")]
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.vrfs.set(self.cleaned_data["vrfs"])
+        return instance
 
 
 class DeviceBulkEditForm(
@@ -2159,6 +2172,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "mac_address",
             "ip_addresses",
             "mtu",
+            "vrf",
             "mgmt_only",
             "description",
             "mode",
@@ -2171,9 +2185,11 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "device": forms.HiddenInput(),
             "type": StaticSelect2(),
             "mode": StaticSelect2(),
+            "vrf": StaticSelect2(),
         }
         labels = {
             "mode": "802.1Q Mode",
+            "vrf": "VRF",
         }
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
@@ -2241,6 +2257,14 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         max_value=INTERFACE_MTU_MAX,
         label="MTU",
     )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+        query_params={
+            "device": "$device",
+        },
+    )
     mac_address = forms.CharField(required=False, label="MAC Address")
     mgmt_only = forms.BooleanField(
         required=False,
@@ -2275,6 +2299,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "bridge",
         "lag",
         "mtu",
+        "vrf",
         "mac_address",
         "description",
         "mgmt_only",
@@ -2286,7 +2311,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
 
 
 class InterfaceBulkCreateForm(
-    form_from_model(Interface, ["enabled", "mtu", "mgmt_only", "mode", "tags"]),
+    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
     DeviceBulkAddComponentForm,
 ):
     type = forms.ChoiceField(
@@ -2306,6 +2331,7 @@ class InterfaceBulkCreateForm(
         "type",
         "enabled",
         "mtu",
+        "vrf",
         "mgmt_only",
         "description",
         "mode",

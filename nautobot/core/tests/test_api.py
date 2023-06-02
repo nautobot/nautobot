@@ -1,3 +1,4 @@
+from copy import deepcopy
 import csv
 from io import BytesIO, StringIO
 import json
@@ -11,11 +12,13 @@ from constance import config
 from constance.test import override_config
 from rest_framework import status
 from rest_framework.exceptions import ParseError
+from rest_framework.settings import api_settings
 
 from nautobot.circuits.models import Provider
 from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices
@@ -178,27 +181,61 @@ class APIVersioningTestCase(testing.APITestCase):
     Testing our custom API versioning, NautobotAPIVersioning.
     """
 
+    OVERRIDE_REST_FRAMEWORK = deepcopy(settings.REST_FRAMEWORK)
+    # For Nautobot 2.0, the default/only supported API version is 2.0, which limits our ability to test with multiple
+    # or min/max versions. For test purposes we force there to be some extra versions available.
+    EXTRA_ALLOWED_VERSIONS = [
+        f"{settings.VERSION_MAJOR - 1}.99",
+        *settings.REST_FRAMEWORK["ALLOWED_VERSIONS"],
+        f"{settings.VERSION_MAJOR}.{settings.VERSION_MINOR + 1}",
+    ]
+    OVERRIDE_REST_FRAMEWORK["ALLOWED_VERSIONS"] = EXTRA_ALLOWED_VERSIONS
+    OVERRIDE_REST_FRAMEWORK["DEFAULT_VERSION"] = EXTRA_ALLOWED_VERSIONS[-1]
+
     def test_default_version(self):
-        """Test that a request with no specific API version gets the default version."""
+        """Test that a request with no specific API version gets the default version, which is the current version."""
         url = reverse("api-root")
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, 200)
         self.assertIn("API-Version", response)
-        self.assertEqual(response["API-Version"], settings.REST_FRAMEWORK["DEFAULT_VERSION"])
+        self.assertEqual(response["API-Version"], api_settings.DEFAULT_VERSION)
+        self.assertEqual(response["API-Version"], f"{settings.VERSION_MAJOR}.{settings.VERSION_MINOR}")
+
+        with override_settings(REST_FRAMEWORK=self.OVERRIDE_REST_FRAMEWORK):
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, 200)
+            self.assertIn("API-Version", response)
+            self.assertEqual(response["API-Version"], self.OVERRIDE_REST_FRAMEWORK["DEFAULT_VERSION"])
+            self.assertEqual(response["API-Version"], f"{settings.VERSION_MAJOR}.{settings.VERSION_MINOR + 1}")
+
+    def test_allowed_versions(self):
+        """Test that all expected versions are supported."""
+        for minor_version in range(0, settings.VERSION_MINOR + 1):
+            version = f"{settings.VERSION_MAJOR}.{minor_version}"
+            self.assertIn(version, settings.REST_FRAMEWORK["ALLOWED_VERSIONS"])
+            self.assertIn(version, api_settings.ALLOWED_VERSIONS)
+            self.assertIn(version, NautobotAPIVersioning.allowed_versions)
 
     def test_header_version(self):
         """Test that the API version can be specified via the HTTP Accept header."""
         url = reverse("api-root")
 
-        min_version = settings.REST_FRAMEWORK["ALLOWED_VERSIONS"][0]
+        min_version = api_settings.ALLOWED_VERSIONS[0]
         self.set_api_version(min_version)
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, 200)
         self.assertIn("API-Version", response)
         self.assertEqual(response["API-Version"], min_version)
 
-        max_version = settings.REST_FRAMEWORK["ALLOWED_VERSIONS"][-1]
-        self.set_api_version(max_version)
+        default_version = api_settings.DEFAULT_VERSION
+        self.set_api_version(default_version)
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, 200)
+        self.assertIn("API-Version", response)
+        self.assertEqual(response["API-Version"], default_version)
+
+        max_version = api_settings.ALLOWED_VERSIONS[-1]
+        self.set_api_version(min_version)
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, 200)
         self.assertIn("API-Version", response)
@@ -208,20 +245,49 @@ class APIVersioningTestCase(testing.APITestCase):
         self.set_api_version(invalid_version)
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, 406)  # Not Acceptable
-        for version in settings.REST_FRAMEWORK["ALLOWED_VERSIONS"]:
+        for version in api_settings.ALLOWED_VERSIONS:
             self.assertIn(version, response.data["detail"])
+
+        # Also test with explicitly added additional allowed versions
+        with override_settings(REST_FRAMEWORK=self.OVERRIDE_REST_FRAMEWORK):
+            min_version = self.EXTRA_ALLOWED_VERSIONS[0]
+            self.set_api_version(min_version)
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, 200)
+            self.assertIn("API-Version", response)
+            self.assertEqual(response["API-Version"], min_version)
+
+            max_version = self.EXTRA_ALLOWED_VERSIONS[-1]
+            self.set_api_version(max_version)
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, 200)
+            self.assertIn("API-Version", response)
+            self.assertEqual(response["API-Version"], max_version)
+
+            invalid_version = "0.0"
+            self.set_api_version(invalid_version)
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, 406)  # Not Acceptable
+            for version in self.EXTRA_ALLOWED_VERSIONS:
+                self.assertIn(version, response.data["detail"])
 
     def test_query_version(self):
         """Test that the API version can be specified via a query parameter."""
         url = reverse("api-root")
 
-        min_version = settings.REST_FRAMEWORK["ALLOWED_VERSIONS"][0]
+        min_version = api_settings.ALLOWED_VERSIONS[0]
         response = self.client.get(f"{url}?api_version={min_version}", **self.header)
         self.assertHttpStatus(response, 200)
         self.assertIn("API-Version", response)
         self.assertEqual(response["API-Version"], min_version)
 
-        max_version = settings.REST_FRAMEWORK["ALLOWED_VERSIONS"][-1]
+        default_version = api_settings.DEFAULT_VERSION
+        response = self.client.get(f"{url}?api_version={default_version}", **self.header)
+        self.assertHttpStatus(response, 200)
+        self.assertIn("API-Version", response)
+        self.assertEqual(response["API-Version"], default_version)
+
+        max_version = api_settings.ALLOWED_VERSIONS[-1]
         response = self.client.get(f"{url}?api_version={max_version}", **self.header)
         self.assertHttpStatus(response, 200)
         self.assertIn("API-Version", response)
@@ -230,15 +296,36 @@ class APIVersioningTestCase(testing.APITestCase):
         invalid_version = "0.0"
         response = self.client.get(f"{url}?api_version={invalid_version}", **self.header)
         self.assertHttpStatus(response, 404)
-        for version in settings.REST_FRAMEWORK["ALLOWED_VERSIONS"]:
+        for version in api_settings.ALLOWED_VERSIONS:
             self.assertIn(version, response.data["detail"])
 
+        # Also test with explicitly added additional allowed versions
+        with override_settings(REST_FRAMEWORK=self.OVERRIDE_REST_FRAMEWORK):
+            min_version = self.EXTRA_ALLOWED_VERSIONS[0]
+            response = self.client.get(f"{url}?api_version={min_version}", **self.header)
+            self.assertHttpStatus(response, 200)
+            self.assertIn("API-Version", response)
+            self.assertEqual(response["API-Version"], min_version)
+
+            max_version = self.EXTRA_ALLOWED_VERSIONS[-1]
+            response = self.client.get(f"{url}?api_version={max_version}", **self.header)
+            self.assertHttpStatus(response, 200)
+            self.assertIn("API-Version", response)
+            self.assertEqual(response["API-Version"], max_version)
+
+            invalid_version = "0.0"
+            response = self.client.get(f"{url}?api_version={invalid_version}", **self.header)
+            self.assertHttpStatus(response, 404)
+            for version in self.EXTRA_ALLOWED_VERSIONS:
+                self.assertIn(version, response.data["detail"])
+
+    @override_settings(REST_FRAMEWORK=OVERRIDE_REST_FRAMEWORK)
     def test_header_and_query_version(self):
         """Test the behavior when the API version is specified in both the Accept header *and* a query parameter."""
         url = reverse("api-root")
 
-        min_version = settings.REST_FRAMEWORK["ALLOWED_VERSIONS"][0]
-        max_version = settings.REST_FRAMEWORK["ALLOWED_VERSIONS"][-1]
+        min_version = self.EXTRA_ALLOWED_VERSIONS[0]
+        max_version = self.EXTRA_ALLOWED_VERSIONS[-1]
         # Specify same version both as Accept header and as query parameter (valid)
         self.set_api_version(max_version)
         response = self.client.get(f"{url}?api_version={max_version}", **self.header)
@@ -246,11 +333,10 @@ class APIVersioningTestCase(testing.APITestCase):
         self.assertIn("API-Version", response)
         self.assertEqual(response["API-Version"], max_version)
 
-        if min_version != max_version:
-            # Specify different versions in Accept header and query parameter (invalid)
-            response = self.client.get(f"{url}?api_version={min_version}", **self.header)
-            self.assertHttpStatus(response, 400)
-            self.assertIn("Version mismatch", response.data["detail"])
+        # Specify different versions in Accept header and query parameter (invalid)
+        response = self.client.get(f"{url}?api_version={min_version}", **self.header)
+        self.assertHttpStatus(response, 400)
+        self.assertIn("Version mismatch", response.data["detail"])
 
 
 class LookupTypeChoicesTestCase(testing.APITestCase):

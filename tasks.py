@@ -651,9 +651,9 @@ def check_schema(context, api_version=None):
     else:
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
-        current_major, current_minor = nautobot_version.split(".")[:2]
-        assert current_major == "2", f"check_schemas version calc must be updated to handle version {current_major}"
-        api_versions = [f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)]
+        current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
+        assert current_major == 2, f"check_schemas version calc must be updated to handle version {current_major}"
+        api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
 
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"

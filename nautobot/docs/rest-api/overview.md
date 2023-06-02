@@ -96,17 +96,18 @@ As of Nautobot 1.3, the REST API supports multiple versions. A REST API client m
 
 Generally the former approach is recommended when writing automated API integrations, as it can be set as a general request header alongside the [authentication token](authentication.md) and re-used across a series of REST API interactions, while the latter approach may be more convenient when initially exploring the REST API via the interactive documentation as described above.
 
-### Default Versions and Backward Compatibility
+### Default Versions
 
-By default, a REST API request that does not specify an API version number will default to compatibility with a specified Nautobot version. This default REST API version can be expected to remain constant throughout the lifespan of a given Nautobot major release.
+By default, a REST API request that does not specify an API version number will default to compatibility with the current Nautobot version.
 
-!!! note
++++ 1.3.0
     For Nautobot 1.x, the default API behavior is to be compatible with the REST API of Nautobot version 1.2, in other words, for all Nautobot 1.x versions (beginning with Nautobot 1.2.0), `Accept: application/json` is functionally equivalent to `Accept: application/json; version=1.2`.
 
-    For Nautobot 2.x, the default API version is 2.0.
++/- 2.0.0
+    As of Nautobot 2.0, the default API behavior is changed to use the latest available REST API version. In other words, the default REST API version for Nautobot 2.0.y will be `2.0`, for Nautobot 2.1.y will be `2.1`, etc. This means that REST API clients that do not explicitly request a particular REST API version may encounter potentially [breaking changes](#breaking-changes) in the REST API when Nautobot is upgraded to a new minor or major version.
 
-!!! tip
-    The default REST API version compatibility may change in a subsequent Nautobot major release, so as a best practice, it is recommended that a REST API client _should always_ request the exact Nautobot REST API version that it is compatible with, rather than relying on the default behavior to remain constant.
+!!! important
+    As a best practice, it is recommended that a REST API client _should always_ request the exact Nautobot REST API version that it is compatible with, rather than relying on the default behavior to remain constant.
 
 !!! tip
     Any successful REST API response will include an `API-Version` header showing the API version that is in use for the specific API request being handled.
@@ -127,42 +128,39 @@ Non-breaking (forward- and backward-compatible) REST API changes may be introduc
 Breaking (non-backward-compatible) REST API changes also may be introduced in major or minor Nautobot releases. Examples would include:
 
 * Removal of deprecated fields
-* Addition of new, _required_ fields in POST/PUT/PATCH requests
+* Addition of new, _required_ fields in POST/PUT/PATCH requests or changing an existing field from optional to required
 * Changed field types (for example, changing a single value to a list of values)
 * Redesigned API (for example, listing and accessing Job instances by UUID primary-key instead of by class-path string)
 
 Per Nautobot's [feature-deprecation policy](../development/index.md#deprecation-policy), the previous REST API version(s) will continue to be supported until the next major release. Upon the next major release, previously deprecated API versions will be removed and the newest behavior will become the default. You will no longer be able to request API versions from the previous major version.
 
 !!! important
-    When breaking changes are introduced in a minor release, for compatibility as described above, the default REST API behavior within the remainder of the current major release cycle will continue to be the previous (unchanged) API version. API clients must "opt in" to the new version of the API by explicitly requesting the new API version.
-
-!!! tip
-    This is another reason to always specify the exact `major.minor` Nautobot REST API version when developing a REST API client integration, as it guarantees that the client will be receiving the latest API feature set available in that release rather than possibly defaulting to an older REST API version that is still default but is now deprecated.
+    Again, REST API clients are strongly encouraged to always specify the REST API version they are expecting, as otherwise unexpected breaking changes may be encountered when Nautobot is upgraded to a new major or minor release.
 
 ### Example of API Version Behavior
 
-As an example, let us say that Nautobot 1.3 introduced a new, _non-backwards-compatible_ REST API for the `/api/extras/jobs/` endpoint, and also introduced a new, _backwards-compatible_ set of additional fields on the `/api/dcim/sites/` endpoint. Depending on what API version a REST client interacting with Nautobot 1.3 specified (or didn't specify), it would see the following responses from the server:
+As an example, let us say that Nautobot 2.1 introduced a new, _non-backwards-compatible_ REST API for the `/api/extras/jobs/` endpoint, and also introduced a new, _backwards-compatible_ set of additional fields on the `/api/dcim/locations/` endpoint. Depending on what API version a REST client interacting with Nautobot 2.1 specified (or didn't specify), it would see the following responses from the server:
+
+| API endpoint        | Requested API version | Response                                        |
+| ------------------- | --------------------- | ----------------------------------------------- |
+| `/api/extras/jobs/` | (unspecified)         | Updated 2.1 REST API (not backwards compatible) |
+| `/api/extras/jobs/` | `2.0`                 | Deprecated 2.0-compatible REST API              |
+| `/api/extras/jobs/` | `2.1`                 | New/updated 2.1-compatible REST API             |
+
++/- 2.0.0
+    The [default behavior](#default-versions) when the API version is unspecified is changed from Nautobot 1.x.
+
+| API endpoint            | Requested API version | Response                                     |
+| ----------------------- | --------------------- | -------------------------------------------- |
+| `/api/dcim/locations/`  | (unspecified)         | 2.1-updated, 2.0-compatible REST API         |
+| `/api/dcim/locations/`  | `2.0`                 | 2.1-updated, 2.0-compatible REST API         |
+| `/api/dcim/locations/`  | `2.1`                 | 2.1-updated, 2.0-compatible REST API         |
 
 | API endpoint        | Requested API version | Response                                     |
 | ------------------- | --------------------- | -------------------------------------------- |
-| `/api/extras/jobs/` | (unspecified)         | Deprecated 1.2-compatible REST API           |
-| `/api/extras/jobs/` | `1.2`                 | Deprecated 1.2-compatible REST API           |
-| `/api/extras/jobs/` | `1.3`                 | New/updated 1.3-compatible REST API          |
-
-!!! important
-    Note again that if not specifying an API version, the client _would not_ receive the latest API version when breaking changes are present. Even though the server had Nautobot version 1.3, the default Jobs REST API behavior would be that of Nautobot 1.2. Only by actually requesting API version `1.3` was the client able to access the new Jobs REST API.
-
-| API endpoint        | Requested API version | Response                                     |
-| ------------------- | --------------------- | -------------------------------------------- |
-| `/api/dcim/sites/`  | (unspecified)         | 1.3-updated, 1.2-compatible REST API         |
-| `/api/dcim/sites/`  | `1.2`                 | 1.3-updated, 1.2-compatible REST API         |
-| `/api/dcim/sites/`  | `1.3`                 | 1.3-updated, 1.2-compatible REST API         |
-
-| API endpoint        | Requested API version | Response                                     |
-| ------------------- | --------------------- | -------------------------------------------- |
-| `/api/dcim/racks/`  | (unspecified)         | 1.2-compatible REST API (unchanged)          |
-| `/api/dcim/racks/`  | `1.2`                 | 1.2-compatible REST API (unchanged)          |
-| `/api/dcim/racks/`  | `1.3`                 | 1.3-compatible REST API (unchanged from 1.2) |
+| `/api/dcim/racks/`  | (unspecified)         | 2.1-compatible REST API (unchanged from 2.0) |
+| `/api/dcim/racks/`  | `2.0`                 | 2.1-compatible REST API (unchanged from 2.0) |
+| `/api/dcim/racks/`  | `2.1`                 | 2.1-compatible REST API (unchanged from 2.0) |
 
 ### APISelect with versioning capability
 
@@ -742,9 +740,12 @@ GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
 
 In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-sites` Relationship to this Site.
 
-### Excluding Config Contexts
+### Including Config Contexts
 
-When retrieving devices and virtual machines via the REST API, each will include its rendered [configuration context data](../models/extras/configcontext.md) by default. Users with large amounts of context data will likely observe suboptimal performance when returning multiple objects, particularly with very high page sizes. To combat this, context data may be excluded from the response data by attaching the query parameter `?exclude=config_context` to the request. This parameter works for both list and detail views.
+When retrieving Devices and Virtual Machines via the REST API, it is possible to also retrive the rendered [configuration context data](../models/extras/configcontext.md) for each such object if desired. Because rendering this data can be time consuming, it is _not_ included in the REST API responses by default. If you wish to include config context data in the response, you must opt in by specifying the query parameter `include=config_context` as a part of your request.
+
++/- 2.0.0
+    In Nautobot 1.x, the rendered configuration context was included by default in the REST API response unless specifically excluded with the query parameter `exclude=config_context`. This behavior has been reversed in Nautobot 2.0 and the `exclude` query parameter is no longer supported.
 
 ### Creating a New Object
 

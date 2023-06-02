@@ -6,9 +6,27 @@
         <div class="panel-heading"><strong>VRF</strong></div>
         <div class="panel-body">
             {% render_field form.name %}
-            {% render_field form.rd %}
-            {% render_field form.enforce_unique %}
+            {% render_field form.namespace %}
+	        {% render_field form.rd %}
             {% render_field form.description %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Devices</strong></div>
+        <div class="panel-body">
+            {% render_field form.devices %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Virtual Machines</strong></div>
+        <div class="panel-body">
+            {% render_field form.virtual_machines %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Prefixes</strong></div>
+        <div class="panel-body">
+            {% render_field form.prefixes %}
         </div>
     </div>
     <div class="panel panel-default">
