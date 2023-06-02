@@ -1067,7 +1067,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
         job_model = self._get_job_model_or_404(class_path, pk)
 
         try:
-            job_instance = job_model.job_class()
+            try:
+                job_instance = job_model.job_class()
+            except TypeError as exc:
+                # job_class may be None
+                raise RuntimeError from exc
             initial = normalize_querydict(request.GET, form_class=job_instance.as_form_class())
             if "kwargs_from_job_result" in initial:
                 job_result_pk = initial.pop("kwargs_from_job_result")

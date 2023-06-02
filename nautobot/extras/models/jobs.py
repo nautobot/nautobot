@@ -14,6 +14,7 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
 from django.utils import timezone
+from django.utils.module_loading import import_string
 from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
@@ -21,6 +22,7 @@ from nautobot.core.celery import (
     add_nautobot_log_handler,
     app,
     NautobotKombuJSONEncoder,
+    register_jobs,
     setup_nautobot_job_logging,
 )
 from nautobot.core.models import BaseManager, BaseModel
@@ -264,6 +266,16 @@ class Job(PrimaryModel):
 
     @property
     def job_task(self):
+        import_path = f"{self.module_name}.{self.job_class_name}"
+        # If Celery tasks were loaded before the database was ready, we couldn't load GitRepository-provided Jobs
+        # at that time. Try to backfill if needed. See also comments in import_jobs_as_celery_tasks().
+        if import_path not in app.tasks and self.installed:
+            logger.info("Job %s isn't registered with Celery yet despite being installed; attempting to fix that", self)
+            try:
+                job_class = import_string(import_path)
+                register_jobs(job_class)
+            except Exception as exc:
+                logger.error("Unable to import/register %s: %s", self, exc)
         return app.tasks[f"{self.module_name}.{self.job_class_name}"]
 
     def clean(self):

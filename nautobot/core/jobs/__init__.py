@@ -1,4 +1,4 @@
-from nautobot.core.celery import register_jobs
+from nautobot.core.celery import app, register_jobs
 from nautobot.extras.choices import LogLevelChoices
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
 from nautobot.extras.jobs import Job, ObjectVar
@@ -34,6 +34,8 @@ class GitRepositorySync(Job):
         try:
             ensure_git_repository(repository, job_result=job_result, logger=self.logger)
             refresh_datasource_content("extras.gitrepository", repository, user, job_result, delete=False)
+            # Given that the above succeeded, tell all workers (including ourself) to call ensure_git_repository()
+            app.control.broadcast("refresh_git_repository", repository_pk=repository.pk, head=repository.current_head)
         finally:
             job_result.log(
                 f"Repository synchronization completed in {job_result.duration}",
