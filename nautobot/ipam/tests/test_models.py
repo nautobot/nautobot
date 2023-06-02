@@ -453,7 +453,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix(prefix="10.0.32.0/20", status=self.status, namespace=self.namespace),
             Prefix(prefix="10.0.128.0/18", status=self.status, namespace=self.namespace),
         ]
-        [p.save() for p in prefixes]
+        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
         missing_prefixes = netaddr.IPSet(
             [
                 "10.0.16.0/20",
@@ -469,15 +469,15 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
     def test_get_available_ips(self):
         parent_prefix = Prefix.objects.create(prefix="10.0.0.0/28", status=self.status, namespace=self.namespace)
         ip_list = [
-            IPAddress(address="10.0.0.1/32", status=self.status, namespace=self.namespace),
-            IPAddress(address="10.0.0.3/32", status=self.status, namespace=self.namespace),
-            IPAddress(address="10.0.0.5/32", status=self.status, namespace=self.namespace),
-            IPAddress(address="10.0.0.7/32", status=self.status, namespace=self.namespace),
-            IPAddress(address="10.0.0.9/32", status=self.status, namespace=self.namespace),
-            IPAddress(address="10.0.0.11/32", status=self.status, namespace=self.namespace),
-            IPAddress(address="10.0.0.13/32", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.1/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.3/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.5/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.7/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.9/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.11/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.13/26", status=self.status, namespace=self.namespace),
         ]
-        [i.save() for i in ip_list]
+        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
         missing_ips = netaddr.IPSet(
             [
                 "10.0.0.2/32",
@@ -499,7 +499,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix(prefix="10.0.1.0/24", status=self.status, namespace=self.namespace),
             Prefix(prefix="10.0.2.0/24", status=self.status, namespace=self.namespace),
         ]
-        [p.save() for p in prefixes]
+        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
         self.assertEqual(prefixes[0].get_first_available_prefix(), netaddr.IPNetwork("10.0.3.0/24"))
 
         Prefix.objects.create(prefix="10.0.3.0/24", status=self.status, namespace=self.namespace)
@@ -512,7 +512,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress(address="10.0.0.2/24", status=self.status, namespace=self.namespace),
             IPAddress(address="10.0.0.3/24", status=self.status, namespace=self.namespace),
         ]
-        [i.save() for i in ip_list]
+        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.4/24")
 
         IPAddress.objects.create(address="10.0.0.4/24", status=self.status, namespace=self.namespace)
@@ -527,7 +527,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix(prefix="10.0.0.0/26", status=self.status, namespace=self.namespace),
             Prefix(prefix="10.0.0.128/26", status=self.status, namespace=self.namespace),
         ]
-        [p.save() for p in prefixes]
+        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
         self.assertEqual(prefix.get_utilization(), (128, 256))
 
         # IPv4 Non-container Prefix /24
@@ -541,7 +541,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress(address="10.0.0.0/32", status=self.status, namespace=self.namespace),
             IPAddress(address="10.0.0.255/32", status=self.status, namespace=self.namespace),
         ]
-        [i.save() for i in ip_list]
+        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
 
         # The parent prefix has no children because of the two child /26 prefixes.
         self.assertEqual(prefix.get_utilization(), (0, 254))
@@ -564,7 +564,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress(address="10.0.1.0/32", status=self.status, namespace=self.namespace),
             IPAddress(address="10.0.1.1/32", status=self.status, namespace=self.namespace),
         ]
-        [i.save() for i in ip_list]
+        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
         self.assertEqual(prefix.get_utilization(), (2, 2))
 
         # IPv6 Non-container Prefix, network and broadcast addresses count toward utilization
@@ -573,7 +573,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress(address="aaaa::0/128", status=self.status, namespace=self.namespace),
             IPAddress(address="aaaa::f/128", status=self.status, namespace=self.namespace),
         ]
-        [i.save() for i in ip_list]
+        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
         self.assertEqual(prefix.get_utilization(), (2, 16))
 
         # Large Prefix
@@ -588,7 +588,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix(prefix="22.32.0.0/12", status=self.status, namespace=self.namespace),
             Prefix(prefix="22.48.0.0/12", status=self.status, namespace=self.namespace),
         ]
-        [p.save() for p in prefixes]
+        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
         self.assertEqual(large_prefix.get_utilization(), (4194304, 16777216))
 
         # 50% utilization
@@ -611,7 +611,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix(prefix="ab20::/12", status=self.status, namespace=self.namespace),
             Prefix(prefix="ab30::/12", status=self.status, namespace=self.namespace),
         ]
-        [p.save() for p in prefixes]
+        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
         self.assertEqual(large_prefix_v6.get_utilization(), (2**118, 2**120))
 
         # 50% utilization
