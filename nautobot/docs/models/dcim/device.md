@@ -14,7 +14,7 @@ Device names must be unique within a site, unless the device has been assigned t
 
 When a device has one or more interfaces with IP addresses assigned, a primary IP for the device can be designated, for both IPv4 and IPv6.
 
-+++ 2.0.0
-    Added the behavior that removing the only IPAddress that is assigned to the device and designated as the device's primary IP from its interface or removing the interface containing the only IPAddress that is assigned to the device and designated as the device's primary IP from its device will nullify the device's `primary_ip4` field or `primary_ip6` field depends on the IP version of the IPAddress removed.
++/- 2.0.0
+    In Nautobot 1.x, it was not possible to delete an IPAddress or an Interface that was serving as the primary IP address (`primary_ip4`/`primary_ip6`) for a Device. As of Nautobot 2.0, this is now permitted; doing so will clear out the Device's corresponding primary IP value.
 
 For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer to [Device Redundancy Groups](deviceredundancygroup.md) model documentation.
