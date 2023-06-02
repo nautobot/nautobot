@@ -862,6 +862,11 @@ class APIViewTestCases:
                         field_choices.add(field_name)
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
+                
+            print("========")
+            print(set(self.choices_fields))
+            print(field_choices)
+            print("========")
 
             self.assertEqual(
                 set(self.choices_fields),
