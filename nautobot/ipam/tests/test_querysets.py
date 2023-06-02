@@ -445,7 +445,7 @@ class IPAddressQuerySet(TestCase):
                 self.assertEqual(
                     Prefix.objects.get_closest_parent(ip.host, namespace=self.namespace),
                     Prefix.objects.filter(network__lte=ip.host, broadcast__gte=ip.host, namespace=self.namespace)
-                    .order_by("-mask_length")
+                    .order_by("-prefix_length")
                     .first(),
                 )
 
