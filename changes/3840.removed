@@ -1,0 +1,1 @@
+Removed `Job.slug`, `Job.source`, and `Job.git_repository` database fields.

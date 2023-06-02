@@ -1,0 +1,3 @@
+Changed Job `class_path` property from `<source>/<module>/<ClassName>` to simply `<module>.<ClassName>`.
+Changed GitRepository slugs to use underscores rather than dashes so they can be used as Python module names.
+Changed Job `module_name` for Git-derived Jobs to `<git_repository_slug>.jobs.<module>`.

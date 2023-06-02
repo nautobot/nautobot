@@ -53,6 +53,15 @@
 - Model: "InventoryItem"
   Removed Field: "tree_id"
   Comments: "Made irrelevant by `django-tree-queries`"
+- Model: "Job"
+  Removed Field: "git_repository"
+  Comments: "Now implied by the Job's `module_name` field."
+- Model: "Job"
+  Removed Field: "slug"
+  Comments:
+- Model: "Job"
+  Removed Field: "source"
+  Comments: "Now implied by the Job's `module_name` field."
 - Model: "JobHook"
   Removed Field: "slug"
   Comments:
