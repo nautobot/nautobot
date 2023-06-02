@@ -643,7 +643,10 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def reparent_ips(self):
         """Determine the list of child IPAddresses and set the parent to self."""
         query = IPAddress.objects.select_for_update().filter(
+            ip_version=self.ip_version,
             parent_id=self.parent_id,
+            host__gte=self.network,
+            host__lte=self.broadcast,
         )
 
         return query.update(parent=self)
