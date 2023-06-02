@@ -2,6 +2,7 @@
 import os
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models
@@ -84,7 +85,7 @@ class GitRepository(PrimaryModel):
             check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
 
             if self.present_in_database and self.slug != self.__initial_slug:
-                raise ValueError(
+                raise ValidationError(
                     f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
                     f"requested slug is {self.slug}"
                 )

@@ -592,9 +592,9 @@ class GitRepositoryTestCase(
 
         # Create four GitRepository records
         repos = (
-            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
-            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+            GitRepository(name="Repo 1", slug="repo_1", remote_url="https://example.com/repo1.git"),
+            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
         for repo in repos:
@@ -602,7 +602,7 @@ class GitRepositoryTestCase(
 
         cls.form_data = {
             "name": "A new Git repository",
-            "slug": "a-new-git-repository",
+            "slug": "a_new_git_repository",
             "remote_url": "http://example.com/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
@@ -616,13 +616,27 @@ class GitRepositoryTestCase(
 
         cls.csv_data = (
             "name,slug,remote_url,branch,secrets_group,provided_contents",
-            "Git Repository 5,git-repo-5,https://example.com,main,,extras.configcontext",
-            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,",
-            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
+            "Git Repository 5,git_repo_5,https://example.com,main,,extras.configcontext",
+            "Git Repository 6,git_repo_6,https://example.com,develop,Secrets Group 2,",
+            'Git Repository 7,git_repo_7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
         )
 
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["slug"] = instance.slug  # Slug is not editable
+        self.form_data = form_data
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["slug"] = instance.slug  # Slug is not editable
+        self.form_data = form_data
+        super().test_edit_object_with_constrained_permission()
 
 
 class NoteTestCase(
