@@ -2,6 +2,7 @@
 
 from django.db import migrations
 
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.extras.constants import JOB_MAX_NAME_LENGTH
 
 
@@ -54,6 +55,16 @@ def reverse_fixup_job_module_names(apps, schema_editor):
             job_model.save()
 
 
+def update_slug_for_git_repository(apps, schema_editor):
+    """
+    Update GitRepository.slug to be Python package name safe via slugify_dashes_to_underscores().
+    """
+    GitRepository = apps.get_model("extras", "GitRepository")
+    for git_repository in GitRepository.objects.all():
+        git_repository.slug = slugify_dashes_to_underscores(git_repository.slug)
+        git_repository.save()
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0071_rename_model_fields"),
@@ -62,6 +73,10 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(
             code=generate_unique_job_names,
+            reverse_code=migrations.operations.special.RunPython.noop,
+        ),
+        migrations.RunPython(
+            code=update_slug_for_git_repository,
             reverse_code=migrations.operations.special.RunPython.noop,
         ),
         migrations.RunPython(

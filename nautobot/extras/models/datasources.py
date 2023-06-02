@@ -2,13 +2,14 @@
 import os
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models
 
-from nautobot.core.models.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, check_if_key_is_graphql_safe
 
 
 @extras_features(
@@ -24,7 +25,11 @@ class GitRepository(PrimaryModel):
         max_length=100,
         unique=True,
     )
-    slug = AutoSlugField(populate_from="name")
+    slug = AutoSlugField(
+        populate_from="name",
+        help_text="Internal field name. Please use underscores rather than dashes in this key.",
+        slugify_function=slugify_dashes_to_underscores,
+    )
 
     remote_url = models.URLField(
         max_length=255,
@@ -73,6 +78,18 @@ class GitRepository(PrimaryModel):
     def __str__(self):
         return self.name
 
+    def clean(self):
+        super().clean()
+
+        if self.slug != "":
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
+
+            if self.present_in_database and self.slug != self.__initial_slug:
+                raise ValidationError(
+                    f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
+                    f"requested slug is {self.slug}"
+                )
+
     def get_latest_sync(self):
         """
         Return a `JobResult` for the latest sync operation.
@@ -119,24 +136,3 @@ class GitRepository(PrimaryModel):
         if dry_run:
             return enqueue_git_repository_diff_origin_and_local(self, user)
         return enqueue_pull_git_repository_and_refresh_data(self, user)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-
-        # TODO(jathan): This should be moved to a callable that can be triggered on a worker event
-        # when a repo is "renamed", so that all workers will do it together.
-        if self.__initial_slug and self.slug != self.__initial_slug:
-            # Rename any previously existing repo directory to the new slug.
-            # TODO: In a distributed Nautobot deployment, each Django instance and/or worker instance may
-            # have its own clone of this repository on its own local filesystem; we need some way to ensure
-            # that all such clones are renamed.
-            # For now we just rename the one that we have locally and rely on other methods
-            # (TODO: do we still have any after removing get_jobs()?) to clean up other clones as they're encountered.
-            if os.path.exists(os.path.join(settings.GIT_ROOT, self.__initial_slug)):
-                os.rename(
-                    os.path.join(settings.GIT_ROOT, self.__initial_slug),
-                    self.filesystem_path,
-                )
-
-        # Update cached values
-        self.__initial_slug = self.slug
