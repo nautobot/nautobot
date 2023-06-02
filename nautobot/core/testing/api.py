@@ -387,7 +387,7 @@ class APIViewTestCases:
                 self.assertNotEqual(
                     result_list,
                     result_list_ascending,
-                    "API sort not identical to expected sort (QuerySet not ordering)",
+                    "Same results obtained when sorting by name and by -name (QuerySet not ordering)",
                 )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=True)
