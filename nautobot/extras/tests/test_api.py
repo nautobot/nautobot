@@ -65,10 +65,12 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.jobs import JobHook, JobButton
+
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
+
 from nautobot.ipam.factory import VLANFactory
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.ipam.models import VLANGroup, VLAN
 from nautobot.users.models import ObjectPermission
 
 

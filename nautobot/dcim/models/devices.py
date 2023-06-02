@@ -612,10 +612,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             ip = getattr(self, field)
             if ip is not None:
                 if field == "primary_ip4":
-                    if ip.family != 4:
+                    if ip.ip_version != 4:
                         raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
                 else:
-                    if ip.family != 6:
+                    if ip.ip_version != 6:
                         raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
                 if ipam_models.IPAddressToInterface.objects.filter(ip_address=ip, interface__in=vc_interfaces).exists():
                     pass

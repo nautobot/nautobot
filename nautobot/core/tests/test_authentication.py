@@ -12,7 +12,7 @@ from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.testing import NautobotTestClient, TestCase
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Status
-from nautobot.ipam.models import Prefix
+from nautobot.ipam.models import Prefix, Namespace
 from nautobot.users.models import ObjectPermission, Token
 
 
@@ -242,19 +242,65 @@ class ObjectPermissionAPIViewTestCase(TestCase):
     def setUpTestData(cls):
         cls.location_type = LocationType.objects.get(name="Campus")
         cls.locations = Location.objects.filter(location_type=cls.location_type)[:3]
+        cls.namespace = Namespace.objects.first()
 
         cls.statuses = Status.objects.get_for_model(Prefix)
 
         cls.prefixes = [
-            Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"), location=cls.locations[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.1.0/24"), location=cls.locations[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.2.0/24"), location=cls.locations[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.3.0/24"), location=cls.locations[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.4.0/24"), location=cls.locations[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.5.0/24"), location=cls.locations[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.6.0/24"), location=cls.locations[2], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.7.0/24"), location=cls.locations[2], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.8.0/24"), location=cls.locations[2], status=cls.statuses[0]),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.0.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.1.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.2.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.3.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.4.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.5.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.6.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.7.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.8.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
         ]
 
     def setUp(self):
@@ -318,6 +364,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         url = reverse("ipam-api:prefix-list")
         data = {
             "prefix": "10.0.9.0/24",
+            "namespace": self.namespace.pk,
             "location": self.locations[1].pk,
             "status": self.statuses[1].pk,
         }

@@ -53,6 +53,9 @@
 - Model: "InventoryItem"
   Removed Field: "tree_id"
   Comments: "Made irrelevant by `django-tree-queries`"
+- Model: "IPAddress"
+  Removed Field: "vrf"
+  Comments: "VRF is now related to the assigned Interface(s), as well as the parent Prefix"
 - Model: "JobHook"
   Removed Field: "slug"
   Comments:
@@ -137,6 +140,9 @@
 - Model: "VLANGroup"
   Removed Field: "site"
   Comments: "Use `location` instead"
+- Model: "VRF"
+  Removed Field: "enforce_unique"
+  Comments: "Uniqueness of Prefixes and IPAddresses is now enforced by the database"
 - Model: "Webhook"
   Removed Field: "slug"
   Comments:

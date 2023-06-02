@@ -81,7 +81,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
-from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.ipam.models import VLAN, IPAddress, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -1238,10 +1238,14 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         for relationship in cls.relationships:
             relationship.validated_save()
 
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="1.1.1.1/24", namespace=namespace)
+        Prefix.objects.create(prefix="2.2.2.2/24", namespace=namespace)
+        Prefix.objects.create(prefix="3.3.3.3/24", namespace=namespace)
         ipaddresses = (
-            IPAddress.objects.create(address="1.1.1.1/32"),
-            IPAddress.objects.create(address="2.2.2.2/32"),
-            IPAddress.objects.create(address="3.3.3.3/32"),
+            IPAddress.objects.create(address="1.1.1.1/32", namespace=namespace),
+            IPAddress.objects.create(address="2.2.2.2/32", namespace=namespace),
+            IPAddress.objects.create(address="3.3.3.3/32", namespace=namespace),
         )
 
         for device, ipaddress in zip(devices, ipaddresses):
@@ -1425,7 +1429,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Create an interface and assign an IP to it.
         device = Device.objects.first()
         interface = Interface.objects.create(device=device, name="Interface 1")
-        ip_address = IPAddress.objects.create(address="1.2.3.4/32")
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace)
+        ip_address = IPAddress.objects.create(address="1.2.3.4/32", namespace=namespace)
         interface.ip_addresses.add(ip_address)
 
         # Dupe the form data and populated primary_ip4 w/ ip_address

@@ -4,7 +4,6 @@ from nautobot.core.forms import (
     add_blank_choice,
     AddressFieldMixin,
     BootstrapMixin,
-    BulkEditNullBooleanSelect,
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -37,7 +36,7 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
-from .choices import IPAddressFamilyChoices, ServiceProtocolChoices, PrefixTypeChoices
+from .choices import IPAddressVersionChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
@@ -49,6 +48,7 @@ from .constants import (
 from .models import (
     IPAddress,
     IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -66,6 +66,17 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 
 
 #
+# Namespaces
+#
+
+
+class NamespaceForm(LocatableModelFormMixin, NautobotModelForm):
+    class Meta:
+        model = Namespace
+        fields = ["name", "description", "location"]
+
+
+#
 # VRFs
 #
 
@@ -73,34 +84,45 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 class VRFForm(NautobotModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
+    devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    virtual_machines = DynamicModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), required=False)
+    prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(),
+        required=False,
+        query_params={
+            "namespace": "$namespace",
+        },
+    )
 
     class Meta:
         model = VRF
         fields = [
             "name",
             "rd",
-            "enforce_unique",
+            "namespace",
             "description",
             "import_targets",
             "export_targets",
             "tenant_group",
             "tenant",
             "tags",
+            "devices",
+            "virtual_machines",
+            "prefixes",
         ]
         labels = {
             "rd": "RD",
         }
         help_texts = {
-            "rd": "Route distinguisher in any format",
+            "rd": "Route distinguisher unique to this Namespace (as defined in RFC 4364)",
         }
 
 
 class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    enforce_unique = forms.NullBooleanField(
-        required=False, widget=BulkEditNullBooleanSelect(), label="Enforce unique space"
-    )
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
@@ -202,13 +224,6 @@ class RIRFilterForm(NautobotFilterForm):
 
 
 class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, PrefixFieldMixin):
-    vrf = DynamicModelChoiceField(
-        empty_label="Global",
-        null_option="Global",
-        queryset=VRF.objects.all(),
-        required=False,
-        label="VRF",
-    )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
@@ -226,17 +241,23 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "group_id": "$vlan_group",
         },
     )
-    rir = DynamicModelChoiceField(
-        queryset=RIR.objects.all(),
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
         required=False,
-        label="RIR",
+        label="VRFs",
+        query_params={
+            "namespace": "$namespace",
+        },
     )
 
     class Meta:
         model = Prefix
         fields = [
             "prefix",
-            "vrf",
+            "namespace",
+            "vrfs",
             "location",
             "vlan",
             "status",
@@ -255,8 +276,13 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance is not None:
+            self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
-        self.fields["vrf"].empty_label = "Global"
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.vrfs.set(self.cleaned_data["vrfs"])
+        return instance
 
 
 class PrefixBulkEditForm(
@@ -271,12 +297,15 @@ class PrefixBulkEditForm(
         choices=add_blank_choice(PrefixTypeChoices),
         required=False,
     )
+    """
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
     )
+    """
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
@@ -286,7 +315,7 @@ class PrefixBulkEditForm(
         model = Prefix
         nullable_fields = [
             "location",
-            "vrf",
+            # "vrf",
             "tenant",
             "rir",
             "date_allocated",
@@ -306,10 +335,10 @@ class PrefixFilterForm(
         "q",
         "within_include",
         "type",
-        "family",
+        "ip_version",
         "mask_length",
-        "vrf_id",
-        "present_in_vrf_id",
+        # "vrf_id",
+        # "present_in_vrf_id",
         "status",
         "location",
         "role",
@@ -328,10 +357,10 @@ class PrefixFilterForm(
         ),
         label="Search within",
     )
-    family = forms.ChoiceField(
+    ip_version = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
+        choices=add_blank_choice(IPAddressVersionChoices),
+        label="IP version",
         widget=StaticSelect2(),
     )
     mask_length = forms.ChoiceField(
@@ -340,6 +369,7 @@ class PrefixFilterForm(
         label="Mask length",
         widget=StaticSelect2(),
     )
+    """
     vrf_id = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -347,6 +377,7 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
+    """
     type = forms.MultipleChoiceField(
         required=False,
         choices=PrefixTypeChoices,
@@ -412,11 +443,13 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "vrf_id": "$nat_vrf",
         },
     )
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
 
     class Meta:
         model = IPAddress
         fields = [
             "address",
+            "namespace",
             "vrf",
             "status",
             "role",
@@ -432,6 +465,17 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "tenant",
             "tags",
         ]
+
+    def clean_namespace(self):
+        """
+        Explicitly set the Namespace on the instance so it will be used on save.
+
+        While the model does this itself on create, the model form is creating a bare instance first
+        and setting attributes individually based on the form field values. Since namespace isn't an
+        actual model field, it gets ignored by default.
+        """
+        namespace = self.cleaned_data.pop("namespace")
+        setattr(self.instance, "_namespace", namespace)
 
     def __init__(self, *args, **kwargs):
         # Initialize helper selectors
@@ -452,6 +496,11 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
                     elif nat_inside_parent.vm_interface is not None:
                         initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
                         initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
+
+            # Always populate the namespace from the parent.
+            if instance.present_in_database:
+                initial["namespace"] = instance.parent.namespace
+
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)
@@ -529,7 +578,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
     field_order = [
         "q",
         "parent",
-        "family",
+        "ip_version",
         "mask_length",
         "vrf_id",
         "present_in_vrf_id",
@@ -548,10 +597,10 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         ),
         label="Parent Prefix",
     )
-    family = forms.ChoiceField(
+    ip_version = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
+        choices=add_blank_choice(IPAddressVersionChoices),
+        label="IP version",
         widget=StaticSelect2(),
     )
     mask_length = forms.ChoiceField(
