@@ -5,11 +5,11 @@ from nautobot.core.api import (
     CustomFieldModelSerializerMixin,
     NautobotModelSerializer,
     NotesSerializerMixin,
-    OrderedDefaultRouter,
     RelationshipModelSerializerMixin,
     ValidatedModelSerializer,
     WritableNestedSerializer,
 )
+from nautobot.core.api.routers import OrderedDefaultRouter
 from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
