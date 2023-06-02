@@ -45,9 +45,9 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,rd,namespace",
-            "VRF 4,abc123,{namespace.name}",
-            "VRF 5,xyz246,{namespace.name}",
-            "VRF 6,,Global",
+            f"VRF 4,abc123,{namespace.name}",
+            f"VRF 5,xyz246,{namespace.name}",
+            f"VRF 6,,{namespace.name}",
         )
 
         cls.bulk_edit_data = {
