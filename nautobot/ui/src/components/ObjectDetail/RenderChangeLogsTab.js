@@ -40,7 +40,7 @@ export default function RenderChangeLogsTab({ object_id }) {
     }
 
     if (error || schemaIsError) {
-        return <div>Failed to load...</div>;
+        return <div>Failed to load Change Log Data</div>;
     }
 
     const defaultHeaders = schema.view_options.list_display_fields;

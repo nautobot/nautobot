@@ -42,7 +42,7 @@ export default function RenderNotesTab(props) {
     }
 
     if (error || schemaIsError) {
-        return <div>Failed to load...</div>;
+        return <div>Failed to load Notes Data</div>;
     }
 
     const defaultHeaders = schema.view_options.list_display_fields;
