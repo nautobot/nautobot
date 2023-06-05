@@ -50,6 +50,9 @@
 - Model/Endpoint: "GraphQLQuery"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "IPAddress"
+  Removed Field: "vrf"
+  Comments: "VRF is now related to the assigned Interface(s), as well as the parent Prefix"
 - Model/Endpoint: "JobHook"
   Removed Field: "slug"
   Comments:
@@ -128,6 +131,9 @@
 - Model/Endpoint: "VLANGroup"
   Removed Field: "site"
   Comments: "Use `location` instead"
+- Model/Endpoint: "VRF"
+  Removed Field: "enforce_unique"
+  Comments: "Uniqueness of Prefixes and IPAddresses is now enforced at the database level"
 - Model/Endpoint: "Webhook"
   Removed Field: "slug"
   Comments:

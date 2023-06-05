@@ -79,6 +79,26 @@ If a `Prefix` already exists with the same network and prefix length as a previo
 | `rir`            | `rir`                |
 | `tenant`         | `tenant`             |
 
+#### Prefix Parenting Concrete Relationship
+
+The `ipam.Prefix` model has been modified to have a self-referencing foreign key as the `parent` field. Parenting of prefixes is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
+
+As a result of this change, it is no longer necessary nor possible to disable tree hierarchy using `settings.DISABLE_PREFIX_LIST_HIERARCHY` as this setting has been removed. Additionally it is no longer possible to disable global uniqueness using `settings.ENFORCE_GLOBAL_UNIQUE` as this setting has been removed.
+
+The following changes have been made to the `Prefix` model.
+
+| Removed                | Replaced With   |
+|------------------------|-----------------|
+| `get_child_prefixes()` | `descendants()` |
+
+#### IPAddressd Parenting Concrete Relationship
+
+The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
+
+| Removed                | Replaced With   |
+|------------------------|-----------------|
+| `get_child_prefixes()` | `descendants()` |
+
 ## GraphQL and REST API Changes
 
 ### API Behavior Changes

@@ -330,8 +330,14 @@ class RelationshipModelFormTestCase(TestCase):
             status=cls.device_status,
         )
 
-        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=cls.ipaddress_status)
-        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=cls.ipaddress_status)
+        cls.namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace)
+        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(
+            address="10.1.1.1/24", namespace=cls.namespace, status=cls.ipaddress_status
+        )
+        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(
+            address="10.2.2.2/24", namespace=cls.namespace, status=cls.ipaddress_status
+        )
 
         cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(
             name="VLAN Group 1", slug="vlan-group-1", location=cls.location
@@ -380,6 +386,7 @@ class RelationshipModelFormTestCase(TestCase):
         }
         cls.ipaddress_form_base_data = {
             "address": "10.3.3.3/24",
+            "namespace": cls.namespace.pk,
             "status": cls.ipaddress_status.pk,
         }
         cls.vlangroup_form_base_data = {
@@ -630,6 +637,7 @@ class RelationshipModelFormTestCase(TestCase):
             data={
                 "address": self.ipaddress_1.address,
                 "status": self.ipaddress_status,
+                "namespace": self.namespace.pk,
                 f"cr_{self.relationship_1.key}__source": self.device_2.pk,
             },
         )
@@ -743,9 +751,11 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     def setUpTestData(cls):
         status = Status.objects.get_for_model(ipam_models.IPAddress).first()
         cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=namespace)
         cls.ipaddresses = [
-            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status),
-            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=status),
+            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status, namespace=namespace),
+            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=status, namespace=namespace),
         ]
 
         cls.rel_1to1 = Relationship(

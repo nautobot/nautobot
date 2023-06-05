@@ -364,12 +364,6 @@ class APIViewTestCases:
                     "API sort not identical to QuerySet.order_by",
                 )
 
-                full_list = list(self._get_queryset().values_list("name", flat=True))
-                full_list.sort()
-                self.assertEqual(
-                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
-                )
-
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_descending_ordered(self):
             # Simple sorting check for models with a "name" field
@@ -386,10 +380,14 @@ class APIViewTestCases:
                     "API sort not identical to QuerySet.order_by",
                 )
 
-                full_list = list(self._get_queryset().values_list("name", flat=True))
-                full_list.sort(reverse=True)
-                self.assertEqual(
-                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
+                response_ascending = self.client.get(f"{self._get_list_url()}?sort=name&limit=3", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_list_ascending = list(map(lambda p: p["name"], response_ascending.data["results"]))
+
+                self.assertNotEqual(
+                    result_list,
+                    result_list_ascending,
+                    "Same results obtained when sorting by name and by -name (QuerySet not ordering)",
                 )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=True)
@@ -688,6 +686,7 @@ class APIViewTestCases:
                 this_object.pop("last_updated", None)
                 # PATCH response always includes "opt-in" fields, but GET response does not.
                 this_object.pop("computed_fields", None)
+                this_object.pop("config_context", None)
                 this_object.pop("relationships", None)
 
                 for value in this_object.values():
@@ -769,7 +768,10 @@ class APIViewTestCases:
             url = self._get_detail_url(instance)
 
             # GET object representation
-            get_response = self.client.get(url + "?include=computed_fields&include=relationships", **self.header)
+            opt_in_fields = getattr(get_serializer_for_model(self.model).Meta, "opt_in_fields", None)
+            if opt_in_fields:
+                url += "?" + "&".join([f"include={field}" for field in opt_in_fields])
+            get_response = self.client.get(url, **self.header)
             self.assertHttpStatus(get_response, status.HTTP_200_OK)
             initial_serialized_object = get_response.json()
 

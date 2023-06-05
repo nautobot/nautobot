@@ -7,7 +7,7 @@ import nautobot.core.celery.encoders
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0083_rename_computed_field_slug_to_key"),
+        ("extras", "0085_taggeditem_uniqueness"),
     ]
 
     operations = [
