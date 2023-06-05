@@ -185,10 +185,14 @@ def git_repository_pre_delete(instance, **kwargs):
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
+    # In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
-    # For now we just delete the one that we have locally and rely on other methods
-    # (TODO: do we still have any after removing get_jobs()?) to clean up other clones as they're encountered.
+    # In the Celery worker case, we can broadcast a control message to all workers to do so:
+    app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
+    # But we don't have an equivalent way to broadcast to any other Django instances.
+    # For now we just delete the one that we have locally and rely on other methods,
+    # such as the import_jobs_as_celery_tasks() signal that runs on server startup,
+    # to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)
 

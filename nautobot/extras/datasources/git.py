@@ -15,6 +15,7 @@ from django.db import transaction
 from django.utils.text import slugify
 import yaml
 
+from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.git import GitRepo
 from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
@@ -822,6 +823,46 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 #
 
 
+def refresh_code_from_repository(repository_slug, skip_reimport=False):
+    """
+    After cloning/updating a GitRepository on disk, call this function to reload and reregister the repo's Python code.
+
+    Args:
+        repository_slug (str): Repository directory in GIT_ROOT that was refreshed.
+        skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
+    """
+    if settings.GIT_ROOT not in sys.path:
+        sys.path.append(settings.GIT_ROOT)
+
+    # Unload any previous version of this module and its submodules if present
+    for module_name in list(sys.modules):
+        if module_name == repository_slug or module_name.startswith(f"{repository_slug}."):
+            logger.debug("Unloading module %s", module_name)
+            if module_name in celery_app.loader.task_modules:
+                celery_app.loader.task_modules.remove(module_name)
+            del sys.modules[module_name]
+
+    # Unregister any previous Celery tasks from this module
+    for task_name in list(celery_app.tasks):
+        if task_name.startswith(f"{repository_slug}."):
+            logger.debug("Unregistering Celery task %s", task_name)
+            celery_app.tasks.unregister(task_name)
+
+    if not skip_reimport:
+        try:
+            repository = GitRepository.objects.get(slug=repository_slug)
+            if "extras.job" in repository.provided_contents:
+                # Re-import Celery tasks from this module
+                logger.debug("Importing Jobs from %s.jobs in GIT_ROOT", repository_slug)
+                # TODO: this is **NOT** sufficient to get Celery tasks working in the current prefork model,
+                # as we need some way to restart the preforked worker processes or otherwise
+                # tell them to (re)import the module.
+                celery_app.loader.import_task_module(f"{repository_slug}.jobs")
+        except GitRepository.DoesNotExist as exc:
+            logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+            raise
+
+
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     installed_jobs = []
@@ -830,17 +871,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
 
         found_jobs = False
         try:
-            if settings.GIT_ROOT not in sys.path:
-                sys.path.append(settings.GIT_ROOT)
-
-            module_name = f"{repository_record.slug}"
-            # Unload any previous version of this module if present
-            if module_name in sys.modules:
-                del sys.modules[module_name]
-            module_name += ".jobs"
-            if module_name in sys.modules:
-                del sys.modules[module_name]
-            app.loader.import_task_module(module_name)
+            refresh_code_from_repository(repository_record.slug)
 
             for task_name, task in app.tasks.items():
                 if not task_name.startswith(f"{repository_record.slug}."):
@@ -884,6 +915,9 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                 level_choice=LogLevelChoices.LOG_ERROR,
                 logger=logger,
             )
+    else:
+        # Unload code from this repository, do not reimport it
+        refresh_code_from_repository(repository_record.slug, skip_reimport=True)
 
     for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:
