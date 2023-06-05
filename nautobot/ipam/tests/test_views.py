@@ -258,7 +258,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         response = self.client.post(**request)
         self.assertEqual(200, response.status_code)
-        self.assertIn("Host cannot be modified once set", str(response.content))
+        self.assertIn("Host address cannot be changed once created", str(response.content))
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

@@ -882,9 +882,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         db_index=True,
         help_text="IPv4 or IPv6 host address",
     )
-    mask_length = models.IntegerField(
-        null=False, db_index=True, help_text="Length of the Network Configuration Mask, in bits."
-    )
+    mask_length = models.IntegerField(null=False, db_index=True, help_text="Length of the network mask, in bits.")
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
@@ -990,7 +988,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         if self.present_in_database:
             ip_address = IPAddress.objects.get(id=self.id)
             if ip_address.host != self.host:
-                raise ValidationError({"address": "Host cannot be modified once set"})
+                raise ValidationError({"address": "Host address cannot be changed once created"})
 
         # Validate IP status selection
         if self.status == IPAddress.STATUS_SLAAC and self.ip_version != 6:
