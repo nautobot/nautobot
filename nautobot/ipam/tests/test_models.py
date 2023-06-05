@@ -370,7 +370,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         # Now let's create some duplicates in another Namespace and perform the same tests.
 
-        namespace = random.choice(Namespace.objects.exclude(name="Global"))
+        namespace = random.choice(Namespace.objects.exclude(id=self.namespace.id))
         root = Prefix.objects.create(prefix="101.102.0.0/24", status=self.status, namespace=namespace)
         parent = Prefix.objects.create(prefix="101.102.0.0/25", status=self.status, namespace=namespace)
         child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=namespace)
