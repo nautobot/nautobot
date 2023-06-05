@@ -68,7 +68,7 @@ export default function ObjectRetrieve({ api_url }) {
     // which loads the tabs and its layout schema.
     const objectRetrieveTabSchema = {
         tabs: {
-            Location: schemaData.view_options.retrieve,
+            [`${schemaData.name}`]: schemaData.view_options.retrieve,
         },
     };
 

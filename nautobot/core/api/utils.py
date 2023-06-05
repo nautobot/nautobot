@@ -386,6 +386,10 @@ class SerializerDetailViewConfig:
 
         return m2m_fields, non_m2m_fields
 
+    def capitalize(self, value: str):
+        """Capitalize value only if not uppercase."""
+        return value if (value.isupper()) else value.capitalize()
+
     def view_config(self):
         """
         Generate detail view config for the view based on the serializer's fields.
@@ -412,7 +416,7 @@ class SerializerDetailViewConfig:
         model_verbose_name = self.serializer.Meta.model._meta.verbose_name
         return [
             {
-                model_verbose_name.capitalize(): {
+                self.capitalize(model_verbose_name): {
                     "fields": [field["name"] for field in other_fields],
                 }
             },
