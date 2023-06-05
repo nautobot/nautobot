@@ -1,5 +1,5 @@
-from importlib import import_module
 from django.conf import settings as django_settings
+from importlib import import_module
 
 from nautobot.core.settings_funcs import sso_auth_enabled
 
@@ -38,8 +38,8 @@ def settings(request):
     try:
         view_class = request.resolver_match.func.view_class
     except AttributeError:
-        # Use this method to import the view class as apps (like example_plugin)
-        # do not have the 'view_class' attribute.
+        # Use this method to import the view class views that inherits from
+        # NautobotUIViewSet, as this views do not have the 'view_class' attribute.
         view_func = request.resolver_match.func
         module_path = view_func.__module__
         view_name = view_func.__name__
