@@ -21,7 +21,6 @@ from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
-from nautobot.ipam.models import IPAddress
 from nautobot.users import models as users_models
 
 __all__ = (
