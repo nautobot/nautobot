@@ -385,10 +385,10 @@ class BaseJob(Task):
         Unique identifier of a specific Job class, in the form <module_name>.<ClassName>.
 
         Examples:
-        my_script.MyScript
-        nautobot.core.jobs.MySystemJob
-        my_plugin.jobs.MyPluginJob
-        git_repository.jobs.myjob.MyJob
+        my_script.MyScript - Local Job
+        nautobot.core.jobs.MySystemJob - System Job
+        my_plugin.jobs.MyPluginJob - App-provided Job
+        git_repository.jobs.myjob.MyJob - GitRepository Job
         """
         return f"{cls.__module__}.{cls.__name__}"
 
