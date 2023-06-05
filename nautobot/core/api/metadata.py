@@ -308,8 +308,8 @@ class NautobotMetadata(SimpleMetadata):
                 for field in fields_to_remove:
                     if field in value["fields"]:
                         value["fields"].remove(field)
-                        if section_idx == 0 and idx == 0:
-                            value["fields"].extend(fields_to_add)
+                if section_idx == 0 and idx == 0:
+                    value["fields"].extend(fields_to_add)
         return view_config
 
     def determine_detail_view_schema(self, serializer):
