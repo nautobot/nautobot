@@ -867,13 +867,11 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     installed_jobs = []
     if "extras.job" in repository_record.provided_contents and not delete:
-        from nautobot.core.celery import app
-
         found_jobs = False
         try:
             refresh_code_from_repository(repository_record.slug)
 
-            for task_name, task in app.tasks.items():
+            for task_name, task in celery_app.tasks.items():
                 if not task_name.startswith(f"{repository_record.slug}."):
                     continue
                 found_jobs = True
