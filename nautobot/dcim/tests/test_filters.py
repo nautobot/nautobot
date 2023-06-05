@@ -89,7 +89,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status, Tag
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup, Namespace
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
@@ -1345,11 +1345,14 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         # Assign primary IPs for filtering
         interfaces = Interface.objects.all()
         ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace, status=prefix_status)
+        Prefix.objects.create(prefix="2600::/64", namespace=namespace, status=prefix_status)
         ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24", status=ipaddr_status),
-            IPAddress.objects.create(address="192.0.2.2/24", status=ipaddr_status),
-            IPAddress.objects.create(address="2600::1/120", status=ipaddr_status),
-            IPAddress.objects.create(address="2600::0100/120", status=ipaddr_status),
+            IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace, status=ipaddr_status),
+            IPAddress.objects.create(address="192.0.2.2/24", namespace=namespace, status=ipaddr_status),
+            IPAddress.objects.create(address="2600::0100/120", namespace=namespace, status=ipaddr_status),
         )
 
         interfaces[0].add_ip_addresses([ipaddresses[0], ipaddresses[2]])

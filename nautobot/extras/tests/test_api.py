@@ -65,10 +65,12 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.jobs import JobHook, JobButton
+
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
+
 from nautobot.ipam.factory import VLANFactory
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.ipam.models import VLANGroup, VLAN
 from nautobot.users.models import ObjectPermission
 
 
@@ -219,7 +221,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         # Test API response as well
         self.add_permissions("dcim.view_device")
         device_url = reverse("dcim-api:device-detail", kwargs={"pk": device.pk})
-        response = self.client.get(device_url, **self.header)
+        response = self.client.get(device_url + "?include=config_context", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIn("config_context", response.data)
         self.assertEqual(response.data["config_context"], {"foo": 123, "bar": 456, "baz": 789}, response.data)
@@ -230,7 +232,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext4.locations.add(location)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["location_data"], "ABC")
-        response = self.client.get(device_url, **self.header)
+        response = self.client.get(device_url + "?include=config_context", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIn("config_context", response.data)
         self.assertEqual(response.data["config_context"]["location_data"], "ABC", response.data["config_context"])
@@ -241,7 +243,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext5.locations.add(location)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["foo"], 999)
-        response = self.client.get(device_url, **self.header)
+        response = self.client.get(device_url + "?include=config_context", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIn("config_context", response.data)
         self.assertEqual(response.data["config_context"]["foo"], 999, response.data["config_context"])
@@ -253,7 +255,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         configcontext6.locations.add(location2)
         rendered_context = device.get_config_context()
         self.assertEqual(rendered_context["bar"], 456)
-        response = self.client.get(device_url, **self.header)
+        response = self.client.get(device_url + "?include=config_context", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIn("config_context", response.data)
         self.assertEqual(response.data["config_context"]["bar"], 456, response.data["config_context"])

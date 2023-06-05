@@ -81,7 +81,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
-from nautobot.ipam.models import VLAN, IPAddress
+from nautobot.ipam.models import VLAN, IPAddress, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -1248,10 +1248,15 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             relationship.validated_save()
 
         cls.ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        cls.prefix_status = Status.objects.get_for_model(Prefix).first()
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="1.1.1.1/24", namespace=namespace, status=cls.prefix_status)
+        Prefix.objects.create(prefix="2.2.2.2/24", namespace=namespace, status=cls.prefix_status)
+        Prefix.objects.create(prefix="3.3.3.3/24", namespace=namespace, status=cls.prefix_status)
         ipaddresses = (
-            IPAddress.objects.create(address="1.1.1.1/32", status=cls.ipaddr_status),
-            IPAddress.objects.create(address="2.2.2.2/32", status=cls.ipaddr_status),
-            IPAddress.objects.create(address="3.3.3.3/32", status=cls.ipaddr_status),
+            IPAddress.objects.create(address="1.1.1.1/32", namespace=namespace, status=cls.ipaddr_status),
+            IPAddress.objects.create(address="2.2.2.2/32", namespace=namespace, status=cls.ipaddr_status),
+            IPAddress.objects.create(address="3.3.3.3/32", namespace=namespace, status=cls.ipaddr_status),
         )
 
         for device, ipaddress in zip(devices, ipaddresses):
@@ -1437,13 +1442,14 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device = Device.objects.first()
         intf_status = Status.objects.get_for_model(Interface).first()
         interface = Interface.objects.create(device=device, name="Interface 1", status=intf_status)
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace, status=self.prefix_status)
         ip_address = IPAddress.objects.create(address="1.2.3.4/32", status=self.ipaddr_status)
         interface.ip_addresses.add(ip_address)
 
         # Dupe the form data and populated primary_ip4 w/ ip_address
         form_data = self.form_data.copy()
         form_data["primary_ip4"] = ip_address.pk
-
         # Assert that update succeeds.
         request = {
             "path": self._get_url("edit", device),

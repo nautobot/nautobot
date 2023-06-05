@@ -79,7 +79,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.ipam.filters import VLANFilterSet
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
@@ -1037,7 +1037,10 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
         location = Location.objects.first()
         ipaddr_status = Status.objects.get_for_model(IPAddress).first()
-        ipaddress = IPAddress.objects.create(address="192.0.2.1/24", status=ipaddr_status)
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace, status=prefix_status)
+        ipaddress = IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace, status=ipaddr_status)
 
         ObjectChange.objects.create(
             user=users[0],

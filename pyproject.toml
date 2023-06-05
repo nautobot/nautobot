@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.0.0-alpha.2"
+version = "2.0.0-alpha.3"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -29,8 +29,6 @@ include = [
     "NOTICE",
     # Poetry by default will exclude these files as they are in .gitignore
     "nautobot/project-static/docs/**/*",
-    # Bundle all of the UI code
-    "nautobot/ui/**/*",
 ]
 
 [tool.poetry.dependencies]

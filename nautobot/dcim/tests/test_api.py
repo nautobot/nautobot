@@ -51,7 +51,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
 
@@ -1131,27 +1131,28 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             "status": device_statuses[1].pk,
         }
 
-    def test_config_context_included_by_default_in_list_view(self):
+    def test_config_context_excluded_by_default_in_list_view(self):
         """
-        Check that config context data is included by default in the devices list.
+        Check that config context data is excluded by default in the devices list.
         """
         self.add_permissions("dcim.view_device")
         url = reverse("dcim-api:device-list")
         response = self.client.get(url, **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["results"][0].get("config_context", {}).get("A"), 1)
+        self.assertNotIn("config_context", response.data["results"][0])
 
-    def test_config_context_excluded(self):
+    def test_config_context_included(self):
         """
-        Check that config context data can be excluded by passing ?exclude=config_context.
+        Check that config context data can be included by passing ?include=config_context.
         """
         self.add_permissions("dcim.view_device")
-        url = reverse("dcim-api:device-list") + "?exclude=config_context"
+        url = reverse("dcim-api:device-list") + "?include=config_context"
         response = self.client.get(url, **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertFalse("config_context" in response.data["results"][0])
+        self.assertIn("config_context", response.data["results"][0])
+        self.assertEqual(response.data["results"][0]["config_context"], {"A": 1})
 
     def test_unique_name_per_location_constraint(self):
         """
@@ -1220,6 +1221,9 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         intf_status = Status.objects.get_for_model(Interface).first()
         dev_intf = Interface.objects.create(name="Ethernet1", device=dev, type="1000base-t", status=intf_status)
         ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace, status=prefix_status)
         dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=ipaddr_status)
         dev_intf.add_ip_addresses(dev_ip_addr)
 

@@ -5,7 +5,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
-from nautobot.ipam.models import IPAddress, VLAN, Service
+from nautobot.ipam.models import IPAddress, VLAN, Service, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.filters import (
     ClusterTypeFilterSet,
@@ -426,11 +426,19 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             ),
         )
 
+        cls.namespace = Namespace.objects.first()
+        cls.prefix_status = Status.objects.get_for_model(Prefix).first()
+        cls.ipadd_status = Status.objects.get_for_model(IPAddress).first()
+        cls.prefix4 = Prefix.objects.create(prefix="192.0.2.0/24", namespace=cls.namespace, status=cls.prefix_status)
+        cls.prefix6 = Prefix.objects.create(
+            prefix="fe80::8ef:3eff:fe4c:3895/24", namespace=cls.namespace, status=cls.prefix_status
+        )
         # Assign primary IPs for filtering
-        ip_status = Status.objects.get_for_model(IPAddress).first()
         cls.ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24", status=ip_status),
-            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", status=ip_status),
+            IPAddress.objects.create(address="192.0.2.1/24", namespace=cls.namespace, status=cls.ipadd_status),
+            IPAddress.objects.create(
+                address="fe80::8ef:3eff:fe4c:3895/24", namespace=cls.namespace, status=cls.ipadd_status
+            ),
         )
         cls.interfaces[0].add_ip_addresses(cls.ipaddresses[0])
         cls.interfaces[1].add_ip_addresses(cls.ipaddresses[1])
@@ -701,10 +709,10 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         vminterfaces[2].tagged_vlans.add(cls.vlan2)
 
         # Assign primary IPs for filtering
-        ip_address4 = IPAddress.objects.ip_family(4).first()
+        ip_address4 = IPAddress.objects.filter(ip_version=4).first()
         vminterfaces[0].add_ip_addresses(ip_address4)
         ip_address4.validated_save()
-        ip_address6 = IPAddress.objects.ip_family(6).first()
+        ip_address6 = IPAddress.objects.filter(ip_version=6).first()
         vminterfaces[1].add_ip_addresses(ip_address6)
         ip_address6.validated_save()
 

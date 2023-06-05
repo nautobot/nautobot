@@ -1,6 +1,5 @@
 import { Navigate, useRoutes } from "react-router-dom";
 import { useSelector } from "react-redux";
-
 import { isLoggedInSelector } from "@utils/store";
 import CreateView from "@views/generic/ObjectCreate";
 import DetailView from "@views/generic/ObjectRetrieve";
@@ -9,11 +8,12 @@ import Home from "@views/Home";
 import InstalledApps from "@views/InstalledApps";
 import Login from "@views/Login";
 import Logout from "@views/Logout";
+import { getPluginRoutes } from "@utils";
 
 export default function NautobotRouter() {
     const isLoggedIn = useSelector(isLoggedInSelector);
 
-    let element = useRoutes([
+    return useRoutes([
         {
             path: "/login/",
             element: !isLoggedIn ? <Login /> : <Navigate to="/" />,
@@ -68,10 +68,10 @@ export default function NautobotRouter() {
                             element: <DetailView />,
                             children: [],
                         },
+                        ...getPluginRoutes(),
                     ],
                 },
             ],
         },
     ]);
-    return element;
 }
