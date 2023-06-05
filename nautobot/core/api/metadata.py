@@ -64,10 +64,8 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
             "type": type_map_obj["type"] or "string",
             "title": self._get_title(field, name),
         }
-        if field.read_only:
-            result["readOnly"] = True
 
-        elif isinstance(field, drf_serializers.ListField):
+        if isinstance(field, drf_serializers.ListField):
             if field.allow_empty:
                 result["required"] = not getattr(field, "allow_empty", True)
             result["items"] = self._get_field_properties(field.child, "")
@@ -77,18 +75,17 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
                 result["required"] = type_map_obj.get("required", [])
             result["items"] = self._get_field_properties(field.child_relation, "")
             result["uniqueItems"] = True
-        elif isinstance(field, drf_serializers.RelatedField):
-            result["format"] = type_map_obj["format"]
-            result["uniqueItems"] = True
-            if hasattr(field, "queryset"):
-                model_options = field.queryset.model._meta
-                result["required"] = field.required
-                # Custom Keyword: modelName and appLabel
-                # This Keyword represents the model name of the uuid model
-                # and appLabel represents the app_name of the model
-                result["modelName"] = model_options.model_name
-                result["appLabel"] = model_options.app_label
         else:
+            if isinstance(field, drf_serializers.RelatedField):
+                result["uniqueItems"] = True
+                if hasattr(field, "queryset") and hasattr(field.queryset, "model"):
+                    model_options = field.queryset.model._meta
+                    result["required"] = field.required
+                    # Custom Keyword: modelName and appLabel
+                    # This Keyword represents the model name of the uuid model
+                    # and appLabel represents the app_name of the model
+                    result["modelName"] = model_options.model_name
+                    result["appLabel"] = model_options.app_label
             if field.allow_null:
                 result["type"] = [result["type"], "null"]
             if enum := type_map_obj.get("enum"):
@@ -102,11 +99,12 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
             if format_ := type_map_obj["format"]:
                 result["format"] = format_
 
-            if read_only := type_map_obj["readOnly"]:
+            if read_only := field.read_only:
                 result["readOnly"] = read_only
 
             with contextlib.suppress(drf_fields.SkipField):
                 result["default"] = field.get_default()
+
         result = self._set_validation_properties(field, result)
 
         return result

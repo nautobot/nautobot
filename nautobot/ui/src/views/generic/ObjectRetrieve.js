@@ -2,10 +2,13 @@ import { useLocation, useParams } from "react-router-dom";
 import { SkeletonText } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
 import { Box } from "@nautobot/nautobot-ui";
 
-import AppComponents from "@components/Apps";
 import { useGetRESTAPIQuery } from "@utils/api";
 import GenericView from "@views/generic/GenericView";
-import { RenderTabs, RenderHeader } from "@components/ObjectDetail";
+import {
+    AppComponents,
+    RetrieveViewHeader,
+    RetrieveViewTabs,
+} from "@components";
 
 export default function ObjectRetrieve({ api_url }) {
     const { app_label, model_name, object_id } = useParams();
@@ -72,8 +75,8 @@ export default function ObjectRetrieve({ api_url }) {
     return (
         <GenericView objectData={data}>
             <Box background="white-0" borderRadius="md">
-                <RenderHeader data={data} />
-                <RenderTabs
+                <RetrieveViewHeader data={data} />
+                <RetrieveViewTabs
                     schema={schemaData.schema.properties}
                     layoutSchema={objectRetrieveTabSchema}
                     data={data}

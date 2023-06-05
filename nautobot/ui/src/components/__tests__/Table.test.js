@@ -3,8 +3,8 @@ import { BrowserRouter } from "react-router-dom";
 import NautobotTable from "../Table";
 
 const mockHeaders = [
-    { name: "name", label: "Name" },
-    { name: "description", label: "Description" },
+    { key: "name", dataIndex: "name", title: "Name" },
+    { key: "description", dataIndex: "description", title: "Description" },
 ];
 const mockData = [
     { id: 1, name: "Item 1", description: "Description 1" },
@@ -15,7 +15,11 @@ describe("NautobotTable", () => {
     it("renders table headers and data", () => {
         render(
             <BrowserRouter>
-                <NautobotTable headers={mockHeaders} data={mockData} />
+                <NautobotTable
+                    defaultHeaders={mockHeaders}
+                    tableHeaders={mockHeaders}
+                    tableData={mockData}
+                />
             </BrowserRouter>
         );
 
