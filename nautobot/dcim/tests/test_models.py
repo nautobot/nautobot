@@ -1252,3 +1252,15 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
         count = interface.remove_ip_addresses(ips)
         self.assertEqual(count, 4)
         self.assertEqual(IPAddressToInterface.objects.filter(interface=interface).count(), 0)
+
+        # Test the pre_delete signal for IPAddressToInterface instances
+        interface.add_ip_addresses(ips)
+        self.device.primary_ip4 = interface.ip_addresses.all().filter(host__family=4).first()
+        self.device.primary_ip6 = interface.ip_addresses.all().filter(host__family=6).first()
+        self.device.save()
+        interface.remove_ip_addresses(self.device.primary_ip4)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.primary_ip4, None)
+        interface.remove_ip_addresses(self.device.primary_ip6)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.primary_ip6, None)

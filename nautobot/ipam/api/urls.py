@@ -5,6 +5,9 @@ from . import views
 router = OrderedDefaultRouter()
 router.APIRootView = views.IPAMRootView
 
+# Namespaces
+router.register("namespaces", views.NamespaceViewSet)
+
 # VRFs
 router.register("vrfs", views.VRFViewSet)
 

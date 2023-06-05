@@ -24,7 +24,7 @@ from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.ipam.models import Prefix, IPAddress
+from nautobot.ipam.models import Prefix, IPAddress, Namespace
 from nautobot.users.models import ObjectPermission
 
 from example_plugin import config as example_config
@@ -468,8 +468,10 @@ class PluginCustomValidationTest(TestCase):
 
     def test_relationship_association_validator_raises_exception(self):
         status = Status.objects.get_for_model(IPAddress).first()
-        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
-        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status)
+        namespace = Namespace.objects.first()
+        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"), namespace=namespace)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.22.0/24"), namespace=namespace)
+        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status, namespace=namespace)
         relationship = Relationship.objects.create(
             label="Test Relationship",
             key="test_relationship",

@@ -525,6 +525,7 @@ class BaseInterfaceTable(BaseTable):
         orderable=False,
         verbose_name="Tagged VLANs",
     )
+    vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
 class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
@@ -543,6 +544,7 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
             "type",
             "mgmt_only",
             "mtu",
+            "vrf",
             "mode",
             "mac_address",
             "description",
@@ -593,6 +595,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "lag",
             "mgmt_only",
             "mtu",
+            "vrf",
             "mode",
             "mac_address",
             "description",
@@ -615,6 +618,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "parent_interface",
             "lag",
             "mtu",
+            "vrf",
             "mode",
             "description",
             "ip_addresses",

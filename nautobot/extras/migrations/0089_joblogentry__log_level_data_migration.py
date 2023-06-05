@@ -23,7 +23,7 @@ def migrate_job_log_entry_log_levels(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0086_joblogentry__log_level_default"),
+        ("extras", "0088_joblogentry__log_level_default"),
     ]
 
     operations = [

@@ -1,7 +1,7 @@
 import netaddr
 
-from .constants import VLAN_VID_MAX, VLAN_VID_MIN
-from .models import Prefix, VLAN
+from nautobot.ipam.constants import VLAN_VID_MAX, VLAN_VID_MIN
+from nautobot.ipam.models import Prefix, VLAN
 
 
 def add_available_prefixes(parent, prefix_list):
