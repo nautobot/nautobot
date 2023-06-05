@@ -22,13 +22,13 @@ class IPAddressQuerySet(TestCase):
 
         cls.ips = {
             "10.0.0.1/24": IPAddress.objects.create(address="10.0.0.1/24", namespace=cls.namespace, tenant=None),
-            "10.0.0.1/25": IPAddress.objects.create(address="10.0.0.1/25", namespace=cls.namespace2, tenant=None),
             "10.0.0.2/24": IPAddress.objects.create(address="10.0.0.2/24", namespace=cls.namespace, tenant=None),
             "10.0.0.3/24": IPAddress.objects.create(address="10.0.0.3/24", namespace=cls.namespace, tenant=None),
             "10.0.0.4/24": IPAddress.objects.create(address="10.0.0.4/24", namespace=cls.namespace, tenant=None),
             "2001:db8::1/64": IPAddress.objects.create(address="2001:db8::1/64", namespace=cls.namespace, tenant=None),
             "2001:db8::2/64": IPAddress.objects.create(address="2001:db8::2/64", namespace=cls.namespace, tenant=None),
             "2001:db8::3/64": IPAddress.objects.create(address="2001:db8::3/64", namespace=cls.namespace, tenant=None),
+            "10.0.0.1/25": IPAddress.objects.create(address="10.0.0.1/25", namespace=cls.namespace2, tenant=None),
         }
 
     def test_ip_family(self):

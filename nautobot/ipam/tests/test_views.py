@@ -219,6 +219,22 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
         }
 
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        self.form_data = form_data
+        super().test_edit_object_with_permission()
+
+    # TODO Revise these tests by borrowing the pattern that already exists in nautobot.core.testing.api
+    # where by default the same data is used for both create and edit tests, but you have the option to override one or the other if needed.
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        self.form_data = form_data
+        super().test_edit_object_with_constrained_permission()
+
     def test_host_non_modifiable_once_set(self):
         """`host` field of the IPAddress should not be modifiable once the IPAddress is created."""
         ip_address_1 = self._get_queryset().first()
@@ -241,7 +257,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertEquals(200, response.status_code)
+        self.assertEqual(200, response.status_code)
         self.assertIn("Host cannot be modified once set", str(response.content))
 
 
