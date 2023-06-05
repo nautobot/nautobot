@@ -582,7 +582,13 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
     def test_mask_length(self):
+        # Test filtering by a single integer value
         params = {"mask_length": self.queryset.first().mask_length}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length=params["mask_length"])
+        )
+        # Test filtering by multiple integer values
+        params = {"mask_length": [self.queryset.first().mask_length, self.queryset.last().mask_length]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length=params["mask_length"])
         )

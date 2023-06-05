@@ -133,10 +133,10 @@ All IPAM objects with network field types (`ipam.IPAddress`, and `ipam.Prefix`) 
 
 Below is a summary of the underlying technical changes to network fields. These will be explained in more detail in the following sections.
 
-- For `IPAddress`, the `address` field was exploded out to `host`, and `mask_length` fields; `address` was converted into a computed field.
+- For `IPAddress`, the `address` field was exploded out to `host` and `mask_length` fields; `address` was converted into a computed field.
 - For `Prefix` objects, the `prefix` field was exploded out to `network`, `broadcast`, and `prefix_length` fields; `prefix` was converted into a computed field.
 - The `host`, `network`, and `broadcast` fields are now of a `varbinary` database type, which is represented as a packed binary integer (for example, the host `1.1.1.1` is packed as `b"\x01\x01\x01\x01"`)
-- Network membership queries are accomplished by triangulating the "position" of an address using the IP, and mask length of the source and target addresses.
+- Network membership queries are accomplished by triangulating the "position" of an address using the `host` of the `IPAddress` and the `network` and `broadcast` of the `Prefix`.
 
 !!! note
     You should never have to worry about the binary nature of how the network fields are stored in the database! The Django database ORM takes care of it all!

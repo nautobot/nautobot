@@ -21,6 +21,7 @@ from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
+from nautobot.ipam.models import IPAddress
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -442,6 +443,10 @@ class ViewTestCases:
             # Try GET with model-level permission
             self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
 
+            # We cannot edit IPAddress's host field once it is already set.
+            # but we do need the address field to be not empty
+            if isinstance(instance, IPAddress):
+                self.form_data["address"] = instance.address
             # Try POST with model-level permission
             request = {
                 "path": self._get_url("edit", instance),
@@ -476,6 +481,10 @@ class ViewTestCases:
             # Try GET with a non-permitted object
             self.assertHttpStatus(self.client.get(self._get_url("edit", instance2)), 404)
 
+            # We cannot edit IPAddress's host field once it is already set.
+            # but we do need the address field to be not empty
+            if isinstance(instance1, IPAddress):
+                self.form_data["address"] = instance1.address
             # Try to edit a permitted object
             request = {
                 "path": self._get_url("edit", instance1),

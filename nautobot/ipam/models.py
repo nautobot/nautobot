@@ -893,7 +893,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this IPAddress.",
     )
-    # ip_version is set internally just like network, broadcast, and mask_length.
+    # ip_version is set internally just like network, and mask_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressVersionChoices,
         null=True,
@@ -937,7 +937,7 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
     class Meta:
-        ordering = ("ip_version", "host", "mask_length")  # address may be non-unique
+        ordering = ("parent__namespace", "ip_version", "host", "mask_length")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
@@ -962,14 +962,6 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         if address:
             if isinstance(address, str):
                 address = netaddr.IPNetwork(address)
-            # Note that our "broadcast" field is actually the last IP address in this network.
-            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
-            # 1. For a point-to-point address (IPv4 /31 or IPv6 /127), there are two addresses in the network,
-            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
-            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the network.
-            #    We store this address as both the host and the "broadcast".
-            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
-            # of addresses and prefixes, not for packet forwarding. :-)
             self.host = str(address.ip)
             self.mask_length = address.prefixlen
             self.ip_version = address.version

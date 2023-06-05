@@ -37,7 +37,7 @@ class Migration(migrations.Migration):
         migrations.AlterModelOptions(
             name="ipaddress",
             options={
-                "ordering": ("ip_version", "host", "mask_length"),
+                "ordering": ("parent__namespace", "ip_version", "host", "mask_length"),
                 "verbose_name": "IP address",
                 "verbose_name_plural": "IP addresses",
             },
