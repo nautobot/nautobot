@@ -76,13 +76,13 @@ class Command(BaseCommand):
         try:
             with open(file_path, "r") as f:
                 js_content = f.read()
-
-            # Construct a regular expression that matches the specified key and extracts the associated view component
-            pattern = rf'routes_view_components:\s*{{[^}}]*"{re.escape(route_name)}"\s*:\s*"([^"]+)"'
-            view_component_match = re.search(pattern, js_content)
-            return view_component_match[1] if view_component_match else None
         except FileNotFoundError:
             return None
+
+        # Construct a regular expression that matches the specified key and extracts the associated view component
+        pattern = rf'routes_view_components:\s*{{[^}}]*"{re.escape(route_name)}"\s*:\s*"([^"]+)"'
+        view_component_match = re.search(pattern, js_content)
+        return view_component_match[1] if view_component_match else None
 
     def render_routes_imports(self, app_base_path, app_name, app_config):
         """
