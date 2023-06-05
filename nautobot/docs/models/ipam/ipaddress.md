@@ -28,7 +28,7 @@ An IP address can be assigned to any device or virtual machine interface, and an
     When primary IPs are set for both IPv4 and IPv6, Nautobot will prefer IPv6. This can be changed by setting the `PREFER_IPV4` configuration parameter.
 
 +/- 2.0.0
-    `prefix_length` becomes `mask_length` and is intended to describe the desired subnet mask when configured on interface(s).
+    `prefix_length` becomes `mask_length` and is intended to describe the desired subnet mask of the IP addresses when configured on interface(s).
 
 ## Network Address Translation (NAT)
 
