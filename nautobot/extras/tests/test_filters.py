@@ -777,7 +777,7 @@ class JobFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
         Job.objects.last().tags.set(Tag.objects.get_for_model(Job)[:3])
 
     def test_grouping(self):
-        params = {"grouping": ["test_file_upload_pass", "test_file_upload_fail"]}
+        params = {"grouping": ["file_upload_pass", "file_upload_fail"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_installed(self):

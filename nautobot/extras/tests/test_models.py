@@ -766,7 +766,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.plugin_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "test_pass.TestPass")
+        self.assertEqual(self.local_job.class_path, "pass.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
         self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
@@ -783,7 +783,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             self.assertTrue(job_model.installed)
             self.assertFalse(job_model.enabled)
             for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "test_duplicate_name" in job_model.job_class.__module__:
+                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
                     pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
                 else:
                     self.assertFalse(
@@ -1374,7 +1374,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "test_pass"
+        module = "pass"
         name = "TestPass"
         job_class = get_job(f"{module}.{name}")
 

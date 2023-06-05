@@ -54,7 +54,7 @@ class JobTest(TransactionTestCase):
         """
         Job test which produces a warning log message because the time_limit is less than the soft_time_limit.
         """
-        module = "test_soft_time_limit_greater_than_time_limit"
+        module = "soft_time_limit_greater_than_time_limit"
         name = "TestSoftTimeLimitGreaterThanHardTimeLimit"
         job_result = create_job_result_and_run_job(module, name)
         log_warning = JobLogEntry.objects.filter(
@@ -71,7 +71,7 @@ class JobTest(TransactionTestCase):
         """
         Job test with pass result.
         """
-        module = "test_pass"
+        module = "pass"
         name = "TestPass"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -80,7 +80,7 @@ class JobTest(TransactionTestCase):
         """
         Job test with JobResult Censored Sensitive Variables.
         """
-        module = "test_has_sensitive_variables"
+        module = "has_sensitive_variables"
         name = "TestHasSensitiveVariables"
         # This function create_job_result_and_run_job and the subsequent functions' arguments are very messy
         job_result = create_job_result_and_run_job(module, name, "local", 1, 2, "3", kwarg_1=1, kwarg_2="2")
@@ -92,7 +92,7 @@ class JobTest(TransactionTestCase):
         """
         Job test with fail result.
         """
-        module = "test_fail"
+        module = "fail"
         name = "TestFail"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -102,7 +102,7 @@ class JobTest(TransactionTestCase):
         Job test with field that is a default value that is falsey.
         https://github.com/nautobot/nautobot/issues/2039
         """
-        module = "test_field_default"
+        module = "field_default"
         name = "TestFieldDefault"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
@@ -121,7 +121,7 @@ class JobTest(TransactionTestCase):
         """
         Job test with field order.
         """
-        module = "test_field_order"
+        module = "field_order"
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
@@ -131,7 +131,7 @@ class JobTest(TransactionTestCase):
         """
         Job test without field_order.
         """
-        module = "test_no_field_order"
+        module = "no_field_order"
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
@@ -141,7 +141,7 @@ class JobTest(TransactionTestCase):
         """
         Job test without field_order with a variable inherited from the base class
         """
-        module = "test_no_field_order"
+        module = "no_field_order"
         name = "TestDefaultFieldOrderWithInheritance"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
@@ -154,7 +154,7 @@ class JobTest(TransactionTestCase):
         """
         Job with @transaction.atomic decorator test with pass result.
         """
-        module = "test_atomic_transaction"
+        module = "atomic_transaction"
         name = "TestAtomicDecorator"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -172,7 +172,7 @@ class JobTest(TransactionTestCase):
         """
         Job with `with transaction.atomic()` context manager test with pass result.
         """
-        module = "test_atomic_transaction"
+        module = "atomic_transaction"
         name = "TestAtomicContextManager"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -190,7 +190,7 @@ class JobTest(TransactionTestCase):
         """
         Job with @transaction.atomic decorator test with fail result.
         """
-        module = "test_atomic_transaction"
+        module = "atomic_transaction"
         name = "TestAtomicDecorator"
         job_result = create_job_result_and_run_job(module, name, fail=True)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -208,7 +208,7 @@ class JobTest(TransactionTestCase):
         """
         Job with `with transaction.atomic()` context manager test with fail result.
         """
-        module = "test_atomic_transaction"
+        module = "atomic_transaction"
         name = "TestAtomicContextManager"
         job_result = create_job_result_and_run_job(module, name, fail=True)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -232,7 +232,7 @@ class JobTest(TransactionTestCase):
         - IPAddressWithMaskVar
         - IPNetworkVar
         """
-        module = "test_ipaddress_vars"
+        module = "ipaddress_vars"
         name = "TestIPAddresses"
         job_class, _job_model = get_job_class_and_model(module, name)
 
@@ -270,7 +270,7 @@ class JobTest(TransactionTestCase):
         """
         Test that an attempt is made at log redaction.
         """
-        module = "test_log_redaction"
+        module = "log_redaction"
         name = "TestLogRedaction"
         job_result = create_job_result_and_run_job(module, name)
 
@@ -284,7 +284,7 @@ class JobTest(TransactionTestCase):
         """
         Test that an attempt is made at log redaction.
         """
-        module = "test_log_skip_db_logging"
+        module = "log_skip_db_logging"
         name = "TestLogSkipDBLogging"
         job_result = create_job_result_and_run_job(module, name)
 
@@ -297,7 +297,7 @@ class JobTest(TransactionTestCase):
         """
         Test that Object variable fields behave as expected.
         """
-        module = "test_object_vars"
+        module = "object_vars"
         name = "TestObjectVars"
 
         # Prepare the job data
@@ -324,7 +324,7 @@ class JobTest(TransactionTestCase):
         """
         Test that an optional Object variable field behaves as expected.
         """
-        module = "test_object_var_optional"
+        module = "object_var_optional"
         name = "TestOptionalObjectVar"
         data = {"location": None}
         job_result = create_job_result_and_run_job(module, name, **data)
@@ -343,7 +343,7 @@ class JobTest(TransactionTestCase):
         """
         Test that a required Object variable field behaves as expected.
         """
-        module = "test_object_var_required"
+        module = "object_var_required"
         name = "TestRequiredObjectVar"
         data = {"location": None}
         job_result = create_job_result_and_run_job(module, name, **data)
@@ -356,7 +356,7 @@ class JobTest(TransactionTestCase):
         """
         Job test to see if the latest_result property is indeed returning the most recent job result
         """
-        module = "test_pass"
+        module = "pass"
         name = "TestPass"
         job_result_1 = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -372,7 +372,7 @@ class JobTest(TransactionTestCase):
         """
         Test job form with custom task queues defined on the job class
         """
-        module = "test_task_queues"
+        module = "task_queues"
         name = "TestWorkerQueues"
         mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
         job_class, _ = get_job_class_and_model(module, name)
@@ -392,7 +392,7 @@ class JobTest(TransactionTestCase):
         """
         Test job form with custom task queues defined on the job class and overridden on the model
         """
-        module = "test_task_queues"
+        module = "task_queues"
         name = "TestWorkerQueues"
         mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
         job_class, job_model = get_job_class_and_model(module, name)
@@ -415,20 +415,20 @@ class JobTest(TransactionTestCase):
         Test job class supports_dryrun field and job model supports_dryrun field
         """
 
-        module = "test_dry_run"
+        module = "dry_run"
         name = "TestDryRun"
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertTrue(job_class.supports_dryrun)
         self.assertTrue(job_model.supports_dryrun)
 
-        module = "test_pass"
+        module = "pass"
         name = "TestPass"
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
         self.assertFalse(job_model.supports_dryrun)
 
     def test_job_profiling(self):
-        module = "test_profiling"
+        module = "profiling"
         name = "TestProfilingJob"
 
         # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
@@ -446,7 +446,7 @@ class JobTest(TransactionTestCase):
 
     def test_dryrun_default(self):
         """Test that dryrun_default is reflected in job form."""
-        module = "test_dry_run"
+        module = "dry_run"
         name = "TestDryRun"
         job_class, job_model = get_job_class_and_model(module, name)
 
@@ -482,7 +482,7 @@ class JobFileUploadTest(TransactionTestCase):
 
     def test_run_job_pass(self):
         """Test that file upload succeeds; job SUCCEEDS; and files are deleted."""
-        module = "test_file_upload_pass"
+        module = "file_upload_pass"
         name = "TestFileUploadPass"
         job_class, _job_model = get_job_class_and_model(module, name)
 
@@ -512,7 +512,7 @@ class JobFileUploadTest(TransactionTestCase):
 
     def test_run_job_fail(self):
         """Test that file upload succeeds; job FAILS; files deleted."""
-        module = "test_file_upload_fail"
+        module = "file_upload_fail"
         name = "TestFileUploadFail"
         job_class, _job_model = get_job_class_and_model(module, name)
 
@@ -563,7 +563,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
     def test_runjob_nochange_successful(self):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
-        module = "test_pass"
+        module = "pass"
         name = "TestPass"
         _job_class, job_model = get_job_class_and_model(module, name)
 
@@ -576,7 +576,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
     def test_runjob_wrong_username(self):
         """A job when run with a nonexistent username, is rejected."""
-        module = "test_modify_db"
+        module = "modify_db"
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
         with self.assertRaises(CommandError):
@@ -584,7 +584,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
     def test_runjob_db_change(self):
         """A job that changes the DB, successfully updates the DB."""
-        module = "test_modify_db"
+        module = "modify_db"
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
@@ -618,7 +618,7 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.request.user = self.user
 
     def test_run(self):
-        module = "test_location_with_custom_field"
+        module = "location_with_custom_field"
         name = "TestCreateLocationWithCustomField"
         job_result = create_job_result_and_run_job(module, name)
         job_result.refresh_from_db()
@@ -663,7 +663,7 @@ class JobButtonReceiverTest(TransactionTestCase):
         }
 
     def test_form_field(self):
-        module = "test_job_button_receiver"
+        module = "job_button_receiver"
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
@@ -672,26 +672,26 @@ class JobButtonReceiverTest(TransactionTestCase):
         )
 
     def test_hidden(self):
-        module = "test_job_button_receiver"
+        module = "job_button_receiver"
         name = "TestJobButtonReceiverSimple"
         _job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_model.hidden)
 
     def test_is_job_button(self):
         with self.subTest(expected=False):
-            module = "test_pass"
+            module = "pass"
             name = "TestPass"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_button_receiver)
 
         with self.subTest(expected=True):
-            module = "test_job_button_receiver"
+            module = "job_button_receiver"
             name = "TestJobButtonReceiverSimple"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertTrue(job_model.is_job_button_receiver)
 
     def test_missing_receive_job_button_method(self):
-        module = "test_job_button_receiver"
+        module = "job_button_receiver"
         name = "TestJobButtonReceiverFail"
         job_result = create_job_result_and_run_job(module, name, **self.data)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -720,33 +720,33 @@ class JobHookReceiverTest(TransactionTestCase):
         self.data = {"object_change": oc.id}
 
     def test_form_field(self):
-        module = "test_job_hook_receiver"
+        module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
         self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_profile"])
 
     def test_hidden(self):
-        module = "test_job_hook_receiver"
+        module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         _job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_model.hidden)
 
     def test_is_job_hook(self):
         with self.subTest(expected=False):
-            module = "test_pass"
+            module = "pass"
             name = "TestPass"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_hook_receiver)
 
         with self.subTest(expected=True):
-            module = "test_job_hook_receiver"
+            module = "job_hook_receiver"
             name = "TestJobHookReceiverLog"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertTrue(job_model.is_job_hook_receiver)
 
     def test_object_change_context(self):
-        module = "test_job_hook_receiver"
+        module = "job_hook_receiver"
         name = "TestJobHookReceiverChange"
         job_result = create_job_result_and_run_job(module, name, **self.data)
         test_location = Location.objects.get(name="test_jhr")
@@ -755,7 +755,7 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(oc.user_id, job_result.user.pk)
 
     def test_missing_receive_job_hook_method(self):
-        module = "test_job_hook_receiver"
+        module = "job_hook_receiver"
         name = "TestJobHookReceiverFail"
         job_result = create_job_result_and_run_job(module, name, **self.data)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -769,7 +769,7 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     def setUp(self):
         super().setUp()
 
-        module = "test_job_hook_receiver"
+        module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         self.job_class, self.job_model = get_job_class_and_model(module, name)
         job_hook = JobHook(
@@ -811,8 +811,8 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         for i in range(1, 7):
             ScheduledJob.objects.create(
                 name=f"test{i}",
-                task="test_pass.TestPass",
-                job_class="test_pass.TestPass",
+                task="pass.TestPass",
+                job_class="pass.TestPass",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
                 start_time=timezone.now() - datetime.timedelta(days=i * 30),
@@ -821,8 +821,8 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         ScheduledJob.objects.create(
             name="test7",
-            task="test_pass.TestPass",
-            job_class="test_pass.TestPass",
+            task="pass.TestPass",
+            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
             start_time=timezone.now() - datetime.timedelta(days=180),
@@ -850,8 +850,8 @@ class ScheduledJobIntervalTestCase(TestCase):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = ScheduledJob.objects.create(
             name="weekly_interval",
-            task="test_pass.TestPass",
-            job_class="test_pass.TestPass",
+            task="pass.TestPass",
+            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,
             start_time=start_time,

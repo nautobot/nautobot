@@ -1275,7 +1275,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         obj_perm = ObjectPermission(
             name="Test permission",
-            constraints={"module_name__in": ["test_pass", "test_fail"]},
+            constraints={"module_name__in": ["pass", "fail"]},
             actions=["run"],
         )
         obj_perm.save()
@@ -1289,10 +1289,10 @@ class JobTest(
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
         # Try post to permitted job
-        job_model = Job.objects.get_for_class_path("test_pass.TestPass")
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("test_pass.TestPass")
+        url = self.get_run_url("pass.TestPass")
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1516,7 +1516,7 @@ class JobTest(
 
         test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
 
-        job_model = Job.objects.get_for_class_path("test_field_order.TestFieldOrder")
+        job_model = Job.objects.get_for_class_path("field_order.TestFieldOrder")
         job_model.enabled = True
         job_model.validated_save()
 
@@ -1529,7 +1529,7 @@ class JobTest(
             "var1": test_file,
         }
 
-        url = self.get_run_url(class_path="test_field_order.TestFieldOrder")
+        url = self.get_run_url(class_path="field_order.TestFieldOrder")
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1540,7 +1540,7 @@ class JobTest(
 
         test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
 
-        job_model = Job.objects.get_for_class_path("test_field_order.TestFieldOrder")
+        job_model = Job.objects.get_for_class_path("field_order.TestFieldOrder")
         job_model.enabled = True
         job_model.validated_save()
 
@@ -1553,7 +1553,7 @@ class JobTest(
             "var1": test_file,
         }
 
-        url = self.get_run_url(class_path="test_field_order.TestFieldOrder")
+        url = self.get_run_url(class_path="field_order.TestFieldOrder")
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1564,7 +1564,7 @@ class JobTest(
 
         test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
 
-        job_model = Job.objects.get_for_class_path("test_field_order.TestFieldOrder")
+        job_model = Job.objects.get_for_class_path("field_order.TestFieldOrder")
         job_model.enabled = True
         job_model.validated_save()
 
@@ -1580,7 +1580,7 @@ class JobTest(
             "_schedule_name": "test",
         }
 
-        url = self.get_run_url(class_path="test_field_order.TestFieldOrder")
+        url = self.get_run_url(class_path="field_order.TestFieldOrder")
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1845,10 +1845,10 @@ class JobTest(
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
 
-        job_model = Job.objects.get_for_class_path("test_pass.TestPass")
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("test_pass.TestPass")
+        url = self.get_run_url("pass.TestPass")
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -2099,10 +2099,10 @@ class ScheduledJobTest(
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        job_model = Job.objects.get_for_class_path("test_pass.TestPass")
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
         ScheduledJob.objects.create(
             name="test1",
-            task="test_pass.TestPass",
+            task="pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2112,7 +2112,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="test_pass.TestPass",
+            task="pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2122,7 +2122,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="test_pass.TestPass",
+            task="pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2145,12 +2145,12 @@ class JobApprovalTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.additional_user = User.objects.create(username="user1", is_active=True)
-        cls.job_model = Job.objects.get_for_class_path("test_pass.TestPass")
+        cls.job_model = Job.objects.get_for_class_path("pass.TestPass")
         cls.job_model.enabled = True
         cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="test_pass.TestPass",
+            task="pass.TestPass",
             job_class=cls.job_model.class_path,
             job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2158,12 +2158,12 @@ class JobApprovalTest(APITestCase):
             approval_required=True,
             start_time=now(),
         )
-        cls.dryrun_job_model = Job.objects.get_for_class_path("test_dry_run.TestDryRun")
+        cls.dryrun_job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
         cls.dryrun_job_model.enabled = True
         cls.dryrun_job_model.save()
         cls.dryrun_scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="test_dry_run.TestDryRun",
+            task="dry_run.TestDryRun",
             job_class=cls.dryrun_job_model.class_path,
             job_model=cls.dryrun_job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2204,7 +2204,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="test_pass.TestPass",
+            task="pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2228,7 +2228,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="test_pass.TestPass",
+            task="pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
@@ -2246,7 +2246,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="test_pass.TestPass",
+            task="pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
