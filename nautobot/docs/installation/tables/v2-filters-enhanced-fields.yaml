@@ -121,7 +121,7 @@
   Enhancements: "Filtering on multiple values"
 - Model: "IPAddress"
   Filter: "mask_length"
-  Enhancements: "Filter on multiple integer values"
+  Enhancements: "Filtering on multiple integer values"
 - Model: "IPAddress"
   Filter: "rir"
   Enhancements: "Filter by UUID or by name"
