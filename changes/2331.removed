@@ -1,2 +1,0 @@
-Removed custom `BaseJob` logging methods `_log`, `log`, `log_debug`, `log_success`, `log_info`, `log_warning` and `log_failure`.
-Removed `active_test` and `failed` properties from `BaseJob` class.

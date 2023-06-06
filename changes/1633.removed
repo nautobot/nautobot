@@ -1,3 +1,0 @@
-Removed monkey-patching of `taggit.managers.TaggableManager`.
-Removed `nautobot.extras.utils.is_taggable`; use `nautobot.core.models.utils.is_taggable` instead.
-Removed backward-compatibility with `taggit` 1.x Python API; instead of `object.tags.set(tag1, tag2, tag3)` you must now do `object.tags.set([tag1, tag2, tag3])`.

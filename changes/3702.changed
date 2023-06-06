@@ -1,1 +1,0 @@
-Changed nested serialization to never include tags, computed fields, relationships, and other M2M fields.

@@ -1,2 +1,0 @@
-Fixed missing time-zone information on various Job-related tests in `nautobot.extras.tests.test_views`.
-Fixed various cable-termination API serializers incorrectly reporting the `cable` field as writable.

@@ -1,1 +1,0 @@
-Fixed undesirable nullability of `status` fields to correctly match their intended usage.
