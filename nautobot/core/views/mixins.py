@@ -228,7 +228,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     serializer_class = None
     table_class = None
     notes_form_class = NoteForm
-    use_new_ui = False
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -579,7 +578,16 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     UI mixin to retrieve a model instance.
     """
 
-    use_new_ui = True
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve a model instance.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        context = serializer.data
+        context["use_new_ui"] = True
+        return Response(context)
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
@@ -596,7 +604,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
     )
-    use_new_ui = True
 
     def filter_queryset(self, queryset):
         """
@@ -653,7 +660,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         List the model instances.
         """
-        context = {}
+        context = {"use_new_ui": True}
         if "export" in request.GET:
             queryset = self.get_queryset()
             model = queryset.model
