@@ -2,6 +2,7 @@ from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Location, LocationType
+from nautobot.extras.models import Status
 
 
 class NoteTestCase(SeleniumTestCase):
@@ -24,7 +25,10 @@ class NoteTestCase(SeleniumTestCase):
         Test initial add and then update of a new Note
         """
         location_type, _ = LocationType.objects.get_or_create(name="Campus")
-        location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(
+            name="Location 1", slug="location-1", location_type=location_type, status=location_status
+        )
 
         # Navigate to the created location.
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:location", kwargs={"pk": location.pk})}')

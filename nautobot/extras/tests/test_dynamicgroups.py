@@ -46,11 +46,12 @@ class DynamicGroupTestBase(TestCase):
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
         cls.lt = LocationType.objects.get(name="Campus")
 
+        loc_status = Status.objects.get_for_model(Location).first()
         cls.locations = [
-            Location.objects.create(name="Location 1", slug="location-1", location_type=cls.lt),
-            Location.objects.create(name="Location 2", slug="location-2", location_type=cls.lt),
-            Location.objects.create(name="Location 3", slug="location-3", location_type=cls.lt),
-            Location.objects.create(name="Location 4", slug="location-4", location_type=cls.lt),
+            Location.objects.create(name="Location 1", slug="location-1", location_type=cls.lt, status=loc_status),
+            Location.objects.create(name="Location 2", slug="location-2", location_type=cls.lt, status=loc_status),
+            Location.objects.create(name="Location 3", slug="location-3", location_type=cls.lt, status=loc_status),
+            Location.objects.create(name="Location 4", slug="location-4", location_type=cls.lt, status=loc_status),
         ]
 
         cls.manufacturer = Manufacturer.objects.first()
