@@ -48,7 +48,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, Prefix, Namespace
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
     Cluster,
@@ -955,7 +955,9 @@ class JobResultTest(TestCase):
         self.assertIsNone(job_result.related_object)
 
         # Case 3: Related object with no name, identified by PK/ID
-        ip_address = IPAddress.objects.create(address="1.1.1.1/32")
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="1.1.1.0/24", namespace=namespace)
+        ip_address = IPAddress.objects.create(address="1.1.1.1/32", namespace=namespace)
         job_result = JobResult(
             name="irrelevant",
             obj_type=ContentType.objects.get_for_model(ip_address),

@@ -13,7 +13,7 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, Cons
 # Environment setup
 #
 
-# This is used for display in the UI.
+# This is used for display in the UI. There are also VERSION_MAJOR and VERSION_MINOR derived from this later.
 VERSION = __version__
 
 # Hostname of the system. This is displayed in the web UI footers along with the
@@ -22,9 +22,6 @@ HOSTNAME = platform.node()
 
 # Set the base directory two levels up (i.e. the base nautobot/ directory)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# The directory where the Nautobot UI packaging is stored.
-NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "ui")
 
 # Set the swapable User model to the Nautobot custom User model
 AUTH_USER_MODEL = "users.User"
@@ -62,14 +59,12 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
+# The directory where the Nautobot UI packaging is stored.
+NAUTOBOT_UI_DIR = os.path.join(NAUTOBOT_ROOT, "ui")
+
 # Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
-
-# By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
-# table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
-# ENFORCE_GLOBAL_UNIQUE to True.
-ENFORCE_GLOBAL_UNIQUE = is_truthy(os.getenv("NAUTOBOT_ENFORCE_GLOBAL_UNIQUE", "False"))
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -169,11 +164,11 @@ STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 #
 
 REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API version
-current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
+VERSION_MAJOR, VERSION_MINOR = [int(v) for v in REST_FRAMEWORK_VERSION.split(".")]
 # We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-assert current_major == "2", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
-REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)]
+assert VERSION_MAJOR == 2, f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}"
+REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)]
 
 REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
@@ -198,9 +193,8 @@ REST_FRAMEWORK = {
         "nautobot.core.api.parsers.NautobotCSVParser",
     ),
     "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
-    # Version to use if the client doesn't request otherwise.
-    # This should only change (if at all) with Nautobot major (breaking) releases.
-    "DEFAULT_VERSION": "2.0",
+    # Version to use if the client doesn't request otherwise. Default to current (i.e. latest)
+    "DEFAULT_VERSION": REST_FRAMEWORK_VERSION,
     "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
     "ORDERING_PARAM": "sort",  # This is not meant to be changed by users, but is used internally by the API
     "PAGE_SIZE": None,
@@ -306,13 +300,18 @@ DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
 
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+TESTING = "test" in sys.argv
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
 if TESTING:
-    # keep log quiet by default when running unit/integration tests
-    LOGGING = {}
+    # Log to null handler instead of stderr during testing
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {"console": {"level": "INFO", "class": "logging.NullHandler"}},
+        "loggers": {"nautobot": {"handlers": ["console"], "level": "INFO"}},
+    }
 else:
     LOGGING = {
         "version": 1,
@@ -554,11 +553,6 @@ CONSTANCE_CONFIG = {
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
         field_type=int,
     ),
-    "DISABLE_PREFIX_LIST_HIERARCHY": ConstanceConfigItem(
-        default=False,
-        help_text="Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
-        field_type=bool,
-    ),
     "HIDE_RESTRICTED_UI": ConstanceConfigItem(
         default=False,
         help_text="If set to True, users with limited permissions will not be shown menu items and home-page elements that "
@@ -618,7 +612,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
+    "User Interface": ["HIDE_RESTRICTED_UI"],
 }
 
 #

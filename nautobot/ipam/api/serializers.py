@@ -9,10 +9,11 @@ from nautobot.core.api import (
 )
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam.api.fields import IPFieldSerializer
-from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -21,6 +22,19 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
+
+
+#
+# Namespaces
+#
+
+
+class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:namespace-detail")
+
+    class Meta:
+        model = Namespace
+        fields = ["url", "name", "description", "location"]
 
 
 #
@@ -138,7 +152,6 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
 
@@ -157,7 +170,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "description",
         ]
         extra_kwargs = {
-            "family": {"read_only": True},
+            "ip_version": {"read_only": True},
             "prefix_length": {"read_only": True},
         }
 
@@ -173,9 +186,9 @@ class PrefixLengthSerializer(serializers.Serializer):
             raise serializers.ValidationError({"prefix_length": "this field must be int type"})
 
         prefix = self.context.get("prefix")
-        if prefix.family == 4 and requested_prefix > 32:
+        if prefix.ip_version == 4 and requested_prefix > 32:
             raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv4"})
-        elif prefix.family == 6 and requested_prefix > 128:
+        elif prefix.ip_version == 6 and requested_prefix > 128:
             raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv6"})
         return data
 
@@ -185,19 +198,15 @@ class AvailablePrefixSerializer(serializers.Serializer):
     Representation of a prefix which does not exist in the database.
     """
 
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     prefix = serializers.CharField(read_only=True)
 
     def to_representation(self, instance):
-        if self.context.get("vrf"):
-            vrf = VRFSerializer(self.context["vrf"], context={"request": self.context["request"]}).data
-        else:
-            vrf = None
         return OrderedDict(
             [
-                ("family", instance.version),
+                ("ip_version", instance.version),
                 ("prefix", str(instance)),
-                ("vrf", vrf),
+                ("namepace", instance.namespace),
             ]
         )
 
@@ -208,7 +217,6 @@ class AvailablePrefixSerializer(serializers.Serializer):
 
 
 class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
 
     class Meta:
@@ -224,7 +232,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "description",
         ]
         extra_kwargs = {
-            "family": {"read_only": True},
+            "ip_version": {"read_only": True},
             "prefix_length": {"read_only": True},
             "nat_outside_list": {"read_only": True},
         }
@@ -241,19 +249,15 @@ class AvailableIPSerializer(serializers.Serializer):
     Representation of an IP address which does not exist in the database.
     """
 
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     address = serializers.CharField(read_only=True)
 
     def to_representation(self, instance):
-        if self.context.get("vrf"):
-            vrf = VRFSerializer(self.context["vrf"], context={"request": self.context["request"]}).data
-        else:
-            vrf = None
         return OrderedDict(
             [
-                ("family", self.context["prefix"].version),
+                ("ip_verison", self.context["prefix"].version),
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
-                ("vrf", vrf),
+                ("namespace", instance.namespace),
             ]
         )
 

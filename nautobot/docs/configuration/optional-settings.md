@@ -305,26 +305,6 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 ---
 
-## DISABLE_PREFIX_LIST_HIERARCHY
-
-Default: `False`
-
-This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
-
-A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
-
----
-
-## ENFORCE_GLOBAL_UNIQUE
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_ENFORCE_GLOBAL_UNIQUE`
-
-By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting `ENFORCE_GLOBAL_UNIQUE` to `True`.
-
----
-
 ## EXEMPT_VIEW_PERMISSIONS
 
 Default: `[]` (Empty list)
@@ -1042,6 +1022,9 @@ Default:
 
 +/- 1.4.10
     While running unit or integration tests via `nautobot-server test ...`, LOGGING will be set to `{}` instead of the above defaults, as verbose logging to the console is typically not desirable while running tests.
+
++/- 2.0.0
+    Unit/integration test logging was modified to send all nautobot logs to a `NullHandler` to prevent logs falling through to the last resort logger and being output to stderr.
 
 This translates to:
 

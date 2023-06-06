@@ -348,7 +348,7 @@ class ChoiceFieldFix(OpenApiSerializerFieldExtension):
         choices = self.target._choices
 
         value_type = "string"
-        # IPAddressFamilyChoices and RackWidthChoices are int values, not strings
+        # IPAddressVersionChoices and RackWidthChoices are int values, not strings
         if all(isinstance(x, int) for x in [c for c in list(choices.keys()) if c is not None]):
             value_type = "integer"
         # I don't think we have any of these left in the code base at present,

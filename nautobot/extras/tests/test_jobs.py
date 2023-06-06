@@ -1,6 +1,5 @@
 import datetime
 import json
-import logging
 import re
 import uuid
 from io import StringIO
@@ -128,9 +127,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_fail"
         name = "TestFail"
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
-        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
     def test_field_default(self):
@@ -204,9 +201,7 @@ class JobTest(TransactionTestCase):
         """
         module = "test_read_only_fail"
         name = "TestReadOnlyFail"
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, commit=False)
-        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         self.assertEqual(Location.objects.count(), 0)  # Ensure DB transaction was aborted
         # Also ensure the standard log message about aborting the transaction is *not* present
@@ -343,9 +338,7 @@ class JobTest(TransactionTestCase):
         module = "test_object_var_required"
         name = "TestRequiredObjectVar"
         data = {"location": None}
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
-        logging.disable(logging.NOTSET)
 
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -361,9 +354,7 @@ class JobTest(TransactionTestCase):
         module = "test_object_vars"
         name = "TestObjectVars"
         data = "BAD DATA STRING"
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=data, commit=False)
-        logging.disable(logging.NOTSET)
         # Assert stuff
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         log_failure = JobLogEntry.objects.filter(
@@ -519,13 +510,11 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(FileProxy.objects.count(), 1)
 
         # Run the job
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=serialized_data, commit=False)
         self.assertIsNotNone(job_result.traceback)
         # TODO(jathan): If there are more use-cases for asserting class comparison for errors raised
         # by Jobs, factor this into a test case method.
         self.assertIn(job_class.exception.__name__, job_result.traceback)
-        logging.disable(logging.NOTSET)
 
         # Assert that file contents were correctly read
         self.assertEqual(
@@ -722,9 +711,7 @@ class JobButtonReceiverTest(TransactionTestCase):
     def test_missing_receive_job_button_method(self):
         module = "test_job_button_receiver"
         name = "TestJobButtonReceiverFail"
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
-        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
@@ -788,9 +775,7 @@ class JobHookReceiverTest(TransactionTestCase):
     def test_missing_receive_job_hook_method(self):
         module = "test_job_hook_receiver"
         name = "TestJobHookReceiverFail"
-        logging.disable(logging.ERROR)
         job_result = create_job_result_and_run_job(module, name, data=self.data, commit=False)
-        logging.disable(logging.NOTSET)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 

@@ -1835,7 +1835,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "device_type",
             )
             ipaddress = instance.ip_addresses.select_related(
-                "vrf",
+                # "vrf",
                 "tenant",
             )
             prefixes = instance.prefixes.select_related(
@@ -1843,7 +1843,8 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "status",
                 "tenant",
                 "vlan",
-                "vrf",
+                # "vrf",
+                "namespace",
             )
             virtual_machines = instance.virtual_machines.select_related(
                 "cluster",

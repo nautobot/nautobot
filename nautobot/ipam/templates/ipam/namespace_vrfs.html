@@ -1,0 +1,11 @@
+{% extends 'ipam/namespace_retrieve.html' %}
+
+{% block title %}{{ block.super }} - VRFs{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            {% include 'utilities/obj_table.html' with table=vrf_table table_template='panel_table.html' heading='VRFs' bulk_edit_url='ipam:vrf_bulk_edit' bulk_delete_url='ipam:vrf_bulk_delete' %}
+        </div>
+    </div>
+{% endblock %}
