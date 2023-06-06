@@ -1,2 +1,2 @@
-Added uniqueness constraint "name" to VirtualChassis.
-Added migration to check whether all existing VirtualChassis names are unique and to fail if not.
+Added uniqueness constraint "name" to the VirtualChassis model.
+Added migration to check whether all existing Virtual Chassis instances have unique names and to fail if they do not.
