@@ -18,11 +18,11 @@ def ensure_virtual_chassis_names_are_all_unique(apps, schema_editor):
 
     if duplicates:
         for duplicate_vc in duplicates:
-            print(f">>> There are {VC_NAME_TO_COUNT[duplicate_vc]} with duplicate names {duplicate_vc}\n")
+            print(f">>> There are {VC_NAME_TO_COUNT[duplicate_vc]} with name {duplicate_vc}\n")
         print(
-            f">>> Please rename all the Virtual Chassis instances with duplicate names before running this migration again.\n"
+            ">>> Please rename all Virtual Chassis instances with duplicate names before running this migration again.\n"
         )
-        print(f">>> Failing migration...\n")
+        print(">>> Failing migration...\n")
         raise ValidationError("Duplicate Virtual Chassis names detected.")
 
 
