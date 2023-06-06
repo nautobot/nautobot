@@ -823,30 +823,43 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 #
 
 
-def refresh_code_from_repository(repository_slug, skip_reimport=False):
+def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=False):
     """
     After cloning/updating a GitRepository on disk, call this function to reload and reregister the repo's Python code.
 
     Args:
         repository_slug (str): Repository directory in GIT_ROOT that was refreshed.
+        consumer (celery.worker.Consumer): Celery Consumer to update as well
         skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
     """
     if settings.GIT_ROOT not in sys.path:
         sys.path.append(settings.GIT_ROOT)
 
+    app = consumer.app if consumer is not None else celery_app
+    # TODO: This is ugly, but when app.use_fast_trace_task is set (true by default), Celery calls
+    # celery.app.trace.fast_trace_task(...) which assumes that all tasks are cached and have a valid `__trace__()`
+    # function defined. In theory consumer.update_strategies() (below) should ensure this, but it doesn't
+    # go far enough (possibly a discrepancy between the main worker process and the prefork executors?)
+    # as we can and do still encounter errors where `task.__trace__` is unexpectedly None.
+    # For now, simply disabling use_fast_trace_task forces the task trace function to be rebuilt each time,
+    # which avoids the issue at the cost of very slight overhead.
+    app.use_fast_trace_task = False
+
     # Unload any previous version of this module and its submodules if present
     for module_name in list(sys.modules):
         if module_name == repository_slug or module_name.startswith(f"{repository_slug}."):
             logger.debug("Unloading module %s", module_name)
-            if module_name in celery_app.loader.task_modules:
-                celery_app.loader.task_modules.remove(module_name)
+            if module_name in app.loader.task_modules:
+                app.loader.task_modules.remove(module_name)
             del sys.modules[module_name]
 
     # Unregister any previous Celery tasks from this module
-    for task_name in list(celery_app.tasks):
+    for task_name in list(app.tasks):
         if task_name.startswith(f"{repository_slug}."):
             logger.debug("Unregistering Celery task %s", task_name)
-            celery_app.tasks.unregister(task_name)
+            app.tasks.unregister(task_name)
+            if consumer is not None:
+                del consumer.strategies[task_name]
 
     if not skip_reimport:
         try:
@@ -857,7 +870,9 @@ def refresh_code_from_repository(repository_slug, skip_reimport=False):
                 # TODO: this is **NOT** sufficient to get Celery tasks working in the current prefork model,
                 # as we need some way to restart the preforked worker processes or otherwise
                 # tell them to (re)import the module.
-                celery_app.loader.import_task_module(f"{repository_slug}.jobs")
+                app.loader.import_task_module(f"{repository_slug}.jobs")
+                if consumer is not None:
+                    consumer.update_strategies()
         except GitRepository.DoesNotExist as exc:
             logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
             raise

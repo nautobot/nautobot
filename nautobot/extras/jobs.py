@@ -207,11 +207,12 @@ class BaseJob(Task):
             raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
 
         if not self.job_model.enabled:
-            self.logger.error(
+            logger.error(
                 "Job %s is not enabled to be run!",
                 self.job_model,
                 extra={"object": self.job_model, "grouping": "initialization"},
             )
+            raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
 
         soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
         time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
@@ -225,6 +226,7 @@ class BaseJob(Task):
                 time_limit,
                 extra={"grouping": "initialization"},
             )
+
         self.logger.info("Running job", extra={"grouping": "initialization"})
 
     def run(self, *args, **kwargs):

@@ -1071,7 +1071,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 job_instance = job_model.job_class()
             except TypeError as exc:
                 # job_class may be None
-                raise RuntimeError(str(exc)) from exc
+                raise RuntimeError("Job code for this job is not currently installed or loadable") from exc
             initial = normalize_querydict(request.GET, form_class=job_instance.as_form_class())
             if "kwargs_from_job_result" in initial:
                 job_result_pk = initial.pop("kwargs_from_job_result")

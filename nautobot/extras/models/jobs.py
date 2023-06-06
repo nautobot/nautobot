@@ -260,15 +260,22 @@ class Job(PrimaryModel):
     def runnable(self):
         return self.enabled and self.installed and not (self.has_sensitive_variables and self.approval_required)
 
+    @cached_property
+    def git_repository(self):
+        """GitRepository record, if any, that owns this Job."""
+        try:
+            return GitRepository.objects.get(slug=self.module_name.split(".")[0])
+        except GitRepository.DoesNotExist:
+            return None
+
     @property
     def job_task(self):
         """Get the registered Celery task, refreshing it if necessary."""
-        try:
+        if self.git_repository is not None:
             # If this Job comes from a Git repository, make sure we have the correct version of said code.
-            repo = GitRepository.objects.get(slug=self.module_name.split(".")[0])
-            refresh_git_repository(state=None, repository_pk=repo.pk, head=repo.current_head)
-        except GitRepository.DoesNotExist:
-            pass
+            refresh_git_repository(
+                state=None, repository_pk=self.git_repository.pk, head=self.git_repository.current_head
+            )
         return app.tasks[f"{self.module_name}.{self.job_class_name}"]
 
     def clean(self):

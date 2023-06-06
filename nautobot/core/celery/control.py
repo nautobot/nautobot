@@ -22,7 +22,7 @@ def refresh_git_repository(state, repository_pk, head):
         repository = GitRepository.objects.get(pk=repository_pk)
         # Refresh the repository on disk
         ensure_git_repository(repository, head=head, logger=logger)
-        refresh_code_from_repository(repository.slug)
+        refresh_code_from_repository(repository.slug, consumer=state.consumer if state is not None else None)
 
         return {"ok": {"head": repository.current_head}}
     except Exception as exc:
@@ -41,4 +41,6 @@ def discard_git_repository(state, repository_slug):
     if os.path.isdir(filesystem_path):
         shutil.rmtree(filesystem_path)
     # Unload any code from this repository
-    refresh_code_from_repository(repository_slug, skip_reimport=True)
+    refresh_code_from_repository(
+        repository_slug, consumer=state.consumer if state is not None else None, skip_reimport=True
+    )
