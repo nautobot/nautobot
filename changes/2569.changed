@@ -1,3 +1,0 @@
-Revamped CSV export functionality to use REST API serializers for more self-consistency and reduced boilerplate.
-Revised the natural key for `SecretsGroupAssociation` through-table model.
-Changed behavior of `JobLogEntry.display` REST API field to match the model behavior.

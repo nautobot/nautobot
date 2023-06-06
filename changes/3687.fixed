@@ -1,1 +1,0 @@
-Fixed a bug in `Prefix.reparent_ips()` that was too greedy in reparenting IP addresses when child prexies were deeply nested (such as /31)

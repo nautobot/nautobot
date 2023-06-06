@@ -1,2 +1,0 @@
-Renamed `Relationship` model attribute `slug` to `key`.
-Renamed `Relationship` model attribute `name` to `label`.

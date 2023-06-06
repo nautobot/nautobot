@@ -1,4 +1,0 @@
-Added `NautobotCSVParser` class, providing the ability for the REST API to accept CSV as an input format.
-Added ability to specify a `parent_bay` when creating a Device via the REST API.
-Added `APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_csv` generic test, testing the "round-trip" capability of each API endpoint's CSV export and import.
-Added (temporary) `natural_key_field_names` to `IPAddress`, `Prefix`, `RackReservation`, `ScheduledJob`, and `Service` models.

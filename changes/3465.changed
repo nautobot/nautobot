@@ -1,2 +1,0 @@
-Renamed IPAddress `prefix_length` field to `mask_length`.
-Made IPAddress `host` field non-modifiable.

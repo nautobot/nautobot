@@ -1,1 +1,0 @@
-Added `celery_kwargs` field to `JobResult` and `ScheduledJob` models.
