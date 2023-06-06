@@ -426,6 +426,10 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
     if job_name != default_job_name:
         job_model.name_override = True
 
+    if created and job_model.module_name.startswith("nautobot."):
+        # System jobs should be enabled by default when first created
+        job_model.enabled = True
+
     for field_name in JOB_OVERRIDABLE_FIELDS:
         # Was this field directly inherited from the job before, or was it overridden in the database?
         if not getattr(job_model, f"{field_name}_override", False):

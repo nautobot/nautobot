@@ -781,7 +781,11 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
             self.assertTrue(job_model.installed)
-            self.assertFalse(job_model.enabled)
+            # System jobs should be enabled by default, all others are disabled by default
+            if job_model.module_name.startswith("nautobot."):
+                self.assertTrue(job_model.enabled)
+            else:
+                self.assertFalse(job_model.enabled)
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
                     pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
