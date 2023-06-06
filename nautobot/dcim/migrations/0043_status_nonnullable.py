@@ -9,7 +9,7 @@ import nautobot.extras.models.statuses
 class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0083_rename_computed_field_slug_to_key"),
-        ("dcim", "0041_fixup_null_statuses"),
+        ("dcim", "0042_fixup_null_statuses"),
     ]
 
     operations = [
