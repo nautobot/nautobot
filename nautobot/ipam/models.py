@@ -835,30 +835,48 @@ class Prefix(PrimaryModel):
             return None
         return f"{next(available_ips.__iter__())}/{self.prefix_length}"
 
-    def get_utilization(self):
-        """Get the child prefix size and parent size.
-
-        For Prefixes with a type of "container", get the number child prefixes. For all others, count child IP addresses.
+    def get_network_allocation(self):
+        """Get the utilization of the address space that is currently allocated to child prefixes.
+        For IP Address utilization, use `get_ip_utilization`.
 
         Returns:
             UtilizationData (namedtuple): (numerator, denominator)
         """
-        if self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            child_prefixes = netaddr.IPSet(p.prefix for p in self.descendants())
-            return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
+        child_prefixes = netaddr.IPSet(p.prefix for p in self.descendants())
+        return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
 
-        else:
-            prefix_size = self.prefix.size
-            if all(
-                [
-                    self.ip_version == 4,
-                    self.prefix_length < 31,
-                    self.type != choices.PrefixTypeChoices.TYPE_POOL,
-                ]
-            ):
-                prefix_size -= 2
-            child_count = prefix_size - self.get_available_ips().size
-            return UtilizationData(numerator=child_count, denominator=prefix_size)
+    def get_ip_utilization(self):
+        """Get the IP Address utilization of this prefix. For prefixes with type "pool", the network and broadcast addresses are
+        considered usable IP space.
+
+        Returns:
+            UtilizationData (namedtuple): (numerator, denominator)
+        """
+        child_ips = netaddr.IPSet([ip.address.ip for ip in self.ip_addresses.all()])
+        if all(
+            [
+                self.ip_version == 4,
+                self.prefix_length < 31,
+                self.type == choices.PrefixTypeChoices.TYPE_NETWORK,
+            ]
+        ):
+            child_ips.add(self.network)
+            child_ips.add(self.broadcast)
+
+        if self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
+            for descendant_prefix in self.descendants():
+                child_ips |= netaddr.IPSet([ip.address.ip for ip in descendant_prefix.ip_addresses.all()])
+                if all(
+                    [
+                        self.ip_version == 4,
+                        self.prefix_length < 31,
+                        self.type == choices.PrefixTypeChoices.TYPE_NETWORK,
+                    ]
+                ):
+                    child_ips.add(descendant_prefix.network)
+                    child_ips.add(descendant_prefix.broadcast)
+
+        return UtilizationData(numerator=child_ips.size, denominator=self.prefix.size)
 
 
 @extras_features(

@@ -34,9 +34,14 @@ from .models import (
 
 AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
 
-UTILIZATION_GRAPH = """
+NETWORK_ALLOCATION_GRAPH = """
 {% load helpers %}
-{% if record.present_in_database %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
+{% if record.present_in_database %}{% utilization_graph record.get_network_allocation %}{% else %}&mdash;{% endif %}
+"""
+
+IP_UTILIZATION_GRAPH = """
+{% load helpers %}
+{% if record.present_in_database %}{% utilization_graph record.get_ip_utilization %}{% else %}&mdash;{% endif %}
 """
 
 PREFIX_LINK = """
@@ -403,7 +408,10 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 
 class PrefixDetailTable(PrefixTable):
-    utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False)
+    network_allocation = tables.TemplateColumn(template_code=NETWORK_ALLOCATION_GRAPH, orderable=False)
+    ip_utilization = tables.TemplateColumn(
+        template_code=IP_UTILIZATION_GRAPH, template_name="IP Utilization", orderable=False
+    )
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:prefix_list")
 
@@ -416,7 +424,8 @@ class PrefixDetailTable(PrefixTable):
             "status",
             "children",
             # "vrf",
-            "utilization",
+            "network_allocation",
+            "ip_utilization",
             "tenant",
             "location",
             "vlan",
@@ -432,7 +441,8 @@ class PrefixDetailTable(PrefixTable):
             "status",
             "children",
             # "vrf",
-            "utilization",
+            "network_allocation",
+            "ip_utilization",
             "tenant",
             "location",
             "vlan",
