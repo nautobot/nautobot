@@ -220,6 +220,17 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 
 The Configuration Contexts Metadata key `schema` has been replaced with `config_context_schema`. This means that any `schema` references in your git repository's data must be updated to reflect this change.
 
+`GitRepository` sync operations are now Jobs. As a result, when creating a new `GitRepository` it **is not automatically synchronized**. A `GitRepository.sync()` method has been implemented that will execute the sync job on a worker and return the `JobResult` for the operation. This method takes `dry_run` and `user` arguments. The `dry_run` argument defaults to `False`; if set to `True` will cause the sync to dry-run. The `user` argument is required if a sync is performed.
+
+Additionally, the `GitRepository.save()` method no longer takes a `trigger_resync=<True|False>` argument as it is no longer required. The act of creating a new `GitRepository` no longer has side effects.
+
+Below is a table documenting changes in names for Git-related Jobs. There should NOT be a need to ever manually execute the jobs due to the addition of `GitRepository.sync()`, but this is being provided for clarity.
+
+| Old Job Location                                                       | New Job Location                         |
+|------------------------------------------------------------------------|------------------------------------------|
+| `nautobot.extras.datasources.git.pull_git_repository_and_refresh_data` | `nautobot.core.jobs.GitRepositorySync`   |
+| `nautobot.extras.datasources.git.git_repository_diff_origin_and_local` | `nautobot.core.jobs.GitRepositoryDryRun` |
+
 ## Logging Changes
 
 Where applicable, `logging.getLogger("some_arbitrary_name")` is replaced with `logging.getLogger(__name__)` or `logging.getLogger(__name__ + ".SpecificFeature")`.
@@ -246,7 +257,66 @@ The Job `name` field has been changed to a unique field and the `name` + `groupi
 
     These jobs would be named `Sample job` and `Sample job (2)`
 
-The Job `slug` has been updated to be derived from the `name` field instead of a combination of `job_source`, `git_repository`, and `job_class`.
+The Job `slug`, `source` and `git_repository` fields have been removed. The Job `module_name` field will automatically be updated, for Jobs derived from a Git repository, from `<submodule_name>` to `<git_repository_slug>.jobs.<submodule_name>`. This also changes the secondary uniqueness constraint for Jobs to simply `[module_name, job_class_name]`.
+
+The Job `class_path` attribute has been simplified correspondingly, to simply `<module>.<ClassName>` instead of the former `<source>/<module>/<ClassName>`. For example, the Nautobot Golden Config backup job's `class_path` will change from `plugins/nautobot_golden_config.jobs/BackupJob` to `nautobot_golden_config.jobs.BackupJob`.
+
+The Job `commit_default` field has been renamed to `dryrun_default` and the default value has been changed from `True` to `False`. This change is a result of the fundamental job changes mentioned in the [Job Changes](#job-changes) section below.
+
+## JobResult Database Model Changes
+
+The `JobResult` objects for which results from Job executions are stored are now automatically managed. Therefore job authors must never manipulate or `save()` these objects as they are now used internally for all state transitions and saving the objects yourself could interfere with and cause Job execution to fail or cause data loss.
+
+Therefore all code that is calling `JobResult.set_status()` (which has been removed) or `JobResult.save()` must be removed.
+
+## Job Changes
+
+### Fundamental Changes
+
+The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental changes to the job's methods and signatures were required to support this change:
+
+- The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
+
+!!! important
+    Be sure to call the `super()` method when overloading any of the job's `before_start`, `on_success`, `on_retry`, `on_failure`, or `after_return` methods
+
+- The run method signature is now customizable by the job author. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
 
 !!! example
-    The Nautobot Golden Config backup job's slug will change from `plugins-nautobot_golden_config-jobs-backupjob` to `backup-configurations`.
+    ```py
+    class ExampleJob(Job):
+        var1 = StringVar()
+        var2 = IntegerVar(required=True)
+        var3 = BooleanVar()
+        var4 = ObjectVar(model=Role)
+
+        def run(self, var1, var2, var3, var4):
+            ...
+    ```
+
+### Database Transactions
+
+Nautobot no longer wraps the job `run` method in an atomic database transaction. As a result, jobs that need to roll back database changes will have to decorate the run method with `@transaction.atomic` or use the `with transaction.atomic()` context manager in the job code.
+
+With the removal of the atomic transaction, the `commit` flag has been removed. The ability to bypass job approval on dryrun can be achieved by using an optional `dryrun` argument. Job authors who wish to allow users to bypass approval when the `dryrun` flag is set should set a `dryrun` attribute with a value of `DryRunVar()` on their job class. `DryRunVar` can be imported from `nautobot.extras.jobs`.
+
+!!! example
+    ```py
+    from nautobot.extras.jobs import DryRunVar, Job
+
+    class ExampleJob(Job):
+        dryrun = DryRunVar()
+
+        def run(self, dryrun):
+            ...
+    ```
+
+A new `supports_dryrun` field has been added to the `Job` model and `Job` class that returns true if the `Job` class implements the `dryrun = DryRunVar()` attribute. This is used to determine if jobs that require approval can be dry run without prior approval.
+
+The `commit_default` job field has been renamed to `dryrun_default` and the default value has been changed from `True` to `False`.
+
+!!! important
+    The `read_only` job field no longer changes the behavior of Nautobot core and is left to the job author to decide whether their job is read only.
+
+!!! important
+    Nautobot no longer enforces any job behavior when dryrun is set. It is now the job author's responsibility to define and enforce the execution of a "dry run".

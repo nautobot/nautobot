@@ -1,7 +1,6 @@
 import os
 import tempfile
 from unittest import mock
-import uuid
 import warnings
 
 from django.conf import settings
@@ -26,7 +25,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
-from nautobot.extras.jobs import get_job, Job as JobClass
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -48,9 +47,8 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.statuses import StatusModel
-from nautobot.extras.utils import get_job_content_type
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
-from nautobot.ipam.models import IPAddress, Prefix, Namespace
+from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
     Cluster,
@@ -223,7 +221,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save(trigger_resync=False)
+        repo.save()
 
         nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
         nonduplicate_context.validated_save()
@@ -701,7 +699,7 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save(trigger_resync=False)
+        repo.save()
         nonduplicate_template = ExportTemplate(
             content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
         )
@@ -752,25 +750,10 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
             slug="test-git-repo",
             remote_url="http://localhost/git.git",
         )
-        self.repo.save(trigger_resync=False)
+        self.repo.save()
 
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
-
-    def test_save_relocate_directory(self):
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            with self.settings(GIT_ROOT=tmpdirname):
-                initial_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, initial_path)
-                os.makedirs(initial_path)
-
-                self.repo.slug = "a-new-location"
-                self.repo.save(trigger_resync=False)
-
-                self.assertFalse(os.path.exists(initial_path))
-                new_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, new_path)
-                self.assertTrue(os.path.isdir(new_path))
 
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
@@ -795,10 +778,10 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.plugin_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "local/test_pass/TestPass")
+        self.assertEqual(self.local_job.class_path, "pass.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
-        self.assertEqual(self.plugin_job.class_path, "plugins/example_plugin.jobs/ExampleJob")
+        self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
         self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
 
     def test_latest_result(self):
@@ -810,13 +793,24 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
             self.assertTrue(job_model.installed)
-            self.assertFalse(job_model.enabled)
+            # System jobs should be enabled by default, all others are disabled by default
+            if job_model.module_name.startswith("nautobot."):
+                self.assertTrue(job_model.enabled)
+            else:
+                self.assertFalse(job_model.enabled)
             for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "test_duplicate_name" in job_model.job_class.__module__:
+                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
                     pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
                 else:
-                    self.assertFalse(getattr(job_model, f"{field_name}_override"))
-                    self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+                    self.assertFalse(
+                        getattr(job_model, f"{field_name}_override"),
+                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                    )
+                    self.assertEqual(
+                        getattr(job_model, field_name),
+                        getattr(job_model.job_class, field_name),
+                        field_name,
+                    )
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
@@ -831,9 +825,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "grouping": "Overridden Grouping",
             "name": "Overridden Name",
             "description": "Overridden Description",
-            "commit_default": not self.job_containing_sensitive_variables.commit_default,
+            "dryrun_default": not self.job_containing_sensitive_variables.dryrun_default,
             "hidden": not self.job_containing_sensitive_variables.hidden,
-            "read_only": not self.job_containing_sensitive_variables.read_only,
             "approval_required": not self.job_containing_sensitive_variables.approval_required,
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
@@ -867,7 +860,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         """Verify that cleaning enforces validation of potentially unsanitized user input."""
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name",
                 job_class_name="JobClass",
                 grouping="grouping",
@@ -877,7 +869,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="ThisIsARidiculouslyLongJobClassNameWhoWouldEverDoSuchAnUtterlyRidiculousThingButBetterSafeThanSorrySinceWeAreDealingWithUserInputHere",
                 grouping="grouping",
@@ -887,7 +878,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="OK now this is just ridiculous. Why would you ever want to deal with typing in 255+ characters of grouping information and have to copy-paste it to the other jobs in the same grouping or risk dealing with typos when typing out such a ridiculously long grouping string? Still, once again, better safe than sorry!",
@@ -897,7 +887,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="grouping",
@@ -907,7 +896,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="grouping",
@@ -919,69 +907,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             handler.exception.message_dict["approval_required"][0],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
-
-
-class JobResultTest(TestCase):
-    """
-    Tests for the `JobResult` model class.
-    """
-
-    def test_related_object(self):
-        """Test that the `related_object` property is computed properly."""
-        # Case 1: Job, identified by class_path.
-        job_class = get_job("local/test_pass/TestPass")
-        job_result = JobResult(
-            name=job_class.class_path,
-            obj_type=get_job_content_type(),
-            task_id=uuid.uuid4(),
-        )
-
-        # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
-        self.assertEqual(type(job_result.related_object), type)
-        self.assertTrue(issubclass(job_result.related_object, JobClass))
-        self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
-
-        job_result.name = "local/no_such_job/NoSuchJob"
-        self.assertIsNone(job_result.related_object)
-
-        job_result.name = "not-a-class-path"
-        self.assertIsNone(job_result.related_object)
-
-        # Case 2: GitRepository, identified by name.
-        repo = GitRepository(
-            name="Test Git Repository",
-            slug="test-git-repo",
-            remote_url="http://localhost/git.git",
-        )
-        repo.save(trigger_resync=False)
-
-        job_result = JobResult(
-            name=repo.name,
-            obj_type=ContentType.objects.get_for_model(repo),
-            task_id=uuid.uuid4(),
-        )
-
-        self.assertEqual(job_result.related_object, repo)
-
-        job_result.name = "No such GitRepository"
-        self.assertIsNone(job_result.related_object)
-
-        # Case 3: Related object with no name, identified by PK/ID
-        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
-        prefix_status = Status.objects.get_for_model(Prefix).first()
-        namespace = Namespace.objects.first()
-        Prefix.objects.create(prefix="1.1.1.0/24", namespace=namespace, status=prefix_status)
-        ip_address = IPAddress.objects.create(address="1.1.1.1/32", namespace=namespace, status=ipaddr_status)
-        job_result = JobResult(
-            name="irrelevant",
-            obj_type=ContentType.objects.get_for_model(ip_address),
-            task_id=ip_address.pk,
-        )
-
-        self.assertEqual(job_result.related_object, ip_address)
-
-        job_result.task_id = uuid.uuid4()
-        self.assertIsNone(job_result.related_object)
 
 
 class RoleTest(TestCase):
@@ -1481,20 +1406,15 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "test_pass"
+        module = "pass"
         name = "TestPass"
-        job_class = get_job(f"local/{module}/{name}")
+        job_class = get_job(f"{module}.{name}")
 
-        self.job_result = JobResult.objects.create(
-            name=job_class.class_path,
-            obj_type=get_job_content_type(),
-            user=None,
-            task_id=uuid.uuid4(),
-        )
+        self.job_result = JobResult.objects.create(name=job_class.class_path, user=None)
 
     def test_log_entry_creation(self):
         log = JobLogEntry(
-            log_level=LogLevelChoices.LOG_SUCCESS,
+            log_level=LogLevelChoices.LOG_INFO,
             job_result=self.job_result,
             grouping="run",
             message="This is a test",

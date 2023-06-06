@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from unittest import mock, skip
+from unittest import mock
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
@@ -19,7 +19,6 @@ from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
-    JobSourceChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -52,7 +51,7 @@ from nautobot.extras.models import (
     ComputedField,
 )
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
+from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
@@ -62,7 +61,6 @@ from nautobot.users.models import ObjectPermission
 User = get_user_model()
 
 
-@skip(reason="Content Types are BROKEN")
 class ComputedFieldTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
@@ -585,6 +583,7 @@ class GitRepositoryTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = GitRepository
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -595,17 +594,17 @@ class GitRepositoryTestCase(
 
         # Create four GitRepository records
         repos = (
-            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
-            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+            GitRepository(name="Repo 1", slug="repo_1", remote_url="https://example.com/repo1.git"),
+            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
         for repo in repos:
-            repo.save(trigger_resync=False)
+            repo.validated_save()
 
         cls.form_data = {
             "name": "A new Git repository",
-            "slug": "a-new-git-repository",
+            "slug": "a_new_git_repository",
             "remote_url": "http://example.com/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
@@ -619,13 +618,27 @@ class GitRepositoryTestCase(
 
         cls.csv_data = (
             "name,slug,remote_url,branch,secrets_group,provided_contents",
-            "Git Repository 5,git-repo-5,https://example.com,main,,extras.configcontext",
-            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,",
-            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
+            "Git Repository 5,git_repo_5,https://example.com,main,,extras.configcontext",
+            "Git Repository 6,git_repo_6,https://example.com,develop,Secrets Group 2,",
+            'Git Repository 7,git_repo_7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
         )
 
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["slug"] = instance.slug  # Slug is not editable
+        self.form_data = form_data
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["slug"] = instance.slug  # Slug is not editable
+        self.form_data = form_data
+        super().test_edit_object_with_constrained_permission()
 
 
 class NoteTestCase(
@@ -947,24 +960,24 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
+            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
+            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
+            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
@@ -977,8 +990,8 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
+            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -995,8 +1008,8 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="nautobot.extras.jobs.scheduled_job_handler",
-                job_class="local/test_pass/TestPass",
+                task="pass.TestPass",
+                job_class="pass.TestPass",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -1027,8 +1040,8 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
+            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -1058,13 +1071,12 @@ class ApprovalQueueTestCase(
 
     def setUp(self):
         super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
-        self.job_model_2 = Job.objects.get_for_class_path("local/test_fail/TestFail")
-        self.job_model_3 = Job.objects.get_for_class_path("local/test_read_only_pass/TestReadOnlyPass")
+        self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
+        self.job_model_2 = Job.objects.get_for_class_path("fail.TestFail")
 
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="dry_run.TestDryRun",
             job_model=self.job_model,
             job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -1074,19 +1086,9 @@ class ApprovalQueueTestCase(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="fail.TestFail",
             job_model=self.job_model_2,
             job_class=self.job_model_2.class_path,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=True,
-            start_time=timezone.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_model=self.job_model_3,
-            job_class=self.job_model_3.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
@@ -1098,7 +1100,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="pass.TestPass",
             job_model=self.job_model,
             job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -1242,10 +1244,10 @@ class ApprovalQueueTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_post_dry_run_success(self, _):
-        """Successfully request a dry run based on object-based run_job permissions."""
+    def test_post_dry_run_not_supported(self, _):
+        """Request a dry run on a job that doesn't support dryrun."""
         self.add_permissions("extras.view_scheduledjob")
-        instance = self._get_queryset().first()
+        instance = ScheduledJob.objects.filter(name="test2").first()
         instance.job_model.enabled = True
         instance.job_model.save()
         obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
@@ -1255,14 +1257,31 @@ class ApprovalQueueTestCase(
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
+        # Job was not submitted
+        self.assertFalse(JobResult.objects.filter(name=instance.job_model.class_path).exists())
+        self.assertContains(response, "This job does not support dryrun")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
+    def test_post_dry_run_success(self, mock_enqueue_job, _):
+        """Successfully request a dry run based on object-based run_job permissions."""
+        self.add_permissions("extras.view_scheduledjob")
+        instance = ScheduledJob.objects.filter(name="test1").first()
+        instance.job_model.enabled = True
+        instance.job_model.save()
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        data = {"_dry_run": True}
+
+        mock_enqueue_job.side_effect = lambda job_model, *args, **kwargs: JobResult.objects.create(name=job_model.name)
+
+        response = self.client.post(self._get_url("view", instance), data)
         # Job was submitted
-        self.assertTrue(
-            JobResult.objects.filter(name=instance.job_model.class_path).exists(),
-            msg=extract_page_body(response.content.decode(response.charset)),
-        )
-        job_result = JobResult.objects.get(name=instance.job_model.class_path)
-        self.assertEqual(job_result.job_model, instance.job_model)
-        self.assertEqual(job_result.user, self.user)
+        mock_enqueue_job.assert_called_once()
+        job_result = JobResult.objects.get(name=instance.job_model.name)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1436,22 +1455,8 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = get_job_content_type()
-        JobResult.objects.create(
-            name="local/test_pass/TestPass",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-        JobResult.objects.create(
-            name="local/test_fail/TestFail",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-        JobResult.objects.create(
-            name="local/test_read_only_fail/TestReadOnlyFail",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
+        JobResult.objects.create(name="pass.TestPass")
+        JobResult.objects.create(name="fail.TestFail")
 
 
 class JobTestCase(
@@ -1503,7 +1508,6 @@ class JobTestCase(
 
         # Create an entry for a non-installed Job as well
         cls.test_not_installed = Job(
-            source=JobSourceChoices.SOURCE_LOCAL,
             module_name="nonexistent",
             job_class_name="NoSuchJob",
             grouping="Nonexistent Jobs",
@@ -1518,7 +1522,6 @@ class JobTestCase(
         }
 
         cls.form_data = {
-            "slug": "custom-job-slug",
             "enabled": True,
             "grouping_override": True,
             "grouping": "Overridden Grouping",
@@ -1526,12 +1529,10 @@ class JobTestCase(
             "name": "Overridden Name",
             "description_override": True,
             "description": "This is an overridden description of a job.",
-            "commit_default_override": True,
-            "commit_default": False,
+            "dryrun_default_override": True,
+            "dryrun_default": True,
             "hidden_override": True,
             "hidden": False,
-            "read_only_override": True,
-            "read_only": False,
             "approval_required_override": True,
             "approval_required": True,
             "soft_time_limit_override": True,
@@ -1671,14 +1672,14 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
 
         for run_url in (
-            reverse("extras:job", kwargs={"class_path": "local/test_fail/TestFail"}),
+            reverse("extras:job", kwargs={"class_path": "fail.TestFail"}),
             reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Job is not enabled to be run", response_body)
-            self.assertFalse(JobResult.objects.filter(name="local/test_fail/TestFail").exists())
+            self.assertFalse(JobResult.objects.filter(name="fail.TestFail").exists())
 
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
@@ -1705,6 +1706,37 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
+    def test_rerun_job(self, mock_task_queues_as_choices):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": self.test_required_args.id,
+            "nautobot_job_profile": True,
+            "nautobot_job_user_id": self.user.id,
+            "queue": "uniquequeue",
+        }
+
+        previous_result = JobResult.objects.create(
+            job_model=self.test_required_args,
+            user=self.user,
+            task_kwargs={"var": "456"},
+            celery_kwargs=job_celery_kwargs,
+        )
+
+        run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
+        response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(
+            '<input type="text" name="var" value="456" class="form-control form-control" required placeholder="None" id="id_var">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
@@ -1783,25 +1815,6 @@ class JobTestCase(
             scheduled = ScheduledJob.objects.last()
             self.assertEqual(scheduled.name, "test")
             self.assertEqual(scheduled.start_time, start_time)
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_later_sets_scheduled_job_kwargs_pk(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        start_time = timezone.now() + timedelta(minutes=1)
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(start_time),
-        }
-
-        for run_url in self.run_urls:
-            response = self.client.post(run_url, data)
-            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
-
-            scheduled = ScheduledJob.objects.last()
-            self.assertEqual(scheduled.kwargs["scheduled_job_pk"], str(scheduled.pk))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_for_future(self, _):
@@ -1985,7 +1998,6 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
 
-@skip(reason="Content Types are BROKEN")
 class RelationshipTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -2117,7 +2129,6 @@ class RelationshipTestCase(
         )
 
 
-@skip(reason="Content Types are BROKEN")
 class RelationshipAssociationTestCase(
     # TODO? ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,

@@ -1,7 +1,7 @@
-import uuid
+import collections
 
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TransactionTestCase as _TransactionTestCase
+from django.test import TransactionTestCase as _TransactionTestCase
 from django.test import tag
 
 from nautobot.core.testing.api import APITestCase, APIViewTestCases
@@ -16,20 +16,21 @@ from nautobot.core.testing.utils import (
     post_data,
 )
 from nautobot.core.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
-from nautobot.core.utils.requests import copy_safe_request
-from nautobot.extras.jobs import run_job
-from nautobot.extras.models import JobResult
-from nautobot.extras.utils import get_job_content_type
+from nautobot.extras.jobs import get_job
+from nautobot.extras.models import Job, JobResult
 
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
+    "create_job_result_and_run_job",
     "create_test_user",
     "disable_warnings",
     "extract_form_failures",
     "extract_page_body",
     "FilterTestCases",
     "get_deletable_objects",
+    "get_job_class_and_model",
+    "JobClassInfo",
     "ModelTestCase",
     "ModelViewTestCase",
     "NautobotTestCaseMixin",
@@ -44,71 +45,66 @@ __all__ = (
 User = get_user_model()
 
 
-def run_job_for_testing(job, data=None, commit=True, profile=False, username="test-user", request=None):
+def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
     """
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
-    The Celery task result will be stored at the `JobResult.celery_result` attribute.
-
     Args:
       job (Job): Job model instance (not Job class) to run
-      data (dict): Input data values for any Job variables.
-      commit (bool): Whether to commit changes to the database or rollback when done.
+      username (str): Username of existing or to-be-created User account to own the JobResult.
       profile (bool): Whether to profile the job execution.
-      username (str): Username of existing or to-be-created User account to own the JobResult. Ignored if `request.user`
-        exists.
-      request (HttpRequest): Existing request (if any) to own the JobResult.
+      **kwargs: Input keyword arguments for Job run method.
 
     Returns:
       JobResult: representing the executed job
     """
-    if data is None:
-        data = {}
-
     # Enable the job if it wasn't enabled before
     if not job.enabled:
         job.enabled = True
         job.validated_save()
 
-    # If the request has a user, ignore the username argument and use that user.
-    if request and request.user:
-        user_instance = request.user
-    else:
-        user_instance, _ = User.objects.get_or_create(
-            username=username, defaults={"is_superuser": True, "password": "password"}
-        )
-    job_result = JobResult.objects.create(
-        name=job.class_path,
-        task_kwargs={"data": data, "commit": commit, "profile": profile},
-        obj_type=get_job_content_type(),
-        user=user_instance,
+    user_instance, _ = User.objects.get_or_create(
+        username=username, defaults={"is_superuser": True, "password": "password"}
+    )
+    # Run the job synchronously in the current thread as if it were being executed by a worker
+    job_result = JobResult.execute_job(
         job_model=job,
-        task_id=uuid.uuid4(),
+        user=user_instance,
+        profile=profile,
+        **kwargs,
     )
+    return job_result
 
-    if request is None:
-        factory = RequestFactory()
-        request = factory.request()
-        request.user = user_instance
 
-    # Instead of a context manager, we're just explicitly creating a `NautobotFakeRequest`.
-    wrapped_request = copy_safe_request(request)
-
-    # This runs the job synchronously in the current thread as if it were being executed by a
-    # worker, therefore resulting in updating the `JobResult` as expected.
-    celery_result = run_job.apply(
-        kwargs={
-            "data": data,
-            "request": wrapped_request,
-            "commit": commit,
-            "job_result_pk": job_result.pk,
-            "profile": profile,
-        },
-        task_id=job_result.task_id,
-    )
-    job_result.celery_result = celery_result
+def create_job_result_and_run_job(module, name, source="local", *args, **kwargs):
+    """Test helper function to call get_job_class_and_model() then call run_job_for_testing()."""
+    _job_class, job_model = get_job_class_and_model(module, name, source)
+    job_result = run_job_for_testing(job=job_model, **kwargs)
     job_result.refresh_from_db()
     return job_result
+
+
+#: Return value of `get_job_class_and_model()`.
+JobClassInfo = collections.namedtuple("JobClassInfo", "job_class job_model")
+
+
+def get_job_class_and_model(module, name, source="local"):
+    """
+    Test helper function to look up a job class and job model and ensure the latter is enabled.
+
+    Args:
+        module (str): Job module name
+        name (str): Job class name
+        source (str): Job grouping (default: "local")
+
+    Returns:
+        JobClassInfo: Named 2-tuple of (job_class, job_model)
+    """
+    job_class = get_job(f"{module}.{name}")
+    job_model = Job.objects.get(module_name=module, job_class_name=name)
+    job_model.enabled = True
+    job_model.validated_save()
+    return JobClassInfo(job_class, job_model)
 
 
 @tag("unit")

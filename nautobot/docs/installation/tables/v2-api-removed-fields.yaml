@@ -56,6 +56,12 @@
 - Model/Endpoint: "JobHook"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "JobResult"
+  Removed Field: "job_id"
+  Comments:
+- Model/Endpoint: "JobResult"
+  Removed Field: "obj_type"
+  Comments:
 - Model/Endpoint: "Location"
   Removed Field: "site"
   Comments: "Use `parent` instead"

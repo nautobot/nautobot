@@ -546,7 +546,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         for repo in repos:
-            repo.save(trigger_resync=False)
+            repo.save()
         repos[0].tags.set(Tag.objects.get_for_model(GitRepository))
         repos[1].tags.set(Tag.objects.get_for_model(GitRepository)[:3])
 
@@ -768,7 +768,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
-class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+class JobFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Job.objects.all()
     filterset = JobFilterSet
 
@@ -778,7 +778,7 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         Job.objects.last().tags.set(Tag.objects.get_for_model(Job)[:3])
 
     def test_grouping(self):
-        params = {"grouping": ["test_file_upload_pass", "test_file_upload_fail"]}
+        params = {"grouping": ["file_upload_pass", "file_upload_fail"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_installed(self):
@@ -789,8 +789,8 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
         params = {"job_class_name": "TestPass", "enabled": False}
         self.assertTrue(self.filterset(params, self.queryset).qs.exists())
 
-    def test_commit_default(self):
-        params = {"commit_default": False}
+    def test_dryrun_default(self):
+        params = {"dryrun_default": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
 
     def test_hidden(self):
@@ -799,15 +799,27 @@ class JobFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_read_only(self):
         params = {"read_only": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(read_only=True)
+        )
 
     def test_approval_required(self):
         params = {"approval_required": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(approval_required=True),
+        )
 
     def test_search(self):
         params = {"q": "file"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        expected_matches = (
+            Q(name__icontains="file")  # pylint: disable=unsupported-binary-operation
+            | Q(grouping__icontains="file")
+            | Q(description__icontains="file")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(expected_matches)
+        )
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
@@ -830,16 +842,14 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 job_model=job,
                 name=job.class_path,
                 user=User.objects.first(),
-                obj_type=ContentType.objects.get_for_model(Job),
                 status=JobResultStatusChoices.STATUS_STARTED,
-                task_id=job.pk,
             )
 
     def test_job_model(self):
         jobs = list(self.jobs[:2])
         filter_params = [
             {"job_model_id": [jobs[0].pk, jobs[1].pk]},
-            {"job_model": [jobs[0].pk, jobs[1].slug]},
+            {"job_model": [jobs[0].pk, jobs[1].name]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -894,7 +904,7 @@ class JobHookFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
 
     def test_job(self):
         jobs = Job.objects.filter(job_class_name__in=["TestJobHookReceiverLog", "TestJobHookReceiverChange"])[:2]
-        params = {"job": [jobs[0].slug, jobs[1].pk]}
+        params = {"job": [jobs[0].name, jobs[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_type_create(self):
@@ -963,9 +973,9 @@ class JobButtonFilterTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(job__pk=job.pk)
         )
 
-        params = {"job": [job.slug]}
+        params = {"job": [job.name]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(job__slug=job.slug)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(job__name=job.name)
         )
 
     def test_weight(self):
@@ -988,13 +998,9 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.job_result = JobResult.objects.create(
-            name="test",
-            task_id=uuid.uuid4(),
-            obj_type=ContentType.objects.get_for_model(GitRepository),
-        )
+        cls.job_result = JobResult.objects.create(name="test")
 
-        for log_level in ("debug", "info", "success", "warning"):
+        for log_level in ("debug", "info", "warning", "error", "critical"):
             JobLogEntry.objects.create(
                 log_level=log_level,
                 grouping="run",
@@ -1003,24 +1009,36 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_log_level(self):
-        params = {"log_level": ["success"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"log_level": ["debug"]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(log_level="debug")
+        )
 
     def test_grouping(self):
         params = {"grouping": ["run"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(grouping="run")
+        )
 
     def test_message(self):
-        params = {"message": ["I am a success log."]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"message": ["I am a debug log."]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(message="I am a debug log.")
+        )
 
     def test_search(self):
         params = {"q": "run"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(grouping__icontains="run")
+        )
         params = {"q": "warning log"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"q": "success"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(message__icontains="warning log")
+        )
+        params = {"q": "debug"}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(log_level__icontains="debug")
+        )
 
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):

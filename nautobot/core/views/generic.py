@@ -67,6 +67,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
+    use_new_ui = True
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -157,6 +158,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
     )
+    use_new_ui = True
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
