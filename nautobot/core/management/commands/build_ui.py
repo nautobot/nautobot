@@ -73,8 +73,11 @@ class Command(BaseCommand):
             >>> get_app_component(file_path="/src/example_plugin/example_plugin/ui/index.js", route_name="example-plugin:examplemodel_list")
             "ExampleModelListView"
         """
-        with open(file_path, "r") as f:
-            js_content = f.read()
+        try:
+            with open(file_path, "r") as f:
+                js_content = f.read()
+        except FileNotFoundError:
+            return None
 
         # Construct a regular expression that matches the specified key and extracts the associated view component
         pattern = rf'routes_view_components:\s*{{[^}}]*"{re.escape(route_name)}"\s*:\s*"([^"]+)"'
