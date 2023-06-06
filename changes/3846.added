@@ -1,0 +1,2 @@
+Added uniqueness constraint "name" to VirtualChassis.
+Added migration to check whether all existing VirtualChassis names are unique and to fail if not.
