@@ -26,6 +26,9 @@ class IPAddressQuerySet(TestCase):
             "10.0.0.1/24": IPAddress.objects.create(
                 address="10.0.0.1/24", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
             ),
+            "10.0.0.1/25": IPAddress.objects.create(
+                address="10.0.0.1/25", namespace=cls.namespace2, tenant=None, status=cls.ipaddr_status
+            ),
             "10.0.0.2/24": IPAddress.objects.create(
                 address="10.0.0.2/24", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
             ),
@@ -43,9 +46,6 @@ class IPAddressQuerySet(TestCase):
             ),
             "2001:db8::3/64": IPAddress.objects.create(
                 address="2001:db8::3/64", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
-            ),
-            "10.0.0.1/25": IPAddress.objects.create(
-                address="10.0.0.1/25", namespace=cls.namespace2, tenant=None, status=cls.ipaddr_status
             ),
         }
 

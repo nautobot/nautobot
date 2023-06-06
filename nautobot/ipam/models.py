@@ -942,7 +942,7 @@ class IPAddress(PrimaryModel):
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
     class Meta:
-        ordering = ("parent__namespace", "ip_version", "host", "mask_length")  # address may be non-unique
+        ordering = ("ip_version", "host", "mask_length")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
