@@ -42,7 +42,7 @@ def settings(request):
     except AttributeError:
         # Use this method to import the view class views that inherits from
         # NautobotUIViewSet, as this views do not have the 'view_class' attribute.
-        if request.accepted_renderer is not None:
+        if hasattr(request, "accepted_renderer"):
             use_new_ui = use_new_ui and getattr(request.accepted_renderer, "use_new_ui", False)
 
     return {
