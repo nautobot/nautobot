@@ -118,12 +118,15 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
         location_type_1 = LocationType.objects.get(name="Campus")
         location_type_2 = LocationType.objects.get(name="Building")
+        location_status = Status.objects.get_for_model(Location).first()
         cls.locations = (
-            Location.objects.create(name="Location 1", location_type=location_type_1),
-            Location.objects.create(name="Location 2", location_type=location_type_2),
-            Location.objects.create(name="Location 3", location_type=location_type_2),
+            Location(name="Location 1", location_type=location_type_1, status=location_status),
+            Location(name="Location 2", location_type=location_type_2, status=location_status),
+            Location(name="Location 3", location_type=location_type_1, status=location_status),
         )
         cls.locations[1].parent = cls.locations[0]
+        for location in cls.locations:
+            location.validated_save()
 
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
@@ -157,12 +160,21 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
 
         cls.device = Device.objects.create(
-            name="Device 1", device_type=devicetype, role=devicerole, location=cls.locations[0], cluster=clusters[0]
+            name="Device 1",
+            device_type=devicetype,
+            role=devicerole,
+            status=devicestatus,
+            location=cls.locations[0],
+            cluster=clusters[0],
         )
 
-        cls.virtualmachine = VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[1])
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        cls.virtualmachine = VirtualMachine.objects.create(
+            name="Virtual Machine 1", cluster=clusters[1], status=vm_status
+        )
 
         clusters[0].tags.set(Tag.objects.get_for_model(Cluster))
         clusters[1].tags.set(Tag.objects.get_for_model(Cluster)[:3])
@@ -260,12 +272,15 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
         location_type_1 = LocationType.objects.get(name="Campus")
         location_type_2 = LocationType.objects.get(name="Building")
+        location_status = Status.objects.get_for_model(Location).first()
         cls.locations = (
-            Location.objects.create(name="Location 1", location_type=location_type_1),
-            Location.objects.create(name="Location 2", location_type=location_type_2),
-            Location.objects.create(name="Location 3", location_type=location_type_2),
+            Location(name="Location 1", location_type=location_type_1, status=location_status),
+            Location(name="Location 2", location_type=location_type_2, status=location_status),
+            Location(name="Location 3", location_type=location_type_1, status=location_status),
         )
         cls.locations[1].parent = cls.locations[0]
+        for location in cls.locations:
+            location.validated_save()
 
         clusters = (
             Cluster.objects.create(
@@ -374,21 +389,25 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             ),
         )
 
+        int_status = Status.objects.get_for_model(VMInterface).first()
         cls.interfaces = (
             VMInterface.objects.create(
                 virtual_machine=vms[0],
                 name="Interface 1",
                 mac_address="00-00-00-00-00-01",
+                status=int_status,
             ),
             VMInterface.objects.create(
                 virtual_machine=vms[1],
                 name="Interface 2",
                 mac_address="00-00-00-00-00-02",
+                status=int_status,
             ),
             VMInterface.objects.create(
                 virtual_machine=vms[2],
                 name="Interface 3",
                 mac_address="00-00-00-00-00-03",
+                status=int_status,
             ),
         )
 
@@ -408,12 +427,18 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         )
 
         cls.namespace = Namespace.objects.first()
-        cls.prefix4 = Prefix.objects.create(prefix="192.0.2.0/24", namespace=cls.namespace)
-        cls.prefix6 = Prefix.objects.create(prefix="fe80::8ef:3eff:fe4c:3895/24", namespace=cls.namespace)
+        cls.prefix_status = Status.objects.get_for_model(Prefix).first()
+        cls.ipadd_status = Status.objects.get_for_model(IPAddress).first()
+        cls.prefix4 = Prefix.objects.create(prefix="192.0.2.0/24", namespace=cls.namespace, status=cls.prefix_status)
+        cls.prefix6 = Prefix.objects.create(
+            prefix="fe80::8ef:3eff:fe4c:3895/24", namespace=cls.namespace, status=cls.prefix_status
+        )
         # Assign primary IPs for filtering
         cls.ipaddresses = (
-            IPAddress.objects.create(address="192.0.2.1/24", namespace=cls.namespace),
-            IPAddress.objects.create(address="fe80::8ef:3eff:fe4c:3895/24", namespace=cls.namespace),
+            IPAddress.objects.create(address="192.0.2.1/24", namespace=cls.namespace, status=cls.ipadd_status),
+            IPAddress.objects.create(
+                address="fe80::8ef:3eff:fe4c:3895/24", namespace=cls.namespace, status=cls.ipadd_status
+            ),
         )
         cls.interfaces[0].add_ip_addresses(cls.ipaddresses[0])
         cls.interfaces[1].add_ip_addresses(cls.ipaddresses[1])
@@ -606,10 +631,11 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
             Cluster.objects.create(name="Cluster 3", cluster_type=cluster_types[2]),
         )
 
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
         vms = (
-            VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[0]),
-            VirtualMachine.objects.create(name="Virtual Machine 2", cluster=clusters[1]),
-            VirtualMachine.objects.create(name="Virtual Machine 3", cluster=clusters[2]),
+            VirtualMachine.objects.create(name="Virtual Machine 1", cluster=clusters[0], status=vm_status),
+            VirtualMachine.objects.create(name="Virtual Machine 2", cluster=clusters[1], status=vm_status),
+            VirtualMachine.objects.create(name="Virtual Machine 3", cluster=clusters[2], status=vm_status),
         )
 
         statuses = Status.objects.get_for_model(VMInterface)

@@ -7,7 +7,7 @@ from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.models import Webhook
+from nautobot.extras.models import Status, Webhook
 
 
 # Use the proper swappable User model
@@ -45,7 +45,8 @@ class WebRequestContextTestCase(TestCase):
     def test_change_log_created(self):
         with web_request_context(self.user):
             location_type = LocationType.objects.get(name="Campus")
-            location = Location(name="Test Location 1", location_type=location_type)
+            location_status = Status.objects.get_for_model(Location).first()
+            location = Location(name="Test Location 1", location_type=location_type, status=location_status)
             location.save()
 
         location = Location.objects.get(name="Test Location 1")
@@ -57,7 +58,8 @@ class WebRequestContextTestCase(TestCase):
     def test_change_log_context(self):
         with web_request_context(self.user, context_detail="test_change_log_context"):
             location_type = LocationType.objects.get(name="Campus")
-            location = Location(name="Test Location 1", location_type=location_type)
+            location_status = Status.objects.get_for_model(Location).first()
+            location = Location(name="Test Location 1", location_type=location_type, status=location_status)
             location.save()
 
         location = Location.objects.get(name="Test Location 1")

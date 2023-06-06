@@ -5,6 +5,7 @@ from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import Location, LocationType
+from nautobot.extras.models import Status
 
 
 class CircuitTerminationModelTestCase(ModelTestCases.BaseModelTestCase):
@@ -19,7 +20,10 @@ class CircuitTerminationModelTestCase(ModelTestCases.BaseModelTestCase):
         location_type_1.content_types.set([])
         location_type_2 = LocationType.objects.get(name="Building")
         location_type_2.content_types.add(ContentType.objects.get_for_model(CircuitTermination))
-        cls.circuit = Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type)
+        status = Status.objects.get_for_model(Circuit).first()
+        cls.circuit = Circuit.objects.create(
+            cid="Circuit 1", provider=provider, circuit_type=circuit_type, status=status
+        )
         cls.provider_network = ProviderNetwork.objects.create(name="Provider Network 1", provider=provider)
         cls.location_1 = Location.objects.filter(location_type=location_type_1)[0]
         cls.location_2 = Location.objects.filter(location_type=location_type_2)[0]

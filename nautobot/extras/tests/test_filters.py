@@ -713,9 +713,10 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
 
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
+        rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
-            Rack.objects.create(name="Rack 1", location=locations[0]),
-            Rack.objects.create(name="Rack 2", location=locations[1]),
+            Rack.objects.create(name="Rack 1", location=locations[0], status=rack_status),
+            Rack.objects.create(name="Rack 2", location=locations[1], status=rack_status),
         )
 
         ImageAttachment.objects.create(
@@ -1054,9 +1055,11 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         )
 
         location = Location.objects.first()
+        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
         namespace = Namespace.objects.first()
-        Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace)
-        ipaddress = IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace)
+        Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace, status=prefix_status)
+        ipaddress = IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace, status=ipaddr_status)
 
         ObjectChange.objects.create(
             user=users[0],
@@ -1092,7 +1095,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             action=ObjectChangeActionChoices.ACTION_CREATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": str(ipaddress.status)},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -1101,7 +1104,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             action=ObjectChangeActionChoices.ACTION_UPDATE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": str(ipaddress.status)},
         )
         ObjectChange.objects.create(
             user=users[2],
@@ -1110,7 +1113,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             action=ObjectChangeActionChoices.ACTION_DELETE,
             changed_object=ipaddress,
             object_repr=str(ipaddress),
-            object_data={"address": str(ipaddress.address), "status": ipaddress.status},
+            object_data={"address": str(ipaddress.address), "status": str(ipaddress.status)},
         )
 
     def test_user(self):
@@ -1241,15 +1244,23 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location),
-            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, location=location),
-            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, location=location),
+            Device.objects.create(
+                name="Device 1", device_type=devicetype, role=devicerole, status=devicestatus, location=location
+            ),
+            Device.objects.create(
+                name="Device 2", device_type=devicetype, role=devicerole, status=devicestatus, location=location
+            ),
+            Device.objects.create(
+                name="Device 3", device_type=devicetype, role=devicerole, status=devicestatus, location=location
+            ),
         )
+        vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1"),
-            VLAN.objects.create(vid=2, name="VLAN 2"),
+            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status),
+            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status),
         )
 
         RelationshipAssociation(
@@ -1359,16 +1370,24 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         cls.devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location),
-            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, location=location),
-            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, location=location),
+            Device.objects.create(
+                name="Device 1", device_type=devicetype, role=devicerole, status=devicestatus, location=location
+            ),
+            Device.objects.create(
+                name="Device 2", device_type=devicetype, role=devicerole, status=devicestatus, location=location
+            ),
+            Device.objects.create(
+                name="Device 3", device_type=devicetype, role=devicerole, status=devicestatus, location=location
+            ),
         )
+        vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1"),
-            VLAN.objects.create(vid=2, name="VLAN 2"),
-            VLAN.objects.create(vid=3, name="VLAN 3"),
+            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status),
+            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status),
+            VLAN.objects.create(vid=3, name="VLAN 3", status=vlan_status),
         )
         cls.relationship_associations = (
             RelationshipAssociation(

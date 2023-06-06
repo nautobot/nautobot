@@ -16,6 +16,7 @@ from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 
+from nautobot.core.choices import ColorChoices
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.extras.constants import (
@@ -533,6 +534,22 @@ def check_if_key_is_graphql_safe(model_name, key):
                 "key": "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace"
             }
         )
+
+
+def fixup_null_statuses(*, model, model_contenttype, status_model):
+    """For instances of model that have an invalid NULL status field, create and use a special status_model instance."""
+    instances_to_fixup = model.objects.filter(status__isnull=True)
+    if instances_to_fixup.exists():
+        null_status, _ = status_model.objects.get_or_create(
+            name="NULL",
+            defaults={
+                "color": ColorChoices.COLOR_BLACK,
+                "description": "Created by Nautobot to replace invalid null references",
+            },
+        )
+        null_status.content_types.add(model_contenttype)
+        updated_count = instances_to_fixup.update(status=null_status)
+        print(f"    Found and fixed {updated_count} instances of {model.__name__} that had null 'status' fields.")
 
 
 def migrate_role_data(

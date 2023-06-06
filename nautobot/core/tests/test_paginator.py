@@ -9,6 +9,7 @@ from django.urls import reverse
 from nautobot.core import testing
 from nautobot.core.views import paginator
 from nautobot.dcim import models
+from nautobot.extras import models as extras_models
 
 
 class PaginatorTestCase(testing.TestCase):
@@ -52,8 +53,9 @@ class PaginatorTestCase(testing.TestCase):
     def test_enforce_max_page_size(self):
         """Request an object list view and assert that the MAX_PAGE_SIZE setting is enforced"""
         location_type = models.LocationType.objects.get(name="Campus")
+        status = extras_models.Status.objects.get_for_model(models.Location).first()
         models.Location.objects.bulk_create(
-            [models.Location(name=f"TestLocation{x}", location_type=location_type) for x in range(20)]
+            [models.Location(name=f"TestLocation{x}", location_type=location_type, status=status) for x in range(20)]
         )
         url = reverse("dcim:location_list")
         self.add_permissions("dcim.view_location")
