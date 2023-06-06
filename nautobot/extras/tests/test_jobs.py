@@ -673,7 +673,10 @@ class JobButtonReceiverTest(TransactionTestCase):
         self.request.user = self.user
 
         self.location_type = LocationType.objects.create(name="Test Root Type 2")
-        self.location = Location.objects.create(name="Test Job Button Location 1", location_type=self.location_type)
+        status = Status.objects.get_for_model(Location).first()
+        self.location = Location.objects.create(
+            name="Test Job Button Location 1", location_type=self.location_type, status=status
+        )
         content_type = ContentType.objects.get_for_model(Location)
         self.data = {
             "object_pk": self.location.pk,
@@ -731,7 +734,8 @@ class JobHookReceiverTest(TransactionTestCase):
         # generate an ObjectChange by creating a new location
         with web_request_context(self.user):
             location_type = LocationType.objects.create(name="Test Root Type 1")
-            location = Location(name="Test Location 1", location_type=location_type)
+            status = Status.objects.get_for_model(Location).first()
+            location = Location(name="Test Location 1", location_type=location_type, status=status)
             location.save()
         location.refresh_from_db()
         oc = get_changes_for_model(location).first()
@@ -802,7 +806,8 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
 
     def test_enqueue_job_hook(self):
         with web_request_context(user=self.user):
-            Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type)
+            status = Status.objects.get_for_model(Location).first()
+            Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
             job_result = JobResult.objects.get(job_model=self.job_model)
             expected_log_messages = [
                 ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
@@ -816,8 +821,9 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     @mock.patch.object(JobResult, "enqueue_job")
     def test_enqueue_job_hook_skipped(self, mock_enqueue_job):
         change_context = JobHookChangeContext(user=self.user)
+        status = Status.objects.get_for_model(Location).first()
         with change_logging(change_context):
-            Location.objects.create(name="Test Job Hook Location 2", location_type=self.location_type)
+            Location.objects.create(name="Test Job Hook Location 2", location_type=self.location_type, status=status)
 
         self.assertFalse(mock_enqueue_job.called)
 

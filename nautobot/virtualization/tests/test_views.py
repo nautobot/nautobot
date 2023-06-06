@@ -70,9 +70,14 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(name="Location 1", slug="location-1", location_type=location_type),
-            Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
+            Location.objects.create(
+                name="Location 1", slug="location-1", location_type=location_type, status=location_status
+            ),
+            Location.objects.create(
+                name="Location 2", slug="location-2", location_type=location_type, status=location_status
+            ),
         )
 
         clustergroups = ClusterGroupFactory.create_batch(2)
@@ -131,9 +136,14 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         deviceroles = Role.objects.get_for_model(VirtualMachine)[:2]
         location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(name="Location 1", slug="location-1", location_type=location_type),
-            Location.objects.create(name="Location 2", slug="location-2", location_type=location_type),
+            Location.objects.create(
+                name="Location 1", slug="location-1", location_type=location_type, status=location_status
+            ),
+            Location.objects.create(
+                name="Location 2", slug="location-2", location_type=location_type, status=location_status
+            ),
         )
 
         platforms = Platform.objects.all()[:2]
@@ -261,39 +271,44 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location_type = LocationType.objects.get(name="Campus")
-        location = Location.objects.create(name="Location 1", slug="location-1", location_type=location_type)
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(
+            name="Location 1", slug="location-1", location_type=location_type, status=location_status
+        )
         devicerole = Role.objects.get_for_model(Device).first()
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtualmachines = (
-            VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole),
-            VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole),
+            VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole, status=vm_status),
+            VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole, status=vm_status),
         )
 
+        statuses = Status.objects.get_for_model(VMInterface)
+        status = statuses.first()
+
         interfaces = (
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 1"),
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 2"),
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3"),
-            VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE"),
+            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 1", status=status),
+            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 2", status=status),
+            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3", status=status),
+            VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE", status=status),
         )
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = interfaces[:3]
         cls.selected_objects_parent_name = virtualmachines[0].name
 
+        vlan_status = Status.objects.get_for_model(VLAN).first()
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN1", location=location),
-            VLAN.objects.create(vid=101, name="VLAN101", location=location),
-            VLAN.objects.create(vid=102, name="VLAN102", location=location),
-            VLAN.objects.create(vid=103, name="VLAN103", location=location),
+            VLAN.objects.create(vid=1, name="VLAN1", location=location, status=vlan_status),
+            VLAN.objects.create(vid=101, name="VLAN101", location=location, status=vlan_status),
+            VLAN.objects.create(vid=102, name="VLAN102", location=location, status=vlan_status),
+            VLAN.objects.create(vid=103, name="VLAN103", location=location, status=vlan_status),
         )
 
         obj_type = ContentType.objects.get_for_model(VMInterface)
         cf = CustomField.objects.create(label="Custom Field 1", type="text")
         cf.save()
         cf.content_types.set([obj_type])
-
-        statuses = Status.objects.get_for_model(VMInterface)
-        status = statuses.first()
 
         cls.form_data = {
             "virtual_machine": virtualmachines[1].pk,

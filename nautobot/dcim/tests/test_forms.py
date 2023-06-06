@@ -27,7 +27,8 @@ class DeviceTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        cls.rack = Rack.objects.create(name="Rack 1", location=cls.location)
+        rack_status = Status.objects.get_for_model(Rack).first()
+        cls.rack = Rack.objects.create(name="Rack 1", location=cls.location, status=rack_status)
 
         # Platforms that have a manufacturer.
         mfr_platforms = Platform.objects.filter(manufacturer__isnull=False)
@@ -157,11 +158,13 @@ class LabelTestCase(TestCase):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 2",
             device_type=device_type,
             role=device_role,
             location=location,
+            status=device_status,
         )
 
     def test_interface_label_count_valid(self):

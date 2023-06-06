@@ -295,9 +295,10 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     def test_location(self):
         location_type_1 = LocationType.objects.get(name="Campus")
         location_type_2 = LocationType.objects.get(name="Building")
+        loc_status = Status.objects.get_for_model(Location).first()
         test_locations = (
-            Location.objects.create(name="Location 1", location_type=location_type_1),
-            Location.objects.create(name="Location 2", location_type=location_type_2),
+            Location.objects.create(name="Location 1", location_type=location_type_1, status=loc_status),
+            Location.objects.create(name="Location 2", location_type=location_type_2, status=loc_status),
         )
         test_locations[1].parent = test_locations[0]
         PrefixFactory(location=test_locations[0])
@@ -343,6 +344,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
@@ -350,40 +352,58 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
                 name="Device 1",
                 location=location,
                 role=device_role,
+                status=device_status,
             ),
             Device.objects.create(
                 device_type=device_type,
                 name="Device 2",
                 location=location,
                 role=device_role,
+                status=device_status,
             ),
             Device.objects.create(
                 device_type=device_type,
                 name="Device 3",
                 location=location,
                 role=device_role,
+                status=device_status,
             ),
         )
 
+        interface_status = Status.objects.get_for_model(Interface).first()
         interfaces = (
-            Interface.objects.create(device=devices[0], name="Interface 1"),
-            Interface.objects.create(device=devices[1], name="Interface 2"),
-            Interface.objects.create(device=devices[2], name="Interface 3"),
+            Interface.objects.create(
+                device=devices[0],
+                name="Interface 1",
+                status=interface_status,
+            ),
+            Interface.objects.create(
+                device=devices[1],
+                name="Interface 2",
+                status=interface_status,
+            ),
+            Interface.objects.create(
+                device=devices[2],
+                name="Interface 3",
+                status=interface_status,
+            ),
         )
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machines = (
-            VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster),
-            VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster),
-            VirtualMachine.objects.create(name="Virtual Machine 3", cluster=cluster),
+            VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),
+            VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, status=vm_status),
+            VirtualMachine.objects.create(name="Virtual Machine 3", cluster=cluster, status=vm_status),
         )
 
+        vmint_status = Status.objects.get_for_model(VMInterface).first()
         vminterfaces = (
-            VMInterface.objects.create(virtual_machine=virtual_machines[0], name="Interface 1"),
-            VMInterface.objects.create(virtual_machine=virtual_machines[1], name="Interface 2"),
-            VMInterface.objects.create(virtual_machine=virtual_machines[2], name="Interface 3"),
+            VMInterface.objects.create(virtual_machine=virtual_machines[0], name="Interface 1", status=vmint_status),
+            VMInterface.objects.create(virtual_machine=virtual_machines[1], name="Interface 2", status=vmint_status),
+            VMInterface.objects.create(virtual_machine=virtual_machines[2], name="Interface 3", status=vmint_status),
         )
 
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
@@ -672,10 +692,11 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         cls.location_type_1 = LocationType.objects.get(name="Campus")
         cls.location_type_2 = LocationType.objects.get(name="Building")
+        loc_status = Status.objects.get_for_model(Location).first()
         cls.locations = (
-            Location.objects.create(name="Location 1", location_type=cls.location_type_1),
-            Location.objects.create(name="Location 2", location_type=cls.location_type_1),
-            Location.objects.create(name="Location 3", location_type=cls.location_type_2),
+            Location.objects.create(name="Location 1", location_type=cls.location_type_1, status=loc_status),
+            Location.objects.create(name="Location 2", location_type=cls.location_type_1, status=loc_status),
+            Location.objects.create(name="Location 3", location_type=cls.location_type_2, status=loc_status),
         )
         cls.locations[1].parent = cls.locations[0]
         cls.locations[2].parent = cls.locations[1]
@@ -710,10 +731,11 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     def setUpTestData(cls):
         cls.location_type_1 = LocationType.objects.get(name="Campus")
         cls.location_type_2 = LocationType.objects.get(name="Building")
+        loc_status = Status.objects.get_for_model(Location).first()
         cls.locations = (
-            Location.objects.create(name="Location 1", location_type=cls.location_type_1),
-            Location.objects.create(name="Location 2", location_type=cls.location_type_1),
-            Location.objects.create(name="Location 3", location_type=cls.location_type_2),
+            Location.objects.create(name="Location 1", location_type=cls.location_type_1, status=loc_status),
+            Location.objects.create(name="Location 2", location_type=cls.location_type_1, status=loc_status),
+            Location.objects.create(name="Location 3", location_type=cls.location_type_2, status=loc_status),
         )
         cls.locations[1].parent = cls.locations[0]
 
@@ -838,7 +860,10 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         location = self.locations[0]
         devicerole = Role.objects.get_for_model(Device).first()
-        device = Device.objects.create(device_type=devicetype, role=devicerole, name="Device 1", location=location)
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            device_type=devicetype, role=devicerole, name="Device 1", location=location, status=devicestatus
+        )
         params = {"available_on_device": [device.pk]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
@@ -856,6 +881,7 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
@@ -863,28 +889,32 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
                 name="Device 1",
                 location=location,
                 role=device_role,
+                status=device_status,
             ),
             Device.objects.create(
                 device_type=device_type,
                 name="Device 2",
                 location=location,
                 role=device_role,
+                status=device_status,
             ),
             Device.objects.create(
                 device_type=device_type,
                 name="Device 3",
                 location=location,
                 role=device_role,
+                status=device_status,
             ),
         )
 
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
 
+        vmstatus = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machines = (
-            VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster),
-            VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster),
-            VirtualMachine.objects.create(name="Virtual Machine 3", cluster=cluster),
+            VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vmstatus),
+            VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, status=vmstatus),
+            VirtualMachine.objects.create(name="Virtual Machine 3", cluster=cluster, status=vmstatus),
         )
 
         services = (

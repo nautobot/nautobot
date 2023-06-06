@@ -12,7 +12,7 @@ from nautobot.dcim.constants import (
     POWERFEED_VOLTAGE_DEFAULT,
 )
 
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
 from .device_components import CableTermination, PathEndpoint
 
@@ -90,7 +90,7 @@ class PowerPanel(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
+class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     """
     An electrical circuit delivered from a PowerPanel.
     """
@@ -98,6 +98,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination, StatusModel):
     power_panel = models.ForeignKey(to="PowerPanel", on_delete=models.PROTECT, related_name="power_feeds")
     rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True, related_name="power_feeds")
     name = models.CharField(max_length=100)
+    status = StatusField(blank=False, null=False)
     type = models.CharField(
         max_length=50,
         choices=PowerFeedTypeChoices,

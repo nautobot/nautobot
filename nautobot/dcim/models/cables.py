@@ -18,7 +18,7 @@ from nautobot.dcim.utils import (
     object_to_path_node,
     path_node_to_object,
 )
-from nautobot.extras.models import Status, StatusModel
+from nautobot.extras.models import Status, StatusField
 from nautobot.extras.utils import extras_features
 
 # TODO: There's an ugly circular-import pattern where if we move this import "up" to above, we get into an import loop
@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
     "statuses",
     "webhooks",
 )
-class Cable(PrimaryModel, StatusModel):
+class Cable(PrimaryModel):
     """
     A physical connection between two endpoints.
     """
@@ -73,6 +73,7 @@ class Cable(PrimaryModel, StatusModel):
     termination_b_id = models.UUIDField()
     termination_b = GenericForeignKey(ct_field="termination_b_type", fk_field="termination_b_id")
     type = models.CharField(max_length=50, choices=CableTypeChoices, blank=True)
+    status = StatusField(blank=False, null=False)
     label = models.CharField(max_length=100, blank=True)
     color = ColorField(blank=True)
     length = models.PositiveSmallIntegerField(blank=True, null=True)
