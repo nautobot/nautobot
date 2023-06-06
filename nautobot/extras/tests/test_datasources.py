@@ -5,6 +5,7 @@ import tempfile
 from unittest import mock
 import uuid
 
+from celery.exceptions import NotRegistered
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 import yaml
@@ -28,6 +29,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    Job,
     JobLogEntry,
     JobResult,
     Role,
@@ -175,8 +177,10 @@ class GitTest(TransactionTestCase):
             fd.write("{% for vlan in queryset %}\n{{ vlan.name }}\n{% endfor %}")
 
         with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
-            # Required for job importing
-            pass
+            fd.write("from nautobot.core.celery import register_jobs\nfrom .my_job import MyJob\nregister_jobs(MyJob)")
+
+        with open(os.path.join(path, "jobs", "my_job.py"), "w") as fd:
+            fd.write("from nautobot.extras.jobs import Job\nclass MyJob(Job):\n    def run(self):\n        pass")
 
         return mock.DEFAULT
 
@@ -190,6 +194,7 @@ class GitTest(TransactionTestCase):
         os.remove(os.path.join(path, "export_templates", "dcim", "device", "template2.html"))
         os.remove(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"))
         os.remove(os.path.join(path, "jobs", "__init__.py"))
+        os.remove(os.path.join(path, "jobs", "my_job.py"))
         return mock.DEFAULT
 
     def assert_repo_slug_valid_python_package_name(self):
@@ -281,6 +286,23 @@ class GitTest(TransactionTestCase):
             name=name,
         )
         self.assertIsNotNone(export_template_vlan)
+
+    def assert_job_exists(self, installed=True):
+        """Helper function to assert JobModel and registerd Job exist."""
+        # Is it registered correctly in the database?
+        job_model = Job.objects.get(name="MyJob", module_name=f"{self.repo.slug}.jobs.my_job", job_class_name="MyJob")
+        self.assertIsNotNone(job_model)
+        if installed:
+            self.assertTrue(job_model.installed)
+            # Is the in-memory code accessible?
+            self.assertIsNotNone(job_model.job_class)
+            # Is it registered properly with Celery?
+            self.assertIsNotNone(job_model.job_task)
+        else:
+            self.assertFalse(job_model.installed)
+            self.assertIsNone(job_model.job_class)
+            with self.assertRaises(NotRegistered):
+                job_model.job_task
 
     def test_pull_git_repository_and_refresh_data_with_no_data(self, MockGitRepo):
         """
@@ -435,6 +457,9 @@ class GitTest(TransactionTestCase):
                 # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
                 self.assert_export_template_vlan_exists("template.j2")
 
+                # Make sure Job was successfully loaded from file and registered as a JobModel
+                self.assert_job_exists()
+
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 MockGitRepo.side_effect = self.empty_repo
 
@@ -475,6 +500,9 @@ class GitTest(TransactionTestCase):
                 device = Device.objects.get(name=self.device.name)
                 self.assertIsNone(device.local_config_context_data)
                 self.assertIsNone(device.local_config_context_data_owner)
+
+                # Verify that Job database record still exists but code is no longer installed/loaded
+                self.assert_job_exists(installed=False)
 
     def test_pull_git_repository_and_refresh_data_with_bad_data(self, MockGitRepo):
         """
@@ -645,8 +673,15 @@ class GitTest(TransactionTestCase):
                     ) as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
-                        pass
-                    # TODO: create and register a mock Job
+                        fd.write(
+                            "from nautobot.core.celery import register_jobs\nfrom .my_job import MyJob\nregister_jobs(MyJob)"
+                        )
+
+                    with open(os.path.join(path, "jobs", "my_job.py"), "w") as fd:
+                        fd.write(
+                            "from nautobot.extras.jobs import Job\nclass MyJob(Job):\n    def run(self):\n        pass"
+                        )
+
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
@@ -685,53 +720,34 @@ class GitTest(TransactionTestCase):
                 )
 
                 # Make sure ConfigContextSchema was successfully loaded from file
-                config_context_schema_record = ConfigContextSchema.objects.get(
-                    name="Config Context Schema 1",
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                )
-                self.assertEqual(config_context_schema_record, config_context.config_context_schema)
-
-                config_context_schema = self.config_context_schema
-                config_context_schema_metadata = config_context_schema["_metadata"]
-                self.assertIsNotNone(config_context_schema_record)
-                self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
-                self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
+                self.assert_config_context_schema_record_exists("Config Context Schema 1")
 
                 # Make sure Device local config context was successfully populated from file
-                device = Device.objects.get(name=self.device.name)
-                self.assertIsNotNone(device.local_config_context_data)
-                self.assertEqual({"dns-servers": ["8.8.8.8"]}, device.local_config_context_data)
-                self.assertEqual(device.local_config_context_data_owner, self.repo)
+                self.assert_device_exists(self.device.name)
 
                 # Make sure ExportTemplate was successfully loaded from file
-                export_template = ExportTemplate.objects.get(
-                    owner_object_id=self.repo.pk,
-                    owner_content_type=ContentType.objects.get_for_model(GitRepository),
-                    content_type=ContentType.objects.get_for_model(Device),
-                    name="template.j2",
-                )
-                self.assertIsNotNone(export_template)
+                self.assert_export_template_device("template.j2")
 
-                # TODO: Make sure Job is loaded and registered into Celery as well as the database
+                # Make sure Job is loaded and registered into Celery as well as the database
+                self.assert_job_exists()
 
                 # Now delete the GitRepository
                 self.repo.delete()
 
                 with self.assertRaises(ConfigContext.DoesNotExist):
-                    config_context = ConfigContext.objects.get(
+                    ConfigContext.objects.get(
                         owner_object_id=self.repo.pk,
                         owner_content_type=ContentType.objects.get_for_model(GitRepository),
                     )
 
                 with self.assertRaises(ConfigContextSchema.DoesNotExist):
-                    config_context_schema = ConfigContextSchema.objects.get(
+                    ConfigContextSchema.objects.get(
                         owner_object_id=self.repo.pk,
                         owner_content_type=ContentType.objects.get_for_model(GitRepository),
                     )
 
                 with self.assertRaises(ExportTemplate.DoesNotExist):
-                    export_template = ExportTemplate.objects.get(
+                    ExportTemplate.objects.get(
                         owner_object_id=self.repo.pk,
                         owner_content_type=ContentType.objects.get_for_model(GitRepository),
                     )
@@ -740,7 +756,7 @@ class GitTest(TransactionTestCase):
                 self.assertIsNone(device.local_config_context_data)
                 self.assertIsNone(device.local_config_context_data_owner)
 
-                # TODO: assert the Job is removed from Celery and from the database
+                self.assert_job_exists(installed=False)
 
     def test_git_dry_run(self, MockGitRepo):
         with tempfile.TemporaryDirectory() as tempdir:
