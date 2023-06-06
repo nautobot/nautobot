@@ -33,7 +33,7 @@ def ensure_all_existing_services_fit_uniqueness_constraints(apps, schema_editor)
     Migration function to ensure that all existing Service instances fit the uniqueness constraints [name, device] or [name, vm]
     By enumerating Service instances associated with a device/vm and appending unique indices to names of the Service instances.
     """
-    Service = apps.get_model("extras", "Service")
+    Service = apps.get_model("ipam", "Service")
     MAX_NAME_LENGTH = 100
     device_services = Service.objects.filter(device__isnull=False)
     DEVICE_TO_SERVICE = {}
