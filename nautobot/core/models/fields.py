@@ -186,10 +186,6 @@ class ForeignKeyLimitedByContentTypes(ForeignKeyWithAutoRelatedName):
         - the content-type to which the field is attached (e.g. `dcim.device`)
     """
 
-    def __init__(self, **kwargs):
-        kwargs.setdefault("null", True)
-        super().__init__(**kwargs)
-
     def get_limit_choices_to(self):
         return {"content_types": ContentType.objects.get_for_model(self.model)}
 

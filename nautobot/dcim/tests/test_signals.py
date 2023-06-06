@@ -10,23 +10,26 @@ from nautobot.dcim.models import (
     Manufacturer,
     VirtualChassis,
 )
-from nautobot.extras.models import Role
+from nautobot.extras.models import Role, Status
 
 
 class VirtualChassisTest(TestCase):
     """Class to test signals for VirtualChassis."""
 
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         """Setup Test Data for VirtualChassis Signal tests."""
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
 
-        self.device = Device.objects.create(
+        cls.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
             role=devicerole,
+            status=devicestatus,
             location=location,
         )
 

@@ -347,7 +347,10 @@ class ServiceTestCase(
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
-        device = Device.objects.create(name="Device 1", location=location, device_type=devicetype, role=devicerole)
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            name="Device 1", location=location, device_type=devicetype, role=devicerole, status=devicestatus
+        )
 
         Service.objects.bulk_create(
             [

@@ -1,5 +1,6 @@
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.jobs import Job
+from nautobot.extras.models import Status
 
 
 class TestReadOnlyPass(Job):
@@ -17,6 +18,7 @@ class TestReadOnlyPass(Job):
         Job function.
         """
         location_type = LocationType.objects.create(name="Job Root Type")
-        location = Location.objects.create(name="New Location", location_type=location_type)
+        status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(name="New Location", location_type=location_type, status=status)
 
         self.log_success(obj=location)

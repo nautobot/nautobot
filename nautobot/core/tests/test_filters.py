@@ -4,6 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models as django_models
 from django.shortcuts import reverse
 from django.test import TestCase
+from django.test.utils import isolate_apps
+
 import django_filters
 from tree_queries.models import TreeNodeForeignKey
 
@@ -32,50 +34,67 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         super().setUp()
 
         self.location_type = dcim_models.LocationType.objects.get(name="Campus")
+        status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
         self.parent_location_1 = dcim_models.Location.objects.create(
-            name="Test Parent Location 1", slug="test-parent-location-1", location_type=self.location_type
+            name="Test Parent Location 1",
+            slug="test-parent-location-1",
+            location_type=self.location_type,
+            status=status,
         )
         self.parent_location_2 = dcim_models.Location.objects.create(
-            name="Test Parent Location 2", slug="test-parent-location-2", location_type=self.location_type
+            name="Test Parent Location 2",
+            slug="test-parent-location-2",
+            location_type=self.location_type,
+            status=status,
         )
         self.parent_location_2a = dcim_models.Location.objects.create(
             name="Test Parent Location 2A",
             slug="test-parent-location-2a",
             parent=self.parent_location_2,
             location_type=self.location_type,
+            status=status,
         )
         self.parent_location_2ab = dcim_models.Location.objects.create(
             name="Test Parent Location 2A-B",
             slug="test-parent-location-2a-b",
             parent=self.parent_location_2a,
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_1 = dcim_models.Location.objects.create(
             parent=self.parent_location_1,
             name="Test Child Location 1",
             slug="test-child-location-1",
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_2 = dcim_models.Location.objects.create(
             parent=self.parent_location_2,
             name="Test Child Location 2",
             slug="test-child-location-2",
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_2a = dcim_models.Location.objects.create(
             parent=self.parent_location_2a,
             name="Test Child Location 2a",
             slug="test-child-location-2a",
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_2ab = dcim_models.Location.objects.create(
             parent=self.parent_location_2ab,
             name="Test Child Location 2a-b",
             slug="test-child-location-2a-b",
             location_type=self.location_type,
+            status=status,
         )
         self.child_location_0 = dcim_models.Location.objects.create(
-            parent=None, name="Test Child Location 0", slug="test-child-location0", location_type=self.location_type
+            parent=None,
+            name="Test Child Location 0",
+            slug="test-child-location0",
+            location_type=self.location_type,
+            status=status,
         )
         self.queryset = dcim_models.Location.objects.filter(name__icontains="Test Child Location")
 
@@ -335,35 +354,37 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
         )
 
 
-class TestModel(django_models.Model):
-    """
-    Test model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
-    """
-
-    charfield = django_models.CharField(max_length=10)
-    choicefield = django_models.IntegerField(choices=(("A", 1), ("B", 2), ("C", 3)))
-    charchoicefield = django_models.CharField(
-        choices=(("1", "Option 1"), ("2", "Option 2"), ("3", "Option 3")), max_length=10
-    )
-    datefield = django_models.DateField()
-    datetimefield = django_models.DateTimeField()
-    decimalfield = django_models.DecimalField(max_digits=9, decimal_places=6)
-    floatfield = django_models.FloatField()
-    integerfield = django_models.IntegerField()
-    macaddressfield = core_fields.MACAddressCharField()
-    textfield = django_models.TextField()
-    timefield = django_models.TimeField()
-    treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
-
-    tags = core_fields.TagsField()
-
-
+@isolate_apps("nautobot.core.tests")
 class BaseFilterSetTest(TestCase):
     """
     Ensure that a BaseFilterSet automatically creates the expected set of filters for each filter type.
     """
 
     class TestFilterSet(filters.BaseFilterSet):
+        """Filterset for testing various fields."""
+
+        class TestModel(django_models.Model):
+            """
+            Test model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
+            """
+
+            charfield = django_models.CharField(max_length=10)
+            choicefield = django_models.IntegerField(choices=(("A", 1), ("B", 2), ("C", 3)))
+            charchoicefield = django_models.CharField(
+                choices=(("1", "Option 1"), ("2", "Option 2"), ("3", "Option 3")), max_length=10
+            )
+            datefield = django_models.DateField()
+            datetimefield = django_models.DateTimeField()
+            decimalfield = django_models.DecimalField(max_digits=9, decimal_places=6)
+            floatfield = django_models.FloatField()
+            integerfield = django_models.IntegerField()
+            macaddressfield = core_fields.MACAddressCharField()
+            textfield = django_models.TextField()
+            timefield = django_models.TimeField()
+            treeforeignkeyfield = TreeNodeForeignKey(to="self", on_delete=django_models.CASCADE)
+
+            tags = core_fields.TagsField()
+
         charfield = django_filters.CharFilter()
         macaddressfield = filters.MACAddressFilter()
         modelchoicefield = django_filters.ModelChoiceFilter(
@@ -378,26 +399,32 @@ class BaseFilterSetTest(TestCase):
         multivaluecharfield = filters.MultiValueCharFilter(field_name="charfield")
         treeforeignkeyfield = filters.TreeNodeMultipleChoiceFilter(queryset=TestModel.objects.all())
 
-        class Meta:
-            model = TestModel
-            fields = (
-                "charfield",
-                "choicefield",
-                "charchoicefield",
-                "datefield",
-                "datetimefield",
-                "decimalfield",
-                "floatfield",
-                "integerfield",
-                "macaddressfield",
-                "modelchoicefield",
-                "modelmultiplechoicefield",
-                "multiplechoicefield",
-                "tags",
-                "textfield",
-                "timefield",
-                "treeforeignkeyfield",
-            )
+        # declared this way because `class Meta: model = TestModel` gives a NameError otherwise.
+        Meta = type(
+            "Meta",
+            (),
+            {
+                "model": TestModel,
+                "fields": (
+                    "charfield",
+                    "choicefield",
+                    "charchoicefield",
+                    "datefield",
+                    "datetimefield",
+                    "decimalfield",
+                    "floatfield",
+                    "integerfield",
+                    "macaddressfield",
+                    "modelchoicefield",
+                    "modelmultiplechoicefield",
+                    "multiplechoicefield",
+                    "tags",
+                    "textfield",
+                    "timefield",
+                    "treeforeignkeyfield",
+                ),
+            },
+        )
 
     @classmethod
     def setUpTestData(cls):
@@ -790,10 +817,11 @@ class DynamicFilterLookupExpressionTest(TestCase):
         cls.locations[1].asn = 65101
         cls.locations[2].asn = 65201
 
+        rack_status = extras_models.Status.objects.get_for_model(dcim_models.Rack).first()
         racks = (
-            dcim_models.Rack(name="Rack 1", location=cls.locations[0]),
-            dcim_models.Rack(name="Rack 2", location=cls.locations[1]),
-            dcim_models.Rack(name="Rack 3", location=cls.locations[2]),
+            dcim_models.Rack(name="Rack 1", location=cls.locations[0], status=rack_status),
+            dcim_models.Rack(name="Rack 2", location=cls.locations[1], status=rack_status),
+            dcim_models.Rack(name="Rack 3", location=cls.locations[2], status=rack_status),
         )
         dcim_models.Rack.objects.bulk_create(racks)
 
@@ -844,13 +872,26 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
         dcim_models.Device.objects.bulk_create(devices)
 
+        intf_status = extras_models.Status.objects.get_for_model(dcim_models.Interface).first()
         interfaces = (
-            dcim_models.Interface(device=devices[0], name="Interface 1", mac_address="00-00-00-00-00-01"),
-            dcim_models.Interface(device=devices[0], name="Interface 2", mac_address="aa-00-00-00-00-01"),
-            dcim_models.Interface(device=devices[1], name="Interface 3", mac_address="00-00-00-00-00-02"),
-            dcim_models.Interface(device=devices[1], name="Interface 4", mac_address="bb-00-00-00-00-02"),
-            dcim_models.Interface(device=devices[2], name="Interface 5", mac_address="00-00-00-00-00-03"),
-            dcim_models.Interface(device=devices[2], name="Interface 6", mac_address="cc-00-00-00-00-03"),
+            dcim_models.Interface(
+                device=devices[0], name="Interface 1", mac_address="00-00-00-00-00-01", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[0], name="Interface 2", mac_address="aa-00-00-00-00-01", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[1], name="Interface 3", mac_address="00-00-00-00-00-02", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[1], name="Interface 4", mac_address="bb-00-00-00-00-02", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[2], name="Interface 5", mac_address="00-00-00-00-00-03", status=intf_status
+            ),
+            dcim_models.Interface(
+                device=devices[2], name="Interface 6", mac_address="cc-00-00-00-00-03", status=intf_status
+            ),
         )
         dcim_models.Interface.objects.bulk_create(interfaces)
 
@@ -1167,7 +1208,10 @@ class GetFiltersetTestValuesTest(testing.FilterTestCases.BaseFilterTestCase):
     def test_insufficient_unique_values(self):
         location_type = dcim_models.LocationType.objects.get(name="Campus")
         dcim_models.Location.objects.create(
-            name="getfiltersettestUniqueLocation", description="UniqueLocation description", location_type=location_type
+            name="getfiltersettestUniqueLocation",
+            description="UniqueLocation description",
+            location_type=location_type,
+            status=self.status,
         )
         with self.assertRaisesMessage(ValueError, self.exception_message):
             self.get_filterset_test_values("description")
@@ -1200,11 +1244,12 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
     def setUp(self):
         super().setUp()
         self.lt = dcim_models.LocationType.objects.get(name="Campus")
+        status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
         self.parent_location_1 = dcim_models.Location.objects.create(
-            name="Test Parent Location 1", slug="test-parent-location-1", location_type=self.lt
+            name="Test Parent Location 1", slug="test-parent-location-1", location_type=self.lt, status=status
         )
         self.parent_location_2 = dcim_models.Location.objects.create(
-            name="Test Parent Location 2", slug="test-parent-location-2", location_type=self.lt
+            name="Test Parent Location 2", slug="test-parent-location-2", location_type=self.lt, status=status
         )
         self.child_location_1 = dcim_models.Location.objects.create(
             parent=self.parent_location_1,
@@ -1212,6 +1257,7 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             slug="test-child-location1",
             location_type=self.lt,
             asn=1234,
+            status=status,
         )
         self.child_location_2 = dcim_models.Location.objects.create(
             parent=self.parent_location_2,
@@ -1219,18 +1265,21 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             slug="test-child-location2",
             location_type=self.lt,
             asn=12345,
+            status=status,
         )
         self.child_location_3 = dcim_models.Location.objects.create(
             parent=None,
             name="Test Child Location 3",
             slug="test-child-location3",
             location_type=self.lt,
+            status=status,
         )
         self.child_location_4 = dcim_models.Location.objects.create(
             parent=None,
             name="Test Child Location4",
             slug="test-child-location4",
             location_type=self.lt,
+            status=status,
         )
         self.queryset = dcim_models.Location.objects.all()
 

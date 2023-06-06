@@ -1,0 +1,1 @@
+Deprecated `StatusModel` mixin in favor of directly including a `StatusField` as needed.

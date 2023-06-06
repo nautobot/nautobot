@@ -94,11 +94,15 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        status = Status.objects.get_for_model(Tenant).first()
         location_type = LocationType.objects.create(name="Root Type")
+        location_status = Status.objects.get_for_model(Location).first()
         cls.locations = (
-            Location.objects.create(name="Root 1", location_type=location_type, status=status, tenant=cls.queryset[0]),
-            Location.objects.create(name="Root 2", location_type=location_type, status=status, tenant=cls.queryset[1]),
+            Location.objects.create(
+                name="Root 1", location_type=location_type, status=location_status, tenant=cls.queryset[0]
+            ),
+            Location.objects.create(
+                name="Root 2", location_type=location_type, status=location_status, tenant=cls.queryset[1]
+            ),
         )
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
@@ -112,6 +116,7 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
         VirtualMachineFactory.create_batch(10)
 
         # We don't have a DeviceFactory yet
+        device_status = Status.objects.get_for_model(Device).first()
         cls.devices = (
             Device.objects.create(
                 name="Device 1",
@@ -119,7 +124,7 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
                 role=Role.objects.get_for_model(Device).first(),
                 platform=Platform.objects.first(),
                 location=cls.locations[0],
-                status=status,
+                status=device_status,
                 tenant=Tenant.objects.first(),
             ),
             Device.objects.create(
@@ -128,7 +133,7 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
                 role=Role.objects.get_for_model(Device).first(),
                 platform=Platform.objects.first(),
                 location=cls.locations[0],
-                status=status,
+                status=device_status,
                 tenant=Tenant.objects.last(),
             ),
         )

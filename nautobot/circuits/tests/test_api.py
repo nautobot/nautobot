@@ -170,11 +170,12 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
 
         provider = Provider.objects.first()
         circuit_type = CircuitType.objects.first()
+        status = Status.objects.get_for_model(Circuit).first()
 
         circuits = (
-            Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type),
-            Circuit.objects.create(cid="Circuit 2", provider=provider, circuit_type=circuit_type),
-            Circuit.objects.create(cid="Circuit 3", provider=provider, circuit_type=circuit_type),
+            Circuit.objects.create(cid="Circuit 1", provider=provider, circuit_type=circuit_type, status=status),
+            Circuit.objects.create(cid="Circuit 2", provider=provider, circuit_type=circuit_type, status=status),
+            Circuit.objects.create(cid="Circuit 3", provider=provider, circuit_type=circuit_type, status=status),
         )
 
         CircuitTermination.objects.create(circuit=circuits[0], location=locations[0], term_side=SIDE_A)
