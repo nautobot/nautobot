@@ -790,8 +790,11 @@ class GraphQLQueryTest(TestCase):
             status=interface_status,
         )
         cls.ip_statuses = list(Status.objects.get_for_model(IPAddress))[:2]
+        cls.prefix_statuses = list(Status.objects.get_for_model(Prefix))[:2]
         cls.namespace = Namespace.objects.first()
-        cls.prefix1 = Prefix.objects.create(prefix="10.0.1.0/24", namespace=cls.namespace)
+        cls.prefix1 = Prefix.objects.create(
+            prefix="10.0.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]
+        )
         cls.ipaddr1 = IPAddress.objects.create(
             address="10.0.1.1/24", namespace=cls.namespace, status=cls.ip_statuses[0]
         )
@@ -823,7 +826,9 @@ class GraphQLQueryTest(TestCase):
             mac_address="00:12:12:12:12:12",
             status=interface_status,
         )
-        cls.prefix2 = Prefix.objects.create(prefix="10.0.2.0/24", namespace=cls.namespace)
+        cls.prefix2 = Prefix.objects.create(
+            prefix="10.0.2.0/24", namespace=cls.namespace, status=cls.prefix_statuses[1]
+        )
         cls.ipaddr2 = IPAddress.objects.create(
             address="10.0.2.1/30", namespace=cls.namespace, status=cls.ip_statuses[1]
         )
@@ -896,7 +901,9 @@ class GraphQLQueryTest(TestCase):
             name="eth0",
             status=vmintf_status,
         )
-        cls.vmprefix = Prefix.objects.create(prefix="1.1.1.0/24", namespace=cls.namespace)
+        cls.vmprefix = Prefix.objects.create(
+            prefix="1.1.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]
+        )
         cls.vmipaddr = IPAddress.objects.create(
             address="1.1.1.1/32", namespace=cls.namespace, status=cls.ip_statuses[0]
         )

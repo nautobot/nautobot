@@ -494,6 +494,7 @@ class PluginCustomValidationTest(TestCase):
         prefix = Prefix.objects.create(
             prefix=netaddr.IPNetwork("192.168.10.0/24"), status=prefix_status, namespace=namespace
         )
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.22.0/24"), status=prefix_status, namespace=namespace)
         status = Status.objects.get_for_model(IPAddress).first()
         ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status, namespace=namespace)
         relationship = Relationship.objects.create(

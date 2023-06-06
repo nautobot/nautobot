@@ -1444,7 +1444,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         interface = Interface.objects.create(device=device, name="Interface 1", status=intf_status)
         namespace = Namespace.objects.first()
         Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace, status=self.prefix_status)
-        ip_address = IPAddress.objects.create(address="1.2.3.4/32", status=self.ipaddr_status)
+        ip_address = IPAddress.objects.create(address="1.2.3.4/32", namespace=namespace, status=self.ipaddr_status)
         interface.ip_addresses.add(ip_address)
 
         # Dupe the form data and populated primary_ip4 w/ ip_address

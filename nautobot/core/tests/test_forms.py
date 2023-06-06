@@ -440,6 +440,7 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
             address="10.1.1.2/24", namespace=namespace, status=ipaddr_status
         )
         self.assertEqual(
+            self.field.prepare_value([address_1, address_2]),
             [address_1.pk, address_2.pk],
         )
         self.assertEqual(
@@ -519,6 +520,8 @@ class AddressFieldMixinTest(TestCase):
         self.ip = ipam_models.IPAddress.objects.create(
             address="10.0.0.1/32", namespace=self.namespace, status=ipaddr_status
         )
+        self.initial = {"address": self.ip.address}
+
         with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             ip_none = ipam_models.IPAddress()
             forms.AddressFieldMixin(initial=self.initial, instance=ip_none)

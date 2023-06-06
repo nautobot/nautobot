@@ -1224,7 +1224,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         prefix_status = Status.objects.get_for_model(Prefix).first()
         namespace = Namespace.objects.first()
         Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace, status=prefix_status)
-        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=ipaddr_status)
+        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace, status=ipaddr_status)
         dev_intf.add_ip_addresses(dev_ip_addr)
 
         patch_data = {"primary_ip4": dev_ip_addr.pk}

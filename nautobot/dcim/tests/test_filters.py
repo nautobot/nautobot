@@ -1352,6 +1352,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ipaddresses = (
             IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace, status=ipaddr_status),
             IPAddress.objects.create(address="192.0.2.2/24", namespace=namespace, status=ipaddr_status),
+            IPAddress.objects.create(address="2600::1/120", namespace=namespace, status=ipaddr_status),
             IPAddress.objects.create(address="2600::0100/120", namespace=namespace, status=ipaddr_status),
         )
 
