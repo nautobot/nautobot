@@ -337,10 +337,6 @@ class IPAddressFilterSet(
         method="filter_address",
         label="Address",
     )
-    mask_length = django_filters.NumberFilter(
-        method="filter_mask_length",
-        label="Mask length",
-    )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="parent__vrfs",
         queryset=VRF.objects.all(),
@@ -404,7 +400,7 @@ class IPAddressFilterSet(
 
     class Meta:
         model = IPAddress
-        fields = ["id", "ip_version", "dns_name", "tags"]
+        fields = ["id", "ip_version", "dns_name", "tags", "mask_length"]
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()
@@ -421,11 +417,6 @@ class IPAddressFilterSet(
             return queryset.net_in(value)
         except ValidationError:
             return queryset.none()
-
-    def filter_mask_length(self, queryset, name, value):
-        if not value:
-            return queryset
-        return queryset.filter(prefix_length=value)
 
     def filter_present_in_vrf(self, queryset, name, value):
         if value is None:

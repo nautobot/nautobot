@@ -444,7 +444,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         masked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if "/" in val]
         masked_prefixes = [netaddr.IPNetwork(val).prefixlen for val in networks if "/" in val]
         unmasked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if "/" not in val]
-        return self.filter(Q(host__in=masked_hosts, prefix_length__in=masked_prefixes) | Q(host__in=unmasked_hosts))
+        return self.filter(Q(host__in=masked_hosts, mask_length__in=masked_prefixes) | Q(host__in=unmasked_hosts))
 
     def get(self, *args, address=None, **kwargs):
         """
@@ -452,10 +452,8 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         """
         if address:
             address = netaddr.IPNetwork(address)
-            last_ip = self._get_last_ip(address)
-            kwargs["prefix_length"] = address.prefixlen
+            kwargs["mask_length"] = address.prefixlen
             kwargs["host"] = address.ip
-            kwargs["broadcast"] = last_ip
         return super().get(*args, **kwargs)
 
     def filter(self, *args, address=None, **kwargs):
@@ -464,10 +462,8 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         """
         if address:
             address = netaddr.IPNetwork(address)
-            last_ip = self._get_last_ip(address)
-            kwargs["prefix_length"] = address.prefixlen
+            kwargs["mask_length"] = address.prefixlen
             kwargs["host"] = address.ip
-            kwargs["broadcast"] = last_ip
         return super().filter(*args, **kwargs)
 
     def filter_address_or_pk_in(self, addresses, pk_values=None):
@@ -479,11 +475,9 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         q = Q()
         for _address in addresses:
             _address = netaddr.IPNetwork(_address)
-            last_ip = self._get_last_ip(_address)
-            prefix_length = _address.prefixlen
+            mask_length = _address.prefixlen
             host = _address.ip
-            broadcast = last_ip
-            q |= Q(prefix_length=prefix_length, host=host, broadcast=broadcast)
+            q |= Q(mask_length=mask_length, host=host)
 
         if pk_values is not None:
             q |= Q(pk__in=pk_values)

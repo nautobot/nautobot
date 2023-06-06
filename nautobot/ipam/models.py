@@ -887,8 +887,7 @@ class IPAddress(PrimaryModel):
         db_index=True,
         help_text="IPv4 or IPv6 host address",
     )
-    broadcast = VarbinaryIPField(null=False, db_index=True, help_text="IPv4 or IPv6 broadcast address")
-    prefix_length = models.IntegerField(null=False, db_index=True, help_text="Length of the Network prefix, in bits.")
+    mask_length = models.IntegerField(null=False, db_index=True, help_text="Length of the network mask, in bits.")
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
     parent = models.ForeignKey(
@@ -899,7 +898,7 @@ class IPAddress(PrimaryModel):
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this IPAddress.",
     )
-    # ip_version is set internally just like network, broadcast, and prefix_length.
+    # ip_version is set internally just like network, and mask_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressVersionChoices,
         null=True,
@@ -943,7 +942,7 @@ class IPAddress(PrimaryModel):
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
     class Meta:
-        ordering = ("ip_version", "host", "prefix_length")  # address may be non-unique
+        ordering = ("ip_version", "host", "mask_length")  # address may be non-unique
         verbose_name = "IP address"
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
@@ -968,18 +967,8 @@ class IPAddress(PrimaryModel):
         if address:
             if isinstance(address, str):
                 address = netaddr.IPNetwork(address)
-            # Note that our "broadcast" field is actually the last IP address in this network.
-            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
-            # 1. For a point-to-point address (IPv4 /31 or IPv6 /127), there are two addresses in the network,
-            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
-            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the network.
-            #    We store this address as both the host and the "broadcast".
-            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
-            # of addresses and prefixes, not for packet forwarding. :-)
-            broadcast = address.broadcast if address.broadcast else address[-1]
             self.host = str(address.ip)
-            self.broadcast = str(broadcast)
-            self.prefix_length = address.prefixlen
+            self.mask_length = address.prefixlen
             self.ip_version = address.version
 
     def get_duplicates(self):
@@ -1001,6 +990,12 @@ class IPAddress(PrimaryModel):
 
     def clean(self):
         super().clean()
+
+        # Validate that host is not being modified
+        if self.present_in_database:
+            ip_address = IPAddress.objects.get(id=self.id)
+            if ip_address.host != self.host:
+                raise ValidationError({"address": "Host address cannot be changed once created"})
 
         # Validate IP status selection
         if self.status == IPAddress.STATUS_SLAAC and self.ip_version != 6:
@@ -1024,8 +1019,8 @@ class IPAddress(PrimaryModel):
 
     @property
     def address(self):
-        if self.host is not None and self.prefix_length is not None:
-            cidr = f"{self.host}/{self.prefix_length}"
+        if self.host is not None and self.mask_length is not None:
+            cidr = f"{self.host}/{self.mask_length}"
             return netaddr.IPNetwork(cidr)
         return None
 
@@ -1077,16 +1072,6 @@ class IPAddress(PrimaryModel):
 
         def __str__(self):
             return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
-
-    def _set_mask_length(self, value):
-        """
-        Expose the IPNetwork object's prefixlen attribute on the parent model so that it can be manipulated directly,
-        e.g. for bulk editing.
-        """
-        if self.address is not None:
-            self.prefix_length = value
-
-    mask_length = property(fset=_set_mask_length)
 
 
 class IPAddressToInterface(BaseModel):
