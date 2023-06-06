@@ -2,3 +2,8 @@ Changed Job `class_path` property from `<source>/<module>/<ClassName>` to simply
 Changed GitRepository slugs to use underscores rather than dashes so they can be used as Python module names.
 Changed Job `module_name` for Git-derived Jobs to `<git_repository_slug>.jobs.<module>`.
 System-provided Jobs are now enabled by default for running.
+Changed return signature for `Nautobot.core.utils.git.GitRepo.checkout()` to include whether the filesystem was changed.
+Changed `job` filter on JobButton, JobHook, JobResult, and ScheduledJob to be name-based rather than slug-based.
+Changed `Job.runnable` property to not consider whether the `job_class` is set, as a performance optimization.
+Moved test Jobs from `nautobot/extras/tests/example_jobs/test_*.py` to `nautobot/extras/test_jobs/*.py` to avoid unnecessary loading by the `unittest` runner.
+Changed client-side slug construction (legacy UI) to use underscores rather than dashes.

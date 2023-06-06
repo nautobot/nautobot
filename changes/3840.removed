@@ -1,1 +1,3 @@
 Removed `Job.slug`, `Job.source`, and `Job.git_repository` database fields.
+Removed `source` and `slug` filters for Jobs.
+Removed `get_jobs()`, `get_job_classpaths()`, `jobs_in_directory()` functions.
