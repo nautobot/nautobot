@@ -13,6 +13,7 @@ from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
 from nautobot.core.api import exceptions
+from nautobot.core.templatetags.helpers import bettertitle
 
 
 logger = logging.getLogger(__name__)
@@ -386,10 +387,6 @@ class SerializerDetailViewConfig:
 
         return m2m_fields, non_m2m_fields
 
-    def capitalize(self, value: str):
-        """Capitalize value only if not uppercase."""
-        return value if (value.isupper()) else value.capitalize()
-
     def view_config(self):
         """
         Generate detail view config for the view based on the serializer's fields.
@@ -416,7 +413,7 @@ class SerializerDetailViewConfig:
         model_verbose_name = self.serializer.Meta.model._meta.verbose_name
         return [
             {
-                self.capitalize(model_verbose_name): {
+                bettertitle(model_verbose_name): {
                     "fields": [field["name"] for field in other_fields],
                 }
             },
