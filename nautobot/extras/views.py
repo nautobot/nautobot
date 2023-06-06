@@ -1178,7 +1178,6 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
                     task=job_model.job_class.registered_name,
-                    job_class=job_model.class_path,
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
@@ -1191,7 +1190,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     approval_required=job_model.approval_required,
                     crontab=crontab,
                 )
-                scheduled_job.save()
+                scheduled_job.validated_save()
 
                 if job_model.approval_required:
                     messages.success(request, f"Job {schedule_name} successfully submitted for approval")
@@ -1404,7 +1403,7 @@ class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
-        job_class = get_job(instance.job_class)
+        job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():

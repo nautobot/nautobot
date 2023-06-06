@@ -12,7 +12,6 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
-from django.utils.text import slugify
 import yaml
 
 from nautobot.core.celery import app as celery_app
@@ -756,7 +755,6 @@ def import_config_context_schema(
     except ConfigContextSchema.DoesNotExist:
         schema_record = ConfigContextSchema(
             name=schema_metadata["name"],
-            slug=slugify(schema_metadata["name"]),
             owner_content_type=git_repository_content_type,
             owner_object_id=repository_record.pk,
             data_schema=context_schema_data["data_schema"],
