@@ -755,21 +755,6 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
 
-    def test_save_relocate_directory(self):
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            with self.settings(GIT_ROOT=tmpdirname):
-                initial_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, initial_path)
-                os.makedirs(initial_path)
-
-                self.repo.slug = "a-new-location"
-                self.repo.save()
-
-                self.assertFalse(os.path.exists(initial_path))
-                new_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, new_path)
-                self.assertTrue(os.path.isdir(new_path))
-
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
@@ -793,10 +778,10 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.plugin_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "local/test_pass/TestPass")
+        self.assertEqual(self.local_job.class_path, "pass.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
-        self.assertEqual(self.plugin_job.class_path, "plugins/example_plugin.jobs/ExampleJob")
+        self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
         self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
 
     def test_latest_result(self):
@@ -808,13 +793,24 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
             self.assertTrue(job_model.installed)
-            self.assertFalse(job_model.enabled)
+            # System jobs should be enabled by default, all others are disabled by default
+            if job_model.module_name.startswith("nautobot."):
+                self.assertTrue(job_model.enabled)
+            else:
+                self.assertFalse(job_model.enabled)
             for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "test_duplicate_name" in job_model.job_class.__module__:
+                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
                     pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
                 else:
-                    self.assertFalse(getattr(job_model, f"{field_name}_override"))
-                    self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+                    self.assertFalse(
+                        getattr(job_model, f"{field_name}_override"),
+                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                    )
+                    self.assertEqual(
+                        getattr(job_model, field_name),
+                        getattr(job_model.job_class, field_name),
+                        field_name,
+                    )
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
@@ -864,7 +860,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         """Verify that cleaning enforces validation of potentially unsanitized user input."""
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name",
                 job_class_name="JobClass",
                 grouping="grouping",
@@ -874,7 +869,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="ThisIsARidiculouslyLongJobClassNameWhoWouldEverDoSuchAnUtterlyRidiculousThingButBetterSafeThanSorrySinceWeAreDealingWithUserInputHere",
                 grouping="grouping",
@@ -884,7 +878,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="OK now this is just ridiculous. Why would you ever want to deal with typing in 255+ characters of grouping information and have to copy-paste it to the other jobs in the same grouping or risk dealing with typos when typing out such a ridiculously long grouping string? Still, once again, better safe than sorry!",
@@ -894,7 +887,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="grouping",
@@ -904,7 +896,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="grouping",
@@ -1415,9 +1406,9 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "test_pass"
+        module = "pass"
         name = "TestPass"
-        job_class = get_job(f"local/{module}/{name}")
+        job_class = get_job(f"{module}.{name}")
 
         self.job_result = JobResult.objects.create(name=job_class.class_path, user=None)
 

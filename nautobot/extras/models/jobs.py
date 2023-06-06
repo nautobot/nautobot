@@ -3,18 +3,18 @@
 import contextlib
 from datetime import timedelta
 import logging
-import os
 
 from celery import schedules
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
@@ -24,15 +24,15 @@ from nautobot.core.celery import (
     NautobotKombuJSONEncoder,
     setup_nautobot_job_logging,
 )
+from nautobot.core.celery.control import refresh_git_repository
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import AutoSlugField, JSONArrayField
+from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
     JobExecutionType,
     JobResultStatusChoices,
-    JobSourceChoices,
     LogLevelChoices,
 )
 from nautobot.extras.constants import (
@@ -41,18 +41,15 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
-from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models import ChangeLoggedModel, GitRepository
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
-    jobs_in_directory,
 )
 
 from .customfields import CustomFieldModel
@@ -89,23 +86,6 @@ class Job(PrimaryModel):
     """
 
     # Information used to locate the Job source code
-    source = models.CharField(
-        max_length=JOB_MAX_SOURCE_LENGTH,
-        choices=JobSourceChoices,
-        editable=False,
-        db_index=True,
-        help_text="Source of the Python code for this job - local, Git repository, or plugins",
-    )
-    git_repository = models.ForeignKey(
-        to="extras.GitRepository",
-        blank=True,
-        null=True,
-        default=None,
-        on_delete=models.SET_NULL,
-        db_index=True,
-        related_name="jobs",
-        help_text="Git repository that provides this job",
-    )
     module_name = models.CharField(
         max_length=JOB_MAX_NAME_LENGTH,
         editable=False,
@@ -117,11 +97,6 @@ class Job(PrimaryModel):
         editable=False,
         db_index=True,
         help_text="Name of the Python class providing this job",
-    )
-
-    slug = AutoSlugField(
-        max_length=JOB_MAX_NAME_LENGTH,
-        populate_from="name",
     )
 
     # Human-readable information, potentially inherited from the source code
@@ -247,90 +222,29 @@ class Job(PrimaryModel):
     class Meta:
         managed = True
         ordering = ["grouping", "name"]
-        unique_together = ["source", "git_repository", "module_name", "job_class_name"]
+        unique_together = ["module_name", "job_class_name"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._job_class = None
         self._latest_result = None
 
     def __str__(self):
         return self.name
 
-    def validate_unique(self, exclude=None):
-        """
-        Check for duplicate (source, module_name, job_class_name) in the case where git_repository is None.
-
-        This is needed because NULL != NULL and so the unique_together constraint will not flag this case.
-        """
-        if self.git_repository is None:
-            if Job.objects.exclude(pk=self.pk).filter(
-                source=self.source, module_name=self.module_name, job_class_name=self.job_class_name
-            ):
-                raise ValidationError(
-                    {"job_class_name": "A Job already exists with this source, module_name, and job_class_name"}
-                )
-
-        super().validate_unique(exclude=exclude)
-
-    @property
+    @cached_property
     def job_class(self):
         """Get the Job class (source code) associated with this Job model."""
         if not self.installed:
             return None
-        if self._job_class is None:
-            if self.source == JobSourceChoices.SOURCE_LOCAL:
-                path = settings.JOBS_ROOT
-                for job_info in jobs_in_directory(settings.JOBS_ROOT, module_name=self.module_name):
-                    if job_info.job_class_name == self.job_class_name:
-                        self._job_class = job_info.job_class
-                        break
-                else:
-                    logger.warning("Module %s job class %s not found!", self.module_name, self.job_class_name)
-            elif self.source == JobSourceChoices.SOURCE_GIT:
-                from nautobot.extras.datasources.git import ensure_git_repository
-
-                if self.git_repository is None:
-                    logger.warning("Job %s %s has no associated Git repository", self.module_name, self.job_class_name)
-                    return None
-                try:
-                    # In the case where we have multiple Nautobot instances, or multiple worker instances,
-                    # they are not required to share a common filesystem; therefore, we may need to refresh our local
-                    # clone of the Git repository to ensure that it is in sync with the latest repository clone
-                    # from any instance.
-                    ensure_git_repository(
-                        self.git_repository,
-                        head=self.git_repository.current_head,
-                        logger=logger,
-                    )
-                    path = os.path.join(self.git_repository.filesystem_path, "jobs")
-                    for job_info in jobs_in_directory(path, module_name=self.module_name):
-                        if job_info.job_class_name == self.job_class_name:
-                            self._job_class = job_info.job_class
-                            break
-                    else:
-                        logger.warning(
-                            "Module %s job class %s not found in repository %s",
-                            self.module_name,
-                            self.job_class_name,
-                            self.git_repository,
-                        )
-                except ObjectDoesNotExist:
-                    return None
-                except Exception as exc:
-                    logger.error(f"Error during local clone/refresh of Git repository {self.git_repository}: {exc}")
-                    return None
-            elif self.source in [JobSourceChoices.SOURCE_PLUGIN, JobSourceChoices.SOURCE_SYSTEM]:
-                # pkgutil.resolve_name is only available in Python 3.9 and later
-                self._job_class = import_object(f"{self.module_name}.{self.job_class_name}")
-
-        return self._job_class
+        try:
+            return self.job_task.__class__
+        except Exception as exc:
+            logger.error(str(exc))
+            return None
 
     @property
     def class_path(self):
-        if self.git_repository is not None:
-            return f"{self.source}.{self.git_repository.slug}/{self.module_name}/{self.job_class_name}"
-        return f"{self.source}/{self.module_name}/{self.job_class_name}"
+        return f"{self.module_name}.{self.job_class_name}"
 
     @property
     def latest_result(self):
@@ -344,16 +258,25 @@ class Job(PrimaryModel):
 
     @property
     def runnable(self):
-        return (
-            self.enabled
-            and self.installed
-            and self.job_class is not None
-            and not (self.has_sensitive_variables and self.approval_required)
-        )
+        return self.enabled and self.installed and not (self.has_sensitive_variables and self.approval_required)
+
+    @cached_property
+    def git_repository(self):
+        """GitRepository record, if any, that owns this Job."""
+        try:
+            return GitRepository.objects.get(slug=self.module_name.split(".")[0])
+        except GitRepository.DoesNotExist:
+            return None
 
     @property
     def job_task(self):
-        return app.tasks.get(self.job_class.registered_name, None)
+        """Get the registered Celery task, refreshing it if necessary."""
+        if self.git_repository is not None:
+            # If this Job comes from a Git repository, make sure we have the correct version of said code.
+            refresh_git_repository(
+                state=None, repository_pk=self.git_repository.pk, head=self.git_repository.current_head
+            )
+        return app.tasks[f"{self.module_name}.{self.job_class_name}"]
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -362,12 +285,7 @@ class Job(PrimaryModel):
                 if not getattr(self, f"{field_name}_override", False):
                     setattr(self, field_name, getattr(self.job_class, field_name))
 
-        if self.git_repository is not None and self.source != JobSourceChoices.SOURCE_GIT:
-            raise ValidationError('A Git repository may only be specified when the source is "git"')
-
         # Protect against invalid input when auto-creating Job records
-        if len(self.source) > JOB_MAX_SOURCE_LENGTH:
-            raise ValidationError(f"Source may not exceed {JOB_MAX_SOURCE_LENGTH} characters in length")
         if len(self.module_name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Module name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
@@ -376,8 +294,6 @@ class Job(PrimaryModel):
             raise ValidationError(f"Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        if len(self.slug) > JOB_MAX_NAME_LENGTH:
-            raise ValidationError(f"Slug may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
 
         if self.has_sensitive_variables is True and self.approval_required is True:
             raise ValidationError(

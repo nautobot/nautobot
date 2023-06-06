@@ -257,10 +257,9 @@ The Job `name` field has been changed to a unique field and the `name` + `groupi
 
     These jobs would be named `Sample job` and `Sample job (2)`
 
-The Job `slug` has been updated to be derived from the `name` field instead of a combination of `job_source`, `git_repository`, and `job_class`.
+The Job `slug`, `source` and `git_repository` fields have been removed. The Job `module_name` field will automatically be updated, for Jobs derived from a Git repository, from `<submodule_name>` to `<git_repository_slug>.jobs.<submodule_name>`. This also changes the secondary uniqueness constraint for Jobs to simply `[module_name, job_class_name]`.
 
-!!! example
-    The Nautobot Golden Config backup job's slug will change from `plugins-nautobot_golden_config-jobs-backupjob` to `backup-configurations`.
+The Job `class_path` attribute has been simplified correspondingly, to simply `<module>.<ClassName>` instead of the former `<source>/<module>/<ClassName>`. For example, the Nautobot Golden Config backup job's `class_path` will change from `plugins/nautobot_golden_config.jobs/BackupJob` to `nautobot_golden_config.jobs.BackupJob`.
 
 The Job `commit_default` field has been renamed to `dryrun_default` and the default value has been changed from `True` to `False`. This change is a result of the fundamental job changes mentioned in the [Job Changes](#job-changes) section below.
 

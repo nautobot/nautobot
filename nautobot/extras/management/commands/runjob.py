@@ -14,7 +14,7 @@ class Command(BaseCommand):
     help = "Run a job (script, report) to validate or update data in Nautobot"
 
     def add_arguments(self, parser):
-        parser.add_argument("job", help="Job in the class path form: `<grouping_name>/<module_name>/<JobClassName>`")
+        parser.add_argument("job", help="Job in the Python module form: `<module_name>.<JobClassName>`")
         parser.add_argument(
             "--profile",
             action="store_true",
@@ -35,10 +35,8 @@ class Command(BaseCommand):
         parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
 
     def handle(self, *args, **options):
-        if "/" not in options["job"]:
-            raise CommandError(
-                'Job must be specified in the class path form: "<grouping_name>/<module_name>/<JobClassName>"'
-            )
+        if "." not in options["job"]:
+            raise CommandError('Job must be specified in the Python module form: "<module_name>.<JobClassName>"')
         job_class = get_job(options["job"])
         if not job_class:
             raise CommandError(f'Job "{options["job"]}" not found')
@@ -56,10 +54,10 @@ class Command(BaseCommand):
         except json.decoder.JSONDecodeError as error:
             raise CommandError(f"Invalid JSON data:\n{str(error)}")
 
-        job_model = Job.objects.get_for_class_path(job_class.class_path)
+        job_model = Job.objects.get_for_class_path(options["job"])
 
         # Run the job and create a new JobResult
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {options['job']}...")
 
         if options["local"]:
             job_result = JobResult.execute_job(job_model, user, profile=options["profile"], **data)
@@ -108,8 +106,8 @@ class Command(BaseCommand):
             status = self.style.ERROR("FAILURE")
         else:
             status = self.style.SUCCESS("SUCCESS")
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {job_class.class_path}: {status}")
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {options['job']}: {status}")
 
         # Wrap things up
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {job_class.class_path}: Duration {job_result.duration}")
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {options['job']}: Duration {job_result.duration}")
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Finished")

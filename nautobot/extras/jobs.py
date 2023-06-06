@@ -5,14 +5,13 @@ import inspect
 import json
 import logging
 import os
-import shutil
 import tempfile
 from textwrap import dedent
 import warnings
 
 from billiard.einfo import ExceptionInfo
 from celery import states
-from celery.exceptions import Retry
+from celery.exceptions import NotRegistered, Retry
 from celery.result import EagerResult
 from celery.utils.functional import maybe_list
 from celery.utils.log import get_task_logger
@@ -33,6 +32,7 @@ from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
+from nautobot.core.celery import app as celery_app
 from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -41,18 +41,15 @@ from nautobot.core.forms import (
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import change_logging, JobChangeContext, JobHookChangeContext
-from nautobot.extras.datasources.git import ensure_git_repository
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
-    GitRepository,
     Job as JobModel,
     JobHook,
     JobResult,
     ObjectChange,
 )
-from nautobot.extras.registry import registry
-from nautobot.extras.utils import ChangeLoggedModelsQuery, jobs_in_directory, task_queues_as_choices
+from nautobot.extras.utils import ChangeLoggedModelsQuery, task_queues_as_choices
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -215,6 +212,7 @@ class BaseJob(Task):
                 self.job_model,
                 extra={"object": self.job_model, "grouping": "initialization"},
             )
+            raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
 
         soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
         time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
@@ -228,6 +226,7 @@ class BaseJob(Task):
                 time_limit,
                 extra={"grouping": "initialization"},
             )
+
         self.logger.info("Running job", extra={"grouping": "initialization"})
 
     def run(self, *args, **kwargs):
@@ -385,53 +384,31 @@ class BaseJob(Task):
     @classproperty
     def class_path(cls):  # pylint: disable=no-self-argument
         """
-        Unique identifier of a specific Job class, in the form <source_grouping>/<module_name>/<ClassName>.
+        Unique identifier of a specific Job class, in the form <module_name>.<ClassName>.
 
         Examples:
-        local/my_script/MyScript
-        system/nautobot.core.jobs/MySystemJob
-        plugins/my_plugin.jobs/MyPluginJob
-        git.my-repository/myjob/MyJob
+        my_script.MyScript - Local Job
+        nautobot.core.jobs.MySystemJob - System Job
+        my_plugin.jobs.MyPluginJob - App-provided Job
+        git_repository.jobs.myjob.MyJob - GitRepository Job
         """
-        # TODO(Glenn): it'd be nice if this were derived more automatically instead of needing this logic
-        # TODO(jathan: Once we make all Jobs imported as modules, this may no longer be necessary as
-        # we can just trust that the import location and class_path can be derived from a single
-        # source.
-        if cls in registry["plugin_jobs"]:
-            source_grouping = "plugins"
-        elif cls in registry["system_jobs"]:
-            source_grouping = "system"
-        elif cls.file_path.startswith(settings.JOBS_ROOT):
-            source_grouping = "local"
-        elif cls.file_path.startswith(settings.GIT_ROOT):
-            # $GIT_ROOT/<repo_slug>/jobs/job.py -> <repo_slug>
-            source_grouping = ".".join(
-                [
-                    "git",
-                    os.path.basename(os.path.dirname(os.path.dirname(cls.file_path))),
-                ]
-            )
-        else:
-            raise RuntimeError(
-                f"Unknown/unexpected job file_path {cls.file_path}, should be one of "
-                + ", ".join([settings.JOBS_ROOT, settings.GIT_ROOT])
-            )
-
-        return "/".join([source_grouping, cls.__module__, cls.__name__])
+        return f"{cls.__module__}.{cls.__name__}"
 
     @classproperty
     def class_path_dotted(cls):  # pylint: disable=no-self-argument
         """
         Dotted class_path, suitable for use in things like Python logger names.
+
+        Deprecated as of Nautobot 2.0: just use .class_path instead.
         """
-        return cls.class_path.replace("/", ".")
+        return cls.class_path
 
     @classproperty
     def class_path_js_escaped(cls):  # pylint: disable=no-self-argument
         """
         Escape various characters so that the class_path can be used as a jQuery selector.
         """
-        return cls.class_path.replace("/", r"\/").replace(".", r"\.")
+        return cls.class_path.replace(".", r"\.")
 
     @classproperty
     def grouping(cls):  # pylint: disable=no-self-argument
@@ -1139,152 +1116,16 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
-def get_jobs():
-    """
-    Compile a dictionary of all jobs available across all modules in the jobs path(s).
-
-    Returns an OrderedDict:
-
-    {
-        "local": {
-            <module_name>: {
-                "name": <human-readable module name>,
-                "jobs": {
-                   <class_name>: <job_class>,
-                   <class_name>: <job_class>,
-                   ...
-                },
-            },
-            <module_name>: { ... },
-            ...
-        },
-        "git.<repository-slug>": {
-            <module_name>: { ... },
-        },
-        ...
-        "plugins": {
-            <module_name>: { ... },
-        }
-    }
-    """
-    jobs = OrderedDict()
-
-    paths = _get_job_source_paths()
-
-    # Iterate over all filesystem sources (local, git.<slug1>, git.<slug2>, etc.)
-    for source, path in paths.items():
-        for job_info in jobs_in_directory(path):
-            jobs.setdefault(source, {})
-            if job_info.module_name not in jobs[source]:
-                jobs[source][job_info.module_name] = {"name": job_info.job_class.grouping, "jobs": OrderedDict()}
-            jobs[source][job_info.module_name]["jobs"][job_info.job_class_name] = job_info.job_class
-
-    # Add jobs from system (which were already imported at startup)
-    for cls in registry["system_jobs"]:
-        module = inspect.getmodule(cls)
-        jobs.setdefault("system", {}).setdefault(module.__name__, {"name": cls.grouping, "jobs": OrderedDict()})
-        jobs["system"][module.__name__]["jobs"][cls.__name__] = cls
-
-    # Add jobs from plugins (which were already imported at startup)
-    for cls in registry["plugin_jobs"]:
-        module = inspect.getmodule(cls)
-        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": cls.grouping, "jobs": OrderedDict()})
-        jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
-
-    return jobs
-
-
-def _get_job_source_paths():
-    """
-    Helper function to get_jobs().
-
-    Constructs a dict of {"grouping": filesystem_path, ...}.
-    Current groupings are "local", "git.<repository_slug>".
-    Plugin jobs aren't loaded dynamically from a source_path and so are not included in this function
-    """
-    paths = {}
-    # Locally installed jobs
-    if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
-        paths["local"] = settings.JOBS_ROOT
-
-    # Jobs derived from Git repositories
-    if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
-        for repository_record in GitRepository.objects.all():
-            if "extras.job" not in repository_record.provided_contents:
-                # This repository isn't marked as containing jobs that we should use.
-                continue
-
-            try:
-                # In the case where we have multiple Nautobot instances, or multiple worker instances,
-                # they are not required to share a common filesystem; therefore, we may need to refresh our local clone
-                # of the Git repository to ensure that it is in sync with the latest repository clone from any instance.
-                ensure_git_repository(
-                    repository_record,
-                    head=repository_record.current_head,
-                    logger=logger,
-                )
-            except Exception as exc:
-                logger.error(f"Error during local clone of Git repository {repository_record}: {exc}")
-                continue
-
-            jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
-            if os.path.isdir(jobs_path):
-                paths[f"git.{repository_record.slug}"] = jobs_path
-            else:
-                logger.warning(f"Git repository {repository_record} is configured to provide jobs, but none are found!")
-
-        # TODO(Glenn): when a Git repo is deleted or its slug is changed, we update the local filesystem
-        # (see extras/signals.py, extras/models/datasources.py), but as noted above, there may be multiple filesystems
-        # involved, so not all local clones of deleted Git repositories may have been deleted yet.
-        # For now, if we encounter a "leftover" Git repo here, we delete it now.
-        for git_slug in os.listdir(settings.GIT_ROOT):
-            git_path = os.path.join(settings.GIT_ROOT, git_slug)
-            if not os.path.isdir(git_path):
-                logger.warning(
-                    f"Found non-directory {git_slug} in {settings.GIT_ROOT}. Only Git repositories should exist here."
-                )
-            elif not os.path.isdir(os.path.join(git_path, ".git")):
-                logger.warning(f"Directory {git_slug} in {settings.GIT_ROOT} does not appear to be a Git repository.")
-            elif not GitRepository.objects.filter(slug=git_slug):
-                logger.warning(f"Deleting unmanaged (leftover?) repository at {git_path}")
-                shutil.rmtree(git_path)
-
-    return paths
-
-
-def get_job_classpaths():
-    """
-    Get a list of all known Job class_path strings.
-
-    This is used as a cacheable, light-weight alternative to calling get_jobs() or get_job()
-    when all that's needed is to verify whether a given job exists.
-    """
-    jobs_dict = get_jobs()
-    result = set()
-    for grouping_name, modules_dict in jobs_dict.items():
-        for module_name in modules_dict:
-            for class_name in modules_dict[module_name]["jobs"]:
-                result.add(f"{grouping_name}/{module_name}/{class_name}")
-    return result
-
-
 def get_job(class_path):
     """
-    Retrieve a specific job class by its class_path.
+    Retrieve a specific job class by its class_path (<module_name>.<JobClassName>).
 
-    Note that this is built atop get_jobs() and so is not a particularly light-weight API;
-    if all you need to do is to verify whether a given class_path exists, use get_job_classpaths() instead.
-
-    Returns None if not found.
+    May return None if the job isn't properly registered with Celery at this time.
     """
     try:
-        grouping_name, module_name, class_name = class_path.split("/", 2)
-    except ValueError:
-        logger.error(f'Invalid class_path value "{class_path}"')
+        return celery_app.tasks[class_path].__class__
+    except NotRegistered:
         return None
-
-    jobs = get_jobs()
-    return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
 def enqueue_job_hooks(object_change):

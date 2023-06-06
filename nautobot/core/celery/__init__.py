@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 import pkgutil
+import shutil
 import sys
 
 from celery import Celery, shared_task, signals
@@ -15,6 +16,7 @@ from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
+from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
 
@@ -66,18 +68,53 @@ app.autodiscover_tasks()
 
 
 @signals.import_modules.connect
-def import_tasks_from_jobs_root(sender, **kwargs):
-    """Load jobs from JOBS_ROOT on celery workers."""
+def import_jobs_as_celery_tasks(sender, database_ready=True, **kwargs):
+    """
+    Import system Jobs into Celery as well as Jobs from JOBS_ROOT and GIT_ROOT.
+
+    Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready()
+    """
+    logger.debug("Importing system Jobs")
+    sender.loader.import_task_module("nautobot.core.jobs")
+
     jobs_root = settings.JOBS_ROOT
     if jobs_root and os.path.exists(jobs_root):
         if jobs_root not in sys.path:
             sys.path.append(jobs_root)
         for _, module_name, _ in pkgutil.iter_modules([jobs_root]):
             try:
+                logger.debug("Importing Jobs from %s in JOBS_ROOT", module_name)
                 sender.loader.import_task_module(module_name)
             except Exception as exc:
                 # logger.error(f"Unable to load module '{module_name}' from {jobs_root}: {exc:}")
                 logger.exception(exc)
+
+    git_root = settings.GIT_ROOT
+    if git_root and os.path.exists(git_root):
+        if git_root not in sys.path:
+            sys.path.append(git_root)
+
+        # We can't detect which Git directories we're *supposed* to auto-load Jobs from if we can't read GitRepository
+        # records from the DB, unfortunately.
+        # We work around this in JobModel.job_task to try later loading Git jobs on-the-fly if needed.
+        if database_ready:
+            from nautobot.extras.models import GitRepository
+
+            # Make sure there are no git clones in GIT_ROOT that *aren't* tracked by a GitRepository;
+            # for example, maybe a GitRepository was deleted while this worker process wasn't running?
+            for filename in os.listdir(git_root):
+                filepath = os.path.join(git_root, filename)
+                if (
+                    os.path.isdir(filepath)
+                    and os.path.isdir(os.path.join(filepath, ".git"))
+                    and not GitRepository.objects.filter(slug=filename).exists()
+                ):
+                    logger.warning("Deleting unmanaged (leftover?) Git repository clone at %s", filepath)
+                    shutil.rmtree(filepath)
+
+            # Make sure all GitRepository records that include Jobs have up-to-date git clones, and load their jobs
+            for repo in GitRepository.objects.all():
+                refresh_git_repository(state=None, repository_pk=repo.pk, head=repo.current_head)
 
 
 def add_nautobot_log_handler(logger_instance, log_format=None):
@@ -180,4 +217,5 @@ nautobot_task = shared_task
 def register_jobs(*jobs):
     """Helper method to register jobs with Celery"""
     for job in jobs:
+        logger.debug("Registering job %s.%s", job.__module__, job.__name__)
         app.register_task(job)

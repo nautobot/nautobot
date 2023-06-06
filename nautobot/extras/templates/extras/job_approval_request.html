@@ -32,9 +32,6 @@
         <li role="presentation" class="active">
             <a href="#run" role="tab" data-toggle="tab" class="active">Approval Request</a>
         </li>
-        <li role="presentation">
-            <a href="#source" role="tab" data-toggle="tab">Source</a>
-        </li>
     </ul>
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="run">
@@ -132,12 +129,6 @@
                     </form>
                 </div>
             </div>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="source">
-            {% if object.job_model.installed and object.job_model.job_class is not None %}
-                <p><code>{{ object.job_model.job_class.filename }}</code></p>
-                <pre>{{ object.job_model.job_class.source }}</pre>
-            {% endif %}
         </div>
     </div>
 {% endblock %}

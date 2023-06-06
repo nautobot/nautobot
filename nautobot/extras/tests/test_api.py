@@ -833,6 +833,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     }
     choices_fields = ["provided_contents"]
     slug_source = "name"
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -844,17 +845,17 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         cls.repos = (
             GitRepository(
                 name="Repo 1",
-                slug="repo-1",
+                slug="repo_1",
                 remote_url="https://example.com/repo1.git",
                 secrets_group=secrets_groups[0],
             ),
             GitRepository(
                 name="Repo 2",
-                slug="repo-2",
+                slug="repo_2",
                 remote_url="https://example.com/repo2.git",
                 secrets_group=secrets_groups[0],
             ),
-            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+            GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
         )
         for repo in cls.repos:
             repo.save()
@@ -862,20 +863,20 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "New Git Repository 1",
-                "slug": "new-git-repository-1",
+                "slug": "new_git_repository_1",
                 "remote_url": "https://example.com/newrepo1.git",
                 "secrets_group": secrets_groups[1].pk,
                 "provided_contents": ["extras.configcontext", "extras.exporttemplate"],
             },
             {
                 "name": "New Git Repository 2",
-                "slug": "new-git-repository-2",
+                "slug": "new_git_repository_2",
                 "remote_url": "https://example.com/newrepo2.git",
                 "secrets_group": secrets_groups[1].pk,
             },
             {
                 "name": "New Git Repository 3",
-                "slug": "new-git-repository-3",
+                "slug": "new_git_repository_3",
                 "remote_url": "https://example.com/newrepo3.git",
                 "secrets_group": secrets_groups[1].pk,
             },
@@ -885,6 +886,13 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
                 "secrets_group": secrets_groups[1].pk,
             },
         ]
+
+        # slug is enforced non-editable in clean because we want it to be providable by the user on creation
+        # but not modified afterward
+        cls.update_data = {
+            "name": "A Different Repo Name",
+            "remote_url": "https://example.com/fake.git",
+        }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -937,7 +945,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = self._get_list_url()
         data = {
             "name": "plugin_test",
-            "slug": "plugin-test",
+            "slug": "plugin_test",
             "remote_url": "https://localhost/plugin-test",
             "provided_contents": ["example_plugin.textfile"],
         }
@@ -1155,7 +1163,6 @@ class JobTest(
         "grouping": "Overridden grouping",
         "name_override": True,
         "name": "Overridden name",
-        "slug": "overridden-slug",
         "description_override": True,
         "description": "This is an overridden description.",
         "enabled": True,
@@ -1184,15 +1191,16 @@ class JobTest(
 
     def setUp(self):
         super().setUp()
-        self.default_job_name = "local/api_test_job/APITestJob"
+        self.default_job_name = "api_test_job.APITestJob"
         self.job_class = get_job(self.default_job_name)
+        self.assertIsNotNone(self.job_class)
         self.job_model = Job.objects.get_for_class_path(self.default_job_name)
         self.job_model.enabled = True
         self.job_model.validated_save()
 
     run_success_response_status = status.HTTP_201_CREATED
 
-    def get_run_url(self, class_path="local/api_test_job/APITestJob"):
+    def get_run_url(self, class_path="api_test_job.APITestJob"):
         job_model = Job.objects.get_for_class_path(class_path)
         return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
 
@@ -1212,7 +1220,7 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model = Job.objects.get_for_class_path("api_test_job.APITestJob")
         job_model.has_sensitive_variables = True
         job_model.has_sensitive_variables_override = True
         job_model.validated_save()
@@ -1234,7 +1242,7 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_approval_required_job_set_has_sensitive_variables_to_true(self):
-        job_model = Job.objects.get_for_class_path("local/api_test_job/APITestJob")
+        job_model = Job.objects.get_for_class_path("api_test_job.APITestJob")
         job_model.approval_required = True
         job_model.approval_required_override = True
         job_model.validated_save()
@@ -1279,7 +1287,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         obj_perm = ObjectPermission(
             name="Test permission",
-            constraints={"module_name__in": ["test_pass", "test_fail"]},
+            constraints={"module_name__in": ["pass", "fail"]},
             actions=["run"],
         )
         obj_perm.save()
@@ -1293,10 +1301,10 @@ class JobTest(
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
         # Try post to permitted job
-        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("local/test_pass/TestPass")
+        url = self.get_run_url("pass.TestPass")
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1324,7 +1332,6 @@ class JobTest(
         self.add_permissions("extras.run_job")
 
         job_model = Job(
-            source="local",
             module_name="uninstalled_module",
             job_class_name="NoSuchJob",
             grouping="Uninstalled Module",
@@ -1334,7 +1341,7 @@ class JobTest(
         )
         job_model.validated_save()
 
-        url = self.get_run_url("local/uninstalled_module/NoSuchJob")
+        url = self.get_run_url("uninstalled_module.NoSuchJob")
         with disable_warnings("django.request"):
             response = self.client.post(url, {}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -1521,7 +1528,7 @@ class JobTest(
 
         test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
 
-        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model = Job.objects.get_for_class_path("field_order.TestFieldOrder")
         job_model.enabled = True
         job_model.validated_save()
 
@@ -1534,7 +1541,7 @@ class JobTest(
             "var1": test_file,
         }
 
-        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        url = self.get_run_url(class_path="field_order.TestFieldOrder")
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1545,7 +1552,7 @@ class JobTest(
 
         test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
 
-        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model = Job.objects.get_for_class_path("field_order.TestFieldOrder")
         job_model.enabled = True
         job_model.validated_save()
 
@@ -1558,7 +1565,7 @@ class JobTest(
             "var1": test_file,
         }
 
-        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        url = self.get_run_url(class_path="field_order.TestFieldOrder")
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1569,7 +1576,7 @@ class JobTest(
 
         test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
 
-        job_model = Job.objects.get_for_class_path("local/test_field_order/TestFieldOrder")
+        job_model = Job.objects.get_for_class_path("field_order.TestFieldOrder")
         job_model.enabled = True
         job_model.validated_save()
 
@@ -1585,7 +1592,7 @@ class JobTest(
             "_schedule_name": "test",
         }
 
-        url = self.get_run_url(class_path="local/test_field_order/TestFieldOrder")
+        url = self.get_run_url(class_path="field_order.TestFieldOrder")
         response = self.client.post(url, data=job_data, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1850,10 +1857,10 @@ class JobTest(
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
 
-        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("local/test_pass/TestPass")
+        url = self.get_run_url("pass.TestPass")
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -2049,7 +2056,7 @@ class JobResultTest(
         )
         JobResult.objects.create(
             job_model=None,
-            name="Deleted Job",
+            name="deleted_module.deleted_job",
             date_done=now(),
             user=None,
             status=JobResultStatusChoices.STATUS_SUCCESS,
@@ -2104,10 +2111,10 @@ class ScheduledJobTest(
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2117,7 +2124,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2127,7 +2134,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="pass.TestPass",
             job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2150,12 +2157,12 @@ class JobApprovalTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.additional_user = User.objects.create(username="user1", is_active=True)
-        cls.job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
+        cls.job_model = Job.objects.get_for_class_path("pass.TestPass")
         cls.job_model.enabled = True
         cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="pass.TestPass",
             job_class=cls.job_model.class_path,
             job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2163,12 +2170,12 @@ class JobApprovalTest(APITestCase):
             approval_required=True,
             start_time=now(),
         )
-        cls.dryrun_job_model = Job.objects.get_for_class_path("local/test_dry_run/TestDryRun")
+        cls.dryrun_job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
         cls.dryrun_job_model.enabled = True
         cls.dryrun_job_model.save()
         cls.dryrun_scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.tests.example_jobs.test_dry_run.TestDryRun",
+            task="dry_run.TestDryRun",
             job_class=cls.dryrun_job_model.class_path,
             job_model=cls.dryrun_job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2209,7 +2216,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
@@ -2233,7 +2240,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
@@ -2251,7 +2258,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.tests.example_jobs.test_pass.TestPass",
+            task="pass.TestPass",
             job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,

@@ -1,4 +1,3 @@
-import inspect
 import logging
 import os
 
@@ -16,7 +15,6 @@ from constance.apps import ConstanceConfig
 from graphene.types import generic, String
 
 from nautobot.core.signals import nautobot_database_ready
-from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import registry
 
 
@@ -26,22 +24,6 @@ MENU_TABS = ("Inventory", "Networks", "Security", "Automation", "Platform")
 logger = logging.getLogger(__name__)
 registry["nav_menu"] = dict({tab: {"groups": {}, "permissions": set()} for tab in MENU_TABS})
 registry["homepage_layout"] = {"panels": {}}
-registry["system_jobs"] = []
-
-
-def register_jobs(class_list):
-    """
-    Register a list of Job classes
-    """
-    from nautobot.extras.jobs import Job
-
-    for job in class_list:
-        if not inspect.isclass(job):
-            raise TypeError(f"Job class {job} was passed as an instance!")
-        if not issubclass(job, Job):
-            raise TypeError(f"{job} is not a subclass of extras.jobs.Job!")
-
-        registry["system_jobs"].append(job)
 
 
 class NautobotConfig(AppConfig):
@@ -62,13 +44,17 @@ class NautobotConfig(AppConfig):
         """
         Ready function initiates the import application.
         """
-        homepage_layout = import_object(f"{self.name}.{self.homepage_layout}")
-        if homepage_layout is not None:
+        try:
+            homepage_layout = import_string(f"{self.name}.{self.homepage_layout}")
             register_homepage_panels(self.path, self.label, homepage_layout)
+        except ModuleNotFoundError:
+            pass
 
-        menu_items = import_object(f"{self.name}.{self.menu_tabs}")
-        if menu_items is not None:
+        try:
+            menu_items = import_string(f"{self.name}.{self.menu_tabs}")
             register_menu_items(menu_items)
+        except ModuleNotFoundError:
+            pass
 
 
 def create_or_check_entry(grouping, record, key, path):
@@ -628,8 +614,9 @@ class CoreConfig(NautobotConfig):
         super().ready()
 
         # Register jobs last after everything else has been done.
-        jobs = import_string("nautobot.core.jobs.jobs")
-        register_jobs(jobs)
+        from nautobot.core.celery import app, import_jobs_as_celery_tasks
+
+        import_jobs_as_celery_tasks(app, database_ready=False)
 
 
 class NautobotConstanceConfig(ConstanceConfig):

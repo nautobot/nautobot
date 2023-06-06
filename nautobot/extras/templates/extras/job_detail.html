@@ -23,16 +23,6 @@
         </div>
         <table class="table table-hover panel-body attr-table">
             <tr>
-                <td>Source</td>
-                <td>{{ object.source | bettertitle }}</td>
-            </tr>
-            {% if object.source == "git" %}
-                <tr>
-                    <td>Repository</td>
-                    <td>{{ object.git_repository|hyperlinked_object }}</td>
-                </tr>
-            {% endif %}
-            <tr>
                 <td>Module</td>
                 <td><code>{{ object.module_name }}</code></td>
             </tr>

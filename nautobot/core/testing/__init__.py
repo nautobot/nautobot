@@ -100,9 +100,8 @@ def get_job_class_and_model(module, name, source="local"):
     Returns:
         JobClassInfo: Named 2-tuple of (job_class, job_model)
     """
-    class_path = f"{source}/{module}/{name}"
-    job_class = get_job(class_path)
-    job_model = Job.objects.get_for_class_path(class_path)
+    job_class = get_job(f"{module}.{name}")
+    job_model = Job.objects.get(module_name=module, job_class_name=name)
     job_model.enabled = True
     job_model.validated_save()
     return JobClassInfo(job_class, job_model)

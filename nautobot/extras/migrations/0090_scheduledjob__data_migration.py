@@ -10,6 +10,7 @@ def migrate_existing_scheduled_jobs(apps, schema_editor):
     2. delete sj.kwargs["commit"].
     3. set sj.user to the old sj.kwargs["user"] if the user is not already set.
     4. set sj.queue and sj.celery_kwargs["queue"] to the old sj.kwargs["task_queue"].
+    5. change sj.job_class from old "source/module/class_name" to "module.class_name"
     """
     ScheduledJob = apps.get_model("extras", "ScheduledJob")
     for sj in ScheduledJob.objects.all():
@@ -20,6 +21,7 @@ def migrate_existing_scheduled_jobs(apps, schema_editor):
             sj.user = old_kwargs.get("user")
         sj.queue = old_kwargs.get("task_queue", "")
         sj.celery_kwargs["queue"] = old_kwargs.get("task_queue", "")
+        sj.job_class = ".".join(sj.job_class.split("/")[-2:])
         sj.save()
 
 
@@ -30,6 +32,7 @@ def reverse_migrate_existing_scheduled_jobs(apps, schema_editor):
     2. Restore the "commit" key to False.
     3. Restore the "user" key from sj.user.
     4. Restore the "task_queue" from sj.queue.
+    5. Restore the "job_class" to a semblance of its old form (will likely be broken)
     """
     ScheduledJob = apps.get_model("extras", "ScheduledJob")
     for sj in ScheduledJob.objects.all():
@@ -37,6 +40,7 @@ def reverse_migrate_existing_scheduled_jobs(apps, schema_editor):
         sj.kwargs["commit"] = False
         sj.kwargs["user"] = sj.user
         sj.kwargs["task_queue"] = sj.queue or sj.celery_kwargs["queue"]
+        sj.job_class = "local/" + "/".join(sj.job_class.rsplit(".", 1))
         sj.save()
 
 

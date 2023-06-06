@@ -5,18 +5,20 @@ import logging
 import mimetypes
 import os
 import re
+import sys
 from urllib.parse import quote
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
 from django.utils.text import slugify
 import yaml
 
+from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.git import GitRepo
 from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
-    JobSourceChoices,
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -33,7 +35,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
-from nautobot.extras.utils import jobs_in_directory, refresh_job_model_from_job_class
+from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.tenancy.models import TenantGroup, Tenant
 from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
 from .utils import files_from_contenttype_directories
@@ -151,20 +153,25 @@ def ensure_git_repository(
     repository_record, job_result=None, logger=None, head=None  # pylint: disable=redefined-outer-name
 ):
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-    Note that this function may be called independently of the `pull_git_repository_and_refresh_data` job,
+
+    Note that this function may be called independently of the `GitRepositorySync` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
+
     Args:
       repository_record (GitRepository): Repository to ensure the state of.
       job_result (JobResult): Optional JobResult to store results into.
       logger (logging.Logger): Optional Logger to additionally log results to.
       head (str): Optional Git commit hash to check out instead of pulling branch latest.
+
+    Returns:
+      bool: Whether any change to the local repo actually occurred.
     """
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
 
     try:
         repo_helper = GitRepo(to_path, from_url)
-        head = repo_helper.checkout(from_branch, head)
+        head, changed = repo_helper.checkout(from_branch, head)
         if repository_record.current_head != head:
             repository_record.current_head = head
             repository_record.save()
@@ -181,19 +188,23 @@ def ensure_git_repository(
         raise
 
     if job_result:
-        job_result.log(
-            "Repository successfully refreshed",
-            level_choice=LogLevelChoices.LOG_INFO,
-            logger=logger,
-        )
+        if changed:
+            job_result.log(
+                "Repository successfully refreshed",
+                level_choice=LogLevelChoices.LOG_INFO,
+                logger=logger,
+            )
         job_result.log(
             f'The current Git repository hash is "{repository_record.current_head}"',
             level_choice=LogLevelChoices.LOG_INFO,
             logger=logger,
         )
     elif logger:
-        logger.info("Repository successfully refreshed")
+        if changed:
+            logger.info("Repository successfully refreshed")
         logger.info(f'The current Git repository hash is "{repository_record.current_head}"')
+
+    return changed
 
 
 def git_repository_dry_run(repository_record, job_result=None, logger=None):  # pylint: disable=redefined-outer-name
@@ -812,28 +823,71 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 #
 
 
+def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=False):
+    """
+    After cloning/updating a GitRepository on disk, call this function to reload and reregister the repo's Python code.
+
+    Args:
+        repository_slug (str): Repository directory in GIT_ROOT that was refreshed.
+        consumer (celery.worker.Consumer): Celery Consumer to update as well
+        skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
+    """
+    if settings.GIT_ROOT not in sys.path:
+        sys.path.append(settings.GIT_ROOT)
+
+    app = consumer.app if consumer is not None else celery_app
+    # TODO: This is ugly, but when app.use_fast_trace_task is set (true by default), Celery calls
+    # celery.app.trace.fast_trace_task(...) which assumes that all tasks are cached and have a valid `__trace__()`
+    # function defined. In theory consumer.update_strategies() (below) should ensure this, but it doesn't
+    # go far enough (possibly a discrepancy between the main worker process and the prefork executors?)
+    # as we can and do still encounter errors where `task.__trace__` is unexpectedly None.
+    # For now, simply disabling use_fast_trace_task forces the task trace function to be rebuilt each time,
+    # which avoids the issue at the cost of very slight overhead.
+    app.use_fast_trace_task = False
+
+    # Unload any previous version of this module and its submodules if present
+    for module_name in list(sys.modules):
+        if module_name == repository_slug or module_name.startswith(f"{repository_slug}."):
+            logger.debug("Unloading module %s", module_name)
+            if module_name in app.loader.task_modules:
+                app.loader.task_modules.remove(module_name)
+            del sys.modules[module_name]
+
+    # Unregister any previous Celery tasks from this module
+    for task_name in list(app.tasks):
+        if task_name.startswith(f"{repository_slug}."):
+            logger.debug("Unregistering Celery task %s", task_name)
+            app.tasks.unregister(task_name)
+            if consumer is not None:
+                del consumer.strategies[task_name]
+
+    if not skip_reimport:
+        try:
+            repository = GitRepository.objects.get(slug=repository_slug)
+            if "extras.job" in repository.provided_contents:
+                # Re-import Celery tasks from this module
+                logger.debug("Importing Jobs from %s.jobs in GIT_ROOT", repository_slug)
+                app.loader.import_task_module(f"{repository_slug}.jobs")
+                if consumer is not None:
+                    consumer.update_strategies()
+        except GitRepository.DoesNotExist as exc:
+            logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+            raise
+
+
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
     installed_jobs = []
     if "extras.job" in repository_record.provided_contents and not delete:
-        jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
-        if os.path.isdir(jobs_path):
-            for job_info in jobs_in_directory(jobs_path, report_errors=True):
-                if job_info.error is not None:
-                    job_result.log(
-                        message=f"Error in loading Jobs from `{job_info.module_name}`: `{job_info.error}`",
-                        grouping="jobs",
-                        level_choice=LogLevelChoices.LOG_ERROR,
-                        logger=logger,
-                    )
-                    continue
+        found_jobs = False
+        try:
+            refresh_code_from_repository(repository_record.slug)
 
-                job_model, created = refresh_job_model_from_job_class(
-                    Job,
-                    JobSourceChoices.SOURCE_GIT,
-                    job_info.job_class,
-                    git_repository=repository_record,
-                )
+            for task_name, task in celery_app.tasks.items():
+                if not task_name.startswith(f"{repository_record.slug}."):
+                    continue
+                found_jobs = True
+                job_model, created = refresh_job_model_from_job_class(Job, task.__class__)
 
                 if job_model is None:
                     job_result.log(
@@ -856,15 +910,26 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     logger=logger,
                 )
                 installed_jobs.append(job_model)
-        else:
+
+            if not found_jobs:
+                job_result.log(
+                    "No jobs were registered on loading the `jobs` submodule. Did you miss a `register_jobs()` call?",
+                    grouping="jobs",
+                    level_choice=LogLevelChoices.LOG_WARNING,
+                    logger=logger,
+                )
+        except Exception as exc:
             job_result.log(
-                "No `jobs` subdirectory found in Git repository",
+                f"Error in loading Jobs from Git repository: {exc}",
                 grouping="jobs",
-                level_choice=LogLevelChoices.LOG_WARNING,
+                level_choice=LogLevelChoices.LOG_ERROR,
                 logger=logger,
             )
+    else:
+        # Unload code from this repository, do not reimport it
+        refresh_code_from_repository(repository_record.slug, skip_reimport=True)
 
-    for job_model in Job.objects.filter(source=JobSourceChoices.SOURCE_GIT, git_repository=repository_record):
+    for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:
             job_result.log(
                 message="Marking Job record as no longer installed",
