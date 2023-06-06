@@ -358,27 +358,44 @@ class ParallelPrefixTest(APITransactionTestCase):
             connection.close()
 
 
-@skip("Needs to be updated for Namespaces")
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
+
+    # Namespace is a write-only field.
+    validation_excluded_fields = ["namespace"]
 
     @classmethod
     def setUpTestData(cls):
         cls.statuses = Status.objects.get_for_model(IPAddress)
         cls.namespace = Namespace.objects.first()
-        Prefix.objects.create(prefix="192.168.0.0/24", namespace=cls.namespace)
-        Prefix.objects.create(prefix="2001:db8:abcd:12::/64", namespace=cls.namespace)
+        pfx_status = Status.objects.get_for_model(Prefix).first()
+        parent4 = Prefix.objects.create(prefix="192.168.0.0/24", status=pfx_status, namespace=cls.namespace)
+        parent6 = Prefix.objects.create(prefix="2001:db8:abcd:12::/64", status=pfx_status, namespace=cls.namespace)
+
+        # Generic `test_update_object()` will grab the first object, so we're aligning this
+        # update_data with that to make sure that it has a valid parent.
+        first_ip = IPAddress.objects.first()
+        cls.update_data = {
+            "address": str(first_ip),
+            "namespace": cls.namespace.pk,
+            "status": cls.statuses[0].pk,
+        }
+
+        # Intermix `namespace` and `parent` arguments for create to assert either will work.
         cls.create_data = [
             {
                 "address": "192.168.0.4/24",
+                "namespace": cls.namespace.pk,
                 "status": cls.statuses[0].pk,
             },
             {
                 "address": "2001:db8:abcd:12::20/128",
+                "parent": parent6.pk,
                 "status": cls.statuses[0].pk,
             },
             {
                 "address": "192.168.0.6/24",
+                "parent": parent4.pk,
                 "status": cls.statuses[0].pk,
             },
         ]
@@ -387,6 +404,22 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             "status": cls.statuses[1].pk,
         }
 
+    def test_create_requires_parent_or_namespace(self):
+        """Test that missing parent/namespace fields result in an error."""
+        self.add_permissions("ipam.add_ipaddress")
+        data = {
+            "address": "192.168.0.10/32",
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(
+            self._get_list_url(),
+            data,
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("__all__", response.data)
+
     def test_create_invalid_address(self):
         """Pass various invalid inputs and confirm they are rejected cleanly."""
         self.add_permissions("ipam.add_ipaddress")
@@ -394,7 +427,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         for bad_address in ("", "192.168.0.0.100/24", "192.168.0.0/35", "2001:db8:1:2:3:4:5:6:7:8/64"):
             response = self.client.post(
                 self._get_list_url(),
-                {"address": bad_address, "status": self.statuses[0].pk},
+                {"address": bad_address, "status": self.statuses[0].pk, "namespace": self.namespace.pk},
                 format="json",
                 **self.header,
             )
@@ -404,20 +437,29 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
     def test_create_multiple_outside_nat_success(self):
         """Validate NAT inside address can tie to multiple NAT outside addresses."""
         # Create the two outside NAT IP Addresses tied back to the single inside NAT address
-        self.add_permissions("ipam.add_ipaddress")
-        self.add_permissions("ipam.view_ipaddress")
+        self.add_permissions("ipam.add_ipaddress", "ipam.view_ipaddress")
         nat_inside = IPAddress.objects.filter(nat_outside_list__isnull=True).first()
         # Create NAT outside with above address IP as inside NAT
         ip1 = self.client.post(
             self._get_list_url(),
-            {"address": "192.0.2.1/24", "nat_inside": nat_inside.pk, "status": self.statuses[0].pk},
+            {
+                "address": "192.168.0.19/24",
+                "nat_inside": nat_inside.pk,
+                "status": self.statuses[0].pk,
+                "namespace": self.namespace.pk,
+            },
             format="json",
             **self.header,
         )
         self.assertHttpStatus(ip1, status.HTTP_201_CREATED)
         ip2 = self.client.post(
             self._get_list_url(),
-            {"address": "192.0.2.2/24", "nat_inside": nat_inside.pk, "status": self.statuses[0].pk},
+            {
+                "address": "192.168.0.20/24",
+                "nat_inside": nat_inside.pk,
+                "status": self.statuses[0].pk,
+                "namespace": self.namespace.pk,
+            },
             format="json",
             **self.header,
         )
@@ -428,8 +470,8 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["nat_outside_list"][0]["address"], "192.0.2.1/24")
-        self.assertEqual(response.data["nat_outside_list"][1]["address"], "192.0.2.2/24")
+        self.assertEqual(response.data["nat_outside_list"][0]["address"], "192.168.0.19/24")
+        self.assertEqual(response.data["nat_outside_list"][1]["address"], "192.168.0.20/24")
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
