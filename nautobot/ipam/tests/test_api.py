@@ -617,6 +617,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.json()["ports"], expected)
 
         # And do it again, but with ports as int.
+        data["name"] = "http-1"
         data["ports"] = expected
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)

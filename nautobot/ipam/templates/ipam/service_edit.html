@@ -12,13 +12,16 @@
                         <p class="form-control-static">{{ obj.device }}</p>
                     </div>
                 </div>
-            {% else %}
+            {% elif obj.virtual_machine %}
                 <div class="form-group">
                     <label class="col-md-3 control-label required">Virtual Machine</label>
                     <div class="col-md-9">
                         <p class="form-control-static">{{ obj.virtual_machine }}</p>
                     </div>
                 </div>
+            {% else %}
+                {% render_field form.device %}
+                {% render_field form.virtual_machine %}
             {% endif %}
             {% render_field form.name %}
             {% render_field form.protocol %}
