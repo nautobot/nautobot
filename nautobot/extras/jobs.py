@@ -207,7 +207,7 @@ class BaseJob(Task):
             raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
 
         if not self.job_model.enabled:
-            logger.error(
+            self.logger.error(
                 "Job %s is not enabled to be run!",
                 self.job_model,
                 extra={"object": self.job_model, "grouping": "initialization"},
