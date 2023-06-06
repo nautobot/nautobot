@@ -84,7 +84,11 @@ class ExampleLoggingJob(Job):
             logger.info("Step %s", step)
             print(f"stdout logging for step {step}, task: {self.request.id}")
             print(f"stderr logging for step {step}, task: {self.request.id}", file=sys.stderr)
-        logger.info("Success", extra={"object": self.job_model})
+        logger.critical(
+            "This log message will not be logged to the database but will be logged to the console.",
+            extra={"skip_db_logging": True},
+        )
+        logger.info("Success", extra={"object": self.job_model, "grouping": "job_run_success"})
         return f"Ran for {interval} seconds"
 
 
