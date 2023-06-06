@@ -867,9 +867,6 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
             if "extras.job" in repository.provided_contents:
                 # Re-import Celery tasks from this module
                 logger.debug("Importing Jobs from %s.jobs in GIT_ROOT", repository_slug)
-                # TODO: this is **NOT** sufficient to get Celery tasks working in the current prefork model,
-                # as we need some way to restart the preforked worker processes or otherwise
-                # tell them to (re)import the module.
                 app.loader.import_task_module(f"{repository_slug}.jobs")
                 if consumer is not None:
                     consumer.update_strategies()
