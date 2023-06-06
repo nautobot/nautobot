@@ -1,0 +1,1 @@
+Fixed build failure caused by registered App missing ui/index.js.
