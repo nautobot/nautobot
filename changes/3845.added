@@ -1,0 +1,2 @@
+Added two uniqueness constraints, ("name", "device") and ("name", "virtual_machine"), to Service model.
+Added data migration to ensure all existing service instances fit those uniqueness constraints.

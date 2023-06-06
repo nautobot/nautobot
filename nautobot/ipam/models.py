@@ -1361,6 +1361,7 @@ class Service(PrimaryModel):
             "protocol",
             "ports",
         )  # (protocol, port) may be non-unique
+        unique_together = [["name", "device"], ["name", "virtual_machine"]]
 
     def __str__(self):
         return f"{self.name} ({self.get_protocol_display()}/{self.port_list})"
