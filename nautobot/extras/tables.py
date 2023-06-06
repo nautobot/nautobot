@@ -97,7 +97,7 @@ SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
 <button type="button"
         onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
         title="Dry Run"
-        class="btn btn-primary btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
+        class="btn btn-primary btn-xs"{% if not perms.extras.run_job or not record.job_model.supports_dryrun %} disabled="disabled"{% endif %}>
     <i class="mdi mdi-play"></i>
 </button>
 <button type="button"
@@ -421,8 +421,8 @@ class GitRepositoryTable(BaseTable):
 
     class JobResultColumn(tables.TemplateColumn):
         def render(self, record, table, value, bound_column, **kwargs):
-            if record.name in table.context.get("job_results", {}):
-                table.context.update({"result": table.context["job_results"][record.name]})
+            if str(record.pk) in table.context.get("job_results", {}):
+                table.context.update({"result": table.context["job_results"][str(record.pk)]})
             else:
                 table.context.update({"result": None})
             return super().render(record, table, value, bound_column, **kwargs)
@@ -518,12 +518,13 @@ class JobTable(BaseTable):
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
     description = tables.Column(accessor="description_first_line")
-    commit_default = BooleanColumn()
+    dryrun_default = BooleanColumn()
     hidden = BooleanColumn()
     read_only = BooleanColumn()
     approval_required = BooleanColumn()
     is_job_hook_receiver = BooleanColumn()
     is_job_button_receiver = BooleanColumn()
+    supports_dryrun = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
     actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
@@ -556,12 +557,13 @@ class JobTable(BaseTable):
             "enabled",
             "has_sensitive_variables",
             "description",
-            "commit_default",
+            "dryrun_default",
             "hidden",
             "read_only",
             "is_job_hook_receiver",
             "is_job_button_receiver",
             "approval_required",
+            "supports_dryrun",
             "soft_time_limit",
             "time_limit",
             "last_run",
@@ -621,8 +623,10 @@ class JobLogEntryTable(BaseTable):
     def render_log_level(self, value):
         log_level = value.lower()
         # The css is label-danger for failure items.
-        if log_level == "failure":
+        if log_level in ["error", "critical"]:
             log_level = "danger"
+        elif log_level == "debug":
+            log_level = "default"
 
         return format_html('<label class="label label-{}">{}</label>', log_level, value)
 
@@ -644,8 +648,7 @@ class JobLogEntryTable(BaseTable):
 
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
-    linked_record = tables.Column(verbose_name="Job / Git Repository", linkify=True)
-    name = tables.Column()
+    job_model = tables.Column(linkify=True)
     date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
@@ -683,33 +686,24 @@ class JobResultTable(BaseTable):
         """
     )
 
-    def order_linked_record(self, queryset, is_descending):
-        return (
-            queryset.order_by(
-                ("-" if is_descending else "") + "job_model__name",
-                ("-" if is_descending else "") + "name",
-            ),
-            True,
-        )
-
     def render_summary(self, record):
         """
         Define custom rendering for the summary column.
         """
         log_objects = record.job_log_entries.all()
-        success = log_objects.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+        debug = log_objects.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
         info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
         warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()
-        failure = log_objects.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
+        error = log_objects.filter(log_level__in=[LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]).count()
         return format_html(
-            """<label class="label label-success">{}</label>
+            """<label class="label label-default">{}</label>
             <label class="label label-info">{}</label>
             <label class="label label-warning">{}</label>
             <label class="label label-danger">{}</label>""",
-            success,
+            debug,
             info,
             warning,
-            failure,
+            error,
         )
 
     class Meta(BaseTable.Meta):
@@ -718,7 +712,7 @@ class JobResultTable(BaseTable):
             "pk",
             "date_created",
             "name",
-            "linked_record",
+            "job_model",
             "duration",
             "date_done",
             "user",
@@ -726,7 +720,7 @@ class JobResultTable(BaseTable):
             "summary",
             "actions",
         )
-        default_columns = ("pk", "date_created", "name", "linked_record", "user", "status", "summary", "actions")
+        default_columns = ("pk", "date_created", "name", "job_model", "user", "status", "summary", "actions")
 
 
 class JobButtonTable(BaseTable):

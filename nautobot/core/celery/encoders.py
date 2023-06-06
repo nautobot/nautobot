@@ -2,6 +2,7 @@ import logging
 
 from rest_framework.utils.encoders import JSONEncoder
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,15 +27,20 @@ class NautobotKombuJSONEncoder(JSONEncoder):
     def default(self, obj):
         # Import here to avoid django.core.exceptions.ImproperlyConfigured Error.
         # Core App is not set up yet if we import this at the top of the file.
+        from nautobot.core.models import BaseModel
         from nautobot.core.models.managers import TagsManager
 
-        if hasattr(obj, "nautobot_serialize"):
+        if isinstance(obj, BaseModel):
             cls = obj.__class__
             module = cls.__module__
             qual_name = ".".join([module, cls.__qualname__])  # fully qualified dotted import path
             logger.debug("Performing nautobot serialization on %s for type %s", obj, qual_name)
-            data = {"__nautobot_type__": qual_name}
-            data.update(obj.nautobot_serialize())
+            data = {
+                "id": obj.id,
+                "__nautobot_type__": qual_name,
+                # TODO: change to natural key to provide additional context if object is deleted from the db
+                "display": getattr(obj, "display", str(obj)),
+            }
             return data
 
         elif isinstance(obj, set):

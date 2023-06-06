@@ -1,0 +1,2 @@
+Removed `Job.read_only_override`, `JobResult.obj_type`, `JobResult.periodic_task_name`, and `JobResult.task_id` fields.
+Removed `NautobotFakeRequest` and associated methods, variables and logic.

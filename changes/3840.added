@@ -1,0 +1,1 @@
+Added `bool` return value for `Nautobot.extras.datasources.git.ensure_git_repository()` to indicate whether the filesystem was changed.

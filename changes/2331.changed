@@ -1,0 +1,2 @@
+Changed `JobLogEntry.log_level` choices from `default`, `info`, `success`, `warning`, `failure` to Python default logging levels `debug`, `info`, `warning`, `error` and `critical`.
+Changed job logging from custom log methods on the `BaseJob` class to celery's `get_task_logger` logging implementation.

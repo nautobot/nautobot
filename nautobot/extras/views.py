@@ -1,4 +1,3 @@
-import inspect
 from datetime import timedelta
 import logging
 
@@ -26,7 +25,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils.lookup import get_table_for_model
-from nautobot.core.utils.requests import copy_safe_request, normalize_querydict
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
@@ -35,7 +34,7 @@ from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
+from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
@@ -50,8 +49,7 @@ from .datasources import (
 )
 from .filters import RoleFilterSet
 from .forms import RoleBulkEditForm, RoleForm
-from .jobs import Job as JobClass
-from .jobs import get_job, run_job
+from .jobs import get_job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -795,12 +793,12 @@ class GitRepositoryListView(generic.ObjectListView):
     template_name = "extras/gitrepository_list.html"
 
     def extra_context(self):
-        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
         # Get the newest results for each repository name
         results = {
-            r.name: r
+            r.task_kwargs["repository"]: r
             for r in JobResult.objects.filter(
-                obj_type=git_repository_content_type,
+                task_name__startswith="nautobot.core.jobs.GitRepository",
+                task_kwargs__repository__isnull=False,
                 status__in=JobResultStatusChoices.READY_STATES,
             )
             .order_by("date_done")
@@ -826,9 +824,12 @@ class GitRepositoryEditView(generic.ObjectEditView):
     model_form = forms.GitRepositoryForm
     template_name = "extras/gitrepository_object_edit.html"
 
+    # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
+    # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
+    # again, this will be moved to the API calls, so just something to keep in mind.
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
+        obj.user = request.user
         return super().alter_obj(obj, request, url_args, url_kwargs)
 
     def get_return_url(self, request, obj):
@@ -890,9 +891,9 @@ def check_and_call_git_repository_function(request, pk, func):
         messages.error(request, "Unable to run job: Celery worker process not running.")
     else:
         repository = get_object_or_404(GitRepository, pk=pk)
-        func(repository, request)
+        job_result = func(repository, request.user)
 
-    return redirect("extras:gitrepository_result", pk=pk)
+    return redirect(job_result.get_absolute_url())
 
 
 class GitRepositorySyncView(View):
@@ -917,12 +918,7 @@ class GitRepositoryResultView(generic.ObjectView):
         return "extras.view_gitrepository"
 
     def get_extra_context(self, request, instance):
-        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
-        job_result = (
-            JobResult.objects.filter(obj_type=git_repository_content_type, name=instance.name)
-            .order_by("-date_created")
-            .first()
-        )
+        job_result = instance.get_latest_sync()
 
         return {
             "result": job_result,
@@ -1071,22 +1067,24 @@ class JobView(ObjectPermissionRequiredMixin, View):
         job_model = self._get_job_model_or_404(class_path, pk)
 
         try:
-            job_class = job_model.job_class()
-            initial = normalize_querydict(request.GET, form_class=job_class.as_form_class())
+            try:
+                job_instance = job_model.job_class()
+            except TypeError as exc:
+                # job_class may be None
+                raise RuntimeError("Job code for this job is not currently installed or loadable") from exc
+            initial = normalize_querydict(request.GET, form_class=job_instance.as_form_class())
             if "kwargs_from_job_result" in initial:
                 job_result_pk = initial.pop("kwargs_from_job_result")
                 try:
-                    job_result = job_model.results.get(pk=job_result_pk)
-                    # Allow explicitly specified arg values in request.GET to take precedence over the saved job_kwargs,
-                    # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
+                    job_result = job_model.job_results.get(pk=job_result_pk)
+                    # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
+                    # for example "?kwargs_from_job_result=<UUID>&integervar=22"
                     explicit_initial = initial
-                    initial = job_result.job_kwargs.get("data", {}).copy()
-                    commit = job_result.job_kwargs.get("commit")
-                    if commit is not None:
-                        initial.setdefault("_commit", commit)
-                    task_queue = job_result.job_kwargs.get("task_queue")
+                    initial = job_result.task_kwargs.copy()
+                    task_queue = job_result.celery_kwargs.get("queue", None)
                     if task_queue is not None:
-                        initial.setdefault("_task_queue", task_queue)
+                        initial["_task_queue"] = task_queue
+                    initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(
@@ -1095,11 +1093,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     )
 
             template_name = "extras/job.html"
-            job_form = job_class.as_form(initial=initial)
-            if hasattr(job_class, "template_name"):
+            job_form = job_instance.as_form(initial=initial)
+            if hasattr(job_instance, "template_name"):
                 try:
-                    get_template(job_class.template_name)
-                    template_name = job_class.template_name
+                    get_template(job_instance.template_name)
+                    template_name = job_instance.template_name
                 except TemplateDoesNotExist as err:
                     messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
@@ -1144,12 +1142,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
+            task_queue = job_form.cleaned_data.pop("_task_queue", None)
+            dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
-            commit = job_form.cleaned_data.pop("_commit")
             profile = job_form.cleaned_data.pop("_profile")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+            if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                 crontab = ""
 
                 if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
@@ -1175,25 +1174,16 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     else:
                         schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
-                task_kwargs = {
-                    "data": job_model.job_class.serialize_data(job_form.cleaned_data),
-                    "request": copy_safe_request(request),
-                    "user": request.user.pk,
-                    "commit": commit,
-                    "name": job_model.class_path,
-                    "task_queue": job_form.cleaned_data.get("_task_queue", None),
-                }
-                if task_queue:
-                    task_kwargs["celery_kwargs"] = {"queue": task_queue}
-
+                celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
-                    task="nautobot.extras.jobs.scheduled_job_handler",
+                    task=job_model.job_class.registered_name,
                     job_class=job_model.class_path,
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    kwargs=task_kwargs,
+                    kwargs=job_model.job_class.serialize_data(job_form.cleaned_data),
+                    celery_kwargs=celery_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     queue=task_queue,
@@ -1212,18 +1202,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_content_type = get_job_content_type()
+                job_kwargs = job_model.job_class.prepare_job_kwargs(job_form.cleaned_data)
                 job_result = JobResult.enqueue_job(
-                    run_job,
-                    job_model.class_path,
-                    job_content_type,
+                    job_model,
                     request.user,
-                    celery_kwargs={"queue": task_queue},
-                    data=job_model.job_class.serialize_data(job_form.cleaned_data),
-                    request=copy_safe_request(request),
-                    commit=commit,
                     profile=profile,
-                    task_queue=job_form.cleaned_data.get("_task_queue", None),
+                    task_queue=task_queue,
+                    **job_model.job_class.serialize_data(job_kwargs),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
@@ -1271,7 +1256,7 @@ class JobApprovalRequestView(generic.ObjectView):
     job's execution, rather than initial job form input.
     """
 
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    queryset = ScheduledJob.objects.needs_approved()
     template_name = "extras/job_approval_request.html"
     additional_permissions = ("extras.view_job",)
 
@@ -1290,8 +1275,9 @@ class JobApprovalRequestView(generic.ObjectView):
 
         if job_class is not None:
             # Render the form with all fields disabled
-            initial = instance.kwargs.get("data", {})
-            initial["_commit"] = instance.kwargs.get("commit", True)
+            initial = instance.kwargs
+            initial["_task_queue"] = instance.queue
+            initial["_profile"] = instance.celery_kwargs.get("profile", False)
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
             job_form = None
@@ -1327,22 +1313,17 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job cannot be run at this time")
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")
+            elif not job_model.supports_dryrun:
+                messages.error(request, "This job does not support dryrun")
             else:
-                # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
-                job_content_type = get_job_content_type()
-                initial = scheduled_job.kwargs.get("data", {})
-                initial["_commit"] = False
-                celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
+                # Immediately enqueue the job and send the user to the normal JobResult view
+                job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
+                job_kwargs["dryrun"] = True
                 job_result = JobResult.enqueue_job(
-                    run_job,
-                    job_model.job_class.class_path,
-                    job_content_type,
+                    job_model,
                     request.user,
-                    celery_kwargs=celery_kwargs,
-                    data=job_model.job_class.serialize_data(initial),
-                    request=copy_safe_request(request),
-                    commit=False,  # force a dry-run
-                    task_queue=scheduled_job.kwargs.get("task_queue", None),
+                    celery_kwargs=scheduled_job.celery_kwargs,
+                    **job_model.job_class.serialize_data(job_kwargs),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
@@ -1397,7 +1378,7 @@ class JobApprovalRequestView(generic.ObjectView):
 
 
 class ScheduledJobListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
+    queryset = ScheduledJob.objects.enabled()
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
@@ -1411,7 +1392,7 @@ class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    queryset = ScheduledJob.objects.needs_approved()
     table = tables.ScheduledJobApprovalQueueTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
@@ -1483,7 +1464,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.select_related("job_model", "obj_type", "user").prefetch_related("logs")
+    queryset = JobResult.objects.select_related("job_model", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1504,7 +1485,7 @@ class JobResultView(generic.ObjectView):
     Display a JobResult and its Job data.
     """
 
-    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.prefetch_related("job_model", "user")
     template_name = "extras/jobresult.html"
 
     def get_extra_context(self, request, instance):
@@ -1512,13 +1493,6 @@ class JobResultView(generic.ObjectView):
         job_class = None
         if instance.job_model is not None:
             job_class = instance.job_model.job_class
-        # 2.0 TODO: remove JobResult.related_object entirely
-        related_object = instance.related_object
-        if inspect.isclass(related_object) and issubclass(related_object, JobClass):
-            if job_class is None:
-                job_class = related_object
-        elif related_object:
-            associated_record = related_object
 
         return {
             "job": job_class,
@@ -1571,16 +1545,10 @@ class JobButtonRunView(ObjectPermissionRequiredMixin, View):
         job_button = JobButton.objects.get(pk=pk)
         job_model = job_button.job
         result = JobResult.enqueue_job(
-            func=run_job,
-            name=job_model.class_path,
-            obj_type=get_job_content_type(),
+            job_model=job_model,
             user=request.user,
-            data={
-                "object_pk": post_data["object_pk"],
-                "object_model_name": post_data["object_model_name"],
-            },
-            request=copy_safe_request(request),
-            commit=True,
+            object_pk=post_data["object_pk"],
+            object_model_name=post_data["object_model_name"],
         )
         msg = f'Job enqueued. <a href="{result.get_absolute_url()}">Click here for the results.</a>'
         messages.info(request=request, message=mark_safe(msg))

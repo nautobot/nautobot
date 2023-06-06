@@ -197,19 +197,8 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 ]
 ```
 
-### `plugin_jobs`
-
-[Jobs](../additional-features/jobs.md) provided by plugins. A list of `Job` classes, for example:
-
-```python
-[
-    demo_data_plugin.jobs.CreateDemoData,
-    demo_data_plugin.jobs.DestroyDemoData,
-    branch_creation_plugin.jobs.CreateNewSmallBranch,
-    branch_creation_plugin.jobs.CreateNewMediumBranch,
-    branch_creation_plugin.jobs.CreateNewLargeBranch,
-]
-```
+--- 2.0.0
+    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../additional-features/jobs.md#writing-jobs) which should be called at import time by any plugin that provides jobs.
 
 ### `plugin_template_extensions`
 
