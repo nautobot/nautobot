@@ -578,6 +578,17 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     UI mixin to retrieve a model instance.
     """
 
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve a model instance.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        context = serializer.data
+        context["use_new_ui"] = True
+        return Response(context)
+
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     """
@@ -649,7 +660,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         List the model instances.
         """
-        context = {}
+        context = {"use_new_ui": True}
         if "export" in request.GET:
             queryset = self.get_queryset()
             model = queryset.model
