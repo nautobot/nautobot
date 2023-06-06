@@ -5,7 +5,7 @@ from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.factory import LocationTypeFactory
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice
+from nautobot.extras.models import CustomField, CustomFieldChoice, Status
 
 
 class ListViewFilterTestCase(SeleniumTestCase):
@@ -22,11 +22,18 @@ class ListViewFilterTestCase(SeleniumTestCase):
         lt2 = LocationType.objects.get(name="Root")
         lt3 = LocationType.objects.get(name="Building")
         lt4 = LocationType.objects.get(name="Floor")
-        campus_loc = Location.objects.create(name="Filter Test Location 1", location_type=lt1)
-        Location.objects.create(name="Filter Test Location 2", location_type=lt2)
-        buidling_loc = Location.objects.create(name="Filter Test Location 3", location_type=lt3, parent=campus_loc)
-        Location.objects.create(name="Filter Test Location 4", location_type=lt4, parent=buidling_loc)
-        Location.objects.create(name="Filter Test Location 5", location_type=lt4, parent=buidling_loc)
+        location_status = Status.objects.get_for_model(Location).first()
+        campus_loc = Location.objects.create(name="Filter Test Location 1", location_type=lt1, status=location_status)
+        Location.objects.create(name="Filter Test Location 2", location_type=lt2, status=location_status)
+        building_loc = Location.objects.create(
+            name="Filter Test Location 3", location_type=lt3, parent=campus_loc, status=location_status
+        )
+        Location.objects.create(
+            name="Filter Test Location 4", location_type=lt4, parent=building_loc, status=location_status
+        )
+        Location.objects.create(
+            name="Filter Test Location 5", location_type=lt4, parent=building_loc, status=location_status
+        )
         # set test user to admin
         self.user.is_superuser = True
         self.user.save()
@@ -102,7 +109,8 @@ class ListViewFilterTestCase(SeleniumTestCase):
         # navigate back to the filter page and try the individual filter remove X button
         self.browser.visit(filtered_locations_url)
         remove_single_filter = self.browser.find_by_xpath(
-            "//div[@class='filters-applied']//span[@class='filter-selection']//span[@class='filter-selection-choice-remove remove-filter-param']",
+            "//div[@class='filters-applied']//span[@class='filter-selection']//"
+            "span[@class='filter-selection-choice-remove remove-filter-param']",
             wait_time=10,
         )
         remove_single_filter.click()
@@ -121,7 +129,8 @@ class ListViewFilterTestCase(SeleniumTestCase):
             value (str or int): The value to fill in the input field or select from the select field.
             field_type (str, optional): The type of the field, either "input" or "select".
             idx (int, optional): The index of the field in case there are multiple fields with the same name.
-            select2_field_name (str, optional): The name of the select2 field in case it is different from the input field name.
+            select2_field_name (str, optional): The name of the select2 field in case it is different from the
+                input field name.
         """
         if field_type == "input":
             self.browser.find_by_name(field_name)[idx].fill(value)

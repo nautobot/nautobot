@@ -4,7 +4,7 @@ from django.db import models
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -120,7 +120,7 @@ class CircuitType(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Circuit(PrimaryModel, StatusModel):
+class Circuit(PrimaryModel):
     """
     A communications circuit connects two points.
     Each Circuit belongs to a Provider; Providers may have multiple circuits.
@@ -129,6 +129,7 @@ class Circuit(PrimaryModel, StatusModel):
     """
 
     cid = models.CharField(max_length=100, verbose_name="Circuit ID")
+    status = StatusField(blank=False, null=False)
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="circuits")
     circuit_type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
     tenant = models.ForeignKey(

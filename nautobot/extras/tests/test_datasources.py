@@ -63,19 +63,22 @@ class GitTest(TransactionTestCase):
 
         self.location_type = LocationType.objects.create(name="Test Location Type", slug="test-location-type")
         self.location_type.content_types.add(ContentType.objects.get_for_model(Device))
-        self.location = Location.objects.create(location_type=self.location_type, name="Test Location")
+        status = Status.objects.create(name="Active Test")
+        status.content_types.add(ContentType.objects.get_for_model(Location))
+        self.location = Location.objects.create(location_type=self.location_type, name="Test Location", status=status)
         self.manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
         self.device_type = DeviceType.objects.create(
             manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
         )
-        self.role = Role.objects.get_for_model(Device).first()
-        self.device_status = Status.objects.get_for_model(Device).first()
+        role = Role.objects.create(name="Active Test")
+        role.content_types.add(ContentType.objects.get_for_model(Device))
+        status.content_types.add(ContentType.objects.get_for_model(Device))
         self.device = Device.objects.create(
             name="test-device",
-            role=self.role,
+            role=role,
             device_type=self.device_type,
             location=self.location,
-            status=self.device_status,
+            status=status,
         )
 
         self.repo = GitRepository(

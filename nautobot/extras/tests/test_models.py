@@ -1,6 +1,7 @@
 import os
 import tempfile
 from unittest import mock
+import warnings
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -9,7 +10,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings
-
+from django.test.utils import isolate_apps
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase, TransactionTestCase
@@ -45,6 +46,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
@@ -152,39 +154,43 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
     model = ConfigContext
 
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        self.devicetype = DeviceType.objects.create(
+        cls.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
-        self.devicerole = Role.objects.get_for_model(Device).first()
+        cls.devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.create(name="Location Type 1")
-        self.location = Location.objects.create(name="Location 1", location_type=location_type)
-        self.platform = Platform.objects.first()
-        self.tenant = Tenant.objects.first()
-        self.tenantgroup = self.tenant.tenant_group
-        self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
-        self.dynamic_groups = DynamicGroup.objects.create(
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
+        cls.platform = Platform.objects.first()
+        cls.tenant = Tenant.objects.first()
+        cls.tenantgroup = cls.tenant.tenant_group
+        cls.tag, cls.tag2 = Tag.objects.get_for_model(Device)[:2]
+        cls.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
             content_type=ContentType.objects.get_for_model(Device),
             filter={"name": ["Device 1", "Device 2"]},
         )
-        self.dynamic_group_2 = DynamicGroup.objects.create(
+        cls.dynamic_group_2 = DynamicGroup.objects.create(
             name="Dynamic Group 2",
             content_type=ContentType.objects.get_for_model(Device),
             filter={"name": ["Device 2"]},
         )
-        self.vm_dynamic_group = DynamicGroup.objects.create(
+        cls.vm_dynamic_group = DynamicGroup.objects.create(
             name="VM Dynamic Group",
             content_type=ContentType.objects.get_for_model(VirtualMachine),
             filter={"name": ["VM 1"]},
         )
 
-        self.device = Device.objects.create(
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
             name="Device 1",
-            device_type=self.devicetype,
-            role=self.devicerole,
-            location=self.location,
+            device_type=cls.devicetype,
+            role=cls.devicerole,
+            location=cls.location,
+            status=cls.device_status,
         )
 
         ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
@@ -254,6 +260,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -294,12 +301,14 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         )
         dynamic_group_context.dynamic_groups.add(self.vm_dynamic_group)
 
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = VirtualMachine.objects.create(
             name="VM 1",
             cluster=cluster,
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=vm_status,
         )
         virtual_machine.tags.add(self.tag)
 
@@ -338,6 +347,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -369,6 +379,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -392,6 +403,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         dynamic_group_context = ConfigContext.objects.create(
@@ -1360,6 +1372,22 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.status.clean()
             self.status.save()
             self.assertEqual(str(self.status), test)
+
+    @isolate_apps("nautobot.extras.tests")
+    def test_deprecated_mixin_class(self):
+        """Test that inheriting from StatusModel raises a DeprecationWarning."""
+        with warnings.catch_warnings(record=True) as warn_list:
+            warnings.simplefilter("always")
+
+            class MyModel(StatusModel):  # pylint: disable=unused-variable
+                pass
+
+        self.assertEqual(len(warn_list), 1)
+        warning = warn_list[0]
+        self.assertTrue(issubclass(warning.category, DeprecationWarning))
+        self.assertIn("StatusModel is deprecated", str(warning))
+        self.assertIn("Instead of deriving MyModel from StatusModel", str(warning))
+        self.assertIn("please directly declare `status = StatusField(...)` on your model instead", str(warning))
 
 
 class TagTest(ModelTestCases.BaseModelTestCase):
