@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.test.utils import isolate_apps
 
 from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import construct_natural_key_slug, deconstruct_natural_key_slug
@@ -6,6 +7,7 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import DeviceType, Manufacturer
 
 
+@isolate_apps("nautobot.core.tests")
 class BaseModelTest(TestCase):
     class FakeBaseModel(BaseModel):
         def clean(self):

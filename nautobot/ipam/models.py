@@ -15,7 +15,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Interface
-from nautobot.extras.models import RoleModelMixin, Status, StatusModel
+from nautobot.extras.models import RoleField, Status, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
 from nautobot.virtualization.models import VMInterface
@@ -392,7 +392,7 @@ class RIR(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
+class Prefix(PrimaryModel):
     """
     A Prefix represents an IPv4 or IPv6 network, including mask length.
     Prefixes can optionally be assigned to Locations and VRFs.
@@ -413,6 +413,8 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
         choices=choices.PrefixTypeChoices,
         default=choices.PrefixTypeChoices.TYPE_NETWORK,
     )
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     parent = models.ForeignKey(
         "self",
         blank=True,
@@ -643,7 +645,10 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     def reparent_ips(self):
         """Determine the list of child IPAddresses and set the parent to self."""
         query = IPAddress.objects.select_for_update().filter(
+            ip_version=self.ip_version,
             parent_id=self.parent_id,
+            host__gte=self.network,
+            host__lte=self.broadcast,
         )
 
         return query.update(parent=self)
@@ -865,7 +870,7 @@ class Prefix(PrimaryModel, StatusModel, RoleModelMixin):
     "statuses",
     "webhooks",
 )
-class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
+class IPAddress(PrimaryModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -883,6 +888,8 @@ class IPAddress(PrimaryModel, StatusModel, RoleModelMixin):
         help_text="IPv4 or IPv6 host address",
     )
     mask_length = models.IntegerField(null=False, db_index=True, help_text="Length of the network mask, in bits.")
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
@@ -1183,7 +1190,7 @@ class VLANGroup(OrganizationalModel):
     "statuses",
     "webhooks",
 )
-class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
+class VLAN(PrimaryModel):
     """
     A VLAN is a distinct layer two forwarding domain identified by a 12-bit integer (1-4094).
     Each VLAN must be assigned to a Location, however VLAN IDs need not be unique within a Location.
@@ -1211,6 +1218,8 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
     )
     name = models.CharField(max_length=255, db_index=True)
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1228,6 +1237,8 @@ class VLAN(PrimaryModel, StatusModel, RoleModelMixin):
         "role",
         "description",
     ]
+
+    natural_key_field_names = ["vid", "vlan_group"]
 
     class Meta:
         ordering = (

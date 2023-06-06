@@ -393,17 +393,21 @@ class DynamicModelChoiceFieldTest(TestCase):
 
     def test_prepare_value_valid_uuid(self):
         """A UUID PK referring to an actual object should be handled correctly."""
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
         namespace = ipam_models.Namespace.objects.first()
-        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace)
-        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace)
+        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace, status=ipaddr_status)
         self.assertEqual(self.field.prepare_value(address.pk), address.pk)
         self.assertEqual(self.field_with_to_field_name.prepare_value(address.pk), address.address)
 
     def test_prepare_value_valid_object(self):
         """An object reference should be handled correctly."""
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
         namespace = ipam_models.Namespace.objects.first()
-        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace)
-        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace)
+        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace, status=ipaddr_status)
         self.assertEqual(self.field.prepare_value(address), address.pk)
         self.assertEqual(self.field_with_to_field_name.prepare_value(address), address.address)
 
@@ -425,10 +429,16 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
 
     def test_prepare_value_multiple_object(self):
         """A list of object values should be translated to a list of PKs."""
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
         namespace = ipam_models.Namespace.objects.first()
-        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace)
-        address_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace)
-        address_2 = ipam_models.IPAddress.objects.create(address="10.1.1.2/24", namespace=namespace)
+        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        address_1 = ipam_models.IPAddress.objects.create(
+            address="10.1.1.1/24", namespace=namespace, status=ipaddr_status
+        )
+        address_2 = ipam_models.IPAddress.objects.create(
+            address="10.1.1.2/24", namespace=namespace, status=ipaddr_status
+        )
         self.assertEqual(
             self.field.prepare_value([address_1, address_2]),
             [address_1.pk, address_2.pk],
@@ -501,13 +511,17 @@ class AddressFieldMixinTest(TestCase):
 
     def setUp(self):
         """Setting up shared variables for the AddressFieldMixin."""
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
         self.namespace = ipam_models.Namespace.objects.first()
-        self.prefix = ipam_models.Prefix.objects.create(prefix="10.0.0.0/24", namespace=self.namespace)
-        self.ip = ipam_models.IPAddress.objects.create(address="10.0.0.1/32", namespace=self.namespace)
+        self.prefix = ipam_models.Prefix.objects.create(
+            prefix="10.0.0.0/24", namespace=self.namespace, status=prefix_status
+        )
+        self.ip = ipam_models.IPAddress.objects.create(
+            address="10.0.0.1/32", namespace=self.namespace, status=ipaddr_status
+        )
         self.initial = {"address": self.ip.address}
 
-    def test_address_initial(self):
-        """Ensure initial kwargs for address is passed in."""
         with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             ip_none = ipam_models.IPAddress()
             forms.AddressFieldMixin(initial=self.initial, instance=ip_none)

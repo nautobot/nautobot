@@ -84,11 +84,10 @@ class ChangeLogViewTest(ModelViewTestCase):
         self.assertEqual(oc.user_id, self.user.pk)
 
     def test_update_object(self):
-        location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Test Location 1",
             slug="test-location-1",
-            status=location_status,
+            status=self.location_status,
             location_type=self.location_type,
         )
         location.save()
@@ -98,7 +97,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             "location_type": self.location_type.pk,
             "name": "Test Location X",
             "slug": "test-location-x",
-            "status": location_status.pk,
+            "status": self.location_status.pk,
             "cf_my_field": "DEF",
             "cf_my_field_select": "Foo",
             "tags": [self.tags[2].pk],
@@ -136,6 +135,7 @@ class ChangeLogViewTest(ModelViewTestCase):
             name="Test Location 1",
             slug="test-location-1",
             location_type=self.location_type,
+            status=self.location_status,
             _custom_field_data={"my_field": "ABC", "my_field_select": "Bar"},
         )
         location.save()

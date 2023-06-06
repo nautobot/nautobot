@@ -33,7 +33,7 @@ from nautobot.dcim.constants import (
 from nautobot.extras.models import (
     RelationshipModel,
     Status,
-    StatusModel,
+    StatusField,
 )
 from nautobot.extras.utils import extras_features
 
@@ -421,11 +421,12 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-class BaseInterface(RelationshipModel, StatusModel):
+class BaseInterface(RelationshipModel):
     """
     Abstract base class for fields shared by dcim.Interface and virtualization.VMInterface.
     """
 
+    status = StatusField(blank=False, null=False)
     enabled = models.BooleanField(default=True)
     mac_address = MACAddressCharField(blank=True, default="", verbose_name="MAC Address")
     mtu = models.PositiveIntegerField(

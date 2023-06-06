@@ -4,7 +4,7 @@ from django.test import override_settings
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
-from nautobot.extras.models import DynamicGroup, Role
+from nautobot.extras.models import DynamicGroup, Role, Status
 
 
 class GraphQLTestCase(TestCase):
@@ -14,8 +14,13 @@ class GraphQLTestCase(TestCase):
         self.device_role = Role.objects.get_for_model(Device).first()
         self.manufacturer = Manufacturer.objects.first()
         self.device_type = DeviceType.objects.create(model="Model", manufacturer=self.manufacturer)
+        device_status = Status.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
-            location=self.location, role=self.device_role, device_type=self.device_type, name="Device"
+            location=self.location,
+            role=self.device_role,
+            device_type=self.device_type,
+            name="Device",
+            status=device_status,
         )
         self.dynamic_group = DynamicGroup.objects.create(
             name="Dynamic_Group", content_type=ContentType.objects.get_for_model(Device)

@@ -113,7 +113,8 @@ class ComputedFieldTestCase(
             ),
         )
         cls.location_type = LocationType.objects.get(name="Campus")
-        cls.location1 = Location(name="NYC", location_type=cls.location_type)
+        status = Status.objects.get_for_model(Location).first()
+        cls.location1 = Location(name="NYC", location_type=cls.location_type, status=status)
         cls.location1.save()
 
         for cf in computed_fields:
@@ -450,7 +451,8 @@ class CustomLinkTest(TestCase):
         )
         customlink.save()
         location_type = LocationType.objects.get(name="Campus")
-        location = Location(name="Test Location", slug="test-location", location_type=location_type)
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", slug="test-location", location_type=location_type, status=status)
         location.save()
 
         response = self.client.get(location.get_absolute_url(), follow=True)
@@ -1956,7 +1958,8 @@ class ObjectChangeTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         location_type = LocationType.objects.get(name="Campus")
-        location = Location(name="Location 1", slug="location-1", location_type=location_type)
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Location 1", slug="location-1", location_type=location_type, status=location_status)
         location.save()
 
         # Create three ObjectChanges
@@ -2142,16 +2145,24 @@ class RelationshipAssociationTestCase(
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
         location = Location.objects.first()
         devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, location=location),
-            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, location=location),
-            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, location=location),
+            Device.objects.create(
+                name="Device 1", device_type=devicetype, role=devicerole, location=location, status=devicestatus
+            ),
+            Device.objects.create(
+                name="Device 2", device_type=devicetype, role=devicerole, location=location, status=devicestatus
+            ),
+            Device.objects.create(
+                name="Device 3", device_type=devicetype, role=devicerole, location=location, status=devicestatus
+            ),
         )
+        vlan_status = Status.objects.get_for_model(VLAN).first()
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1"),
-            VLAN.objects.create(vid=2, name="VLAN 2"),
-            VLAN.objects.create(vid=3, name="VLAN 3"),
+            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status),
+            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status),
+            VLAN.objects.create(vid=3, name="VLAN 3", status=vlan_status),
         )
 
         RelationshipAssociation(

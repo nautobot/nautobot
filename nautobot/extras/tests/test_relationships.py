@@ -24,123 +24,126 @@ from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 
 
 class RelationshipBaseTest(TestCase):
-    def setUp(self):
-        self.location_ct = ContentType.objects.get_for_model(Location)
-        self.rack_ct = ContentType.objects.get_for_model(Rack)
-        self.vlan_ct = ContentType.objects.get_for_model(VLAN)
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_ct = ContentType.objects.get_for_model(Location)
+        cls.rack_ct = ContentType.objects.get_for_model(Rack)
+        cls.vlan_ct = ContentType.objects.get_for_model(VLAN)
 
-        self.locations = Location.objects.all()[:5]
+        cls.locations = Location.objects.all()[:5]
 
-        self.racks = [
-            Rack.objects.create(name="Rack A", location=self.locations[0]),
-            Rack.objects.create(name="Rack B", location=self.locations[1]),
-            Rack.objects.create(name="Rack C", location=self.locations[2]),
+        cls.rack_status = Status.objects.get_for_model(Rack).first()
+        cls.racks = [
+            Rack.objects.create(name="Rack A", location=cls.locations[0], status=cls.rack_status),
+            Rack.objects.create(name="Rack B", location=cls.locations[1], status=cls.rack_status),
+            Rack.objects.create(name="Rack C", location=cls.locations[2], status=cls.rack_status),
         ]
 
-        self.vlans = [
-            VLAN.objects.create(name="VLAN A", vid=100, location=self.locations[0]),
-            VLAN.objects.create(name="VLAN B", vid=100, location=self.locations[1]),
-            VLAN.objects.create(name="VLAN C", vid=100, location=self.locations[2]),
+        cls.vlan_status = Status.objects.get_for_model(VLAN).first()
+        cls.vlans = [
+            VLAN.objects.create(name="VLAN A", vid=100, location=cls.locations[0], status=cls.vlan_status),
+            VLAN.objects.create(name="VLAN B", vid=100, location=cls.locations[1], status=cls.vlan_status),
+            VLAN.objects.create(name="VLAN C", vid=100, location=cls.locations[2], status=cls.vlan_status),
         ]
 
-        self.m2m_1 = Relationship(
+        cls.m2m_1 = Relationship(
             label="Vlan to Rack",
             key="vlan_rack",
-            source_type=self.rack_ct,
+            source_type=cls.rack_ct,
             source_label="My Vlans",
-            source_filter={"location": [self.locations[0].slug, self.locations[1].slug, self.locations[2].slug]},
-            destination_type=self.vlan_ct,
+            source_filter={"location": [cls.locations[0].slug, cls.locations[1].slug, cls.locations[2].slug]},
+            destination_type=cls.vlan_ct,
             destination_label="My Racks",
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
-        self.m2m_1.validated_save()
+        cls.m2m_1.validated_save()
 
-        self.m2m_2 = Relationship(
+        cls.m2m_2 = Relationship(
             label="Another Vlan to Rack",
             key="vlan_rack_2",
-            source_type=self.rack_ct,
-            destination_type=self.vlan_ct,
+            source_type=cls.rack_ct,
+            destination_type=cls.vlan_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
-        self.m2m_2.validated_save()
+        cls.m2m_2.validated_save()
 
-        self.o2m_1 = Relationship(
+        cls.o2m_1 = Relationship(
             label="generic location to vlan",
             key="location_vlan",
-            source_type=self.location_ct,
-            destination_type=self.vlan_ct,
+            source_type=cls.location_ct,
+            destination_type=cls.vlan_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
         )
-        self.o2m_1.validated_save()
+        cls.o2m_1.validated_save()
 
-        self.o2o_1 = Relationship(
+        cls.o2o_1 = Relationship(
             label="Primary Rack per Location",
             key="primary_rack_location",
-            source_type=self.rack_ct,
+            source_type=cls.rack_ct,
             source_hidden=True,
-            destination_type=self.location_ct,
+            destination_type=cls.location_ct,
             destination_label="Primary Rack",
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
         )
-        self.o2o_1.validated_save()
+        cls.o2o_1.validated_save()
 
         # Relationships between objects of the same type
 
-        self.o2o_2 = Relationship(
+        cls.o2o_2 = Relationship(
             label="Alphabetical Locations",
             key="alphabetical_locations",
-            source_type=self.location_ct,
+            source_type=cls.location_ct,
             source_label="Alphabetically Prior",
-            destination_type=self.location_ct,
+            destination_type=cls.location_ct,
             destination_label="Alphabetically Subsequent",
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
         )
-        self.o2o_2.validated_save()
+        cls.o2o_2.validated_save()
 
-        self.o2os_1 = Relationship(
+        cls.o2os_1 = Relationship(
             label="Redundant Rack",
             key="redundant_rack",
-            source_type=self.rack_ct,
-            destination_type=self.rack_ct,
+            source_type=cls.rack_ct,
+            destination_type=cls.rack_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
         )
-        self.o2os_1.validated_save()
+        cls.o2os_1.validated_save()
 
-        self.m2ms_1 = Relationship(
+        cls.m2ms_1 = Relationship(
             label="Related Locations",
             key="related_locations",
-            source_type=self.location_ct,
-            destination_type=self.location_ct,
+            source_type=cls.location_ct,
+            destination_type=cls.location_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
-        self.m2ms_1.validated_save()
+        cls.m2ms_1.validated_save()
 
         # Relationships involving a content type that doesn't actually have a backing model.
         # This can occur in practice if, for example, a relationship is defined for a plugin-defined model,
         # then the plugin is subsequently uninstalled or deactivated.
-        self.invalid_ct = ContentType.objects.create(app_label="nonexistent", model="nosuchmodel")
+        cls.invalid_ct = ContentType.objects.create(app_label="nonexistent", model="nosuchmodel")
 
         # Don't use validated_save() on these as it will fail due to the invalid content-type
-        self.invalid_relationships = [
+        cls.invalid_relationships = [
             Relationship.objects.create(
                 label="Invalid Relationship 1",
                 key="invalid_relationship_1",
-                source_type=self.location_ct,
-                destination_type=self.invalid_ct,
+                source_type=cls.location_ct,
+                destination_type=cls.invalid_ct,
                 type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
             ),
             Relationship.objects.create(
                 label="Invalid Relationship 2",
                 key="invalid_relationship_2",
-                source_type=self.invalid_ct,
-                destination_type=self.location_ct,
+                source_type=cls.invalid_ct,
+                destination_type=cls.location_ct,
                 type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
             ),
             Relationship.objects.create(
                 label="Invalid Relationship 3",
                 key="invalid_relationship_3",
-                source_type=self.invalid_ct,
-                destination_type=self.invalid_ct,
+                source_type=cls.invalid_ct,
+                destination_type=cls.invalid_ct,
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
             ),
         ]
@@ -810,11 +813,12 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         initial_count = RelationshipAssociation.objects.count()
         # Create new locations because protected error might be raised if we use test fixtures here.
         location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(name="new location 1", location_type=location_type),
-            Location.objects.create(name="new location 2", location_type=location_type),
-            Location.objects.create(name="new location 3", location_type=location_type),
-            Location.objects.create(name="new location 4", location_type=location_type),
+            Location.objects.create(name="new location 1", location_type=location_type, status=location_status),
+            Location.objects.create(name="new location 2", location_type=location_type, status=location_status),
+            Location.objects.create(name="new location 3", location_type=location_type, status=location_status),
+            Location.objects.create(name="new location 4", location_type=location_type, status=location_status),
         )
         associations = [
             RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.vlans[0]),

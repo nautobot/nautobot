@@ -39,9 +39,14 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
         circuit_types = CircuitType.objects.all()[:2]
         cls.locations = Location.objects.filter(children__isnull=True)[:2]
 
+        status = Status.objects.get_for_model(Circuit).first()
         circuits = (
-            Circuit.objects.create(provider=providers[0], circuit_type=circuit_types[0], cid="Test Circuit 1"),
-            Circuit.objects.create(provider=providers[1], circuit_type=circuit_types[1], cid="Test Circuit 1"),
+            Circuit.objects.create(
+                provider=providers[0], circuit_type=circuit_types[0], cid="Test Circuit 1", status=status
+            ),
+            Circuit.objects.create(
+                provider=providers[1], circuit_type=circuit_types[1], cid="Test Circuit 1", status=status
+            ),
         )
 
         CircuitTermination.objects.create(circuit=circuits[0], location=cls.locations[0], term_side="A")
@@ -150,8 +155,9 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
             status=device_status,
             location=location,
         )
-        interface1 = Interface.objects.create(device=device1, name="eth0")
-        interface2 = Interface.objects.create(device=device2, name="eth0")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interface1 = Interface.objects.create(device=device1, name="eth0", status=interface_status)
+        interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
 
         circuit_terminations = CircuitTermination.objects.all()
         circuit_terminations[0].tags.set(Tag.objects.get_for_model(CircuitTermination))

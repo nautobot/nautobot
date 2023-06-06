@@ -66,12 +66,7 @@ class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
 class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
     tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)
-    object_id = models.UUIDField()
 
     class Meta:
         index_together = ("content_type", "object_id")
-        # TODO: unique_together = [["content_type", "object_id", "tag"]]
-
-    # TODO: This isn't a guaranteed natural key for this model (see lack of a `unique_together` above), but in practice
-    # it is "nearly" unique. Once a proper unique_together is added and accounted for, this can be removed as redundant
-    natural_key_field_names = ["content_type", "object_id", "tag"]
+        unique_together = [["content_type", "object_id", "tag"]]
