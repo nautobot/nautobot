@@ -58,7 +58,7 @@
   Comments: "VRF is now related to the assigned Interface(s), as well as the parent Prefix"
 - Model: "Job"
   Removed Field: "git_repository"
-  Comments: "Now implied by the Job's `module_name` field."
+  Comments: "Can be retrieved from the instance if desired, but is no longer a database field."
 - Model: "Job"
   Removed Field: "slug"
   Comments:
