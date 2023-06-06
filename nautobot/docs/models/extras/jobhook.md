@@ -37,21 +37,21 @@ class ExampleJobHookReceiver(JobHookReceiver):
 
         # log diff output
         snapshots = change.get_snapshots()
-        self.log_info(f"DIFF: {snapshots['differences']}")
+        self.logger.info("DIFF: %s", snapshots['differences'])
 
         # validate changes to serial field
         if "serial" in snapshots["differences"]["added"]:
             old_serial = snapshots["differences"]["removed"]["serial"]
             new_serial = snapshots["differences"]["added"]["serial"]
-            self.log_info(f"{changed_object} serial has been changed from {old_serial} to {new_serial}")
+            self.logger.info("%s serial has been changed from %s to %s", changed_object, old_serial, new_serial)
 
             # Check the new serial is valid and revert if necessary
             if not self.validate_serial(new_serial):
                 changed_object.serial = old_serial
                 changed_object.save()
-                self.log_info(f"{changed_object} serial {new_serial} was not valid. Reverted to {old_serial}")
+                self.logger.info("%s serial %s was not valid. Reverted to %s", changed_object, new_serial, old_serial)
 
-            self.log_success(message=f"Serial validation completed for {changed_object}")
+            self.logger.info("Serial validation completed for %s", changed_object)
 
     def validate_serial(self, serial):
         # add business logic to validate serial

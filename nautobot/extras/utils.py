@@ -1,9 +1,7 @@
 import collections
 import hashlib
 import hmac
-import inspect
 import logging
-import pkgutil
 import re
 import sys
 
@@ -12,17 +10,16 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
 from django.db.models import Q
-from django.template.defaultfilters import slugify
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 
+from nautobot.core.choices import ColorChoices
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.registry import registry
@@ -336,49 +333,7 @@ def task_queues_as_choices(task_queues):
     return choices
 
 
-# namedtuple class yielded by the jobs_in_directory generator function, below
-# Example: ("devices", <module "devices">, "Hostname", <class "devices.Hostname">, None)
-# Example: ("devices", None, None, None, "error at line 40")
-JobClassInfo = collections.namedtuple(
-    "JobClassInfo",
-    ["module_name", "module", "job_class_name", "job_class", "error"],
-    defaults=(None, None, None, None),  # all parameters except `module_name` are optional and default to None.
-)
-
-
-def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors=False):
-    """
-    Walk the available Python modules in the given directory, and for each module, walk its Job class members.
-
-    Args:
-        path (str): Directory to import modules from, outside of sys.path
-        module_name (str): Specific module name to select; if unspecified, all modules will be inspected
-        reload_modules (bool): Whether to force reloading of modules even if previously loaded into Python.
-        report_errors (bool): If True, when an error is encountered, yield a JobClassInfo with the given error.
-                              If False (default), log the error but do not yield anything.
-
-    Yields:
-        JobClassInfo: (module_name, module, job_class_name, job_class, error)
-    """
-    from .jobs import is_job  # avoid circular import
-
-    for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
-        if module_name and discovered_module_name != module_name:
-            continue
-        if reload_modules and discovered_module_name in sys.modules:
-            del sys.modules[discovered_module_name]
-        try:
-            module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
-            # Get all members of the module that are Job subclasses
-            for job_class_name, job_class in inspect.getmembers(module, is_job):
-                yield JobClassInfo(discovered_module_name, module, job_class_name, job_class)
-        except Exception as exc:
-            logger.error(f"Unable to load module {discovered_module_name} from {path}: {exc}")
-            if report_errors:
-                yield JobClassInfo(module_name=discovered_module_name, error=exc)
-
-
-def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, git_repository=None):
+def refresh_job_model_from_job_class(job_model_class, job_class):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
 
@@ -392,13 +347,6 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     )  # imported here to prevent circular import problem
 
     # Unrecoverable errors
-    if len(job_source) > JOB_MAX_SOURCE_LENGTH:  # Should NEVER happen
-        logger.error(
-            'Unable to store Jobs from "%s" as Job models because the source exceeds %d characters in length!',
-            job_source,
-            JOB_MAX_SOURCE_LENGTH,
-        )
-        return (None, False)
     if len(job_class.__module__) > JOB_MAX_NAME_LENGTH:
         logger.error(
             'Unable to store Jobs from module "%s" as Job models because the module exceeds %d characters in length!',
@@ -443,8 +391,6 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     existing_job_names = (
         job_model_class.objects.filter(name__startswith=job_name)
         .exclude(
-            source=job_source[:JOB_MAX_SOURCE_LENGTH],
-            git_repository=git_repository,
             module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
             job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         )
@@ -464,16 +410,15 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
         )
 
     job_model, created = job_model_class.objects.get_or_create(
-        source=job_source[:JOB_MAX_SOURCE_LENGTH],
-        git_repository=git_repository,
         module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
         job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
         defaults={
-            "slug": slugify(job_name)[:JOB_MAX_NAME_LENGTH],
             "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
             "name": job_name,
             "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
             "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
+            "read_only": job_class.read_only,
+            "supports_dryrun": job_class.supports_dryrun,
             "installed": True,
             "enabled": False,
         },
@@ -482,11 +427,18 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     if job_name != default_job_name:
         job_model.name_override = True
 
+    if created and job_model.module_name.startswith("nautobot."):
+        # System jobs should be enabled by default when first created
+        job_model.enabled = True
+
     for field_name in JOB_OVERRIDABLE_FIELDS:
         # Was this field directly inherited from the job before, or was it overridden in the database?
         if not getattr(job_model, f"{field_name}_override", False):
             # It was inherited and not overridden
             setattr(job_model, field_name, getattr(job_class, field_name))
+
+    # set supports_dryrun to match the property on the job class
+    job_model.supports_dryrun = job_class.supports_dryrun
 
     if not created:
         # Mark it as installed regardless
@@ -495,12 +447,10 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
     job_model.save()
 
     logger.info(
-        '%s Job "%s: %s" from <%s%s: %s>',
+        '%s Job "%s: %s" from <%s>',
         "Created" if created else "Refreshed",
         job_model.grouping,
         job_model.name,
-        job_source,
-        f" {git_repository.name}" if git_repository is not None else "",
         job_class.__name__,
     )
 
@@ -516,7 +466,7 @@ def remove_prefix_from_cf_key(field_name):
     return field_name[3:]
 
 
-def check_if_key_is_graphql_safe(model_name, key):
+def check_if_key_is_graphql_safe(model_name, key, field_name="key"):
     """
     Helper method to check if a key field is Python/GraphQL safe.
     Used in CustomField, ComputedField and Relationship models.
@@ -525,9 +475,25 @@ def check_if_key_is_graphql_safe(model_name, key):
     if not graphql_safe_pattern.fullmatch(key):
         raise ValidationError(
             {
-                "key": "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace"
+                f"{field_name}": f"This {field_name} is not Python/GraphQL safe. Please do not start the {field_name} with a digit and do not use hyphens or whitespace"
             }
         )
+
+
+def fixup_null_statuses(*, model, model_contenttype, status_model):
+    """For instances of model that have an invalid NULL status field, create and use a special status_model instance."""
+    instances_to_fixup = model.objects.filter(status__isnull=True)
+    if instances_to_fixup.exists():
+        null_status, _ = status_model.objects.get_or_create(
+            name="NULL",
+            defaults={
+                "color": ColorChoices.COLOR_BLACK,
+                "description": "Created by Nautobot to replace invalid null references",
+            },
+        )
+        null_status.content_types.add(model_contenttype)
+        updated_count = instances_to_fixup.update(status=null_status)
+        print(f"    Found and fixed {updated_count} instances of {model.__name__} that had null 'status' fields.")
 
 
 def migrate_role_data(

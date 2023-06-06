@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from nautobot.dcim import models
+from nautobot.extras import models as extras_models
 
 
 class NaturalOrderByManagerTest(TestCase):
@@ -15,7 +16,8 @@ class NaturalOrderByManagerTest(TestCase):
         # Create the Racks
         location_type = models.LocationType.objects.get(name="Campus")
         location = models.Location.objects.filter(location_type=location_type).first()
-        models.Rack.objects.bulk_create(models.Rack(name=name, location=location) for name in names)
+        status = extras_models.Status.objects.get_for_model(models.Rack).first()
+        models.Rack.objects.bulk_create(models.Rack(name=name, location=location, status=status) for name in names)
         # Validate forward ordering
         self.assertEqual(names, list(models.Rack.objects.filter(name__in=names).values_list("name", flat=True)))
 

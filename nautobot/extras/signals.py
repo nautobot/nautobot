@@ -1,7 +1,6 @@
 import os
 import random
 import shutil
-import uuid
 import logging
 from datetime import timedelta
 
@@ -13,6 +12,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 
+from nautobot.core.celery import app, import_jobs_as_celery_tasks
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
@@ -169,11 +169,12 @@ def git_repository_pre_delete(instance, **kwargs):
     """
     from nautobot.extras.datasources import refresh_datasource_content
 
+    # FIXME(jathan): In light of jobs overhaul and Git syncs as jobs, we need to rethink this. We
+    # might instead make "delete" another Job class and call it here, but also think about how
+    # worker events will be such as firing the worker event here.
     job_result = JobResult.objects.create(
         name=instance.name,
-        obj_type=ContentType.objects.get_for_model(instance),
         user=None,
-        task_id=uuid.uuid4(),
         status=JobResultStatusChoices.STATUS_STARTED,
     )
 
@@ -184,13 +185,13 @@ def git_repository_pre_delete(instance, **kwargs):
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    if job_result.status not in JobResultStatusChoices.READY_STATES:
-        job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
-    job_result.save()
-
-    # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
+    # In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
-    # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
+    # In the Celery worker case, we can broadcast a control message to all workers to do so:
+    app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
+    # But we don't have an equivalent way to broadcast to any other Django instances.
+    # For now we just delete the one that we have locally and rely on other methods,
+    # such as the import_jobs_as_celery_tasks() signal that runs on server startup,
     # to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)
@@ -236,40 +237,31 @@ def refresh_job_models(sender, *, apps, **kwargs):
     """
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
+    from nautobot.extras.jobs import Job as JobClass  # avoid circular import
+
     Job = apps.get_model("extras", "Job")
-    GitRepository = apps.get_model("extras", "GitRepository")  # pylint: disable=redefined-outer-name
 
     # To make reverse migrations safe
-    if not hasattr(Job, "job_class_name") or not hasattr(Job, "git_repository"):
+    if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
-    from nautobot.extras.jobs import get_jobs
+    import_jobs_as_celery_tasks(app)
 
-    # TODO(Glenn): eventually this should be inverted so that get_jobs() relies on the database models...
-    job_classes = get_jobs()
     job_models = []
-    for source, modules in job_classes.items():
-        git_repository = None
-        if source.startswith("git."):
-            try:
-                git_repository = GitRepository.objects.get(slug=source[4:])
-            except GitRepository.DoesNotExist:
-                logger.warning('GitRepository "%s" not found?', source[4:])
-            source = "git"
+    for task in app.tasks.values():
+        # Skip Celery tasks that aren't Jobs
+        if not isinstance(task, JobClass):
+            continue
 
-        for module_details in modules.values():
-            for job_class in module_details["jobs"].values():
-                job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
-                if job_model is not None:
-                    job_models.append(job_model)
+        job_model, _ = refresh_job_model_from_job_class(Job, task.__class__)
+        if job_model is not None:
+            job_models.append(job_model)
 
-    for job_model in Job.objects.all():
-        if job_model.installed and job_model not in job_models:
+    for job_model in Job.objects.filter(installed=True):
+        if job_model not in job_models:
             logger.info(
-                "Job %s%s/%s/%s is no longer installed",
-                job_model.source,
-                f"/{job_model.git_repository.slug}" if job_model.git_repository is not None else "",
+                "Job %s/%s is no longer installed",
                 job_model.module_name,
                 job_model.job_class_name,
             )

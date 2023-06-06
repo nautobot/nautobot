@@ -312,8 +312,10 @@ class ParallelPrefixTest(APITransactionTestCase):
     """
 
     def test_create_multiple_available_prefixes_parallel(self):
-        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL)
         prefix_status = Status.objects.get_for_model(Prefix).first()
+        prefix = Prefix.objects.create(
+            prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL, status=prefix_status
+        )
 
         # 5 Prefixes
         requests = [
@@ -326,8 +328,10 @@ class ParallelPrefixTest(APITransactionTestCase):
         self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
 
     def test_create_multiple_available_ips_parallel(self):
-        prefix = Prefix.objects.create(prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL)
         prefix_status = Status.objects.get_for_model(Prefix).first()
+        prefix = Prefix.objects.create(
+            prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL, status=prefix_status
+        )
 
         # 8 IPs
         requests = [{"description": f"Test IP {i}", "status": prefix_status.pk} for i in range(1, 9)]
@@ -529,6 +533,7 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
@@ -536,12 +541,14 @@ class ServiceTest(APIViewTestCases.APIViewTestCase):
                 location=location,
                 device_type=devicetype,
                 role=devicerole,
+                status=devicestatus,
             ),
             Device.objects.create(
                 name="Device 2",
                 location=location,
                 device_type=devicetype,
                 role=devicerole,
+                status=devicestatus,
             ),
         )
         cls.devices = devices

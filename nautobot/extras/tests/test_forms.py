@@ -304,6 +304,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.platform = dcim_models.Platform.objects.create(name="Platform 1")
         cls.device_status = Status.objects.get_for_model(Device).first()
         cls.ipaddress_status = Status.objects.get_for_model(ipam_models.IPAddress).first()
+        cls.prefix_status = Status.objects.get_for_model(ipam_models.Prefix).first()
         cls.vlangroup_status = Status.objects.get_for_model(ipam_models.VLANGroup).first()
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
@@ -331,7 +332,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
 
         cls.namespace = ipam_models.Namespace.objects.first()
-        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace)
+        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=cls.prefix_status)
         cls.ipaddress_1 = ipam_models.IPAddress.objects.create(
             address="10.1.1.1/24", namespace=cls.namespace, status=cls.ipaddress_status
         )
@@ -750,9 +751,10 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         status = Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = Status.objects.get_for_model(ipam_models.Prefix).first()
         cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         namespace = ipam_models.Namespace.objects.first()
-        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=namespace)
+        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", status=prefix_status, namespace=namespace)
         cls.ipaddresses = [
             ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status, namespace=namespace),
             ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=status, namespace=namespace),
@@ -1143,18 +1145,15 @@ class JobEditFormTestCase(TestCase):
             "grouping": "Overridden grouping",
             "name_override": True,
             "name": "Overridden name",
-            "slug": "overridden-slug",
             "description_override": True,
             "description": "This is an overridden description.",
             "enabled": True,
             "approval_required_override": True,
             "approval_required": True,
-            "commit_default_override": True,
-            "commit_default": False,
+            "dryrun_default_override": True,
+            "dryrun_default": True,
             "hidden_override": True,
             "hidden": True,
-            "read_only_override": True,
-            "read_only": True,
             "soft_time_limit_override": True,
             "soft_time_limit": 350.1,
             "time_limit_override": True,

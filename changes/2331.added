@@ -1,0 +1,2 @@
+Added job stdout/stderr redirection to database `JobLogEntry` records.
+Added support to skip job logs from being written to the database.

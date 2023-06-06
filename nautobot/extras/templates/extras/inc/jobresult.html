@@ -40,6 +40,16 @@
             {% endif %}
             </td>
         </tr>
+        <tr>
+            <td>Return Value</td>
+            <td id="pending-result-loader">
+            {% if result.date_done %}
+                {{ result.result | placeholder }}
+            {% else %}
+                <img src="{% static 'img/ajax-loader.gif' %}">
+            {% endif %}
+            </td>
+        </tr>
     </table>
 </div>
 

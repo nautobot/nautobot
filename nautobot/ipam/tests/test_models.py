@@ -160,16 +160,15 @@ class IPAddressToInterfaceTest(TestCase):
 class TestVarbinaryIPField(TestCase):
     """Tests for `nautobot.ipam.fields.VarbinaryIPField`."""
 
-    def setUp(self):
-        super().setUp()
-
+    @classmethod
+    def setUpTestData(cls):
         # Field is a VarbinaryIPField we'll use to test.
-        self.namespace = Namespace.objects.first()
-        self.status = Status.objects.get(name="Active")
-        self.prefix = Prefix.objects.create(prefix="10.0.0.0/24", status=self.status, namespace=self.namespace)
-        self.field = self.prefix._meta.get_field("network")
-        self.network = self.prefix.network
-        self.network_packed = bytes(self.prefix.prefix.network)
+        cls.namespace = Namespace.objects.first()
+        cls.status = Status.objects.get(name="Active")
+        cls.prefix = Prefix.objects.create(prefix="10.0.0.0/24", status=cls.status, namespace=cls.namespace)
+        cls.field = cls.prefix._meta.get_field("network")
+        cls.network = cls.prefix.network
+        cls.network_packed = bytes(cls.prefix.prefix.network)
 
     def test_db_type(self):
         """Test `VarbinaryIPField.db_type`."""
@@ -273,6 +272,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.namespace = Namespace.objects.first()
         self.statuses = Status.objects.get_for_model(Prefix)
         self.status = self.statuses.first()
+        self.status.content_types.add(ContentType.objects.get_for_model(IPAddress))
         self.root = Prefix.objects.create(prefix="101.102.0.0/24", status=self.status, namespace=self.namespace)
         self.parent = Prefix.objects.create(prefix="101.102.0.0/25", status=self.status, namespace=self.namespace)
         self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
@@ -281,8 +281,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
     def test_prefix_validation(self):
         location_type = LocationType.objects.get(name="Room")
         location = Location.objects.filter(location_type=location_type).first()
-        prefix = Prefix(prefix="192.0.2.0/24", location=location)
-        prefix.status = self.statuses[0]
+        prefix = Prefix(prefix="192.0.2.0/24", location=location, status=self.statuses[0])
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
@@ -370,7 +369,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         # Now let's create some duplicates in another Namespace and perform the same tests.
 
-        namespace = random.choice(Namespace.objects.exclude(name="Global"))
+        namespace = random.choice(Namespace.objects.exclude(id=self.namespace.id))
         root = Prefix.objects.create(prefix="101.102.0.0/24", status=self.status, namespace=namespace)
         parent = Prefix.objects.create(prefix="101.102.0.0/25", status=self.status, namespace=namespace)
         child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=namespace)
@@ -709,17 +708,18 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
 
     def test_get_next_available_vid(self):
         vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
+        status = Status.objects.get_for_model(VLAN).first()
         VLAN.objects.bulk_create(
             (
-                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup),
-                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup),
-                VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup),
-                VLAN(name="VLAN 5", vid=5, vlan_group=vlangroup),
+                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 5", vid=5, vlan_group=vlangroup, status=status),
             )
         )
         self.assertEqual(vlangroup.get_next_available_vid(), 4)
 
-        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup),))
+        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup, status=status),))
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
 
 
@@ -740,7 +740,8 @@ class VLANTestCase(ModelTestCases.BaseModelTestCase):
         location_type.content_types.add(ContentType.objects.get_for_model(VLAN))
         group = VLANGroup.objects.create(name="Group 1")
         vlan.vlan_group = group
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type)
+        location_status = Status.objects.get_for_model(Location).first()
+        location_2 = Location.objects.create(name="Location 2", location_type=location_type, status=location_status)
         group.location = location_2
         group.save()
         with self.assertRaises(ValidationError) as cm:

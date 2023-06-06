@@ -34,7 +34,7 @@ class PrefixOrderingTestCase(OrderingTestBase):
 class IPAddressOrderingTestCase(OrderingTestBase):
     def test_address_vrf_ordering(self):
         """
-        This function tests IPAddress ordering (host, then prefix_length)
+        This function tests IPAddress ordering (host, then mask_length)
         """
-        addresses = sorted(IPAddress.objects.all(), key=attrgetter("address.network.packed", "prefix_length"))
+        addresses = sorted(IPAddress.objects.all(), key=attrgetter("address.network.packed", "mask_length"))
         self._compare(IPAddress.objects.all(), addresses)

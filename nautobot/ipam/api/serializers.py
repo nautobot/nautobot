@@ -233,7 +233,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         ]
         extra_kwargs = {
             "ip_version": {"read_only": True},
-            "prefix_length": {"read_only": True},
+            "mask_length": {"read_only": True},
             "nat_outside_list": {"read_only": True},
         }
 

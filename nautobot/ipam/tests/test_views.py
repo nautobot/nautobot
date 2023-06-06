@@ -1,12 +1,11 @@
 import datetime
-from unittest import skip
 
 from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.utils.timezone import make_aware
 
-from nautobot.core.testing import ViewTestCases
+from nautobot.core.testing import post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -24,6 +23,7 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -179,7 +179,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             self.assertNotIn(prefix.get_absolute_url(), content, msg=content)
 
 
-@skip("Updated for Namespaces but still failing. Remove broadcast/prefix_length and revisit.")
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
 
@@ -219,6 +218,47 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "dns_name": "example",
             "description": "New description",
         }
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        self.form_data = form_data
+        super().test_edit_object_with_permission()
+
+    # TODO Revise these tests by borrowing the pattern that already exists in nautobot.core.testing.api
+    # where by default the same data is used for both create and edit tests, but you have the option to override one or the other if needed.
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        self.form_data = form_data
+        super().test_edit_object_with_constrained_permission()
+
+    def test_host_non_modifiable_once_set(self):
+        """`host` field of the IPAddress should not be modifiable once the IPAddress is created."""
+        ip_address_1 = self._get_queryset().first()
+        ip_address_2 = self._get_queryset().last()
+
+        # Assign model-level permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("edit", ip_address_1)), 200)
+
+        # Try POST with model-level permission, with a different address from that of ip_address_1
+        # a.k.a Try to modify the host field of ip_address_1
+        self.form_data["address"] = ip_address_2.address
+        request = {
+            "path": self._get_url("edit", ip_address_1),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Host address cannot be changed once created", str(response.content))
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -347,7 +387,10 @@ class ServiceTestCase(
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
-        device = Device.objects.create(name="Device 1", location=location, device_type=devicetype, role=devicerole)
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            name="Device 1", location=location, device_type=devicetype, role=devicerole, status=devicestatus
+        )
 
         Service.objects.bulk_create(
             [

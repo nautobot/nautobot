@@ -1,0 +1,1 @@
+Fixed cases where Device.role was null, incongruent with the enforcement in the API and UI.

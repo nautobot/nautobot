@@ -553,7 +553,6 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "grouping": "icontains",
             "description": "icontains",
         },
@@ -563,17 +562,15 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         model = Job
         fields = [
             "id",
-            "source",
             "module_name",
             "job_class_name",
-            "slug",
             "name",
             "grouping",
             "installed",
             "enabled",
             "has_sensitive_variables",
             "approval_required",
-            "commit_default",
+            "dryrun_default",
             "hidden",
             "read_only",
             "is_job_hook_receiver",
@@ -584,9 +581,8 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "name_override",
             "approval_required_override",
             "description_override",
-            "commit_default_override",
+            "dryrun_default_override",
             "hidden_override",
-            "read_only_override",
             "soft_time_limit_override",
             "time_limit_override",
             "has_sensitive_variables_override",
@@ -600,8 +596,9 @@ class JobHookFilterSet(BaseFilterSet):
         choices=ChangeLoggedModelsQuery().get_choices,
     )
     job = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=Job.objects.all(),
-        label="Job (slug or ID)",
+        label="Job (name or ID)",
     )
 
     class Meta:
@@ -626,21 +623,21 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
         queryset=Job.objects.all(),
-        label="Job (ID or slug)",
+        label="Job (name or ID)",
     )
     job_model_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
-    obj_type = ContentTypeFilter()
     date_created = django_filters.DateTimeFilter()
     date_done = django_filters.DateTimeFilter()
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_done", "name", "status", "user", "obj_type"]
+        fields = ["id", "date_created", "date_done", "name", "status", "user"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -666,9 +663,9 @@ class ScheduledJobFilterSet(BaseFilterSet):
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="job_model__slug",
+        to_field_name="name",
         queryset=Job.objects.all(),
-        label="Job (ID or slug)",
+        label="Job (name or ID)",
     )
     job_model_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Job.objects.all(),
@@ -697,7 +694,11 @@ class JobButtonFilterSet(BaseFilterSet):
         },
     )
     content_types = ContentTypeFilter()
-    job = NaturalKeyOrPKMultipleChoiceFilter(queryset=Job.objects.all(), label="Job (slug or ID)")
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
 
     class Meta:
         model = JobButton

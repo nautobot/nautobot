@@ -20,7 +20,11 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         task_name=None,
         task_args=None,
         task_kwargs=None,
+        celery_kwargs=None,
+        job_model_id=None,
+        scheduled_job_id=None,
         worker=None,
+        user_id=None,
         using=None,
         content_type=None,
         content_encoding=None,
@@ -39,15 +43,20 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
 
         Args:
             task_id (uuid): UUID of task.
-            periodic_task_name (str): Celery periodic task name.
+            periodic_task_name (str): Celery periodic task name. (not used by Nautobot)
             task_name (str): Celery task name.
-            task_args (list): JSON-serialized task arguments.
-            task_kwargs (dict): JSON-serialized task kwargs.
-            result (str): JSON-serialized return value of the task, or an exception instance raised
+            task_args (list): Task arguments.
+            task_kwargs (dict): Task kwargs.
+            celery_kwargs (dict): Celery kwargs (kwargs passed to apply_async).
+            job_model_id (uuid): UUID of the Job model instance of the task being run.
+            scheduled_job_id (uuid): UUID of the ScheduledJob model instance that initiated
+                this task, or None if not scheduled.
+            result (obj): Return value of the task, or an exception instance raised
                 by the task.
             status (str): Task status. See `JobResultStatusChoices` for a list of possible status
                 values.
             worker (str): Worker that executes the task.
+            user_id (uuid): UUID of the user that initiated the task.
             using (str): Django database connection to use.
             traceback (str): Traceback string taken at the point of exception (only passed if the
                 task failed).
@@ -66,14 +75,28 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             "traceback": traceback,
             "meta": meta,
             "date_done": None,
-            "periodic_task_name": periodic_task_name,
             "task_name": task_name,
             "task_args": task_args,
             "task_kwargs": task_kwargs,
+            "celery_kwargs": celery_kwargs,
+            "job_model_id": job_model_id,
+            "scheduled_job_id": scheduled_job_id,
+            "user_id": user_id,
             "worker": worker,
         }
+        from nautobot.extras.models.jobs import Job
 
-        obj, created = self.using(using).get_or_create(task_id=task_id, defaults=fields)
+        # Need to have a try/except block here
+        # because sometimes job_model_id will be None.
+        try:
+            job = Job.objects.get(id=job_model_id)
+            if job.has_sensitive_variables:
+                del fields["task_args"]
+                del fields["task_kwargs"]
+        except Job.DoesNotExist:
+            pass
+
+        obj, created = self.using(using).get_or_create(id=task_id, defaults=fields)
 
         if not created:
             # Make sure `date_done` is allowed to stay null until the task reacheas a ready state.
