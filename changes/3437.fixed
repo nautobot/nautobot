@@ -1,1 +1,0 @@
-Fixed the possibility of inadvertently applying the same `Tag` to the same object multiple times by adding appropriate uniqueness constraints on the `TaggedItem` through table.

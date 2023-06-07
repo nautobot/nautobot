@@ -1,2 +1,0 @@
-Added generic test for GET/PUT round-trip in the REST API.
-Added support for `{"value": "x"}` format when writing to ChoiceFields in the REST API, making round-trip data easier.

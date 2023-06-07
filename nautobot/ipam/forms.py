@@ -603,11 +603,11 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         label="IP version",
         widget=StaticSelect2(),
     )
-    mask_length = forms.ChoiceField(
+    mask_length = forms.MultipleChoiceField(
         required=False,
         choices=IPADDRESS_MASK_LENGTH_CHOICES,
         label="Mask length",
-        widget=StaticSelect2(),
+        widget=StaticSelect2Multiple(),
     )
     vrf_id = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),

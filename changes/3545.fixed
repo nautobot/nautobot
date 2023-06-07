@@ -1,1 +1,0 @@
-Fixed a bug in Job edit view template where slug was missing, preventing creation from happening.

@@ -1,1 +1,0 @@
-Changed REST API for Device and VirtualMachine to omit `config_context` by default and only include it when requested by using the `?include=config_context` query parameter.

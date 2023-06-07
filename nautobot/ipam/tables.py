@@ -449,7 +449,7 @@ class PrefixDetailTable(PrefixTable):
 class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     address = tables.TemplateColumn(
-        template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "prefix_length")
+        template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "mask_length")
     )
     # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()

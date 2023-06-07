@@ -1,1 +1,0 @@
-Added `home_url`, `config_url`, and `docs_url` keys to the `/api/plugins/installed-plugins/` REST API endpoint.

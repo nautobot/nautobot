@@ -1,1 +1,0 @@
-Changed REST API versioning to default to latest instead of earliest when unspecified by the client.

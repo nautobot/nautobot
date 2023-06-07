@@ -1,1 +1,0 @@
-Added `get_absolute_url` method on `BaseModel` which will attempt to resolve the detail view route for all subclassed models.
