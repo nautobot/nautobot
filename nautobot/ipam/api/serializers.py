@@ -1,12 +1,14 @@
 from collections import OrderedDict
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     ChoiceField,
     NautobotModelSerializer,
 )
+from nautobot.core.api.serializers import NautobotHyperlinkedRelatedField
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
@@ -34,7 +36,8 @@ class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Namespace
-        fields = ["url", "name", "description", "location"]
+        fields = "__all__"
+        list_display_fields = ["name", "description", "location"]
 
 
 #
@@ -206,7 +209,6 @@ class AvailablePrefixSerializer(serializers.Serializer):
             [
                 ("ip_version", instance.version),
                 ("prefix", str(instance)),
-                ("namepace", instance.namespace),
             ]
         )
 
@@ -218,6 +220,9 @@ class AvailablePrefixSerializer(serializers.Serializer):
 
 class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     address = IPFieldSerializer()
+    namespace = NautobotHyperlinkedRelatedField(
+        view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
+    )
 
     class Meta:
         model = IPAddress
@@ -235,7 +240,18 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "ip_version": {"read_only": True},
             "mask_length": {"read_only": True},
             "nat_outside_list": {"read_only": True},
+            "parent": {"required": False},
         }
+
+    def validate(self, data):
+        namespace = data.get("namespace", None)
+        parent = data.get("parent", None)
+
+        # Only assert namespace/parent on create.
+        if self.instance is None and not any([namespace, parent]):
+            raise ValidationError({"__all__": "One of parent or namespace must be provided"})
+
+        return data
 
     def get_field_names(self, declared_fields, info):
         """Add nat_outside_list reverse relation to the automatically discovered fields."""
@@ -255,9 +271,8 @@ class AvailableIPSerializer(serializers.Serializer):
     def to_representation(self, instance):
         return OrderedDict(
             [
-                ("ip_verison", self.context["prefix"].version),
+                ("ip_version", self.context["prefix"].version),
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
-                ("namespace", instance.namespace),
             ]
         )
 

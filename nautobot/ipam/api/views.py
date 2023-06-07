@@ -171,7 +171,6 @@ class PrefixViewSet(NautobotModelViewSet):
                 many=True,
                 context={
                     "request": request,
-                    "namespace": prefix.namespace,
                 },
             )
 
@@ -260,7 +259,6 @@ class PrefixViewSet(NautobotModelViewSet):
                 context={
                     "request": request,
                     "prefix": prefix.prefix,
-                    "namespace": prefix.namespace,
                 },
             )
 

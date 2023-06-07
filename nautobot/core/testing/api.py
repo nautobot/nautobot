@@ -471,7 +471,8 @@ class APIViewTestCases:
             self.maxDiff = None
             # This check is more useful than it might seem. Any related object that wasn't CSV-converted correctly
             # will likely be rendered incorrectly as an API URL, and that API URL *will* differ between the
-            # two responses based on the inclusion or omission of the "?format=csv" parameter.
+            # two responses based on the inclusion or omission of the "?format=csv" parameter. If
+            # you run into this, make sure all serializers have `Meta.fields = "__all__"` set.
             self.assertEqual(
                 response_1.content.decode(response_1.charset), response_2.content.decode(response_2.charset)
             )
