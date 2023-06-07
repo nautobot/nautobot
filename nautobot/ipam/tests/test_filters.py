@@ -602,9 +602,15 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
     def test_mask_length(self):
-        params = {"mask_length": self.queryset.first().prefix_length}
+        # Test filtering by a single integer value
+        params = {"mask_length": self.queryset.first().mask_length}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(prefix_length=params["mask_length"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length=params["mask_length"])
+        )
+        # Test filtering by multiple integer values
+        params = {"mask_length": [self.queryset.first().mask_length, self.queryset.last().mask_length]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length=params["mask_length"])
         )
 
     def test_vrf(self):

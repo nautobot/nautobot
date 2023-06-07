@@ -1,1 +1,0 @@
-Updated `JobResult` manager `store_result` method to censor sensitive variables.

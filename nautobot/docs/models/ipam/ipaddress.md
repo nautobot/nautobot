@@ -27,6 +27,9 @@ An IP address can be assigned to any device or virtual machine interface, and an
 !!! note
     When primary IPs are set for both IPv4 and IPv6, Nautobot will prefer IPv6. This can be changed by setting the `PREFER_IPV4` configuration parameter.
 
++/- 2.0.0
+    `prefix_length` becomes `mask_length` and is intended to describe the desired subnet mask of the IP addresses when configured on interface(s).
+
 ## Network Address Translation (NAT)
 
 An IP address can be designated as the network address translation (NAT) inside IP address for one or more other IP addresses. This is useful primarily to denote a translation between public and private IP addresses. This relationship is followed in both directions: For example, if 10.0.0.1 is assigned as the inside IP for 192.0.2.1, 192.0.2.1 will be displayed as the outside IP for 10.0.0.1.

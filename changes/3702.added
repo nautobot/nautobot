@@ -1,1 +1,0 @@
-Added basic Redis caching for `TreeModel.display` to reduce redundant queries when listing such objects.

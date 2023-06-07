@@ -1,1 +1,0 @@
-Fixed logging output not being suppressed during unit and integration tests.

@@ -1,1 +1,0 @@
-Removed `run_job` Celery task and updated `BaseJob` to subclass Celery `Task`.
