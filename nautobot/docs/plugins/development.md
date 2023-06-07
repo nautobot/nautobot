@@ -654,7 +654,7 @@ def refresh_git_animals(repository_record, job_result, delete=False):
         job_result.log(
             "Successfully created/updated animal",
             obj=animal_record,
-            level_choice=LogLevelChoices.LOG_SUCCESS,
+            level_choice=LogLevelChoices.LOG_INFO,
             grouping="animals",
         )
 

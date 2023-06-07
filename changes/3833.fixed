@@ -1,1 +1,0 @@
-Fixed build failure caused by registered App missing urls.py file or a urlpatterns.

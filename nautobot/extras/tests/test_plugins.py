@@ -10,6 +10,7 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.celery import app
 from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
 from nautobot.dcim.tests.test_views import create_test_device
@@ -17,7 +18,7 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
-from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
@@ -119,31 +120,8 @@ class PluginTest(TestCase):
         from example_plugin.jobs import ExampleJob
 
         self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
-
-        self.assertEqual(
-            ExampleJob,
-            get_job("plugins/example_plugin.jobs/ExampleJob"),
-        )
-        self.assertIn(
-            "plugins/example_plugin.jobs/ExampleJob",
-            get_job_classpaths(),
-        )
-        jobs_dict = get_jobs()
-        self.assertIn("plugins", jobs_dict)
-        self.assertIn("example_plugin.jobs", jobs_dict["plugins"])
-        self.assertEqual(
-            "ExamplePlugin jobs",
-            jobs_dict["plugins"]["example_plugin.jobs"].get("name"),
-        )
-        self.assertIn("jobs", jobs_dict["plugins"]["example_plugin.jobs"])
-        self.assertIn(
-            "ExampleJob",
-            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"],
-        )
-        self.assertEqual(
-            ExampleJob,
-            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"]["ExampleJob"],
-        )
+        self.assertEqual(ExampleJob, get_job("example_plugin.jobs.ExampleJob"))
+        self.assertIn("example_plugin.jobs.ExampleJob", app.tasks)
 
     def test_git_datasource_contents_registration(self):
         """

@@ -1,116 +1,13 @@
-import copy
 import re
 
 from django import forms
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.http import QueryDict
-from django.utils.functional import SimpleLazyObject
 import django_filters
 
-from nautobot.core import constants, exceptions
+from nautobot.core import exceptions
 from nautobot.core.utils.filtering import get_filterset_field
-
-
-#
-# Fake request object
-#
-
-
-class NautobotFakeRequest:
-    """
-    A fake request object which is explicitly defined at the module level so it is able to be pickled. It simply
-    takes what is passed to it as kwargs on init and sets them as instance variables.
-    """
-
-    def __init__(self, _dict):
-        self.__dict__ = _dict
-
-    def _get_user(self):
-        """Lazy lookup function for self.user."""
-        if not self._cached_user:
-            User = get_user_model()
-            self._cached_user = User.objects.get(pk=self._user_pk)
-        return self._cached_user
-
-    def _init_user(self):
-        """Set up self.user as a lazy attribute, similar to a real Django Request object."""
-        self._cached_user = None
-        self.user = SimpleLazyObject(self._get_user)
-
-    def nautobot_serialize(self):
-        """
-        Serialize a JSON representation that is safe to pass to Celery.
-
-        This function is called from nautobot.core.celery.NautobotKombuJSONEncoder.
-        """
-        data = copy.deepcopy(self.__dict__)
-        # We don't want to try to pickle/unpickle or serialize/deserialize the actual User object,
-        # but make sure we do store its PK so that we can look it up on-demand after being deserialized.
-        user = data.pop("user")
-        data.pop("_cached_user", None)
-        if "_user_pk" not in data:
-            # We have a user but haven't stored its PK yet, so look it up and store it
-            data["_user_pk"] = user.pk
-        return data
-
-    @classmethod
-    def nautobot_deserialize(cls, data):
-        """
-        Deserialize a JSON representation that is safe to pass to Celery and return a NautobotFakeRequest instance.
-
-        This function is registered for usage by Celery in nautobot/core/celery/__init__.py
-        """
-        obj = cls(data)
-        obj._init_user()
-        return obj
-
-    def __getstate__(self):
-        """
-        Implement `pickle` serialization API.
-
-        It turns out that Celery uses pickle internally in apply_async()/send_job() even if we have configured Celery
-        to use JSON for all I/O (and we do, see settings.py), so we need to support pickle and JSON both.
-        """
-        return self.nautobot_serialize()
-
-    def __setstate__(self, state):
-        """
-        Implement `pickle` deserialization API.
-
-        It turns out that Celery uses pickle internally in apply_async()/send_job() even if we have configured Celery
-        to use JSON for all I/O (and we do, see settings.py), so we need to support pickle and JSON both.
-        """
-        # Generic __setstate__ behavior
-        self.__dict__.update(state)
-        # Set up lazy `self.user` attribute based on `state["_user_pk"]`
-        self._init_user()
-
-
-def copy_safe_request(request):
-    """
-    Copy selected attributes from a request object into a new fake request object. This is needed in places where
-    thread safe pickling of the useful request data is needed.
-
-    Note that `request.FILES` is explicitly omitted because they cannot be uniformly serialized.
-    """
-    meta = {
-        k: request.META[k]
-        for k in constants.HTTP_REQUEST_META_SAFE_COPY
-        if k in request.META and isinstance(request.META[k], str)
-    }
-
-    return NautobotFakeRequest(
-        {
-            "META": meta,
-            "POST": request.POST,
-            "GET": request.GET,
-            "user": request.user,
-            "path": request.path,
-            "id": getattr(request, "id", None),  # UUID assigned by middleware
-        }
-    )
 
 
 def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset):

@@ -1,1 +1,0 @@
-Fixed `debugpy` workflow not working with the removal of `manage.py`.

@@ -54,10 +54,28 @@
   Removed Field: "tree_id"
   Comments: "Made irrelevant by `django-tree-queries`"
 - Model: "IPAddress"
+  Removed Field: "broadcast"
+  Comments: "Use parent Prefix's broadcast instead"
+- Model: "IPAddress"
   Removed Field: "vrf"
   Comments: "VRF is now related to the assigned Interface(s), as well as the parent Prefix"
+- Model: "Job"
+  Removed Field: "git_repository"
+  Comments: "Can be retrieved from the instance if desired, but is no longer a database field."
+- Model: "Job"
+  Removed Field: "slug"
+  Comments:
+- Model: "Job"
+  Removed Field: "source"
+  Comments: "Now implied by the Job's `module_name` field."
 - Model: "JobHook"
   Removed Field: "slug"
+  Comments:
+- Model: "JobResult"
+  Removed Field: "job_id"
+  Comments:
+- Model: "JobResult"
+  Removed Field: "obj_type"
   Comments:
 - Model: "Location"
   Removed Field: "site"

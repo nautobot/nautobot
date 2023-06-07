@@ -4,7 +4,6 @@ from .fields import (
     SerializedPKRelatedField,
     TimeZoneSerializerField,
 )
-from .routers import OrderedDefaultRouter
 from .serializers import (
     BaseModelSerializer,
     BulkOperationSerializer,
@@ -26,7 +25,6 @@ __all__ = (
     "CustomFieldModelSerializerMixin",
     "NautobotModelSerializer",
     "NotesSerializerMixin",
-    "OrderedDefaultRouter",
     "RelationshipModelSerializerMixin",
     "SerializedPKRelatedField",
     "TimeZoneSerializerField",

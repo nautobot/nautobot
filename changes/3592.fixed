@@ -1,1 +1,0 @@
-Fixed heuristic for duplicate calls to `populate_model_features_registry` causing skipped updates.

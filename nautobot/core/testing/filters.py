@@ -119,7 +119,7 @@ class FilterTestCases:
             """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`.
 
             This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
-            that `filter=False` matches `self.queryset.filter(field__isnull=False)`.
+            that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
             """
             for filter_name, filter_object in self.filterset.get_filters().items():
                 if not isinstance(filter_object, RelatedMembershipBooleanFilter):

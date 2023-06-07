@@ -1,1 +1,0 @@
-Fixed an error seen when running the `extras.0061_collect_roles_from_related_apps_roles` migration.
