@@ -209,7 +209,6 @@ class AvailablePrefixSerializer(serializers.Serializer):
             [
                 ("ip_version", instance.version),
                 ("prefix", str(instance)),
-                ("namepace", instance.namespace),
             ]
         )
 
@@ -274,7 +273,6 @@ class AvailableIPSerializer(serializers.Serializer):
             [
                 ("ip_version", self.context["prefix"].version),
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
-                ("namespace", instance.namespace),
             ]
         )
 

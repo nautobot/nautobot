@@ -5,7 +5,6 @@ from random import shuffle
 
 from django.db import connection
 from django.urls import reverse
-from netaddr import IPNetwork
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
@@ -138,7 +137,6 @@ class RIRTest(APIViewTestCases.APIViewTestCase):
         return [rir.pk for rir in RIRs]
 
 
-@skip("Needs to be updated for Namespaces")
 class PrefixTest(APIViewTestCases.APIViewTestCase):
     model = Prefix
     choices_fields = []
@@ -202,8 +200,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of the first available prefix within a parent prefix.
         """
         # Find prefix with no child prefixes and large enough to create 4 child prefixes
-        for instance in Prefix.objects.filter(vrf__isnull=False):
-            if instance.descendants().count() == 0 and instance.prefix.size > 2:
+        for instance in Prefix.objects.filter(children__isnull=True):
+            if instance.prefix.size > 2:
                 prefix = instance
                 break
         else:
@@ -217,13 +215,14 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(4):
             data = {
                 "prefix_length": child_prefix_length,
+                "namespace": self.namespace.pk,
                 "status": self.status.pk,
                 "description": f"Test Prefix {i + 1}",
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data["prefix"], str(prefixes_to_be_created[i]))
-            self.assertEqual(str(response.data["vrf"]), self.absolute_api_url(prefix.vrf))
+            self.assertEqual(str(response.data["namespace"]), self.absolute_api_url(prefix.namespace))
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more prefix
@@ -241,8 +240,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test the creation of available prefixes within a parent prefix.
         """
         # Find prefix with no child prefixes and large enough to create 4 child prefixes
-        for instance in Prefix.objects.filter(vrf__isnull=False):
-            if instance.descendants().count() == 0 and instance.prefix.size > 2:
+        for instance in Prefix.objects.filter(children__isnull=True):
+            if instance.prefix.size > 2:
                 prefix = instance
                 break
         else:
@@ -254,11 +253,36 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         # Try to create five prefixes (only four are available)
         child_prefix_length = prefix.prefix_length + 2
         data = [
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 1", "status": self.status.pk},
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 2", "status": self.status.pk},
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 3", "status": self.status.pk},
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 4", "status": self.status.pk},
-            {"prefix_length": child_prefix_length, "description": "Test Prefix 5", "status": self.status.pk},
+            {
+                "prefix_length": child_prefix_length,
+                "description": "Test Prefix 1",
+                "namespace": self.namespace.pk,
+                "status": self.status.pk,
+            },
+            {
+                "prefix_length": child_prefix_length,
+                "description": "Test Prefix 2",
+                "namespace": self.namespace.pk,
+                "status": self.status.pk,
+            },
+            {
+                "prefix_length": child_prefix_length,
+                "description": "Test Prefix 3",
+                "namespace": self.namespace.pk,
+                "status": self.status.pk,
+            },
+            {
+                "prefix_length": child_prefix_length,
+                "description": "Test Prefix 4",
+                "namespace": self.namespace.pk,
+                "status": self.status.pk,
+            },
+            {
+                "prefix_length": child_prefix_length,
+                "description": "Test Prefix 5",
+                "namespace": self.namespace.pk,
+                "status": self.status.pk,
+            },
         ]
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
@@ -279,7 +303,10 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of all available IP addresses within a parent prefix.
         """
         prefix = Prefix.objects.create(
-            prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL, status=self.status
+            prefix="192.0.2.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
@@ -298,10 +325,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         Test retrieval of the first available IP address within a parent prefix.
         """
-        vrf = VRF.objects.first()
         prefix = Prefix.objects.create(
-            prefix=IPNetwork("192.0.2.0/30"),
-            vrf=vrf,
+            prefix="192.0.2.0/30",
+            namespace=self.namespace,
             type=choices.PrefixTypeChoices.TYPE_POOL,
             status=self.status,
         )
@@ -312,11 +338,12 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(1, 5):
             data = {
                 "description": f"Test IP {i}",
+                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(str(response.data["vrf"]), self.absolute_api_url(vrf))
+            self.assertEqual(str(response.data["parent"]), self.absolute_api_url(prefix))
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more IP
@@ -329,39 +356,60 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test the creation of available IP addresses within a parent prefix.
         """
         prefix = Prefix.objects.create(
-            prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL, status=self.status
+            prefix="192.0.2.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
         # Try to create nine IPs (only eight are available)
-        data = [{"description": f"Test IP {i}", "status": self.status.pk} for i in range(1, 10)]  # 9 IPs
+        data = [
+            {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
+            for i in range(1, 10)
+        ]  # 9 IPs
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
         # Create all eight available IPs in a single request
-        data = [{"description": f"Test IP {i}", "status": self.status.pk} for i in range(1, 9)]  # 8 IPs
+        data = [
+            {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
+            for i in range(1, 9)
+        ]  # 8 IPs
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 8)
 
 
-@skip("Needs to be updated for Namespaces")
 class ParallelPrefixTest(APITransactionTestCase):
     """
     Adapted from https://github.com/netbox-community/netbox/pull/3726
     """
 
+    def setUp(self):
+        super().setUp()
+        self.namespace = Namespace.objects.create(name="Turtles", description="All the way down.")
+        self.status = Status.objects.get_for_model(Prefix).first()
+
     def test_create_multiple_available_prefixes_parallel(self):
-        prefix_status = Status.objects.get_for_model(Prefix).first()
         prefix = Prefix.objects.create(
-            prefix=IPNetwork("192.0.2.0/28"), type=choices.PrefixTypeChoices.TYPE_POOL, status=prefix_status
+            prefix="192.0.2.0/28",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
         )
 
         # 5 Prefixes
         requests = [
-            {"prefix_length": 30, "description": f"Test Prefix {i}", "status": prefix_status.pk} for i in range(1, 6)
+            {
+                "prefix_length": 30,
+                "description": f"Test Prefix {i}",
+                "namespace": self.namespace.pk,
+                "status": self.status.pk,
+            }
+            for i in range(1, 6)
         ]
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self._do_parallel_requests(url, requests)
@@ -370,13 +418,18 @@ class ParallelPrefixTest(APITransactionTestCase):
         self.assertEqual(len(prefixes), len(set(prefixes)), "Duplicate prefixes should not exist")
 
     def test_create_multiple_available_ips_parallel(self):
-        prefix_status = Status.objects.get_for_model(Prefix).first()
         prefix = Prefix.objects.create(
-            prefix=IPNetwork("192.0.2.0/29"), type=choices.PrefixTypeChoices.TYPE_POOL, status=prefix_status
+            prefix="192.0.2.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
         )
 
         # 8 IPs
-        requests = [{"description": f"Test IP {i}", "status": prefix_status.pk} for i in range(1, 9)]
+        requests = [
+            {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
+            for i in range(1, 9)
+        ]
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self._do_parallel_requests(url, requests)
         ips = [str(o) for o in IPAddress.objects.filter().all()]
