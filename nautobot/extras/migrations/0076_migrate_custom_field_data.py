@@ -11,8 +11,9 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
     CustomField = apps.get_model("extras", "customfield")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
-    # Make sure that the key is unique during migration
-    cf_keys = []
+    # Make sure that customfield keys are unique by appending counters
+    # and log messages if the old keys are changed.
+    cf_keys = set()
     for custom_field in CustomField.objects.all().order_by("created"):
         original_cf_key = custom_field.key
         cf_key = slugify_dashes_to_underscores(original_cf_key)
@@ -28,6 +29,7 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
             )
             custom_field.key = cf_key
             custom_field.save()
+        cf_keys.add(cf_key)
         CF_KEY_TO_NAME[custom_field.key] = custom_field.name
 
     # Move name to labels
