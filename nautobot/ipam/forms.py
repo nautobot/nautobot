@@ -788,14 +788,6 @@ class ServiceForm(NautobotModelForm):
         else:
             self.fields["ip_addresses"].choices = []
 
-    def clean(self, *args, **kwargs):
-        if self.instance:
-            if self.instance.device:
-                self.cleaned_data["device"] = self.instance.device
-            else:
-                self.cleaned_data["virtual_machine"] = self.instance.virtual_machine
-        super().clean()
-
 
 class ServiceFilterForm(NautobotFilterForm):
     model = Service

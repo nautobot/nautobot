@@ -25,6 +25,7 @@ from nautobot.ipam.models import (
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -341,7 +342,10 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.device = Device.objects.create(
             name="Device 1", location=location, device_type=devicetype, role=devicerole, status=devicestatus
         )
-
+        cluster_type = ClusterType.objects.create(name="Circuit Type 2")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=location)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        cls.virtual_machine = VirtualMachine.objects.create(cluster=cluster, name="VM 1", status=vm_status)
         Service.objects.bulk_create(
             [
                 Service(
@@ -410,3 +414,47 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("Service with this Name and Device already exists.", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_service_cannot_be_assigned_to_both_device_and_vm(self):
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        # Input a virtual machine as well in the form data
+        self.form_data["virtual_machine"] = self.virtual_machine.pk
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("A service cannot be associated with both a device and a virtual machine.", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_service_cannot_be_assigned_to_neither_device_nor_vm(self):
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        # Input a virtual machine as well in the form data
+        self.form_data["device"] = None
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("A service must be associated with either a device or a virtual machine.", response_body)
