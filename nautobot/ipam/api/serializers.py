@@ -36,7 +36,8 @@ class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = Namespace
-        fields = ["url", "name", "description", "location"]
+        fields = "__all__"
+        list_display_fields = ["name", "description", "location"]
 
 
 #

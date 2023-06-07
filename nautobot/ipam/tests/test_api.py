@@ -24,26 +24,68 @@ class AppTest(APITestCase):
         self.assertEqual(response.status_code, 200)
 
 
-@skip("Needs to be updated for Namespaces")
+class NamespaceTest(APIViewTestCases.APIViewTestCase):
+    model = Namespace
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.first()
+        cls.create_data = [
+            {
+                "name": "Purple Monkey Namesapce 1",
+                "description": "A perfectly cromulent namespace.",
+                "location": location.pk,
+            },
+            {
+                "name": "Purple Monkey Namesapce 2",
+                "description": "A secondarily cromulent namespace.",
+                "location": location.pk,
+            },
+            {
+                "name": "Purple Monkey Namesapce 3",
+                "description": "A third cromulent namespace.",
+                "location": location.pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "description": "A perfectly new description.",
+        }
+
+    def get_deletable_object_pks(self):
+        namespaces = [
+            Namespace.objects.create(name="Deletable Namespace 1"),
+            Namespace.objects.create(name="Deletable Namespace 2"),
+            Namespace.objects.create(name="Deletable Namespace 3"),
+        ]
+        return [ns.pk for ns in namespaces]
+
+
 class VRFTest(APIViewTestCases.APIViewTestCase):
     model = VRF
-    create_data = [
-        {
-            "name": "VRF 4",
-            "rd": "65000:4",
-        },
-        {
-            "name": "VRF 5",
-            "rd": "65000:5",
-        },
-        {
-            "name": "VRF 6",
-            "rd": "65000:6",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
+
+    @classmethod
+    def setUpTestData(cls):
+        namespace = Namespace.objects.first()
+        cls.create_data = [
+            {
+                "namespace": namespace.pk,
+                "name": "VRF 4",
+                "rd": "65000:4",
+            },
+            {
+                "namespace": namespace.pk,
+                "name": "VRF 5",
+                "rd": "65000:5",
+            },
+            {
+                "namespace": namespace.pk,
+                "name": "VRF 6",
+                "rd": "65000:6",
+            },
+        ]
+        cls.bulk_update_data = {
+            "description": "New description",
+        }
 
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
