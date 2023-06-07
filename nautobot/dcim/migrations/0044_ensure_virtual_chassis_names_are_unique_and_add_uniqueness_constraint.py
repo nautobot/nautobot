@@ -19,11 +19,9 @@ def ensure_virtual_chassis_names_are_all_unique(apps, schema_editor):
     if duplicates:
         for duplicate_vc in duplicates:
             print(f">>> There are {VC_NAME_TO_COUNT[duplicate_vc]} with name {duplicate_vc}\n")
-        print(
-            ">>> Please rename all Virtual Chassis instances with duplicate names before running this migration again.\n"
-        )
+        print(">>> Unable to proceed with migrations; in Nautobot 2.0+ the name for these records must be unique.\n")
         print(">>> Failing migration...\n")
-        raise ValidationError("Duplicate Virtual Chassis names detected.")
+        raise RuntimeError("Duplicate Virtual Chassis record names must be manually resolved before migrating.")
 
 
 class Migration(migrations.Migration):
