@@ -6,8 +6,8 @@ from nautobot.core.utils.migrations import check_for_duplicates_with_natural_key
 
 
 def ensure_virtual_chassis_names_are_all_unique(apps, schema_editor):
-    VC = apps.get_model("dcim", "VirtualChassis")
-    check_for_duplicates_with_natural_key_fields_in_migration(VC, ["name"])
+    VirtualChassis = apps.get_model("dcim", "VirtualChassis")
+    check_for_duplicates_with_natural_key_fields_in_migration(VirtualChassis, ["name"])
 
 
 class Migration(migrations.Migration):
