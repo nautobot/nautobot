@@ -3,12 +3,12 @@
 from django.db import migrations
 
 
-def make_sure_service_name_is_unique(service_list, parent, cache, max_name_length):
+def make_sure_service_name_is_unique(service_list, parent, cache):
     """
-    service_list: list; Service instances that are associated to Devices or Virtual Machines.
-    parent: str; could be either "device" or "virtual_machine".
-    cache: dictionary; dictionary that contains Device/Virtual Machine instances as Key and associated Service instances' names as Value.
-    max_name_length: int; max_length for the name attribute of Service model.
+    Args:
+        service_list (list): Service instances that are associated to Devices or Virtual Machines.
+        parent (str): could be either "device" or "virtual_machine".
+        cache (dict): dictionary that contains Device/Virtual Machine instances as Key and associated Service instances' names as Value.
     """
     for service in service_list:
         host = getattr(service, parent)
@@ -18,7 +18,7 @@ def make_sure_service_name_is_unique(service_list, parent, cache, max_name_lengt
         while service_name in service_names:
             appendage = f"_{count}"
             len_appendage = len(appendage)
-            length_overflow = len(service_name) + len_appendage - max_name_length
+            length_overflow = len(service_name) + len_appendage - 100
             if length_overflow > 0:
                 service_name = service_name[: len(service_name) - length_overflow]
             service_name += appendage
@@ -37,14 +37,13 @@ def ensure_all_existing_services_fit_uniqueness_constraints(apps, schema_editor)
     By enumerating Service instances associated with a device/vm and appending unique indices to names of the Service instances.
     """
     Service = apps.get_model("ipam", "Service")
-    MAX_NAME_LENGTH = 100
     device_services = Service.objects.filter(device__isnull=False)
-    DEVICE_TO_SERVICE = {}
-    make_sure_service_name_is_unique(device_services, "device", DEVICE_TO_SERVICE, MAX_NAME_LENGTH)
+    device_to_service = {}
+    make_sure_service_name_is_unique(device_services, "device", device_to_service)
 
     vm_services = Service.objects.filter(virtual_machine__isnull=False)
-    VM_TO_SERVICE = {}
-    make_sure_service_name_is_unique(vm_services, "virtual_machine", VM_TO_SERVICE, MAX_NAME_LENGTH)
+    vm_to_service = {}
+    make_sure_service_name_is_unique(vm_services, "virtual_machine", vm_to_service)
 
 
 class Migration(migrations.Migration):
