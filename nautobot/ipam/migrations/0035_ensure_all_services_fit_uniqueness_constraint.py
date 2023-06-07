@@ -12,7 +12,7 @@ def make_sure_service_name_is_unique(service_list, parent, cache, max_name_lengt
     """
     for service in service_list:
         host = getattr(service, parent)
-        service_names = cache.setdefault(host, [])
+        service_names = cache.setdefault(host, set())
         count = 1
         service_name = service.name
         while service_name in service_names:
@@ -23,9 +23,12 @@ def make_sure_service_name_is_unique(service_list, parent, cache, max_name_lengt
                 service_name = service_name[: len(service_name) - length_overflow]
             service_name += appendage
             count += 1
-        service.name = service_name
-        cache[host].append(service_name)
-        service.save()
+
+        if service_name != service.name:
+            print(f'    Service instance {service.id} is being renamed to "{service_name}" for uniqueness')
+            service.name = service_name
+            service.save()
+        cache[host].add(service_name)
 
 
 def ensure_all_existing_services_fit_uniqueness_constraints(apps, schema_editor):
