@@ -1802,8 +1802,7 @@ class JobTestCase(
             response = self.client.post(run_url, data)
             self.assertRedirects(response, reverse("extras:scheduledjob_list"))
 
-            scheduled = ScheduledJob.objects.last()
-            self.assertEqual(scheduled.name, f"test {i}")
+            scheduled = ScheduledJob.objects.get(name=f"test {i}")
             self.assertEqual(scheduled.start_time, start_time)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
