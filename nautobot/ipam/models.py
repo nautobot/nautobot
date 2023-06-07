@@ -709,7 +709,6 @@ class Prefix(PrimaryModel):
 
         return query.filter(
             ip_version=self.ip_version,
-            prefix_length__gte=self.prefix_length,
             network__gte=self.network,
             broadcast__lte=self.broadcast,
             namespace=self.namespace,
@@ -837,21 +836,35 @@ class Prefix(PrimaryModel):
 
     def get_utilization(self):
         """
-        TODO: document me
+        Return the utilization of this prefix as a UtilizationData object. For prefixes containing other prefixes,
+        all direct child prefixes are considered fully utilized. For prefixes containing IP addresses and/or pools,
+        pools are considered fully utilized while only IP addresses that are not contained within pools are added
+        to the utilization.
         """
-        child_prefixes = netaddr.IPSet(p.prefix for p in self.children.all())
         denominator = self.prefix.size
-        # TODO: if is_pool, the child IPs will be parented to the pool's parent so the child_ips
-        # will need to be filtered on self.network, self.broadcast and self.namespace
-        # if self.is_pool:
-        #     child_ips = IPAddress.objects.filter(namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast)
-        # else:
-        child_ips = netaddr.IPSet(i.host for i in self.ip_addresses.all())
-        if child_ips and denominator > 2:
-            if not any([self.network in child_ips, self.broadcast in child_ips]):
-                denominator -= 2
 
+        if self.type == choices.PrefixTypeChoices.TYPE_POOL:
+            pool_ips = IPAddress.objects.filter(
+                parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+            ).values_list("host", flat=True)
+            child_ips = netaddr.IPSet(pool_ips)
+        else:
+            child_ips = netaddr.IPSet(i.host for i in self.ip_addresses.all())
+
+        child_prefixes = netaddr.IPSet(p.prefix for p in self.children.all())
         numerator = child_prefixes | child_ips
+
+        # Exclude network and broadcast address from the denominator unless they've been assigned to an IPAddress or child pool.
+        if all(
+            [
+                not self.children.exclude(type=choices.PrefixTypeChoices.TYPE_POOL).exists(),
+                denominator > 2,
+                self.type != choices.PrefixTypeChoices.TYPE_POOL,
+                self.ip_version == 4,
+            ]
+        ):
+            if not any([self.network in numerator, self.broadcast in numerator]):
+                denominator -= 2
 
         return UtilizationData(numerator=numerator.size, denominator=denominator)
 

@@ -79,7 +79,7 @@ If a `Prefix` already exists with the same network and prefix length as a previo
 | `rir`            | `rir`                |
 | `tenant`         | `tenant`             |
 
-#### Prefix Parenting Concrete Relationship
+### Prefix Parenting Concrete Relationship
 
 The `ipam.Prefix` model has been modified to have a self-referencing foreign key as the `parent` field. Parenting of prefixes is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
 
@@ -91,13 +91,37 @@ The following changes have been made to the `Prefix` model.
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
 
-#### IPAddressd Parenting Concrete Relationship
+### IPAddress Parenting Concrete Relationship
 
 The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
 
 | Removed                | Replaced With   |
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
+
+### Prefix get_utilization Method
+
+The `get_utilization` method on the `ipam.Prefix` model has been updated in 2.0 to account for the `Prefix.type` field. The behavior is now as follows:
+
+- If the `Prefix.type` is `Container`, the utilization is calculated as the sum of the total address space of all child prefixes.
+- If the `Prefix.type` is `Pool`, the utilization is calculated as the sum of the total number of IP addresses within the pool's range.
+- If the `Prefix.type` is `Network`:
+    - The utilization is calculated as the sum of the total address space of all child `Pool` prefixes plus the total number of child IP addresses.
+    - For IPv4 networks larger than /31, if neither the first or last address is occupied by either a pool or an IP address, they are subtracted from the total size of the prefix.
+
+#### Example
+
+- 192.168.0.0/16          `Container - 1024/65536 utilization`
+    - 192.168.1.0/24      `Network - 1/254 utilization`
+        - 192.168.1.1     `IP Address`
+    - 192.168.2.0/24      `Network - 4/256 utilization`
+        - 192.168.2.0/30  `Pool - 1/4 utilization`
+            - 192.168.2.1 `IP Address`
+    - 192.168.3.0/24      `Network - 5/254 utilization`
+        - 192.168.3.1     `IP Address`
+        - 192.168.3.64/30 `Pool - 0/4 utilization`
+    - 192.168.4.0/24      `Network - 1/256 utilization`
+        - 192.168.4.255   `IP Address`
 
 ## GraphQL and REST API Changes
 
