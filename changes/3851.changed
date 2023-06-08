@@ -1,0 +1,1 @@
+Changed `ObjectPermission.name` to be globally unique and serve as the natural key for this model.
