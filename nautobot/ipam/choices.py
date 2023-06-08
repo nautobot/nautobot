@@ -91,8 +91,8 @@ class IPAddressRoleChoices(ChoiceSet):
 
 
 class IPAddressTypeChoices(ChoiceSet):
-    TYPE_HOST = "host"
     TYPE_DHCP = "dhcp"
+    TYPE_HOST = "host"
     TYPE_SLAAC = "slaac"
 
     CHOICES = (

@@ -112,7 +112,6 @@ def revert_ipaddress_type_to_status(apps, schema_editor):
     # Revert type back to status.
     IPAddress.objects.filter(type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_DHCP).update(status=status_dhcp)
     IPAddress.objects.filter(type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_SLAAC).update(status=status_slaac)
-    IPAddress.objects.update(type=None)
 
 
 class Migration(migrations.Migration):
