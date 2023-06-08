@@ -207,9 +207,9 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "address,status,parent",
-            f"192.0.2.4/24,{statuses[0].name},{parent.natural_key_slug}",
-            f"192.0.2.5/24,{statuses[0].name},{parent.natural_key_slug}",
-            f"192.0.2.6/24,{statuses[0].name},{parent.natural_key_slug}",
+            f"192.0.2.4/24,{statuses[0].name},{parent.composite_key}",
+            f"192.0.2.5/24,{statuses[0].name},{parent.composite_key}",
+            f"192.0.2.6/24,{statuses[0].name},{parent.composite_key}",
         )
 
         cls.bulk_edit_data = {
@@ -421,9 +421,9 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "device,name,protocol,ports,description",
-            f"{cls.device.natural_key_slug},Service 4,tcp,1,First service",
-            f"{cls.device.natural_key_slug},Service 5,tcp,2,Second service",
-            f'{cls.device.natural_key_slug},Service 6,udp,"3,4,5",Third service',
+            f"{cls.device.composite_key},Service 4,tcp,1,First service",
+            f"{cls.device.composite_key},Service 5,tcp,2,Second service",
+            f'{cls.device.composite_key},Service 6,udp,"3,4,5",Third service',
         )
 
         cls.bulk_edit_data = {

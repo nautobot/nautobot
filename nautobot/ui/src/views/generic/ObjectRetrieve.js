@@ -144,7 +144,7 @@ function RenderRow(props) {
             "id",
             "url",
             "display",
-            "natural_key_slug",
+            "composite_key",
             "slug",
             "notes_url",
         ].includes(key) ^ !!props.advanced

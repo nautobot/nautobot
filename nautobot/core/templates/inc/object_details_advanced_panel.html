@@ -16,13 +16,13 @@
                         </span>
                     </td>
                 </tr>
-                {% if object.natural_key_slug %}
+                {% if object.composite_key %}
                     <tr>
-                        <td>Natural-key Slug</td>
+                        <td>Composite Key</td>
                         <td>
                             <span class="hover_copy">
-                                <span id="natural_key_slug_copy">{{ object.natural_key_slug }}</span>
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#natural_key_slug_copy">
+                                <span id="composite_key_copy">{{ object.composite_key }}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#composite_key_copy">
                                     <span class="mdi mdi-content-copy"></span>
                                 </button>
                             </span>

@@ -24,7 +24,7 @@ Added the `?depth` query parameter in Nautobot v2.X to replace the `?brief` para
 
 #### Natural Key Support Across Nautobot Models ([#2900](https://github.com/nautobot/nautobot/issues/2900))
 
-Nautobot's `BaseModel` base class and related classes now implement automatic support for Django [natural keys](https://docs.djangoproject.com/en/3.2/topics/serialization/#natural-keys) for lookup and referencing, as well as supporting a `natural_key_slug` concept similar to that introduced by `django-natural-keys`. (Nautobot does not depend on `django-natural-keys` but its implementation is heavily inspired by that project.) For example:
+Nautobot's `BaseModel` base class and related classes now implement automatic support for Django [natural keys](https://docs.djangoproject.com/en/3.2/topics/serialization/#natural-keys) for lookup and referencing, as well as supporting a `composite_key` concept similar to that introduced by `django-natural-keys`. (Nautobot does not depend on `django-natural-keys` but its implementation is heavily inspired by that project.) For example:
 
 ```python
 >>> DeviceType.objects.first().natural_key()
@@ -33,10 +33,10 @@ Nautobot's `BaseModel` base class and related classes now implement automatic su
 >>> DeviceType.objects.get_by_natural_key("MegaCorp", "Model 9000")
 <DeviceType: Model 9000>
 
->>> DeviceType.objects.first().natural_key_slug
+>>> DeviceType.objects.first().composite_key
 'MegaCorp&Model+9000'
 
->>> DeviceType.objects.get(natural_key_slug="MegaCorp&Model+9000")
+>>> DeviceType.objects.get(composite_key="MegaCorp&Model+9000")
 <DeviceType: Model 9000>
 ```
 
@@ -316,7 +316,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#3715](https://github.com/nautobot/nautobot/issues/3715) - Added (temporary) `natural_key_field_names` to `IPAddress`, `Prefix`, `RackReservation`, `ScheduledJob`, and `Service` models.
 - [#3721](https://github.com/nautobot/nautobot/issues/3721) - Added App provided model view override.
 - [#3722](https://github.com/nautobot/nautobot/issues/3722) - Added `termination_type` filter to `CableFilterSet`.
-- [#3722](https://github.com/nautobot/nautobot/issues/3722) - Added `natural_key_slug` field to REST API serializers.
+- [#3722](https://github.com/nautobot/nautobot/issues/3722) - Added `composite_key` field to REST API serializers.
 - [#3736](https://github.com/nautobot/nautobot/issues/3736) - Added App provided custom route view.
 - [#3741](https://github.com/nautobot/nautobot/issues/3741) - Added natural-key-slug information to UI detail views.
 - [#3754](https://github.com/nautobot/nautobot/issues/3754) - Added loading widget to the left of the ObjectListTable Buttons after initial data load.
