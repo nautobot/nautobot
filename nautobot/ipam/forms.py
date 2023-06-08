@@ -737,6 +737,16 @@ class VLANFilterForm(
 
 
 class ServiceForm(NautobotModelForm):
+    device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Device",
+    )
+    virtual_machine = DynamicModelChoiceField(
+        queryset=VirtualMachine.objects.all(),
+        required=False,
+        label="Virtual Machine",
+    )
     ports = NumericArrayField(
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         help_text="Comma-separated list of one or more port numbers. A range may be specified using a hyphen.",
@@ -746,6 +756,8 @@ class ServiceForm(NautobotModelForm):
         model = Service
         fields = [
             "name",
+            "device",
+            "virtual_machine",
             "protocol",
             "ports",
             "ip_addresses",
