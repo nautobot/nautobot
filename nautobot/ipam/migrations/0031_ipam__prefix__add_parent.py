@@ -53,30 +53,40 @@ def migrate_ipaddress_status_to_type(apps, schema_editor):
 
     ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
     statuses = Status.objects.filter(content_types=ipaddress_ct)
-    status_active = statuses.get(name="Active")
+    status_migrated, _ = statuses.get_or_create(
+        name="Migrated",
+        defaults={
+            "color": "ff0000",
+            "description": "DHCP/SLAAC status replaced with `type` of same name by Nautobot 2.0 data migrations.",
+        },
+    )
 
     # Update all objects of status=DHCP to type=DHCP & status=Active.
     print(">>> Migrating IPAddresses with status DHCP to type DHCP...")
     IPAddress.objects.filter(status__name="DHCP").update(
         type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_DHCP,
-        status=status_active,
+        status=status_migrated,
     )
 
     # Update all objects of status=SLAAC to type=SLAAC & status=Active.
     print(">>> Migrating IPAddresses with status SLAAC to type SLAAC...")
     IPAddress.objects.filter(status__name="SLAAC").update(
         type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_SLAAC,
-        status=status_active,
+        status=status_migrated,
     )
-
-    if IPAddress.objects.filter(models.Q(status__name="DHCP") | models.Q(status__name="SLAAC")).exists():
-        raise SystemExit("There should not be any IPAddress with type DHCP or SLAAC! This is bad!")
 
     # Delete the legacy status objects.
     print(">>> Deleting Status DHCP")
-    Status.objects.filter(name="DHCP").delete()
+    try:
+        Status.objects.filter(name="DHCP").delete()
+    except models.ProtectedError:
+        pass
+
     print(">>> Deleting Status SLAAC")
-    Status.objects.filter(name="SLAAC").delete()
+    try:
+        Status.objects.filter(name="SLAAC").delete()
+    except models.ProtectedError:
+        pass
 
 
 def revert_ipaddress_type_to_status(apps, schema_editor):
