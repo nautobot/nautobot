@@ -42,7 +42,7 @@
         </li>
         {% if perms.ipam.view_ipaddress %}
             <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
-                <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.ip_addresses.count }}</span></a>
+                <a href="{% url 'ipam:prefix_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ object.get_child_ips.count }}</span></a>
             </li>
         {% endif %}
 {% endblock extra_nav_tabs %}

@@ -483,7 +483,7 @@ class PrefixIPAddressesView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
         ipaddresses = (
-            instance.ip_addresses.all()
+            instance.get_child_ips()
             .restrict(request.user, "view")
             .select_related("status")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")

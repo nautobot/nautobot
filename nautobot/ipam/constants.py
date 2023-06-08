@@ -1,4 +1,4 @@
-from .choices import IPAddressRoleChoices
+from .choices import IPAddressRoleChoices, PrefixTypeChoices
 
 # BGP ASN bounds
 BGP_ASN_MIN = 1
@@ -24,6 +24,11 @@ VRF_RD_MAX_LENGTH = 21
 
 PREFIX_LENGTH_MIN = 1
 PREFIX_LENGTH_MAX = 127  # IPv6
+PREFIX_ALLOWED_PARENT_TYPES = {
+    PrefixTypeChoices.TYPE_CONTAINER: PrefixTypeChoices.TYPE_CONTAINER,
+    PrefixTypeChoices.TYPE_NETWORK: PrefixTypeChoices.TYPE_CONTAINER,
+    PrefixTypeChoices.TYPE_POOL: PrefixTypeChoices.TYPE_NETWORK,
+}
 
 
 #

@@ -18,6 +18,7 @@ from nautobot.dcim.models import Interface
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
+from nautobot.ipam import constants
 from nautobot.virtualization.models import VMInterface
 from .constants import (
     SERVICE_PORT_MAX,
@@ -596,6 +597,10 @@ class Prefix(PrimaryModel):
             parent = max(supernets, key=operator.attrgetter("prefix_length"))
             self.parent = parent
 
+        if self.parent and self.parent.type != constants.PREFIX_ALLOWED_PARENT_TYPES[self.type]:
+            err_msg = f"{self.type} prefixes cannot be created in {self.parent.type} prefixes."
+            raise ValidationError({"parent": err_msg})
+
         super().save(*args, **kwargs)
 
         # Determine the subnets and reparent them to this prefix.
@@ -812,6 +817,21 @@ class Prefix(PrimaryModel):
         )
         return available_ips
 
+    def get_child_ips(self):
+        """
+        Return IP addresses with this prefix as parent if this prefix is a network.
+        If this prefix is a pool, return IP addresses within the pool's address space.
+
+        Returns:
+            IPAddress QuerySet
+        """
+        if self.type == choices.PrefixTypeChoices.TYPE_POOL:
+            return IPAddress.objects.filter(
+                parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+            )
+        else:
+            return self.ip_addresses.all()
+
     def get_first_available_prefix(self):
         """
         Return the first available child prefix within the prefix (or None).
@@ -1020,6 +1040,10 @@ class IPAddress(PrimaryModel):
             .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
             .get_closest_parent(self.host, include_self=True)
         )
+
+        if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
+            err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
+            raise ValidationError({"address": err_msg})
 
         super().save(*args, **kwargs)
 
