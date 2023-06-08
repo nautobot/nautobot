@@ -1,6 +1,6 @@
 import { Tab, Tabs, TabList, TabPanel, TabPanels } from "@nautobot/nautobot-ui";
 
-import { RenderCol, RenderNotesTab, RenderChangeLogsTab } from "./Retrieve";
+import { RenderCol, RenderNotesTab, RenderChangeLogsTab } from ".";
 
 function RenderTabs({
     layoutSchema,

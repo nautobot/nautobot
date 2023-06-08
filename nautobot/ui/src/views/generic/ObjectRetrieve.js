@@ -6,8 +6,8 @@ import { useGetRESTAPIQuery } from "@utils/api";
 import GenericView from "@views/generic/GenericView";
 import {
     AppComponents,
-    RetrieveViewHeader,
-    RetrieveViewTabs,
+    RenderHeader,
+    RenderTabs,
 } from "@components";
 
 export default function ObjectRetrieve({ api_url }) {
@@ -75,8 +75,8 @@ export default function ObjectRetrieve({ api_url }) {
     return (
         <GenericView objectData={data}>
             <Box background="white-0" borderRadius="md">
-                <RetrieveViewHeader data={data} />
-                <RetrieveViewTabs
+                <RenderHeader data={data} />
+                <RenderTabs
                     schema={schemaData.schema.properties}
                     layoutSchema={objectRetrieveTabSchema}
                     data={data}
