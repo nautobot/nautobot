@@ -177,7 +177,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
             username="basicusergranted", password=self.basic_auth_user_password
         )
 
-        obj_perm = ObjectPermission(name="Test permission", actions=["add", "change", "view", "delete"])
+        obj_perm = ObjectPermission(name="Token Test Permission", actions=["add", "change", "view", "delete"])
         obj_perm.save()
         obj_perm.users.add(self.basic_auth_user_granted)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))

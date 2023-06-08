@@ -1,0 +1,1 @@
+Fixed node_modules volume mount in docker-compose.

@@ -1,0 +1,1 @@
+Fixed errorneous algorithms used in CustomField and Relationship data migrations.

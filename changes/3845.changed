@@ -1,0 +1,1 @@
+Changed `Service.name` and `Service.device` or `Service.name` and `Service.virtual_machine` to be globally unique and to serve as the natural key for this model.

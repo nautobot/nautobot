@@ -1602,8 +1602,6 @@ class InterfaceTest(Mixins.BasePortTestMixin):
         self.assertEqual(queryset.bridge, self.interfaces[2])
 
         # Assert LAG
-        self.add_permissions("dcim.add_interface")
-
         response = self.client.post(
             self._get_list_url(), data=self.common_device_or_vc_data[1], format="json", **self.header
         )
