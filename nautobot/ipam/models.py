@@ -835,11 +835,15 @@ class Prefix(PrimaryModel):
         return f"{next(available_ips.__iter__())}/{self.prefix_length}"
 
     def get_utilization(self):
-        """
-        Return the utilization of this prefix as a UtilizationData object. For prefixes containing other prefixes,
-        all direct child prefixes are considered fully utilized. For prefixes containing IP addresses and/or pools,
-        pools are considered fully utilized while only IP addresses that are not contained within pools are added
-        to the utilization.
+        """Return the utilization of this prefix as a UtilizationData object.
+
+        For prefixes containing other prefixes, all direct child prefixes are considered fully utilized.
+
+        For prefixes containing IP addresses and/or pools, pools are considered fully utilized while
+        only IP addresses that are not contained within pools are added to the utilization.
+
+        Returns:
+            UtilizationData (namedtuple): (numerator, denominator)
         """
         denominator = self.prefix.size
 
@@ -849,9 +853,9 @@ class Prefix(PrimaryModel):
             ).values_list("host", flat=True)
             child_ips = netaddr.IPSet(pool_ips)
         else:
-            child_ips = netaddr.IPSet(i.host for i in self.ip_addresses.all())
+            child_ips = netaddr.IPSet(self.ip_addresses.values_list("host", flat=True))
 
-        child_prefixes = netaddr.IPSet(p.prefix for p in self.children.all())
+        child_prefixes = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
         numerator = child_prefixes | child_ips
 
         # Exclude network and broadcast address from the denominator unless they've been assigned to an IPAddress or child pool.
