@@ -820,7 +820,7 @@ class VirtualChassis(PrimaryModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=64, unique=True)
     domain = models.CharField(max_length=30, blank=True)
 
     class Meta:
