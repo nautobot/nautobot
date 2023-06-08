@@ -1128,7 +1128,7 @@ class VLANGroup(OrganizationalModel):
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=100, db_index=True, unique=True)
     # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
     slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     location = models.ForeignKey(
@@ -1146,9 +1146,6 @@ class VLANGroup(OrganizationalModel):
             "name",
         )  # (location, name) may be non-unique
         unique_together = [
-            # 2.0 TODO: since location is nullable, and NULL != NULL, this means that we can have multiple non-Location VLANGroups
-            # with the same name. This should probably be fixed with a custom validate_unique() function!
-            ["location", "name"],
             # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
             ["location", "slug"],
         ]
@@ -1211,7 +1208,6 @@ class VLAN(PrimaryModel):
         to="ipam.VLANGroup",
         on_delete=models.PROTECT,
         related_name="vlans",
-        blank=True,
         null=True,
     )
     vid = models.PositiveSmallIntegerField(
