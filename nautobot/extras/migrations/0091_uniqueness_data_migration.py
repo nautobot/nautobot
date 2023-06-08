@@ -1,6 +1,8 @@
 from django.db import migrations, models
 import sys
 
+from nautobot.core.utils.migrations import check_for_duplicates_with_natural_key_fields_in_migration
+
 
 def ensure_unique_scheduledjob_names(apps, schema_editor):
     ScheduledJob = apps.get_model("extras", "ScheduledJob")
@@ -28,40 +30,9 @@ def check_for_duplicates(apps, schema_editor):
     ConfigContextSchema = apps.get_model("extras", "ConfigContextSchema")
     ExportTemplate = apps.get_model("extras", "ExportTemplate")
 
-    failed = False
-
-    dupe_cc = ConfigContext.objects.values("name").order_by().annotate(count=models.Count("name")).filter(count__gt=1)
-    if dupe_cc.exists():
-        failed = True
-        print(
-            f"    Duplicate ConfigContext names detected: {list(dupe_cc.values_list('name', flat=True))}",
-            file=sys.stderr,
-        )
-
-    dupe_ccs = (
-        ConfigContextSchema.objects.values("name").order_by().annotate(count=models.Count("name")).filter(count__gt=1)
-    )
-    if dupe_ccs.exists():
-        failed = True
-        print(
-            f"    Duplicate ConfigContextSchema names detected: {list(dupe_ccs.values_list('name', flat=True))}",
-            file=sys.stderr,
-        )
-
-    dupe_et = ExportTemplate.objects.values("name").order_by().annotate(count=models.Count("name")).filter(count__gt=1)
-    if dupe_et.exists():
-        failed = True
-        print(
-            f"    Duplicate ExportTemplate names detected: {list(dupe_et.values_list('name', flat=True))}",
-            file=sys.stderr,
-        )
-
-    if failed:
-        print(
-            "    Unable to proceed with migrations; in Nautobot 2.0+ the name for these records must be unique.",
-            file=sys.stderr,
-        )
-        raise RuntimeError("Duplicate record names must be manually resolved before migrating.")
+    check_for_duplicates_with_natural_key_fields_in_migration(ConfigContext, ["name"])
+    check_for_duplicates_with_natural_key_fields_in_migration(ConfigContextSchema, ["name"])
+    check_for_duplicates_with_natural_key_fields_in_migration(ExportTemplate, ["name"])
 
 
 class Migration(migrations.Migration):
