@@ -61,15 +61,17 @@ def migrate_ipaddress_status_to_type(apps, schema_editor):
         },
     )
 
-    # Update all objects of status=DHCP to type=DHCP & status=Active.
-    print(">>> Migrating IPAddresses with status DHCP to type DHCP...")
+    # Update all objects of status=DHCP to type=DHCP & status=Migrated.
+    if "test" not in sys.argv:
+        print(">>> Migrating IPAddresses with status DHCP to type DHCP...")
     IPAddress.objects.filter(status__name="DHCP").update(
         type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_DHCP,
         status=status_migrated,
     )
 
-    # Update all objects of status=SLAAC to type=SLAAC & status=Active.
-    print(">>> Migrating IPAddresses with status SLAAC to type SLAAC...")
+    # Update all objects of status=SLAAC to type=SLAAC & status=Migrated.
+    if "test" not in sys.argv:
+        print(">>> Migrating IPAddresses with status SLAAC to type SLAAC...")
     IPAddress.objects.filter(status__name="SLAAC").update(
         type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_SLAAC,
         status=status_migrated,
