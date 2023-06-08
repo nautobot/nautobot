@@ -1,5 +1,4 @@
-from django.db import migrations, models
-import sys
+from django.db import migrations
 
 from nautobot.core.utils.migrations import check_for_duplicates_with_natural_key_fields_in_migration
 
