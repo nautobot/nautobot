@@ -356,6 +356,7 @@ def brief_nested_serializer_factory(relation_info):
         NautobotBriefNestedSerializer.__name__ = brief_serializer_name
         BRIEF_NESTED_SERIALIZER_CACHE[brief_serializer_name] = NautobotBriefNestedSerializer
         field_class = NautobotBriefNestedSerializer
+        relation_info["read_only"] = False
         field_kwargs = get_nested_relation_kwargs(relation_info)
     return field_class, field_kwargs
 

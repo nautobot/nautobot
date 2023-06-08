@@ -15,7 +15,6 @@ from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerialize
 from rest_framework import serializers
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
@@ -23,7 +22,6 @@ from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 from nautobot.core.api.fields import ObjectTypeField
 from nautobot.core.api.mixins import WritableSerializerMixin
 from nautobot.core.api.utils import (
-    brief_nested_serializer_factory,
     dict_to_filter_params,
     nested_serializer_factory,
 )
@@ -102,6 +100,22 @@ class OptInFieldsMixin:
         return self.__pruned_fields
 
 
+@extend_schema_field(
+    {
+        "type": "object",
+        "properties": {
+            "id": {
+                "type": "string",
+                "format": "uuid",
+            },
+            "object_type": {"type": "string"},
+            "url": {
+                "type": "string",
+                "format": "uri",
+            },
+        },
+    }
+)
 class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.HyperlinkedRelatedField):
     """DRF's built-in HyperlinkedRelatedField combined with custom to_internal_value() function"""
 
@@ -120,6 +134,12 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
             else:
                 kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
         super().__init__(*args, **kwargs)
+
+    def to_representation(self, value):
+        """Override DRF's default to_representation() to support custom display fields."""
+        url = super().to_representation(value)
+        model = self.queryset.model
+        return {"id": value.pk, "object_type": model._meta.app_label + ":" + model._meta.model_name, "url": url}
 
 
 class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializer):
@@ -242,9 +262,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         # makes the field impervious to the `?depth` parameter.
         # So we intercept it here to call build_nested_field()
         # which will make the tags field be rendered with TagSerializer() and respect the `depth` parameter.
-        def get_tags_relation_info():
+
+        if isinstance(getattr(model_class, field_name, None), TagsManager) and nested_depth > 0:
             tags_field = getattr(model_class, field_name)
-            return RelationInfo(
+            relation_info = RelationInfo(
                 model_field=tags_field,
                 related_model=Tag,
                 to_many=True,
@@ -252,23 +273,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                 to_field=_get_to_field(tags_field),
                 reverse=False,
             )
-
-        if isinstance(getattr(model_class, field_name, None), TagsManager) and nested_depth > 0:
-            relation_info = get_tags_relation_info()
             return self.build_nested_field(field_name, relation_info, nested_depth)
 
-        field = super().build_field(field_name, info, model_class, nested_depth)
-
-        if issubclass(field[0], serializers.HyperlinkedRelatedField) and not issubclass(
-            field[0], HyperlinkedIdentityField
-        ):
-            if isinstance(getattr(model_class, field_name, None), TagsManager):
-                relation_info = get_tags_relation_info()
-            else:
-                relation_info = info.relations[field_name]
-            field = brief_nested_serializer_factory(relation_info)
-
-        return field
+        return super().build_field(field_name, info, model_class, nested_depth)
 
     def build_relational_field(self, field_name, relation_info):
         """Override DRF's default relational-field construction to be app-aware."""
