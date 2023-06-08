@@ -202,14 +202,16 @@ class LocationSerializer(
         # TODO: Add documentation of this schema
         detail_view_config = [
             {
-                "Location": {"fields": ["name", "rack_count", "parent"]},
-                "Management": {"fields": ["status", "prefix_count", "device_count"]},
-                "Others": {"fields": ["tenant"]},
+                "Location": {
+                    "fields": ["name", "location_type", "tenant", "description", "facility", "asn", "time_zone"]
+                },
+                "Contact Info": {
+                    "fields": ["physical_address", "shipping_address", "contact_name", "contact_phone", "contact_email"]
+                },
             },
             {
                 "Tags": {"fields": ["tags"]},
                 "Comments": {"fields": ["comments"]},
-                "Contact": {"fields": ["contact_name", "contact_phone", "contact_email"]},
             },
         ]
 

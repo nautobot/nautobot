@@ -44,6 +44,31 @@ The libraries and tools used to build the React UI are:
 - [React Redux](https://react-redux.js.org/)
 - [RTK Query](https://redux-toolkit.js.org/rtk-query/overview)
 
+### Customizing a Model's detail view
+
+Currently, it is possible to customize the layout, groups, and fields of a detail view for a model. You can achieve this by creating groups that contain fields, which can be positioned either in the left column or the right column. To customize the detail view of your model, follow the instructions below:
+
+```python
+class ExampleModelSerializer(ModelSerializer):
+    ...
+    class Meta:
+        ...
+        detail_view_config = [
+            {
+                "Group Name 1": {"fields": ["name", ...]},
+                "Group Name 2": {"fields": [...]},
+            },
+            {
+                "Group Name 3": {"fields": [...]},
+                "Group Name 4": {"fields": [...]},
+            },
+        ]
+```
+
+In the above example, we add the `detail_view_config` attribute to the Serializer's Meta class. The value of this attribute is a list containing two dict, representing the two columns of the detail view. The first dictionary represents the fields in the first column, while the second dictionary represents the fields in the second column. Each dictionary consists of a key-value pair, where the key is the name of the grouping, and the value is a list of the model fields that should be included in that grouping.
+
+If a `detail_view_config` is not provided to the Model Serializer, the default view configuration will be used. The default view config displays all non-many-to-many (non-m2m) fields in the left column, and many-to-many (m2m) fields in the right column, with each field having its own grouping.
+
 ### Documenting Your Code
 
 The UI uses JS Doc to document the code. For more information on JS Doc, see the [JS Doc website](https://jsdoc.app/).
