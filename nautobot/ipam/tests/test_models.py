@@ -556,19 +556,19 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         # IPv4 Non-container Prefix /31, network and broadcast addresses count toward utilization
         prefix = Prefix.objects.create(prefix="10.0.1.0/31", status=self.status, namespace=self.namespace)
-        IPAddress.objects.create(address="10.0.1.0/32", status=self.status, namespace=self.namespace),
-        IPAddress.objects.create(address="10.0.1.1/32", status=self.status, namespace=self.namespace),
+        IPAddress.objects.create(address="10.0.1.0/32", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="10.0.1.1/32", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (2, 2))
 
         # IPv6 Non-container Prefix, first and last addresses count toward utilization
         prefix = Prefix.objects.create(prefix="aaab::/124", status=self.status, namespace=self.namespace)
-        IPAddress.objects.create(address="aaab::1/128", status=self.status, namespace=self.namespace),
-        IPAddress.objects.create(address="aaab::2/128", status=self.status, namespace=self.namespace),
+        IPAddress.objects.create(address="aaab::1/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaab::2/128", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (2, 16))
 
         prefix = Prefix.objects.create(prefix="aaaa::/124", status=self.status, namespace=self.namespace)
-        IPAddress.objects.create(address="aaaa::0/128", status=self.status, namespace=self.namespace),
-        IPAddress.objects.create(address="aaaa::f/128", status=self.status, namespace=self.namespace),
+        IPAddress.objects.create(address="aaaa::0/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaaa::f/128", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (2, 16))
 
         # Large Prefix
