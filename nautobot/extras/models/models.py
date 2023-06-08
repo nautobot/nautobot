@@ -74,7 +74,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     will be available to a Device in location A assigned to tenant B. Data is stored in JSON format.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=100, unique=True)
 
     # A ConfigContext *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
@@ -128,7 +128,6 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
 
     class Meta:
         ordering = ["weight", "name"]
-        unique_together = [["name", "owner_content_type", "owner_object_id"]]
 
     def __str__(self):
         if self.owner:
@@ -144,15 +143,6 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
 
         # Validate data against schema
         self._validate_with_schema("data", "config_context_schema")
-
-        # Check for a duplicated `name`. This is necessary because Django does not consider two NULL fields to be equal,
-        # and thus if the `owner` is NULL, a duplicate `name` will not otherwise automatically raise an exception.
-        if (
-            ConfigContext.objects.exclude(pk=self.pk)
-            .filter(name=self.name, owner_content_type=self.owner_content_type, owner_object_id=self.owner_object_id)
-            .exists()
-        ):
-            raise ValidationError({"name": "A ConfigContext with this name already exists."})
 
 
 class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
@@ -249,9 +239,8 @@ class ConfigContextSchema(OrganizationalModel):
     This model stores jsonschema documents where are used to optionally validate config context data payloads.
     """
 
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, unique=True)
     description = models.CharField(max_length=200, blank=True)
-    slug = AutoSlugField(populate_from="name", max_length=200, unique=None, db_index=True)
     data_schema = models.JSONField(
         help_text="A JSON Schema document which is used to validate a config context object."
     )
@@ -270,11 +259,6 @@ class ConfigContextSchema(OrganizationalModel):
         ct_field="owner_content_type",
         fk_field="owner_object_id",
     )
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["name", "owner_content_type", "owner_object_id"], name="unique_name_owner"),
-        ]
 
     def __str__(self):
         if self.owner:
@@ -326,12 +310,12 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(
         max_length=500,
-        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Links which render as empty text will not be displayed.",
+        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Links which render as empty text will not be displayed.",
     )
     target_url = models.CharField(
         max_length=500,
         verbose_name="URL",
-        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
+        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
@@ -403,7 +387,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
 
     class Meta:
         ordering = ["content_type", "name"]
-        unique_together = [["content_type", "name", "owner_content_type", "owner_object_id"]]
+        unique_together = [["content_type", "name"]]
 
     def __str__(self):
         if self.owner:
@@ -441,21 +425,6 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         super().clean()
         if self.file_extension.startswith("."):
             self.file_extension = self.file_extension[1:]
-
-        # Don't allow two ExportTemplates with the same name, content_type, and owner.
-        # This is necessary because Django doesn't consider NULL=NULL, and so if owner is NULL the unique_together
-        # condition will never be matched even if name and content_type are the same.
-        if (
-            ExportTemplate.objects.exclude(pk=self.pk)
-            .filter(
-                name=self.name,
-                content_type=self.content_type,
-                owner_content_type=self.owner_content_type,
-                owner_object_id=self.owner_object_id,
-            )
-            .exists()
-        ):
-            raise ValidationError({"name": "An ExportTemplate with this name and content type already exists."})
 
 
 #

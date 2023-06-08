@@ -229,7 +229,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         Assert that the local context passes schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
         )
         self.add_permissions("virtualization.change_virtualmachine")
 
@@ -251,7 +251,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         Assert that the local context fails schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
+            name="Schema 2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
         )
         # Add object-level permission
         self.add_permissions("virtualization.change_virtualmachine")
