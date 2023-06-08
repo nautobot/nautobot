@@ -456,6 +456,8 @@ class ParallelPrefixTest(APITransactionTestCase):
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
 
+    choices_fields = ["type"]
+
     # Namespace is a write-only field.
     validation_excluded_fields = ["namespace"]
 
