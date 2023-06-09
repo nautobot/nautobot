@@ -140,14 +140,9 @@ function RenderRow(props) {
     var value = props.value;
 
     if (
-        [
-            "id",
-            "url",
-            "display",
-            "composite_key",
-            "slug",
-            "notes_url",
-        ].includes(key) ^ !!props.advanced
+        ["id", "url", "display", "composite_key", "slug", "notes_url"].includes(
+            key
+        ) ^ !!props.advanced
     ) {
         return null;
     }
