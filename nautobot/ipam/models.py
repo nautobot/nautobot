@@ -942,6 +942,9 @@ class IPAddress(PrimaryModel):
 
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
+    # The default inherits from the parent, which is too verbose.
+    natural_key_field_lookups = ["parent__namespace__name", "host"]
+
     class Meta:
         ordering = ("ip_version", "host", "mask_length")  # address may be non-unique
         verbose_name = "IP address"
