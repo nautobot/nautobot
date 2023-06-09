@@ -3388,10 +3388,6 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
         self.assertEqual(list(tag.content_types.all()), tag_content_types)
 
-    @skip("Something weird is happening with the returned order of content_types")
-    def test_recreate_object_csv(self):
-        pass
-
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
     model = Webhook
