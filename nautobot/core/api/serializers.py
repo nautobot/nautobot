@@ -135,10 +135,23 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
                 kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
         super().__init__(*args, **kwargs)
 
+    def to_internal_value(self, data):
+        data
+        if isinstance(data, dict):
+            if "id" in data:
+                return super().to_internal_value(data["id"])
+        elif isinstance(data, str):
+            return super().to_internal_value(data)
+
     def to_representation(self, value):
         """Override DRF's default to_representation() to support custom display fields."""
         url = super().to_representation(value)
-        model = self.queryset.model
+        if self.queryset:
+            model = self.queryset.model
+        elif getattr(self.parent.Meta.model, self.source, False):
+            model = getattr(self.parent.Meta.model, self.source).field.model
+        else:
+            return {"id": value.pk, "object_type": "unknown", "url": url}
         return {"id": value.pk, "object_type": model._meta.app_label + ":" + model._meta.model_name, "url": url}
 
 

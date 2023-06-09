@@ -322,45 +322,6 @@ def nested_serializer_factory(relation_info, nested_depth):
     return field_class, field_kwargs
 
 
-BRIEF_NESTED_SERIALIZER_CACHE = {}
-
-
-def brief_nested_serializer_factory(relation_info):
-    """
-    Return a BriefSerializer representation of a serializer field.
-    This method should only be called in build_nested_field()
-    in which relation_info is are already given.
-    """
-    brief_serializer_name = f"BriefNested{relation_info.related_model.__name__}"
-    # If we already have built a suitable NestedSerializer we return the cached serializer.
-    # else we build a new one and store it in the cache for future use.
-    if brief_serializer_name in BRIEF_NESTED_SERIALIZER_CACHE:
-        field_class = BRIEF_NESTED_SERIALIZER_CACHE[brief_serializer_name]
-        field_kwargs = get_nested_relation_kwargs(relation_info)
-    else:
-        base_serializer_class = get_serializer_for_model(relation_info.related_model)
-
-        class NautobotBriefNestedSerializer(base_serializer_class):
-            def get_field_names(self, declared_fields, info):
-                """Ensure id, object_type, and url are only in the brief serializer."""
-                base_fields = list(super().get_field_names(declared_fields, info))
-                desired_fields = set(["id", "object_type", "url"])
-                return [field for field in base_fields if field in desired_fields]
-
-            class Meta:
-                model = relation_info.related_model
-                is_nested = True
-                depth = 0
-                fields = ["id", "object_type", "url"]
-
-        NautobotBriefNestedSerializer.__name__ = brief_serializer_name
-        BRIEF_NESTED_SERIALIZER_CACHE[brief_serializer_name] = NautobotBriefNestedSerializer
-        field_class = NautobotBriefNestedSerializer
-        relation_info["read_only"] = False
-        field_kwargs = get_nested_relation_kwargs(relation_info)
-    return field_class, field_kwargs
-
-
 def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
     """
     Handle serialization of GenericForeignKey fields at an appropriate depth.
