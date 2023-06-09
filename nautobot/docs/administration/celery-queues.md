@@ -39,4 +39,4 @@ ExecStart=/opt/nautobot/bin/nautobot-server celery worker --loglevel INFO --pidf
 You may have to change this setting multiple times to find what works best in your environment.
 
 !!! warning
-    Modifying your concurrency setting may increase the CPU and memory load on your celery worker. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
+    Modifying your concurrency setting may increase the CPU and will increase the memory load on your celery worker by at least 175MB per concurrent thread. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
