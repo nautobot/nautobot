@@ -983,7 +983,7 @@ class IPAddress(PrimaryModel):
 
         # Validate IP status selection
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
-            raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC type"})
+            raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
