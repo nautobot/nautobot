@@ -1,1 +1,1 @@
-Removed VLAN Group [location, name] uniqueness constrain.
+Removed VLANGroup `[location, name]` uniqueness constraint (replaced with globally unique `name`).
