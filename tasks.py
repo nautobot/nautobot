@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from distutils.util import strtobool
 import os
 import re
 
@@ -33,18 +32,27 @@ except ModuleNotFoundError:
 
 
 def is_truthy(arg):
-    """Convert "truthy" strings into Booleans.
+    """
+    Convert "truthy" strings into Booleans.
 
     Examples:
         >>> is_truthy('yes')
         True
+
     Args:
         arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
         f, false, off and 0. Raises ValueError if val is anything else.
     """
     if isinstance(arg, bool):
         return arg
-    return bool(strtobool(arg))
+
+    val = str(arg).lower()
+    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError("invalid truth value %r" % (val,))
 
 
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
