@@ -5,7 +5,6 @@ import sys
 from django.db import migrations, models
 
 import nautobot.ipam.utils.migrations
-import nautobot.ipam.choices
 
 
 def reverse_it(apps, schema_editor):
@@ -52,46 +51,44 @@ def migrate_ipaddress_status_to_type(apps, schema_editor):
     IPAddress = apps.get_model("ipam", "IPAddress")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
+    ips_dhcp = IPAddress.objects.filter(status__name="DHCP")
+    ips_slaac = IPAddress.objects.filter(status__name="SLAAC")
     ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
-    statuses = Status.objects.filter(content_types=ipaddress_ct)
-    status_migrated, _ = statuses.get_or_create(
-        name="Migrated",
-        defaults={
-            "color": "ff0000",
-            "description": "DHCP/SLAAC status replaced with `type` of same name by Nautobot 2.0 data migrations.",
-        },
-    )
 
-    # Update all objects of status=DHCP to type=DHCP & status=Migrated.
-    if "test" not in sys.argv:
-        print(">>> Migrating IPAddresses with status DHCP to type DHCP...")
+    # First, update update type on any IPs with status DHCP/SLAAC.
+    if any([ips_dhcp.exists(), ips_slaac.exists()]):
+        status_migrated, _ = Status.objects.get_or_create(
+            name="Migrated",
+            defaults={
+                "color": "ff0000",
+                "description": "DHCP/SLAAC status replaced with `type` of same name by Nautobot 2.0 data migrations.",
+            },
+        )
+        status_migrated.content_types.add(ipaddress_ct)
 
-    IPAddress.objects.filter(status__name="DHCP").update(
-        type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_DHCP,
-        status=status_migrated,
-    )
+        # Update all objects of status=DHCP to type=DHCP & status=Migrated.
+        if "test" not in sys.argv:
+            print(">>> Migrating IPAddresses with status DHCP to type DHCP...")
 
-    # Update all objects of status=SLAAC to type=SLAAC & status=Migrated.
-    if "test" not in sys.argv:
-        print(">>> Migrating IPAddresses with status SLAAC to type SLAAC...")
+        ips_dhcp.update(type="dhcp", status=status_migrated)
 
-    IPAddress.objects.filter(status__name="SLAAC").update(
-        type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_SLAAC,
-        status=status_migrated,
-    )
+        # Update all objects of status=SLAAC to type=SLAAC & status=Migrated.
+        if "test" not in sys.argv:
+            print(">>> Migrating IPAddresses with status SLAAC to type SLAAC...")
 
-    # Delete the legacy status objects.
-    print(">>> Deleting Status DHCP")
-    try:
-        Status.objects.filter(name="DHCP").delete()
-    except models.ProtectedError:
-        pass
+        ips_slaac.update(type="slaac", status=status_migrated)
 
-    print(">>> Deleting Status SLAAC")
-    try:
-        Status.objects.filter(name="SLAAC").delete()
-    except models.ProtectedError:
-        pass
+    # Then, delete the legacy status objects.
+    for status_name in ("DHCP", "SLAAC"):
+        try:
+            status = Status.objects.get(name=status_name)
+            # Clear the IPAddress content-type no matter what.
+            status.content_types.remove(ipaddress_ct)
+            if not status.content_types.exists():
+                print(f">>> Deleting Status {status_name}")
+                status.delete()
+        except (models.ProtectedError, Status.DoesNotExist):
+            pass
 
 
 def revert_ipaddress_type_to_status(apps, schema_editor):
@@ -101,20 +98,20 @@ def revert_ipaddress_type_to_status(apps, schema_editor):
     ContentType = apps.get_model("contenttypes", "ContentType")
 
     ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+    defaults = {"color": "4caf50"}
+    type_map = {
+        "DHCP": "Dynamically assigned IPv4/IPv6 address",
+        "SLAAC": "Dynamically assigned IPv6 address",
+    }
 
     # Recreate the DHCP/SLAAC statuses.
-    status_dhcp, _ = Status.objects.get_or_create(
-        name="DHCP", defaults={"color": "4caf50", "description": "Dynamically assigned IPv4/IPv6 address"}
-    )
-    status_dhcp.content_types.add(ipaddress_ct)
-    status_slaac, _ = Status.objects.get_or_create(
-        name="SLAAC", defaults={"color": "4caf50", "description": "Dynamically assigned IPv6 address"}
-    )
-    status_slaac.content_types.add(ipaddress_ct)
-
-    # Revert type back to status.
-    IPAddress.objects.filter(type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_DHCP).update(status=status_dhcp)
-    IPAddress.objects.filter(type=nautobot.ipam.choices.IPAddressTypeChoices.TYPE_SLAAC).update(status=status_slaac)
+    for type_name, description in type_map.items():
+        ips = IPAddress.objects.filter(type=type_name.lower())
+        if ips.exists():
+            defaults["description"] = description
+            status, _ = Status.objects.get_or_create(name=type_name, defaults=defaults)
+            status.content_types.add(ipaddress_ct)
+            ips.update(status=status)
 
 
 class Migration(migrations.Migration):
