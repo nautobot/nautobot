@@ -15,6 +15,7 @@ from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerialize
 from rest_framework import serializers
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.relations import ManyRelatedField
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
@@ -138,16 +139,20 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
     def to_internal_value(self, data):
         data
         if isinstance(data, dict):
-            if "id" in data:
+            if "url" in data:
+                return super().to_internal_value(data["url"])
+            elif "id" in data:
                 return super().to_internal_value(data["id"])
-        elif isinstance(data, str):
-            return super().to_internal_value(data)
+        val = super().to_internal_value(data)
+        return val
 
     def to_representation(self, value):
         """Override DRF's default to_representation() to support custom display fields."""
         url = super().to_representation(value)
         if self.queryset:
             model = self.queryset.model
+        elif isinstance(self.parent, ManyRelatedField) and getattr(self.parent.parent.Meta.model, self.source, False):
+            model = getattr(self.parent.parent.Meta.model, self.source).field.model
         elif getattr(self.parent.Meta.model, self.source, False):
             model = getattr(self.parent.Meta.model, self.source).field.model
         else:
