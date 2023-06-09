@@ -91,6 +91,15 @@ The following changes have been made to the `Prefix` model.
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
 
+#### Prefix Parenting Constraints
+
+The following constraints have been added to the `Prefix` model:
+
+- A `Prefix` of type `Container` can only have a parent of type `Container`
+- A `Prefix` of type `Network` can only have a parent of type `Container`
+- A `Prefix` of type `Pool` can only have a parent of type `Network`
+- Any `Prefix` can be a root prefix (i.e. have no parent)
+
 ### IPAddress Parenting Concrete Relationship
 
 The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
@@ -98,6 +107,14 @@ The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Pref
 | Removed                | Replaced With   |
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
+
+#### IPAddress Parenting Constraints
+
+The following constraints have been added to the `IPAddress` model:
+
+- An `IPAddress` must have a parent `Prefix` of type `Network`
+- An `IPAddress` cannot be created if a suitable parent `Prefix` of type `Network` does not exist
+- An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network`. This is because the `IPAddress` must have a concrete relationship to a `Network` and the `Pool` membership is derived from the IP address being within the `Pool`'s range.
 
 ### Prefix get_utilization Method
 

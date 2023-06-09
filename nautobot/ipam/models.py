@@ -559,7 +559,7 @@ class Prefix(PrimaryModel):
         """
         A Prefix with children will be impossible to delete and raise a `ProtectedError`.
 
-        If a Prefix has children, this catch the error and explicitly update the
+        If a Prefix has children, this catches the error and explicitly updates the
         `protected_objects` from the exception setting their parent to the old parent of this
         prefix, and then this prefix will be deleted.
         """
@@ -567,18 +567,36 @@ class Prefix(PrimaryModel):
         try:
             return super().delete(*args, **kwargs)
         except models.ProtectedError as err:
-            # This will be either IPAddress or Prefix.
-            protected_model = tuple(err.protected_objects)[0]._meta.model
 
-            # IPAddress objects must have a parent.
-            if protected_model == IPAddress and self.parent is None:
-                raise models.ProtectedError(
-                    msg=(
-                        f"Cannot delete Prefix {self} because it has child IPAddress objects that "
-                        "would no longer have a parent."
-                    ),
-                    protected_objects=err.protected_objects,
-                ) from err
+            for instance in err.protected_objects:
+                # This will be either IPAddress or Prefix.
+                protected_model = instance._meta.model
+
+                # IPAddress objects must have a valid parent.
+                if protected_model == IPAddress and (
+                    self.parent is None or self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK
+                ):
+                    raise models.ProtectedError(
+                        msg=(
+                            f"Cannot delete Prefix {self} because it has child IPAddress objects that "
+                            "would no longer have a valid parent."
+                        ),
+                        protected_objects=err.protected_objects,
+                    ) from err
+
+                # Prefix objects must have a valid parent
+                elif (
+                    protected_model == Prefix
+                    and self.parent is not None
+                    and constants.PREFIX_ALLOWED_PARENT_TYPES[instance.type] != self.parent.type
+                ):
+                    raise models.ProtectedError(
+                        msg=(
+                            f"Cannot delete Prefix {self} because it has child Prefix objects that "
+                            "would no longer have a valid parent."
+                        ),
+                        protected_objects=err.protected_objects,
+                    ) from err
 
             # Update protected objects to use the new parent and delete the old parent (self).
             protected_pks = (po.pk for po in err.protected_objects)
@@ -597,9 +615,29 @@ class Prefix(PrimaryModel):
             parent = max(supernets, key=operator.attrgetter("prefix_length"))
             self.parent = parent
 
+        # Validate that creation of this prefix does not create an invalid parent/child relationship
         if self.parent and self.parent.type != constants.PREFIX_ALLOWED_PARENT_TYPES[self.type]:
-            err_msg = f"{self.type} prefixes cannot be created in {self.parent.type} prefixes."
-            raise ValidationError({"parent": err_msg})
+            err_msg = f"{self.type.title()} prefixes cannot be created in {self.parent.type} prefixes"
+            raise ValidationError({"type": err_msg})
+
+        invalid_children = Prefix.objects.filter(
+            ~models.Q(id=self.id),
+            ~models.Q(type__in=constants.PREFIX_ALLOWED_CHILD_TYPES[self.type]),
+            parent_id=self.parent_id,
+            prefix_length__gt=self.prefix_length,
+            ip_version=self.ip_version,
+            network__gte=self.network,
+            broadcast__lte=self.broadcast,
+            namespace=self.namespace,
+        )
+
+        if invalid_children.exists():
+            invalid_child_prefixes = [
+                f"{child.cidr_str} ({child.type})" for child in invalid_children.only("network", "prefix_length")
+            ]
+            err_msg = f'Creating prefix "{self.prefix}" in namespace "{self.namespace}" with type "{self.type}" '
+            err_msg += f"would create an invalid parent/child relationship with prefixes {invalid_child_prefixes}"
+            raise ValidationError({"__all__": err_msg})
 
         super().save(*args, **kwargs)
 

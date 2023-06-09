@@ -29,6 +29,11 @@ PREFIX_ALLOWED_PARENT_TYPES = {
     PrefixTypeChoices.TYPE_NETWORK: PrefixTypeChoices.TYPE_CONTAINER,
     PrefixTypeChoices.TYPE_POOL: PrefixTypeChoices.TYPE_NETWORK,
 }
+PREFIX_ALLOWED_CHILD_TYPES = {
+    PrefixTypeChoices.TYPE_CONTAINER: [PrefixTypeChoices.TYPE_CONTAINER, PrefixTypeChoices.TYPE_NETWORK],
+    PrefixTypeChoices.TYPE_NETWORK: [PrefixTypeChoices.TYPE_POOL],
+    PrefixTypeChoices.TYPE_POOL: [],
+}
 
 
 #

@@ -4,6 +4,7 @@ import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError
+from django.db.models import ProtectedError
 from django.test import TestCase
 
 from nautobot.core.testing.models import ModelTestCases
@@ -640,11 +641,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         """Test that duplicate Prefixes in the same Namespace raises an error."""
         Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
         duplicate_prefix = Prefix(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
-        # self.assertRaises(IntegrityError, duplicate_prefix.full_clean)
         self.assertRaises(ValidationError, duplicate_prefix.full_clean)
 
-    def test_parenting_constraints(self):
-        """Test that Prefix parenting correctly raises validation errors when incorrect parents are assigned."""
+    def test_parenting_constraints_on_save(self):
+        """Test that Prefix parenting correctly raises validation errors when saving a prefix would create an invalid parent/child relationship."""
 
         namespace = Namespace.objects.create(name="test_parenting_constraints")
         Prefix.objects.create(
@@ -686,6 +686,120 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix.objects.create(
                 prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
             )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (network parenting container)"
+        ):
+            Prefix.objects.create(
+                prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (pool parenting container)"
+        ):
+            Prefix.objects.create(
+                prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (network parenting network)"
+        ):
+            Prefix.objects.create(
+                prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (pool parenting network)"
+        ):
+            Prefix.objects.create(
+                prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (container parenting pool)"
+        ):
+            Prefix.objects.create(
+                prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (pool parenting pool)"
+        ):
+            Prefix.objects.create(
+                prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+
+        with self.subTest("Test that valid parents can be created"):
+            Prefix.objects.create(
+                prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+            Prefix.objects.create(
+                prefix="12.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+            Prefix.objects.create(
+                prefix="12.0.0.0/7", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+    def test_parenting_constraints_on_delete(self):
+        """Test that Prefix parenting correctly raises validation errors when deleting a prefix would create an invalid parent/child relationship."""
+
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+        root = Prefix.objects.create(
+            prefix="10.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        container = Prefix.objects.create(
+            prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        network = Prefix.objects.create(
+            prefix="10.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        pool = Prefix.objects.create(
+            prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        )
+
+        with self.assertRaises(
+            ProtectedError,
+            msg="Test that deleting a network prefix that would make a pool prefix's parent a container raises a ProtectedError",
+        ):
+            network.delete()
+
+        with self.subTest("Test that deleting a parent prefix properly reparents the child prefixes"):
+            container.delete()
+            root.refresh_from_db()
+            network.refresh_from_db()
+            pool.refresh_from_db()
+            self.assertIsNone(root.parent)
+            self.assertEqual(network.parent, root)
+            self.assertEqual(pool.parent, network)
+
+        ip = IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.subTest("Test that deleting a pool prefix containing IPs succeeds"):
+            self.assertEqual(ip.parent, network)
+            pool.delete()
+            ip.refresh_from_db()
+            self.assertEqual(ip.parent, network)
+
+        with self.assertRaises(
+            ProtectedError,
+            msg="Test that deleting a network prefix that would make an IP's parent a container raises a ProtectedError",
+        ):
+            network.delete()
+
+        with self.subTest("Test that deleting the root prefix succeeds"):
+            root.delete()
+            network.refresh_from_db()
+            self.assertIsNone(network.parent)
+
+        with self.assertRaises(
+            ProtectedError,
+            msg="Test that deleting a network prefix that would orphan an IP raises a ProtectedError",
+        ):
+            network.delete()
+
+        with self.subTest("Test that deleting all child IPs of a network prefix allows the prefix to be deleted"):
+            ip.delete()
+            network.delete()
 
 
 class TestIPAddress(ModelTestCases.BaseModelTestCase):
@@ -764,7 +878,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
                 )
 
     def test_parenting_constraints(self):
-        """Test that IPAddress parenting correctly raises validation errors when unable to assign a valid parent."""
+        """Test that IPAddress parenting correctly raises validation errors when unable to assign a valid parent prefix."""
 
         namespace = Namespace.objects.create(name="test_parenting_constraints")
 
