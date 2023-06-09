@@ -24,6 +24,7 @@ export default function RenderHeader({ data }) {
     return (
         <Box display="flex" justifyContent="space-between" padding="md">
             <Heading display="flex" alignItems="center" gap="5px">
+                {/* TODO(Timizuo): Create a reusable component from <Heading><NtcThumbnailIcon /> {title}</Heading> */}
                 <NtcThumbnailIcon width="25px" height="30px" />{" "}
                 <Text size="H1" as="h1">
                     {data.display}
