@@ -137,6 +137,7 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
         super().__init__(*args, **kwargs)
 
     def to_internal_value(self, data):
+        """Convert potentially nested representation to a model instance."""
         if isinstance(data, dict):
             if "url" in data:
                 return super().to_internal_value(data["url"])
@@ -145,7 +146,7 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
         return super().to_internal_value(data)
 
     def to_representation(self, value):
-        """Override DRF's default to_representation() to support custom display fields."""
+        """Convert URL representation to a brief nested representation."""
         url = super().to_representation(value)
         if self.queryset:
             model = self.queryset.model
