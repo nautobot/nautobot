@@ -274,13 +274,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         # with depth of 0
         if request is not None and request.method != "GET":
             nested_depth = 0
-
         # For tags field, DRF does not recognize the relationship between tags and the model itself (?)
         # so instead of calling build_nested_field() it will call build_property_field() which
         # makes the field impervious to the `?depth` parameter.
         # So we intercept it here to call build_nested_field()
         # which will make the tags field be rendered with TagSerializer() and respect the `depth` parameter.
-
         if isinstance(getattr(model_class, field_name, None), TagsManager) and nested_depth > 0:
             tags_field = getattr(model_class, field_name)
             relation_info = RelationInfo(
