@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     Status,
     Webhook,
 )
+from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
 
@@ -389,6 +390,7 @@ class RelationshipModelFormTestCase(TestCase):
             "address": "10.3.3.3/24",
             "namespace": cls.namespace.pk,
             "status": cls.ipaddress_status.pk,
+            "type": IPAddressTypeChoices.TYPE_HOST,
         }
         cls.vlangroup_form_base_data = {
             "location": cls.location.pk,
