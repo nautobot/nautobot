@@ -299,6 +299,8 @@ class NautobotMetadata(SimpleMetadata):
                 ...
             ]
         """
+
+        # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
         fields_to_remove = ["natural_key_slug", "url", "display", "status", "id"]
         fields_to_add = ["id", "natural_key_slug", "url"]
 

@@ -4,11 +4,7 @@ import { Box } from "@nautobot/nautobot-ui";
 
 import { useGetRESTAPIQuery } from "@utils/api";
 import GenericView from "@views/generic/GenericView";
-import {
-    AppComponents,
-    RenderHeader,
-    RenderTabs,
-} from "@components";
+import { AppComponents, RenderHeader, RenderTabs } from "@components";
 
 export default function ObjectRetrieve({ api_url }) {
     const { app_label, model_name, object_id } = useParams();
