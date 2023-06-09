@@ -1,7 +1,6 @@
 """Helper functions to detect settings after app initialization (AKA 'dynamic settings')."""
 
 from django.conf import settings
-from distutils.util import strtobool
 from functools import lru_cache
 import os
 
