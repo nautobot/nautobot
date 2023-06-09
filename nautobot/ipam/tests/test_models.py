@@ -571,6 +571,14 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         IPAddress.objects.create(address="aaaa::f/128", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (2, 16))
 
+        # single address prefixes
+        prefix = Prefix.objects.create(prefix="cccc::1/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="cccc::1/128", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (1, 1))
+        prefix = Prefix.objects.create(prefix="1.1.1.1/32", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="1.1.1.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (1, 1))
+
         # Large Prefix
         large_prefix = Prefix.objects.create(
             prefix="22.0.0.0/8", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace

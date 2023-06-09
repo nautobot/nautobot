@@ -856,21 +856,22 @@ class Prefix(PrimaryModel):
             child_ips = netaddr.IPSet(self.ip_addresses.values_list("host", flat=True))
 
         child_prefixes = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
-        numerator = child_prefixes | child_ips
+        numerator_set = child_prefixes | child_ips
 
         # Exclude network and broadcast address from the denominator unless they've been assigned to an IPAddress or child pool.
+        # Only applies to IPv4 prefixes with a prefix length of /30 or shorter
         if all(
             [
-                not self.children.exclude(type=choices.PrefixTypeChoices.TYPE_POOL).exists(),
                 denominator > 2,
                 self.type != choices.PrefixTypeChoices.TYPE_POOL,
                 self.ip_version == 4,
+                not self.children.exclude(type=choices.PrefixTypeChoices.TYPE_POOL).exists(),
             ]
         ):
-            if not any([self.network in numerator, self.broadcast in numerator]):
+            if not any([self.network in numerator_set, self.broadcast in numerator_set]):
                 denominator -= 2
 
-        return UtilizationData(numerator=numerator.size, denominator=denominator)
+        return UtilizationData(numerator=numerator_set.size, denominator=denominator)
 
 
 @extras_features(
@@ -1025,7 +1026,11 @@ class IPAddress(PrimaryModel):
             namespace = self.parent.namespace
 
         # Determine the closest parent automatically based on the Namespace.
-        self.parent = Prefix.objects.get_closest_parent(self.host, namespace=namespace)
+        self.parent = (
+            Prefix.objects.filter(namespace=namespace)
+            .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
+            .get_closest_parent(self.host, include_self=True)
+        )
 
         super().save(*args, **kwargs)
 
