@@ -104,7 +104,7 @@ class RestrictedQuerySet(QuerySet):
         """
         Extend base queryset with support for filtering by `composite_key=...`.
 
-        This is an enhanced version of composite key support from django-natural-keys.
+        This is an enhanced version of natural-key slug support from django-natural-keys.
         Counterpart to BaseModel.composite_key property.
         """
         composite_key = kwargs.pop("composite_key", None)

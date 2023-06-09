@@ -8,4 +8,4 @@
 #    "." is already ruled out as an unreserved character but also would appear in IPv4 IPAddress and Prefix objects
 #    ":" similarly would appear in IPv6 IPAddress/Prefix objects
 #    "/" would appear in Prefix objects as well as various numbered device component names
-COMPOSITE_KEY_SEPARATOR = "&"
+COMPOSITE_KEY_SEPARATOR = ";"
