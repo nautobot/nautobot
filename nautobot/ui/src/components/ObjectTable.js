@@ -7,7 +7,7 @@ import {
     EditIcon,
 } from "@nautobot/nautobot-ui";
 
-import TableItem from "@components/ObjectTableItem";
+import ObjectTableItem from "@components/ObjectTableItem";
 
 function getTableItemLink(idx, obj) {
     if (idx === 0) {
@@ -32,7 +32,7 @@ function createTableColumn(tableHeaders, columnHelper) {
                         ? props.row.original
                         : props.row.original[props.column.id];
                 return (
-                    <TableItem
+                    <ObjectTableItem
                         name={key}
                         obj={props.getValue()}
                         url={getTableItemLink(idx, column_data)}
@@ -55,8 +55,8 @@ function renderActionButton({ cellContext }) {
     );
 }
 
-// A standard Nautobot table. This _may_ be beneficial to move into nautobot-ui
-export default function NautobotTable({
+// A standard Nautobot Object table. This _may_ be beneficial to move into nautobot-ui
+export default function ObjectTable({
     defaultHeaders,
     tableHeaders,
     tableData,

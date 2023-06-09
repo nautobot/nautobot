@@ -1,6 +1,6 @@
 import { Table, Tbody, Td, Tr } from "@nautobot/nautobot-ui";
 
-import TableItem from "@components/ObjectTableItem";
+import ObjectTableItem from "@components/ObjectTableItem";
 import { buildUrl } from "@utils/url";
 
 function RenderTable({ fields, schema, data }) {
@@ -22,7 +22,7 @@ function RenderTable({ fields, schema, data }) {
                         <Tr key={idx}>
                             <Td>{fieldSchema.title}</Td>
                             <Td>
-                                <TableItem obj={fieldData} url={url} />
+                                <ObjectTableItem obj={fieldData} url={url} />
                             </Td>
                         </Tr>
                     );

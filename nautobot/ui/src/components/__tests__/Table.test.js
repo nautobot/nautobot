@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import NautobotTable from "../ObjectTable";
+import ObjectTable from "../ObjectTable";
 
 const mockHeaders = [
     { key: "name", dataIndex: "name", title: "Name" },
@@ -15,7 +15,7 @@ describe("NautobotTable", () => {
     it("renders table headers and data", () => {
         render(
             <BrowserRouter>
-                <NautobotTable
+                <ObjectTable
                     defaultHeaders={mockHeaders}
                     tableHeaders={mockHeaders}
                     tableData={mockData}

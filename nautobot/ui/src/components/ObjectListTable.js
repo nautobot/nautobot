@@ -20,7 +20,7 @@ import {
 import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
 
-import TableItem from "@components/ObjectTableItem";
+import ObjectTableItem from "@components/ObjectTableItem";
 import LoadingWidget from "./LoadingWidget";
 
 const getTableItemLink = (idx, obj) => {
@@ -82,7 +82,7 @@ export default function ObjectListTable({
                                 ? props.row.original
                                 : props.row.original[props.column.id];
                         return (
-                            <TableItem
+                            <ObjectTableItem
                                 name={key}
                                 obj={props.getValue()}
                                 url={getTableItemLink(idx, column_data)}

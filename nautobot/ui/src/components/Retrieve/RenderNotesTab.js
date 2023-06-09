@@ -8,7 +8,7 @@ import {
 import { SkeletonText } from "@chakra-ui/react";
 
 import { useGetRESTAPIQuery, fetcher } from "@utils/api";
-import NautobotTable from "@components/ObjectTable";
+import ObjectTable from "@components/ObjectTable";
 
 export default function RenderNotesTab(props) {
     const { app_label, model_name, object_id, isPluginView } = props;
@@ -55,7 +55,7 @@ export default function RenderNotesTab(props) {
                 <Heading display="flex" alignItems="center" gap="5px">
                     <NtcThumbnailIcon width="25px" height="30px" /> Notes
                 </Heading>
-                <NautobotTable
+                <ObjectTable
                     defaultHeaders={defaultHeaders}
                     tableHeaders={tableHeaders}
                     tableData={tableData}

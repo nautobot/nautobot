@@ -58,8 +58,8 @@ function TableColumnDisplay({ obj }) {
     }
 }
 
-// TODO(timizuo): Rename component to TableCol and also create a Table folder and move Table and Table col to the folder.
-export default function TableItem({ name, obj, url }) {
+// TODO(timizuo): create a ObjectTableItem folder and move ObjectTable, ObjectTableItem and ObjectListTable to the folder.
+export default function ObjectTableItem({ name, obj, url }) {
     if (url && obj) {
         return (
             <Link to={url}>
