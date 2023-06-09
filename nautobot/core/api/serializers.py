@@ -137,14 +137,12 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
         super().__init__(*args, **kwargs)
 
     def to_internal_value(self, data):
-        data
         if isinstance(data, dict):
             if "url" in data:
                 return super().to_internal_value(data["url"])
             elif "id" in data:
                 return super().to_internal_value(data["id"])
-        val = super().to_internal_value(data)
-        return val
+        return super().to_internal_value(data)
 
     def to_representation(self, value):
         """Override DRF's default to_representation() to support custom display fields."""
