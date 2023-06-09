@@ -23,10 +23,10 @@ class ModelUtilsTestCase(TestCase):
         """Test that construct_composite_key() and deconstruct_composite_key() work and are symmetric."""
         for values, expected_slug in (
             (["alpha"], "alpha"),  # simplest case
-            (["alpha", "beta"], "alpha&beta"),  # multiple inputs
-            (["10.1.1.1/24", "fe80::1"], "10.1.1.1%2F24&fe80::1"),  # URL-safe ASCII characters, / is *not* path safe
-            ([None, "Hello", None], "%00&Hello&%00"),  # Null values
-            (["💩", "Everyone's favorite!"], "%F0%9F%92%A9&Everyone%27s+favorite%21"),  # Emojis and unsafe ASCII
+            (["alpha", "beta"], "alpha;beta"),  # multiple inputs
+            (["10.1.1.1/24", "fe80::1"], "10.1.1.1%2F24;fe80::1"),  # URL-safe ASCII characters, / is *not* path safe
+            ([None, "Hello", None], "%00;Hello;%00"),  # Null values
+            (["💩", "Everyone's favorite!"], "%F0%9F%92%A9;Everyone%27s+favorite%21"),  # Emojis and unsafe ASCII
         ):
             with self.subTest(values=values):
                 slug = construct_composite_key(values)
