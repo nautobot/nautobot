@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import TableItem from "../TableItem";
+import TableItem from "../ObjectTableItem";
 
 describe("TableItem", () => {
     it("renders em dash when obj is null", () => {

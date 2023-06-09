@@ -20,7 +20,7 @@ import {
 import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
 
-import TableItem from "@components/TableItem";
+import TableItem from "@components/ObjectTableItem";
 import LoadingWidget from "./LoadingWidget";
 
 const getTableItemLink = (idx, obj) => {

@@ -9,8 +9,9 @@ from rest_framework import fields as drf_fields
 from rest_framework import serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
+from rest_framework.relations import ManyRelatedField
 
-from nautobot.core.api.utils import SerializerDetailViewConfig
+from nautobot.core.templatetags.helpers import bettertitle
 
 
 # FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
@@ -314,10 +315,63 @@ class NautobotMetadata(SimpleMetadata):
                     value["fields"].extend(fields_to_add)
         return view_config
 
+    def get_m2m_and_non_m2m_fields(self, serializer):
+        """
+        Retrieve the many-to-many (m2m) fields and other non-m2m fields from the serializer.
+
+        Returns:
+            A tuple containing two lists: m2m_fields and non m2m fields.
+                - m2m_fields: A list of dictionaries, each containing the name and label of an m2m field.
+                - non_m2m_fields: A list of dictionaries, each containing the name and label of a non m2m field.
+        """
+        m2m_fields = []
+        non_m2m_fields = []
+
+        for field_name, field in serializer.fields.items():
+            if isinstance(field, ManyRelatedField):
+                m2m_fields.append({"name": field_name, "label": field.label or field_name})
+            else:
+                non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
+
+        return m2m_fields, non_m2m_fields
+
+    def get_default_detail_view_config(self, serializer):
+        """
+        Generate detail view config for the view based on the serializer's fields.
+
+        Examples:
+            >>> SerializerDetailViewConfig(DeviceSerializer()).view_config().
+            [
+                {
+                    Device: {
+                        "fields": ["name", "subdevice_role", "height", "comments"...]
+                    }
+                },
+                {
+                    Tags: {
+                        "fields": ["tags"]
+                    }
+                }
+            ]
+
+        Returns:
+            A list representing the view config.
+        """
+        m2m_fields, other_fields = self.get_m2m_and_non_m2m_fields(serializer)
+        model_verbose_name = self.serializer.Meta.model._meta.verbose_name
+        return [
+            {
+                bettertitle(model_verbose_name): {
+                    "fields": [field["name"] for field in other_fields],
+                }
+            },
+            {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
+        ]
+
     def determine_detail_view_schema(self, serializer):
         """Determine the layout option that would be used for the detail view"""
         if hasattr(serializer.Meta, "detail_view_config"):
             view_config = serializer.Meta.detail_view_config
         else:
-            view_config = SerializerDetailViewConfig(serializer).view_config()
+            view_config = self.get_default_detail_view_config(serializer)
         return self.restructure_view_config(view_config)

@@ -7,7 +7,7 @@ import {
     EditIcon,
 } from "@nautobot/nautobot-ui";
 
-import TableItem from "@components/TableItem";
+import TableItem from "@components/ObjectTableItem";
 
 function getTableItemLink(idx, obj) {
     if (idx === 0) {

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import NautobotTable from "../Table";
+import NautobotTable from "../ObjectTable";
 
 const mockHeaders = [
     { key: "name", dataIndex: "name", title: "Name" },

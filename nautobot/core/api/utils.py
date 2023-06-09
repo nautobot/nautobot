@@ -7,13 +7,11 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.relations import ManyRelatedField
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
 from nautobot.core.api import exceptions
-from nautobot.core.templatetags.helpers import bettertitle
 
 
 logger = logging.getLogger(__name__)
@@ -351,71 +349,3 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
         ).data
         data["generic_foreign_key"] = True
         return data
-
-
-class SerializerDetailViewConfig:
-    """
-    Class for generating detail UI view schema based on a serializer's fields.
-
-    Args:
-        serializer: The serializer instance.
-    """
-
-    def __init__(
-        self,
-        serializer,
-    ):
-        self.serializer = serializer
-
-    def get_m2m_and_non_m2m_fields(self):
-        """
-        Retrieve the many-to-many (m2m) fields and other non-m2m fields from the serializer.
-
-        Returns:
-            A tuple containing two lists: m2m_fields and non m2m fields.
-                - m2m_fields: A list of dictionaries, each containing the name and label of an m2m field.
-                - non_m2m_fields: A list of dictionaries, each containing the name and label of a non m2m field.
-        """
-        m2m_fields = []
-        non_m2m_fields = []
-
-        for field_name, field in self.serializer.fields.items():
-            if isinstance(field, ManyRelatedField):
-                m2m_fields.append({"name": field_name, "label": field.label or field_name})
-            else:
-                non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
-
-        return m2m_fields, non_m2m_fields
-
-    def view_config(self):
-        """
-        Generate detail view config for the view based on the serializer's fields.
-
-        Examples:
-            >>> SerializerDetailViewConfig(DeviceSerializer()).view_config().
-            [
-                {
-                    Device: {
-                        "fields": ["name", "subdevice_role", "height", "comments"...]
-                    }
-                },
-                {
-                    Tags: {
-                        "fields": ["tags"]
-                    }
-                }
-            ]
-
-        Returns:
-            A list representing the view config.
-        """
-        m2m_fields, other_fields = self.get_m2m_and_non_m2m_fields()
-        model_verbose_name = self.serializer.Meta.model._meta.verbose_name
-        return [
-            {
-                bettertitle(model_verbose_name): {
-                    "fields": [field["name"] for field in other_fields],
-                }
-            },
-            {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
-        ]

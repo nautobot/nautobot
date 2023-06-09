@@ -8,7 +8,7 @@ import {
 import { SkeletonText } from "@chakra-ui/react";
 
 import { useGetRESTAPIQuery, fetcher } from "@utils/api";
-import NautobotTable from "@components/Table";
+import NautobotTable from "@components/ObjectTable";
 
 export default function RenderChangeLogsTab({ object_id }) {
     const changelog_url = `/api/extras/object-changes/?changed_object_id=${object_id}&depth=1`;

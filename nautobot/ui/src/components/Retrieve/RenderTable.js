@@ -1,6 +1,6 @@
 import { Table, Tbody, Td, Tr } from "@nautobot/nautobot-ui";
 
-import TableItem from "@components/TableItem";
+import TableItem from "@components/ObjectTableItem";
 import { buildUrl } from "@utils/url";
 
 function RenderTable({ fields, schema, data }) {
