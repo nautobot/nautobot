@@ -1,5 +1,6 @@
 import datetime
 import logging
+import random
 
 import factory
 import faker
@@ -336,8 +337,14 @@ class PrefixFactory(PrimaryModelFactory):
         action = "create" if create else "build"
         is_ipv6 = self.ip_version == 6
 
-        # Create child prefixes for containers, otherwise create child ip addresses
-        child_factory = PrefixFactory if self.type == PrefixTypeChoices.TYPE_CONTAINER else IPAddressFactory
+        # Create child prefixes for containers, randomly create prefixes or ip addresses for networks
+        if self.type == PrefixTypeChoices.TYPE_CONTAINER:
+            child_factory = PrefixFactory
+        elif self.type == PrefixTypeChoices.TYPE_NETWORK:
+            child_factory = random.choice([IPAddressFactory, PrefixFactory])
+        else:
+            return
+
         method = getattr(child_factory, action)
 
         # Default to maximum of 4 children unless overridden in kwargs
@@ -369,6 +376,11 @@ class PrefixFactory(PrimaryModelFactory):
             if child_cidr > 128 or self.ip_version == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
+            if self.type == PrefixTypeChoices.TYPE_CONTAINER:
+                child_type = random.choice([PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_CONTAINER])
+            else:
+                child_type = PrefixTypeChoices.TYPE_POOL
+
             # Create child prefixes, preserving location, vrf and is_ipv6 from parent
             for count, address in enumerate(self.prefix.subnet(child_cidr)):
                 if count == child_count:
@@ -380,6 +392,7 @@ class PrefixFactory(PrimaryModelFactory):
                     is_ipv6=is_ipv6,
                     has_rir=False,
                     namespace=self.namespace,
+                    type=child_type,
                     **kwargs,
                 )
 
