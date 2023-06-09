@@ -265,7 +265,7 @@ class APIViewTestCases:
                             #                                                    ^^^^^^
                             self.assertTrue(is_uuid(url.split("/")[-2]))
                             self.assertTrue(is_uuid(pk))
-                            # app_label, model_name = response_data[field]["object_type"].split(":")
+                            # app_label, model_name = response_data[field]["object_type"].split(".")
                             # TODO: check app_label and model_name against the related object
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])

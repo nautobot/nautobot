@@ -343,7 +343,7 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
 
         result = {
             "id": obj_related_field.pk,
-            "object_type": obj_related_field._meta.app_label + ":" + obj_related_field._meta.model_name,
+            "object_type": obj_related_field._meta.app_label + "." + obj_related_field._meta.model_name,
             "url": url,
         }
         return result

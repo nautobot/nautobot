@@ -156,7 +156,7 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
             model = getattr(self.parent.Meta.model, self.source).field.model
         else:
             return {"id": value.pk, "object_type": "unknown", "url": url}
-        return {"id": value.pk, "object_type": model._meta.app_label + ":" + model._meta.model_name, "url": url}
+        return {"id": value.pk, "object_type": model._meta.app_label + "." + model._meta.model_name, "url": url}
 
 
 class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializer):
