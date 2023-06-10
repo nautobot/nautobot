@@ -640,6 +640,7 @@ class RelationshipModelFormTestCase(TestCase):
             data={
                 "address": self.ipaddress_1.address,
                 "status": self.ipaddress_status,
+                "type": IPAddressTypeChoices.TYPE_HOST,
                 "namespace": self.namespace.pk,
                 f"cr_{self.relationship_1.key}__source": self.device_2.pk,
             },
