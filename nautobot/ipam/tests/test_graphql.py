@@ -1,21 +1,14 @@
-from unittest import skip
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase
-from nautobot.extras.models import Status
-from nautobot.ipam.models import Prefix
 
 
-@skip("Needs to be updated for Namespaces")
 class TestPrefix(APITestCase):
     def setUp(self):
         super().setUp()
         self.api_url = reverse("graphql-api")
-        self.statuses = Status.objects.get_for_model(Prefix)
-        self.prefixv4 = Prefix.objects.filter(ip_version=4).first()
-        self.prefixv6 = Prefix.objects.filter(ip_version=6).first()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_prefix_ip_version(self):
