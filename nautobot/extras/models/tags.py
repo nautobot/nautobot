@@ -3,7 +3,7 @@ from django.db import models
 from taggit.models import GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.models import BaseManager, BaseModel, NameColorContentTypesModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
@@ -27,14 +27,21 @@ class TagQuerySet(RestrictedQuerySet):
         return self.filter(content_types__model=model._meta.model_name, content_types__app_label=model._meta.app_label)
 
 
+# Tag *should* be a `NameColorContentTypesModel` but that way lies circular import purgatory. Sigh.
 @extras_features(
     "custom_validators",
 )
-class Tag(NameColorContentTypesModel):
+class Tag(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
+    name = models.CharField(max_length=100, unique=True)
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="tags",
         limit_choices_to=TaggableClassesQuery(),
+    )
+    color = ColorField(default=ColorChoices.COLOR_GREY)
+    description = models.CharField(
+        max_length=200,
+        blank=True,
     )
 
     objects = BaseManager.from_queryset(TagQuerySet)()
