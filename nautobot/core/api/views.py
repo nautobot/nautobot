@@ -170,14 +170,14 @@ class ModelViewSetMixin:
     logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
-    #       UUID PKs and also do NOT support natural-key-slugs.
+    #       UUID PKs and also do NOT support composite-keys.
     #       The impact of NOT setting this is that per the OpenAPI schema, only UUIDs are permitted for most ViewSets;
     #       however, "secretly" due to our custom get_object() implementation below, you can actually also specify a
     #       composite_key value instead of a UUID. We're not currently documenting/using this feature, so OK for now
     # lookup_value_regex = r"[^/]+"
 
     def get_object(self):
-        """Extend rest_framework.generics.GenericAPIView.get_object to allow "pk" lookups to use a natural-key-slug."""
+        """Extend rest_framework.generics.GenericAPIView.get_object to allow "pk" lookups to use a composite-key."""
         queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
 

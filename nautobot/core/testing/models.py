@@ -21,8 +21,6 @@ class ModelTestCases:
             """Check that `composite_key` and filtering by `composite_key` both work."""
             instance = self.model.objects.first()
             self.assertIsNotNone(instance)
-            if not hasattr(instance, "natural_key"):
-                self.skipTest("No natural_key on this model.")
             if not hasattr(instance, "composite_key"):
                 self.skipTest("No composite_key on this model.")
             self.assertIsNotNone(instance.composite_key)

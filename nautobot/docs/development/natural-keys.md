@@ -25,9 +25,9 @@ Similarly, the `composite_key` and `get(composite_key=...`) APIs are also symmet
 ```python
 # Note that composite_key is a property, not a method!
 >>> DeviceType.objects.first().composite_key
-'MegaCorp&Model+9000'
+'MegaCorp;Model+9000'
 
->>> DeviceType.objects.get(composite_key="MegaCorp&Model+9000")
+>>> DeviceType.objects.get(composite_key="MegaCorp;Model+9000")
 <DeviceType: Model 9000>
 ```
 

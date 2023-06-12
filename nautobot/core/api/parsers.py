@@ -93,17 +93,17 @@ class NautobotCSVParser(BaseParser):
                 continue
 
             if isinstance(serializer_field, serializers.ManyRelatedField):
-                # A list of related objects, represented as a list of natural-key-slugs
+                # A list of related objects, represented as a list of composite-keys
                 if value:
                     related_model = serializer_field.child_relation.get_queryset().model
-                    value = [self.get_natural_key_dict(slug, related_model) for slug in value.split(",")]
+                    value = [self.get_composite_key_dict(slug, related_model) for slug in value.split(",")]
                 else:
                     value = []
             elif isinstance(serializer_field, serializers.RelatedField):
-                # A single related object, represented by its natural-key-slug
+                # A single related object, represented by its composite-key
                 if value:
                     related_model = serializer_field.get_queryset().model
-                    value = self.get_natural_key_dict(value, related_model)
+                    value = self.get_composite_key_dict(value, related_model)
                 else:
                     value = None
             elif isinstance(serializer_field, (serializers.ListField, serializers.MultipleChoiceField)):
@@ -135,9 +135,9 @@ class NautobotCSVParser(BaseParser):
 
         return data
 
-    def get_natural_key_dict(self, composite_key, model):
+    def get_composite_key_dict(self, composite_key, model):
         """
-        Get the data dictionary corresponding to the given natural key list or string for the given model.
+        Get the data dictionary corresponding to the given composite key list or string for the given model.
         """
         if not composite_key:
             return None

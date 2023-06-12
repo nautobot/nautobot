@@ -8,4 +8,6 @@
 #    "." is already ruled out as an unreserved character but also would appear in IPv4 IPAddress and Prefix objects
 #    ":" similarly would appear in IPv6 IPAddress/Prefix objects
 #    "/" would appear in Prefix objects as well as various numbered device component names
+# 3. Safe in a URL query string component (so that we can do URLs like "/dcim/devices/?location=<composite_key>"
+#    This rules out "&" and "="
 COMPOSITE_KEY_SEPARATOR = ";"

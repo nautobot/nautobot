@@ -34,9 +34,9 @@ Nautobot's `BaseModel` base class and related classes now implement automatic su
 <DeviceType: Model 9000>
 
 >>> DeviceType.objects.first().composite_key
-'MegaCorp&Model+9000'
+'MegaCorp;Model+9000'
 
->>> DeviceType.objects.get(composite_key="MegaCorp&Model+9000")
+>>> DeviceType.objects.get(composite_key="MegaCorp;Model+9000")
 <DeviceType: Model 9000>
 ```
 
@@ -316,7 +316,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#3715](https://github.com/nautobot/nautobot/issues/3715) - Added (temporary) `natural_key_field_names` to `IPAddress`, `Prefix`, `RackReservation`, `ScheduledJob`, and `Service` models.
 - [#3721](https://github.com/nautobot/nautobot/issues/3721) - Added App provided model view override.
 - [#3722](https://github.com/nautobot/nautobot/issues/3722) - Added `termination_type` filter to `CableFilterSet`.
-- [#3722](https://github.com/nautobot/nautobot/issues/3722) - Added `composite_key` field to REST API serializers.
+- [#3722](https://github.com/nautobot/nautobot/issues/3722) - Added `natural_key_slug` field to REST API serializers.
 - [#3736](https://github.com/nautobot/nautobot/issues/3736) - Added App provided custom route view.
 - [#3741](https://github.com/nautobot/nautobot/issues/3741) - Added natural-key-slug information to UI detail views.
 - [#3754](https://github.com/nautobot/nautobot/issues/3754) - Added loading widget to the left of the ObjectListTable Buttons after initial data load.
