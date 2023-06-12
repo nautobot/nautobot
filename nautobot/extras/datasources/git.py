@@ -245,7 +245,7 @@ def get_repo_from_url_to_path_and_from_branch(
             pass
         if not token:
             log_message = (
-                "Repository has a secrets group assigned but is missing a token secret of access type 'HTTP'."
+                "Repository has a secrets group assigned but is missing a 'token' secret of access type 'HTTP'."
                 "Falling through to legacy behaviour."
             )
             if job_result:
