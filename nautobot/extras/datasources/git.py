@@ -205,7 +205,9 @@ def git_repository_diff_origin_and_local(repository_pk, request, job_result_pk, 
         log_job_result_final_status(job_result, "dry run")
 
 
-def get_repo_from_url_to_path_and_from_branch(repository_record):
+def get_repo_from_url_to_path_and_from_branch(
+    repository_record, logger=None, job_result=None
+):  # pylint: disable=redefined-outer-name
     """Returns the from_url, to_path and from_branch of a Git Repo
     Returns:
         namedtuple (GitRepoInfo): (
@@ -241,6 +243,16 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
         except ObjectDoesNotExist:
             # No defined secret, fall through to legacy behavior
             pass
+        if not token:
+            log_message = (
+                "Repository has a secrets group assigned but is missing a token secret of access type 'HTTP'."
+                "Falling through to legacy behaviour."
+            )
+            if job_result:
+                job_result.log(log_message, level_choice=LogLevelChoices.LOG_WARNING, logger=logger)
+                job_result.save()
+            elif logger:
+                logger.warning(log_message)
 
     if not token and repository_record._token:
         token = repository_record._token
@@ -273,7 +285,9 @@ def ensure_git_repository(
       head (str): Optional Git commit hash to check out instead of pulling branch latest.
     """
 
-    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
+        repository_record, logger=logger, job_result=job_result
+    )
 
     try:
         repo_helper = GitRepo(to_path, from_url)
@@ -310,7 +324,9 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
         job_result (JobResult): Optional JobResult to store results into.
         logger (logging.Logger): Optional Logger to additionally log results to.
     """
-    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
+        repository_record, logger=logger, job_result=job_result
+    )
 
     try:
         repo_helper = GitRepo(to_path, from_url, clone_initially=False)
