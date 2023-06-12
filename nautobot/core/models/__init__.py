@@ -153,7 +153,14 @@ class BaseModel(models.Model):
         # Next, for any natural key fields that have related models, get the natural key for the related model if known
         natural_key_field_lookups = []
         for field_name in natural_key_field_names:
-            field = cls._meta.get_field(field_name)
+            # field_name could be a related field that has its own natural key fields (`parent`),
+            # *or* it could be an explicit set of traversals (`parent__namespace__name`). Handle both.
+            model = cls
+            for field_component in field_name.split("__")[:-1]:
+                model = model._meta.get_field(field_component).remote_field.model
+
+            field = model._meta.get_field(field_name.split("__")[-1])
+
             if getattr(field, "remote_field", None) is None:
                 # Not a related field, so the field name is the field lookup
                 natural_key_field_lookups.append(field_name)
