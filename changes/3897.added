@@ -1,0 +1,1 @@
+Adds log message when a secrets group for a git repository doesn't yield a token.
