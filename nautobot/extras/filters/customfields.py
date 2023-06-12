@@ -8,6 +8,7 @@ from nautobot.core.filters import (
     MultiValueNumberFilter,
 )
 from nautobot.core.forms import NullableDateField
+from nautobot.core.forms.widgets import StaticSelect2Multiple
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 
 

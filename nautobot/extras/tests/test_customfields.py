@@ -4,8 +4,10 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
+from django.forms import ChoiceField, IntegerField, NumberInput
 from django.urls import reverse
 from rest_framework import status
+from nautobot.core.forms.widgets import StaticSelect2
 
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
@@ -13,6 +15,7 @@ from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.filters import LocationFilterSet
+from nautobot.dcim.forms import RackFilterForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
@@ -1698,6 +1701,60 @@ class CustomFieldFilterTest(TestCase):
         self.assertQuerysetEqual(
             self.filterset({"cf_cf8__n": ["Foo"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8="Foo")
+            | self.queryset.filter(_custom_field_data__cf8__isnull=True),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__ic": ["FOO"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__icontains="FOO"),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__nic": ["FOO"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf8__icontains="FOO")
+            | self.queryset.filter(_custom_field_data__cf8__isnull=True),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__iew": ["AR"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__iendswith="AR"),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__niew": ["AR"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf8__iendswith="AR")
+            | self.queryset.filter(_custom_field_data__cf8__isnull=True),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__isw": ["FO"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__istartswith="FO"),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__nisw": ["FO"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf8__istartswith="FO")
+            | self.queryset.filter(_custom_field_data__cf8__isnull=True),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__ie": ["foo"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__iexact="foo"),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__nie": ["foo"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf8__istartswith="FO")
+            | self.queryset.filter(_custom_field_data__cf8__isnull=True),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__re": ["F.o"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__regex="F.o"),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__nre": ["F.o"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf8__regex="F.o")
+            | self.queryset.filter(_custom_field_data__cf8__isnull=True),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__ire": ["F.O"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__iregex="F.o"),
+        )
+        self.assertQuerysetEqual(
+            self.filterset({"cf_cf8__nire": ["F.O"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf8__iregex="F.o")
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
 
