@@ -109,7 +109,7 @@ class OptInFieldsMixin:
                 "type": "string",
                 "format": "uuid",
             },
-            "object_type": {"type": "string"},
+            "object_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]+\\.[a-z][a-z0-9_]+$"},
             "url": {
                 "type": "string",
                 "format": "uri",

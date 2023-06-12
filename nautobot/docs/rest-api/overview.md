@@ -801,7 +801,7 @@ curl -s -X POST \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.0" \
 http://nautobot/api/ipam/prefixes/ \
---data '{"prefix": "192.0.2.0/24", "location": 8df9e629-4338-438b-8ea9-06114f7be08e}' | jq '.'
+--data '{"prefix": "192.0.2.0/24", "status": "fc32b83f-2448-4602-9d43-fecc6735e4e5", "location": "8df9e629-4338-438b-8ea9-06114f7be08e", "namespace": "1fa6a1a9-84a3-4cf3-a9ad-7e4e7baa134a"}' | jq '.'
 ```
 
 ```json
@@ -813,11 +813,23 @@ http://nautobot/api/ipam/prefixes/ \
     "label": "IPv4"
   },
   "prefix": "192.0.2.0/24",
-  "location": "http://nautobot/api/dcim/locations/8df9e629-4338-438b-8ea9-06114f7be08e/",
-  "vrf": null,
+  "location": {
+    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
+    "object_type": "dcim.location",
+    "url": "http://nautobot/api/dcim/locations/8df9e629-4338-438b-8ea9-06114f7be08e/",
+  },
+  "namespace": {
+    "id": "1fa6a1a9-84a3-4cf3-a9ad-7e4e7baa134a",
+    "object_type": "ipam.namespace",
+    "url": "http://nautobot/api/ipam/namespaces/1fa6a1a9-84a3-4cf3-a9ad-7e4e7baa134a/",
+  },
   "tenant": null,
   "vlan": null,
-  "status": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+  "status": {
+    "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+    "object_type": "extras.status",
+    "url": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+  },
   "role": null,
   "type": "network",
   "description": "",
@@ -836,7 +848,7 @@ curl -s -X POST \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.0" \
 http://nautobot/api/ipam/prefixes/ \
---data '{"prefix": "192.0.2.0/24", "location": {"id": "8df9e629-4338-438b-8ea9-06114f7be08e", "object_type": "dcim.location"}' | jq '.'
+--data '{"prefix": "192.0.2.0/24", "status": {"id": "fc32b83f-2448-4602-9d43-fecc6735e4e5", "object_type": "extras.status"}, "location": {"id": "8df9e629-4338-438b-8ea9-06114f7be08e", "object_type": "dcim.location"}, "namespace": { "id": "1fa6a1a9-84a3-4cf3-a9ad-7e4e7baa134a", "object_type": "ipam.namespace"} }' | jq '.'
 ```
 
 ### Creating Multiple Objects
