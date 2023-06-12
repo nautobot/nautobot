@@ -98,7 +98,9 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
     return GitJobResult(job_result=job_result, repository_record=repository_record)
 
 
-def get_repo_from_url_to_path_and_from_branch(repository_record):
+def get_repo_from_url_to_path_and_from_branch(
+    repository_record, logger=None, job_result=None
+):  # pylint: disable=redefined-outer-name
     """Returns the from_url, to_path and from_branch of a Git Repo
     Returns:
         namedtuple (GitRepoInfo): (
@@ -134,6 +136,21 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
         except ObjectDoesNotExist:
             # No defined secret, fall through to legacy behavior
             pass
+        if not token:
+            log_message = (
+                "Repository has a secrets group assigned but is missing a 'token' secret of access type 'HTTP'."
+                "Falling through to legacy behaviour."
+            )
+            if job_result:
+                job_result.log(log_message, level_choice=LogLevelChoices.LOG_WARNING, logger=logger)
+                job_result.save()
+            elif logger:
+                logger.warning(log_message)
+
+    if not token and repository_record._token:
+        token = repository_record._token
+    if not user and repository_record.username:
+        user = repository_record.username
 
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.
@@ -152,58 +169,45 @@ def ensure_git_repository(
     repository_record, job_result=None, logger=None, head=None  # pylint: disable=redefined-outer-name
 ):
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-
-    Note that this function may be called independently of the `GitRepositorySync` job,
+    Note that this function may be called independently of the `pull_git_repository_and_refresh_data` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
-
     Args:
       repository_record (GitRepository): Repository to ensure the state of.
       job_result (JobResult): Optional JobResult to store results into.
       logger (logging.Logger): Optional Logger to additionally log results to.
       head (str): Optional Git commit hash to check out instead of pulling branch latest.
-
-    Returns:
-      bool: Whether any change to the local repo actually occurred.
     """
 
-    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
+        repository_record, logger=logger, job_result=job_result
+    )
 
     try:
         repo_helper = GitRepo(to_path, from_url)
-        head, changed = repo_helper.checkout(from_branch, head)
+        head = repo_helper.checkout(from_branch, head)
         if repository_record.current_head != head:
             repository_record.current_head = head
-            repository_record.save()
+            # Make sure we don't recursively trigger a new resync of the repository!
+            repository_record.save(trigger_resync=False)
 
-    # FIXME(jathan): As a part of jobs overhaul, this error-handling should be removed since this
-    # should only ever be called in the context of a Git sync job. Also, all logging directly from a
-    # JobResult should also be replaced with just trusting the logger to do the correct thing (such
-    # as from the Job class).
     except Exception as exc:
         if job_result:
-            job_result.log(str(exc), level_choice=LogLevelChoices.LOG_ERROR, logger=logger)
+            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
+            job_result.save()
         elif logger:
             logger.error(str(exc))
         raise
 
     if job_result:
-        if changed:
-            job_result.log(
-                "Repository successfully refreshed",
-                level_choice=LogLevelChoices.LOG_INFO,
-                logger=logger,
-            )
         job_result.log(
-            f'The current Git repository hash is "{repository_record.current_head}"',
-            level_choice=LogLevelChoices.LOG_INFO,
+            "Repository successfully refreshed",
+            level_choice=LogLevelChoices.LOG_SUCCESS,
             logger=logger,
         )
+        job_result.save()
     elif logger:
-        if changed:
-            logger.info("Repository successfully refreshed")
-        logger.info(f'The current Git repository hash is "{repository_record.current_head}"')
-
-    return changed
+        logger.info("Repository successfully refreshed")
 
 
 def git_repository_dry_run(repository_record, job_result=None, logger=None):  # pylint: disable=redefined-outer-name
@@ -213,7 +217,9 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
         job_result (JobResult): Optional JobResult to store results into.
         logger (logging.Logger): Optional Logger to additionally log results to.
     """
-    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
+        repository_record, logger=logger, job_result=job_result
+    )
 
     try:
         repo_helper = GitRepo(to_path, from_url, clone_initially=False)
@@ -229,13 +235,15 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
 
     except Exception as exc:
         if job_result:
-            job_result.log(str(exc), level_choice=LogLevelChoices.LOG_ERROR, logger=logger)
+            job_result.set_status(JobResultStatusChoices.STATUS_ERRORED)
+            job_result.log(str(exc), level_choice=LogLevelChoices.LOG_FAILURE, logger=logger)
+            job_result.save()
         elif logger:
             logger.error(str(exc))
         raise
 
     if job_result:
-        job_result.log("Repository dry run successful", level_choice=LogLevelChoices.LOG_INFO, logger=logger)
+        job_result.log("Repository dry run successful", level_choice=LogLevelChoices.LOG_SUCCESS, logger=logger)
     elif logger:
         logger.info("Repository dry run successful")
 
