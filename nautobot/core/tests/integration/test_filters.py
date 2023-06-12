@@ -46,7 +46,9 @@ class ListViewFilterTestCase(SeleniumTestCase):
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label=self.cf_text_field_label),
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label=self.cf_integer_field_label),
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, label=self.cf_select_field_label),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_MULTISELECT, label=self.cf_multi_select_field_label),
+            CustomField.objects.create(
+                type=CustomFieldTypeChoices.TYPE_MULTISELECT, label=self.cf_multi_select_field_label
+            ),
         )
         for custom_field in self.custom_fields:
             custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
@@ -192,7 +194,11 @@ class ListViewFilterTestCase(SeleniumTestCase):
             select_field_name, "Option C", field_type="select", idx=1, select2_field_name="form-1-lookup_value"
         )
         self.change_field_value(
-            multi_select_field_name, "MultiSelect Option C", field_type="select", idx=1, select2_field_name="form-1-lookup_value"
+            multi_select_field_name,
+            "MultiSelect Option C",
+            field_type="select",
+            idx=1,
+            select2_field_name="form-1-lookup_value",
         )
         self.browser.find_by_xpath("//a[@href='#default-filter']").click()
         self.assertEqual(self.browser.find_by_name(text_field_name)[1].value, "test new update")

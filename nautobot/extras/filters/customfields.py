@@ -84,7 +84,6 @@ class CustomFieldMultiValueSelectFilter(CustomFieldFilterMixin, django_filters.M
     """This provides functionality for filtering custom fields with select type"""
 
     def __init__(self, *args, **kwargs):
-        # TODO(jathan): See if I can make this user `kwargs` instead.
         self.field_class.widget = StaticSelect2Multiple
         super().__init__(*args, **kwargs)
 
