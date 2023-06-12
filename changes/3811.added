@@ -1,1 +1,1 @@
-Added a note that addresses UWSGI buffer size concerns with Azure SSO in `nautobot/docs/configuration/authentication/sso.md`
+Added a note that addresses UWSGI buffer size concerns with Azure SSO in `nautobot/docs/configuration/authentication/sso.md`.
