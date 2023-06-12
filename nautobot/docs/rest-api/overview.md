@@ -830,33 +830,13 @@ http://nautobot/api/ipam/prefixes/ \
 
 Related fields can be specified using either the primary key, the URL of the related object, or a nested representation similar to what is returned in the `?depth=0` response. For example, the following request is equivalent to the one above:
 
-```json
-{
-  "id": "48df6965-0fcb-4155-b5f8-00fe8b9b01af",
-  "url": "http://nautobot/api/ipam/prefixes/48df6965-0fcb-4155-b5f8-00fe8b9b01af/",
-  "family": {
-    "value": 4,
-    "label": "IPv4"
-  },
-  "prefix": "192.0.2.0/24",
-  "location": {
-    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
-  },
-  "vrf": null,
-  "tenant": null,
-  "vlan": null,
-  "status": {
-    "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
-    "object_type": "extras.status",
-  },
-  "role": null,
-  "type": "network",
-  "description": "",
-  "tags": [],
-  "custom_fields": {},
-  "created": "2020-08-04T20:08:39.007125Z",
-  "last_updated": "2020-08-04T20:08:39.007125Z"
-}
+```no-highlight
+curl -s -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.0" \
+http://nautobot/api/ipam/prefixes/ \
+--data '{"prefix": "192.0.2.0/24", "location": {"id": "8df9e629-4338-438b-8ea9-06114f7be08e", "object_type": "dcim.location"}' | jq '.'
 ```
 
 ### Creating Multiple Objects
