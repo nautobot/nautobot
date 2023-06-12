@@ -143,12 +143,12 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             if isinstance(field.child_relation, ContentTypeField):
                 field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')
             else:
-                field_info["format"] = mark_safe('<code>"natural_key_slug,natural_key_slug"</code>')
+                field_info["format"] = mark_safe('<code>"composite_key,composite_key"</code>')
         elif isinstance(field, serializers.RelatedField):
             if isinstance(field, ContentTypeField):
                 field_info["format"] = mark_safe("<code>app_label.model</code>")
             else:
-                field_info["format"] = mark_safe("<code>natural_key_slug</code>")
+                field_info["format"] = mark_safe("<code>composite_key</code>")
         elif isinstance(field, (serializers.ListField, serializers.MultipleChoiceField)):
             field_info["format"] = mark_safe('<code>"value,value"</code>')
         elif isinstance(field, (serializers.DictField, serializers.JSONField)):
