@@ -148,6 +148,23 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.21 (2023-06-12)
+
+### Added
+
+- [#3806](https://github.com/nautobot/nautobot/issues/3806) - Added instructions and examples for SAML SSO using Okta as the IdP.
+- [#3811](https://github.com/nautobot/nautobot/issues/3811) - Added a note that addresses UWSGI buffer size concerns with Azure SSO in `nautobot/docs/configuration/authentication/sso.md`.
+- [#3897](https://github.com/nautobot/nautobot/issues/3897) - Adds log message when a secrets group for a git repository doesn't yield a token.
+
+### Changed
+
+- [#3888](https://github.com/nautobot/nautobot/issues/3888) - Changed note for celery concurrency in the docs.
+
+### Fixed
+
+- [#3809](https://github.com/nautobot/nautobot/issues/3809) - Fixed a bug that prevented  `__init__()` function of `bulk_create_form_class` being overridden in NautobotUIViewSet.
+- [#3882](https://github.com/nautobot/nautobot/issues/3882) - Removed deprecated distutils dependency.
+
 ## v1.5.20 (2023-05-30)
 
 ### Added
