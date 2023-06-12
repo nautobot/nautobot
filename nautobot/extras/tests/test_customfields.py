@@ -350,13 +350,13 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
             ct = ContentType.objects.get_for_model(Device)
             custom_field_select = CustomField(
                 type=CustomFieldTypeChoices.TYPE_SELECT,
-                name="select_field",
+                label="Select Field",
             )
             custom_field_select.save()
             custom_field_select.content_types.set([ct])
-            CustomFieldChoice.objects.create(field=custom_field_select, value="Foo")
-            CustomFieldChoice.objects.create(field=custom_field_select, value="Bar")
-            CustomFieldChoice.objects.create(field=custom_field_select, value="Baz")
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Foo")
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Bar")
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Baz")
             filter_field = custom_field_select.to_filter_form_field()
             self.assertIsInstance(filter_field, ChoiceField)
             self.assertIsInstance(filter_field.widget, StaticSelect2)
@@ -365,7 +365,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         with self.subTest("Assert CustomField Integer Type renders the correct filter form field and widget"):
             custom_field_integer = CustomField(
                 type=CustomFieldTypeChoices.TYPE_INTEGER,
-                name="integer_field",
+                label="integer_field",
             )
             custom_field_integer.save()
             custom_field_integer.content_types.set([ct])
@@ -2052,11 +2052,11 @@ class CustomFieldFilterFormTest(TestCase):
     def test_custom_filter_form(self):
         """Assert CustomField renders the appropriate filter form field"""
         rack_ct = ContentType.objects.get_for_model(Rack)
-        ct_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, name="select_field")
+        ct_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, label="Select Field")
         ct_field.content_types.set([rack_ct])
-        CustomFieldChoice.objects.create(field=ct_field, value="Foo")
-        CustomFieldChoice.objects.create(field=ct_field, value="Bar")
-        CustomFieldChoice.objects.create(field=ct_field, value="Baz")
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Baz")
         filterform = RackFilterForm()
         self.assertIsInstance(filterform["cf_select_field"].field, ChoiceField)
         self.assertIsInstance(filterform["cf_select_field"].field.widget, StaticSelect2)
