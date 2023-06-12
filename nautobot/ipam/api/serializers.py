@@ -254,9 +254,11 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         return data
 
     def get_field_names(self, declared_fields, info):
-        """Add nat_outside_list reverse relation to the automatically discovered fields."""
+        """Add reverse relations to the automatically discovered fields."""
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "nat_outside_list")
+        self.extend_field_names(fields, "interfaces")
+        self.extend_field_names(fields, "vm_interfaces")
         return fields
 
 

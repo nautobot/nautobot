@@ -1417,7 +1417,6 @@ query {
                 self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @skip("TODO: convert to use interfaces and vm_interfaces reverse relationships")
     def test_query_ip_addresses_assigned_object(self):
         """Query IP Address assigned_object values."""
 
@@ -1425,19 +1424,15 @@ query {
 query {
     ip_addresses {
         address
-        assigned_object {
-            ... on InterfaceType {
-                name
-                device { name }
-            }
-            ... on VMInterfaceType {
-                name
-                virtual_machine { name }
-            }
+        interfaces {
+            name
+            device { name }
+        }
+        vm_interfaces {
+            name
+            virtual_machine { name }
         }
         ip_version
-        interface { name }
-        vminterface { name }
     }
 }"""
         result = self.execute_query(query)
@@ -1447,22 +1442,19 @@ query {
             self.assertIn(
                 entry["address"], (str(self.ipaddr1.address), str(self.ipaddr2.address), str(self.vmipaddr.address))
             )
-            self.assertIn("assigned_object", entry)
+            self.assertIn("interfaces", entry)
+            self.assertIn("vm_interfaces", entry)
             self.assertIn(entry["ip_version"], (4, 6))
             if entry["address"] == str(self.vmipaddr.address):
-                self.assertEqual(entry["assigned_object"]["name"], self.vminterface.name)
-                self.assertEqual(entry["vminterface"]["name"], self.vminterface.name)
-                self.assertIsNone(entry["interface"])
-                self.assertIn("virtual_machine", entry["assigned_object"])
-                self.assertNotIn("device", entry["assigned_object"])
-                self.assertEqual(entry["assigned_object"]["virtual_machine"]["name"], self.virtualmachine.name)
+                self.assertEqual(entry["vm_interfaces"][0]["name"], self.vminterface.name)
+                self.assertEqual(entry["interfaces"], [])
+                self.assertIn("virtual_machine", entry["vm_interfaces"][0])
+                self.assertEqual(entry["vm_interfaces"][0]["virtual_machine"]["name"], self.virtualmachine.name)
             else:
-                self.assertIn(entry["assigned_object"]["name"], (self.interface11.name, self.interface12.name))
-                self.assertIn(entry["interface"]["name"], (self.interface11.name, self.interface12.name))
-                self.assertIsNone(entry["vminterface"])
-                self.assertIn("device", entry["assigned_object"])
-                self.assertNotIn("virtual_machine", entry["assigned_object"])
-                self.assertEqual(entry["assigned_object"]["device"]["name"], self.device1.name)
+                self.assertIn(entry["interfaces"][0]["name"], (self.interface11.name, self.interface12.name))
+                self.assertEqual(entry["vm_interfaces"], [])
+                self.assertIn("device", entry["interfaces"][0])
+                self.assertEqual(entry["interfaces"][0]["device"]["name"], self.device1.name)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_cables_filter(self):

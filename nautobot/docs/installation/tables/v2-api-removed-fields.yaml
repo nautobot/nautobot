@@ -54,6 +54,9 @@
   Removed Field: "slug"
   Comments:
 - Model/Endpoint: "IPAddress"
+  Removed Field: "assigned_object"
+  Comments: "Use `interfaces` and/or `vm_interfaces` instead."
+- Model/Endpoint: "IPAddress"
   Removed Field: "broadcast"
   Comments: "Use parent Prefix's broadcast instead"
 - Model/Endpoint: "IPAddress"
