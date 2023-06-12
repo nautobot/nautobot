@@ -58,7 +58,7 @@ function TableColumnDisplay({ obj }) {
     }
 }
 
-// TODO(timizuo): create a ObjectTableItem folder and move ObjectTable, ObjectTableItem and ObjectListTable to the folder.
+
 export default function ObjectTableItem({ name, obj, url }) {
     if (url && obj) {
         return (

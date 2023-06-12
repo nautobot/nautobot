@@ -8,7 +8,7 @@ import {
 import { SkeletonText } from "@chakra-ui/react";
 
 import { useGetRESTAPIQuery, fetcher } from "@utils/api";
-import ObjectTable from "@components/ObjectTable";
+import { ObjectTable } from "../ObjectTable";
 
 export default function RenderNotesTab(props) {
     const { app_label, model_name, object_id, isPluginView } = props;

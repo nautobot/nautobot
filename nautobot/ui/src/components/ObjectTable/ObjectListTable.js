@@ -1,4 +1,4 @@
-import { RouterButton } from "./RouterButton";
+import { RouterButton } from "../RouterButton";
 import { ButtonGroup, SkeletonText } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
@@ -17,11 +17,12 @@ import {
     EditIcon,
     useToast,
 } from "@nautobot/nautobot-ui";
-import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
 
-import ObjectTableItem from "@components/ObjectTableItem";
-import LoadingWidget from "./LoadingWidget";
+import Paginator from "../paginator";
+import ObjectTableItem from "./ObjectTableItem";
+import LoadingWidget from "../LoadingWidget";
+
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {

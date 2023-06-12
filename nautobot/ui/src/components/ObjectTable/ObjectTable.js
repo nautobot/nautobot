@@ -7,7 +7,7 @@ import {
     EditIcon,
 } from "@nautobot/nautobot-ui";
 
-import ObjectTableItem from "@components/ObjectTableItem";
+import ObjectTableItem from "./ObjectTableItem";
 
 function getTableItemLink(idx, obj) {
     if (idx === 0) {
@@ -26,7 +26,8 @@ function createTableColumn(tableHeaders, columnHelper) {
         columnHelper.accessor(key, {
             cell: (props) => {
                 // Get the column data from the object
-                // e.g from {"status": {"display": "Active"}, "id": ....} get => {"display": "Active"}
+                // e.g from {status: {display: "Active", id: 1, ...}, id: ....} get => {display: "Active", id: 1}
+                // In the example above it gets the col(status) value
                 const column_data =
                     idx === 0
                         ? props.row.original

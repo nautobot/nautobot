@@ -2,7 +2,7 @@ import {Box, Heading, NtcThumbnailIcon, Table, TableContainer, Tbody, Thead, Tr,
 import GenericView from "@views/generic/GenericView";
 import { useParams } from "react-router-dom";
 import { toTitleCase } from "@utils/string";
-import ObjectTableItem from "@components/ObjectTableItem";
+import { ObjectTableItem } from "@components";
 
 export default function ModelView(props) {
   const { app_name, model_name } = useParams();
@@ -33,7 +33,7 @@ export default function ModelView(props) {
                           <strong>{k}</strong>
                       </Td>
                       <Td>
-                        <ObjectTableItem obj={v} />
+                          <ObjectTableItem obj={v} />
                       </Td>
                   </Tr>]
               ))

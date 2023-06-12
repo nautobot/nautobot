@@ -5,11 +5,9 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404
 import drf_react_template.schema_form_encoder as schema
 from rest_framework import exceptions
-from rest_framework import fields as drf_fields
-from rest_framework import serializers as drf_serializers
+from rest_framework import fields as drf_fields, relations as drf_relations, serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
-from rest_framework.relations import ManyRelatedField
 
 from nautobot.core.templatetags.helpers import bettertitle
 
@@ -328,7 +326,7 @@ class NautobotMetadata(SimpleMetadata):
         non_m2m_fields = []
 
         for field_name, field in serializer.fields.items():
-            if isinstance(field, ManyRelatedField):
+            if isinstance(field, drf_relations.ManyRelatedField):
                 m2m_fields.append({"name": field_name, "label": field.label or field_name})
             else:
                 non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
