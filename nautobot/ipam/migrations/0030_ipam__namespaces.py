@@ -220,6 +220,11 @@ class Migration(migrations.Migration):
                 to="ipam.prefix",
             ),
         ),
+        migrations.AddField(
+            model_name="ipaddress",
+            name="type",
+            field=models.CharField(default="host", max_length=50),
+        ),
         migrations.AlterModelOptions(
             name="ipaddress",
             options={

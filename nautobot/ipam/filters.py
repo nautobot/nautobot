@@ -400,7 +400,7 @@ class IPAddressFilterSet(
 
     class Meta:
         model = IPAddress
-        fields = ["id", "ip_version", "dns_name", "tags", "mask_length"]
+        fields = ["id", "ip_version", "dns_name", "type", "tags", "mask_length"]
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()

@@ -10,7 +10,7 @@ from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status, Tag
-from nautobot.ipam.choices import ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
     Namespace,
@@ -198,6 +198,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
             "status": statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
             "role": roles[0].pk,
             "nat_inside": None,
             "dns_name": "example",
@@ -216,6 +217,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": None,
             "status": statuses[1].pk,
             "role": roles[1].pk,
+            "type": IPAddressTypeChoices.TYPE_HOST,
             "dns_name": "example",
             "description": "New description",
         }

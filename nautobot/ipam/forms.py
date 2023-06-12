@@ -36,7 +36,7 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
-from .choices import IPAddressVersionChoices, ServiceProtocolChoices, PrefixTypeChoices
+from .choices import IPAddressVersionChoices, IPAddressTypeChoices, ServiceProtocolChoices, PrefixTypeChoices
 from .constants import (
     IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
@@ -393,11 +393,6 @@ class PrefixFilterForm(
 
 
 class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldMixin):
-    vrf = DynamicModelChoiceField(
-        queryset=VRF.objects.all(),
-        required=False,
-        label="VRF",
-    )
     nat_location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
@@ -450,7 +445,7 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         fields = [
             "address",
             "namespace",
-            "vrf",
+            "type",
             "status",
             "role",
             "dns_name",
@@ -505,26 +500,25 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
 
         super().__init__(*args, **kwargs)
 
-        self.fields["vrf"].empty_label = "Global"
-
 
 class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
     pattern = ExpandableIPAddressField(label="Address pattern")
 
 
 class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
-    vrf = DynamicModelChoiceField(
-        queryset=VRF.objects.all(),
+    namespace = DynamicModelChoiceField(
+        queryset=Namespace.objects.all(),
         required=False,
-        label="VRF",
+        label="Namespace",
     )
 
     class Meta:
         model = IPAddress
         fields = [
             "address",
-            "vrf",
+            "namespace",
             "status",
+            "type",
             "role",
             "dns_name",
             "description",
@@ -533,20 +527,11 @@ class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
             "tags",
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["vrf"].empty_label = "Global"
-
 
 class IPAddressBulkEditForm(
     TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm
 ):
     pk = forms.ModelMultipleChoiceField(queryset=IPAddress.objects.all(), widget=forms.MultipleHiddenInput())
-    vrf = DynamicModelChoiceField(
-        queryset=VRF.objects.all(),
-        required=False,
-        label="VRF",
-    )
     mask_length = forms.IntegerField(
         min_value=IPADDRESS_MASK_LENGTH_MIN,
         max_value=IPADDRESS_MASK_LENGTH_MAX,
@@ -555,10 +540,14 @@ class IPAddressBulkEditForm(
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     dns_name = forms.CharField(max_length=255, required=False)
     description = forms.CharField(max_length=100, required=False)
+    type = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(IPAddressTypeChoices),
+        widget=StaticSelect2(),
+    )
 
     class Meta:
         nullable_fields = [
-            "vrf",
             "tenant",
             "dns_name",
             "description",
@@ -566,7 +555,6 @@ class IPAddressBulkEditForm(
 
 
 class IPAddressAssignForm(BootstrapMixin, forms.Form):
-    vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="VRF", empty_label="Global")
     q = forms.CharField(
         required=False,
         label="Search",
@@ -616,6 +604,11 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
+    type = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(IPAddressTypeChoices),
+        widget=StaticSelect2(),
+    )
     tag = TagFilterField(model)
 
 

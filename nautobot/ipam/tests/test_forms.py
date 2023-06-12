@@ -5,8 +5,8 @@ from django.test import TestCase
 
 from nautobot.extras.models import Status
 from nautobot.ipam import forms, models
-from nautobot.ipam.choices import IPAddressStatusChoices
-from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.ipam.choices import IPAddressTypeChoices
+from nautobot.ipam.models import IPAddress, Namespace, Prefix
 
 
 class BaseNetworkFormTest:
@@ -15,8 +15,24 @@ class BaseNetworkFormTest:
     object_name = None
     extra_data = {}
 
+    def setUp(self):
+        super().setUp()
+        self.namespace = Namespace.objects.first()
+        self.status = Status.objects.get(name="Active")
+        self.prefix_status = Status.objects.get_for_model(Prefix).first()
+        self.ip_status = Status.objects.get_for_model(IPAddress).first()
+        self.parent = Prefix.objects.create(
+            prefix="192.168.1.0/24", namespace=self.namespace, status=self.prefix_status
+        )
+        self.parent2 = Prefix.objects.create(
+            prefix="192.168.0.0/24", namespace=self.namespace, status=self.prefix_status
+        )
+        self.parent6 = Prefix.objects.create(
+            prefix="2001:0db8::/40", namespace=self.namespace, status=self.prefix_status
+        )
+
     def test_valid_ip_address(self):
-        data = {self.field_name: "192.168.1.0/24"}
+        data = {self.field_name: "192.168.1.0/24", "namespace": self.namespace, "status": self.status}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -24,7 +40,7 @@ class BaseNetworkFormTest:
         self.assertTrue(form.save())
 
     def test_address_invalid_ipv4(self):
-        data = {self.field_name: "192.168.0.1/64"}
+        data = {self.field_name: "192.168.0.1/64", "namespace": self.namespace, "status": self.status}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -32,7 +48,7 @@ class BaseNetworkFormTest:
         self.assertEqual("Please specify a valid IPv4 or IPv6 address.", form.errors[self.field_name][0])
 
     def test_address_zero_mask(self):
-        data = {self.field_name: "192.168.0.1/0"}
+        data = {self.field_name: "192.168.0.1/0", "namespace": self.namespace, "status": self.status}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -40,7 +56,7 @@ class BaseNetworkFormTest:
         self.assertTrue(form.is_valid())
 
     def test_address_missing_mask(self):
-        data = {self.field_name: "192.168.0.1"}
+        data = {self.field_name: "192.168.0.1", "namespace": self.namespace, "status": self.status}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -57,13 +73,13 @@ class PrefixFormTest(BaseNetworkFormTest, TestCase):
     def setUp(self):
         super().setUp()
         self.extra_data = {
-            "status": Status.objects.get_for_model(Prefix).first(),
+            "namespace": self.namespace,
+            "status": self.prefix_status,
             "type": "network",
             "rir": models.RIR.objects.first(),
         }
 
 
-@skip("Needs to be updated for Namespaces")
 class IPAddressFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.IPAddressForm
     field_name = "address"
@@ -71,20 +87,32 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.extra_data = {"status": Status.objects.get_for_model(IPAddress).first()}
+        self.extra_data = {
+            "namespace": self.namespace,
+            "status": self.ip_status,
+            "type": IPAddressTypeChoices.TYPE_HOST,
+        }
 
     def test_slaac_valid_ipv6(self):
-        form = self.form_class(
-            data={
+        data = self.extra_data
+        data.update(
+            {
                 self.field_name: "2001:0db8:0000:0000:0000:ff00:0042:8329/128",
-                "status": Status.objects.get(name="SLAAC"),
+                "type": IPAddressTypeChoices.TYPE_SLAAC,
             }
         )
+        form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
 
     def test_slaac_status_invalid_ipv4(self):
-        slaac = IPAddressStatusChoices.as_dict()[IPAddressStatusChoices.STATUS_SLAAC]
-        form = self.form_class(data={self.field_name: "192.168.0.1/32", "status": Status.objects.get(name=slaac)})
+        data = self.extra_data
+        data.update(
+            {
+                self.field_name: "192.168.0.1/32",
+                "type": IPAddressTypeChoices.TYPE_SLAAC,
+            }
+        )
+        form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
-        self.assertEqual("Only IPv6 addresses can be assigned SLAAC status", form.errors["status"][0])
+        self.assertEqual("Only IPv6 addresses can be assigned SLAAC type", form.errors["type"][0])
