@@ -41,7 +41,6 @@ class DynamicGroupTestCase(SeleniumTestCase):
         # Fill out the form.
         name = "devices-active"
         self.browser.fill("name", name)
-        # self.browser.fill("slug", name)  # slug should be auto-populated
         self.browser.select("content_type", ct_label)
 
         # Click that "Create" button

@@ -461,7 +461,7 @@ class PluginCustomValidationTest(TestCase):
 
     def test_custom_validator_raises_exception(self):
         location_type = LocationType.objects.get(name="Campus")
-        location = Location(name="this location has a matching name", slug="location1", location_type=location_type)
+        location = Location(name="this location has a matching name", location_type=location_type)
 
         with self.assertRaises(ValidationError):
             location.clean()
@@ -507,21 +507,18 @@ class FilterExtensionTest(TestCase):
         location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
             name="Location 1",
-            slug="location-1",
             tenant=tenants[0],
             location_type=location_type,
             status=location_status,
         )
         Location.objects.create(
             name="Location 2",
-            slug="location-2",
             tenant=tenants[1],
             location_type=location_type,
             status=location_status,
         )
         Location.objects.create(
             name="Location 3",
-            slug="location-3",
             tenant=tenants[2],
             location_type=location_type,
             status=location_status,
@@ -534,7 +531,6 @@ class FilterExtensionTest(TestCase):
         DeviceType.objects.create(
             manufacturer=manufacturers[0],
             model="Model 1",
-            slug="model-1",
             part_number="Part Number 1",
             u_height=1,
             is_full_depth=True,
@@ -542,7 +538,6 @@ class FilterExtensionTest(TestCase):
         DeviceType.objects.create(
             manufacturer=manufacturers[1],
             model="Model 2",
-            slug="model-2",
             part_number="Part Number 2",
             u_height=2,
             is_full_depth=True,
@@ -550,7 +545,6 @@ class FilterExtensionTest(TestCase):
         DeviceType.objects.create(
             manufacturer=manufacturers[2],
             model="Model 3",
-            slug="model-3",
             part_number="Part Number 3",
             u_height=3,
             is_full_depth=False,
@@ -559,26 +553,26 @@ class FilterExtensionTest(TestCase):
         device_status = Status.objects.get_for_model(Device).first()
         Device.objects.create(
             name="Device 1",
-            device_type=DeviceType.objects.get(slug="model-1"),
+            device_type=DeviceType.objects.get(model="Model 1"),
             role=roles[0],
             tenant=tenants[0],
-            location=Location.objects.get(slug="location-1"),
+            location=Location.objects.get(name="Location 1"),
             status=device_status,
         )
         Device.objects.create(
             name="Device 2",
-            device_type=DeviceType.objects.get(slug="model-2"),
+            device_type=DeviceType.objects.get(model="Model 2"),
             role=roles[1],
             tenant=tenants[1],
-            location=Location.objects.get(slug="location-2"),
+            location=Location.objects.get(name="Location 2"),
             status=device_status,
         )
         Device.objects.create(
             name="Device 3",
-            device_type=DeviceType.objects.get(slug="model-2"),
+            device_type=DeviceType.objects.get(model="Model 2"),
             role=roles[3],
             tenant=tenants[2],
-            location=Location.objects.get(slug="location-3"),
+            location=Location.objects.get(name="Location 3"),
             status=device_status,
         )
 

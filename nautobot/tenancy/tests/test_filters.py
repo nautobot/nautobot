@@ -255,7 +255,7 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
         )
 
     def test_locations(self):
-        params = {"locations": [self.locations[0].pk, self.locations[1].slug]}
+        params = {"locations": [self.locations[0].pk, self.locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__in=[self.locations[0], self.locations[1]]).distinct(),

@@ -98,7 +98,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         """
-        Generic GET handler for accessing an object by PK or slug
+        Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
 
@@ -512,7 +512,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         """Retrieve an object based on `kwargs`."""
-        # Look up an existing object by slug or PK, or name if provided.
+        # Look up an existing object by slug, PK, or name, if provided.
         for field in ("slug", "pk", "name"):
             if field in kwargs:
                 return get_object_or_404(self.queryset, **{field: kwargs[field]})

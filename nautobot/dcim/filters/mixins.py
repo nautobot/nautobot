@@ -5,7 +5,7 @@ from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
-    NameSlugSearchFilterSet,
+    NameSearchFilterSet,
     RelatedMembershipBooleanFilter,
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
@@ -25,10 +25,11 @@ class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
     )
 
 
-class DeviceComponentTemplateModelFilterSetMixin(NameSlugSearchFilterSet, CustomFieldModelFilterSetMixin):
+class DeviceComponentTemplateModelFilterSetMixin(NameSearchFilterSet, CustomFieldModelFilterSetMixin):
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
-        label="Device type (slug or ID)",
+        to_field_name="model",
+        label="Device type (model or ID)",
     )
     label = MultiValueCharFilter(label="Label")
     description = MultiValueCharFilter(label="Description")
@@ -47,7 +48,8 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
     location = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device__location",
         queryset=Location.objects.all(),
-        label="Location (slug or ID)",
+        to_field_name="name",
+        label="Location (name or ID)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
@@ -64,7 +66,8 @@ class LocatableModelFilterSetMixin(django_filters.FilterSet):
 
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
-        label="Location (slug or ID)",
+        to_field_name="name",
+        label="Location (name or ID)",
     )
 
 

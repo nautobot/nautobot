@@ -55,7 +55,6 @@ class CustomFieldTestCase(SeleniumTestCase):
         # Fill out form
         self.browser.select("type", field_type)
         self.browser.fill("label", field_label)
-        # Slug field should be auto-populated based on the provided label
 
         # Find the "content_types" dynamic multi-select and type into it.
         # See: https://splinter.readthedocs.io/en/latest/elements-in-the-page.html#interacting-with-forms

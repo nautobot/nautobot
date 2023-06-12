@@ -16,10 +16,6 @@ from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 
-def get_id(model, slug):
-    return model.objects.get(slug=slug).id
-
-
 class DeviceTestCase(TestCase):
     def setUp(self):
         self.device_status = Status.objects.get_for_model(Device).first()

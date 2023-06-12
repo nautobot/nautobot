@@ -23,11 +23,11 @@ def build_lookup_label(field_name, _verbose_name):
     Return lookup expr with its verbose name
 
     Args:
-        field_name (str): Field name e.g slug__iew
+        field_name (str): Field name e.g name__iew
         _verbose_name (str): The verbose name for the lookup expr which is suffixed to the field name e.g iew -> iendswith
 
     Examples:
-        >>> build_lookup_label("slug__iew", "iendswith")
+        >>> build_lookup_label("name__iew", "iendswith")
         >>> "ends-with (iew)"
     """
     verbose_name = verbose_lookup_expr(_verbose_name) or "exact"
@@ -126,7 +126,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(
         field, ContentTypeMultipleChoiceFilter
     ):  # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
-        # models that have sucha  filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
+        # models that have such a filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
         from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
 
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)

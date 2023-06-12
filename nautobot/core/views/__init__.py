@@ -235,9 +235,9 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
 
 class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
-        query_slug = request.GET.get("slug")
-        if query_slug:
-            data["obj"] = GraphQLQuery.objects.get(slug=query_slug)
+        query_name = request.GET.get("name")
+        if query_name:
+            data["obj"] = GraphQLQuery.objects.get(name=query_name)
             data["editing"] = True
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm

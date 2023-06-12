@@ -35,7 +35,7 @@ class RackGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = RackGroup
-        fields = ("pk", "name", "location", "rack_count", "description", "slug", "actions")
+        fields = ("pk", "name", "location", "rack_count", "description", "actions")
         default_columns = ("pk", "name", "location", "rack_count", "description", "actions")
 
 

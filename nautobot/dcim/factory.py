@@ -67,7 +67,7 @@ MANUFACTURER_NAMES = (
     "Palo Alto",
 )
 
-# For `Platform.napalm_driver`, either randomly choose based on Manufacturer slug.
+# For `Platform.napalm_driver`, either randomly choose based on Manufacturer slugified name.
 NAPALM_DRIVERS = {
     "arista": ["eos"],
     "cisco": ["ios", "iosxr", "iosxr_netconf", "nxos", "nxos_ssh"],
@@ -96,7 +96,6 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     manufacturer = random_instance(Manufacturer)
 
-    # Slug isn't defined here since it will always inherit from model.
     model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} DeviceType {n + 1}")
 
     has_part_number = NautobotBoolIterator()
@@ -124,7 +123,6 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
         model = DeviceRedundancyGroup
         exclude = ("has_description", "has_comments")
 
-    # Slug isn't defined here since it will always inherit from name.
     name = factory.LazyFunction(
         lambda: "".join(word.title() for word in Faker().words(nb=2, part_of_speech="adjective", unique=True))
     )
@@ -146,7 +144,6 @@ class ManufacturerFactory(OrganizationalModelFactory):
         model = Manufacturer
         exclude = ("has_description",)
 
-    # Slug isn't defined here since it will always inherit from name.
     name = UniqueFaker("word", ext_word_list=MANUFACTURER_NAMES)
 
     has_description = NautobotBoolIterator()
@@ -156,12 +153,11 @@ class ManufacturerFactory(OrganizationalModelFactory):
 class PlatformFactory(OrganizationalModelFactory):
     class Meta:
         model = Platform
-        exclude = ("has_manufacturer", "manufacturer_slug", "has_description", "has_napalm_args")
+        exclude = ("has_manufacturer", "has_description", "has_napalm_args")
 
     # This dictates `name` and `napalm_driver`.
     has_manufacturer = NautobotBoolIterator()
 
-    # Slug isn't defined here since it will always inherit from name.
     name = factory.Maybe(
         "has_manufacturer",
         factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} Platform {n + 1}"),

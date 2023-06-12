@@ -562,19 +562,17 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         self.statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
         self.location1 = dcim_models.Location.objects.create(
-            location_type=self.location_type_1, name="Location 1", slug="location-1", status=self.statuses[0]
+            location_type=self.location_type_1, name="Location 1", status=self.statuses[0]
         )
         self.location2 = dcim_models.Location.objects.create(
             location_type=self.location_type_2,
             name="Location 2",
-            slug="location-2",
             parent=self.location1,
             status=self.statuses[0],
         )
         self.location3 = dcim_models.Location.objects.create(
             location_type=self.location_type_2,
             name="Location 3",
-            slug="location-3",
             parent=self.location1,
             status=self.statuses[0],
         )

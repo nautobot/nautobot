@@ -308,10 +308,10 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(location__in=params["location"]),
         )
-        params = {"location": [test_locations[0].slug, test_locations[1].slug]}
+        params = {"location": [test_locations[0].name, test_locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(location__slug__in=params["location"]),
+            self.queryset.filter(location__name__in=params["location"]),
         )
 
     def test_vlan(self):
@@ -722,9 +722,9 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(location__in=params["location"])
         )
-        params = {"location": [self.locations[0].slug, self.locations[1].slug]}
+        params = {"location": [self.locations[0].name, self.locations[1].name]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(location__slug__in=params["location"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(location__name__in=params["location"])
         )
 
 
@@ -831,9 +831,9 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(location__in=params["location"])
         )
-        params = {"location": [self.locations[0].slug, self.locations[1].slug]}
+        params = {"location": [self.locations[0].name, self.locations[1].name]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(location__slug__in=params["location"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(location__name__in=params["location"])
         )
 
     def test_vlan_group(self):
@@ -863,7 +863,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_available_on_device(self):
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         location = self.locations[0]
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()

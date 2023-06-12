@@ -352,7 +352,7 @@ class VirtualMachineFilterForm(
     q = forms.CharField(required=False, label="Search")
     cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )

@@ -222,7 +222,7 @@ query {
         members {
           name
           device_role {
-            slug
+            name
           }
           cf_upgrade_operational_state
         }
@@ -244,28 +244,28 @@ An example data returned from Nautobot is presented below.
           {
             "name": "spine-1",
             "device_role": {
-              "slug": "spine"
+              "name": "spine"
             },
             "cf_upgrade_operational_state": "in_reboot"
           },
           {
             "name": "spine-2",
             "device_role": {
-              "slug": "spine"
+              "name": "spine"
             },
             "cf_upgrade_operational_state": null
           },
           {
             "name": "spine-3",
             "device_role": {
-              "slug": "spine"
+              "name": "spine"
             },
             "cf_upgrade_operational_state": null
           },
           {
             "name": "spine-4",
             "device_role": {
-              "slug": "spine"
+              "name": "spine"
             },
             "cf_upgrade_operational_state": null
           }

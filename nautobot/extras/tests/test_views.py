@@ -414,19 +414,19 @@ class CustomFieldTestCase(
         }
 
     def test_create_object_without_permission(self):
-        # Can't have two CustomFields with the same "slug"
+        # Can't have two CustomFields with the same "key"
         self.form_data = self.form_data.copy()
         self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
-        # Can't have two CustomFields with the same "slug"
+        # Can't have two CustomFields with the same "key"
         self.form_data = self.form_data.copy()
         self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
 
     def test_create_object_with_constrained_permission(self):
-        # Can't have two CustomFields with the same "slug"
+        # Can't have two CustomFields with the same "key"
         self.form_data = self.form_data.copy()
         self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
@@ -440,13 +440,13 @@ class CustomLinkTest(TestCase):
             content_type=ContentType.objects.get_for_model(Location),
             name="Test",
             text="FOO {{ obj.name }} BAR",
-            target_url="http://example.com/?location={{ obj.slug }}",
+            target_url="http://example.com/?location={{ obj.name }}",
             new_window=False,
         )
         customlink.save()
         location_type = LocationType.objects.get(name="Campus")
         status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", slug="test-location", location_type=location_type, status=status)
+        location = Location(name="Test Location", location_type=location_type, status=status)
         location.save()
 
         response = self.client.get(location.get_absolute_url(), follow=True)
@@ -825,7 +825,7 @@ class GraphQLQueriesTestCase(
             ),
             GraphQLQuery(
                 name="graphql-query-2",
-                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+                query='{ devices(role: "edge") { id, name, device_role { name } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
@@ -848,14 +848,12 @@ query ($device: String!) {
     }
     tags {
       name
-      slug
     }
     device_role {
       name
     }
     platform {
       name
-      slug
       manufacturer {
         name
       }
@@ -863,7 +861,6 @@ query ($device: String!) {
     }
     location {
       name
-      slug
       vlans {
         id
         name
@@ -921,7 +918,7 @@ query ($device: String!) {
             ),
             GraphQLQuery(
                 name="Graphql Query 5",
-                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+                query='{ devices(role: "edge") { id, name, device_role { name } } }',
             ),
         )
 
@@ -933,9 +930,6 @@ query ($device: String!) {
             "name": "graphql-query-4",
             "query": "{query: locations {name}}",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Graphql Query 5"
 
 
 #
@@ -1962,7 +1956,7 @@ class ObjectChangeTestCase(TestCase):
     def setUpTestData(cls):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Location 1", slug="location-1", location_type=location_type, status=location_status)
+        location = Location(name="Location 1", location_type=location_type, status=location_status)
         location.save()
 
         # Create three ObjectChanges
@@ -2144,7 +2138,7 @@ class RelationshipAssociationTestCase(
         cls.relationship = relationship
         relationship.validated_save()
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
         location = Location.objects.first()
@@ -2253,17 +2247,16 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
         cls.form_data = {
             "name": "Tag X",
-            "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
             "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset()],
         }
 
         cls.csv_data = (
-            "name,slug,color,description,content_types",
-            "Tag 4,tag-4,ff0000,Fourth tag,dcim.device",
-            'Tag 5,tag-5,00ff00,Fifth tag,"dcim.device,dcim.location"',
-            "Tag 6,tag-6,0000ff,Sixth tag,dcim.location",
+            "name,color,description,content_types",
+            "Tag 4,ff0000,Fourth tag,dcim.device",
+            'Tag 5,00ff00,Fifth tag,"dcim.device,dcim.location"',
+            "Tag 6,0000ff,Sixth tag,dcim.location",
         )
 
         cls.bulk_edit_data = {
@@ -2285,7 +2278,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
         self.assertHttpStatus(self.client.post(**request), 302)
 
-        tag = Tag.objects.filter(slug=self.form_data["slug"])
+        tag = Tag.objects.filter(name=self.form_data["name"])
         self.assertTrue(tag.exists())
         self.assertEqual(tag[0].content_types.first(), location_content_type)
 
@@ -2304,7 +2297,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         response = self.client.post(**request)
-        tag = Tag.objects.filter(slug=self.form_data["slug"])
+        tag = Tag.objects.filter(name=self.form_data["name"])
         self.assertFalse(tag.exists())
         self.assertIn("content_types: Select a valid choice", str(response.content))
 
@@ -2318,7 +2311,6 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         form_data = {
             "name": tag_1.name,
-            "slug": tag_1.slug,
             "color": "c0c0c0",
             "content_types": [ContentType.objects.get_for_model(Device).id],
         }

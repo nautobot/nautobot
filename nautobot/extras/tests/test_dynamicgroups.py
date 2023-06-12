@@ -48,10 +48,10 @@ class DynamicGroupTestBase(TestCase):
 
         loc_status = Status.objects.get_for_model(Location).first()
         cls.locations = [
-            Location.objects.create(name="Location 1", slug="location-1", location_type=cls.lt, status=loc_status),
-            Location.objects.create(name="Location 2", slug="location-2", location_type=cls.lt, status=loc_status),
-            Location.objects.create(name="Location 3", slug="location-3", location_type=cls.lt, status=loc_status),
-            Location.objects.create(name="Location 4", slug="location-4", location_type=cls.lt, status=loc_status),
+            Location.objects.create(name="Location 1", location_type=cls.lt, status=loc_status),
+            Location.objects.create(name="Location 2", location_type=cls.lt, status=loc_status),
+            Location.objects.create(name="Location 3", location_type=cls.lt, status=loc_status),
+            Location.objects.create(name="Location 4", location_type=cls.lt, status=loc_status),
         ]
 
         cls.manufacturer = Manufacturer.objects.first()
@@ -269,9 +269,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         status = Status.objects.get_for_model(Location).first()
 
         # Create two LocationTypes (My Region > My Site)
-        loc_type_region = LocationType.objects.create(name="My Region", slug="my-region")
+        loc_type_region = LocationType.objects.create(name="My Region")
         loc_type_region.content_types.add(self.device_ct)
-        loc_type_site = LocationType.objects.create(name="My Site", slug="my-site", parent=loc_type_region)
+        loc_type_site = LocationType.objects.create(name="My Site", parent=loc_type_region)
         loc_type_site.content_types.add(self.device_ct)
 
         loc_region = Location.objects.create(name="Location A", location_type=loc_type_region, status=status)
@@ -602,7 +602,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
     def test_generate_query_for_filter(self):
         """Test `DynamicGroup.generate_query_for_filter()`."""
         group = self.parent  # Any group will do, so why not this one?
-        multi_value = ["location-3"]
+        multi_value = ["Location 3"]
         fs = group.filterset_class()
         multi_field = fs.filters["location"]
         multi_query = group.generate_query_for_filter(
@@ -614,7 +614,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         # Assert that both querysets resturn the same results
         group_qs = queryset.filter(multi_query)
-        device_qs = Device.objects.filter(location__slug__in=multi_value)
+        device_qs = Device.objects.filter(location__name__in=multi_value)
         self.assertQuerySetEqual(group_qs, device_qs)
 
         # Now do a non-multi-value filter.
@@ -626,14 +626,14 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         self.assertQuerySetEqual(solo_qs, interface_qs)
 
         # Test that a nested field_name w/ `generate_query` works as expected. This is explicitly to
-        # test a regression w/ nested slug-related values such as `DeviceFilterSet.macufacturer` which
+        # test a regression w/ nested name-related values such as `DeviceFilterSet.manufacturer` which
         # filters on `device_type__manufacturer`.
         manufacturer = Manufacturer.objects.first()
         nested_value = [manufacturer.name]
         group.set_filter({"manufacturer": nested_value})
         group.validated_save()
 
-        # We are making sure the filterset generated from the slug as an argument results in the same
+        # We are making sure the filterset generated from the name as an argument results in the same
         # filtered queryset, and more importantly that the nested filter expression `device_type__manufacturer`
         # is automatically used to get the related model name without failing.
         nested_query = group.generate_query_for_filter(filter_field=fs.filters["manufacturer"], value=nested_value)
@@ -1038,8 +1038,8 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
 
     def test_group(self):
         group_pk = self.queryset.first().group.pk  # expecting 1
-        group_slug = self.queryset.last().group.name  # expecting 1
-        params = {"group": [group_pk, group_slug]}
+        group_name = self.queryset.last().group.name  # expecting 1
+        params = {"group": [group_pk, group_name]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_parent_group(self):
@@ -1053,7 +1053,7 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase):
             "intersection": 2,  # operator
             "First Child": 1,  # group__name
             "Parent": 3,  # parent_group__name,
-            "Third Child": 2,  # parent_group__slug OR group__slug,
+            "Third Child": 2,  # parent_group__name OR group__name,
         }
         for value, cnt in tests.items():
             params = {"q": value}

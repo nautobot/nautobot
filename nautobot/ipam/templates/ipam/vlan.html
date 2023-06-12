@@ -3,7 +3,7 @@
 
 {% block extra_breadcrumbs %}
                 {% if object.location %}
-                    <li><a href="{% url 'ipam:vlan_list' %}?location={{ object.location.slug }}">
+                    <li><a href="{% url 'ipam:vlan_list' %}?location={{ object.location.name }}">
                         {{ object.location }}
                     </a></li>
                 {% endif %}

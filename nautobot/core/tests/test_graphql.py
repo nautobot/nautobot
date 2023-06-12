@@ -84,15 +84,9 @@ class GraphQLTestCase(TestCase):
         self.location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         self.locations = (
-            Location.objects.create(
-                name="Location-1", slug="location-1", location_type=self.location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location-2", slug="location-2", location_type=self.location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location-3", slug="location-3", location_type=self.location_type, status=location_status
-            ),
+            Location.objects.create(name="Location-1", location_type=self.location_type, status=location_status),
+            Location.objects.create(name="Location-2", location_type=self.location_type, status=location_status),
+            Location.objects.create(name="Location-3", location_type=self.location_type, status=location_status),
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -412,12 +406,8 @@ class GraphQLAPIPermissionTest(TestCase):
         cls.location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         cls.locations = (
-            Location.objects.create(
-                name="Location 1", slug="test1", location_type=cls.location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location 2", slug="test2", location_type=cls.location_type, status=location_status
-            ),
+            Location.objects.create(name="Location 1", location_type=cls.location_type, status=location_status),
+            Location.objects.create(name="Location 2", location_type=cls.location_type, status=location_status),
         )
 
         location_object_type = ContentType.objects.get(app_label="dcim", model="location")
@@ -429,7 +419,7 @@ class GraphQLAPIPermissionTest(TestCase):
             rack_obj_permission = ObjectPermission.objects.create(
                 name=f"Permission Rack {i+1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"location__slug": f"test{i+1}"},
+                constraints={"location__name": f"test{i+1}"},
             )
             rack_obj_permission.object_types.add(rack_object_type)
             rack_obj_permission.groups.add(cls.groups[i])
@@ -438,7 +428,7 @@ class GraphQLAPIPermissionTest(TestCase):
             location_obj_permission = ObjectPermission.objects.create(
                 name=f"Permission Location {i+1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"slug": f"test{i+1}"},
+                constraints={"name": f"test{i+1}"},
             )
             location_obj_permission.object_types.add(location_object_type)
             location_obj_permission.groups.add(cls.groups[i])
@@ -1327,10 +1317,10 @@ query {
             f'role: ["{self.device_role1.name}", "{self.device_role2.name}"]': _count(
                 {"role": [self.device_role1.name, self.device_role2.name]}
             ),
-            f'location: "{self.location1.slug}"': _count({"location": [self.location1.slug]}),
-            f'location: ["{self.location1.slug}"]': _count({"location": [self.location1.slug]}),
-            f'location: ["{self.location1.slug}", "{self.location2.slug}"]': _count(
-                {"location": [self.location1.slug, self.location2.slug]}
+            f'location: "{self.location1.name}"': _count({"location": [self.location1.name]}),
+            f'location: ["{self.location1.name}"]': _count({"location": [self.location1.name]}),
+            f'location: ["{self.location1.name}", "{self.location2.name}"]': _count(
+                {"location": [self.location1.name, self.location2.name]}
             ),
             'face: "front"': _count({"face": ["front"]}),
             'face: "rear"': _count({"face": ["rear"]}),
@@ -1466,8 +1456,8 @@ query {
             ('rack: "Rack 2"', 1),
             ('rack: ["Rack 1", "Rack 2"]', 4),
             (f'location_id: "{self.location1.id}"', 4),
-            (f'location: "{self.location2.slug}"', 1),
-            (f'location: ["{self.location1.slug}", "{self.location2.slug}"]', 4),
+            (f'location: "{self.location2.name}"', 1),
+            (f'location: ["{self.location1.name}", "{self.location2.name}"]', 4),
             (f'tenant_id: "{self.tenant1.id}"', 3),
             ('tenant: "Tenant 2"', 1),
             ('tenant: ["Tenant 1", "Tenant 2"]', 4),

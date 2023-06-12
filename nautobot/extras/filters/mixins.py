@@ -153,7 +153,8 @@ class LocalContextModelFilterSetMixin(django_filters.FilterSet):
     )
     local_config_context_schema = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
-        label="Schema (ID or slug)",
+        to_field_name="name",
+        label="Schema (ID or name)",
     )
 
     def _local_config_context_data(self, queryset, name, value):

@@ -191,15 +191,15 @@ def construct_composite_key(values):
     return values
 
 
-def deconstruct_composite_key(slug):
+def deconstruct_composite_key(composite_key):
     """
-    Convert the given natural key slug string back to a list of distinct values.
+    Convert the given composite-key string back to a list of distinct values.
 
     - Percent-encoded characters are converted back to their raw values
     - Single literal null characters `%00` are converted back to a Python `None`.
 
     Inverse operation of `construct_composite_key()`.
     """
-    values = [unquote_plus(value) for value in slug.split(COMPOSITE_KEY_SEPARATOR)]
+    values = [unquote_plus(value) for value in composite_key.split(COMPOSITE_KEY_SEPARATOR)]
     values = [value if value != "\0" else None for value in values]
     return values

@@ -96,7 +96,7 @@ class NautobotCSVParser(BaseParser):
                 # A list of related objects, represented as a list of composite-keys
                 if value:
                     related_model = serializer_field.child_relation.get_queryset().model
-                    value = [self.get_composite_key_dict(slug, related_model) for slug in value.split(",")]
+                    value = [self.get_composite_key_dict(comp_key, related_model) for comp_key in value.split(",")]
                 else:
                     value = []
             elif isinstance(serializer_field, serializers.RelatedField):

@@ -4,7 +4,7 @@
 
 {% block breadcrumbs %}
             <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
-            <li><a href="{% url 'dcim:device_list' %}?location={{ object.location.slug }}">{{ object.location }}</a></li>
+            <li><a href="{% url 'dcim:device_list' %}?location={{ object.location.name }}">{{ object.location }}</a></li>
             {% if object.parent_bay %}
                 <li>{{ object.parent_bay.device|hyperlinked_object }}</li>
                 <li>{{ object.parent_bay }}</li>
@@ -127,7 +127,7 @@
             {% endif %}
         {% endwith %}
         {% if perms.dcim.napalm_read_device %}
-            {% if object.status.slug != 'active' %}
+            {% if object.status.name != 'Active' %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='Device must be in active status' %}
             {% elif not object.platform %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No platform assigned to this device' %}

@@ -32,27 +32,23 @@ Simply querying the `/api/dcim/devices/` API route provides:
               "id": "687f53d9-2c51-40fd-83aa-875e43d01a05",
               "url": "https://demo.nautobot.com/api/dcim/manufacturers/687f53d9-2c51-40fd-83aa-875e43d01a05/",
               "name": "Arista",
-              "slug": "arista"
             },
             "model": "DCS-7280CR2-60",
-            "slug": "dcs-7280cr2-60",
             "display": "Arista DCS-7280CR2-60"
           },
-          "device_role": {
+          "role": {
             "id": "a3637471-6b4d-4f5a-a249-838d621abe60",
             "url": "https://demo.nautobot.com/api/dcim/device-roles/a3637471-6b4d-4f5a-a249-838d621abe60/",
             "name": "edge",
-            "slug": "edge"
           },
           "tenant": null,
           "platform": null,
           "serial": "",
           "asset_tag": null,
-          "site": {
+          "location": {
             "id": "4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3",
-            "url": "https://demo.nautobot.com/api/dcim/sites/4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3/",
+            "url": "https://demo.nautobot.com/api/dcim/locations/4ad439e9-4f1b-41c9-bc8c-dd7c1c921dc3/",
             "name": "ams",
-            "slug": "ams"
           },
           "rack": {
             "id": "bff3f7af-bd77-49b6-a57a-9c4b8fc7673a",
@@ -339,7 +335,7 @@ Inside of **Extensibility -> Data Management -> GraphQL Queries**, there are vie
 
 Saved queries can be executed from the detailed query view or via a REST API request. The queries can also be populated from the detailed query view into GraphiQL by using the "Open in GraphiQL" button. Additionally, in the GraphiQL UI, there is now a menu item, "Queries", which can be used to populate GraphiQL with any previously saved query.
 
-To execute a stored query via the REST API, a POST request can be sent to `/api/extras/graphql-queries/[slug]/run/`. Any GraphQL variables required by the query can be passed in as JSON data within the request body.
+To execute a stored query via the REST API, a POST request can be sent to `/api/extras/graphql-queries/[uuid]/run/`. Any GraphQL variables required by the query can be passed in as JSON data within the request body.
 
 ## Closing
 

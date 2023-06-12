@@ -10,8 +10,8 @@ This table defines repository parameters that are required to establish a relati
 
 |Field|Explanation|
 |:--|:--|
-|Name|Name of the relationship as displayed to users.|
-|Slug|Internal name of this relationship. Please use underscores rather than dashes.|
+|Label|Lael of the relationship as displayed to users.|
+|Key|Internal relationship key. Please use underscores rather than dashes.|
 |Description|(Optional) Meaningful description to provide additional relationship details.|
 |[Type](../models/extras/relationship.md#relationship-types)|Cardinality of this relationship.|
 |Source type|The source object type to which this relationship applies.|

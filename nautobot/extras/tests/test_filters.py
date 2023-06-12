@@ -180,9 +180,9 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         manufacturer = Manufacturer.objects.first()
 
         device_types = (
-            DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
-            DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturer),
-            DeviceType.objects.create(model="Device Type 3", slug="device-type-3", manufacturer=manufacturer),
+            DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer),
+            DeviceType.objects.create(model="Device Type 2", manufacturer=manufacturer),
+            DeviceType.objects.create(model="Device Type 3", manufacturer=manufacturer),
         )
         cls.device_types = device_types
 
@@ -240,9 +240,9 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=params["location_id"])
         )
-        params = {"location": [self.locations[0].slug, self.locations[1].slug]}
+        params = {"location": [self.locations[0].name, self.locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(locations__slug__in=params["location"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(locations__name__in=params["location"])
         )
 
     def test_role(self):
@@ -258,7 +258,7 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
         device_types = list(self.device_types[:2])
         filter_params = [
             {"device_type_id": [device_types[0].pk, device_types[1].pk]},
-            {"device_type": [device_types[0].pk, device_types[1].slug]},
+            {"device_type": [device_types[0].pk, device_types[1].model]},
         ]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
@@ -514,7 +514,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
         repos = (
             GitRepository(
                 name="Repo 1",
-                slug="repo-1",
+                slug="repo_1",
                 branch="main",
                 provided_contents=[
                     "extras.configcontext",
@@ -524,7 +524,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
             ),
             GitRepository(
                 name="Repo 2",
-                slug="repo-2",
+                slug="repo_2",
                 branch="develop",
                 provided_contents=[
                     "extras.configcontext",
@@ -535,7 +535,7 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
             ),
             GitRepository(
                 name="Repo 3",
-                slug="repo-3",
+                slug="repo_3",
                 branch="next",
                 provided_contents=[
                     "extras.configcontext",
@@ -597,7 +597,7 @@ class GraphQLTestCase(FilterTestCases.NameOnlyFilterTestCase):
             ),
             GraphQLQuery(
                 name="graphql-query-2",
-                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+                query='{ devices(role: "edge") { id, name, device_role { name } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
@@ -620,14 +620,12 @@ query ($device: String!) {
     }
     tags {
       name
-      slug
     }
     device_role {
       name
     }
     platform {
       name
-      slug
       manufacturer {
         name
       }
@@ -635,7 +633,6 @@ query ($device: String!) {
     }
     location {
       name
-      slug
       vlans {
         id
         name
@@ -1067,7 +1064,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             action=ObjectChangeActionChoices.ACTION_CREATE,
             changed_object=location,
             object_repr=str(location),
-            object_data={"name": location.name, "slug": location.slug},
+            object_data={"name": location.name},
         )
         ObjectChange.objects.create(
             user=users[0],
@@ -1076,7 +1073,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             action=ObjectChangeActionChoices.ACTION_UPDATE,
             changed_object=location,
             object_repr=str(location),
-            object_data={"name": location.name, "slug": location.slug},
+            object_data={"name": location.name},
         )
         ObjectChange.objects.create(
             user=users[1],
@@ -1085,7 +1082,7 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
             action=ObjectChangeActionChoices.ACTION_DELETE,
             changed_object=location,
             object_repr=str(location),
-            object_data={"name": location.name, "slug": location.slug},
+            object_data={"name": location.name},
         )
         ObjectChange.objects.create(
             user=users[1],
@@ -1241,7 +1238,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
             relationship.validated_save()
 
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1367,7 +1364,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
             relationship.validated_save()
 
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -1710,7 +1707,7 @@ class StatusTestCase(FilterTestCases.NameOnlyFilterTestCase):
         )
 
 
-class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
+class TagTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Tag.objects.all()
     filterset = TagFilterSet
 
@@ -1729,7 +1726,7 @@ class TagTestCase(FilterTestCases.NameSlugFilterTestCase):
         self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Location)[0])
 
     def test_search(self):
-        params = {"q": self.tags[0].slug}
+        params = {"q": self.tags[0].name}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}

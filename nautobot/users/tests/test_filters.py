@@ -96,7 +96,7 @@ class UserTestCase(FilterTestCases.FilterTestCase):
                 action=ObjectChangeActionChoices.ACTION_CREATE,
                 changed_object=location,
                 object_repr=str(location),
-                object_data={"name": location.name, "slug": location.slug},
+                object_data={"name": location.name},
             )
             for num in range(3)
         ]

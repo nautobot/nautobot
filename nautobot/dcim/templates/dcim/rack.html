@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{% url 'dcim:rack_list' %}?location={{ object.location.slug }}">{{ object.location }}</a></li>
+                <li><a href="{% url 'dcim:rack_list' %}?location={{ object.location.name }}">{{ object.location }}</a></li>
                 {% if object.rack_group %}
                     {% for rack_group in object.rack_group.ancestors %}
                         <li>{{ rack_group|hyperlinked_object }}</li>

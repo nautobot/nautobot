@@ -144,7 +144,7 @@ Relationships with other models can be traversed by concatenating attribute name
 This approach can span multiple levels of relations. For example, the following will return all IP addresses assigned to a device in North America:
 
 ```python
->>> IPAddress.objects.filter(interface__device__site__region__slug="north-america")
+>>> IPAddress.objects.filter(interfaces__device__location__name="North America")
 ```
 
 !!! note

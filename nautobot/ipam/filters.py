@@ -7,7 +7,7 @@ from netaddr.core import AddrFormatError
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
-    NameSlugSearchFilterSet,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     NumericArrayFilter,
     RelatedMembershipBooleanFilter,
@@ -145,7 +145,7 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         fields = ["id", "name", "tags"]
 
 
-class RIRFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class RIRFilterSet(NautobotFilterSet, NameSearchFilterSet):
     class Meta:
         model = RIR
         fields = ["id", "name", "is_private", "description"]
@@ -442,7 +442,7 @@ class IPAddressFilterSet(
         return queryset.filter(vm_interfaces__in=interface_ids)
 
 
-class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):
+class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):
     class Meta:
         model = VLANGroup
         fields = ["id", "name", "slug", "description"]

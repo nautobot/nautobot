@@ -36,7 +36,7 @@ To create a Device Type:
 2. Click on the **Device Types** option in the drop-down menu
 3. On the Device Types page `Add +` a new Device Type
     * A Device Type requires a **Manufacturer** object to be created prior to creating the Device Type
-    * Device Type requires **Manufacturer**, **Model**, **Slug**, and **Height** values at creation
+    * Device Type requires **Manufacturer**, **Model**, and **Height** values at creation
     * In this example, name the Device Type `MX240-edge`
 4. On the home page for the specific Device Type, click on `+Add Components` and select `Interfaces`
 

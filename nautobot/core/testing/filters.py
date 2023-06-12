@@ -92,7 +92,7 @@ class FilterTestCases:
                 `generic_filter_tests` with explicit field names.
                 For example, to test a NaturalKeyOrPKMultipleChoiceFilter, use:
                     generic_filter_tests = (
-                        ["filter_name", "field_name__slug"],
+                        ["filter_name", "field_name__name"],
                         ["filter_name", "field_name__id"],
                     )
 
@@ -146,7 +146,7 @@ class FilterTestCases:
                     break
             else:
                 self.fail(f"Couldn't find any {self.queryset.model._meta.object_name} with at least two Tags.")
-            params = {"tags": [tags[0].slug, tags[1].pk]}
+            params = {"tags": [tags[0].name, tags[1].pk]}
             filterset_result = self.filterset(params, self.queryset).qs
             # Tags is an AND filter not an OR filter
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()

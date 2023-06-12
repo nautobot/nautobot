@@ -6,7 +6,7 @@ from django.utils.functional import classproperty
 
 from timezone_field import TimeZoneField
 
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
 from nautobot.dcim.fields import ASNField
@@ -31,7 +31,6 @@ class LocationType(TreeModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -147,8 +146,6 @@ class Location(TreeModel, PrimaryModel):
     # A Location's name is unique within context of its parent, not globally unique.
     name = models.CharField(max_length=100, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
-    # However a Location's slug *is* globally unique.
-    slug = AutoSlugField(populate_from=["parent__slug", "name"])
     location_type = models.ForeignKey(
         to="dcim.LocationType",
         on_delete=models.PROTECT,

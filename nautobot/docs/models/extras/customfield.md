@@ -1,6 +1,6 @@
 # Custom Fields
 
-Each model in Nautobot is represented in the database as a discrete table, and each attribute of a model exists as a column within its table. For example, sites are stored in the `dcim_site` table, which has columns named `name`, `facility`, `physical_address`, and so on. As new attributes are added to objects throughout the development of Nautobot, tables are expanded to include new columns.
+Each model in Nautobot is represented in the database as a discrete table, and each attribute of a model exists as a column within its table. For example, locations are stored in the `dcim_location` table, which has columns named `name`, `facility`, `physical_address`, and so on. As new attributes are added to objects throughout the development of Nautobot, tables are expanded to include new columns.
 
 However, some users might want to store additional object attributes that are somewhat esoteric in nature, and that would not make sense to include in the core Nautobot database schema. For instance, suppose your organization needs to associate each device with a ticket number correlating it with an internal support system record. This is certainly a legitimate use for Nautobot, but it's not a common enough need to warrant including a field for _every_ Nautobot installation. Instead, you can create a custom field to hold this data.
 
@@ -24,19 +24,18 @@ Nautobot supports these custom field types:
 +++ 1.3.0
     Support for JSON-type custom fields was added.
 
-Each custom field must have a name and slug; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
+Each custom field must have a key; this should be a simple database-friendly string, e.g. `tps_report`. You may also assign a corresponding human-friendly label (e.g. "TPS report"); the label will be displayed on web forms. A weight is also required: Higher-weight fields will be ordered lower within a form. (The default weight is 100.) If a description is provided, it will appear beneath the field in a form.
 
 +/- 1.4.0
     Custom fields now have both a `name` and a `slug`; in older versions there was no `slug` field. When migrating existing data to Nautobot 1.4.0 or later, the `label` and `slug` will be automatically populated for existing custom fields if necessary.
 
-!!! warning
-    In all Nautobot 1.x versions, the custom field `name` is used as the key to store and retrieve custom field data via the database and GraphQL. In a future major release, the `name` field will be removed and custom field data will be accessible via the `slug` instead. See [below](#custom-fields-and-the-rest-api) for REST API versioning behavior in this area.
++/- 2.0.0
+    The custom field `slug` has been renamed to `key`, and `name` to `label`, in order to provide more clarity around their usage. Existing custom fields will automatically be migrated when upgrading to Nautobot 2.0.0 or later.
 
-!!! tip
-    Because custom field data is included in the database, in the REST API and in GraphQL, we strongly recommend that when defining a custom field, you provide a `slug` that contains underscores rather than dashes (`my_field_slug`, not `my-field-slug`), as some features may not work optimally if dashes are included in the slug. Similarly, the provided `name` should also contain only alphanumeric characters and underscores, as it is currently treated in some cases like a slug.
+    Additionally, the `key` now **must** be a valid GraphQL identifier, which in general means that it must start with a lowercase letter and contain only lowercase letters, numbers, and underscores.
 
 !!! note
-    The name, slug, and type of a custom field cannot be modified once created, so take care in defining these fields. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the data model when defining a new custom field.
+    The `key` and `type` of a custom field cannot be modified once created, so take care in defining these fields. This helps to reduce the possibility of inconsistent data and enforces the importance of thinking about the data model when defining a new custom field.
 
 Marking a field as required will force the user to provide a value for the field when creating a new object or when saving an existing object. A default value for the field may also be provided. Use "true" or "false" for boolean fields, or the exact value of a choice for selection fields.
 
@@ -76,44 +75,42 @@ There are a number of available built-in filters for custom fields.
 
 Filtering on an object's list view follows the same pattern as [custom field filtering on the API](../../rest-api/filtering.md#filtering-by-custom-field).
 
-When using the ORM, you can filter on custom fields using `_custom_field_data__<field name>` (note the underscore before `custom_field_data` and the double-underscore before the field name). For example, if a custom field of string type with a `name` of  `"site_code"` was created for Site objects, you could filter as follows:
+When using the ORM, you can filter on custom fields using `_custom_field_data__<field name>` (note the underscore before `custom_field_data` and the double-underscore before the field name). For example, if a custom field of string type with a `name` of  `"location_code"` was created for Location objects, you could filter as follows:
 
 ```python
-from nautobot.dcim.models import Site
+from nautobot.dcim.models import Location
 
-all_sites = Site.objects.all()  # -> ['Raleigh', 'Charlotte', 'Greensboro']
-filtered_sites_1 = Site.objects.filter(_custom_field_data__site_code="US-NC-RAL42")  # -> ['Raleigh']
-filtered_sites_2 = Site.objects.filter(_custom_field_data__site_code__in=["US-NC-RAL42", "US-NC-CLT22"])  # -> ['Raleigh', 'Charlotte']
+all_locs = Location.objects.all()  # -> ['Raleigh', 'Charlotte', 'Greensboro']
+filtered_locs_1 = Location.objects.filter(_custom_field_data__location_code="US-NC-RAL42")  # -> ['Raleigh']
+filtered_locs_2 = Location.objects.filter(_custom_field_data__location_code__in=["US-NC-RAL42", "US-NC-CLT22"])  # -> ['Raleigh', 'Charlotte']
 ```
 
 ## Custom Fields and the REST API
 
-When retrieving an object via the REST API, all of its custom field data will be included within the `custom_fields` attribute. For example, below is the partial output of a site with two custom fields defined:
+When retrieving an object via the REST API, all of its custom field data will be included within the `custom_fields` attribute. For example, below is the partial output of a location with two custom fields defined:
 
 ```json
 {
-    "id": 123,
-    "url": "http://localhost:8080/api/dcim/sites/123/",
+    "id": 42568d63-0f8c-453f-8d13-1355f677af4e,
+    "url": "http://localhost:8080/api/dcim/locations/42568d63-0f8c-453f-8d13-1355f677af4e/",
     "name": "Raleigh 42",
     ...
     "custom_fields": {
         "deployed": "2018-06-19",
-        "site_code": "US-NC-RAL42"
+        "location_code": "US-NC-RAL42"
     },
     ...
 ```
 
-!!! version-changed "Changed in API version 1.4"
-    In REST API versions 1.3 and earlier, each custom field's `name` is used as the key under `custom_fields` in the REST API. As part of the planned future transition to removing the `name` attribute entirely from custom fields, when REST API version 1.4 or later is requested, the `custom_fields` data in the REST API is instead indexed by custom field `slug`.
++/- 2.0.0
+    In the Nautobot 1.x REST API, depending on the exact API version in use, the `custom_fields` dictionary would be keyed by either the `name` or the `slug` of each custom field. In Nautobot 2.0, this has been standardized and the dictionary keys will **always** correspond to the custom field's `key` strings.
 
-    Refer to the documentation on [REST API versioning](../../rest-api/overview.md#versioning) for more information about REST API versioning and how to request a specific version of the REST API.
-
-To set or change custom field values, simply include nested JSON data in your REST API POST, PATCH, or PUT request. Unchanged fields may be omitted from the data. For example, the below would set a value for the `deployed` custom field but would leave the `site_code` value unchanged:
+To set or change custom field values, simply include nested JSON data in your REST API POST, PATCH, or PUT request. Unchanged fields may be omitted from the data. For example, the below would set a value for the `deployed` custom field but would leave the `location_code` value unchanged:
 
 ```json
 {
-    "name": "New Site",
-    "slug": "new-site",
+    "name": "New Location",
+    "slug": "new-location",
     "custom_fields": {
         "deployed": "2019-03-24"
     }

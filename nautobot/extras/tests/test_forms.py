@@ -239,7 +239,6 @@ class NoteModelFormTestCase(TestCase):
 
         cls.location_form_base_data = {
             "name": "Location 1",
-            "slug": "location-1",
             "location_type": cls.location_type.pk,
             "status": status.pk,
         }

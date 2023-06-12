@@ -80,7 +80,7 @@ PREFIX_COPY_LINK = """
 
 PREFIX_ROLE_LINK = """
 {% if record.role %}
-    <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.slug }}">{{ record.role }}</a>
+    <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
 {% else %}
     &mdash;
 {% endif %}
@@ -193,7 +193,7 @@ VLAN_PREFIXES = """
 
 VLAN_ROLE_LINK = """
 {% if record.role %}
-    <a href="{% url 'ipam:vlan_list' %}?role={{ record.role.slug }}">{{ record.role }}</a>
+    <a href="{% url 'ipam:vlan_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
 {% else %}
     &mdash;
 {% endif %}

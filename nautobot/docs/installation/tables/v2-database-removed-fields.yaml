@@ -35,6 +35,9 @@
 - Model: "DeviceRedundancyGroup"
   Removed Field: "slug"
   Comments:
+- Model: "DeviceType"
+  Removed Field: "slug"
+  Comments:
 - Model: "DynamicGroup"
   Removed Field: "slug"
   Comments:
@@ -86,13 +89,25 @@
 - Model: "Location"
   Removed Field: "site"
   Comments:
+- Model: "Location"
+  Removed Field: "slug"
+  Comments:
+- Model: "LocationType"
+  Removed Field: "slug"
+  Comments:
 - Model: "Manufacturer"
+  Removed Field: "slug"
+  Comments:
+- Model: "Note"
   Removed Field: "slug"
   Comments:
 - Model: "Platform"
   Removed Field: "slug"
   Comments:
 - Model: "Provider"
+  Removed Field: "slug"
+  Comments:
+- Model: "ProviderNetwork"
   Removed Field: "slug"
   Comments:
 - Model: "PowerFeed"
@@ -123,6 +138,9 @@
   Removed Field: "site"
   Comments: "Use `location` instead"
 - Model: "RackGroup"
+  Removed Field: "slug"
+  Comments:
+- Model: "RackGroup"
   Removed Field: "tree_id"
   Comments: "Made irrelevant by `django-tree-queries`"
 - Model: "RIR"
@@ -147,6 +165,9 @@
   Removed Field: "slug"
   Comments:
 - Model: "Status"
+  Removed Field: "slug"
+  Comments:
+- Model: "Tag"
   Removed Field: "slug"
   Comments:
 - Model: "Tenant"

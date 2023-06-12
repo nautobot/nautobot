@@ -1,9 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from taggit.models import TagBase, GenericUUIDTaggedItemBase
+from taggit.models import GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models import BaseManager, BaseModel, NameColorContentTypesModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
@@ -30,16 +30,11 @@ class TagQuerySet(RestrictedQuerySet):
 @extras_features(
     "custom_validators",
 )
-class Tag(TagBase, BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
+class Tag(NameColorContentTypesModel):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="tags",
         limit_choices_to=TaggableClassesQuery(),
-    )
-    color = ColorField(default=ColorChoices.COLOR_GREY)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
     )
 
     objects = BaseManager.from_queryset(TagQuerySet)()
