@@ -7,7 +7,7 @@ from django.db.models import ProtectedError
 from django.forms import ChoiceField, IntegerField, NumberInput
 from django.urls import reverse
 from rest_framework import status
-from nautobot.core.forms.widgets import StaticSelect2
+from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
 
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
@@ -361,6 +361,10 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
             self.assertIsInstance(filter_field, ChoiceField)
             self.assertIsInstance(filter_field.widget, StaticSelect2)
             self.assertEqual(filter_field.widget.choices, [("Bar", "Bar"), ("Baz", "Baz"), ("Foo", "Foo")])
+            # Assert Choice Custom Field with lookup-expr other than exact returns a
+            filter_field_with_lookup_expr = custom_field_select.to_filter_form_field(lookup_expr="icontains")
+            self.assertIsInstance(filter_field_with_lookup_expr, ChoiceField)
+            self.assertIsInstance(filter_field_with_lookup_expr.widget, MultiValueCharInput)
 
         with self.subTest("Assert CustomField Integer Type renders the correct filter form field and widget"):
             custom_field_integer = CustomField(
