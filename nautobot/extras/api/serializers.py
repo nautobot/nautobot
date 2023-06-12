@@ -118,7 +118,8 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
         super().__init__(*args, **kwargs)
 
         if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            self.fields.pop("dynamic_groups")
+            # In the case of a nested serializer, we won't have a `dynamic_groups` field at all.
+            self.fields.pop("dynamic_groups", None)
 
     class Meta:
         model = ConfigContext
