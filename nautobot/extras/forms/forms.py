@@ -280,7 +280,7 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="name", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(
         queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="name", required=False
@@ -317,13 +317,11 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
 
 class ConfigContextSchemaForm(NautobotModelForm):
     data_schema = JSONField(label="")
-    slug = SlugField()
 
     class Meta:
         model = ConfigContextSchema
         fields = (
             "name",
-            "slug",
             "description",
             "data_schema",
         )
@@ -866,7 +864,7 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
+        to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -941,7 +939,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
+        to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     # 2.0 TODO(glenn) filtering by obj_type should be solved by dynamic filter form generation
@@ -969,7 +967,7 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
+        to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
@@ -1061,7 +1059,7 @@ class LocalContextFilterForm(forms.Form):
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     local_config_context_schema = DynamicModelMultipleChoiceField(
-        queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
+        queryset=ConfigContextSchema.objects.all(), to_field_name="name", required=False
     )
 
 

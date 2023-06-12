@@ -1363,6 +1363,10 @@ class Service(PrimaryModel):
             "protocol",
             "ports",
         )  # (protocol, port) may be non-unique
+        constraints = [
+            models.UniqueConstraint(fields=["name", "device"], name="unique_device_service_name"),
+            models.UniqueConstraint(fields=["name", "virtual_machine"], name="unique_virtual_machine_service_name"),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.get_protocol_display()}/{self.port_list})"

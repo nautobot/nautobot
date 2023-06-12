@@ -515,15 +515,14 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
 
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
-    # We pass in job_class and job_model here partly for forward/backward compatibility logic, and
-    # part fallback safety. It's mildly useful to store both the class_path string and the JobModel
+    # We pass in task and job_model here partly for forward/backward compatibility logic, and
+    # part fallback safety. It's mildly useful to store both the task module/class name and the JobModel
     # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
     # null) you still have a bit of context on the ScheduledJob as to what it was originally
     # scheduled for.
     scheduled_job = ScheduledJob(
         name=name,
         task=job_model.job_class.registered_name,
-        job_class=job_model.class_path,
         job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {user} for {time}",
@@ -536,7 +535,7 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
         crontab=crontab,
         queue=task_queue,
     )
-    scheduled_job.save()
+    scheduled_job.validated_save()
     return scheduled_job
 
 

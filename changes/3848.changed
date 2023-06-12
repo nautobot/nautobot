@@ -1,0 +1,1 @@
+Changed `ExportTemplate` uniqueness constraint (and natural key) to be simply `(content_type, name)`.

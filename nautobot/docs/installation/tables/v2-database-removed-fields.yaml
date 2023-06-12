@@ -20,6 +20,9 @@
 - Model: "ConfigContext"
   Removed Field: "sites"
   Comments: "Use `locations` instead"
+- Model: "ConfigContextSchema"
+  Removed Field: "slug"
+  Comments:
 - Model: "CustomField"
   Removed Field: "name"
   Comments: "Use `label` or `key` as appropriate"
@@ -125,6 +128,9 @@
 - Model: "RouteTarget"
   Removed Field: "slug"
   Comments:
+- Model: "ScheduledJob"
+  Removed Field: "job_class"
+  Comments: "Use `task` instead"
 - Model: "Secret"
   Removed Field: "slug"
   Comments:

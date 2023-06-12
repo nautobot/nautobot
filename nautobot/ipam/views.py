@@ -920,7 +920,7 @@ class ServiceListView(generic.ObjectListView):
     filterset = filters.ServiceFilterSet
     filterset_form = forms.ServiceFilterForm
     table = tables.ServiceTable
-    action_buttons = ("import", "export")
+    action_buttons = ("add", "import", "export")
 
 
 class ServiceView(generic.ObjectView):

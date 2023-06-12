@@ -26,6 +26,9 @@
 - Model/Endpoint: "ConfigContext"
   Removed Field: "sites"
   Comments: "Use `locations` instead"
+- Model/Endpoint: "ConfigContextSchema"
+  Removed Field: "slug"
+  Comments:
 - Model/Endpoint: "CustomLink"
   Removed Field: "slug"
   Comments:
@@ -83,6 +86,9 @@
 - Model/Endpoint: "Prefix"
   Removed Field: "is_pool"
   Comments: "Use `type` instead"
+- Model/Endpoint: "Prefix"
+  Removed Field: "vrf"
+  Comments: "Prefixes are now assigned to a VRF in the same Namespace via a many-to-many relationship"
 - Model/Endpoint: "Prefix"
   Removed Field: "site"
   Comments: "Use `location` instead"

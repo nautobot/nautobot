@@ -1,0 +1,2 @@
+Changed `ScheduledJob.name` to be globally unique and serve as the natural key for this model.
+Increased `ScheduledJob.task` `max_length` to fix an off-by-one potential error.
