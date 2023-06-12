@@ -942,9 +942,6 @@ class IPAddress(PrimaryModel):
 
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
-    # The default inherits from the parent, which is too verbose.
-    natural_key_field_lookups = ["parent__namespace__name", "host"]
-
     class Meta:
         ordering = ("ip_version", "host", "mask_length")  # address may be non-unique
         verbose_name = "IP address"
@@ -974,6 +971,9 @@ class IPAddress(PrimaryModel):
             self.host = str(address.ip)
             self.mask_length = address.prefixlen
             self.ip_version = address.version
+
+    # TODO: The current IPAddress model has no appropriate natural key available yet.
+    natural_key_field_names = ["id"]
 
     def clean(self):
         super().clean()
