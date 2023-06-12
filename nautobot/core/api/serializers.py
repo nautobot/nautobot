@@ -155,6 +155,11 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
         elif getattr(self.parent.Meta.model, self.source, False):
             model = getattr(self.parent.Meta.model, self.source).field.model
         else:
+            logger.warning(
+                "Unable to determine model for related field %r; " "ensure that either 'queryset' is set on the field ",
+                "or defines the related model in the Meta.",
+                self.field_name,
+            )
             return {"id": value.pk, "object_type": "unknown", "url": url}
         return {"id": value.pk, "object_type": model._meta.app_label + "." + model._meta.model_name, "url": url}
 
