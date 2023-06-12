@@ -106,8 +106,10 @@ class OptInFieldsMixin:
         "type": "object",
         "properties": {
             "id": {
-                "type": "string",
-                "format": "uuid",
+                "oneOf": [
+                    {"type": "string", "format": "uuid"},
+                    {"type": "integer"},
+                ]
             },
             "object_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]+\\.[a-z][a-z0-9_]+$"},
             "url": {
