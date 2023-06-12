@@ -972,8 +972,7 @@ class IPAddress(PrimaryModel):
             self.mask_length = address.prefixlen
             self.ip_version = address.version
 
-    # TODO: The current IPAddress model has no appropriate natural key available yet.
-    natural_key_field_names = ["id"]
+    natural_key_field_names = ["parent__namespace", "host"]
 
     def clean(self):
         super().clean()
