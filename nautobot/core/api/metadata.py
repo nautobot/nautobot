@@ -358,7 +358,7 @@ class NautobotMetadata(SimpleMetadata):
             A list representing the view config.
         """
         m2m_fields, other_fields = self.get_m2m_and_non_m2m_fields(serializer)
-        model_verbose_name = self.serializer.Meta.model._meta.verbose_name
+        model_verbose_name = serializer.Meta.model._meta.verbose_name
         return [
             {
                 bettertitle(model_verbose_name): {
