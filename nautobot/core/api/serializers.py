@@ -157,12 +157,12 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
         else:
             logger.warning(
                 "Unable to determine model for related field %r; "
-                "ensure that either 'queryset' is set on the field "
-                "or defines the related model in the Meta.",
+                "ensure that either the field defines a 'queryset' "
+                "or the Meta defines the related 'model'.",
                 self.field_name,
             )
-            return {"id": value.pk, "object_type": "unknown", "url": url}
-        return {"id": value.pk, "object_type": model._meta.app_label + "." + model._meta.model_name, "url": url}
+            return {"id": value.pk, "object_type": "unknown.unknown", "url": url}
+        return {"id": value.pk, "object_type": model._meta.label_lower, "url": url}
 
 
 class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializer):
