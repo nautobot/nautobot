@@ -18,7 +18,7 @@ from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Device, Platform, Rack, Location, LocationType
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 
@@ -1135,6 +1135,7 @@ class RequiredRelationshipTestMixin(TestCase):
             required_on="source",
         )
         relationship_o2o.validated_save()
+        vlan_group = VLANGroup.objects.first()
 
         tests_params = [
             # Required many-to-many:
@@ -1143,6 +1144,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "vid": "1",
                     "name": "New VLAN",
                     "status": str(Status.objects.get_for_model(VLAN).first().pk),
+                    "vlan_group": str(vlan_group.pk),
                 },
                 "relationship": relationship_m2m,
                 "required_objects_generator": [

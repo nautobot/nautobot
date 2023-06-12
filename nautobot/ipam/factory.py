@@ -141,6 +141,30 @@ class VLANGroupFactory(OrganizationalModelFactory):
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
     )
+    
+    @factory.post_generation
+    def children(self, create, extracted, **kwargs):
+        """Creates child prefixes and ip addresses within the prefix IP space."""
+        if create:
+            return
+
+        # 50% chance to create children
+        if not faker.Faker().pybool():
+            return
+
+        # Default to maximum of 4 children unless overridden in kwargs
+        max_count = int(kwargs.pop("max_count", 4))
+        child_count = faker.Faker().pyint(min_value=0, max_value=max_count)
+        if child_count == 0:
+            return
+        
+        if extracted and self.has_location:
+            VLANFactory.create_batch(size=child_count, location=self.location, vlan_group=self)
+
+
+class VLANGroupGetOrCreateFactory(VLANGroupFactory):
+    class Meta:
+        django_get_or_create = ("location")
 
 
 class VLANFactory(PrimaryModelFactory):
@@ -148,7 +172,6 @@ class VLANFactory(PrimaryModelFactory):
         model = VLAN
         exclude = (
             "has_description",
-            "has_vlan_group",
             "has_location",
             "has_role",
             "has_tenant",
@@ -191,14 +214,13 @@ class VLANFactory(PrimaryModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    has_vlan_group = NautobotBoolIterator()
-    vlan_group = factory.Maybe("has_vlan_group", random_instance(VLANGroup, allow_null=False), None)
+    vlan_group = random_instance(VLANGroup, allow_null=False)
 
     has_location = NautobotBoolIterator()
     location = factory.Maybe(
-        "has_vlan_group",
+        "has_location",
         factory.LazyAttribute(lambda vlan: vlan.vlan_group.location),
-        factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
+        None,
     )
 
     has_tenant = NautobotBoolIterator()
@@ -208,6 +230,11 @@ class VLANFactory(PrimaryModelFactory):
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
         django_get_or_create = ("vlan_group", "location", "tenant")
+    
+    vlan_group = factory.SubFactory(
+            VLANGroupGetOrCreateFactory,
+            location=factory.SelfAttribute("..location"),
+        )
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -290,7 +317,6 @@ class PrefixFactory(PrimaryModelFactory):
         "has_vlan",
         factory.SubFactory(
             VLANGetOrCreateFactory,
-            vlan_group=None,
             location=factory.SelfAttribute("..location"),
             tenant=factory.SelfAttribute("..tenant"),
         ),

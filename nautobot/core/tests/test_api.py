@@ -25,6 +25,7 @@ from nautobot.extras import choices
 from nautobot.extras import models as extras_models
 from nautobot.ipam import models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers
+from nautobot.ipam.factory import VLANGroupFactory
 
 
 class AppTest(testing.APITestCase):
@@ -557,34 +558,45 @@ class WritableNestedSerializerTest(testing.APITestCase):
     def setUp(self):
         super().setUp()
 
-        self.location_type_1 = dcim_models.LocationType.objects.get(name="Campus")
-        self.location_type_2 = dcim_models.LocationType.objects.get(name="Building")
+        vlan_group_ct = ContentType.objects.get_for_model(ipam_models.VLANGroup)
+        vlan_ct = ContentType.objects.get_for_model(ipam_models.VLAN)
+        self.locations_types = [
+            dcim_models.LocationType.objects.get(name="Campus"),
+            dcim_models.LocationType.objects.get(name="Building")
+        ]
+        for location_type in self.locations_types:
+            location_type.content_types.set([vlan_group_ct, vlan_ct])
 
         self.statuses = extras_models.Status.objects.get_for_model(dcim_models.Location)
         self.location1 = dcim_models.Location.objects.create(
-            location_type=self.location_type_1, name="Location 1", slug="location-1", status=self.statuses[0]
+            location_type=self.locations_types[0], name="Location 1", slug="location-1", status=self.statuses[0]
         )
         self.location2 = dcim_models.Location.objects.create(
-            location_type=self.location_type_2,
+            location_type=self.locations_types[1],
             name="Location 2",
             slug="location-2",
             parent=self.location1,
             status=self.statuses[0],
         )
         self.location3 = dcim_models.Location.objects.create(
-            location_type=self.location_type_2,
+            location_type=self.locations_types[1],
             name="Location 3",
             slug="location-3",
             parent=self.location1,
             status=self.statuses[0],
         )
+        self.vlan_group1 = VLANGroupFactory.create(location=self.location1)
+        self.vlan_group2 = VLANGroupFactory.create(location=self.location2)
+        self.vlan_group3 = VLANGroupFactory.create(location=self.location3)
+
 
     def test_related_by_pk(self):
         data = {
-            "vid": 100,
-            "name": "Test VLAN 100",
+            "vid": 150,
+            "name": "Test VLAN 150",
             "location": self.location1.pk,
             "status": self.statuses.first().pk,
+            "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -598,8 +610,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_pk_no_match(self):
         data = {
-            "vid": 100,
-            "name": "Test VLAN 100",
+            "vid": 160,
+            "name": "Test VLAN 160",
             "location": "00000000-0000-0000-0000-0000000009eb",
             "status": self.statuses.first().pk,
         }
@@ -614,10 +626,11 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_attributes(self):
         data = {
-            "vid": 100,
-            "name": "Test VLAN 100",
+            "vid": 110,
+            "name": "Test VLAN 110",
             "status": self.statuses.first().pk,
             "location": {"name": "Location 1"},
+            "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -630,10 +643,11 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_attributes_no_match(self):
         data = {
-            "vid": 100,
-            "name": "Test VLAN 100",
+            "vid": 120,
+            "name": "Test VLAN 120",
             "status": self.statuses.first().pk,
             "location": {"name": "Location X"},
+            "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -646,14 +660,15 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_attributes_multiple_matches(self):
         data = {
-            "vid": 100,
-            "name": "Test VLAN 100",
+            "vid": 130,
+            "name": "Test VLAN 130",
             "status": self.statuses.first().pk,
             "location": {
                 "parent": {
                     "name": self.location1.name,
                 },
             },
+            "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -666,10 +681,11 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_invalid(self):
         data = {
-            "vid": 100,
-            "name": "Test VLAN 100",
+            "vid": 140,
+            "name": "Test VLAN 140",
             "location": "XXX",
             "status": self.statuses.first().pk,
+            "vlan_group": self.vlan_group2.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
