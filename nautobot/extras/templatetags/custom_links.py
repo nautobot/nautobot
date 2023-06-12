@@ -4,8 +4,8 @@ from django import template
 from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
 
+from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.models import CustomLink
-from nautobot.utilities.utils import render_jinja2
 
 
 register = template.Library()
@@ -44,7 +44,6 @@ def custom_links(context, obj):
     group_names = OrderedDict()
 
     for cl in links:
-
         # Organize custom links by group
         if cl.group_name and cl.group_name in group_names:
             group_names[cl.group_name].append(cl)
@@ -67,7 +66,6 @@ def custom_links(context, obj):
 
     # Add grouped links to template
     for group, links in group_names.items():
-
         links_rendered = []
 
         for cl in links:

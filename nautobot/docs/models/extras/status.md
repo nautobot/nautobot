@@ -12,9 +12,10 @@ Statuses may be managed by navigating to **Organization > Statuses** in the navi
 
 ### Importing Objects with a `status` Field
 
-When using CSV import to reference a `status` field on an object, the `Status.slug` field is used.
+When using CSV import to reference a `status` field on an object, the `Status.name` field is used.
 
-For example, the default **Active** status has a slug of `active`, so the `active` value would be used for import.
++/- 2.0.0
+    Changed the CSV import reference for Statuses from `Status.slug` to `Status.name`.
 
 ## Customizing Statuses
 
@@ -33,7 +34,10 @@ For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be cust
     data models of their own that implement a `status` field. Proceed at your
     own risk!
 
-Any model that is intended to have a `status` field must inherit from `nautobot.extras.models.statuses.StatusModel`. This abstract model will add an `nautobot.extras.models.statuses.StatusField` to the model. The abstract base will automatically assign a `related_name` for the reverse relationship back to the inheriting model's name (e.g. `devices`).
+Any model that is intended to have a `status` field must use a `nautobot.extras.models.statuses.StatusField` for its foreign-key to the model. This field type will automatically assign a `related_name` for the reverse relationship back to the inheriting model's verbose plural name (e.g. `devices`).
+
++/- 2.0.0
+    The related name for Statuses was changed to be based on the model's `verbose_name_plural` instead of the pattern `%(app_label)s_%(model)s_related`. For example, `Status.devices` and not `Status.dcim_device_related`. Additionally, the recommendation to inherit from `StatusModel` has been replaced with a recommendation to directly include a `StatusField`.
 
 ### `StatusField` model field
 
@@ -57,14 +61,6 @@ Any model form that is intended to have a `status` field must inherit from one o
 +/- 1.4.0
     In prior Nautobot versions these mixins were named `StatusFilterFormMixin` and `StatusBulkEditFormMixin`; the old names are still available as aliases but will be removed in a future major release.
 
-- FIXME: CSV import forms
-
-### `StatusSerializerField` serializer field
-
-Any serializer that is intended to have a `status` field must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`. This adds an `nautobot.extras.api.fields.StatusSerializerField` to the serializer.
-
-The `StatusSerializerField` is a writable slug-related choice field that allows writing to the field using the `name` value of the status (e.g. `"active"`). Writing to this field is normalized to always be converted to lowercase.
-
 ### Table field
 
 If you wish for a table to include a `status` field, your table must inherit from `nautobot.extras.tables.StatusTableMixin`. This includes a `ColorColumn` on the table.
@@ -75,13 +71,12 @@ To fully integrate a model to include a `status` field, assert the following:
 
 ### Model
 
-- The model must inherit from `nautobot.extras.models.statuses.StatusModel`
+- The model must use a `nautobot.extras.models.statuses.StatusField`
 - Decorate the model class with `@extras_features('statuses')` (`from nautobot.extras.utils import extras_features`)
 
 ### Forms
 
 - Generic model forms will automatically include a `StatusField`
-- CSV model import forms must inherit from `nautobot.extras.forms.StatusModelCSVFormMixin`
 - Bulk edit model forms must inherit from `nautobot.extras.forms.StatusModelBulkEditFormMixin`
 - Filter forms must inherit from `nautobot.extras.forms.StatusModelFilterFormMixin`
 
@@ -91,10 +86,6 @@ To fully integrate a model to include a `status` field, assert the following:
 ### Filters
 
 - Filtersets for your model must inherit from `nautobot.extras.filters.StatusModelFilterSetMixin`
-
-### Serializers
-
-- Serializers for your model must inherit from `nautobot.extras.api.serializers.StatusModelSerializerMixin`
 
 ### Tables
 

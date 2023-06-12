@@ -1,14 +1,13 @@
-from nautobot.utilities.choices import ChoiceSet
+from nautobot.core.choices import ChoiceSet
 
 
-class IPAddressFamilyChoices(ChoiceSet):
-
-    FAMILY_4 = 4
-    FAMILY_6 = 6
+class IPAddressVersionChoices(ChoiceSet):
+    VERSION_4 = 4
+    VERSION_6 = 6
 
     CHOICES = (
-        (FAMILY_4, "IPv4"),
-        (FAMILY_6, "IPv6"),
+        (VERSION_4, "IPv4"),
+        (VERSION_6, "IPv6"),
     )
 
 
@@ -18,26 +17,27 @@ class IPAddressFamilyChoices(ChoiceSet):
 
 
 class PrefixStatusChoices(ChoiceSet):
-
-    STATUS_CONTAINER = "container"
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
 
     CHOICES = (
-        (STATUS_CONTAINER, "Container"),
         (STATUS_ACTIVE, "Active"),
         (STATUS_RESERVED, "Reserved"),
         (STATUS_DEPRECATED, "Deprecated"),
     )
 
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_CONTAINER: "default",
-        STATUS_ACTIVE: "primary",
-        STATUS_RESERVED: "info",
-        STATUS_DEPRECATED: "danger",
-    }
+
+class PrefixTypeChoices(ChoiceSet):
+    TYPE_CONTAINER = "container"
+    TYPE_NETWORK = "network"
+    TYPE_POOL = "pool"
+
+    CHOICES = (
+        (TYPE_CONTAINER, "Container"),
+        (TYPE_NETWORK, "Network"),
+        (TYPE_POOL, "Pool"),
+    )
 
 
 #
@@ -46,7 +46,6 @@ class PrefixStatusChoices(ChoiceSet):
 
 
 class IPAddressStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
@@ -61,18 +60,8 @@ class IPAddressStatusChoices(ChoiceSet):
         (STATUS_SLAAC, "SLAAC"),
     )
 
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_ACTIVE: "primary",
-        STATUS_RESERVED: "info",
-        STATUS_DEPRECATED: "danger",
-        STATUS_DHCP: "success",
-        STATUS_SLAAC: "success",
-    }
-
 
 class IPAddressRoleChoices(ChoiceSet):
-
     ROLE_LOOPBACK = "loopback"
     ROLE_SECONDARY = "secondary"
     ROLE_ANYCAST = "anycast"
@@ -111,7 +100,6 @@ class IPAddressRoleChoices(ChoiceSet):
 
 
 class VLANStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
@@ -122,13 +110,6 @@ class VLANStatusChoices(ChoiceSet):
         (STATUS_DEPRECATED, "Deprecated"),
     )
 
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_ACTIVE: "primary",
-        STATUS_RESERVED: "info",
-        STATUS_DEPRECATED: "danger",
-    }
-
 
 #
 # Services
@@ -136,7 +117,6 @@ class VLANStatusChoices(ChoiceSet):
 
 
 class ServiceProtocolChoices(ChoiceSet):
-
     PROTOCOL_TCP = "tcp"
     PROTOCOL_UDP = "udp"
 

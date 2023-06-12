@@ -2,7 +2,7 @@ import binascii
 import os
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser, Group, UserManager
+from django.contrib.auth.models import AbstractUser, Group, UserManager as UserManager_
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
@@ -10,10 +10,9 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from nautobot.core.models import BaseModel
-from nautobot.utilities.fields import JSONArrayField
-from nautobot.utilities.querysets import RestrictedQuerySet
-from nautobot.utilities.utils import flatten_dict
+from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.utils.data import flatten_dict
 
 
 __all__ = (
@@ -29,6 +28,14 @@ __all__ = (
 #
 
 
+class UserManager(BaseManager, UserManager_):
+    """
+    Natural-key subclass of Django's UserManager.
+
+    Note that this is *NOT* based around RestrictedQuerySet.
+    """
+
+
 class User(BaseModel, AbstractUser):
     """
     Nautobot implements its own User model to suport several specific use cases.
@@ -38,11 +45,11 @@ class User(BaseModel, AbstractUser):
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
-    # We must use the stock UserManager instead of RestrictedQuerySet from BaseModel
     objects = UserManager()
 
     class Meta:
         db_table = "auth_user"
+        ordering = ["username"]
 
     def get_config(self, path, default=None):
         """
@@ -206,9 +213,12 @@ class ObjectPermission(BaseModel):
     identified by ORM query parameters.
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=200, blank=True)
     enabled = models.BooleanField(default=True)
+
+    # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+    # pylint: disable=unsupported-binary-operation
     object_types = models.ManyToManyField(
         to=ContentType,
         limit_choices_to=Q(
@@ -227,6 +237,7 @@ class ObjectPermission(BaseModel):
         ),
         related_name="object_permissions",
     )
+    # pylint: enable=unsupported-binary-operation
     groups = models.ManyToManyField(to=Group, blank=True, related_name="object_permissions")
     users = models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name="object_permissions")
     actions = JSONArrayField(
@@ -239,8 +250,6 @@ class ObjectPermission(BaseModel):
         null=True,
         help_text="Queryset filter matching the applicable objects of the selected type(s)",
     )
-
-    objects = RestrictedQuerySet.as_manager()
 
     class Meta:
         ordering = ["name"]

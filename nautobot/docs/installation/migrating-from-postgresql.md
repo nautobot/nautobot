@@ -12,7 +12,6 @@ nautobot-server dumpdata \
     --natural-primary \
     --exclude contenttypes \
     --exclude auth.permission \
-    --exclude django_rq \
     --format json \
     --indent 2 \
     --traceback \
@@ -61,9 +60,14 @@ nautobot-server nbshell
 Example output:
 
 ```no-highlight
-### Nautobot interactive shell (32cec46b2b7e)
-### Python 3.9.7 | Django 3.1.13 | Nautobot 1.1.3
-### lsmodels() will show available models. Use help(<model>) for more info.
+...
+# Django version 3.2.16
+# Nautobot version 2.0.0a0
+# Example Nautobot App version 1.0.0
+Python 3.8.16 (default, Mar 23 2023, 04:48:11)
+[GCC 10.2.1 20210110] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+(InteractiveConsole)
 >>> Status.objects.all().delete()
 (67, {'extras.Status_content_types': 48, 'extras.Status': 19})
 >>>

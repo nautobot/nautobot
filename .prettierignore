@@ -1,0 +1,9 @@
+/*
+!/nautobot
+/nautobot/*
+!/nautobot/ui
+/nautobot/ui/build
+# These files get rendered by `nautobot-server build_ui`
+/nautobot/ui/jsconfig.paths.json
+/nautobot/ui/src/app_imports.js
+/nautobot/ui/src/app_routes.json

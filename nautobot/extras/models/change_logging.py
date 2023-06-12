@@ -7,10 +7,12 @@ from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
+from nautobot.core.models.utils import serialize_object, serialize_object_v2
+from nautobot.core.utils.data import shallow_compare_dict
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import get_route_for_model, serialize_object, serialize_object_v2, shallow_compare_dict
 
 
 #
@@ -24,7 +26,7 @@ class ChangeLoggedModel(models.Model):
     null to facilitate adding these fields to existing instances via a database migration.
     """
 
-    created = models.DateField(auto_now_add=True, blank=True, null=True)
+    created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
@@ -75,7 +77,7 @@ class ObjectChange(BaseModel):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="changes",
+        related_name="object_changes",
         blank=True,
         null=True,
     )
@@ -106,22 +108,6 @@ class ObjectChange(BaseModel):
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
-    csv_headers = [
-        "time",
-        "user",
-        "user_name",
-        "request_id",
-        "action",
-        "changed_object_type",
-        "changed_object_id",
-        "related_object_type",
-        "related_object_id",
-        "object_repr",
-        "object_data",
-        "change_context",
-        "change_context_detail",
-    ]
-
     class Meta:
         ordering = ["-time"]
         get_latest_by = "time"
@@ -144,7 +130,6 @@ class ObjectChange(BaseModel):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
 
     def save(self, *args, **kwargs):
-
         # Record the user's name and the object's representation as static strings
         if not self.user_name:
             if self.user:
@@ -156,26 +141,6 @@ class ObjectChange(BaseModel):
             self.object_repr = str(self.changed_object)[:CHANGELOG_MAX_OBJECT_REPR]
 
         return super().save(*args, **kwargs)
-
-    def get_absolute_url(self):
-        return reverse("extras:objectchange", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.time,
-            self.user,
-            self.user_name,
-            self.request_id,
-            self.get_action_display(),
-            self.changed_object_type,
-            self.changed_object_id,
-            self.related_object_type,
-            self.related_object_id,
-            self.object_repr,
-            self.object_data,
-            self.change_context,
-            self.change_context_detail,
-        )
 
     def get_action_class(self):
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)

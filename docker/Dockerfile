@@ -100,10 +100,21 @@ ENV PYTHONUNBUFFERED=1 \
     prometheus_multiproc_dir=/prom_cache
 
 # Install all OS package upgrades and dependencies needed to run Nautobot in production
-# hadolint ignore=DL3005,DL3008,DL3013
+# DL3008 - Require pinned dependencies for apt instal
+# DL3009 - Delete the apt-get lists after installing something
+# hadolint ignore=DL3008,DL3009
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y git mime-support curl libxml2 libmariadb3 openssl && \
+    apt-get install --no-install-recommends -y curl
+
+# DL3008 - Require pinned dependencies for apt instal
+# DL3009 - Delete the apt-get lists after installing something
+# DL3013 - pin all Python package versions
+# DL3059 - Multiple consecutive RUN instructions
+# DL4006 - Set the SHELL option -o pipefail before RUN with a pipe in
+# hadolint ignore=DL3008,DL3013,DL3059,DL4006
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
@@ -155,6 +166,7 @@ RUN poetry config virtualenvs.create false && \
     poetry config installer.no-binary pyuwsgi
 
 COPY pyproject.toml poetry.lock README.md /source/
+COPY nautobot/ui/package.json nautobot/ui/package-lock.json /source/nautobot/ui/
 
 # The example_plugin is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
 COPY examples /source/examples
@@ -166,6 +178,14 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
     --mount=type=cache,target="/root/.cache/pypoetry" \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
+
+
+WORKDIR /source/nautobot/ui
+
+# Install (non-development) Node dependencies of Nautobot UI
+RUN npm install
+
+WORKDIR /source
 
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image
@@ -215,40 +235,25 @@ FROM dependencies-dev-python as dependencies-dev-platform-amd64
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && \
     chmod +x /usr/bin/hadolint
 
-# Install NodeJS for installing markdownlint-cli
-
-RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-x64.tar.xz && \
-    mkdir -p /usr/local/lib/nodejs && \
-    tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
-    rm -rf /tmp/node.tar.xz
-
-ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-x64/bin"
-
 FROM dependencies-dev-python as dependencies-dev-platform-arm64
 
 # Install hadolint for linting Dockerfiles
 RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-arm64 && \
     chmod +x /usr/bin/hadolint
 
-# Install NodeJS for installing markdownlint-cli
-
-RUN curl -Lo /tmp/node.tar.xz https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-arm64.tar.xz && \
-    mkdir -p /usr/local/lib/nodejs && \
-    tar -xf /tmp/node.tar.xz -C /usr/local/lib/nodejs && \
-    rm -rf /tmp/node.tar.xz
-
-ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-arm64/bin"
-
 ################################ Stage: dependencies-dev (intermediate build target)
 
 # hadolint ignore=DL3006
 FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
 
-RUN npm install --global markdownlint-cli@0.31.1
+# Install our developer node dependencies (markdownlint-cli, etc)
+COPY package.json package-lock.json /source/
+RUN npm install
 
 # Nautobot wheel build is no longer a direct previous layer
 # /source from build-nautobot will include docs from build-docs as well
 COPY --from=build-nautobot /source /source
+COPY --from=dependencies /source/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
 
 # Run Nautobot development server by default
 EXPOSE 8080
@@ -288,6 +293,7 @@ ARG PYTHON_VER
 # Copy from "build-nautobot" the built Nautobot wheel
 COPY --from=dependencies /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
 COPY --from=dependencies /usr/local/bin /usr/local/bin
+COPY --from=dependencies /source/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
 COPY --from=build-nautobot /source/dist/*.whl /tmp
 
 # Install the Nautobot wheel
@@ -312,6 +318,8 @@ USER nautobot
 WORKDIR /opt/nautobot
 
 COPY --from=final-dev --chown=nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
+
+RUN nautobot-server build_ui
 
 # Run Nautobot server under uwsgi by default
 EXPOSE 8080 8443

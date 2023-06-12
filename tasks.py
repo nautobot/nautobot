@@ -32,6 +32,13 @@ except ModuleNotFoundError:
     HAS_RICH = False
 
 
+# Base directory path from this file.
+BASE_DIR = os.path.join(os.path.dirname(__file__))
+
+# Base directory path for Nautobot UI.
+NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "nautobot/ui")
+
+
 def is_truthy(arg):
     """Convert "truthy" strings into Booleans.
 
@@ -54,9 +61,9 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.7",
+            "python_ver": "3.8",
             "local": False,
-            "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
+            "compose_dir": os.path.join(BASE_DIR, "development/"),
             "compose_files": [
                 "docker-compose.yml",
                 "docker-compose.postgres.yml",
@@ -164,8 +171,8 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, **kwargs):
-    """Wrapper to run a command locally or inside the nautobot container."""
+def run_command(context, command, service="nautobot", **kwargs):
+    """Wrapper to run a command locally or inside the provided container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
         if "hide" not in kwargs:
@@ -175,10 +182,10 @@ def run_command(context, command, **kwargs):
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
-        if "nautobot" in results.stdout:
-            compose_command = f"exec nautobot {command}"
+        if service in results.stdout:
+            compose_command = f"exec {service} {command}"
         else:
-            compose_command = f"run --entrypoint '{command}' nautobot"
+            compose_command = f"run --rm --entrypoint '{command}' {service}"
 
         docker_compose(context, compose_command, pty=True)
 
@@ -223,7 +230,6 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     }
 )
 def build_dependencies(context, poetry_parallel=True):
-
     # Determine preferred/default target architecture
     output = context.run("docker buildx inspect default", env={"PYTHON_VER": context.nautobot.python_ver}, hide=True)
     result = re.search(r"Platforms: ([^,\n]+)", output.stdout)
@@ -339,7 +345,7 @@ def docker_push(context, branch, commit="", datestamp=""):
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.7":
+    if context.nautobot.python_ver == "3.8":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
@@ -424,7 +430,7 @@ def vscode(context):
 # ------------------------------------------------------------------------------
 @task
 def nbshell(context):
-    """Launch an interactive nbshell session."""
+    """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
     run_command(context, command, pty=True)
@@ -433,7 +439,10 @@ def nbshell(context):
 @task(help={"service": "Name of the service to shell into"})
 def cli(context, service="nautobot"):
     """Launch a bash shell inside the running Nautobot (or other) Docker container."""
-    docker_compose(context, f"exec {service} bash", pty=True)
+    context.nautobot.local = False
+    command = "bash"
+
+    run_command(context, command, service=service, pty=True)
 
 
 @task(
@@ -479,7 +488,6 @@ def post_upgrade(context):
     - collectstatic
     - remove_stale_contenttypes
     - clearsessions
-    - invalidate all
     """
     command = "nautobot-server post_upgrade"
 
@@ -593,6 +601,14 @@ def pylint(context, target=None, recursive=False):
 
 
 @task
+def yamllint(context):
+    """Run yamllint to validate formatting applies to YAML standards."""
+    # TODO: enable for directories other than nautobot/docs and fix all warnings
+    command = "yamllint nautobot/docs --format standard"
+    run_command(context, command)
+
+
+@task
 def serve_docs(context):
     """Runs local instance of mkdocs serve (ctrl-c to stop)."""
     if is_truthy(context.nautobot.local):
@@ -611,7 +627,7 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
+    command = "markdownlint --ignore nautobot/project-static --ignore nautobot/ui/node_modules --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
     run_command(context, command)
 
 
@@ -635,9 +651,9 @@ def check_schema(context, api_version=None):
     else:
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
-        current_major, current_minor = nautobot_version.split(".")[:2]
-        assert current_major == "1", f"check_schemas version calc must be updated to handle version {current_major}"
-        api_versions = [f"{current_major}.{minor}" for minor in range(2, int(current_minor) + 1)]
+        current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
+        assert current_major == 2, f"check_schemas version calc must be updated to handle version {current_major}"
+        api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
 
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"
@@ -832,6 +848,66 @@ def performance_test(
 
 @task(
     help={
+        "label": "Specify a directory to test instead of running all Nautobot UI tests.",
+    },
+)
+def unittest_ui(
+    context,
+    label=None,
+):
+    """Run Nautobot UI unit tests."""
+    command = "npm run test -- --watchAll=false"
+    if label:
+        command += f" {label}"
+    run_command(context, command, service="nodejs")
+
+
+@task(
+    help={
+        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
+    }
+)
+def prettier(context, autoformat=False):
+    """Check Node.JS code style with Prettier."""
+    prettier_command = "npx prettier"
+
+    if autoformat:
+        arg = "--write"
+    else:
+        arg = "--check"
+
+    if is_truthy(context.nautobot.local):
+        path = NAUTOBOT_UI_DIR
+    else:
+        path = "."
+
+    command = f"{prettier_command} {arg} {path}"
+    run_command(context, command, service="nodejs")
+
+
+@task(
+    help={
+        "autoformat": "Apply some recommendations automatically, rather than failing if formatting is incorrect. Not all issues can be fixed automatically.",
+    }
+)
+def eslint(context, autoformat=False):
+    """Check for ESLint rule compliance and other style issues."""
+    eslint_command = "npx eslint --max-warnings 0"
+
+    if autoformat:
+        eslint_command += " --fix"
+
+    if is_truthy(context.nautobot.local):
+        path = NAUTOBOT_UI_DIR
+    else:
+        path = "."
+
+    command = f"{eslint_command} {path}"
+    run_command(context, command, service="nodejs")
+
+
+@task(
+    help={
         "lint-only": "Only run linters; unit tests will be excluded.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
     }
@@ -840,11 +916,29 @@ def tests(context, lint_only=False, keepdb=False):
     """Run all linters and unit tests."""
     black(context)
     flake8(context)
+    prettier(context)
+    eslint(context)
     hadolint(context)
     markdownlint(context)
+    yamllint(context)
     pylint(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)
+
+
+@task(help={"version": "The version number or the rule to update the version."})
+def version(context, version=None):  # pylint: disable=redefined-outer-name
+    """
+    Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is
+    provided.
+
+    The version number or rules are those supported by `poetry version`.
+    """
+    if version is None:
+        version = ""
+
+    run_command(context, f"poetry version --short {version}")
+    run_command(context, f"npm --prefix nautobot/ui version {version}")

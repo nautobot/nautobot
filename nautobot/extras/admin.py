@@ -36,29 +36,27 @@ class FileProxyAdmin(NautobotModelAdmin):
 
 
 #
-# Job results (jobs, scripts, reports, Git repository sync, etc.)
+# Job results (jobs and Git repository sync)
 #
 
 
 @admin.register(JobResult)
 class JobResultAdmin(NautobotModelAdmin):
     list_display = [
-        "obj_type",
         "name",
-        "created",
-        "completed",
+        "date_created",
+        "date_done",
         "user",
         "status",
     ]
     fields = [
-        "obj_type",
+        "id",
         "name",
-        "created",
-        "completed",
+        "date_created",
+        "date_done",
         "user",
         "status",
-        "data",
-        "job_id",
+        "result",
     ]
     list_filter = [
         "status",

@@ -1,0 +1,49 @@
+{% load static %}
+{% load helpers %}
+{% load plugins %}
+
+<!DOCTYPE html>
+<html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
+<head>
+    <title>{% block title %}Home{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
+    {% include 'inc/media.html' %}
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+    {% include 'inc/nav_menu.html' %}
+    <div class="container-fluid wrapper">
+        {% if "BANNER_TOP"|settings_or_config %}
+            <div class="alert alert-info text-center" role="alert">
+                {{ "BANNER_TOP"|settings_or_config|safe }}
+            </div>
+        {% endif %}
+        {% if settings.MAINTENANCE_MODE %}
+            <div class="alert alert-warning text-center" role="alert">
+                <h4><i class="mdi mdi-alert"></i> Maintenance Mode</h4>
+                <p>Nautobot is currently in maintenance mode. Functionality may be limited.</p>
+            </div>
+        {% endif %}
+        {% plugin_banners %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissable" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span>&times;</span>
+                </button>
+                {{ message }}
+            </div>
+        {% endfor %}
+        {% block header %}{% endblock header %}
+        {% block content %}{% endblock content %}
+        <div class="push"></div>
+        {% if "BANNER_BOTTOM"|settings_or_config %}
+            <div class="alert alert-info text-center banner-bottom" role="alert">
+                {{ "BANNER_BOTTOM"|settings_or_config|safe }}
+            </div>
+        {% endif %}
+    </div>
+    {% include 'modals/modal_theme.html' with name='theme'%}
+    {% include 'inc/footer.html' %}
+    {% include 'inc/javascript.html' %}
+{% block javascript %}{% endblock %}
+</body>
+</html>

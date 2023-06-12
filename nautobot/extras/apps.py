@@ -1,6 +1,5 @@
 import logging
 
-from django.conf import settings
 from django.db.utils import ProgrammingError
 
 import graphene
@@ -10,7 +9,7 @@ from nautobot.core.apps import NautobotConfig
 from nautobot.core.signals import nautobot_database_ready
 
 
-logger = logging.getLogger("nautobot.extras.apps")
+logger = logging.getLogger(__name__)
 
 
 class ExtrasConfig(NautobotConfig):
@@ -24,12 +23,12 @@ class ExtrasConfig(NautobotConfig):
         nautobot_database_ready.connect(refresh_job_models, sender=self)
 
         from graphene_django.converter import convert_django_field
-        from taggit.managers import TaggableManager
+        from nautobot.core.models.fields import TagsField
         from nautobot.extras.graphql.types import TagType
 
-        @convert_django_field.register(TaggableManager)
+        @convert_django_field.register(TagsField)
         def convert_field_to_list_tags(field, registry=None):
-            """Convert TaggableManager to List of Tags."""
+            """Convert TagsField to List of Tags."""
             return graphene.List(TagType)
 
         from nautobot.extras.plugins.validators import wrap_model_clean_methods
@@ -46,12 +45,10 @@ class ExtrasConfig(NautobotConfig):
             )
 
         # Register the DatabaseBackend health check
-        from nautobot.extras.health_checks import CacheopsRedisBackend, DatabaseBackend, RedisBackend
+        from nautobot.extras.health_checks import DatabaseBackend, RedisBackend
 
         plugin_dir.register(DatabaseBackend)
         plugin_dir.register(RedisBackend)
-        if getattr(settings, "CACHEOPS_HEALTH_CHECK_ENABLED", False):
-            plugin_dir.register(CacheopsRedisBackend)
 
         # Register built-in SecretsProvider classes
         from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider

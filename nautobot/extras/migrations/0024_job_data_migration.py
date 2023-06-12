@@ -1,6 +1,6 @@
 from django.db import migrations
 
-from nautobot.core.fields import slugify_dots_to_dashes
+from nautobot.core.models.fields import slugify_dots_to_dashes
 
 
 def _create_job_model(job_model_class, class_path):
@@ -89,7 +89,6 @@ def reverse_migrate_job_data(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0023_job_model"),
     ]

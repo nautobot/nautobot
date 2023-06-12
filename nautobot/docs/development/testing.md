@@ -10,21 +10,31 @@ Integration testing is much more involved, and builds on top of the foundation l
 
 ## Tagging Tests
 
-By Nautobot convention, **unit** tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `unit`. The base test case class `nautobot.utilities.testing.TestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing view and API test cases in the Nautobot test suite inherit from this class.
+By Nautobot convention, **unit** tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `unit`. The base test case class `nautobot.core.testing.TestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing view and API test cases in the Nautobot test suite inherit from this class.
 
-By Nautobot convention, **integration** tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `integration`. The base test case class `nautobot.utilities.testing.integration.SeleniumTestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing integration test cases in the Nautobot test suite inherit from this class.
+By Nautobot convention, **integration** tests must be [tagged](https://docs.djangoproject.com/en/stable/topics/testing/tools/#tagging-tests) with `integration`. The base test case class `nautobot.core.testing.integration.SeleniumTestCase` has this tag, therefore any test cases inheriting from that class do not need to be explicitly tagged. All existing integration test cases in the Nautobot test suite inherit from this class.
+
++/- 2.0.0
+    The base test classes moved from `nautobot.utilities.testing` to `nautobot.core.testing`.
 
 The `invoke unittest` and `invoke integration-test` commands are intentionally distinct, and the correct tagging of test cases is essential to enforcing the division between these two test categories. We never want to risk running the unit tests and integration tests at the same time. The isolation from each other is critical to a clean and manageable continuous development cycle.
 
 ## Base Classes and Code Location
 
-| Test Type   | Base Class                                                | Code Location                              |
-| ----------- | --------------------------------------------------------- | ------------------------------------------ |
-| Unit        | `nautobot.utilities.testing.TestCase`                     | `nautobot/APP/tests/test_*.py`             |
-| Integration | `nautobot.utilities.testing.integration.SeleniumTestCase` | `nautobot/APP/tests/integration/test_*.py` |
+| Test Type   | Base Class                                               | Code Location                              |
+| ----------- | -------------------------------------------------------- | ------------------------------------------ |
+| Unit        | `nautobot.core.testing.TestCase` or subclass (see below) | `nautobot/APP/tests/test_*.py`             |
+| Integration | `nautobot.core.testing.integration.SeleniumTestCase`     | `nautobot/APP/tests/integration/test_*.py` |
 
-- New unit tests **must always** inherit from `nautobot.utilities.testing.TestCase`. Do not use `django.test.TestCase`.
-- New integration tests **must always** inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`. Do not use any other base class for integration tests.
+- New unit tests **must always** inherit from `nautobot.core.testing.TestCase` or one of its subclasses. Do not use `django.test.TestCase`.
+    - API view test cases should generally inherit from one or more of the classes in `nautobot.core.testing.api.APIViewTestCases`.
+    - Filterset test cases should generally inherit from `nautobot.core.testing.filters.FilterTestCases.FilterTestCase`.
+    - Model test cases should generally inherit from `nautobot.core.testing.models.ModelTestCases.BaseModelTestCase`.
+    - View test cases should generally inherit from one or more of the classes in `nautobot.core.testing.views.ViewTestCases`.
+- New integration tests **must always** inherit from `nautobot.core.testing.integration.SeleniumTestCase`. Do not use any other base class for integration tests.
+
++/- 2.0.0
+    The base test classes moved from `nautobot.utilities.testing` to `nautobot.core.testing`.
 
 ## Factories
 
@@ -32,7 +42,7 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 
 Nautobot uses the [`factory_boy`](https://factoryboy.readthedocs.io/en/stable/) library as a way to generate randomized but plausible database data for use in unit and integration tests, or for convenience in populating a local development instance.
 
-Factories for each Nautobot app's models are defined in the corresponding `nautobot/APPNAME/factory.py` files. Helper classes and functions for certain common patterns are defined in `nautobot/utilities/factory.py`. Factories can be used directly from `nbshell` so long as you have `factory_boy` installed. Examples:
+Factories for each Nautobot app's models are defined in the corresponding `nautobot/APPNAME/factory.py` files. Helper classes and functions for certain common patterns are defined in `nautobot/core/factory.py`. Factories can be used directly from `nautobot-server nbshell` so long as you have `factory_boy` installed. Examples:
 
 ```python
 >>> from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory

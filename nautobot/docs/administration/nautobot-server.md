@@ -57,13 +57,13 @@ celery@worker1 v5.1.1 (sun-harmonics)
 
 
 [tasks]
+  . nautobot.core.tasks.get_releases
   . nautobot.extras.datasources.git.pull_git_repository_and_refresh_data
   . nautobot.extras.jobs.run_job
   . nautobot.extras.tasks.delete_custom_field_data
   . nautobot.extras.tasks.process_webhook
   . nautobot.extras.tasks.provision_field
   . nautobot.extras.tasks.update_custom_field_choice_data
-  . nautobot.utilities.tasks.get_releases
 
 [2021-07-01 21:32:40,680: INFO/MainProcess] Connected to redis://localhost:6379/0
 [2021-07-01 21:32:40,690: INFO/MainProcess] mingle: searching for neighbors
@@ -151,13 +151,15 @@ nautobot=> \q
     - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
     - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
++/- 2.0.0
+    - `django_rq` is no longer part of Nautobot's dependencies and so no longer needs to be explicitly excluded.
+
 ```no-highlight
 nautobot-server dumpdata \
   --natural-foreign \
   --natural-primary \
   --exclude contenttypes \
   --exclude auth.permission \
-  --exclude django_rq \
   --format json \
   --indent 2 \
   --traceback  > nautobot_dump.json
@@ -236,7 +238,6 @@ Creating Statuses...
 Creating TenantGroups...
 Creating Tenants...
 Creating RIRs...
-Creating Aggregates...
 Creating RouteTargets...
 Creating VRFs...
 Creating IP/VLAN Roles...
@@ -284,21 +285,6 @@ Configuration file created at '/home/example/.nautobot/nautobot_config.py
 ```
 
 For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
-
-### `invalidate`
-
-`nautobot-server invalidate`
-
-Invalidates cache for entire app, model or particular instance. Most commonly you will see us recommend clearing the entire cache using `invalidate all`:
-
-```no-highlight
-nautobot-server invalidate all
-```
-
-There are a number of other options not covered here.
-
-!!! note
-    This is a built-in management command provided by the [Cacheops plugin](https://github.com/Suor/django-cacheops) Nautobot for caching. Please see the official [Cacheops documentation on `invalidate`](https://github.com/Suor/django-cacheops#invalidation) for more information.
 
 ### `loaddata`
 
@@ -351,9 +337,56 @@ nautobot-server nbshell
 Prompt provided:
 
 ```no-highlight
-### Nautobot interactive shell (localhost)
-### Python 3.8.7 | Django 3.1.7 | Nautobot 1.0.0
-### lsmodels() will show available models. Use help(<model>) for more info.
+# Shell Plus Model Imports
+from constance.backends.database.models import Constance
+from django.contrib.admin.models import LogEntry
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.sessions.models import Session
+from django_celery_beat.models import ClockedSchedule, CrontabSchedule, IntervalSchedule, PeriodicTask, PeriodicTasks, SolarSchedule
+from django_celery_results.models import ChordCounter, GroupResult, TaskResult
+from example_plugin.models import AnotherExampleModel, ExampleModel
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.dcim.models.cables import Cable, CablePath
+from nautobot.dcim.models.device_component_templates import ConsolePortTemplate, ConsoleServerPortTemplate, DeviceBayTemplate, FrontPortTemplate, InterfaceTemplate, PowerOutletTemplate, PowerPortTemplate, RearPortTemplate
+from nautobot.dcim.models.device_components import ConsolePort, ConsoleServerPort, DeviceBay, FrontPort, Interface, InventoryItem, PowerOutlet, PowerPort, RearPort
+from nautobot.dcim.models.devices import Device, DeviceRedundancyGroup, DeviceType, Manufacturer, Platform, VirtualChassis
+from nautobot.dcim.models.locations import Location, LocationType
+from nautobot.dcim.models.power import PowerFeed, PowerPanel
+from nautobot.dcim.models.racks import Rack, RackGroup, RackReservation
+from nautobot.dcim.models.sites import Region, Site
+from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.models.customfields import ComputedField, CustomField, CustomFieldChoice
+from nautobot.extras.models.datasources import GitRepository
+from nautobot.extras.models.groups import DynamicGroup, DynamicGroupMembership
+from nautobot.extras.models.jobs import Job, JobHook, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs
+from nautobot.extras.models.models import ConfigContext, ConfigContextSchema, CustomLink, ExportTemplate, FileAttachment, FileProxy, GraphQLQuery, HealthCheckTestModel, ImageAttachment, Note, Webhook
+from nautobot.extras.models.relationships import Relationship, RelationshipAssociation
+from nautobot.extras.models.roles import Role
+from nautobot.extras.models.secrets import Secret, SecretsGroup, SecretsGroupAssociation
+from nautobot.extras.models.statuses import Status
+from nautobot.extras.models.tags import Tag, TaggedItem
+from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
+from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VMInterface, VirtualMachine
+from social_django.models import Association, Code, Nonce, Partial, UserSocialAuth
+# Shell Plus Django Imports
+from django.core.cache import cache
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import Avg, Case, Count, F, Max, Min, Prefetch, Q, Sum, When
+from django.utils import timezone
+from django.urls import reverse
+from django.db.models import Exists, OuterRef, Subquery
+# Django version 3.2.18
+# Nautobot version 2.0.0a2
+# Example Nautobot App version 1.0.0
+Python 3.8.16 (default, Mar 23 2023, 04:48:11)
+[GCC 10.2.1 20210110] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+(InteractiveConsole)
 >>>
 ```
 
@@ -372,19 +405,18 @@ This will run the following management commands with default settings, in order:
 - `collectstatic`
 - `remove_stale_contenttypes`
 - `clearsessions`
-- `invalidate all`
 
 !!! note
     Commands listed here that are not covered in this document here are Django built-in commands.
+
+--- 2.0.0
+    With the removal of `django-cacheops` from Nautobot, this command no longer runs `invalidate all`.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
 
 `--no-collectstatic`  
 Do not automatically collect static files into a single location.
-
-`--no-invalidate-all`  
-Do not automatically invalidate cache for entire application.
 
 `--no-migrate`  
 Do not automatically perform any database migrations.
@@ -394,6 +426,9 @@ Do not automatically remove stale content types.
 
 `--no-trace-paths`  
 Do not automatically generate missing cable paths.
+
+--- 2.0.0
+    With the removal of `django-cacheops` from Nautobot, the `--no-invalidate-all` flag was removed from this command.
 
 ```no-highlight
 nautobot-server post_upgrade
@@ -425,8 +460,6 @@ Collecting static files...
 Removing stale content types...
 
 Removing expired sessions...
-
-Invalidating cache...
 ```
 
 ### `remove_stale_scheduled_jobs`

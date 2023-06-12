@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0027_job_gitrepository_data_migration"),
     ]

@@ -2,11 +2,10 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.core.fields
+import nautobot.core.models.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0025_add_advanced_ui_boolean_to_customfield_conputedfield_and_relationship"),
     ]
@@ -27,7 +26,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="job",
             name="slug",
-            field=nautobot.core.fields.AutoSlugField(
+            field=nautobot.core.models.fields.AutoSlugField(
                 blank=True,
                 max_length=320,
                 populate_from=["class_path"],

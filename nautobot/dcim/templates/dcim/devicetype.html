@@ -46,10 +46,10 @@
             {% clone_button object %}
         {% endif %}
         {% if perms.dcim.change_devicetype %}
-            {% edit_button object key="pk" %}
+            {% edit_button object %}
         {% endif %}
         {% if perms.dcim.delete_devicetype %}
-            {% delete_button object key="pk" %}
+            {% delete_button object %}
         {% endif %}
 {% endblock buttons %}
 
@@ -115,7 +115,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Instances</td>
+                        <td>Device Instances</td>
                         <td><a href="{% url 'dcim:device_list' %}?device_type_id={{ object.pk }}">{{ instance_count }}</a></td>
                     </tr>
                 </table>

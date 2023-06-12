@@ -1,0 +1,2 @@
+Added migration helper method to check if a model contains duplicate records based on its natural key fields.
+Added migration to check whether all existing Virtual Chassis instances have unique names and to fail if they do not.

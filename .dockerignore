@@ -12,6 +12,10 @@
 !README.md
 !docs
 !mkdocs.yml
+!package.json
+!package-lock.json
 
 # Add specific exclusions
 **/__pycache__
+nautobot/ui/build
+nautobot/ui/node_modules

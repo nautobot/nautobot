@@ -3,17 +3,19 @@ import datetime
 from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
+from django.utils.timezone import make_aware
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Manufacturer, Site
+from nautobot.core.testing import post_data, ViewTestCases
+from nautobot.core.testing.utils import extract_page_body
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, Status, Tag
-from nautobot.ipam.choices import IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.extras.models import CustomField, Role, Status, Tag
+from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -21,8 +23,8 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import ViewTestCases
-from nautobot.utilities.testing.utils import extract_page_body
+from nautobot.users.models import ObjectPermission
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -30,28 +32,27 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         tenants = Tenant.objects.all()[:2]
+        namespace = Namespace.objects.get(name="Global")
 
         cls.form_data = {
             "name": "VRF X",
+            "namespace": namespace.pk,
             "rd": "65000:999",
             "tenant": tenants[0].pk,
-            "enforce_unique": True,
             "description": "A new VRF",
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
         }
 
         cls.csv_data = (
-            "name",
-            "VRF 4",
-            "VRF 5",
-            "VRF 6",
+            "name,rd,namespace",
+            f"VRF 4,abc123,{namespace.name}",
+            f"VRF 5,xyz246,{namespace.name}",
+            f"VRF 6,,{namespace.name}",
         )
 
         cls.bulk_edit_data = {
             "tenant": tenants[1].pk,
-            "enforce_unique": False,
             "description": "New description",
         }
 
@@ -61,7 +62,6 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         tenants = Tenant.objects.all()[:2]
 
         cls.form_data = {
@@ -88,78 +88,24 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        RIR.objects.create(name="RFC N/A")
-        RIR.objects.create(name="MAGICNIC")
-        RIR.objects.create(name="NOTANIC")
-
         cls.form_data = {
             "name": "RIR X",
-            "slug": "rir-x",
             "is_private": True,
             "description": "A new RIR",
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "RIR 4,rir-4,Fourth RIR",
-            "RIR 5,rir-5,Fifth RIR",
-            "RIR 6,rir-6,Sixth RIR",
-            "RIR 7,,Seventh RIR",
-        )
-        cls.slug_source = "name"
-        cls.slug_test_object = RIR.objects.first().name
-
-
-class AggregateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = Aggregate
-
-    @classmethod
-    def setUpTestData(cls):
-        rir = RIR.objects.first()
-
-        cls.form_data = {
-            "prefix": IPNetwork("22.99.0.0/16"),
-            "rir": rir.pk,
-            "date_added": datetime.date(2020, 1, 1),
-            "description": "A new aggregate",
-            "tags": [t.pk for t in Tag.objects.get_for_model(Aggregate)],
-        }
-
-        cls.csv_data = (
-            "prefix,rir",
-            f"22.4.0.0/16,{rir.name}",
-            f"22.5.0.0/16,{rir.name}",
-            f"22.6.0.0/16,{rir.name}",
+            "name,description",
+            "RIR 4,Fourth RIR",
+            "RIR 5,Fifth RIR",
+            "RIR 6,Sixth RIR",
+            "RIR 7,Seventh RIR",
         )
 
-        cls.bulk_edit_data = {
-            "rir": RIR.objects.last().pk,
-            "date_added": datetime.date(2020, 1, 1),
-            "description": "New description",
-        }
-
-
-class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
-    model = Role
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.form_data = {
-            "name": "Role X",
-            "slug": "role-x",
-            "weight": 200,
-            "description": "A new role",
-        }
-
-        cls.csv_data = (
-            "name,slug,weight",
-            "Role 4,role-4,1000",
-            "Role 5,role-5,1000",
-            "Role 6,role-6,1000",
-            "Role 7,,1000",
-        )
-        cls.slug_source = "name"
-        cls.slug_test_object = Role.objects.first().name
+    def setUp(self):
+        super().setUp()
+        # Ensure that we have at least one RIR with no prefixes that can be used for the "delete_object" tests.
+        RIR.objects.create(name="RIR XYZ")
 
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
@@ -167,43 +113,48 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
     @classmethod
     def setUpTestData(cls):
+        rir = RIR.objects.first()
+        namespace = Namespace.objects.get(name="Global")
 
-        sites = Site.objects.all()[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         vrfs = VRF.objects.all()[:2]
 
-        roles = Role.objects.all()[:2]
+        roles = Role.objects.get_for_model(Prefix)[:2]
 
         statuses = Status.objects.get_for_model(Prefix)
-        status_reserved = statuses.get(slug="reserved")
 
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
-            "site": sites[1].pk,
+            "namespace": namespace.pk,
+            "location": locations[1].pk,
             "vrf": vrfs[1].pk,
             "tenant": None,
             "vlan": None,
-            "status": status_reserved.pk,
+            "status": statuses[1].pk,
             "role": roles[1].pk,
-            "is_pool": True,
+            "type": "pool",
+            "rir": rir.pk,
+            "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
             "description": "A new prefix",
             "tags": [t.pk for t in Tag.objects.get_for_model(Prefix)],
         }
 
         cls.csv_data = (
-            "vrf,prefix,status",
-            f"{vrfs[0].name},10.4.0.0/16,active",
-            f"{vrfs[0].name},10.5.0.0/16,active",
-            f"{vrfs[0].name},10.6.0.0/16,active",
+            "vrf,prefix,status,rir,namespace",
+            f"{vrfs[0].name},10.4.0.0/16,{statuses[0].name},{rir.name},{namespace.name}",
+            f"{vrfs[0].name},10.5.0.0/16,{statuses[0].name},{rir.name},{namespace.name}",
+            f"{vrfs[0].name},10.6.0.0/16,{statuses[1].name},{rir.name},{namespace.name}",
         )
 
         cls.bulk_edit_data = {
             "location": None,
-            "site": sites[1].pk,
             "vrf": vrfs[1].pk,
             "tenant": None,
-            "status": status_reserved.pk,
+            "status": statuses[1].pk,
             "role": roles[1].pk,
-            "is_pool": False,
+            "type": "network",
+            "rir": RIR.objects.last().pk,
+            "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
             "description": "New description",
         }
 
@@ -215,8 +166,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
-        s = Status.objects.create(name="nonexistentstatus")
-        s.content_types.add(ContentType.objects.get_for_model(Prefix))
+        status = Status.objects.create(name="nonexistentstatus")
+        status.content_types.add(ContentType.objects.get_for_model(Prefix))
         self.assertNotEqual(prefixes.count(), 0)
 
         url = self._get_url("list")
@@ -234,18 +185,20 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        vrfs = VRF.objects.all()[:2]
-
+        namespace = Namespace.objects.get(name="Global")
         statuses = Status.objects.get_for_model(IPAddress)
-        status_reserved = statuses.get(slug="reserved")
+        roles = Role.objects.get_for_model(IPAddress)
+        parent, _ = Prefix.objects.get_or_create(
+            prefix="192.0.2.0/24",
+            defaults={"namespace": namespace, "status": statuses[0], "type": "network"},
+        )
 
         cls.form_data = {
-            "vrf": vrfs[1].pk,
+            "namespace": namespace.pk,
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
-            "status": status_reserved.pk,
-            "role": IPAddressRoleChoices.ROLE_ANYCAST,
+            "status": statuses[1].pk,
+            "role": roles[0].pk,
             "nat_inside": None,
             "dns_name": "example",
             "description": "A new IP address",
@@ -253,20 +206,60 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "vrf,address,status",
-            f"{vrfs[0].name},192.0.2.4/24,active",
-            f"{vrfs[0].name},192.0.2.5/24,active",
-            f"{vrfs[0].name},192.0.2.6/24,active",
+            "address,status,parent",
+            f"192.0.2.4/24,{statuses[0].name},{parent.natural_key_slug}",
+            f"192.0.2.5/24,{statuses[0].name},{parent.natural_key_slug}",
+            f"192.0.2.6/24,{statuses[0].name},{parent.natural_key_slug}",
         )
 
         cls.bulk_edit_data = {
-            "vrf": vrfs[1].pk,
             "tenant": None,
-            "status": status_reserved.pk,
-            "role": IPAddressRoleChoices.ROLE_ANYCAST,
+            "status": statuses[1].pk,
+            "role": roles[1].pk,
             "dns_name": "example",
             "description": "New description",
         }
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        self.form_data = form_data
+        super().test_edit_object_with_permission()
+
+    # TODO Revise these tests by borrowing the pattern that already exists in nautobot.core.testing.api
+    # where by default the same data is used for both create and edit tests, but you have the option to override one or the other if needed.
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        self.form_data = form_data
+        super().test_edit_object_with_constrained_permission()
+
+    def test_host_non_modifiable_once_set(self):
+        """`host` field of the IPAddress should not be modifiable once the IPAddress is created."""
+        ip_address_1 = self._get_queryset().first()
+        ip_address_2 = self._get_queryset().last()
+
+        # Assign model-level permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("edit", ip_address_1)), 200)
+
+        # Try POST with model-level permission, with a different address from that of ip_address_1
+        # a.k.a Try to modify the host field of ip_address_1
+        self.form_data["address"] = ip_address_2.address
+        request = {
+            "path": self._get_url("edit", ip_address_1),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Host address cannot be changed once created", str(response.content))
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -274,13 +267,12 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         cls.form_data = {
             "name": "VLAN Group X",
             "slug": "vlan-group-x",
-            "site": site.pk,
+            "location": location.pk,
             "description": "A new VLAN group",
         }
 
@@ -300,65 +292,60 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        locations = Location.objects.filter(site__isnull=False)
-        cls.sites = Site.objects.filter(locations__in=locations)
-
-        site_1 = cls.sites.first()
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
+        location_1 = cls.locations.first()
 
         vlangroups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", site=site_1),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", site=cls.sites.last()),
+            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=cls.locations.first()),
+            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=cls.locations.last()),
         )
 
-        roles = (
-            Role.objects.create(name="Role 1", slug="role-1"),
-            Role.objects.create(name="Role 2", slug="role-2"),
-        )
+        roles = Role.objects.get_for_model(VLAN)[:2]
 
         statuses = Status.objects.get_for_model(VLAN)
-        status_active = statuses.get(slug="active")
-        status_reserved = statuses.get(slug="reserved")
+        status_1 = statuses[0]
+        status_2 = statuses[1]
 
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=101,
             name="VLAN101",
-            site=site_1,
+            location=location_1,
             role=roles[0],
-            status=status_active,
-            _custom_field_data={"field": "Value"},
+            status=status_1,
+            _custom_field_data={"custom_field": "Value"},
         )
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=102,
             name="VLAN102",
-            site=site_1,
+            location=location_1,
             role=roles[0],
-            status=status_active,
-            _custom_field_data={"field": "Value"},
+            status=status_1,
+            _custom_field_data={"custom_field": "Value"},
         )
         VLAN.objects.create(
-            group=vlangroups[0],
+            vlan_group=vlangroups[0],
             vid=103,
             name="VLAN103",
-            site=site_1,
+            location=location_1,
             role=roles[0],
-            status=status_active,
-            _custom_field_data={"field": "Value"},
+            status=status_1,
+            _custom_field_data={"custom_field": "Value"},
         )
 
-        custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="field", default="")
+        custom_field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Custom Field", default=""
+        )
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {
-            "location": Location.objects.filter(site=vlangroups[1].site).first().pk,
-            "site": vlangroups[1].site.pk,
-            "group": vlangroups[1].pk,
+            "location": cls.locations.last().pk,
+            "vlan_group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
-            "status": status_reserved.pk,
+            "status": status_2.pk,
             "role": roles[1].pk,
             "description": "A new VLAN",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
@@ -366,61 +353,54 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "vid,name,status",
-            "104,VLAN104,active",
-            "105,VLAN105,active",
-            "106,VLAN106,active",
+            f"104,VLAN104,{status_1.name}",
+            f"105,VLAN105,{status_1.name}",
+            f"106,VLAN106,{status_1.name}",
         )
 
         cls.bulk_edit_data = {
-            "location": Location.objects.filter(site=site_1).first().pk,
-            "site": site_1.pk,
-            "group": vlangroups[0].pk,
+            "location": cls.locations.first().pk,
+            "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
-            "status": status_reserved.pk,
+            "status": status_2.pk,
             "role": roles[0].pk,
             "description": "New description",
         }
 
 
-# TODO: Update base class to PrimaryObjectViewTestCase
-# Blocked by absence of standard creation view
-class ServiceTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Service
 
     @classmethod
     def setUpTestData(cls):
-
-        site = Site.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        device = Device.objects.create(name="Device 1", site=site, device_type=devicetype, device_role=devicerole)
-
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            name="Device 1", location=location, device_type=devicetype, role=devicerole, status=devicestatus
+        )
+        cluster_type = ClusterType.objects.create(name="Circuit Type 2")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=location)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        cls.virtual_machine = VirtualMachine.objects.create(cluster=cluster, name="VM 1", status=vm_status)
         Service.objects.bulk_create(
             [
                 Service(
-                    device=device,
+                    device=cls.device,
                     name="Service 1",
                     protocol=ServiceProtocolChoices.PROTOCOL_TCP,
                     ports=[101],
                 ),
                 Service(
-                    device=device,
+                    device=cls.device,
                     name="Service 2",
                     protocol=ServiceProtocolChoices.PROTOCOL_TCP,
                     ports=[102],
                 ),
                 Service(
-                    device=device,
+                    device=cls.device,
                     name="Service 3",
                     protocol=ServiceProtocolChoices.PROTOCOL_TCP,
                     ports=[103],
@@ -429,21 +409,21 @@ class ServiceTestCase(
         )
 
         cls.form_data = {
-            "device": device.pk,
+            "device": cls.device.pk,
             "virtual_machine": None,
             "name": "Service X",
             "protocol": ServiceProtocolChoices.PROTOCOL_TCP,
             "ports": "104,105",
-            "ipaddresses": [],
+            "ip_addresses": [],
             "description": "A new service",
             "tags": [t.pk for t in Tag.objects.get_for_model(Service)],
         }
 
         cls.csv_data = (
             "device,name,protocol,ports,description",
-            "Device 1,Service 1,tcp,1,First service",
-            "Device 1,Service 2,tcp,2,Second service",
-            "Device 1,Service 3,udp,3,Third service",
+            f"{cls.device.natural_key_slug},Service 4,tcp,1,First service",
+            f"{cls.device.natural_key_slug},Service 5,tcp,2,Second service",
+            f'{cls.device.natural_key_slug},Service 6,udp,"3,4,5",Third service',
         )
 
         cls.bulk_edit_data = {
@@ -451,3 +431,69 @@ class ServiceTestCase(
             "ports": "106,107",
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_duplicate_service_name_on_the_same_device_violates_uniqueness_constraint(self):
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        # Duplicate name for a Service that already exists
+        self.form_data["name"] = "Service 1"
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Service with this Name and Device already exists.", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_service_cannot_be_assigned_to_both_device_and_vm(self):
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        # Input a virtual machine as well in the form data
+        self.form_data["virtual_machine"] = self.virtual_machine.pk
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("A service cannot be associated with both a device and a virtual machine.", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_service_cannot_be_assigned_to_neither_device_nor_vm(self):
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        # Input a virtual machine as well in the form data
+        self.form_data["device"] = None
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("A service must be associated with either a device or a virtual machine.", response_body)

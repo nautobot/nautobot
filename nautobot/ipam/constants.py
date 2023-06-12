@@ -1,5 +1,3 @@
-from django.db.models import Q
-
 from .choices import IPAddressRoleChoices
 
 # BGP ASN bounds
@@ -32,13 +30,10 @@ PREFIX_LENGTH_MAX = 127  # IPv6
 # IPAddresses
 #
 
-IPADDRESS_ASSIGNMENT_MODELS = Q(
-    Q(app_label="dcim", model="interface") | Q(app_label="virtualization", model="vminterface")
-)
-
 IPADDRESS_MASK_LENGTH_MIN = 1
 IPADDRESS_MASK_LENGTH_MAX = 128  # IPv6
 
+# TODO(jathan); Rip this out when we get to the IPAddress.parent work.
 IPADDRESS_ROLES_NONUNIQUE = (
     # IPAddress roles which are exempt from unique address enforcement
     IPAddressRoleChoices.ROLE_ANYCAST,

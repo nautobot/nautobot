@@ -3,13 +3,12 @@
 import django.core.serializers.json
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.core.fields
+import nautobot.core.models.fields
 import taggit.managers
 import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0015_scheduled_job"),
     ]
@@ -33,7 +32,9 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100, unique=True)),
                 (
                     "slug",
-                    nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
+                    nautobot.core.models.fields.AutoSlugField(
+                        blank=True, max_length=100, populate_from="name", unique=True
+                    ),
                 ),
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("provider", models.CharField(max_length=100)),
@@ -62,7 +63,9 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100, unique=True)),
                 (
                     "slug",
-                    nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
+                    nautobot.core.models.fields.AutoSlugField(
+                        blank=True, max_length=100, populate_from="name", unique=True
+                    ),
                 ),
                 ("description", models.CharField(blank=True, max_length=200)),
             ],

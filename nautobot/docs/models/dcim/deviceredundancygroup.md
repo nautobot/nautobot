@@ -48,7 +48,7 @@ query ($device_name: [String]) {
                     name
                     ip_addresses {
                         host
-                        prefix_length
+                        mask_length
                     }
                     parent_interface {
                         name
@@ -98,7 +98,7 @@ We will demonstrate how to execute the command for Primary Unit only, however yo
                                     "ip_addresses": [
                                         {
                                             "host": "172.27.48.0",
-                                            "prefix_length": 31
+                                            "mask_length": 31
                                         }
                                     ],
                                     "parent_interface": {
@@ -118,7 +118,7 @@ We will demonstrate how to execute the command for Primary Unit only, however yo
                                     "ip_addresses": [
                                         {
                                             "host": "172.27.48.1",
-                                            "prefix_length": 31
+                                            "mask_length": 31
                                         }
                                     ],
                                     "parent_interface": {
@@ -172,7 +172,7 @@ failover
 Following snippet represents an example Cisco ASA Failover rendered configuration:
 
 ```python
-from nautobot.utilities.utils import render_jinja2
+from nautobot.core.utils.data import render_jinja2
 
 
 context = dict(

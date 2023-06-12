@@ -3,13 +3,13 @@ from logging import ERROR
 from unittest.mock import Mock, patch
 
 import requests
-from cacheops import CacheMiss, RedisCache
 from django.conf import settings
+from django.core.cache import cache
 from django.test import SimpleTestCase, override_settings
 from packaging import version
 from requests import Response
 
-from nautobot.utilities.tasks import get_releases
+from nautobot.core.tasks import get_releases
 
 
 def successful_github_response(url, *_args, **_kwargs):
@@ -67,10 +67,10 @@ def unsuccessful_github_response(url, *_args, **_kwargs):
 )
 class GetReleasesTestCase(SimpleTestCase):
     @patch.object(requests, "get")
-    @patch.object(RedisCache, "set")
-    @patch.object(RedisCache, "get")
+    @patch.object(cache, "set")
+    @patch.object(cache, "get")
     def test_pre_releases(self, mock_cache_get: Mock, mock_cache_set: Mock, mock_request_get: Mock):
-        mock_cache_get.side_effect = CacheMiss()
+        mock_cache_get.return_value = None
         mock_request_get.side_effect = successful_github_response
 
         releases = get_releases(pre_releases=True)
@@ -99,6 +99,7 @@ class GetReleasesTestCase(SimpleTestCase):
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
+            timeout=15,
         )
 
         # Check if result is put in cache
@@ -107,10 +108,10 @@ class GetReleasesTestCase(SimpleTestCase):
         mock_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
 
     @patch.object(requests, "get")
-    @patch.object(RedisCache, "set")
-    @patch.object(RedisCache, "get")
+    @patch.object(cache, "set")
+    @patch.object(cache, "get")
     def test_no_pre_releases(self, mock_cache_get: Mock, mock_cache_set: Mock, mock_request_get: Mock):
-        mock_cache_get.side_effect = CacheMiss()
+        mock_cache_get.return_value = None
         mock_request_get.side_effect = successful_github_response
 
         releases = get_releases(pre_releases=False)
@@ -135,6 +136,7 @@ class GetReleasesTestCase(SimpleTestCase):
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
+            timeout=15,
         )
 
         # Check if result is put in cache
@@ -143,10 +145,10 @@ class GetReleasesTestCase(SimpleTestCase):
         mock_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
 
     @patch.object(requests, "get")
-    @patch.object(RedisCache, "set")
-    @patch.object(RedisCache, "get")
+    @patch.object(cache, "set")
+    @patch.object(cache, "get")
     def test_failed_request(self, mock_cache_get: Mock, mock_cache_set: Mock, mock_request_get: Mock):
-        mock_cache_get.side_effect = CacheMiss()
+        mock_cache_get.return_value = None
         mock_request_get.side_effect = unsuccessful_github_response
 
         with self.assertLogs(level=ERROR) as cm:
@@ -166,14 +168,15 @@ class GetReleasesTestCase(SimpleTestCase):
             "https://localhost/unittest/releases",
             headers={"Accept": "application/vnd.github.v3+json"},
             proxies=settings.HTTP_PROXIES,
+            timeout=15,
         )
 
         # Check if failure is put in cache
         mock_cache_set.assert_called_once_with("latest_release_no_retry", "https://localhost/unittest/releases", 900)
 
     @patch.object(requests, "get")
-    @patch.object(RedisCache, "set")
-    @patch.object(RedisCache, "get")
+    @patch.object(cache, "set")
+    @patch.object(cache, "get")
     def test_blocked_retry(self, mock_cache_get: Mock, mock_cache_set: Mock, mock_request_get: Mock):
         mock_cache_get.return_value = "https://localhost/unittest/releases"
         mock_request_get.side_effect = successful_github_response

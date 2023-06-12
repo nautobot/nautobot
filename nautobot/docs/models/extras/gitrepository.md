@@ -12,12 +12,15 @@ Some text-based content is more conveniently stored in a separate Git repository
 
 ## Repository Configuration
 
-When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `token` and any associated `username` that can be used to grant access to the repository.
+When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `secrets group` that can be used to gain access to the repository.
 
-!!! warning
-    Beginning in Nautobot 1.2, there are two ways to define a `token` and/or `username` for a Git repository -- either by directly configuring them into the repository definition, or by associating the repository with a [secrets group](./secretsgroup.md) record (this latter approach is new in Nautobot 1.2). The direct-configuration approach should be considered as deprecated, as it is less secure and poses a number of maintainability issues. If at all possible, you should use a secrets group instead. The direct-configuration approach may be removed altogether as an option in a future release of Nautobot.
+!!! note
+    Nautobot currently only supports repositories that can be cloned using the standard git command line, `git clone`. This means App-style integrations like GitHub Apps are not currently supported, as their workflow of managing files leverages a REST API.
 
-The token implementation can vary from Git provider to Git provider, the following providers have been confirmed to work. In theory, additional providers using the same pattern will work, but there is currently no specific support for all providers.
+--- 2.0.0
+    In Nautobot 1.x it was possible to configure the secrets (`username` and/or `token`) for a private Git Repository directly in Nautobot's database. Due to security concerns and maintainability challenges, this option has been removed. To access a private Git repository you now must use Secrets Groups.
+
+The implementation of private repository access can vary from Git provider to Git provider. The following providers have been confirmed to work; in theory, additional providers using the same pattern will work, but there is currently no specific support for all providers.
 
 * GitHub's [`token`](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) does not require a `username`.
 * GitLab's [`token`](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) requires a `username`, conventions are to use the username "oauth2". In addition, GitLab's [deploy tokens](https://docs.gitlab.com/ee/user/project/deploy_tokens/) are also supported.
@@ -64,13 +67,16 @@ Config contexts may be provided as JSON or YAML files located in `/config_contex
 
 The metadata used to create the config context has the following options and is specified by the `_metadata` key.
 
-| Key         | Required | Default | Description                                                                       |
-| ----------- | -------- | ------- | --------------------------------------------------------------------------------- |
-| name        | True     | N/A     | The name that will be assigned to the Config Context                              |
-| weight      | False    | 1000    | The weight that will be assigned to the Config Context that determines precedence |
-| description | False    | N/A     | The description applied to the Config Context                                     |
-| is_active   | False    | True    | Whether or not the Config Context is active                                       |
-| schema      | False    | N/A     | Config Context Schema that it should be validated against                         |
+| Key                    | Required | Default | Description                                                                       |
+|------------------------| -------- | ------- | --------------------------------------------------------------------------------- |
+| name                   | True     | N/A     | The name that will be assigned to the Config Context                              |
+| weight                 | False    | 1000    | The weight that will be assigned to the Config Context that determines precedence |
+| description            | False    | N/A     | The description applied to the Config Context                                     |
+| is_active              | False    | True    | Whether or not the Config Context is active                                       |
+| config_context_schema  | False    | N/A     | Config Context Schema that it should be validated against                         |
+
++/- 2.0.0
+    The key for specifying Config Context Schemas was renamed from `schema` to `config_context_schema`.
 
 There are several other keys that can be defined that match the scope of what the Config Context will be assigned to.
 
@@ -84,7 +90,7 @@ Here is an example `_metadata` key defined:
         "description": "NTP and Syslog servers for region NYC",
         "is_active": true,
         "regions": [{"slug": "nyc"}],
-        "schema": "Config Context Schema 1"
+        "config_context_schema": "Config Context Schema 1"
     },
     "acl": {
         "definitions": {
@@ -175,7 +181,7 @@ The implicit config contexts will be defined using dictionaries for both `_metad
         "weight": 1000,
         "description": "NTP and Syslog servers for region NYC",
         "is_active": true,
-        "schema": "Config Context Schema 1"
+        "config_context_schema": "Config Context Schema 1"
     },
     "ntp-servers": [
         "172.16.10.22",
@@ -196,7 +202,7 @@ _metadata":
   weight: 1000
   description: "NTP and Syslog servers for region NYC"
   is_active: true
-  schema: "Config Context Schema 1"
+  config_context_schema: "Config Context Schema 1"
 
 ntp-servers:
   - 172.16.10.22

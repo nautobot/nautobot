@@ -2,13 +2,13 @@ from django.db.models import Q
 from django.forms import IntegerField
 import django_filters
 
-from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueDateFilter,
     MultiValueNumberFilter,
 )
-from nautobot.utilities.forms import NullableDateField, StaticSelect2Multiple
+from nautobot.core.forms import NullableDateField
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 
 
 EXACT_FILTER_TYPES = (
@@ -31,6 +31,7 @@ class CustomFieldFilterMixin:
         if custom_field.type not in EXACT_FILTER_TYPES:
             if custom_field.filter_logic == CustomFieldFilterLogicChoices.FILTER_LOOSE:
                 kwargs.setdefault("lookup_expr", "icontains")
+        kwargs["widget"] = custom_field.to_form_field(set_initial=False, enforce_required=False).widget
         super().__init__(*args, **kwargs)
         self.field_name = f"_custom_field_data__{self.field_name}"
 

@@ -41,7 +41,7 @@ Nautobot requires access to a supported database service to store data. This ser
 * `HOST` - Name or IP address of the database server (use `localhost` if running locally)
 * `PORT` - The port to use when connecting to the database. An empty string means the default port for your selected backend. (PostgreSQL: `5432`, MySQL: `3306`)
 * `CONN_MAX_AGE` - Lifetime of a [persistent database connection](https://docs.djangoproject.com/en/stable/ref/databases/#persistent-connections), in seconds (300 is the default)
-* `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.
+* `ENGINE` - The database backend to use. This can be either `django.db.backends.postgresql` or `django.db.backends.mysql`.  If `METRICS_ENABLED` is `True` this can also be either `django_prometheus.db.backends.postgresql` or `django_prometheus.db.backends.mysql`
 
 The following environment variables may also be set for each of the above values:
 
@@ -124,64 +124,16 @@ to different Redis instances/databases per feature.
 
 ### Caching
 
-Nautobot supports database query caching using [`django-cacheops`](https://github.com/Suor/django-cacheops).
-
-Caching is configured by defining the [`CACHEOPS_REDIS`](#cacheops_redis) setting which in its simplest form is just a URL.
-
 For more details on Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../additional-features/caching.md).
-
-!!! important
-    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) to perform caching, as `django-cacheops` takes its place.
-
-#### CACHEOPS_REDIS
-
-Default: `"redis://localhost:6379/1"`
-
-Environment Variable: `NAUTOBOT_CACHEOPS_REDIS`
-
-If you wish to use SSL, you may set the URL scheme to `rediss://`, for example:
-
-```python
-CACHEOPS_REDIS = "rediss://localhost:6379/1"
-```
-
-This setting may also be a dictionary style to provide additional options such as custom TLS/SSL settings, for example:
-
-```python
-import ssl
-
-CACHEOPS_REDIS = {
-    "host": os.getenv("NAUTOBOT_REDIS_HOST", "localhost"),
-    "port": int(os.getenv("NAUTOBOT_REDIS_PORT", 6379)),
-    "password": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
-    "ssl": True,
-    "ssl_cert_reqs": ssl.CERT_REQUIRED,
-    "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
-    "ssl_certfile": "/opt/nautobot/redis/tls.crt",
-    "ssl_keyfile": "/opt/nautobot/redis/tls.key",
-}
-```
-
-Additional settings may be available and are not covered here. Please see the official guide on [Cacheops setup](https://github.com/Suor/django-cacheops#setup).
-
-#### CACHEOPS_SENTINEL
-
-Default: `undefined`
-
-If you are using [Redis Sentinel](https://redis.io/topics/sentinel) for high-availability purposes, you must replace the [`CACHEOPS_REDIS`](#cacheops_redis) setting with [`CACHEOPS_SENTINEL`](#cacheops_sentinel). For more details on configuring Nautobot to use Redis Sentinel see [Using Redis Sentinel](../additional-features/caching.md#using-redis-sentinel). For more details on how to configure Cacheops specifically to use Redis Sentinel see the official guide on [Cacheops
-setup](https://github.com/Suor/django-cacheops#setup).
-
-!!! warning
-    [`CACHEOPS_REDIS`](#cacheops_redis) and [`CACHEOPS_SENTINEL`](#cacheops_sentinel) are mutually exclusive and will result in an error if both are set.
 
 ### Task Queuing
 
 #### CACHES
 
-The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects, and also to define centralized Redis connection settings that will be used by RQ. The `CACHES` setting is required to to simplify the configuration for defining queues. *It is not used for caching at this time.*
+The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects. The `CACHES` setting is required to simplify the configuration for `django-redis`.
 
 !!! important
-    Nautobot does not utilize the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching because Cacheops is being used instead as detailed just above. *Yes, we know this is confusing, which is why this is being called out explicitly!*
+    Nautobot also utilizes the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching.
 
 Default:
 
@@ -192,7 +144,7 @@ Default:
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://localhost:6379/0",
+        "LOCATION": "redis://localhost:6379/1",
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -208,105 +160,12 @@ CACHES = {
 }
 ```
 
-### Task Queuing with RQ
-
-+/- 1.1.0
-    Using task queueing with RQ is deprecated in exchange for using Celery. Support for RQ will be removed entirely starting in Nautobot 2.0.
-
-Task queues are configured by defining them within the [`RQ_QUEUES`](#rq_queues) setting.
-
-Nautobot's core functionality relies on several distinct queues and these represent the minimum required set of queues that must be defined. By default, these use identical connection settings as defined in [`CACHES`](#caches) (yes, that's confusing and we'll explain below).
-
-In most cases the default settings will be suitable for production use, but it is up to you to modify the task queues for your environment and know that other use cases such as utilizing specific plugins may require additional queues to be defined.
-
-#### RQ_QUEUES
-
-The default value for this setting defines the queues and instructs RQ to use the `default` Redis connection defined in [`CACHES`](#caches). This is intended to simplify default configuration for the common case.
-
-Please see the [official `django-rq` documentation on support for django-redis connection settings](https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache) for more information.
-
-+/- 1.1.0
-    The `check_releases`, `custom_fields`, and `webhooks` queues are no longer in use by Nautobot but maintained here for backwards compatibility; they will be removed in Nautobot 2.0.
-
-Default:
-
-```python
-RQ_QUEUES = {
-    "default": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "check_releases": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "custom_fields": {
-        "USE_REDIS_CACHE": "default",
-    },
-    "webhooks": {
-        "USE_REDIS_CACHE": "default",
-    },
-}
-```
-
-More verbose dictionary-style configuration is still supported, but is not required unless you absolutely need more advanced task queuing configuration. An example configuration follows:
-
-```python
-RQ_QUEUES = {
-    "default": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    },
-    "webhooks": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    },
-    "check_releases": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    },
-    "custom_fields": {
-        "HOST": "localhost",
-        "PORT": 6379,
-        "DB": 0,
-        "PASSWORD": "",
-        "SSL": False,
-        "DEFAULT_TIMEOUT": 300
-    }
-}
-```
-
-* `HOST` - Name or IP address of the Redis server (use `localhost` if running locally)
-* `PORT` - TCP port of the Redis service; leave blank for default port (6379)
-* `PASSWORD` - Redis password (if set)
-* `DB` - Numeric database ID
-* `SSL` - Use SSL connection to Redis
-* `DEFAULT_TIMEOUT` - The maximum execution time of a background task (such as running a [Job](../additional-features/jobs.md)), in seconds.
-
 The following environment variables may also be set for some of the above values:
 
-* `NAUTOBOT_REDIS_SCHEME`
-* `NAUTOBOT_REDIS_HOST`
-* `NAUTOBOT_REDIS_PORT`
-* `NAUTOBOT_REDIS_PASSWORD`
-* `NAUTOBOT_REDIS_USERNAME`
-* `NAUTOBOT_REDIS_SSL`
-* `NAUTOBOT_REDIS_TIMEOUT`
+* `NAUTOBOT_CACHES_BACKEND`
 
-!!! note
-    If you overload any of the default values in [`CACHES`](#caches) or [`RQ_QUEUES`](#rq_queues) you may be unable to utilize the environment variables, depending on what you change.
-
-For more details on configuring RQ, please see the documentation for [Django RQ installation](https://github.com/rq/django-rq#installation).
++/- 2.0.0
+    The default value of `CACHES["default"]["LOCATION"]` has changed from `redis://localhost:6379/0` to `redis://localhost:6379/1`, as Django's native caching is now taking the role previously occupied by `django-cacheops`.
 
 ### Task Queuing with Celery
 
@@ -353,22 +212,6 @@ High availability clustering of Redis for use with Celery can be performed using
 Environment Variable: `NAUTOBOT_SECRET_KEY`
 
 This is a secret, random string used to assist in the creation new cryptographic hashes for passwords and HTTP cookies. The key defined here should not be shared outside of the configuration file. `SECRET_KEY` can be changed at any time, however be aware that doing so will invalidate all existing sessions.
-
-!!! bug
-    Due to an [unresolved bug in the `django-cryptography` library](https://github.com/georgemarshall/django-cryptography/issues/56), if you have any [Git repositories](../models/extras/gitrepository.md) configured in your database, changing the `SECRET_KEY` will cause errors like:
-
-    ```
-    <class 'django.core.signing.BadSignature'>
-
-    Signature "b'mG5+660ye92rJBEtyZxuorLD6A6tcRmeS7mrGCP9ayg=\n'" does not match
-    ```
-
-    If you encounter this error, it can be resolved in one of two ways:
-
-    1. Change the `SECRET_KEY` back to its previous value, and delete all Git repository records via the UI or API.
-    2. Connect to the database and use SQL commands to delete all Git repository records without needing to revert the `SECRET_KEY`.
-
-Please note that this key is **not** used directly for hashing user passwords or (with the exception of the aforementioned `django-cryptography` bug) for the encrypted storage of secret data in Nautobot.
 
 `SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols.
 

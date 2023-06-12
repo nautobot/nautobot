@@ -7,7 +7,7 @@ This section describes some of the more advanced use cases for the [Docker Compo
 The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/stable/concepts/configuration.html) which you may want to override. Configuration properties include:
 
 - `project_name`: The name that all Docker containers will be grouped together under (default: `nautobot`, resulting in containers named `nautobot_nautobot_1`, `nautobot_redis_1`, etc.)
-- `python_ver`: the Python version which is used to build the Docker container (default: `3.7`)
+- `python_ver`: the Python version which is used to build the Docker container (default: `3.8`)
 - `local`: run the commands in the local environment vs the Docker container (default: `False`)
 - `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
 - `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.postgres.yml", "docker-compose.dev.yml"]`)
@@ -109,32 +109,6 @@ nautobot:
 ```
 
 Then `invoke stop` (if you previously had the docker environment running with Postgres) and `invoke start` and you should now be running with MySQL.
-
-### Running an RQ worker
-
-By default the Docker development environment no longer includes an RQ worker container, as RQ support in Nautobot is deprecated and will be removed entirely in a future release. If you need to run an RQ worker, you can set up `invoke.yml` as described above with the following `docker-compose.override.yml`:
-
-```yaml
----
-services:
-  rq_worker:
-    image: "networktocode/nautobot-dev-py${PYTHON_VER}:local"
-    entrypoint: "nautobot-server rqworker"
-    healthcheck:
-      interval: 60s
-      timeout: 30s
-      start_period: 5s
-      retries: 3
-      test: ["CMD", "nautobot-server", "health_check"]
-    depends_on:
-      - nautobot
-    env_file:
-      - ./dev.env
-    tty: true
-    volumes:
-      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
-      - ../:/source
-```
 
 ### SSO Auth Backend with Keycloak
 

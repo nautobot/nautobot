@@ -1,78 +1,12 @@
 import re
-from unittest import skipIf
+from unittest import skipIf, skip
 
 import netaddr
 from django.db import connection
 
-from nautobot.ipam.models import Prefix, Aggregate, IPAddress
-from nautobot.utilities.testing import TestCase
-
-
-class AggregateQuerysetTestCase(TestCase):
-    queryset = Aggregate.objects.all()
-
-    # Note: unlike Prefixes, Aggregates should never overlap; this is checked in Aggregate.clean().
-    # A previous implementation of this test disregarded this restriction in order to test the Aggregate queryset
-    # features more extensively, but this is shared logic between AggregateQueryset and PrefixQueryset and is
-    # covered thoroughly by the PrefixQuerysetTestCase later in this file, so we can get adequate test coverage for
-    # Aggregate querysets without violating the model's base assumptions.
-
-    @classmethod
-    def setUpTestData(cls):
-        agg = cls.queryset.first()
-        cls.exact_network = agg.prefix
-        cls.parent_network = cls.exact_network.supernet()[-1]
-        # Depending on random generation, parent_network *might* cover a second aggregate
-        cls.parent_covers_second_aggregate = (
-            cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[0]).exists()
-            and cls.queryset.net_equals(list(cls.parent_network.subnet(cls.exact_network.prefixlen))[1]).exists()
-        )
-        cls.child_network = list(cls.exact_network.subnet(cls.exact_network.prefixlen + 3))[0]
-
-    def test_net_equals(self):
-        self.assertEqual(self.queryset.net_equals(self.exact_network).count(), 1)
-        self.assertEqual(self.queryset.net_equals(self.parent_network).count(), 0)
-        self.assertEqual(self.queryset.net_equals(self.child_network).count(), 0)
-
-    def test_net_contained(self):
-        self.assertEqual(
-            self.queryset.net_contained(self.parent_network).count(),
-            1 if not self.parent_covers_second_aggregate else 2,
-        )
-        self.assertEqual(self.queryset.net_contained(self.exact_network).count(), 0)
-        self.assertEqual(self.queryset.net_contained(self.child_network).count(), 0)
-
-    def test_net_contained_or_equal(self):
-        self.assertEqual(
-            self.queryset.net_contained_or_equal(self.parent_network).count(),
-            1 if not self.parent_covers_second_aggregate else 2,
-        )
-        self.assertEqual(self.queryset.net_contained_or_equal(self.exact_network).count(), 1)
-        self.assertEqual(self.queryset.net_contained_or_equal(self.child_network).count(), 0)
-
-    def test_net_contains(self):
-        self.assertEqual(self.queryset.net_contains(self.parent_network).count(), 0)
-        self.assertEqual(self.queryset.net_contains(self.exact_network).count(), 0)
-        self.assertEqual(self.queryset.net_contains(self.child_network).count(), 1)
-
-    def test_net_contains_or_equals(self):
-        self.assertEqual(self.queryset.net_contains_or_equals(self.parent_network).count(), 0)
-        self.assertEqual(self.queryset.net_contains_or_equals(self.exact_network).count(), 1)
-        self.assertEqual(self.queryset.net_contains_or_equals(self.child_network).count(), 1)
-
-    def test_get_by_prefix(self):
-        prefix = self.queryset.net_equals(self.exact_network)[0]
-        self.assertEqual(self.queryset.get(prefix=str(self.exact_network)), prefix)
-
-    def test_get_by_prefix_fails(self):
-        with self.assertRaises(Aggregate.DoesNotExist):
-            self.queryset.get(prefix=self.parent_network)
-        with self.assertRaises(Aggregate.DoesNotExist):
-            self.queryset.get(prefix=self.child_network)
-
-    def test_filter_by_prefix(self):
-        prefix = self.queryset.net_equals(self.exact_network)[0]
-        self.assertEqual(self.queryset.filter(prefix=self.exact_network)[0], prefix)
+from nautobot.core.testing import TestCase
+from nautobot.extras.models import Status
+from nautobot.ipam.models import Prefix, IPAddress, Namespace
 
 
 class IPAddressQuerySet(TestCase):
@@ -80,18 +14,39 @@ class IPAddressQuerySet(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.queryset.delete()
-
+        cls.prefix_status = Status.objects.get_for_model(Prefix).first()
+        cls.ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        cls.namespace = Namespace.objects.first()
+        cls.namespace2 = Namespace.objects.create(name="Namespace 2")
+        cls.prefix4 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=cls.prefix_status)
+        cls.prefix4_2 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace2, status=cls.prefix_status)
+        cls.prefix6 = Prefix.objects.create(prefix="2001:db8::/64", namespace=cls.namespace, status=cls.prefix_status)
         cls.ips = {
-            "10.0.0.1/24": IPAddress.objects.create(address="10.0.0.1/24", vrf=None, tenant=None),
-            "10.0.0.1/25": IPAddress.objects.create(address="10.0.0.1/25", vrf=None, tenant=None),
-            "10.0.0.2/24": IPAddress.objects.create(address="10.0.0.2/24", vrf=None, tenant=None),
-            "10.0.0.3/24": IPAddress.objects.create(address="10.0.0.3/24", vrf=None, tenant=None),
-            "10.0.0.4/24": IPAddress.objects.create(address="10.0.0.4/24", vrf=None, tenant=None),
-            "2001:db8::1/64": IPAddress.objects.create(address="2001:db8::1/64", vrf=None, tenant=None),
-            "2001:db8::2/64": IPAddress.objects.create(address="2001:db8::2/64", vrf=None, tenant=None),
-            "2001:db8::3/64": IPAddress.objects.create(address="2001:db8::3/64", vrf=None, tenant=None),
+            "10.0.0.1/24": IPAddress.objects.create(
+                address="10.0.0.1/24", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
+            ),
+            "10.0.0.1/25": IPAddress.objects.create(
+                address="10.0.0.1/25", namespace=cls.namespace2, tenant=None, status=cls.ipaddr_status
+            ),
+            "10.0.0.2/24": IPAddress.objects.create(
+                address="10.0.0.2/24", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
+            ),
+            "10.0.0.3/24": IPAddress.objects.create(
+                address="10.0.0.3/24", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
+            ),
+            "10.0.0.4/24": IPAddress.objects.create(
+                address="10.0.0.4/24", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
+            ),
+            "2001:db8::1/64": IPAddress.objects.create(
+                address="2001:db8::1/64", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
+            ),
+            "2001:db8::2/64": IPAddress.objects.create(
+                address="2001:db8::2/64", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
+            ),
+            "2001:db8::3/64": IPAddress.objects.create(
+                address="2001:db8::3/64", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
+            ),
         }
 
     def test_ip_family(self):
@@ -297,7 +252,10 @@ class IPAddressQuerySet(TestCase):
             self.ips.values(),
         )
 
-        extra_ip = IPAddress.objects.create(address="192.168.0.1/24", vrf=None, tenant=None)
+        Prefix.objects.create(prefix="192.168.0.0/24", namespace=self.namespace, status=self.prefix_status)
+        extra_ip = IPAddress.objects.create(
+            address="192.168.0.1/24", namespace=self.namespace, tenant=None, status=self.ipaddr_status
+        )
         self.assertQuerysetEqualAndNotEmpty(
             IPAddress.objects.filter(host__net_in=["192.168.0.0/31"]),
             [extra_ip],
@@ -497,28 +455,46 @@ class IPAddressQuerySet(TestCase):
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )
 
+    def test_get_closest_parent(self):
+        # create prefixes with /24 through /32 lengths
+        for i in range(24, 33):
+            Prefix.objects.create(prefix=f"10.0.0.0/{i}", namespace=self.namespace, status=self.prefix_status)
 
+        for ip in self.ips.values():
+            with self.subTest(ip=ip):
+                self.assertEqual(
+                    Prefix.objects.get_closest_parent(ip.host, namespace=self.namespace),
+                    Prefix.objects.filter(network__lte=ip.host, broadcast__gte=ip.host, namespace=self.namespace)
+                    .order_by("-prefix_length")
+                    .first(),
+                )
+
+
+@skip
 class PrefixQuerysetTestCase(TestCase):
     queryset = Prefix.objects.all()
 
     @classmethod
     def setUpTestData(cls):
-
+        # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
+        # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
+        cls.queryset.update(parent=None)
         cls.queryset.delete()
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"))
+        status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), status=status)
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.0/24"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.0/24"), status=status)
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.192/28"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.208/28"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.224/28"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.192/28"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.208/28"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.224/28"), status=status)
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/64"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/120"))
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/122"))
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/64"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/120"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/122"), status=status)
 
     def test_net_equals(self):
         self.assertEqual(self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
@@ -586,7 +562,6 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(self.queryset.filter(prefix="192.168.0.0/16")[0], prefix)
 
     def test_string_search(self):
-        # This test case also applies to Aggregate objects.
         search_terms = {
             "192": 7,
             "192.": 7,

@@ -16,6 +16,9 @@ A Job Hook is a mechanism for automatically starting a [job](../../additional-fe
 
 Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](../../additional-features/jobs.md#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_job_hook`.
 
+!!! warning
+    Requiring approval for execution of Job Hooks by setting the `Meta.approval_required` attribute to `True` on your `JobHookReceiver` subclass is not supported. The value of this attribute will be ignored. Support for requiring approval of Job Hooks will be added in a future release.
+
 !!! important
     To prevent negatively impacting system performance through an infinite loop, a change that was made by a `JobHookReceiver` job will not trigger another `JobHookReceiver` job to run.
 
@@ -34,21 +37,21 @@ class ExampleJobHookReceiver(JobHookReceiver):
 
         # log diff output
         snapshots = change.get_snapshots()
-        self.log_info(f"DIFF: {snapshots['differences']}")
+        self.logger.info("DIFF: %s", snapshots['differences'])
 
         # validate changes to serial field
         if "serial" in snapshots["differences"]["added"]:
             old_serial = snapshots["differences"]["removed"]["serial"]
             new_serial = snapshots["differences"]["added"]["serial"]
-            self.log_info(f"{changed_object} serial has been changed from {old_serial} to {new_serial}")
+            self.logger.info("%s serial has been changed from %s to %s", changed_object, old_serial, new_serial)
 
             # Check the new serial is valid and revert if necessary
             if not self.validate_serial(new_serial):
                 changed_object.serial = old_serial
                 changed_object.save()
-                self.log_info(f"{changed_object} serial {new_serial} was not valid. Reverted to {old_serial}")
+                self.logger.info("%s serial %s was not valid. Reverted to %s", changed_object, new_serial, old_serial)
 
-            self.log_success(message=f"Serial validation completed for {changed_object}")
+            self.logger.info("Serial validation completed for %s", changed_object)
 
     def validate_serial(self, serial):
         # add business logic to validate serial

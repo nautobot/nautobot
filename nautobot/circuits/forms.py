@@ -1,24 +1,7 @@
 from django import forms
 
-from nautobot.dcim.form_mixins import (
-    LocatableModelFilterFormMixin,
-    LocatableModelFormMixin,
-)
-from nautobot.extras.forms import (
-    CustomFieldModelCSVForm,
-    NautobotFilterForm,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
-    StatusModelFilterFormMixin,
-    TagsBulkEditFormMixin,
-)
-from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
-from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     CommentField,
-    CSVModelChoiceField,
     DatePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -26,6 +9,20 @@ from nautobot.utilities.forms import (
     SlugField,
     TagFilterField,
 )
+from nautobot.dcim.form_mixins import (
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
+from nautobot.extras.forms import (
+    NautobotFilterForm,
+    NautobotBulkEditForm,
+    NautobotModelForm,
+    StatusModelBulkEditFormMixin,
+    StatusModelFilterFormMixin,
+    TagsBulkEditFormMixin,
+)
+from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
+from nautobot.tenancy.models import Tenant
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 
@@ -35,14 +32,12 @@ from .models import Circuit, CircuitTermination, CircuitType, Provider, Provider
 
 
 class ProviderForm(NautobotModelForm):
-    slug = SlugField()
     comments = CommentField()
 
     class Meta:
         model = Provider
         fields = [
             "name",
-            "slug",
             "asn",
             "account",
             "portal_url",
@@ -62,12 +57,6 @@ class ProviderForm(NautobotModelForm):
             "noc_contact": "NOC email address and phone number",
             "admin_contact": "Administrative contact email address and phone number",
         }
-
-
-class ProviderCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = Provider
-        fields = Provider.csv_headers
 
 
 class ProviderBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -95,7 +84,7 @@ class ProviderFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     field_order = ["q"]
     q = forms.CharField(required=False, label="Search")
     asn = forms.IntegerField(required=False, label="ASN")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -121,20 +110,6 @@ class ProviderNetworkForm(NautobotModelForm):
         fieldsets = (("Provider Network", ("provider", "name", "slug", "description", "comments", "tags")),)
 
 
-class ProviderNetworkCSVForm(CustomFieldModelCSVForm):
-    provider = CSVModelChoiceField(queryset=Provider.objects.all(), to_field_name="name", help_text="Assigned provider")
-
-    class Meta:
-        model = ProviderNetwork
-        fields = [
-            "provider",
-            "name",
-            "slug",
-            "description",
-            "comments",
-        ]
-
-
 class ProviderNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ProviderNetwork.objects.all(), widget=forms.MultipleHiddenInput)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
@@ -150,10 +125,12 @@ class ProviderNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 class ProviderNetworkFilterForm(NautobotFilterForm):
     model = ProviderNetwork
-    field_order = ["q", "provider_id"]
+    field_order = ["q", "provider"]
     q = forms.CharField(required=False, label="Search")
-    provider_id = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), required=False, label="Provider")
-    tag = TagFilterField(model)
+    provider = DynamicModelMultipleChoiceField(
+        queryset=Provider.objects.all(), required=False, label="Provider", to_field_name="name"
+    )
+    tags = TagFilterField(model)
 
 
 #
@@ -162,24 +139,12 @@ class ProviderNetworkFilterForm(NautobotFilterForm):
 
 
 class CircuitTypeForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = CircuitType
         fields = [
             "name",
-            "slug",
             "description",
         ]
-
-
-class CircuitTypeCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = CircuitType
-        fields = CircuitType.csv_headers
-        help_texts = {
-            "name": "Name of circuit type",
-        }
 
 
 #
@@ -189,14 +154,14 @@ class CircuitTypeCSVForm(CustomFieldModelCSVForm):
 
 class CircuitForm(NautobotModelForm, TenancyForm):
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
-    type = DynamicModelChoiceField(queryset=CircuitType.objects.all())
+    circuit_type = DynamicModelChoiceField(queryset=CircuitType.objects.all())
     comments = CommentField()
 
     class Meta:
         model = Circuit
         fields = [
             "cid",
-            "type",
+            "circuit_type",
             "provider",
             "status",
             "install_date",
@@ -216,42 +181,9 @@ class CircuitForm(NautobotModelForm, TenancyForm):
         }
 
 
-class CircuitCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
-    provider = CSVModelChoiceField(
-        queryset=Provider.objects.all(),
-        to_field_name="name",
-        help_text="Assigned provider",
-    )
-    type = CSVModelChoiceField(
-        queryset=CircuitType.objects.all(),
-        to_field_name="name",
-        help_text="Type of circuit",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = Circuit
-        fields = [
-            "cid",
-            "provider",
-            "type",
-            "status",
-            "tenant",
-            "install_date",
-            "commit_rate",
-            "description",
-            "comments",
-        ]
-
-
 class CircuitBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Circuit.objects.all(), widget=forms.MultipleHiddenInput)
-    type = DynamicModelChoiceField(queryset=CircuitType.objects.all(), required=False)
+    circuit_type = DynamicModelChoiceField(queryset=CircuitType.objects.all(), required=False)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     commit_rate = forms.IntegerField(required=False, label="Commit rate (Kbps)")
@@ -276,28 +208,29 @@ class CircuitFilterForm(
     model = Circuit
     field_order = [
         "q",
-        "type",
+        "circuit_type",
         "provider",
         "provider_network",
         "status",
-        "region",
-        "site",
         "location",
         "tenant_group",
         "tenant",
         "commit_rate",
     ]
     q = forms.CharField(required=False, label="Search")
-    type = DynamicModelMultipleChoiceField(queryset=CircuitType.objects.all(), to_field_name="slug", required=False)
-    provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="slug", required=False)
+    circuit_type = DynamicModelMultipleChoiceField(
+        queryset=CircuitType.objects.all(), to_field_name="name", required=False
+    )
+    provider = DynamicModelMultipleChoiceField(queryset=Provider.objects.all(), to_field_name="name", required=False)
     provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(),
         required=False,
-        query_params={"provider_id": "$provider"},
+        query_params={"provider": "$provider"},
+        to_field_name="slug",
         label="Provider Network",
     )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -314,8 +247,6 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
         model = CircuitTermination
         fields = [
             "term_side",
-            "region",
-            "site",
             "location",
             "provider_network",
             "port_speed",

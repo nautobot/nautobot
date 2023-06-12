@@ -84,7 +84,7 @@ Version [0.1.0]:
 Description []:  An example Nautobot app
 Author [, n to skip]:  Bob Jones
 License []:  Apache 2.0
-Compatible Python versions [^3.8]:  ^3.7
+Compatible Python versions [^3.8]:  ^3.8
 
 Would you like to define your main dependencies interactively? (yes/no) [yes] no
 Would you like to define your development dependencies interactively? (yes/no) [yes] no
@@ -98,7 +98,7 @@ authors = ["Bob Jones"]
 license = "Apache 2.0"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 
 [tool.poetry.dev-dependencies]
 
@@ -151,7 +151,6 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | Name | Default | Description |
 | ---- | ------- | ----------- |
 | `base_url` | Same as specified `name` | Base path to use for app URLs |
-| `caching_config` | `{"*":{"ops":"all"}}` | App-specific [query caching configuration](https://github.com/Suor/django-cacheops#setup) |
 | `config_view_name` | `None` | [URL name](#adding-links-to-the-installed-apps-view) for a "configuration" view defined by this app |
 | `default_settings` | `{}` | A dictionary of configuration parameters and their default values |
 | `home_view_name` | `None` | [URL name](#adding-links-to-the-installed-apps-view) for a "home" or "dashboard" view defined by this app |
@@ -161,12 +160,20 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
 | `min_version` | `None` | Minimum version of Nautobot with which the app is compatible |
 | `required_settings` | `[]` | A list of any configuration parameters that **must** be defined by the user |
+| `searchable_models` | `[]` | A list of model names to include in the global Nautobot search |
+| `constance_config` | `{}` | [Django Constance](#adding-database-backed-config) configuration parameters for settings. |
+
++++ 2.0.0
+    Support for the `searchable_models` and `constance_config` attributes were added.
+
+--- 2.0.0
+    Support for `caching_config` was removed with the removal of `django-cacheops`.
 
 !!! note
     All `required_settings` must be configured in `PLUGINS_CONFIG` in `nautobot_config.py` before the app can be used.
 
 !!! warning
-    If a configuration parameter is listed in both `required_settings` and `default_settings`, the default setting will be ignored.
+    If a configuration parameter is listed in either of `required_settings` or `constance_config`, and also in `default_settings`, the default setting will be ignored.
 
 #### NautobotAppConfig Code Location Attributes
 
@@ -383,7 +390,10 @@ def banner(context, *args, **kwargs):
 
 Apps can extend the existing navigation bar layout. By default, Nautobot looks for a `menu_items` list inside of `navigation.py`. (This can be overridden by setting `menu_items` to a custom value on the app's `NautobotAppConfig`.)
 
-Using a key and weight system, a developer can integrate the app's menu additions amongst existing menu tabs, groups, items and buttons, and/or create entirely new menus as desired.
+Using a key and weight system, a developer can integrate the app's menu additions amongst existing menu tabs, groups, and items.
+
+--- 2.0.0
+    As part of the Nautobot 2.0 UI redesign, the option for apps to add entirely new top-level menu "tabs" has been removed. Additionally, buttons can no longer be added to menu items.
 
 More documentation and examples can be found in the [Navigation Menu](../development/navigation-menu.md) guide.
 
@@ -437,6 +447,83 @@ config = AnimalSoundsConfig
 and now the "Configuration" button that appears in the Installed Plugins table next to "Animal Sounds" will be a link to your configuration view.
 
 Similarly, if your app provides an "app home" or "dashboard" view, you can provide a link for the "Home" button in the Installed Plugins table by defining `home_view_name` on your `NautobotAppConfig` class. This can also be done for documentation by defining `docs_view_name` on your `NautobotAppConfig` class.
+
+### Adding Database Backed Config
+
++++ 2.0.0
+
+Apps can define settings that will be stored in the Database Backend through [Django Constance](https://django-constance.readthedocs.io/en/latest/#). All of the standard Django Constance types are supported. A
+Constance Fieldset will automatically be created for your plugin. We have added the `ConstanceConfigItem`
+namedtuple to assist in the configurations.
+
+```python
+# __init__.py
+from nautobot.apps import ConstanceConfigItem, NautobotAppConfig
+
+class AnimalSoundsConfig(NautobotAppConfig):
+    # ...
+    constance_config = {
+        'DOG': ConstanceConfigItem(default='woof', help_text='Dog sound'),
+        'CAT': ConstanceConfigItem(default='meow', help_text='Cat sound'),
+        'FOX': ConstanceConfigItem(default=123, help_text='Fox sound', field_type=int),
+    }
+```
+
+![Nautobot app in the admin config](../media/plugins/plugin_admin_config.png)
+
+!!! warning
+    Do not store secrets in the constance_config, instead use Nautobot [Secrets](../models/extras/secret.md).
+
+### Overriding Default Model Views in Nautobot Apps
+
++++ 2.0.0
+
+In UI 2.0, Nautobot provides default model views (`ObjectListView`, `ObjectRetrieveView` and etc) for every model including App provided models unless they are explicitly overridden. For example, an app called `your_example_app` wants to override the default `ObjectRetrieveView` for its model called `YourExampleModel` with a customized view called `YourExampleView`. We need to go to the `index.js` file located in the `your_example_app/ui` folder and add a key `view_overrides` to the `app_config` dictionary variable.
+
+```no-highlight
+const app_config = {
+    ...
+    view_overrides: {}
+    ...
+}
+```
+
+In `view_overrides`'s dictionary, you need to specify the app and the model you want to override the default view for in this format `{app_label}: {model_name}`. So in our case, it would be `"your-example-app": "your-example-model"`.
+
+```no-highlight
+...
+    view_overrides: {
+        "your-example-app": "your-example-model": {}
+    }
+...
+```
+
+Finally, you need to specify the default view action you want to override and the new view in this format `{view_action}: {new_view}`. So in our case, it would be `"retrieve": "YourExampleView"`:
+
+```no-highlight
+...
+    view_overrides: {
+        "your-example-app": "your-example-model": {
+            "retrieve": "YourExampleView"
+        }
+    }
+...
+```
+
+Now if you go to `YourExampleModel`'s retrieve view, instead of the default `ObjectRetrieveView`, you will see the customized layout of `YourExampleView`.
+
+If you want to override the default `ObjectListView` as well for `YourExampleModel` with `YourExampleListView`, just append `"list": "YourExampleListView"` to the `"your-example-app": "your-example-model"` dictionary.
+
+```no-highlight
+...
+    view_overrides: {
+        "your-example-app": "your-example-model": {
+            "retrieve": "YourExampleView",
+            "list": "YourExampleListView",
+        }
+    }
+...
+```
 
 ## Extending Existing Functionality
 
@@ -567,7 +654,7 @@ def refresh_git_animals(repository_record, job_result, delete=False):
         job_result.log(
             "Successfully created/updated animal",
             obj=animal_record,
-            level_choice=LogLevelChoices.LOG_SUCCESS,
+            level_choice=LogLevelChoices.LOG_INFO,
             grouping="animals",
         )
 
@@ -615,9 +702,9 @@ def create_site_to_animal_relationship(sender, apps, **kwargs):
 
     # Ensure that the Relationship exists
     Relationship.objects.update_or_create(
-        slug="site-favorite-animal",
+        key="site_favorite_animal",
         defaults={
-            "name": "Site's Favorite Animal",
+            "label": "Site's Favorite Animal",
             "type": RelationshipTypeChoices.TYPE_ONE_TO_MANY,
             "source_type": ContentType.objects.get_for_model(Animal),
             "source_label": "Sites that love this Animal",
@@ -727,7 +814,7 @@ The requirements to extend a filter set or a filter form (or both) are:
 
 Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with _not_ `icontains` using the `ic` and `nic` expressions respectively.
 
-The dynamically-added lookup expressions can be found in the source code at [nautobot/utilities/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/constants.py) and the mapping logic can be found in [nautobot/utilities/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/utilities/filters.py). Please see the documentation on [filtering](../rest-api/filtering.md#lookup-expressions) for more information.
+The dynamically-added lookup expressions can be found in the source code at [nautobot/core/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/constants.py) and the mapping logic can be found in [nautobot/core/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/filters.py). Please see the documentation on [filtering](../rest-api/filtering.md#lookup-expressions) for more information.
 
 !!! tip
     For developers of apps that define their own model filters, note that the above are added dynamically, as long as the class inherits from `nautobot.apps.filters.BaseFilterSet`.
@@ -774,6 +861,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | Feature | `django.db.models.Model` | `BaseModel` | `OrganizationalModel` | `PrimaryModel` |
 | ------- | --------------------- | ----------- | --------------------- | -------------- |
 | UUID primary key | ❌ | ✅ | ✅ | ✅ |
+| [Natural keys](../development/natural-keys.md) | ❌ | ✅ | ✅ | ✅ |
 | [Object permissions](../administration/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../development/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
@@ -781,9 +869,6 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
 | [Note](../models/extras/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
-
-!!! note
-    When using `OrganizationalModel` or `PrimaryModel`, you also must use the `@extras_features` decorator to specify support for (at a minimum) the `"custom_fields"` and `"relationships"` features.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 
@@ -802,6 +887,9 @@ class Animal(BaseModel):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        unique_together = [["name", "sound"]]
 ```
 
 Once you have defined the model(s) for your app, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.
@@ -864,6 +952,18 @@ class AnimalAdmin(NautobotModelAdmin):
 This will display the app and its model in the admin UI. Staff users can create, change, and delete model instances via the admin UI without needing to create a custom view.
 
 ![Nautobot app in the admin UI](../media/plugins/plugin_admin_ui.png)
+
+### Including Models in the Global Search
+
++++ 2.0.0
+
+Simply define a `searchable_models` array on the NautobotAppConfig for your app, listing the lowercase names of the model(s) from your app that you wish to include in the Nautobot global search.
+
+```python
+class AnimalSoundsConfig(NautobotAppConfig):
+    ...
+    searchable_models = ["animal"]
+```
 
 ### Integrating with GraphQL
 
@@ -937,7 +1037,10 @@ GraphQL utility functions:
 1. `execute_query()`: Runs string as a query against GraphQL.
 2. `execute_saved_query()`: Execute a saved query from Nautobot database.
 
-Both functions have the same arguments other than `execute_saved_query()` which requires a slug to identify the saved query rather than a string holding a query.
+Both functions have the same arguments other than `execute_saved_query()` which requires a name to identify the saved query rather than a string holding a query.
+
++/- 2.0.0
+    `execute_saved_query()` now expects a `saved_query_name` rather than a `saved_query_slug`.
 
 For authentication either a request object or user object needs to be passed in. If there is none, the function will error out.
 
@@ -949,7 +1052,7 @@ Arguments:
     * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
     * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
 * `execute_saved_query()`:
-    * `saved_query_slug` (str): Slug of a saved GraphQL query.
+    * `saved_query_name` (str): Name of a saved GraphQL query.
     * `variables` (dict, optional): If the query has variables they need to be passed in as a dictionary.
     * `request` (django.test.client.RequestFactory, optional): Used to authenticate.
     * `user` (django.contrib.auth.models.User, optional): Used to authenticate.
@@ -973,36 +1076,40 @@ Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuit
 Below we provide an example on how to use `NautobotUIViewSet` on a theoretical app model.
 
 ```python
-from nautobot.apps.views import NautobotUIViewset
+from nautobot.apps.views import NautobotUIViewSet
+from yourapp import filters, forms, models, tables
+from yourapp.api import serializers
 
 class YourAppModelUIViewSet(NautobotUIViewSet):
-    bulk_create_form_class = YourAppModelCSVForm
-    bulk_update_form_class = YourAppModelBulkEditForm
-    filterset_class = YourAppModelFilterSet
-    filterset_form_class = YourAppModelFilterForm
-    form_class = YourAppModelForm
-    queryset = YourAppModel.objects.all()
+    bulk_update_form_class = forms.YourAppModelBulkEditForm
+    filterset_class = filters.YourAppModelFilterSet
+    filterset_form_class = forms.YourAppModelFilterForm
+    form_class = forms.YourAppModelForm
+    queryset = models.YourAppModel.objects.all()
     serializer_class = serializers.YourAppModelSerializer
-    table_class = YourAppModelTable
+    table_class = tables.YourAppModelTable
 ```
 
 #### Setting ViewSet Attributes
 
 **One caveat of using the NautobotUIViewSet is that the `queryset`, `serializer_class` and `table_class` attribute of the `YourAppModelUIViewSet` has to be set before most of the `NautobotUIViewSet` functionalities will become available.**
 
-By default the URL patterns generated by a `NautobotUIViewSet` are based on the model's `slug` (`/model-name/<slug>/` for the detail view, `/model-name/<slug>/edit/` for the edit view, etc.). If your model lacks a `slug` field, or if you otherwise need to use a different field to look up an object, just override the default `lookup_field` in your ViewSet attributes:
+By default the URL patterns generated by a `NautobotUIViewSet` are based on the model's `pk` (`/model-name/<pk>/` for the detail view, `/model-name/<pk>/edit/` for the edit view, etc.). if you need to use a different field to look up an object, just override the default `lookup_field` in your ViewSet attributes:
 
 ```python
-from nautobot.apps.views import NautobotUIViewset
+from nautobot.apps.views import NautobotUIViewSet
 
 class YourAppModelUIViewSet(NautobotUIViewSet):
     ...
-    lookup_field = "pk"
+    lookup_field = "slug"
     ...
 ```
 
++/- 2.0.0
+    The default `lookup_field` for `NautobotUIViewSet` has been changed from `"slug"` to `"pk"`.
+
 !!! note
-    Using a field other than the default `slug` or the alternative field `pk` (as shown in the example above), may result in certain pieces of the UI not displaying (for example, the edit and delete buttons on the object detail view). This is due to the URL expecting a named key of slug or pk, rather than id.
+    Using a field other than the default `pk` or the alternative field `slug` (as shown in the example above), may result in certain pieces of the UI not displaying (for example, the edit and delete buttons on the object detail view). This is due to the URL expecting a named key of slug or pk, rather than id.
 
 #### View Template Context
 
@@ -1043,10 +1150,12 @@ Other context keys may be available for certain views:
 
 You may see other context keys as well, but any not documented above should not be relied upon as they may be removed in a future release. Some examples of those are:
 
-* `changelog_url`: This can now be retrieved from the object itself, via `object.get_changelog_url`, if the object supports change-logging
 * `obj`: Please use `object` instead
 * `obj_type`: Please use `verbose_name` instead
 * `obj_type_plural`: Please use `verbose_name_plural` instead
+
+--- 2.0.0
+    The `changelog_url` context key was removed. Use `object.get_changelog_url` instead.
 
 #### Excluding ViewMixins from NautobotUIViewSet
 
@@ -1125,13 +1234,13 @@ urlpatterns = [
     # changelog, notes and etc.
     ...
     path(
-        "yourappmodels/<slug:slug>/changelog/",
+        "yourappmodels/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="yourappmodel_changelog",
         kwargs={"model": yourappmodel},
     ),
     path(
-        "yourappmodels/<slug:slug>/notes/",
+        "yourappmodels/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="yourappmodel_notes",
         kwargs={"model": yourappmodel},
@@ -1365,7 +1474,7 @@ try:
     from nautobot.extras.views import ObjectNotesView
     urlpatterns.append(
         path(
-            'random/<slug:slug>/notes/),
+            'random/<uuid:pk>/notes/),
             ObjectNotesView.as_view(),
             name="random_notes",
             kwargs={"model": Random},

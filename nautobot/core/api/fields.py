@@ -1,5 +1,4 @@
 from collections import OrderedDict
-
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -8,6 +7,7 @@ from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
 
 
+# TODO: why is this not a serializers.ChoiceField subclass??
 class ChoiceField(serializers.Field):
     """
     Represent a ChoiceField as {'value': <DB value>, 'label': <string>}. Accepts a single value on write.
@@ -51,9 +51,18 @@ class ChoiceField(serializers.Field):
                 return data
             raise ValidationError("This field may not be blank.")
 
+        if isinstance(data, dict):
+            if "value" in data:
+                data = data["value"]
+            else:
+                raise ValidationError(
+                    'Value must be passed directly (e.g. "foo": 123) '
+                    'or as a dict with key "value" (e.g. "foo": {"value": 123}).'
+                )
+
         # Provide an explicit error message if the request is trying to write a dict or list
-        if isinstance(data, (dict, list)):
-            raise ValidationError('Value must be passed directly (e.g. "foo": 123); do not use a dictionary or list.')
+        if isinstance(data, list):
+            raise ValidationError('Value must be passed directly (e.g. "foo": 123); do not use a list.')
 
         # Check for string representations of boolean/integer values
         if hasattr(data, "lower"):
@@ -103,6 +112,25 @@ class ContentTypeField(RelatedField):
 
     def to_representation(self, obj):
         return f"{obj.app_label}.{obj.model}"
+
+
+class ObjectTypeField(serializers.CharField):
+    """
+    Represent the ContentType of this serializer's model as "<app_label>.<model>".
+    """
+
+    def __init__(self, *args, read_only=True, source="*", **kwargs):  # pylint: disable=useless-parent-delegation
+        """Default read_only to True as this should never be a writable field."""
+        super().__init__(*args, read_only=read_only, source=source, **kwargs)
+
+    def to_representation(self, _value):
+        """
+        Get the content-type of this serializer's model.
+
+        Implemented this way because `_value` may be None when generating the schema.
+        """
+        model = self.parent.Meta.model
+        return model._meta.label_lower
 
 
 class SerializedPKRelatedField(PrimaryKeyRelatedField):

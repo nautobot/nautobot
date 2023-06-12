@@ -35,6 +35,9 @@ PLUGINS = [
     "example_plugin",
 ]
 
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE = None
 
 #
 # Development Environment for SSO
@@ -51,7 +54,9 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
     )
     SOCIAL_AUTH_KEYCLOAK_KEY = "nautobot"
     SOCIAL_AUTH_KEYCLOAK_SECRET = "7b1c3527-8702-4742-af69-2b74ee5742e8"
-    SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8087/realms/nautobot/").json()["public_key"]
+    SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8087/realms/nautobot/", timeout=15).json()[
+        "public_key"
+    ]
     SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL = "http://localhost:8087/realms/nautobot/protocol/openid-connect/auth"
     SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False

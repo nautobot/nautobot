@@ -1,14 +1,9 @@
-try:
-    from importlib import metadata
-except ImportError:
-    # Python version < 3.8
-    import importlib_metadata as metadata
+from importlib import metadata
 
 __version__ = metadata.version(__name__)
 
 
-from nautobot.core.signals import nautobot_database_ready
-from nautobot.apps import NautobotAppConfig
+from nautobot.apps import ConstanceConfigItem, NautobotAppConfig, nautobot_database_ready
 
 from example_plugin.signals import nautobot_database_ready_callback
 
@@ -26,8 +21,14 @@ class ExamplePluginConfig(NautobotAppConfig):
     middleware = ["example_plugin.middleware.ExampleMiddleware"]
     installed_apps = ["nautobot.extras.tests.example_plugin_dependency"]
     default_settings = {
-        "example_default_key": "example_default_value",
+        "ANOTHER_SAMPLE_VARIABLE": "example_default_value",
     }
+    constance_config = {
+        "SAMPLE_VARIABLE": ConstanceConfigItem(
+            default="example_default_value", help_text="Example of supplying a setting through Django Constance."
+        ),
+    }
+    searchable_models = ["examplemodel"]
 
     # URL reverse lookup names
     home_view_name = "plugins:example_plugin:home"

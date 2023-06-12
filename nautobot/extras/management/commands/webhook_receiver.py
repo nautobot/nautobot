@@ -11,7 +11,6 @@ class WebhookHandler(BaseHTTPRequestHandler):
     show_headers = True
 
     def __getattr__(self, item):
-
         # Return the same method for any type of HTTP request (GET, POST, etc.)
         if item.startswith("do_"):
             return self.do_ANY

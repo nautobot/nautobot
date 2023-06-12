@@ -4,13 +4,12 @@ import django.core.serializers.json
 from django.core.validators import MinValueValidator
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.core.fields
+import nautobot.core.models.fields
 import taggit.managers
 import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0022_objectchange_object_datav2"),
     ]
@@ -36,7 +35,7 @@ class Migration(migrations.Migration):
                 ("job_class_name", models.CharField(db_index=True, editable=False, max_length=100)),
                 (
                     "slug",
-                    nautobot.core.fields.AutoSlugField(
+                    nautobot.core.models.fields.AutoSlugField(
                         blank=True,
                         max_length=320,
                         populate_from=["source", "module_name", "job_class_name"],

@@ -42,6 +42,9 @@ The Nautobot plugin architecture allows for plugins to do any or all of the foll
 * **Add new REST API endpoints.** A plugin can register URLs under the `/api/plugins/` root path to provide new REST API views.
 * **Add custom middleware.** A plugin can provide and register custom Django middleware.
 
++++ 2.0.0
+    * **Register data models for the global search.** A plugin's data models can easily be included in the top-level "global" search.
+
 ### Declare dependencies and requirements
 
 * **Declare configuration parameters.** A plugin can define required, optional, and default configuration parameters within its unique namespace. Plugin configuration parameters are configurable under [`PLUGINS_CONFIG`](../configuration/optional-settings.md#plugins_config) in `nautobot_config.py`.

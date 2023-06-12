@@ -236,6 +236,7 @@ class NetIn(Lookup):
         # This is to satisfy an issue with django cacheops, specifically this line:
         # https://github.com/Suor/django-cacheops/blob/a5ed1ac28c7259f5ad005e596cc045d1d61e2c51/cacheops/query.py#L175
         # Without 1, and one 1 value as %s, will result in stacktrace. A non-impacting condition is added to the query
+        # TODO: Although we don't use cacheops now, removing this code causes a traceback in MySQL? Leaving for now
         if _connection.vendor == "mysql":
             self.query_starter = "'1' NOT IN %s AND "
         elif _connection.vendor == "postgresql":

@@ -16,7 +16,7 @@ from django.utils.http import is_safe_url
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
-from nautobot.utilities.forms import ConfirmationForm
+from nautobot.core.forms import ConfirmationForm
 from .forms import LoginForm, PasswordChangeForm, TokenForm
 from .models import Token
 
@@ -120,7 +120,6 @@ class ProfileView(LoginRequiredMixin, View):
     template_name = "users/profile.html"
 
     def get(self, request):
-
         return render(
             request,
             self.template_name,
@@ -135,7 +134,6 @@ class UserConfigView(LoginRequiredMixin, View):
     template_name = "users/preferences.html"
 
     def get(self, request):
-
         return render(
             request,
             self.template_name,
@@ -220,7 +218,6 @@ class ChangePasswordView(LoginRequiredMixin, View):
 
 class TokenListView(LoginRequiredMixin, View):
     def get(self, request):
-
         tokens = Token.objects.filter(user=request.user)
 
         return render(
@@ -236,7 +233,6 @@ class TokenListView(LoginRequiredMixin, View):
 
 class TokenEditView(LoginRequiredMixin, View):
     def get(self, request, pk=None):
-
         if pk is not None:
             if not request.user.has_perm("users.change_token"):
                 return HttpResponseForbidden()
@@ -261,7 +257,6 @@ class TokenEditView(LoginRequiredMixin, View):
         )
 
     def post(self, request, pk=None):
-
         if pk is not None:
             token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
             form = TokenForm(request.POST, instance=token)
@@ -297,7 +292,6 @@ class TokenEditView(LoginRequiredMixin, View):
 
 class TokenDeleteView(LoginRequiredMixin, View):
     def get(self, request, pk):
-
         token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
         initial_data = {
             "return_url": reverse("user:token_list"),
@@ -316,7 +310,6 @@ class TokenDeleteView(LoginRequiredMixin, View):
         )
 
     def post(self, request, pk):
-
         token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
         form = ConfirmationForm(request.POST)
         if form.is_valid():

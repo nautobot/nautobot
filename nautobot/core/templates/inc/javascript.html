@@ -37,18 +37,4 @@
     window.addEventListener("resize", setBodyPaddingTop);
     window.addEventListener("load", setBodyPaddingTop);
 
-    /*
-    Dropdown menu overflow screen view control
-    */
-    $(".dropdown .dropdown-toggle").on("click", function(){
-        var dropdown = $(this).next("ul");
-        var distanceOfDropDownFromNavStart = $(this).offset().left + dropdown.width();
-        var navBarWidth = $(".nav.navbar-nav").width();
-        var isEntirelyVisible = (distanceOfDropDownFromNavStart <= navBarWidth);
-
-        if (!isEntirelyVisible)
-            dropdown.addClass('edge');
-        else
-            dropdown.removeClass('edge');
-    })
 </script>

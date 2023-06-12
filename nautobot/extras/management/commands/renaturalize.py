@@ -1,7 +1,7 @@
 from django.apps import apps
 from django.core.management.base import BaseCommand, CommandError
 
-from nautobot.utilities.fields import NaturalOrderingField
+from nautobot.core.models.fields import NaturalOrderingField
 
 
 class Command(BaseCommand):
@@ -55,7 +55,6 @@ class Command(BaseCommand):
         return models
 
     def handle(self, *args, **options):
-
         models = self._get_models(args)
 
         if options["verbosity"]:

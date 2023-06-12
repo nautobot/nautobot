@@ -1,17 +1,19 @@
+import itertools
 import logging
 import platform
 from collections import OrderedDict
 
-from django import __version__ as DJANGO_VERSION
+from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
-from django.shortcuts import redirect
-from django_rq.queues import get_connection as get_rq_connection
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import NoReverseMatch, reverse as django_reverse
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -23,7 +25,6 @@ from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
-from rq.worker import Worker as RQWorker
 
 from graphql import get_default_backend
 from graphql.execution import ExecutionResult
@@ -32,18 +33,19 @@ from graphql.execution.middleware import MiddlewareManager
 from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
-from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
-from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import (
-    get_all_lookup_expr_for_field,
-    get_filterset_parameter_form_field,
-    get_form_for_model,
-    FilterSetFieldNotFound,
-    ensure_content_type_and_field_name_inquery_params,
-)
+from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.celery import app as celery_app
+from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
+from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
+from nautobot.extras.registry import registry
 from . import serializers
+
 
 HTTP_ACTIONS = {
     "GET": "view",
@@ -54,7 +56,6 @@ HTTP_ACTIONS = {
     "PATCH": "change",
     "DELETE": "delete",
 }
-
 
 #
 # Mixins
@@ -73,29 +74,6 @@ class NautobotAPIVersionMixin:
         except AttributeError:
             pass
         return response
-
-
-class BulkCreateModelMixin:
-    """
-    Bulk create multiple model instances by using the
-    Serializers ``many=True`` ability from Django REST >= 2.2.5.
-
-    .. note::
-        This mixin uses the same method to create model instances
-        as ``CreateModelMixin`` because both non-bulk and bulk
-        requests will use ``POST`` request method.
-    """
-
-    def bulk_create(self, request, *args, **kwargs):
-        return self.perform_bulk_create(request)
-
-    def perform_bulk_create(self, request):
-        with transaction.atomic():
-            serializer = self.get_serializer(data=request.data, many=True)
-            serializer.is_valid(raise_exception=True)
-            # 2.0 TODO: this should be wrapped with a paginator so as to match the same format as the list endpoint,
-            # i.e. `{"results": [{instance}, {instance}, ...]}` instead of bare list `[{instance}, {instance}, ...]`
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class BulkUpdateModelMixin:
@@ -189,49 +167,66 @@ class BulkDestroyModelMixin:
 
 
 class ModelViewSetMixin:
-    brief = False
-    # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
-    # select_related
-    brief_prefetch_fields = []
+    logger = logging.getLogger(__name__ + ".ModelViewSet")
+
+    # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
+    #       UUID PKs and also do NOT support natural-key-slugs.
+    #       The impact of NOT setting this is that per the OpenAPI schema, only UUIDs are permitted for most ViewSets;
+    #       however, "secretly" due to our custom get_object() implementation below, you can actually also specify a
+    #       natural_key_slug value instead of a UUID. We're not currently documenting/using this feature, so OK for now
+    # lookup_value_regex = r"[^/]+"
+
+    def get_object(self):
+        """Extend rest_framework.generics.GenericAPIView.get_object to allow "pk" lookups to use a natural-key-slug."""
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+
+        assert lookup_url_kwarg in self.kwargs, (
+            f"Expected view {self.__class__.__name__} to be called with a URL keyword argument named "
+            f'"{lookup_url_kwarg}". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.'
+        )
+
+        if lookup_url_kwarg == "pk" and hasattr(queryset.model, "natural_key_slug"):
+            # Support lookup by either PK (UUID) or natural_key_slug
+            lookup_value = self.kwargs["pk"]
+            if is_uuid(lookup_value):
+                obj = get_object_or_404(queryset, pk=lookup_value)
+            else:
+                obj = get_object_or_404(queryset, natural_key_slug=lookup_value)
+        else:
+            # Default DRF lookup behavior, just in case a viewset has overridden `lookup_url_kwarg` for its own needs
+            obj = get_object_or_404(queryset, **{self.lookup_field: self.kwargs[lookup_url_kwarg]})
+
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
     def get_serializer(self, *args, **kwargs):
-
         # If a list of objects has been provided, initialize the serializer with many=True
         if isinstance(kwargs.get("data", {}), list):
             kwargs["many"] = True
 
         return super().get_serializer(*args, **kwargs)
 
-    def get_serializer_class(self):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-
-        # If using 'brief' mode, find and return the nested serializer for this model, if one exists
-        if self.brief:
-            logger.debug("Request is for 'brief' format; initializing nested serializer")
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if "text/csv" in self.request.accepted_media_type:
+            # CSV rendering should always use depth 1
+            context["depth"] = 1
+        elif self.request.method == "GET":
+            # Only allow the depth to be greater than 0 in GET requests
+            depth = 0
             try:
-                serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-                logger.debug(f"Using serializer {serializer}")
-                return serializer
-            except SerializerNotFound:
-                logger.debug(f"Nested serializer for {self.queryset.model} not found!")
+                depth = int(self.request.query_params.get("depth", 0))
+            except ValueError:
+                self.logger.warning("The depth parameter must be an integer between 0 and 10")
 
-        # Fall back to the hard-coded serializer class
-        return self.serializer_class
+            context["depth"] = depth
+        else:
+            # Use depth=0 in all write type requests.
+            context["depth"] = 0
 
-    def get_queryset(self):
-        # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
-        if self.brief:
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
-
-        return super().get_queryset()
-
-    def initialize_request(self, request, *args, **kwargs):
-        # Check if brief=True has been passed
-        if request.method == "GET" and request.GET.get("brief"):
-            self.brief = True
-
-        return super().initialize_request(request, *args, **kwargs)
+        return context
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
@@ -243,9 +238,9 @@ class ModelViewSetMixin:
         """
         # Restrict the view's QuerySet to allow only the permitted objects for the given user, if applicable
         if request.user.is_authenticated:
-            action = HTTP_ACTIONS[request.method]
-            if action:
-                self.queryset = self.queryset.restrict(request.user, action)
+            http_action = HTTP_ACTIONS[request.method]
+            if http_action:
+                self.queryset = self.queryset.restrict(request.user, http_action)
 
     def initial(self, request, *args, **kwargs):
         """
@@ -264,16 +259,87 @@ class ModelViewSetMixin:
         self.restrict_queryset(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-
         try:
             return super().dispatch(request, *args, **kwargs)
         except ProtectedError as e:
             protected_objects = list(e.protected_objects)
             msg = f"Unable to delete object. {len(protected_objects)} dependent objects were found: "
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
-            logger.warning(msg)
+            self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
+
+    @action(detail=True, url_path="detail-view-config")
+    def detail_view_config(self, request, pk):
+        """
+        Return a JSON of the ObjectDetailView configuration
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+        obj_serializer_class = get_serializer_for_model(obj)
+        obj_serializer = obj_serializer_class(data=None)
+        response = self.get_detail_view_config(obj_serializer)
+        response = Response(response)
+        return response
+
+    def get_detail_view_config(self, obj_serializer):
+        all_fields = list(obj_serializer.get_fields().keys())
+        header_fields = ["display", "status", "created", "last_updated"]
+        extra_fields = ["object_type", "relationships", "computed_fields", "custom_fields"]
+        advanced_fields = ["id", "url", "display", "natural_key_slug", "slug", "notes_url"]
+        plugin_tab_1_fields = ["field_1", "field_2", "field_3"]
+        plugin_tab_2_fields = ["field_1", "field_2", "field_3"]
+        main_fields = [
+            field
+            for field in all_fields
+            if field not in header_fields and field not in extra_fields and field not in advanced_fields
+        ]
+        response = {
+            "main": [
+                {
+                    "name": obj_serializer.Meta.model._meta.model_name,
+                    "fields": main_fields,
+                    "colspan": 2,
+                    "rowspan": len(main_fields),
+                },
+                {
+                    "name": "extra",
+                    "fields": extra_fields,
+                    "colspan": 2,
+                    "rowspan": len(extra_fields),
+                },
+            ],
+            "advanced": [
+                {
+                    "name": "advanced data",
+                    "fields": advanced_fields,
+                    "colspan": 3,
+                    "rowspan": len(advanced_fields),
+                    "advanced": "true",
+                }
+            ],
+            "plugin_tab_1": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": 3,
+                    "rowspan": len(plugin_tab_1_fields),
+                },
+                {
+                    "name": "extra_plugin_data",
+                    "fields": plugin_tab_1_fields,
+                    "colspan": 1,
+                    "rowspan": len(plugin_tab_1_fields),
+                },
+            ],
+            "plugin_tab_2": [
+                {
+                    "name": "plugin_data",
+                    "fields": plugin_tab_2_fields,
+                    "colspan": 3,
+                    "rowspan": len(plugin_tab_2_fields),
+                }
+            ],
+        }
+        return response
 
 
 class ModelViewSet(
@@ -286,6 +352,8 @@ class ModelViewSet(
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
     """
+
+    logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     def _validate_objects(self, instance):
         """
@@ -303,8 +371,7 @@ class ModelViewSet(
 
     def perform_create(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Creating new {model._meta.verbose_name}")
+        self.logger.info(f"Creating new {model._meta.verbose_name}")
 
         # Enforce object-level permissions on save()
         try:
@@ -316,8 +383,7 @@ class ModelViewSet(
 
     def perform_update(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
+        self.logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
 
         # Enforce object-level permissions on save()
         try:
@@ -329,8 +395,7 @@ class ModelViewSet(
 
     def perform_destroy(self, instance):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
+        self.logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
 
         return super().perform_destroy(instance)
 
@@ -358,7 +423,6 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-
         return Response(
             OrderedDict(
                 (
@@ -422,8 +486,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "nautobot-version": {"type": "string"},
                     "plugins": {"type": "object"},
                     "python-version": {"type": "string"},
-                    # 2.0 TODO: remove rq-workers-running property
-                    "rq-workers-running": {"type": "integer"},
                     "celery-workers-running": {"type": "integer"},
                 },
             }
@@ -460,8 +522,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "nautobot-version": settings.VERSION,
                 "plugins": plugins,
                 "python-version": platform.python_version(),
-                # 2.0 TODO: remove rq-workers-running
-                "rq-workers-running": RQWorker.count(get_rq_connection("default")),
                 "celery-workers-running": worker_count,
             }
         )
@@ -715,6 +775,154 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 
 
 #
+# UI Views
+#
+
+
+class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
+    """API View that returns the nav-menu content applicable to the requesting user."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        """Get the menu data for the requesting user.
+
+        Returns the following data-structure (as not all context in registry["nav_menu"] is relevant to the UI):
+
+        {
+            "Inventory": {
+                "Devices": {
+                    "Devices": "/dcim/devices/",
+                    "Device Types": "/dcim/device-types/",
+                    ...
+                    "Connections": {
+                        "Cables": "/dcim/cables/",
+                        "Console Connections": "/dcim/console-connections/",
+                        ...
+                    },
+                    ...
+                },
+                "Organization": {
+                    ...
+                },
+                ...
+            },
+            "Networks": {
+                ...
+            },
+            "Security": {
+                ...
+            },
+            "Automation": {
+                ...
+            },
+            "Platform": {
+                ...
+            },
+        }
+        """
+        base_menu = registry["nav_menu"]
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+
+        filtered_menu = {}
+        for context, context_details in base_menu.items():
+            if HIDE_RESTRICTED_UI and not any(
+                request.user.has_perm(permission) for permission in context_details["permissions"]
+            ):
+                continue
+            filtered_menu[context] = {}
+            for group_name, group_details in context_details["groups"].items():
+                if HIDE_RESTRICTED_UI and not any(
+                    request.user.has_perm(permission) for permission in group_details["permissions"]
+                ):
+                    continue
+                filtered_menu[context][group_name] = {}
+                for item_name, item_details in group_details["items"].items():
+                    if HIDE_RESTRICTED_UI and not any(
+                        request.user.has_perm(permission) for permission in item_details["permissions"]
+                    ):
+                        continue
+                    if "items" in item_details:
+                        # It's a sub-group
+                        filtered_menu[context][group_name][item_name] = {}
+                        for subitem_name, subitem_details in item_details["items"].items():
+                            if HIDE_RESTRICTED_UI and not any(
+                                request.user.has_perm(perm) for perm in subitem_details["permissions"]
+                            ):
+                                continue
+                            filtered_menu[context][group_name][item_name][subitem_name] = subitem_details["link"]
+                    else:
+                        # It's a menu item
+                        filtered_menu[context][group_name][item_name] = item_details["link"]
+
+        return Response(filtered_menu)
+
+
+class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
+    """
+    Enumerate the models listed on the Nautobot home page and return data structure
+    containing verbose_name_plural, url and count.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        object_counts = {
+            "Inventory": [
+                {"model": "dcim.rack"},
+                {"model": "dcim.devicetype"},
+                {"model": "dcim.device"},
+                {"model": "dcim.virtualchassis"},
+                {"model": "dcim.deviceredundancygroup"},
+                {"model": "dcim.cable"},
+            ],
+            "Networks": [
+                {"model": "ipam.vrf"},
+                {"model": "ipam.prefix"},
+                {"model": "ipam.ipaddress"},
+                {"model": "ipam.vlan"},
+            ],
+            "Security": [{"model": "extras.secret"}],
+            "Platform": [
+                {"model": "extras.gitrepository"},
+                {"model": "extras.relationship"},
+                {"model": "extras.computedfield"},
+                {"model": "extras.customfield"},
+                {"model": "extras.customlink"},
+                {"model": "extras.tag"},
+                {"model": "extras.status"},
+                {"model": "extras.role"},
+            ],
+        }
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+
+        for entry in itertools.chain(*object_counts.values()):
+            app_label, model_name = entry["model"].split(".")
+            model = apps.get_model(app_label, model_name)
+            permission = get_permission_for_model(model, "view")
+            if HIDE_RESTRICTED_UI and not request.user.has_perm(permission):
+                continue
+            data = {"name": model._meta.verbose_name_plural}
+            try:
+                data["url"] = django_reverse(get_route_for_model(model, "list"))
+            except NoReverseMatch:
+                logger = logging.getLogger(__name__)
+                route = get_route_for_model(model, "list")
+                logger.warning(f"Handled expected exception when generating filter field: {route}")
+            manager = model.objects
+            if request.user.has_perm(permission):
+                if hasattr(manager, "restrict"):
+                    data["count"] = model.objects.restrict(request.user).count()
+                else:
+                    data["count"] = model.objects.count()
+            entry.update(data)
+
+        return Response(object_counts)
+
+
+#
 # Lookup Expr
 #
 
@@ -727,7 +935,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPIView(NautobotAPIVersionMixin, A
     @extend_schema(exclude=True)
     def get(self, request):
         try:
-            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+            field_name, model = ensure_content_type_and_field_name_in_query_params(request.GET)
             data = get_all_lookup_expr_for_field(model, field_name)
         except FilterSetFieldNotFound:
             return Response("field_name not found", status=404)
@@ -754,24 +962,28 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
     @extend_schema(exclude=True)
     def get(self, request):
         try:
-            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+            field_name, model = ensure_content_type_and_field_name_in_query_params(request.GET)
         except ValidationError as err:
             return Response(err.args[0], status=err.code)
-        model_form = get_form_for_model(model)
-        if model_form is None:
-            logger = logging.getLogger(__name__)
-
-            logger.warning(f"Form for {model} model not found")
-            # Because the DOM Representation cannot be derived from a CharField without a Form, the DOM Representation must be hardcoded.
-            return Response(
-                {
-                    "dom_element": f"<input type='text' name='{field_name}' class='form-control lookup_value-input' id='id_{field_name}'>"
-                }
-            )
         try:
             form_field = get_filterset_parameter_form_field(model, field_name)
         except FilterSetFieldNotFound:
             return Response("field_name not found", 404)
 
-        field_dom_representation = form_field.get_bound_field(model_form(auto_id="id_for_%s"), field_name).as_widget()
-        return Response({"dom_element": field_dom_representation})
+        try:
+            model_form = get_form_for_model(model)
+            model_form_instance = model_form(auto_id="id_for_%s")
+        except Exception as err:
+            # Cant determine the exceptions to handle because any exception could be raised,
+            # e.g InterfaceForm would raise a ObjectDoesNotExist Error since no device was provided
+            # While other forms might raise other errors, also if model_form is None a TypeError would be raised.
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Handled expected exception when generating filter field: {err}")
+
+            # Create a temporary form and get a BoundField for the specified field
+            # This is necessary to generate the HTML representation using as_widget()
+            TempForm = type("TempForm", (forms.Form,), {field_name: form_field})
+            model_form_instance = TempForm(auto_id="id_for_%s")
+
+        bound_field = form_field.get_bound_field(model_form_instance, field_name)
+        return Response({"dom_element": bound_field.as_widget()})

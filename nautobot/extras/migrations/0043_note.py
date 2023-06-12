@@ -3,12 +3,11 @@
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.core.fields
+import nautobot.core.models.fields
 import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("contenttypes", "0002_remove_content_type_name"),
@@ -31,7 +30,7 @@ class Migration(migrations.Migration):
                 ("user_name", models.CharField(editable=False, max_length=150)),
                 (
                     "slug",
-                    nautobot.core.fields.AutoSlugField(
+                    nautobot.core.models.fields.AutoSlugField(
                         blank=True, max_length=100, populate_from="assigned_object", unique=True
                     ),
                 ),

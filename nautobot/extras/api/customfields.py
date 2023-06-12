@@ -1,27 +1,15 @@
 from django.contrib.contenttypes.models import ContentType
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
-from rest_framework.serializers import SerializerMethodField
-from rest_framework.fields import CreateOnlyDefault, Field
+from rest_framework.fields import Field
 
-from nautobot.core.api import ValidatedModelSerializer
 from nautobot.extras.models import CustomField
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 
 
 #
 # Custom fields
 #
-
-
-def should_use_custom_field_slug(request=None):
-    if request is None:
-        # Default behavior for backwards compatibility
-        return False
-    major_version, minor_version = request.version.split(".", 1)
-    # Use slug for API versions 1.4 or greater
-    use_slug = int(major_version) > 1 or int(minor_version) >= 4
-    return use_slug
 
 
 class CustomFieldDefaultValues:
@@ -33,7 +21,6 @@ class CustomFieldDefaultValues:
 
     def __call__(self, serializer_field):
         self.model = serializer_field.parent.Meta.model
-        use_slug = should_use_custom_field_slug(serializer_field.context.get("request"))
 
         # Retrieve the CustomFields for the parent model
         content_type = ContentType.objects.get_for_model(self.model)
@@ -42,7 +29,7 @@ class CustomFieldDefaultValues:
         # Populate the default value for each CustomField
         value = {}
         for field in fields:
-            key = field.slug if use_slug else field.name
+            key = field.key
             if field.default is not None:
                 value[key] = field.default
             else:
@@ -53,66 +40,30 @@ class CustomFieldDefaultValues:
 
 @extend_schema_field(OpenApiTypes.OBJECT)
 class CustomFieldsDataField(Field):
-    def _get_custom_fields(self):
+    @property
+    def custom_field_keys(self):
         """
-        Cache CustomFields assigned to this model to avoid redundant database queries
+        Cache CustomField keys assigned to this model to avoid redundant database queries
         """
-        if not hasattr(self, "_custom_fields"):
+        if not hasattr(self, "_custom_field_keys"):
             content_type = ContentType.objects.get_for_model(self.parent.Meta.model)
-            self._custom_fields = CustomField.objects.filter(content_types=content_type)
-        return self._custom_fields
+            self._custom_field_keys = CustomField.objects.filter(content_types=content_type).values_list(
+                "key", flat=True
+            )
+        return self._custom_field_keys
 
     def to_representation(self, obj):
-        if should_use_custom_field_slug(self.context.get("request")):
-            # 1.4+ behavior
-            # 2.0 TODO: #824 use cf.slug as lookup key instead of cf.name
-            return {cf.slug: obj.get(cf.name) for cf in self._get_custom_fields()}
-        else:
-            # Legacy behavior
-            return {cf.name: obj.get(cf.name) for cf in self._get_custom_fields()}
+        return {key: obj.get(key) for key in self.custom_field_keys}
 
     def to_internal_value(self, data):
         """Support updates to individual fields on an existing instance without needing to provide the entire dict."""
-        if should_use_custom_field_slug(self.context.get("request")):
-            # Map slugs to names for the backend data
-            # 2.0 TODO: #824 remove this translation
-            new_data = {}
-            custom_fields = CustomField.objects.filter(slug__in=data.keys())
-            for cf in custom_fields.iterator():
-                new_data[cf.name] = data[cf.slug]
-            data = new_data
+
+        # Discard any entries in data that do not align with actual CustomFields - this matches the REST API behavior
+        # for top-level serializer fields that do not exist or are not writable
+        data = {key: value for key, value in data.items() if key in self.custom_field_keys}
 
         # If updating an existing instance, start with existing _custom_field_data
         if self.parent.instance:
             data = {**self.parent.instance._custom_field_data, **data}
 
         return data
-
-
-class CustomFieldModelSerializerMixin(ValidatedModelSerializer):
-    """
-    Extends ModelSerializer to render any CustomFields and their values associated with an object.
-    """
-
-    computed_fields = SerializerMethodField(read_only=True)
-    custom_fields = CustomFieldsDataField(
-        source="_custom_field_data",
-        default=CreateOnlyDefault(CustomFieldDefaultValues()),
-    )
-
-    @extend_schema_field(OpenApiTypes.OBJECT)
-    def get_computed_fields(self, obj):
-        return obj.get_computed_fields()
-
-    def get_field_names(self, declared_fields, info):
-        """Ensure that "custom_fields" and "computed_fields" are always included appropriately."""
-        fields = list(super().get_field_names(declared_fields, info))
-        self.extend_field_names(fields, "custom_fields")
-        self.extend_field_names(fields, "computed_fields", opt_in_only=True)
-        return fields
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(CustomFieldModelSerializerMixin)
-class CustomFieldModelSerializer(CustomFieldModelSerializerMixin):
-    pass

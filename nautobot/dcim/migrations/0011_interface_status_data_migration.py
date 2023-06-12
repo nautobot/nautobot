@@ -36,7 +36,6 @@ def clear_interface_status(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0010_interface_status"),
     ]

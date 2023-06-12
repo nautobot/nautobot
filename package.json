@@ -1,0 +1,21 @@
+{
+  "name": "nautobot-dev",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Developer Dependencies (Non-App) Package",
+  "author": "Network to Code <opensource@networktocode.com>",
+  "license": "Apache-2.0",
+  "homepage": "https://nautobot.com",
+  "devDependencies": {
+    "eslint": "^8.37.0",
+    "eslint-config-react-app": "^7.0.1",
+    "prettier": "^2.8.7",
+    "markdownlint-cli": "^0.31.1"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  }
+}

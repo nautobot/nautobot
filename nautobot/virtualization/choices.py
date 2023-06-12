@@ -1,4 +1,4 @@
-from nautobot.utilities.choices import ChoiceSet
+from nautobot.core.choices import ChoiceSet
 
 
 #
@@ -7,7 +7,6 @@ from nautobot.utilities.choices import ChoiceSet
 
 
 class VirtualMachineStatusChoices(ChoiceSet):
-
     STATUS_OFFLINE = "offline"
     STATUS_ACTIVE = "active"
     STATUS_PLANNED = "planned"
@@ -24,19 +23,8 @@ class VirtualMachineStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
 
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_OFFLINE: "warning",
-        STATUS_ACTIVE: "success",
-        STATUS_PLANNED: "info",
-        STATUS_STAGED: "primary",
-        STATUS_FAILED: "danger",
-        STATUS_DECOMMISSIONING: "warning",
-    }
-
 
 class VMInterfaceStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_DECOMMISSIONING = "decommissioning"
     STATUS_FAILED = "failed"

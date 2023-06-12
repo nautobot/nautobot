@@ -1,9 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import DynamicGroup
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 
@@ -32,7 +32,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         ct_label = f"{content_type.app_label}.{content_type.model}"
 
         # Navigate to the DynamicGroups list view
-        self.browser.links.find_by_partial_text("Organization").click()
+        self.browser.links.find_by_partial_text("Inventory").click()
         self.browser.links.find_by_partial_text("Dynamic Groups").click()
 
         # Click add button
@@ -74,7 +74,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         # And just a cursory check to make sure that the filter worked.
         group = DynamicGroup.objects.get(name=name)
         self.assertEqual(group.count, len(devices))
-        self.assertEqual(group.filter, {"status": ["active"]})
+        self.assertEqual(group.filter, {"status": ["Active"]})
 
         # Verify dynamic group shows up on device detail tab
         self.browser.visit(

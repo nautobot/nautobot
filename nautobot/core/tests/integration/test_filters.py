@@ -1,11 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
-from nautobot.dcim import factory
-from nautobot.dcim.models import Region, Site
+from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.dcim.factory import LocationTypeFactory
+from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.extras.models import CustomField, CustomFieldChoice, Status
 
 
 class ListViewFilterTestCase(SeleniumTestCase):
@@ -16,26 +16,41 @@ class ListViewFilterTestCase(SeleniumTestCase):
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)
-        factory.RegionFactory.create_batch(15, has_parent=False)
-        factory.SiteFactory.create_batch(15, has_tenant=False)
+        if not LocationType.objects.filter(name="Campus").exists():
+            LocationTypeFactory.create_batch(7)
+        lt1 = LocationType.objects.get(name="Campus")
+        lt2 = LocationType.objects.get(name="Root")
+        lt3 = LocationType.objects.get(name="Building")
+        lt4 = LocationType.objects.get(name="Floor")
+        location_status = Status.objects.get_for_model(Location).first()
+        campus_loc = Location.objects.create(name="Filter Test Location 1", location_type=lt1, status=location_status)
+        Location.objects.create(name="Filter Test Location 2", location_type=lt2, status=location_status)
+        building_loc = Location.objects.create(
+            name="Filter Test Location 3", location_type=lt3, parent=campus_loc, status=location_status
+        )
+        Location.objects.create(
+            name="Filter Test Location 4", location_type=lt4, parent=building_loc, status=location_status
+        )
+        Location.objects.create(
+            name="Filter Test Location 5", location_type=lt4, parent=building_loc, status=location_status
+        )
         # set test user to admin
         self.user.is_superuser = True
         self.user.save()
 
-        # TODO(timizuo): changing these from name to slug when resolving issue #824
-        self.cf_text_field_name = "text_field"
-        self.cf_integer_field_name = "integer_field"
-        self.cf_select_field_name = "select_field"
+        self.cf_text_field_label = "Text Field"
+        self.cf_integer_field_label = "Integer Field"
+        self.cf_select_field_label = "Select Field"
         self.custom_fields = (
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name=self.cf_text_field_name),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, name=self.cf_integer_field_name),
-            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, name=self.cf_select_field_name),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label=self.cf_text_field_label),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label=self.cf_integer_field_label),
+            CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, label=self.cf_select_field_label),
         )
         for custom_field in self.custom_fields:
-            custom_field.content_types.set([ContentType.objects.get_for_model(Site)])
+            custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
 
         for x in ["A", "B", "C"]:
-            CustomFieldChoice.objects.create(field=self.custom_fields[2], value=f"Option {x}")
+            CustomFieldChoice.objects.create(custom_field=self.custom_fields[2], value=f"Option {x}")
 
     def tearDown(self):
         self.logout()
@@ -47,8 +62,8 @@ class ListViewFilterTestCase(SeleniumTestCase):
         removing the filter with the list view "filters" ui element.
         """
 
-        # retrieve site list view
-        self.browser.visit(f"{self.live_server_url}{reverse('dcim:site_list')}")
+        # retrieve location list view
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:location_list')}")
         filter_modal = self.browser.find_by_id("FilterForm_modal", wait_time=10)
         self.assertFalse(filter_modal.visible)
 
@@ -59,26 +74,27 @@ class ListViewFilterTestCase(SeleniumTestCase):
         # assert the filter modal has appeared
         self.assertTrue(filter_modal.visible)
 
-        # start typing a region into select2
-        region = Region.objects.first()
-        region_select = filter_modal.find_by_xpath(
-            "//label[@for='id_region']/..//input[@class='select2-search__field']", wait_time=10
+        # start typing a parent into select2
+        location_type = LocationType.objects.filter(parent__isnull=True).first()
+        parent = Location.objects.filter(location_type=location_type).first()
+        parent_select = filter_modal.find_by_xpath(
+            "//label[@for='id_parent']/..//input[@class='select2-search__field']", wait_time=10
         )
-        for _ in region_select.type(f"{region.name[:4]}", slowly=True):
+        for _ in parent_select.type(f"{parent.name[:4]}", slowly=True):
             pass
 
-        # click region option in select2
-        region_option_xpath = f"//ul[@id='select2-id_region-results']//li[text()='{region.name}']"
-        region_option = self.browser.find_by_xpath(region_option_xpath, wait_time=10)
-        region_option.click()
+        # click parent option in select2
+        parent_option_xpath = f"//ul[@id='select2-id_parent-results']//li[text()='{parent.name}']"
+        parent_option = self.browser.find_by_xpath(parent_option_xpath, wait_time=10)
+        parent_option.click()
 
         # click apply button in filter modal
         apply_button = filter_modal.find_by_xpath("//div[@id='default-filter']//button[@type='submit']", wait_time=10)
         apply_button.click()
 
         # assert the url has changed to add the filter param
-        filtered_sites_url = self.browser.url
-        self.assertIn("region=", filtered_sites_url)
+        filtered_locations_url = self.browser.url
+        self.assertIn("parent=", filtered_locations_url)
 
         # find and click the remove all filter X button
         remove_all_filters = self.browser.find_by_xpath(
@@ -88,18 +104,19 @@ class ListViewFilterTestCase(SeleniumTestCase):
         remove_all_filters.click()
 
         # assert the filter param has been removed from the url
-        self.assertNotIn("region=", self.browser.url)
+        self.assertNotIn("parent=", self.browser.url)
 
         # navigate back to the filter page and try the individual filter remove X button
-        self.browser.visit(filtered_sites_url)
+        self.browser.visit(filtered_locations_url)
         remove_single_filter = self.browser.find_by_xpath(
-            "//div[@class='filters-applied']//span[@class='filter-selection']//span[@class='filter-selection-choice-remove remove-filter-param']",
+            "//div[@class='filters-applied']//span[@class='filter-selection']//"
+            "span[@class='filter-selection-choice-remove remove-filter-param']",
             wait_time=10,
         )
         remove_single_filter.click()
 
         # assert the filter has been removed from the url
-        self.assertNotIn("region=", self.browser.url)
+        self.assertNotIn("parent=", self.browser.url)
 
         # assert the filter UI element is gone
         self.assertTrue(self.browser.is_element_not_present_by_xpath("//div[@class='filters-applied']"))
@@ -112,7 +129,8 @@ class ListViewFilterTestCase(SeleniumTestCase):
             value (str or int): The value to fill in the input field or select from the select field.
             field_type (str, optional): The type of the field, either "input" or "select".
             idx (int, optional): The index of the field in case there are multiple fields with the same name.
-            select2_field_name (str, optional): The name of the select2 field in case it is different from the input field name.
+            select2_field_name (str, optional): The name of the select2 field in case it is different from the
+                input field name.
         """
         if field_type == "input":
             self.browser.find_by_name(field_name)[idx].fill(value)
@@ -127,11 +145,11 @@ class ListViewFilterTestCase(SeleniumTestCase):
 
     def test_input_field_gets_updated(self):
         """Assert that a filter input/select field on Dynamic Filter Form updates if same field is updated."""
-        self.browser.visit(f'{self.live_server_url}{reverse("dcim:site_list")}')
+        self.browser.visit(f'{self.live_server_url}{reverse("dcim:location_list")}')
 
-        text_field_name = "cf_" + self.cf_text_field_name
-        integer_field_name = "cf_" + self.cf_integer_field_name
-        select_field_name = "cf_" + self.cf_select_field_name
+        text_field_name = self.custom_fields[0].add_prefix_to_cf_key()
+        integer_field_name = self.custom_fields[1].add_prefix_to_cf_key()
+        select_field_name = self.custom_fields[2].add_prefix_to_cf_key()
         apply_btn_xpath = "//div[@id='default-filter']//button[@type='submit']"
 
         # Open the filter modal, configure filter and apply filter

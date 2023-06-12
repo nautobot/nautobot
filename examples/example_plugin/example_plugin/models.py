@@ -1,24 +1,19 @@
 from django.db import models
-from django.urls import reverse
 
 from nautobot.apps.models import extras_features, OrganizationalModel
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class ExampleModel(OrganizationalModel):
-    name = models.CharField(max_length=20, help_text="The name of this Example.")
+    name = models.CharField(max_length=20, help_text="The name of this Example.", unique=True)
     number = models.IntegerField(default=100, help_text="The number of this Example.")
-
-    csv_headers = ["name", "number"]
 
     class Meta:
         ordering = ["name"]
@@ -26,31 +21,21 @@ class ExampleModel(OrganizationalModel):
     def __str__(self):
         return f"{self.name} - {self.number}"
 
-    def get_absolute_url(self):
-        return reverse("plugins:example_plugin:examplemodel", kwargs={"pk": self.pk})
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.number,
-        )
-
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     # "graphql", Not specified here as we have a custom type for this model, see example_plugin.graphql.types
-    "relationships",
     "webhooks",
+    "relationships",  # Defined here to ensure no clobbering: https://github.com/nautobot/nautobot/issues/3592
 )
 class AnotherExampleModel(OrganizationalModel):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=20, unique=True)
     number = models.IntegerField(default=100)
+
+    # by default the natural key would just be "name" since it's a unique field. But we can override it:
+    natural_key_field_names = ["name", "number"]
 
     class Meta:
         ordering = ["name"]
-
-    def get_absolute_url(self):
-        return reverse("plugins:example_plugin:anotherexamplemodel", kwargs={"pk": self.pk})

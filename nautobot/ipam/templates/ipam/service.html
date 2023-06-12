@@ -30,7 +30,7 @@
                 <tr>
                     <td>IP Addresses</td>
                     <td>
-                        {% for ipaddress in object.ipaddresses.all %}
+                        {% for ipaddress in object.ip_addresses.all %}
                             {{ ipaddress|hyperlinked_object }}<br>
                         {% empty %}
                             <span class="text-muted">None</span>

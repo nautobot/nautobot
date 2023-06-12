@@ -97,7 +97,7 @@ class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
         name = "Example Simple Job Button Receiver"
 
     def receive_job_button(self, obj):
-        self.log_info(obj=obj, message="Running Job Button Receiver.")
+        self.logger.info("Running Job Button Receiver.", extra={"object": obj})
         # Add job logic here
 ```
 
@@ -106,7 +106,7 @@ class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
 Since Job Buttons can be associated to multiple object types, it would be trivial to create a Job that can change what it runs based on the object type.
 
 ```py
-from nautobot.dcim.models import Device, Site
+from nautobot.dcim.models import Device, Location
 from nautobot.extras.jobs import JobButtonReceiver
 
 
@@ -114,25 +114,30 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
     class Meta:
         name = "Example Complex Job Button Receiver"
 
-    def _run_site_job(self, obj):
-        self.log_info(obj=obj, message="Running Site Job Button Receiver.")
-        # Run Site Job function
+    def _run_location_job(self, obj):
+        self.logger.info("Running Location Job Button Receiver.", extra={"object": obj})
+        # Run Location Job function
 
     def _run_device_job(self, obj):
-        self.log_info(obj=obj, message="Running Device Job Button Receiver.")
+        self.logger.info("Running Device Job Button Receiver.", extra={"object": obj})
         # Run Device Job function
 
     def receive_job_button(self, obj):
         user = self.request.user
-        if isinstance(obj, Site):
-            if not user.has_perm("dcim.add_site"):
-                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Site.")
+        if isinstance(obj, Location):
+            if not user.has_perm("dcim.add_location"):
+                self.logger.error("User '%s' does not have permission to add a Location.", user, extra={"object": obj})
+                raise Exception("User does not have permission to add a Location.")
             else:
-                self._run_site_job(obj)
-        if isinstance(obj, Device):
+                self._run_location_job(obj)
+        elif isinstance(obj, Device):
             if not user.has_perm("dcim.add_device"):
-                self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Device.")
+                self.logger.error("User '%s' does not have permission to add a Device.", user, extra={"object": obj})
+                raise Exception("User does not have permission to add a Device.")
             else:
                 self._run_device_job(obj)
-        self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
+        else:
+            self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
+            raise Exception("Job button called on unsupported object type.")
+
 ```

@@ -1,0 +1,2 @@
+Corrected out-of-date information about `class_path` in the Jobs documentation.
+Fixed incorrect filter form definitions for JobHookFilterForm, JobResultFilterForm, ScheduledJobFilterForm.

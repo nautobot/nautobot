@@ -48,34 +48,6 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        <td>Regions</td>
-                        <td>
-                            {% if object.regions.all %}
-                                <ul>
-                                    {% for region in object.regions.all %}
-                                        <li>{{ region|hyperlinked_object }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Sites</td>
-                        <td>
-                            {% if object.sites.all %}
-                                <ul>
-                                    {% for site in object.sites.all %}
-                                        <li>{{ site|hyperlinked_object }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                <span class="text-muted">None</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
                         <td>Locations</td>
                         <td>
                             {% if object.locations.all %}
@@ -95,7 +67,7 @@
                             {% if object.roles.all %}
                                 <ul>
                                     {% for role in object.roles.all %}
-                                        <li><a href="{% url 'dcim:device_list' %}?role={{ role.slug }}">{{ role }}</a></li>
+                                        <li><a href="{% url 'dcim:device_list' %}?role={{ role.name }}">{{ role }}</a></li>
                                     {% endfor %}
                                 </ul>
                             {% else %}
