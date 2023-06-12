@@ -33,7 +33,7 @@ NO_CONFIRM_BUTTON = """
 """
 
 NO_CONFIRM_FORM = """
-<form id="form_id_{button_id}" action="/extras/job-button/{button_id}/run/" method="post" class="form">
+<form id="form_id_{button_id}" action="{% url 'extras:jobbutton_run' pk=button_id %}" method="post" class="form">
   {hidden_inputs}
 </form>
 """
@@ -52,7 +52,7 @@ CONFIRM_MODAL = """
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title" id="confirm_modal_label_{button_id}">Confirmation</h4>
       </div>
-      <form id="form_id_{button_id}" action="/extras/job-button/{button_id}/run/" method="post" class="form">
+      <form id="form_id_{button_id}" action="{% url 'extras:jobbutton_run' pk=button_id %}" method="post" class="form">
         <div class="modal-body">
           {hidden_inputs}
           Run Job <strong>'{job}'</strong> with object <strong>'{object}'</strong>?
