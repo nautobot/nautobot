@@ -111,6 +111,9 @@ class ObjectChange(BaseModel):
     class Meta:
         ordering = ["-time"]
         get_latest_by = "time"
+        unique_together = [
+            ["request_id", "changed_object_type", "changed_object_id"],
+        ]
         indexes = [
             models.Index(
                 name="extras_objectchange_triple_idx",
