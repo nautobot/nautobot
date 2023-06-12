@@ -1,11 +1,12 @@
 import re
-from unittest import skipIf, skip
+from unittest import skipIf
 
 import netaddr
 from django.db import connection
 
 from nautobot.core.testing import TestCase
 from nautobot.extras.models import Status
+from nautobot.ipam import choices
 from nautobot.ipam.models import Prefix, IPAddress, Namespace
 
 
@@ -455,22 +456,7 @@ class IPAddressQuerySet(TestCase):
             [instance for ip, instance in self.ips.items() if re.match(r"2001(.*)1", ip)],
         )
 
-    def test_get_closest_parent(self):
-        # create prefixes with /24 through /32 lengths
-        for i in range(24, 33):
-            Prefix.objects.create(prefix=f"10.0.0.0/{i}", namespace=self.namespace, status=self.prefix_status)
 
-        for ip in self.ips.values():
-            with self.subTest(ip=ip):
-                self.assertEqual(
-                    Prefix.objects.get_closest_parent(ip.host, namespace=self.namespace),
-                    Prefix.objects.filter(network__lte=ip.host, broadcast__gte=ip.host, namespace=self.namespace)
-                    .order_by("-prefix_length")
-                    .first(),
-                )
-
-
-@skip
 class PrefixQuerysetTestCase(TestCase):
     queryset = Prefix.objects.all()
 
@@ -478,23 +464,36 @@ class PrefixQuerysetTestCase(TestCase):
     def setUpTestData(cls):
         # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
+        IPAddress.objects.all().delete()
         cls.queryset.update(parent=None)
         cls.queryset.delete()
 
-        status = Status.objects.get_for_model(Prefix).first()
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), status=status)
+        cls.status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.create(
+            prefix=netaddr.IPNetwork("192.168.0.0/16"), status=cls.status, type=choices.PrefixTypeChoices.TYPE_CONTAINER
+        )
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), status=status)
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), status=status)
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.0/24"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), status=cls.status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), status=cls.status)
+        Prefix.objects.create(
+            prefix=netaddr.IPNetwork("192.168.3.0/24"), status=cls.status, type=choices.PrefixTypeChoices.TYPE_CONTAINER
+        )
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.192/28"), status=status)
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.208/28"), status=status)
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.224/28"), status=status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.192/28"), status=cls.status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.208/28"), status=cls.status)
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.3.224/28"), status=cls.status)
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/64"), status=status)
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/120"), status=status)
-        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/122"), status=status)
+        Prefix.objects.create(
+            prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/64"),
+            status=cls.status,
+            type=choices.PrefixTypeChoices.TYPE_CONTAINER,
+        )
+        Prefix.objects.create(
+            prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/120"),
+            status=cls.status,
+            type=choices.PrefixTypeChoices.TYPE_CONTAINER,
+        )
+        Prefix.objects.create(prefix=netaddr.IPNetwork("fd78:da4f:e596:c217::/122"), status=cls.status)
 
     def test_net_equals(self):
         self.assertEqual(self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16")).count(), 1)
@@ -532,21 +531,6 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/28")).count(), 3)
         self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/30")).count(), 3)
         self.assertEqual(self.queryset.net_contains_or_equals(netaddr.IPNetwork("192.168.3.192/32")).count(), 3)
-
-    def test_annotate_tree(self):
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.0.0/16").parents, 0)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.0.0/16").children, 6)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.3.0/24").parents, 1)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.3.0/24").children, 3)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.3.224/28").parents, 2)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="192.168.3.224/28").children, 0)
-
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/64").parents, 0)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/64").children, 2)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/120").parents, 1)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/120").children, 1)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/122").parents, 2)
-        self.assertEqual(self.queryset.annotate_tree().get(prefix="fd78:da4f:e596:c217::/122").children, 0)
 
     def test_get_by_prefix(self):
         prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
@@ -733,3 +717,43 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__regex=r"fd78(.*)c218(.*)").count(), 0)
         self.assertEqual(Prefix.objects.filter(network__iregex=r"fd78(.*)c217(.*)").count(), 3)
         self.assertEqual(Prefix.objects.filter(network__iregex=r"fd78(.*)c218(.*)").count(), 0)
+
+    def test_get_closest_parent(self):
+        """Test the PrefixQuerySet.get_closest_parent() method."""
+        namespace = Namespace.objects.create(name="test_get_closest_parent")
+
+        container = netaddr.IPNetwork("10.0.0.0/24")
+        Prefix.objects.create(
+            prefix=container,
+            type=choices.PrefixTypeChoices.TYPE_CONTAINER,
+            namespace=namespace,
+            status=self.status,
+        )
+
+        # create prefixes with /25 through /32 lengths (10.0.0.1/32, 10.0.0.2/31, 10.0.0.4/30, etc.)
+        for prefix_length in range(25, 33):
+            network = list(container.subnet(prefix_length))[1]
+            Prefix.objects.create(
+                prefix=network,
+                type=choices.PrefixTypeChoices.TYPE_NETWORK,
+                namespace=namespace,
+                status=self.status,
+            )
+
+        for last_octet in range(1, 255):
+            ip = netaddr.IPAddress(f"10.0.0.{last_octet}")
+            expected_prefix_length = 33 - len(bin(last_octet)[2:])  # [1] = 32, [2,3] = 31, [4,5,6,7] = 30, etc.
+            with self.subTest(ip=ip, expected_prefix_length=expected_prefix_length):
+                closest_parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(ip, include_self=True)
+                expected_parent = list(container.subnet(expected_prefix_length))[1]
+                self.assertEqual(closest_parent.prefix, expected_parent)
+                self.assertEqual(
+                    closest_parent,
+                    Prefix.objects.filter(
+                        network__lte=ip.value,
+                        broadcast__gte=ip.value,
+                        namespace=namespace,
+                    )
+                    .order_by("-prefix_length")
+                    .first(),
+                )
