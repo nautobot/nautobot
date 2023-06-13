@@ -1,7 +1,9 @@
 import sys
 
 from django.apps import apps as global_apps
+from django.core.exceptions import FieldError
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
+from django.utils.text import slugify
 
 from nautobot.circuits import choices as circuit_choices
 from nautobot.core.choices import ColorChoices
@@ -113,6 +115,7 @@ def export_statuses_from_choiceset(choiceset, color_map=None, description_map=No
         choice_kwargs = {
             "name": value,
             "description": description_map[value],
+            "slug": slugify(value),
             "color": color_map[value],
         }
         choices.append(choice_kwargs)
@@ -168,16 +171,29 @@ def create_custom_statuses(
 
         for choice_kwargs in choices:
             # Since statuses are customizable now, we need to gracefully handle the case where a status
-            # has had its name, color and/or description changed from the defaults.
-            # Try to find by name
+            # has had its name, slug, color and/or description changed from the defaults.
+            # First, try to find by slug if applicable
             defaults = choice_kwargs.copy()
-            name = defaults.pop("name")
+            slug = defaults.pop("slug")
             try:
-                obj, created = Status.objects.get_or_create(name=name, defaults=defaults)
-            except IntegrityError as err:
-                raise SystemExit(
-                    f"Unexpected error while running data migration to populate status for {model_path}: {err}"
-                )
+                # May fail with an IntegrityError if a status with a different slug has a name matching this one
+                # May fail with a FieldError if the Status model no longer has a slug field
+                obj, created = Status.objects.get_or_create(slug=slug, defaults=defaults)
+            except (IntegrityError, FieldError) as error:
+                # OK, what if we look up by name instead?
+                defaults = choice_kwargs.copy()
+                name = defaults.pop("name")
+                # FieldError would occur when calling create_custom_statuses after status slug removal
+                # migration has been migrated
+                # e.g nautobot.extras.tests.test_management.StatusManagementTestCase.test_populate_status_choices_idempotent
+                if isinstance(error, FieldError):
+                    defaults.pop("slug")
+                try:
+                    obj, created = Status.objects.get_or_create(name=name, defaults=defaults)
+                except IntegrityError as err:
+                    raise SystemExit(
+                        f"Unexpected error while running data migration to populate status for {model_path}: {err}"
+                    ) from err
 
             # Make sure the content-type is associated.
             if content_type not in obj.content_types.all():
