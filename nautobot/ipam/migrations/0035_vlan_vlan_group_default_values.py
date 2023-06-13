@@ -29,7 +29,7 @@ def vlan_vlan_group_uniqueness_constrains_revise(apps, schema_editor):
     increment_names_of_records_with_similar_names(VLANGroup)
 
     # Hope fully vlan group with name `Default VLAN Group` would not exist
-    default_vlan_group = VLANGroup.objects.create(name="Default VLAN Group")
+    _, default_vlan_group = VLANGroup.objects.get_or_create(name="Default VLAN Group")
     VLAN.objects.filter(vlan_group__isnull=True).update(vlan_group=default_vlan_group)
 
 

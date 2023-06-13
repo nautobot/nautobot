@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
             model_name="vlan",
             name="vlan_group",
             field=models.ForeignKey(
-                null=True, on_delete=django.db.models.deletion.PROTECT, related_name="vlans", to="ipam.vlangroup"
+                null=False, on_delete=django.db.models.deletion.PROTECT, related_name="vlans", to="ipam.vlangroup"
             ),
         ),
         migrations.AlterField(

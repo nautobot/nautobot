@@ -1208,7 +1208,6 @@ class VLAN(PrimaryModel):
         to="ipam.VLANGroup",
         on_delete=models.PROTECT,
         related_name="vlans",
-        null=True,
     )
     vid = models.PositiveSmallIntegerField(
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
