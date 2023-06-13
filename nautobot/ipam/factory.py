@@ -101,6 +101,8 @@ class VRFFactory(PrimaryModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
+    namespace = random_instance(Namespace, allow_null=False)
+
     @factory.post_generation
     def import_targets(self, create, extracted, **kwargs):
         if create:
@@ -222,9 +224,8 @@ class NamespaceFactory(PrimaryModelFactory):
 
     class Meta:
         model = Namespace
-        django_get_or_create = ("name",)
 
-    name = factory.Faker("text", max_nb_chars=20)
+    name = UniqueFaker("text", max_nb_chars=20)
 
 
 class PrefixFactory(PrimaryModelFactory):
@@ -296,7 +297,7 @@ class PrefixFactory(PrimaryModelFactory):
         ),
         None,
     )
-    namespace = factory.SubFactory(NamespaceFactory)
+    namespace = random_instance(Namespace, allow_null=False)
     # TODO: Update for M2M tests
     # vrf = factory.Maybe(
     #     "has_vrf",

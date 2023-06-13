@@ -107,12 +107,12 @@ class Command(BaseCommand):
         LocationFactory.create_batch(7, has_parent=True)
         LocationFactory.create_batch(40)
         LocationFactory.create_batch(10, has_parent=False)
-        self.stdout.write("Creating Namespaces...")
-        NamespaceFactory.create_batch(1)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
         RouteTargetFactory.create_batch(20)
+        self.stdout.write("Creating Namespaces...")
+        NamespaceFactory.create_batch(10)
         self.stdout.write("Creating VRFs...")
         VRFFactory.create_batch(10, has_tenant=True)
         VRFFactory.create_batch(10, has_tenant=False)
@@ -180,9 +180,9 @@ class Command(BaseCommand):
                 TenantFactory,
                 LocationTypeFactory,
                 LocationFactory,
-                NamespaceFactory,
                 RIRFactory,
                 RouteTargetFactory,
+                NamespaceFactory,
                 VRFFactory,
                 VLANGroupFactory,
                 VLANFactory,
@@ -200,7 +200,7 @@ class Command(BaseCommand):
             ]
         )
 
-    def _output_hash_for_factory_models(self, factories=[]):
+    def _output_hash_for_factory_models(self, factories):
         """Output a hash of the IDs of all objects in the given factories' model.
 
         Used for identifying factory determinism problems in unit tests. Only prints if GITHUB_ACTIONS environment variable is set to "true".
@@ -211,8 +211,8 @@ class Command(BaseCommand):
         for factory in factories:
             model = factory._meta.get_model_class()
             model_ids = list(model.objects.order_by("id").values_list("id", flat=True))
-            hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
-            self.stdout.write(f"SHA256 Hash for {model.__name__}: {hash}")
+            sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
+            self.stdout.write(f"SHA256 hash for {model.__name__}: {sha256_hash}")
 
     def handle(self, *args, **options):
         if options["flush"]:
