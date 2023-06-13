@@ -14,11 +14,11 @@ To create a Platform:
 2. Find **Platforms** and click on the **+** icon in the menu
     * This takes you to the `Add a new platform` form
 3. Provide a `Name` (required)
-5. Select a `Manufacturer` from the drop-down selector (optional)
-6. Provide the name of the `NAPALM driver` (optional) (Note: this must be the exact name of the NAPALM driver)
-7. Provide `NAPALM arguments` (optional)
-8. Provide `Description` (optional)
-9. Click on the `Create` button
+4. Select a `Manufacturer` from the drop-down selector (optional)
+5. Provide the name of the `NAPALM driver` (optional) (Note: this must be the exact name of the NAPALM driver)
+6. Provide `NAPALM arguments` (optional)
+7. Provide `Description` (optional)
+8. Click on the `Create` button
 
 !!! tip
     NAPALM Driver Options include:
