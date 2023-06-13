@@ -144,7 +144,7 @@ class VLANGroupFactory(OrganizationalModelFactory):
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):
-        """Creates child prefixes and ip addresses within the prefix IP space."""
+        """Creates child VLANs within the VLANGroup."""
         if create:
             return
 
