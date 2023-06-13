@@ -1,5 +1,10 @@
+import logging
+
 from django.db.models import Manager
 from taggit.managers import _TaggableManager
+
+
+logger = logging.getLogger(__name__)
 
 
 class BaseManager(Manager):
@@ -16,34 +21,24 @@ class BaseManager(Manager):
         Generic implementation that depends on the model being a BaseModel subclass or otherwise implementing our
         `natural_key_field_lookups` property API. Loosely based on implementation from `django-natural-keys`.
         """
+        if len(args) == 1 and isinstance(args[0], (list, tuple)):
+            logger.warning(
+                "%s.objects.get_by_natural_key() was called with a single %s as its args, "
+                "instead of a list of individual args. Did you forget a '*' in your call?",
+                self.model.__name__,
+                type(args[0]).__name__,
+            )
+            args = args[0]
+
         base_kwargs = self.model.natural_key_args_to_kwargs(args)
 
-        # Since base_kwargs already has __ lookups in it, we could just do "return self.get(**base_kwargs)"
-        # But we'll inherit a pattern from django-natural-keys where we replace nested related field lookups with
-        # calls to `related_model.objects.get_by_natural_key()` just in case it has a custom/overridden implementation.
-        nested_lookups = {}
-        kwargs = {}
-        for field_lookup in self.model.natural_key_field_lookups:
-            if "__" in field_lookup:
-                field_name, _ = field_lookup.split("__", 1)
-                nested_lookups.setdefault(field_name, []).append(base_kwargs[field_lookup])
-            else:
-                kwargs[field_lookup] = base_kwargs[field_lookup]
-
-        # Look up the related model instances by their own natural keys.
-        # If any related lookup fails, then the base model lookup can automatically fail as a result.
-        for field_name, related_values in nested_lookups.items():
-            # Handle the case where the related lookup is actually looking for a null reference.
-            if all(related_value is None for related_value in related_values):
-                kwargs[f"{field_name}__isnull"] = True
-                continue
-            related_model = self.model._meta.get_field(field_name).remote_field.model
-            try:
-                kwargs[field_name] = related_model.objects.get_by_natural_key(*related_values)
-            except related_model.DoesNotExist as exc:
-                raise self.model.DoesNotExist() from exc
-
-        return self.get(**kwargs)
+        # django-natural-keys had a pattern where it would replace nested related field lookups
+        # (parent__namespace__name="Global", parent__prefix="10.0.0.0/8") with calls to get_by_natural_key()
+        # (parent=Prefix.objects.get_by_natural_key("Global", "10.0.0.0/8")).
+        # We initially followed this pattern, but it had the downside that an object's natural key could therefore
+        # **only** reference related objects by their own natural keys, which is unnecessarily rigid.
+        # We instead just do the simple thing and let Django follow the nested lookups as appropriate:
+        return self.get(**base_kwargs)
 
 
 class TagsManager(_TaggableManager, BaseManager):

@@ -1,6 +1,7 @@
 import os
 import tempfile
 from unittest import mock
+import uuid
 import warnings
 
 from django.conf import settings
@@ -24,7 +25,13 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
-from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+from nautobot.extras.choices import (
+    LogLevelChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
@@ -38,6 +45,7 @@ from nautobot.extras.models import (
     Job as JobModel,
     JobLogEntry,
     JobResult,
+    ObjectChange,
     Role,
     Secret,
     SecretsGroup,
@@ -904,6 +912,17 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             handler.exception.message_dict["approval_required"][0],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+
+class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
+    model = ObjectChange
+
+    @classmethod
+    def setUpTestData(cls):
+        location_oc = Location.objects.first().to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
+        location_oc.request_id = uuid.uuid4()
+        location_oc.change_context = ObjectChangeEventContextChoices.CONTEXT_ORM
+        location_oc.validated_save()
 
 
 class RoleTest(TestCase):

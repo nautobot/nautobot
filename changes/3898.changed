@@ -1,0 +1,1 @@
+Changed the `IPAddress` natural key definition (`IPAddress.natural_key_field_names`) to `[parent__namespace, host]`.

@@ -202,8 +202,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.csv_data = (
             "name,slug,location_type,parent,status,tenant,description",
             f'Root 3,root-3,"{lt1.name}",,{status.name},,',
-            f'Intermediate 2,intermediate-2,"{lt2.name}",{loc2.natural_key_slug},{status.name},"{tenant.name}",Hello world!',
-            f'Leaf 2,leaf-2,"{lt3.name}",{loc3.natural_key_slug},{status.name},"{tenant.name}",',
+            f'Intermediate 2,intermediate-2,"{lt2.name}",{loc2.composite_key},{status.name},"{tenant.name}",Hello world!',
+            f'Leaf 2,leaf-2,"{lt3.name}",{loc3.composite_key},{status.name},"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
@@ -241,10 +241,10 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.csv_data = (
             "location,name,slug,description",
-            f"{location.natural_key_slug},Rack Group 4,rack-group-4,Fourth rack group",
-            f"{location.natural_key_slug},Rack Group 5,rack-group-5,Fifth rack group",
-            f"{location.natural_key_slug},Rack Group 6,rack-group-6,Sixth rack group",
-            f"{location.natural_key_slug},Rack Group 7,,Seventh rack group",
+            f"{location.composite_key},Rack Group 4,rack-group-4,Fourth rack group",
+            f"{location.composite_key},Rack Group 5,rack-group-5,Fifth rack group",
+            f"{location.composite_key},Rack Group 6,rack-group-6,Sixth rack group",
+            f"{location.composite_key},Rack Group 7,,Seventh rack group",
         )
         cls.slug_test_object = "Rack Group 8"
         cls.slug_source = "name"
@@ -280,9 +280,9 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "rack,units,description",
-            f'{rack.natural_key_slug},"10,11,12",Reservation 1',
-            f"{rack.natural_key_slug},13,Reservation 2",
-            f'{rack.natural_key_slug},"16,17,18",Reservation 3',
+            f'{rack.composite_key},"10,11,12",Reservation 1',
+            f"{rack.composite_key},13,Reservation 2",
+            f'{rack.composite_key},"16,17,18",Reservation 3',
         )
 
         cls.bulk_edit_data = {
@@ -397,9 +397,9 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "location,rack_group,name,width,u_height,status",
-            f"{cls.locations[0].natural_key_slug},,Rack 4,19,42,{statuses[0].name}",
-            f"{cls.locations[0].natural_key_slug},{rackgroups[0].natural_key_slug},Rack 5,19,42,{statuses[1].name}",
-            f"{cls.locations[1].natural_key_slug},{rackgroups[1].natural_key_slug},Rack 6,19,42,{statuses[2].name}",
+            f"{cls.locations[0].composite_key},,Rack 4,19,42,{statuses[0].name}",
+            f"{cls.locations[0].composite_key},{rackgroups[0].composite_key},Rack 5,19,42,{statuses[1].name}",
+            f"{cls.locations[1].composite_key},{rackgroups[1].composite_key},Rack 6,19,42,{statuses[2].name}",
         )
 
         cls.bulk_edit_data = {
@@ -1293,10 +1293,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "role,device_type,status,name,location,rack,position,face,secrets_group,parent_bay",
-            f"{deviceroles[0].name},{devicetypes[0].natural_key_slug},{statuses[0].name},Device 4,{locations[0].name},{racks[0].natural_key_slug},10,front,",
-            f"{deviceroles[0].name},{devicetypes[0].natural_key_slug},{statuses[0].name},Device 5,{locations[0].name},{racks[0].natural_key_slug},20,front,",
-            f"{deviceroles[0].name},{devicetypes[0].natural_key_slug},{statuses[0].name},Device 6,{locations[0].name},{racks[0].natural_key_slug},30,front,Secrets Group 2",
-            f"{deviceroles[1].name},{devicetypes[1].natural_key_slug},{statuses[0].name},Child Device,{locations[0].name},,,,,{device_bay.natural_key_slug}",
+            f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 4,{locations[0].name},{racks[0].composite_key},10,front,",
+            f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 5,{locations[0].name},{racks[0].composite_key},20,front,",
+            f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 6,{locations[0].name},{racks[0].composite_key},30,front,Secrets Group 2",
+            f"{deviceroles[1].name},{devicetypes[1].composite_key},{statuses[0].name},Child Device,{locations[0].name},,,,,{device_bay.composite_key}",
         )
 
         cls.bulk_edit_data = {
@@ -1548,9 +1548,9 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name",
-            f"{device.natural_key_slug},Console Port 4",
-            f"{device.natural_key_slug},Console Port 5",
-            f"{device.natural_key_slug},Console Port 6",
+            f"{device.composite_key},Console Port 4",
+            f"{device.composite_key},Console Port 5",
+            f"{device.composite_key},Console Port 6",
         )
 
 
@@ -1594,9 +1594,9 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name",
-            f"{device.natural_key_slug},Console Server Port 4",
-            f"{device.natural_key_slug},Console Server Port 5",
-            f"{device.natural_key_slug},Console Server Port 6",
+            f"{device.composite_key},Console Server Port 4",
+            f"{device.composite_key},Console Server Port 5",
+            f"{device.composite_key},Console Server Port 6",
         )
 
 
@@ -1645,9 +1645,9 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name",
-            f"{device.natural_key_slug},Power Port 4",
-            f"{device.natural_key_slug},Power Port 5",
-            f"{device.natural_key_slug},Power Port 6",
+            f"{device.composite_key},Power Port 4",
+            f"{device.composite_key},Power Port 5",
+            f"{device.composite_key},Power Port 6",
         )
 
 
@@ -1710,9 +1710,9 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name",
-            f"{device.natural_key_slug},Power Outlet 4",
-            f"{device.natural_key_slug},Power Outlet 5",
-            f"{device.natural_key_slug},Power Outlet 6",
+            f"{device.composite_key},Power Outlet 4",
+            f"{device.composite_key},Power Outlet 5",
+            f"{device.composite_key},Power Outlet 6",
         )
 
 
@@ -1815,9 +1815,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name,type,status",
-            f"{device.natural_key_slug},Interface 4,1000base-t,{statuses[0].name}",
-            f"{device.natural_key_slug},Interface 5,1000base-t,{statuses[0].name}",
-            f"{device.natural_key_slug},Interface 6,1000base-t,{statuses[0].name}",
+            f"{device.composite_key},Interface 4,1000base-t,{statuses[0].name}",
+            f"{device.composite_key},Interface 5,1000base-t,{statuses[0].name}",
+            f"{device.composite_key},Interface 6,1000base-t,{statuses[0].name}",
         )
 
 
@@ -1873,9 +1873,9 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name,type,rear_port,rear_port_position",
-            f"{device.natural_key_slug},Front Port 4,8p8c,{rearports[3].natural_key_slug},1",
-            f"{device.natural_key_slug},Front Port 5,8p8c,{rearports[4].natural_key_slug},1",
-            f"{device.natural_key_slug},Front Port 6,8p8c,{rearports[5].natural_key_slug},1",
+            f"{device.composite_key},Front Port 4,8p8c,{rearports[3].composite_key},1",
+            f"{device.composite_key},Front Port 5,8p8c,{rearports[4].composite_key},1",
+            f"{device.composite_key},Front Port 6,8p8c,{rearports[5].composite_key},1",
         )
 
     @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
@@ -1924,9 +1924,9 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name,type,positions",
-            f"{device.natural_key_slug},Rear Port 4,8p8c,1",
-            f"{device.natural_key_slug},Rear Port 5,8p8c,1",
-            f"{device.natural_key_slug},Rear Port 6,8p8c,1",
+            f"{device.composite_key},Rear Port 4,8p8c,1",
+            f"{device.composite_key},Rear Port 5,8p8c,1",
+            f"{device.composite_key},Rear Port 6,8p8c,1",
         )
 
 
@@ -1969,9 +1969,9 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name",
-            f"{device.natural_key_slug},Device Bay 4",
-            f"{device.natural_key_slug},Device Bay 5",
-            f"{device.natural_key_slug},Device Bay 6",
+            f"{device.composite_key},Device Bay 4",
+            f"{device.composite_key},Device Bay 5",
+            f"{device.composite_key},Device Bay 6",
         )
 
 
@@ -2024,9 +2024,9 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "device,name",
-            f"{device.natural_key_slug},Inventory Item 4",
-            f"{device.natural_key_slug},Inventory Item 5",
-            f"{device.natural_key_slug},Inventory Item 6",
+            f"{device.composite_key},Inventory Item 4",
+            f"{device.composite_key},Inventory Item 5",
+            f"{device.composite_key},Inventory Item 6",
         )
 
 
@@ -2515,9 +2515,9 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,domain,master",
-            f"VC4,Domain 4,{cls.devices[9].natural_key_slug}",
-            f"VC5,Domain 5,{cls.devices[10].natural_key_slug}",
-            f"VC6,Domain 6,{cls.devices[11].natural_key_slug}",
+            f"VC4,Domain 4,{cls.devices[9].composite_key}",
+            f"VC5,Domain 5,{cls.devices[10].composite_key}",
+            f"VC6,Domain 6,{cls.devices[11].composite_key}",
         )
 
         cls.bulk_edit_data = {
@@ -2577,9 +2577,9 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "location,rack_group,name",
-            f"{locations[0].natural_key_slug},{rackgroups[0].natural_key_slug},Power Panel 4",
-            f"{locations[0].natural_key_slug},{rackgroups[0].natural_key_slug},Power Panel 5",
-            f"{locations[0].natural_key_slug},{rackgroups[0].natural_key_slug},Power Panel 6",
+            f"{locations[0].composite_key},{rackgroups[0].composite_key},Power Panel 4",
+            f"{locations[0].composite_key},{rackgroups[0].composite_key},Power Panel 5",
+            f"{locations[0].composite_key},{rackgroups[0].composite_key},Power Panel 6",
         )
 
         cls.bulk_edit_data = {
@@ -2644,9 +2644,9 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "power_panel,name,voltage,amperage,max_utilization,status",
-            f"{powerpanels[0].natural_key_slug},Power Feed 4,120,20,80,{statuses[0].name}",
-            f"{powerpanels[0].natural_key_slug},Power Feed 5,120,20,80,{statuses[0].name}",
-            f"{powerpanels[0].natural_key_slug},Power Feed 6,120,20,80,{statuses[1].name}",
+            f"{powerpanels[0].composite_key},Power Feed 4,120,20,80,{statuses[0].name}",
+            f"{powerpanels[0].composite_key},Power Feed 5,120,20,80,{statuses[0].name}",
+            f"{powerpanels[0].composite_key},Power Feed 6,120,20,80,{statuses[1].name}",
         )
 
         cls.bulk_edit_data = {

@@ -40,6 +40,10 @@
                     <td>IPv{{ object.ip_version }}</td>
                 </tr>
                 <tr>
+                    <td>Type</td>
+                    <td>{{ object.type|hyperlinked_object }}</td>
+                </tr>
+                <tr>
                     <td>Status</td>
                     <td>
                         {{ object.status| hyperlinked_object_with_color }}

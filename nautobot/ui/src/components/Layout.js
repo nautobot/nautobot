@@ -40,7 +40,7 @@ export default function Layout({ children }) {
                     />
                 </Heading>
                 {isLoggedIn && <SidebarNav />}
-                <Button onClick={legacyUI} variant="link" color="white">
+                <Button onClick={legacyUI} variant="link" color="gray-1">
                     Return to Legacy UI
                 </Button>
             </Sidebar>

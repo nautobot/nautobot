@@ -1,0 +1,1 @@
+Fixed missing `natural_key` for `ObjectChange` records.

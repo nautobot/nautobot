@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 from unittest import mock
 import uuid
+import tempfile
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -440,7 +441,7 @@ class JobTest(TransactionTestCase):
             msg="Profiling test job errored, this indicates that either no profiling file was created or it is malformed.",
         )
 
-        profiling_result = Path(f"/tmp/nautobot-jobresult-{job_result.pk}.pstats")
+        profiling_result = Path(f"{tempfile.gettempdir()}/nautobot-jobresult-{job_result.id}.pstats")
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
 

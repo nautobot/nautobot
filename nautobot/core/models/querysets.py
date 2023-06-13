@@ -1,7 +1,7 @@
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 
-from nautobot.core.models.utils import deconstruct_natural_key_slug
+from nautobot.core.models.utils import deconstruct_composite_key
 from nautobot.core.utils import permissions
 
 
@@ -102,14 +102,14 @@ class RestrictedQuerySet(QuerySet):
 
     def filter(self, *args, **kwargs):
         """
-        Extend base queryset with support for filtering by `natural_key_slug=...`.
+        Extend base queryset with support for filtering by `composite_key=...`.
 
         This is an enhanced version of natural-key slug support from django-natural-keys.
-        Counterpart to BaseModel.natural_key_slug property.
+        Counterpart to BaseModel.composite_key property.
         """
-        natural_key_slug = kwargs.pop("natural_key_slug", None)
-        if natural_key_slug and isinstance(natural_key_slug, str):
-            values = deconstruct_natural_key_slug(natural_key_slug)
+        composite_key = kwargs.pop("composite_key", None)
+        if composite_key and isinstance(composite_key, str):
+            values = deconstruct_composite_key(composite_key)
             kwargs.update(self.model.natural_key_args_to_kwargs(values))
 
         return super().filter(*args, **kwargs)

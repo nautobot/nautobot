@@ -10,7 +10,7 @@ from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status, Tag
-from nautobot.ipam.choices import ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
     Namespace,
@@ -198,6 +198,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
             "status": statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
             "role": roles[0].pk,
             "nat_inside": None,
             "dns_name": "example",
@@ -207,15 +208,16 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "address,status,parent",
-            f"192.0.2.4/24,{statuses[0].name},{parent.natural_key_slug}",
-            f"192.0.2.5/24,{statuses[0].name},{parent.natural_key_slug}",
-            f"192.0.2.6/24,{statuses[0].name},{parent.natural_key_slug}",
+            f"192.0.2.4/24,{statuses[0].name},{parent.composite_key}",
+            f"192.0.2.5/24,{statuses[0].name},{parent.composite_key}",
+            f"192.0.2.6/24,{statuses[0].name},{parent.composite_key}",
         )
 
         cls.bulk_edit_data = {
             "tenant": None,
             "status": statuses[1].pk,
             "role": roles[1].pk,
+            "type": IPAddressTypeChoices.TYPE_HOST,
             "dns_name": "example",
             "description": "New description",
         }
@@ -421,9 +423,9 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "device,name,protocol,ports,description",
-            f"{cls.device.natural_key_slug},Service 4,tcp,1,First service",
-            f"{cls.device.natural_key_slug},Service 5,tcp,2,Second service",
-            f'{cls.device.natural_key_slug},Service 6,udp,"3,4,5",Third service',
+            f"{cls.device.composite_key},Service 4,tcp,1,First service",
+            f"{cls.device.composite_key},Service 5,tcp,2,Second service",
+            f'{cls.device.composite_key},Service 6,udp,"3,4,5",Third service',
         )
 
         cls.bulk_edit_data = {

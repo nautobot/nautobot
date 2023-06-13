@@ -535,8 +535,8 @@ class NautobotCSVRendererTest(TestCase):
         self.assertEqual(read_data["id"], str(location_type.id))
         self.assertIn("display", read_data)
         self.assertEqual(read_data["display"], location_type.display)
-        self.assertIn("natural_key_slug", read_data)
-        self.assertEqual(read_data["natural_key_slug"], location_type.natural_key_slug)
+        self.assertIn("composite_key", read_data)
+        self.assertEqual(read_data["composite_key"], location_type.composite_key)
         self.assertIn("name", read_data)
         self.assertEqual(read_data["name"], location_type.name)
         self.assertIn("content_types", read_data)
@@ -546,7 +546,7 @@ class NautobotCSVRendererTest(TestCase):
         self.assertIn("nestable", read_data)
         self.assertEqual(read_data["nestable"], str(location_type.nestable))
         self.assertIn("parent", read_data)
-        self.assertEqual(read_data["parent"], location_type.parent.natural_key_slug)
+        self.assertEqual(read_data["parent"], location_type.parent.composite_key)
 
 
 class WritableNestedSerializerTest(testing.APITestCase):
@@ -591,7 +591,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["location"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.status, self.statuses.first())
         self.assertEqual(vlan.location, self.location1)
@@ -624,7 +624,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["location"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.location, self.location1)
 

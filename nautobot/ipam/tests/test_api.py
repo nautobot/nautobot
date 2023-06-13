@@ -222,7 +222,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data["prefix"], str(prefixes_to_be_created[i]))
-            self.assertEqual(str(response.data["namespace"]), self.absolute_api_url(prefix.namespace))
+            self.assertEqual(str(response.data["namespace"]["url"]), self.absolute_api_url(prefix.namespace))
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more prefix
@@ -343,7 +343,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            self.assertEqual(str(response.data["parent"]), self.absolute_api_url(prefix))
+            self.assertEqual(str(response.data["parent"]["url"]), self.absolute_api_url(prefix))
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more IP
@@ -455,6 +455,8 @@ class ParallelPrefixTest(APITransactionTestCase):
 
 class IPAddressTest(APIViewTestCases.APIViewTestCase):
     model = IPAddress
+
+    choices_fields = ["type"]
 
     # Namespace is a write-only field.
     validation_excluded_fields = ["namespace"]
