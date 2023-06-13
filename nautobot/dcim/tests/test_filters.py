@@ -284,14 +284,16 @@ def common_test_data(cls):
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), location=loc1, status=prefix_status)
 
     # TODO: remove these once we have a Sites fixture; for now SiteTestCase needs VLANGroups and VLANs with Sites
-    VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=loc0)
-    VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=loc0)
-    VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", location=loc1)
+    vlan_groups = (
+        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=loc0),
+        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=loc0),
+        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", location=loc1),
+    )
 
     vlan_status = Status.objects.get_for_model(VLAN).first()
-    VLAN.objects.create(name="VLAN 101", vid=101, location=loc0, status=vlan_status)
-    VLAN.objects.create(name="VLAN 102", vid=102, location=loc0, status=vlan_status)
-    VLAN.objects.create(name="VLAN 103", vid=103, location=loc1, status=vlan_status)
+    VLAN.objects.create(name="VLAN 101", vid=101, location=loc0, status=vlan_status, vlan_group=vlan_groups[0])
+    VLAN.objects.create(name="VLAN 102", vid=102, location=loc0, status=vlan_status, vlan_group=vlan_groups[1])
+    VLAN.objects.create(name="VLAN 103", vid=103, location=loc1, status=vlan_status, vlan_group=vlan_groups[2])
 
     pf_status = Status.objects.get_for_model(PowerFeed).first()
     power_feeds = (

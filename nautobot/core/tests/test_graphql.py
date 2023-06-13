@@ -66,6 +66,7 @@ from nautobot.extras.models import (
     Status,
     Webhook,
 )
+from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
@@ -661,8 +662,16 @@ class GraphQLQueryTest(TestCase):
         cls.tenant2 = Tenant.objects.create(name="Tenant 2")
 
         vlan_statuses = Status.objects.get_for_model(VLAN)
-        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, location=cls.location1, status=vlan_statuses[0])
-        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, location=cls.location2, status=vlan_statuses[1])
+        vlan_groups = (
+            VLANGroupFactory.create(location=cls.location1),
+            VLANGroupFactory.create(location=cls.location2),
+        )
+        cls.vlan1 = VLAN.objects.create(
+            name="VLAN 1", vid=100, location=cls.location1, status=vlan_statuses[0], vlan_group=vlan_groups[0]
+        )
+        cls.vlan2 = VLAN.objects.create(
+            name="VLAN 2", vid=200, location=cls.location2, status=vlan_statuses[1], vlan_group=vlan_groups[1]
+        )
 
         cls.location1_power_panels = [
             PowerPanel.objects.create(name="location1-powerpanel1", location=cls.location1),

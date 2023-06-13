@@ -737,15 +737,21 @@ def increment_names_of_records_with_similar_names(model: models.Model):
     """
     This function increments the names of records with similar names in a given model.
     """
-    duplicate_records = (
-        model.objects.values("name").order_by("name").annotate(name_count=models.Count("name")).filter(name_count__gt=1)
-    )
+    cache = set()
     records_to_update = []
+    for instance in model.objects.all():
+        name = instance.name
+        counter = 1
+        while name in cache:
+            max_name_length = model.name.field.max_length
+            name = f"{instance.name[:max_name_length]} {counter}"
+            counter += 1
 
-    for duplicate_record in duplicate_records:
-        records = model.objects.filter(name=duplicate_record["name"])[1:]
-        for idx, record in enumerate(records):
-            # Starting from 2 e.g Example Name 2, Example Name 3
-            record.name = f"{record.name} {idx + 2}"
-            records_to_update.append(record)
-    model.objects.bulk_update(records_to_update, ["name"])
+        if name != instance.name:
+            print(f'{model._meta.verbose_name} instance {instance.id} is being renamed to "{name}" for uniqueness')
+            instance.name = name
+            records_to_update.append(instance)
+        cache.add(name)
+
+    if records_to_update:
+        model.objects.bulk_update(records_to_update, ["name"])

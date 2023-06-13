@@ -5,7 +5,7 @@ from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import ConfigContextSchema, Status
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -289,10 +289,11 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         )
 
         vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_group = VLANGroup.objects.first()
         vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status),
-            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status),
-            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status),
+            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status, vlan_group=vlan_group),
         )
 
         cls.create_data = [
