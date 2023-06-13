@@ -403,10 +403,11 @@ class IPAddressFilterSet(
         fields = ["id", "ip_version", "dns_name", "type", "tags", "mask_length"]
 
     def _assigned_to_interface(self, queryset, name, value):
-        if value == True:
-            queryset = queryset.filter(Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False))
-        elif value == False:
-            queryset = queryset.filter(Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True))
+        if value is not None:
+            if value:
+                queryset = queryset.filter(Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False))
+            else:
+                queryset = queryset.filter(Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True))
         return queryset
 
     def search_by_parent(self, queryset, name, value):

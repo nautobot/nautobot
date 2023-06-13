@@ -335,7 +335,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     @classmethod
     def setUpTestData(cls):
         # Make sure that the VRFs belong to the same Namespace
-        vrfs = VRF.objects.filter(namespace=VRF.objects.first().namespace, rd__isnull=False)[:3]
+        cls.namespace = Namespace.objects.filter(vrfs__isnull=False).first()
+        vrfs = VRF.objects.filter(namespace=cls.namespace, rd__isnull=False)[:3]
 
         cls.interface_ct = ContentType.objects.get_for_model(Interface)
         cls.vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
@@ -411,7 +412,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         statuses = Status.objects.get_for_model(IPAddress)
         prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
-        cls.namespace = vrfs[0].namespace
         cls.prefix4 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=prefix_status)
         cls.prefix6 = Prefix.objects.create(prefix="2001:db8::/64", namespace=cls.namespace, status=prefix_status)
         # Add some prefixes to VRFs so that we have enough qualified vrfs in test_vrf().
