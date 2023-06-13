@@ -275,10 +275,10 @@ class NautobotMetadata(SimpleMetadata):
 
     def restructure_view_config(self, view_config):
         """
-        Restructure the view config by removing specific fields ("natural_key_slug", "url", "display", "status", "id")
-        from the view config and adding standard fields ("id", "natural_key_slug", "url") to the first item's fields.
+        Restructure the view config by removing specific fields ("composite_key", "url", "display", "status", "id")
+        from the view config and adding standard fields ("id", "composite_key", "url") to the first item's fields.
 
-        This operation aims to establish a standardized and consistent way of displaying the fields "id", "natural_key_slug",
+        This operation aims to establish a standardized and consistent way of displaying the fields "id", "composite_key",
         and "url" within the view config.
 
         Example:
@@ -292,7 +292,7 @@ class NautobotMetadata(SimpleMetadata):
             >>> restructure_view_config(view_config)
             [
                 {
-                    Location: {fields: ["name","id","natural_key_slug","url"]},
+                    Location: {fields: ["name","id","composite_key","url"]},
                     Others: {fields: ["tenant", "tenant_group"]}
                 },
                 ...
@@ -300,8 +300,8 @@ class NautobotMetadata(SimpleMetadata):
         """
 
         # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
-        fields_to_remove = ["natural_key_slug", "url", "display", "status", "id"]
-        fields_to_add = ["id", "natural_key_slug", "url"]
+        fields_to_remove = ["composite_key", "url", "display", "status", "id"]
+        fields_to_add = ["id", "composite_key", "url"]
 
         for section_idx, section in enumerate(view_config):
             for idx, data in enumerate(section.items()):

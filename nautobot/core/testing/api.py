@@ -206,7 +206,7 @@ class APIViewTestCases:
 
                 with self.subTest("Assert specific fields(`id`, `composite_key`, `url`)."):
                     # Assert specific fields(`id`, `composite_key`, `url`) are present only at the end of the first col group fields.
-                    special_fields = ["id", "natural_key_slug", "url"]
+                    special_fields = ["id", "composite_key", "url"]
                     for col_idx, col in enumerate(response_view_config):
                         for group_idx, (group_title, group) in enumerate(col.items()):
                             group_fields = group["fields"]
