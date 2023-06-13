@@ -2763,7 +2763,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 if method == "put":
                     vlan2_json_data.update({"vid": "5", "name": vlan2.name})
 
-
             # Try method without specifying required relationships for either vlan1 or vlan2 (fails)
             json_data = [vlan1_json_data, vlan2_json_data]
             response = send_bulk_data(method, json_data)
