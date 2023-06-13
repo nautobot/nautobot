@@ -2,7 +2,6 @@ from unittest import skip
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from nautobot.core.filters import RelatedMembershipBooleanFilter
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import (
     Device,
