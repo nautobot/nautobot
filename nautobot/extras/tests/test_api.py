@@ -674,7 +674,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
         {
             "name": "API DynamicGroup 4",
             "content_type": "dcim.device",
-            "filter": {"location": ["location-1"]},
+            "filter": {"location": ["Location 1"]},
         },
         {
             "name": "API DynamicGroup 5",
@@ -684,7 +684,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
         {
             "name": "API DynamicGroup 6",
             "content_type": "dcim.device",
-            "filter": {"location": ["location-2"]},
+            "filter": {"location": ["Location 2"]},
         },
     ]
 

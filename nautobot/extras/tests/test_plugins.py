@@ -594,9 +594,9 @@ class FilterExtensionTest(TestCase):
         """
         Test that filters work against nested filters.
         """
-        params = {"example_plugin_dtype": ["model-1"]}
+        params = {"example_plugin_dtype": ["Model 1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"example_plugin_dtype": ["model-2"]}
+        params = {"example_plugin_dtype": ["Model 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_filter_method_param(self):

@@ -419,7 +419,7 @@ class GraphQLAPIPermissionTest(TestCase):
             rack_obj_permission = ObjectPermission.objects.create(
                 name=f"Permission Rack {i+1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"location__name": f"test{i+1}"},
+                constraints={"location__name": f"Location {i+1}"},
             )
             rack_obj_permission.object_types.add(rack_object_type)
             rack_obj_permission.groups.add(cls.groups[i])
@@ -428,7 +428,7 @@ class GraphQLAPIPermissionTest(TestCase):
             location_obj_permission = ObjectPermission.objects.create(
                 name=f"Permission Location {i+1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"name": f"test{i+1}"},
+                constraints={"name": f"Location {i+1}"},
             )
             location_obj_permission.object_types.add(location_object_type)
             location_obj_permission.groups.add(cls.groups[i])
@@ -456,7 +456,7 @@ class GraphQLAPIPermissionTest(TestCase):
 
         cls.get_racks_params_query = """
         query {
-            racks(location: "test1") {
+            racks(location: "Location 1") {
                 name
             }
         }
@@ -563,14 +563,14 @@ class GraphQLAPIPermissionTest(TestCase):
 
     def test_graphql_query_variables(self):
         """Validate graphql variables are working as expected."""
-        payload = {"query": self.get_racks_var_query, "variables": {"location": "test1"}}
+        payload = {"query": self.get_racks_var_query, "variables": {"location": "Location 1"}}
         response = self.clients[2].post(self.api_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2"])
 
-        payload = {"query": self.get_racks_var_query, "variables": {"location": "test2"}}
+        payload = {"query": self.get_racks_var_query, "variables": {"location": "Location 2"}}
         response = self.clients[2].post(self.api_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
@@ -590,6 +590,7 @@ class GraphQLAPIPermissionTest(TestCase):
         response = self.clients[0].post(self.api_url, {"query": self.get_locations_racks_query}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["locations"], list)
+        self.assertGreater(len(response.data["data"]["locations"]), 0)
         location_names = [item["name"] for item in response.data["data"]["locations"]]
         rack_names = [item["name"] for item in response.data["data"]["locations"][0]["racks"]]
         self.assertEqual(location_names, ["Location 1"])

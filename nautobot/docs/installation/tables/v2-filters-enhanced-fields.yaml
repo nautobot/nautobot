@@ -232,7 +232,7 @@
   Enhancements: "Filter by UUID or by name"
 - Model: "VLAN"
   Filter: "vlan_group"
-  Enhancements: "Filter by UUID or by slug"
+  Enhancements: "Filter by UUID or by name"
 - Model: "VRF"
   Filter: "tenant"
   Enhancements: "Filter by UUID or by name"

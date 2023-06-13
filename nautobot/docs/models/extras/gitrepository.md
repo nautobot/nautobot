@@ -170,7 +170,7 @@ config_contexts/
 ```
 
 +/- 2.0.0
-    In Nautobot 1.x, the filenames were interpreted as `slug` strings for the related objects. In Nautobot 2.0 and later, the filenames are based on the `name` instead.
+    In Nautobot 1.x, the filenames were interpreted as `slug` strings for the related objects. In Nautobot 2.0 and later, the filenames are based on the `name` (or for `device-types` files, the `model`) of the related object instead.
 
 The implicit config contexts will be defined using dictionaries for both `_metadata` and any context data for the config context.
 

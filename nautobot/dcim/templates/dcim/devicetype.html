@@ -4,7 +4,7 @@
 {% load plugins %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.model }}">{{ object.manufacturer }}</a></li>
+                <li><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></li>
 {% endblock extra_breadcrumbs %}
 
 {% block buttons %}
@@ -63,7 +63,7 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Manufacturer</td>
-                        <td><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.model }}">{{ object.manufacturer }}</a></td>
+                        <td><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></td>
                     </tr>
                     <tr>
                         <td>Model Name</td>

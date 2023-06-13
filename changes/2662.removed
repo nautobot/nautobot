@@ -1,0 +1,9 @@
+Removed `DeviceType.slug` field.
+Removed `Location.slug` field.
+Removed `LocationType.slug` field.
+Removed `Note.slug` field.
+Removed `ProviderNetwork.slug` field.
+Removed `RackGroup.slug` field.
+Removed `Tag.slug` field.
+Removed `VLANGroup.slug` field.
+Removed `slug` FilterSet filters from models that no longer have slugs.

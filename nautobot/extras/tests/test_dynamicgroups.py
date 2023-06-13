@@ -105,14 +105,14 @@ class DynamicGroupTestBase(TestCase):
             DynamicGroup.objects.create(
                 name="First Child",
                 description="The first child group",
-                filter={"location": ["location-1"]},
+                filter={"location": ["Location 1"]},
                 content_type=cls.device_ct,
             ),
             # Location-2 only
             DynamicGroup.objects.create(
                 name="Second Child",
                 description="A second child group",
-                filter={"location": ["location-3"]},
+                filter={"location": ["Location 3"]},
                 content_type=cls.device_ct,
             ),
             # Empty filter to use for testing nesting.
@@ -143,6 +143,8 @@ class DynamicGroupTestBase(TestCase):
                 content_type=cls.device_ct,
             ),
         ]
+        for group in cls.groups:
+            group.validated_save()
 
         cls.parent = cls.groups[0]
         cls.first_child = cls.groups[1]
@@ -237,8 +239,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
     def test_get_for_object(self):
         """Test `DynamicGroup.objects.get_for_object()`."""
-        device1 = self.devices[0]  # location-1
-        device4 = self.devices[-1]  # location-4
+        device1 = self.devices[0]  # device-location-1
+        device4 = self.devices[-1]  # device-location-4
 
         # Assert that the groups we got from `get_for_object()` match the lookup
         # from the group instance itself.
@@ -293,7 +295,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         group = DynamicGroup.objects.create(
             name="Devices Location",
             content_type=self.device_ct,
-            filter={"location": ["location-a"]},
+            filter={"location": ["Location A"]},
         )
 
         # We are expecting that the group members here should be nested results from any devices
@@ -576,7 +578,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
     def test_clean_child_validation(self):
         """Test various ways in which adding a child group should fail."""
         parent = self.parent
-        parent.filter = {"location": ["location-1"]}
+        parent.filter = {"location": ["Location 1"]}
         child = self.invalid_filter
 
         # parent.add_child() should fail

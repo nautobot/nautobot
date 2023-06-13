@@ -670,7 +670,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected.distinct())
 
     def test_child_location_type(self):
-        params = {"child_location_type": ["room", LocationType.objects.get(name="Floor").pk]}
+        params = {"child_location_type": ["Room", LocationType.objects.get(name="Floor").pk]}
         query_params = Q(
             location_type__children__in=[LocationType.objects.get(name="Room"), LocationType.objects.get(name="Floor")]
         ) | Q(

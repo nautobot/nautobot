@@ -2128,15 +2128,33 @@ class RelationshipAssociationTestCase(
         device_type = ContentType.objects.get_for_model(Device)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
-        relationship = Relationship(
-            label="Device VLANs",
-            key="device_vlans",
+        # Since RelationshipAssociation.get_absolute_url() is actually the Relationship's URL,
+        # we want to have separate Relationships as well to allow distinguishing between them.
+        relationship_1 = Relationship(
+            label="Device VLANs 1",
+            key="device_vlans_1",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         )
-        cls.relationship = relationship
-        relationship.validated_save()
+        relationship_2 = Relationship(
+            label="Device VLANs 2",
+            key="device_vlans_2",
+            type="many-to-many",
+            source_type=device_type,
+            destination_type=vlan_type,
+        )
+        relationship_3 = Relationship(
+            label="Device VLANs 3",
+            key="device_vlans_3",
+            type="many-to-many",
+            source_type=device_type,
+            destination_type=vlan_type,
+        )
+        cls.relationship = relationship_1
+        relationship_1.validated_save()
+        relationship_2.validated_save()
+        relationship_3.validated_save()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
@@ -2161,21 +2179,21 @@ class RelationshipAssociationTestCase(
         )
 
         RelationshipAssociation(
-            relationship=relationship,
+            relationship=relationship_1,
             source_type=device_type,
             source_id=devices[0].pk,
             destination_type=vlan_type,
             destination_id=vlans[0].pk,
         ).validated_save()
         RelationshipAssociation(
-            relationship=relationship,
+            relationship=relationship_2,
             source_type=device_type,
             source_id=devices[1].pk,
             destination_type=vlan_type,
             destination_id=vlans[1].pk,
         ).validated_save()
         RelationshipAssociation(
-            relationship=relationship,
+            relationship=relationship_3,
             source_type=device_type,
             source_id=devices[2].pk,
             destination_type=vlan_type,
@@ -2183,7 +2201,7 @@ class RelationshipAssociationTestCase(
         ).validated_save()
 
     def test_list_objects_with_constrained_permission(self):
-        instance1, instance2 = self.relationship.relationship_associations.all()[:2]
+        instance1, instance2 = RelationshipAssociation.objects.all()[:2]
 
         # Add object-level permission
         obj_perm = ObjectPermission(

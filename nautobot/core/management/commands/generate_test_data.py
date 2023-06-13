@@ -197,7 +197,7 @@ Type 'yes' to continue, or 'no' to cancel: """
                     "dumpdata",
                     indent=2,
                     format="json",
-                    exclude=["contenttypes", "auth.permission", "extras.job", "extras.customfield"],
+                    exclude=["auth.permission", "extras.job", "extras.customfield"],
                     output=options["fixture_file"],
                 )
 
