@@ -15,6 +15,7 @@ from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerialize
 from rest_framework import serializers
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.relations import ManyRelatedField
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
@@ -100,6 +101,24 @@ class OptInFieldsMixin:
         return self.__pruned_fields
 
 
+@extend_schema_field(
+    {
+        "type": "object",
+        "properties": {
+            "id": {
+                "oneOf": [
+                    {"type": "string", "format": "uuid"},
+                    {"type": "integer"},
+                ]
+            },
+            "object_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]+\\.[a-z][a-z0-9_]+$"},
+            "url": {
+                "type": "string",
+                "format": "uri",
+            },
+        },
+    }
+)
 class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.HyperlinkedRelatedField):
     """DRF's built-in HyperlinkedRelatedField combined with custom to_internal_value() function"""
 
@@ -118,6 +137,34 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
             else:
                 kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
         super().__init__(*args, **kwargs)
+
+    def to_internal_value(self, data):
+        """Convert potentially nested representation to a model instance."""
+        if isinstance(data, dict):
+            if "url" in data:
+                return super().to_internal_value(data["url"])
+            elif "id" in data:
+                return super().to_internal_value(data["id"])
+        return super().to_internal_value(data)
+
+    def to_representation(self, value):
+        """Convert URL representation to a brief nested representation."""
+        url = super().to_representation(value)
+        if self.queryset:
+            model = self.queryset.model
+        elif isinstance(self.parent, ManyRelatedField) and getattr(self.parent.parent.Meta.model, self.source, False):
+            model = getattr(self.parent.parent.Meta.model, self.source).field.model
+        elif getattr(self.parent.Meta.model, self.source, False):
+            model = getattr(self.parent.Meta.model, self.source).field.model
+        else:
+            logger.warning(
+                "Unable to determine model for related field %r; "
+                "ensure that either the field defines a 'queryset' "
+                "or the Meta defines the related 'model'.",
+                self.field_name,
+            )
+            return {"id": value.pk, "object_type": "unknown.unknown", "url": url}
+        return {"id": value.pk, "object_type": model._meta.label_lower, "url": url}
 
 
 class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializer):

@@ -282,7 +282,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["config_context_schema"], self.absolute_api_url(schema))
+        self.assertEqual(response.data["config_context_schema"]["url"], self.absolute_api_url(schema))
 
     def test_schema_validation_fails(self):
         """

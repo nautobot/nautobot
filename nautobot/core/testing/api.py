@@ -253,13 +253,23 @@ class APIViewTestCases:
                     self.assertIn(field, response_data)
                     if isinstance(response_data[field], list):
                         for entry in response_data[field]:
-                            self.assertTrue(is_uuid(entry))
+                            self.assertIsInstance(entry, dict)
+                            self.assertTrue(is_uuid(entry["id"]))
                     else:
                         if response_data[field] is not None:
-                            # The response should be a detail API URL, ending in the UUID of the relevant object
+                            self.assertIsInstance(response_data[field], dict)
+                            url = response_data[field]["url"]
+                            pk = response_data[field]["id"]
+                            object_type = response_data[field]["object_type"]
+                            # The response should be a brief API object, containing an ID, object_type, and URL ending in the UUID of the relevant object
                             # http://nautobot.example.com/api/circuits/providers/<uuid>/
                             #                                                    ^^^^^^
-                            self.assertTrue(is_uuid(response_data[field].split("/")[-2]))
+                            self.assertTrue(is_uuid(url.split("/")[-2]))
+                            self.assertTrue(is_uuid(pk))
+
+                            with self.subTest(f"Assert object_type {object_type} is valid"):
+                                app_label, model_name = object_type.split(".")
+                                ContentType.objects.get(app_label=app_label, model=model_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):

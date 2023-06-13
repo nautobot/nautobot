@@ -627,7 +627,7 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = "markdownlint --ignore nautobot/project-static --ignore nautobot/ui/node_modules --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
+    command = "npm exec -- markdownlint --ignore nautobot/project-static --ignore nautobot/ui/node_modules --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
     run_command(context, command)
 
 
