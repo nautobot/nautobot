@@ -203,7 +203,17 @@ class LocationSerializer(
         detail_view_config = [
             {
                 "Location": {
-                    "fields": ["name", "location_type", "tenant", "description", "facility", "asn", "time_zone", "latitude", "longitude"]
+                    "fields": [
+                        "name",
+                        "location_type",
+                        "tenant",
+                        "description",
+                        "facility",
+                        "asn",
+                        "time_zone",
+                        "latitude",
+                        "longitude",
+                    ]
                 },
                 "Contact Info": {
                     "fields": ["physical_address", "shipping_address", "contact_name", "contact_phone", "contact_email"]
