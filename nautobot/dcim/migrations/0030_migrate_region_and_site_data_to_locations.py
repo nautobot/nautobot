@@ -4,7 +4,6 @@ import logging
 import uuid
 
 from django.db import migrations
-from django.db.utils import IntegrityError
 
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import serialize_object
@@ -54,20 +53,18 @@ def create_region_location_type_locations(apps, region_lt):
         .select_related("parent")
     )
     for region in regions:
-        try:
-            region_loc = location_class.objects.create(
-                id=region.id,
-                location_type=region_lt,
-                name=region.name,
-                description=region.description,
-                parent=location_class.objects.get(id=region.parent_id) if region.parent else None,
-            )
-            region.migrated_location = region_loc
-            region.save()
-        except IntegrityError as e:
-            logger.error(
-                f"{e.args[0]} \nPlease consider changing the slug attribute of this Region instance to resolve this conflict."
-            )
+        region_loc = location_class.objects.create(
+            id=region.id,
+            # We're going to discard Location.slug in the 0045_remove_slugs migration anyway, so for now
+            # just set it to something that we can be pretty confident will *not* collide with existing Locations.
+            slug=str(region.id),
+            location_type=region_lt,
+            name=region.name,
+            description=region.description,
+            parent=location_class.objects.get(id=region.parent_id) if region.parent else None,
+        )
+        region.migrated_location = region_loc
+        region.save()
 
 
 def create_site_location_type_locations(
@@ -85,16 +82,16 @@ def create_site_location_type_locations(
         apps: Installed apps
         location_ct: Location ContentType
         site_ct: Site ContentType
-        site_lt: The newly created site location type
-        exclude_lt: The name of the top level location_type_class to exclude from the update query
-        e.g.
-            At the end of the function, we update all existing top level LocationTypes to have `Site` LocationType as their parent:
+        site_lt: The newly created "Site" LocationType
+        exclude_lt: The name of the top level location_type_class to exclude from the update query, e.g.:
+          At the end of the function, we update all existing top level LocationTypes to have the `Site`
+          LocationType as their parent:
             `location_type_class.objects.filter(parent__isnull=True).exclude(name=exclude_lt).update(parent=site_lt)`
-            If `Region` and `Site` instances both exist in the database, exclude_lt is set to "Region" (a top level lt) to prevent the above line from setting
-            "Region" LocationType to have Site "LocationType" as its parent.
-            If only `Site` instances exist in the database, exclude_lt is set to "Site" to prevent the above line from setting
-            "Site" LocationType (a top level lt) to have itself as a parent.
-        region_lt: The newly created region location type
+          - If `Region` and `Site` instances both exist in the database, exclude_lt is set to "Region" (a top level lt)
+            to prevent the above from setting the "Region" LocationType to have the Site "LocationType" as its parent.
+          - If only `Site` instances exist in the database, exclude_lt is set to "Site" to prevent the above line from
+            setting the "Site" LocationType (a top level lt) to have itself as a parent.
+        region_lt: The newly created "Region" LocationType
     """
     count = 0
     location_instances = []
@@ -116,7 +113,9 @@ def create_site_location_type_locations(
             location_class(
                 id=site.id,
                 name=site.name,
-                slug=site.slug,
+                # We're going to discard Location.slug in the 0045_remove_slugs migration anyway, so for now
+                # just set it to something that we can be pretty confident will *not* collide with existing Locations.
+                slug=str(site.id),
                 location_type=site_lt,
                 tenant=site.tenant,
                 facility=site.facility,
@@ -138,29 +137,9 @@ def create_site_location_type_locations(
         )
         count += 1
 
-        # A simple pagination check:
-        # If there are 1000 locations loaded into list `location_instances`, we create the locations in batch of 1000
-        # This check is in place to optimize memeroy usage with the creation of large number of location objects
-        if count == 1000:
-            # Handle IntegrityError when Region, Site, Location instances with the same slug.
-            try:
-                location_class.objects.bulk_create(location_instances, batch_size=1000)
-            except IntegrityError as e:
-                logger.error(
-                    f"{e.args[0]} \nPlease consider changing the slug attribute of this Site instance to resolve this conflict."
-                )
-            count = 0
-            location_instances = []
-
     # Create the remaining locations
     if count > 0:
-        # Handle IntegrityError when Region, Site, Location instances with the same slug.
-        try:
-            location_class.objects.bulk_create(location_instances, batch_size=1000)
-        except IntegrityError as e:
-            logger.error(
-                f"{e.args[0]} \nPlease consider changing the slug attribute of this Site instance to resolve this conflict."
-            )
+        location_class.objects.bulk_create(location_instances, batch_size=1000)
 
     site_lt_locations = location_class.objects.filter(location_type=site_lt)
     sites = site_class.objects.all()

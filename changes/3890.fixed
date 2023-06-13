@@ -1,0 +1,1 @@
+Fixed an error that could happen during migrations if a Site and a Location both have the same `slug`.
