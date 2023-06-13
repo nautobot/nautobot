@@ -1,7 +1,6 @@
 import sys
 
 from django.apps import apps as global_apps
-from django.core.exceptions import FieldError
 from django.db import DEFAULT_DB_ALIAS, IntegrityError
 
 from nautobot.circuits import choices as circuit_choices

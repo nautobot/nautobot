@@ -122,10 +122,11 @@ class ModelViewTestCase(ModelTestCase):
                 except NoReverseMatch:
                     pass
 
-        self.fail(
+        raise RuntimeError(
             "Unable to resolve instance URL by either 'pk' or 'slug'. "
             "Perhaps you need to define 'self.reverse_url_attribute' explicitly?"
         )
+
 
 @tag("unit")
 class ViewTestCases:

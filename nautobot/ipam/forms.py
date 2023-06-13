@@ -617,7 +617,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 
 
 class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
-
     class Meta:
         model = VLANGroup
         fields = [

@@ -421,9 +421,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Create Devices
         manufacturer = Manufacturer.objects.first()
 
-        device_types = (
-            DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer),
-        )
+        device_types = (DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer),)
 
         device_roles = Role.objects.get_for_model(Device)[:1]
 
