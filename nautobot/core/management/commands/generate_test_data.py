@@ -1,9 +1,14 @@
+import hashlib
+import json
 import os
 
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.utils.crypto import get_random_string
+
+from nautobot.core.settings_funcs import is_truthy
 
 
 class Command(BaseCommand):
@@ -61,6 +66,7 @@ class Command(BaseCommand):
             )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
+                IPAddressFactory,
                 NamespaceFactory,
                 PrefixFactory,
                 RIRFactory,
@@ -164,6 +170,49 @@ class Command(BaseCommand):
         # ClusterFactory.create_batch(10)
         # VirtualMachineFactory.create_batch(10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
+
+        self._output_hash_for_factory_models(
+            factories=[
+                RoleFactory,
+                StatusFactory,
+                TagFactory,
+                TenantGroupFactory,
+                TenantFactory,
+                LocationTypeFactory,
+                LocationFactory,
+                NamespaceFactory,
+                RIRFactory,
+                RouteTargetFactory,
+                VRFFactory,
+                VLANGroupFactory,
+                VLANFactory,
+                PrefixFactory,
+                IPAddressFactory,
+                PlatformFactory,
+                DeviceTypeFactory,
+                ManufacturerFactory,
+                DeviceRedundancyGroupFactory,
+                CircuitTypeFactory,
+                ProviderNetworkFactory,
+                CircuitFactory,
+                ProviderFactory,
+                CircuitTerminationFactory,
+            ]
+        )
+
+    def _output_hash_for_factory_models(self, factories=[]):
+        """Output a hash of the IDs of all objects in the given factories' model.
+
+        Used for identifying factory determinism problems in unit tests. Only prints if GITHUB_ACTIONS environment variable is set to "true".
+        """
+        if not is_truthy(os.environ.get("GITHUB_ACTIONS", "false")):
+            return
+
+        for factory in factories:
+            model = factory._meta.get_model_class()
+            model_ids = list(model.objects.order_by("id").values_list("id", flat=True))
+            hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
+            self.stdout.write(f"SHA256 Hash for {model.__name__}: {hash}")
 
     def handle(self, *args, **options):
         if options["flush"]:

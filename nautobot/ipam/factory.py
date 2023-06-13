@@ -1,6 +1,5 @@
 import datetime
 import logging
-import random
 
 import factory
 import faker
@@ -341,7 +340,7 @@ class PrefixFactory(PrimaryModelFactory):
         if self.type == PrefixTypeChoices.TYPE_CONTAINER:
             child_factory = PrefixFactory
         elif self.type == PrefixTypeChoices.TYPE_NETWORK:
-            child_factory = random.choice([IPAddressFactory, PrefixFactory])
+            child_factory = factory.random.randgen.choice([IPAddressFactory, PrefixFactory])
         else:
             return
 
@@ -377,7 +376,9 @@ class PrefixFactory(PrimaryModelFactory):
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
             if self.type == PrefixTypeChoices.TYPE_CONTAINER:
-                child_type = random.choice([PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_CONTAINER])
+                child_type = factory.random.randgen.choice(
+                    [PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_CONTAINER]
+                )
             else:
                 child_type = PrefixTypeChoices.TYPE_POOL
 
