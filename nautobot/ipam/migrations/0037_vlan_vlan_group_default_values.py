@@ -5,6 +5,9 @@ from django.db import migrations
 from nautobot.ipam.utils.migrations import increment_names_of_records_with_similar_names
 
 
+DEFAULT_VLAN_GROUP_BASENAME = "Default VLAN Group"
+
+
 def vlan_vlan_group_uniqueness_constrains_revise(apps, schema_editor):
     # Resolve VLAN-Group name uniqueness
     VLAN = apps.get_model("ipam", "vlan")
@@ -12,20 +15,28 @@ def vlan_vlan_group_uniqueness_constrains_revise(apps, schema_editor):
 
     increment_names_of_records_with_similar_names(VLANGroup)
 
-    # Hope fully vlan group with name `Default VLAN Group` would not exist
-    _, default_vlan_group = VLANGroup.objects.get_or_create(name="Default VLAN Group")
-    VLAN.objects.filter(vlan_group__isnull=True).update(vlan_group=default_vlan_group)
+    vlans_without_vlan_groups = VLAN.objects.filter(vlan_group__isnull=True)
+    vlans_to_update = []
+    counter = 1
+    for vlan in vlans_without_vlan_groups:
+        while True:
+            created, vlan_group = VLANGroup.objects.get_or_create(
+                name=f"{DEFAULT_VLAN_GROUP_BASENAME} {counter}", defaults={"location": vlan.location}
+            )
+            if created or vlan_group.location == vlan.location:
+                vlan.vlan_group = vlan_group
+                vlans_to_update.append(vlan)
+                continue
+            counter += 1
+    VLAN.objects.bulk_update(vlans_to_update, ["vlan_group"])
 
 
 def revert_vlan_vlan_group_uniqueness_constrains_revise(apps, schema_editor):
     VLAN = apps.get_model("ipam", "vlan")
     VLANGroup = apps.get_model("ipam", "vlangroup")
 
-    # Revert changes made to vlan
-    default_vlan_group = VLANGroup.objects.get(name="Default VLAN Group")
-    VLAN.objects.filter(vlan_group=default_vlan_group).update(vlan_group=None)
-    default_vlan_group.delete()
-
+    # TODO(timizuo): Find a way to revert changes made to VLAN and VLANGroup
+    # Revert changes made to VLAN
     # Reverting changes made to VLAN Group might be tricky
 
 
