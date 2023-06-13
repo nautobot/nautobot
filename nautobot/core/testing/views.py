@@ -117,10 +117,7 @@ class ModelViewTestCase(ModelTestCase):
         except NoReverseMatch:
             # Attempt to resolve using slug as the unique identifier if one exists
             if hasattr(self.model, "slug"):
-                try:
-                    return reverse(url_format.format(action), kwargs={"slug": instance.slug})
-                except NoReverseMatch:
-                    raise
+                return reverse(url_format.format(action), kwargs={"slug": instance.slug})
             raise
 
 
