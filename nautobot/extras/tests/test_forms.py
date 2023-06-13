@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     Status,
     Webhook,
 )
+from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
 
@@ -304,6 +305,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.platform = dcim_models.Platform.objects.create(name="Platform 1")
         cls.device_status = Status.objects.get_for_model(Device).first()
         cls.ipaddress_status = Status.objects.get_for_model(ipam_models.IPAddress).first()
+        cls.prefix_status = Status.objects.get_for_model(ipam_models.Prefix).first()
         cls.vlangroup_status = Status.objects.get_for_model(ipam_models.VLANGroup).first()
         cls.device_1 = dcim_models.Device.objects.create(
             name="Device 1",
@@ -330,8 +332,14 @@ class RelationshipModelFormTestCase(TestCase):
             status=cls.device_status,
         )
 
-        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=cls.ipaddress_status)
-        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=cls.ipaddress_status)
+        cls.namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=cls.prefix_status)
+        cls.ipaddress_1 = ipam_models.IPAddress.objects.create(
+            address="10.1.1.1/24", namespace=cls.namespace, status=cls.ipaddress_status
+        )
+        cls.ipaddress_2 = ipam_models.IPAddress.objects.create(
+            address="10.2.2.2/24", namespace=cls.namespace, status=cls.ipaddress_status
+        )
 
         cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(
             name="VLAN Group 1", slug="vlan-group-1", location=cls.location
@@ -380,7 +388,9 @@ class RelationshipModelFormTestCase(TestCase):
         }
         cls.ipaddress_form_base_data = {
             "address": "10.3.3.3/24",
+            "namespace": cls.namespace.pk,
             "status": cls.ipaddress_status.pk,
+            "type": IPAddressTypeChoices.TYPE_HOST,
         }
         cls.vlangroup_form_base_data = {
             "location": cls.location.pk,
@@ -630,6 +640,8 @@ class RelationshipModelFormTestCase(TestCase):
             data={
                 "address": self.ipaddress_1.address,
                 "status": self.ipaddress_status,
+                "type": IPAddressTypeChoices.TYPE_HOST,
+                "namespace": self.namespace.pk,
                 f"cr_{self.relationship_1.key}__source": self.device_2.pk,
             },
         )
@@ -742,10 +754,13 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         status = Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = Status.objects.get_for_model(ipam_models.Prefix).first()
         cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", status=prefix_status, namespace=namespace)
         cls.ipaddresses = [
-            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status),
-            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=status),
+            ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status, namespace=namespace),
+            ipam_models.IPAddress.objects.create(address="10.2.2.2/24", status=status, namespace=namespace),
         ]
 
         cls.rel_1to1 = Relationship(
@@ -1133,18 +1148,15 @@ class JobEditFormTestCase(TestCase):
             "grouping": "Overridden grouping",
             "name_override": True,
             "name": "Overridden name",
-            "slug": "overridden-slug",
             "description_override": True,
             "description": "This is an overridden description.",
             "enabled": True,
             "approval_required_override": True,
             "approval_required": True,
-            "commit_default_override": True,
-            "commit_default": False,
+            "dryrun_default_override": True,
+            "dryrun_default": True,
             "hidden_override": True,
             "hidden": True,
-            "read_only_override": True,
-            "read_only": True,
             "soft_time_limit_override": True,
             "soft_time_limit": 350.1,
             "time_limit_override": True,

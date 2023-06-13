@@ -1,12 +1,53 @@
 from django.core.exceptions import ValidationError
-from django.db.models.signals import pre_delete, pre_save
+from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
-from nautobot.ipam.models import IPAddressToInterface
+from nautobot.ipam.models import IPAddressToInterface, VRF, VRFDeviceAssignment, VRFPrefixAssignment
+
+
+@receiver(pre_save, sender=VRFDeviceAssignment)
+@receiver(pre_save, sender=VRFPrefixAssignment)
+def ipam_object_saved(sender, instance, raw=False, **kwargs):
+    """
+    Forcibly call `full_clean()` when a new IPAM intermediate model is manually saved to prevent
+    creation of invalid objects.
+    """
+    if raw:
+        return
+    instance.full_clean()
+
+
+@receiver(m2m_changed, sender=VRFPrefixAssignment)
+def vrf_prefix_associated(sender, instance, action, reverse, model, pk_set, **kwargs):
+    """
+    Disallow adding Prefixes if the namespace doesn't match.
+    """
+
+    if action == "pre_add":
+        prefixes = model.objects.filter(pk__in=pk_set).exclude(namespace=instance.namespace)
+        if prefixes.exists():
+            raise ValidationError({"prefixes": "Prefix must match namespace of VRF"})
+
+
+@receiver(m2m_changed, sender=VRFDeviceAssignment)
+def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kwargs):
+    """
+    Assert validation on m2m when devices are associated with a VRF.
+    """
+
+    # TODO(jathan): Temporary workaround until a formset to add/remove/update VRFs <-> Devices and
+    # optionally setting RD/name on assignment. k
+    if action == "post_add":
+        if isinstance(instance, VRF):
+            for assignment in instance.device_assignments.iterator():
+                assignment.validated_save()
+        else:
+            for assignment in instance.vrf_assignments.iterator():
+                assignment.validated_save()
 
 
 @receiver(pre_delete, sender=IPAddressToInterface)
-def ip_address_to_interface_pre_delete_validation(instance, raw=False, **kwargs):
+def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
     if raw:
         return
 
@@ -15,38 +56,25 @@ def ip_address_to_interface_pre_delete_validation(instance, raw=False, **kwargs)
 
     if getattr(instance, "interface"):
         host = instance.interface.device
-        int_or_vm_int = instance.interface
         other_assignments_exist = (
             IPAddressToInterface.objects.filter(interface__device=host, ip_address=instance.ip_address)
             .exclude(id=instance.id)
             .exists()
         )
-        model_name = "Device"
     else:
         host = instance.vm_interface.virtual_machine
-        int_or_vm_int = instance.vm_interface
         other_assignments_exist = (
             IPAddressToInterface.objects.filter(vm_interface__virtual_machine=host, ip_address=instance.ip_address)
             .exclude(id=instance.id)
             .exists()
         )
-        model_name = "Virtual Machine"
 
-    ip_address = instance.ip_address
-    # IP address validation
-    if host:
-        if host.primary_ip4 and host.primary_ip4 == ip_address and not other_assignments_exist:
-            raise ValidationError(
-                {
-                    "ip_addresses": f"Cannot remove IP address {ip_address} from interface {int_or_vm_int} on {model_name} {host} because it is marked as its primary IPv4 address"
-                }
-            )
-        if host.primary_ip6 and host.primary_ip6 == ip_address and not other_assignments_exist:
-            raise ValidationError(
-                {
-                    "ip_addresses": f"Cannot remove IP address {ip_address} from interface {int_or_vm_int} on {model_name} {host} because it is marked as its primary IPv6 address"
-                }
-            )
+    # Only nullify the primary_ip field if no other interfaces/vm_interfaces have the ip_address
+    if not other_assignments_exist and instance.ip_address == host.primary_ip4:
+        host.primary_ip4 = None
+    elif not other_assignments_exist and instance.ip_address == host.primary_ip6:
+        host.primary_ip6 = None
+    host.save()
 
 
 @receiver(pre_save, sender=IPAddressToInterface)

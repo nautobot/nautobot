@@ -5,21 +5,8 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Service</strong></div>
         <div class="panel-body">
-            {% if obj.device %}
-                <div class="form-group">
-                    <label class="col-md-3 control-label required">Device</label>
-                    <div class="col-md-9">
-                        <p class="form-control-static">{{ obj.device }}</p>
-                    </div>
-                </div>
-            {% else %}
-                <div class="form-group">
-                    <label class="col-md-3 control-label required">Virtual Machine</label>
-                    <div class="col-md-9">
-                        <p class="form-control-static">{{ obj.virtual_machine }}</p>
-                    </div>
-                </div>
-            {% endif %}
+            {% render_field form.device %}
+            {% render_field form.virtual_machine %}
             {% render_field form.name %}
             {% render_field form.protocol %}
             {% render_field form.ports %}

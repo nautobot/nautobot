@@ -66,7 +66,7 @@ from nautobot.extras.models import (
     Status,
     Webhook,
 )
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.factory import ClusterTypeFactory
@@ -82,10 +82,17 @@ class GraphQLTestCase(TestCase):
         GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
         GraphQLQuery.objects.create(name="GQL 2", query="query ($name: [String!]) { locations(name:$name) {name} }")
         self.location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         self.locations = (
-            Location.objects.create(name="Location-1", slug="location-1", location_type=self.location_type),
-            Location.objects.create(name="Location-2", slug="location-2", location_type=self.location_type),
-            Location.objects.create(name="Location-3", slug="location-3", location_type=self.location_type),
+            Location.objects.create(
+                name="Location-1", slug="location-1", location_type=self.location_type, status=location_status
+            ),
+            Location.objects.create(
+                name="Location-2", slug="location-2", location_type=self.location_type, status=location_status
+            ),
+            Location.objects.create(
+                name="Location-3", slug="location-3", location_type=self.location_type, status=location_status
+            ),
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -374,37 +381,43 @@ class GraphQLSearchParameters(TestCase):
 class GraphQLAPIPermissionTest(TestCase):
     client_class = NautobotTestClient
 
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         """Initialize the Database with some datas and multiple users associated with different permissions."""
-        self.groups = (
+        cls.groups = (
             Group.objects.create(name="Group 1"),
             Group.objects.create(name="Group 2"),
         )
 
-        self.users = (
+        cls.users = (
             User.objects.create(username="User 1", is_active=True),
             User.objects.create(username="User 2", is_active=True),
             User.objects.create(username="Super User", is_active=True, is_superuser=True),
             User.objects.create(username="Nobody", is_active=True),
         )
 
-        self.tokens = (
-            Token.objects.create(user=self.users[0], key="0123456789abcdef0123456789abcdef01234567"),
-            Token.objects.create(user=self.users[1], key="abcd456789abcdef0123456789abcdef01234567"),
-            Token.objects.create(user=self.users[2], key="efgh456789abcdef0123456789abcdef01234567"),
-            Token.objects.create(user=self.users[3], key="ijkl456789abcdef0123456789abcdef01234567"),
+        cls.tokens = (
+            Token.objects.create(user=cls.users[0], key="0123456789abcdef0123456789abcdef01234567"),
+            Token.objects.create(user=cls.users[1], key="abcd456789abcdef0123456789abcdef01234567"),
+            Token.objects.create(user=cls.users[2], key="efgh456789abcdef0123456789abcdef01234567"),
+            Token.objects.create(user=cls.users[3], key="ijkl456789abcdef0123456789abcdef01234567"),
         )
 
-        self.clients = [self.client_class(), self.client_class(), self.client_class(), self.client_class()]
-        self.clients[0].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[0].key}")
-        self.clients[1].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[1].key}")
-        self.clients[2].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[2].key}")
-        self.clients[3].credentials(HTTP_AUTHORIZATION=f"Token {self.tokens[3].key}")
+        cls.clients = [cls.client_class(), cls.client_class(), cls.client_class(), cls.client_class()]
+        cls.clients[0].credentials(HTTP_AUTHORIZATION=f"Token {cls.tokens[0].key}")
+        cls.clients[1].credentials(HTTP_AUTHORIZATION=f"Token {cls.tokens[1].key}")
+        cls.clients[2].credentials(HTTP_AUTHORIZATION=f"Token {cls.tokens[2].key}")
+        cls.clients[3].credentials(HTTP_AUTHORIZATION=f"Token {cls.tokens[3].key}")
 
-        self.location_type = LocationType.objects.get(name="Campus")
-        self.locations = (
-            Location.objects.create(name="Location 1", slug="test1", location_type=self.location_type),
-            Location.objects.create(name="Location 2", slug="test2", location_type=self.location_type),
+        cls.location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.locations = (
+            Location.objects.create(
+                name="Location 1", slug="test1", location_type=cls.location_type, status=location_status
+            ),
+            Location.objects.create(
+                name="Location 2", slug="test2", location_type=cls.location_type, status=location_status
+            ),
         )
 
         location_object_type = ContentType.objects.get(app_label="dcim", model="location")
@@ -419,8 +432,8 @@ class GraphQLAPIPermissionTest(TestCase):
                 constraints={"location__slug": f"test{i+1}"},
             )
             rack_obj_permission.object_types.add(rack_object_type)
-            rack_obj_permission.groups.add(self.groups[i])
-            rack_obj_permission.users.add(self.users[i])
+            rack_obj_permission.groups.add(cls.groups[i])
+            rack_obj_permission.users.add(cls.users[i])
 
             location_obj_permission = ObjectPermission.objects.create(
                 name=f"Permission Location {i+1}",
@@ -428,21 +441,22 @@ class GraphQLAPIPermissionTest(TestCase):
                 constraints={"slug": f"test{i+1}"},
             )
             location_obj_permission.object_types.add(location_object_type)
-            location_obj_permission.groups.add(self.groups[i])
-            location_obj_permission.users.add(self.users[i])
+            location_obj_permission.groups.add(cls.groups[i])
+            location_obj_permission.users.add(cls.users[i])
 
-        self.rack_grp1 = (
-            Rack.objects.create(name="Rack 1-1", location=self.locations[0]),
-            Rack.objects.create(name="Rack 1-2", location=self.locations[0]),
+        rack_status = Status.objects.get_for_model(Rack).first()
+        cls.rack_grp1 = (
+            Rack.objects.create(name="Rack 1-1", location=cls.locations[0], status=rack_status),
+            Rack.objects.create(name="Rack 1-2", location=cls.locations[0], status=rack_status),
         )
-        self.rack_grp2 = (
-            Rack.objects.create(name="Rack 2-1", location=self.locations[1]),
-            Rack.objects.create(name="Rack 2-2", location=self.locations[1]),
+        cls.rack_grp2 = (
+            Rack.objects.create(name="Rack 2-1", location=cls.locations[1], status=rack_status),
+            Rack.objects.create(name="Rack 2-2", location=cls.locations[1], status=rack_status),
         )
 
-        self.api_url = reverse("graphql-api")
+        cls.api_url = reverse("graphql-api")
 
-        self.get_racks_query = """
+        cls.get_racks_query = """
         query {
             racks {
                 name
@@ -450,7 +464,7 @@ class GraphQLAPIPermissionTest(TestCase):
         }
         """
 
-        self.get_racks_params_query = """
+        cls.get_racks_params_query = """
         query {
             racks(location: "test1") {
                 name
@@ -458,7 +472,7 @@ class GraphQLAPIPermissionTest(TestCase):
         }
         """
 
-        self.get_racks_var_query = """
+        cls.get_racks_var_query = """
         query ($location: [String]) {
             racks(location: $location) {
                 name
@@ -466,7 +480,7 @@ class GraphQLAPIPermissionTest(TestCase):
         }
         """
 
-        self.get_locations_racks_query = """
+        cls.get_locations_racks_query = """
         query {
             locations {
                 name
@@ -477,7 +491,7 @@ class GraphQLAPIPermissionTest(TestCase):
         }
         """
 
-        self.get_rack_query = """
+        cls.get_rack_query = """
         query ($id: ID!) {
             rack (id: $id) {
                 name
@@ -640,13 +654,15 @@ class GraphQLQueryTest(TestCase):
         cls.location2.status = cls.location_statuses[1]
         cls.location1.validated_save()
         cls.location2.validated_save()
-        cls.rack1 = Rack.objects.create(name="Rack 1", location=cls.location1)
-        cls.rack2 = Rack.objects.create(name="Rack 2", location=cls.location2)
+        rack_statuses = Status.objects.get_for_model(Rack)
+        cls.rack1 = Rack.objects.create(name="Rack 1", location=cls.location1, status=rack_statuses[0])
+        cls.rack2 = Rack.objects.create(name="Rack 2", location=cls.location2, status=rack_statuses[1])
         cls.tenant1 = Tenant.objects.create(name="Tenant 1")
         cls.tenant2 = Tenant.objects.create(name="Tenant 2")
 
-        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, location=cls.location1)
-        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, location=cls.location2)
+        vlan_statuses = Status.objects.get_for_model(VLAN)
+        cls.vlan1 = VLAN.objects.create(name="VLAN 1", vid=100, location=cls.location1, status=vlan_statuses[0])
+        cls.vlan2 = VLAN.objects.create(name="VLAN 2", vid=200, location=cls.location2, status=vlan_statuses[1])
 
         cls.location1_power_panels = [
             PowerPanel.objects.create(name="location1-powerpanel1", location=cls.location1),
@@ -757,6 +773,7 @@ class GraphQLQueryTest(TestCase):
             ),
         ]
 
+        interface_status = Status.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -764,14 +781,23 @@ class GraphQLQueryTest(TestCase):
             mac_address="00:11:11:11:11:11",
             mode=InterfaceModeChoices.MODE_ACCESS,
             untagged_vlan=cls.vlan1,
+            status=interface_status,
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device1,
+            status=interface_status,
         )
         cls.ip_statuses = list(Status.objects.get_for_model(IPAddress))[:2]
-        cls.ipaddr1 = IPAddress.objects.create(address="10.0.1.1/24", status=cls.ip_statuses[0])
+        cls.prefix_statuses = list(Status.objects.get_for_model(Prefix))[:2]
+        cls.namespace = Namespace.objects.first()
+        cls.prefix1 = Prefix.objects.create(
+            prefix="10.0.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]
+        )
+        cls.ipaddr1 = IPAddress.objects.create(
+            address="10.0.1.1/24", namespace=cls.namespace, status=cls.ip_statuses[0]
+        )
         cls.interface11.add_ip_addresses(cls.ipaddr1)
 
         cls.device2 = Device.objects.create(
@@ -791,11 +817,21 @@ class GraphQLQueryTest(TestCase):
             device=cls.device2,
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
+            status=interface_status,
         )
         cls.interface22 = Interface.objects.create(
-            name="Int2", type=InterfaceTypeChoices.TYPE_1GE_FIXED, device=cls.device2, mac_address="00:12:12:12:12:12"
+            name="Int2",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            device=cls.device2,
+            mac_address="00:12:12:12:12:12",
+            status=interface_status,
         )
-        cls.ipaddr2 = IPAddress.objects.create(address="10.0.2.1/30", status=cls.ip_statuses[1])
+        cls.prefix2 = Prefix.objects.create(
+            prefix="10.0.2.0/24", namespace=cls.namespace, status=cls.prefix_statuses[1]
+        )
+        cls.ipaddr2 = IPAddress.objects.create(
+            address="10.0.2.1/30", namespace=cls.namespace, status=cls.ip_statuses[1]
+        )
         cls.interface12.add_ip_addresses(cls.ipaddr2)
 
         cls.device3 = Device.objects.create(
@@ -807,7 +843,7 @@ class GraphQLQueryTest(TestCase):
         )
 
         cls.interface31 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=cls.device3
+            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=cls.device3, status=interface_status
         )
         cls.interface31 = Interface.objects.create(
             name="Mgmt1",
@@ -815,6 +851,7 @@ class GraphQLQueryTest(TestCase):
             device=cls.device3,
             mgmt_only=True,
             enabled=False,
+            status=interface_status,
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -858,11 +895,18 @@ class GraphQLQueryTest(TestCase):
             cluster=cluster,
             status=Status.objects.get_for_model(VirtualMachine)[0],
         )
+        vmintf_status = Status.objects.get_for_model(VMInterface).first()
         cls.vminterface = VMInterface.objects.create(
             virtual_machine=cls.virtualmachine,
             name="eth0",
+            status=vmintf_status,
         )
-        cls.vmipaddr = IPAddress.objects.create(address="1.1.1.1/32", status=cls.ip_statuses[0])
+        cls.vmprefix = Prefix.objects.create(
+            prefix="1.1.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]
+        )
+        cls.vmipaddr = IPAddress.objects.create(
+            address="1.1.1.1/32", namespace=cls.namespace, status=cls.ip_statuses[0]
+        )
         cls.vminterface.add_ip_addresses(cls.vmipaddr)
 
         cls.relationship_o2o_1 = Relationship(
@@ -1147,7 +1191,9 @@ query {
             # Assert GraphQL returned properties match those expected
             self.assertEqual(console_server_port_entry["connected_console_port"], connected_console_port)
 
-    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @skip(
+        "Works in isolation, fails as part of the overall test suite due to issue #446, also something is broken with content types"
+    )
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_relationship_associations(self):
         """Test queries involving relationship associations."""
@@ -1322,8 +1368,8 @@ query {
                 IPAddress.objects.filter(host="10.0.1.1").count(),
             ),
             (
-                "family: 4",
-                IPAddress.objects.ip_family(4).count(),
+                'ip_version: "4"',  # TODO: should be int, GraphQL bug?
+                IPAddress.objects.filter(ip_version=4).count(),
             ),
             (
                 f'status: "{self.ip_statuses[0].name}"',
@@ -1339,19 +1385,19 @@ query {
             ),
             (
                 "mask_length: 24",
-                IPAddress.objects.filter(prefix_length=24).count(),
+                IPAddress.objects.filter(mask_length=24).count(),
             ),
             (
                 "mask_length: 30",
-                IPAddress.objects.filter(prefix_length=30).count(),
+                IPAddress.objects.filter(mask_length=30).count(),
             ),
             (
                 "mask_length: 32",
-                IPAddress.objects.filter(prefix_length=32).count(),
+                IPAddress.objects.filter(mask_length=32).count(),
             ),
             (
                 "mask_length: 28",
-                IPAddress.objects.filter(prefix_length=28).count(),
+                IPAddress.objects.filter(mask_length=28).count(),
             ),
             (
                 'parent: "10.0.0.0/16"',
@@ -1371,7 +1417,6 @@ query {
                 self.assertEqual(len(result.data["ip_addresses"]), nbr_expected_results)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @skip("TODO: convert to use interfaces and vm_interfaces reverse relationships")
     def test_query_ip_addresses_assigned_object(self):
         """Query IP Address assigned_object values."""
 
@@ -1379,19 +1424,15 @@ query {
 query {
     ip_addresses {
         address
-        assigned_object {
-            ... on InterfaceType {
-                name
-                device { name }
-            }
-            ... on VMInterfaceType {
-                name
-                virtual_machine { name }
-            }
+        interfaces {
+            name
+            device { name }
         }
-        family
-        interface { name }
-        vminterface { name }
+        vm_interfaces {
+            name
+            virtual_machine { name }
+        }
+        ip_version
     }
 }"""
         result = self.execute_query(query)
@@ -1401,22 +1442,19 @@ query {
             self.assertIn(
                 entry["address"], (str(self.ipaddr1.address), str(self.ipaddr2.address), str(self.vmipaddr.address))
             )
-            self.assertIn("assigned_object", entry)
-            self.assertIn(entry["family"], (4, 6))
+            self.assertIn("interfaces", entry)
+            self.assertIn("vm_interfaces", entry)
+            self.assertIn(entry["ip_version"], (4, 6))
             if entry["address"] == str(self.vmipaddr.address):
-                self.assertEqual(entry["assigned_object"]["name"], self.vminterface.name)
-                self.assertEqual(entry["vminterface"]["name"], self.vminterface.name)
-                self.assertIsNone(entry["interface"])
-                self.assertIn("virtual_machine", entry["assigned_object"])
-                self.assertNotIn("device", entry["assigned_object"])
-                self.assertEqual(entry["assigned_object"]["virtual_machine"]["name"], self.virtualmachine.name)
+                self.assertEqual(entry["vm_interfaces"][0]["name"], self.vminterface.name)
+                self.assertEqual(entry["interfaces"], [])
+                self.assertIn("virtual_machine", entry["vm_interfaces"][0])
+                self.assertEqual(entry["vm_interfaces"][0]["virtual_machine"]["name"], self.virtualmachine.name)
             else:
-                self.assertIn(entry["assigned_object"]["name"], (self.interface11.name, self.interface12.name))
-                self.assertIn(entry["interface"]["name"], (self.interface11.name, self.interface12.name))
-                self.assertIsNone(entry["vminterface"])
-                self.assertIn("device", entry["assigned_object"])
-                self.assertNotIn("virtual_machine", entry["assigned_object"])
-                self.assertEqual(entry["assigned_object"]["device"]["name"], self.device1.name)
+                self.assertIn(entry["interfaces"][0]["name"], (self.interface11.name, self.interface12.name))
+                self.assertEqual(entry["vm_interfaces"], [])
+                self.assertIn("device", entry["interfaces"][0])
+                self.assertEqual(entry["interfaces"][0]["device"]["name"], self.device1.name)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_cables_filter(self):

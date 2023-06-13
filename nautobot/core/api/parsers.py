@@ -9,7 +9,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
-from nautobot.core.models.utils import deconstruct_natural_key_slug
+from nautobot.core.models.utils import deconstruct_composite_key
 
 
 logger = logging.getLogger(__name__)
@@ -93,17 +93,17 @@ class NautobotCSVParser(BaseParser):
                 continue
 
             if isinstance(serializer_field, serializers.ManyRelatedField):
-                # A list of related objects, represented as a list of natural-key-slugs
+                # A list of related objects, represented as a list of composite-keys
                 if value:
                     related_model = serializer_field.child_relation.get_queryset().model
-                    value = [self.get_natural_key_dict(slug, related_model) for slug in value.split(",")]
+                    value = [self.get_composite_key_dict(slug, related_model) for slug in value.split(",")]
                 else:
                     value = []
             elif isinstance(serializer_field, serializers.RelatedField):
-                # A single related object, represented by its natural-key-slug
+                # A single related object, represented by its composite-key
                 if value:
                     related_model = serializer_field.get_queryset().model
-                    value = self.get_natural_key_dict(value, related_model)
+                    value = self.get_composite_key_dict(value, related_model)
                 else:
                     value = None
             elif isinstance(serializer_field, (serializers.ListField, serializers.MultipleChoiceField)):
@@ -135,20 +135,20 @@ class NautobotCSVParser(BaseParser):
 
         return data
 
-    def get_natural_key_dict(self, natural_key_slug, model):
+    def get_composite_key_dict(self, composite_key, model):
         """
-        Get the data dictionary corresponding to the given natural key list or string for the given model.
+        Get the data dictionary corresponding to the given composite key list or string for the given model.
         """
-        if not natural_key_slug:
+        if not composite_key:
             return None
         if model._meta.label_lower == "contenttypes.contenttype":
             # Our ContentTypeField just uses the "app_label.model" string to look up ContentTypes, rather than the
             # actual ([app_label, model]) natural key for ContentType.
-            return natural_key_slug
+            return composite_key
         if model._meta.label_lower == "auth.group":
             # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method.
-            return {"name": deconstruct_natural_key_slug(natural_key_slug)}
+            return {"name": deconstruct_composite_key(composite_key)}
         if hasattr(model, "natural_key_args_to_kwargs"):
-            return model.natural_key_args_to_kwargs(deconstruct_natural_key_slug(natural_key_slug))
+            return model.natural_key_args_to_kwargs(deconstruct_composite_key(composite_key))
         logger.error("%s doesn't implement natural_key_args_to_kwargs()", model.__name__)
-        return {"pk": natural_key_slug}
+        return {"pk": composite_key}

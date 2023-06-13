@@ -7,10 +7,9 @@ from nautobot.core.models.fields import slugify_dashes_to_underscores
 def ensure_relationship_keys_are_unique(apps, schema_editor):
     Relationship = apps.get_model("extras", "relationship")
 
-    relationship_keys = []
-
     # Make sure that relationship keys are unique by appending counters
     # and log messages if the old keys are changed.
+    relationship_keys = set()
     for rel in Relationship.objects.all().order_by("created"):
         original_rel_key = rel.key
         rel_key = slugify_dashes_to_underscores(original_rel_key)
@@ -28,6 +27,7 @@ def ensure_relationship_keys_are_unique(apps, schema_editor):
             )
             rel.key = rel_key
             rel.save()
+        relationship_keys.add(rel_key)
 
 
 class Migration(migrations.Migration):

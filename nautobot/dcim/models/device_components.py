@@ -33,7 +33,7 @@ from nautobot.dcim.constants import (
 from nautobot.extras.models import (
     RelationshipModel,
     Status,
-    StatusModel,
+    StatusField,
 )
 from nautobot.extras.utils import extras_features
 
@@ -421,11 +421,12 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-class BaseInterface(RelationshipModel, StatusModel):
+class BaseInterface(RelationshipModel):
     """
     Abstract base class for fields shared by dcim.Interface and virtualization.VMInterface.
     """
 
+    status = StatusField(blank=False, null=False)
     enabled = models.BooleanField(default=True)
     mac_address = MACAddressCharField(blank=True, default="", verbose_name="MAC Address")
     mtu = models.PositiveIntegerField(
@@ -527,6 +528,13 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         blank=True,
         verbose_name="Tagged VLANs",
     )
+    vrf = models.ForeignKey(
+        to="ipam.VRF",
+        related_name="interfaces",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
     ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
         through="ipam.IPAddressToInterface",
@@ -541,6 +549,11 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
     def clean(self):
         super().clean()
+
+        # VRF validation
+        if self.vrf and self.vrf not in self.device.vrfs.all():
+            # TODO(jathan): Or maybe we automatically add the VRF to the device?
+            raise ValidationError({"vrf": "VRF must be assigned to same Device."})
 
         # LAG validation
         if self.lag is not None:

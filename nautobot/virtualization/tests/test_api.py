@@ -229,7 +229,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         Assert that the local context passes schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
         )
         self.add_permissions("virtualization.change_virtualmachine")
 
@@ -242,7 +242,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(str(response.data["local_config_context_schema"]), self.absolute_api_url(schema))
+        self.assertEqual(str(response.data["local_config_context_schema"]["url"]), self.absolute_api_url(schema))
 
     def test_local_config_context_schema_schema_validation_fails(self):
         """
@@ -251,7 +251,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         Assert that the local context fails schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
+            name="Schema 2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
         )
         # Add object-level permission
         self.add_permissions("virtualization.change_virtualmachine")
@@ -278,26 +278,28 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         clustertype = ClusterType.objects.create(name="Test Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
-        virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")
-        interface_status = Status.objects.get_for_model(VMInterface).first()
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1", status=vm_status)
+        cls.interface_status = Status.objects.get_for_model(VMInterface).first()
 
         interfaces = (
-            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1"),
-            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2"),
-            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3"),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1", status=cls.interface_status),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2", status=cls.interface_status),
+            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3", status=cls.interface_status),
         )
 
+        vlan_status = Status.objects.get_for_model(VLAN).first()
         vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1),
-            VLAN.objects.create(name="VLAN 2", vid=2),
-            VLAN.objects.create(name="VLAN 3", vid=3),
+            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status),
+            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status),
+            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status),
         )
 
         cls.create_data = [
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 4",
-                "status": interface_status.pk,
+                "status": cls.interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
                 "untagged_vlan": vlans[2].pk,
@@ -305,7 +307,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 5",
-                "status": interface_status.pk,
+                "status": cls.interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": interfaces[0].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
@@ -314,7 +316,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Interface 6",
-                "status": interface_status.pk,
+                "status": cls.interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": interfaces[1].pk,
                 "tagged_vlans": [vlans[0].pk, vlans[1].pk],
@@ -325,7 +327,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         cls.untagged_vlan_data = {
             "virtual_machine": virtualmachine.pk,
             "name": "expected-to-fail",
-            "status": interface_status.pk,
+            "status": cls.interface_status.pk,
             "untagged_vlan": vlans[0].pk,
         }
 
@@ -353,7 +355,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
             payload = {
                 "virtual_machine": virtualmachine.pk,
                 "name": "Tagged Interface",
-                "status": Status.objects.get_for_model(VMInterface).first().pk,
+                "status": self.interface_status.pk,
                 "tagged_vlans": [vlan.pk],
             }
             response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
@@ -368,6 +370,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
                 virtual_machine=virtualmachine,
                 name="VMInterface 1",
                 mode=InterfaceModeChoices.MODE_TAGGED,
+                status=self.interface_status,
             )
             interface.tagged_vlans.add(vlan)
             payload = {"mode": None, "tagged_vlans": [vlan.pk]}

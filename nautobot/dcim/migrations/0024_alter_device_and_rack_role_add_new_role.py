@@ -39,6 +39,7 @@ class Migration(migrations.Migration):
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="dcim_device_related",
                 to="extras.role",
+                null=True,
             ),
         ),
         # ##########

@@ -6,7 +6,7 @@ from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.models.utils import construct_natural_key_slug
+from nautobot.core.models.utils import construct_composite_key
 from nautobot.core.utils.lookup import get_route_for_model
 
 
@@ -73,7 +73,7 @@ class BaseModel(models.Model):
         which in effect enforces model validation prior to saving the instance, without having
         to manually make these calls seperately. This is a slight departure from Django norms,
         but is intended to offer an optional, simplified interface for performing this common
-        workflow. The intended use is for user defined Jobs and scripts run via the `nautobot-server nbshell`
+        workflow. The intended use is for user defined Jobs run via the `nautobot-server nbshell`
         command.
         """
         self.full_clean()
@@ -100,13 +100,13 @@ class BaseModel(models.Model):
         return vals
 
     @property
-    def natural_key_slug(self) -> str:
+    def composite_key(self) -> str:
         """
         Automatic "slug" string derived from this model's natural key, suitable for use in URLs etc.
 
         A less naïve implementation than django-natural-keys provides by default, based around URL percent-encoding.
         """
-        return construct_natural_key_slug(self.natural_key())
+        return construct_composite_key(self.natural_key())
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
@@ -153,7 +153,14 @@ class BaseModel(models.Model):
         # Next, for any natural key fields that have related models, get the natural key for the related model if known
         natural_key_field_lookups = []
         for field_name in natural_key_field_names:
-            field = cls._meta.get_field(field_name)
+            # field_name could be a related field that has its own natural key fields (`parent`),
+            # *or* it could be an explicit set of traversals (`parent__namespace__name`). Handle both.
+            model = cls
+            for field_component in field_name.split("__")[:-1]:
+                model = model._meta.get_field(field_component).remote_field.model
+
+            field = model._meta.get_field(field_name.split("__")[-1])
+
             if getattr(field, "remote_field", None) is None:
                 # Not a related field, so the field name is the field lookup
                 natural_key_field_lookups.append(field_name)

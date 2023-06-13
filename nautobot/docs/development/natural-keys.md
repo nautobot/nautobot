@@ -5,8 +5,8 @@
 Nautobot models derived from `BaseModel` automatically support the following [natural key](https://docs.djangoproject.com/en/3.2/topics/serialization/#natural-keys) APIs:
 
 - Django's `instance.natural_key()` and `Model.objects.get_by_natural_key()` method APIs
-- `instance.natural_key_slug` property inspired by the `django-natural-keys` project
-- `Model.objects.get(natural_key_slug=...)` lookup filter inspired by the `django-natural-keys` project
+- `instance.composite_key` property inspired by the `django-natural-keys` project
+- `Model.objects.get(composite_key=...)` lookup filter inspired by the `django-natural-keys` project
 
 ## Using the Natural Key APIs
 
@@ -20,19 +20,19 @@ The `natural_key()` and `get_by_natural_key()` APIs are symmetric with one anoth
 <DeviceType: Model 9000>
 ```
 
-Similarly, the `natural_key_slug` and `get(natural_key_slug=...`) APIs are also symmetric:
+Similarly, the `composite_key` and `get(composite_key=...`) APIs are also symmetric:
 
 ```python
-# Note that natural_key_slug is a property, not a method!
->>> DeviceType.objects.first().natural_key_slug
-'MegaCorp&Model+9000'
+# Note that composite_key is a property, not a method!
+>>> DeviceType.objects.first().composite_key
+'MegaCorp;Model+9000'
 
->>> DeviceType.objects.get(natural_key_slug="MegaCorp&Model+9000")
+>>> DeviceType.objects.get(composite_key="MegaCorp;Model+9000")
 <DeviceType: Model 9000>
 ```
 
 !!! note
-    The `natural_key_slug` is designed to be suitable for future use in URL patterns, such as an object detail endpoint potentially supporting `/app/model/<natural_key_slug>/` as an alternative to the common `/app/model/<primary-key>/` pattern.
+    The `composite_key` is designed to be suitable for future use in URL patterns, such as an object detail endpoint potentially supporting `/app/model/<composite_key>/` as an alternative to the common `/app/model/<primary-key>/` pattern.
 
 ## Implementing the Natural Key APIs
 

@@ -1,0 +1,2 @@
+Changed `ConfigContext.name` to be globally unique and serve as the natural key for this model.
+Changed `ConfigContextSchema.name` to be globally unique and serve as the natural key for this model.

@@ -117,7 +117,7 @@ class NautobotAutoSchema(AutoSchema):
         if "parameters" in operation:
             for param in operation["parameters"]:
                 if param["name"] == "id" and "description" not in param:
-                    param["description"] = "Unique object identifier, either a UUID primary key or a natural-key slug."
+                    param["description"] = "Unique object identifier, either a UUID primary key or a composite key."
             if self.method == "GET":
                 if "depth" not in operation["parameters"]:
                     operation["parameters"].append(
@@ -348,7 +348,7 @@ class ChoiceFieldFix(OpenApiSerializerFieldExtension):
         choices = self.target._choices
 
         value_type = "string"
-        # IPAddressFamilyChoices and RackWidthChoices are int values, not strings
+        # IPAddressVersionChoices and RackWidthChoices are int values, not strings
         if all(isinstance(x, int) for x in [c for c in list(choices.keys()) if c is not None]):
             value_type = "integer"
         # I don't think we have any of these left in the code base at present,

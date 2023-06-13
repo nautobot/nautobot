@@ -52,14 +52,20 @@ menu_items = (
                 weight=300,
                 items=(
                     NavMenuItem(
-                        name="VRFs",
+                        name="Namespaces",
                         weight=100,
+                        link="ipam:namespace_list",
+                        permissions=["ipam.view_namespace"],
+                    ),
+                    NavMenuItem(
+                        name="VRFs",
+                        weight=200,
                         link="ipam:vrf_list",
                         permissions=["ipam.view_vrf"],
                     ),
                     NavMenuItem(
                         name="Route Targets",
-                        weight=200,
+                        weight=300,
                         link="ipam:routetarget_list",
                         permissions=["ipam.view_routetarget"],
                     ),

@@ -10,6 +10,7 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.celery import app
 from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
 from nautobot.dcim.tests.test_views import create_test_device
@@ -17,13 +18,13 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
-from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.ipam.models import Prefix, IPAddress
+from nautobot.ipam.models import Prefix, IPAddress, Namespace
 from nautobot.users.models import ObjectPermission
 
 from example_plugin import config as example_config
@@ -119,31 +120,8 @@ class PluginTest(TestCase):
         from example_plugin.jobs import ExampleJob
 
         self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
-
-        self.assertEqual(
-            ExampleJob,
-            get_job("plugins/example_plugin.jobs/ExampleJob"),
-        )
-        self.assertIn(
-            "plugins/example_plugin.jobs/ExampleJob",
-            get_job_classpaths(),
-        )
-        jobs_dict = get_jobs()
-        self.assertIn("plugins", jobs_dict)
-        self.assertIn("example_plugin.jobs", jobs_dict["plugins"])
-        self.assertEqual(
-            "ExamplePlugin jobs",
-            jobs_dict["plugins"]["example_plugin.jobs"].get("name"),
-        )
-        self.assertIn("jobs", jobs_dict["plugins"]["example_plugin.jobs"])
-        self.assertIn(
-            "ExampleJob",
-            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"],
-        )
-        self.assertEqual(
-            ExampleJob,
-            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"]["ExampleJob"],
-        )
+        self.assertEqual(ExampleJob, get_job("example_plugin.jobs.ExampleJob"))
+        self.assertIn("example_plugin.jobs.ExampleJob", app.tasks)
 
     def test_git_datasource_contents_registration(self):
         """
@@ -489,9 +467,14 @@ class PluginCustomValidationTest(TestCase):
             location.clean()
 
     def test_relationship_association_validator_raises_exception(self):
+        namespace = Namespace.objects.first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        prefix = Prefix.objects.create(
+            prefix=netaddr.IPNetwork("192.168.10.0/24"), status=prefix_status, namespace=namespace
+        )
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.22.0/24"), status=prefix_status, namespace=namespace)
         status = Status.objects.get_for_model(IPAddress).first()
-        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
-        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status)
+        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status, namespace=namespace)
         relationship = Relationship.objects.create(
             label="Test Relationship",
             key="test_relationship",
@@ -521,31 +504,35 @@ class FilterExtensionTest(TestCase):
             Tenant.objects.create(name="Tenant 3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"),
         )
         location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
             name="Location 1",
             slug="location-1",
             tenant=tenants[0],
             location_type=location_type,
+            status=location_status,
         )
         Location.objects.create(
             name="Location 2",
             slug="location-2",
             tenant=tenants[1],
             location_type=location_type,
+            status=location_status,
         )
         Location.objects.create(
             name="Location 3",
             slug="location-3",
             tenant=tenants[2],
             location_type=location_type,
+            status=location_status,
         )
 
-        manufactures = Manufacturer.objects.all()[:3]
+        manufacturers = Manufacturer.objects.all()[:3]
 
         roles = Role.objects.get_for_model(Device)
 
         DeviceType.objects.create(
-            manufacturer=manufactures[0],
+            manufacturer=manufacturers[0],
             model="Model 1",
             slug="model-1",
             part_number="Part Number 1",
@@ -553,7 +540,7 @@ class FilterExtensionTest(TestCase):
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=manufactures[1],
+            manufacturer=manufacturers[1],
             model="Model 2",
             slug="model-2",
             part_number="Part Number 2",
@@ -561,7 +548,7 @@ class FilterExtensionTest(TestCase):
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=manufactures[2],
+            manufacturer=manufacturers[2],
             model="Model 3",
             slug="model-3",
             part_number="Part Number 3",
@@ -569,12 +556,14 @@ class FilterExtensionTest(TestCase):
             is_full_depth=False,
         )
 
+        device_status = Status.objects.get_for_model(Device).first()
         Device.objects.create(
             name="Device 1",
             device_type=DeviceType.objects.get(slug="model-1"),
             role=roles[0],
             tenant=tenants[0],
             location=Location.objects.get(slug="location-1"),
+            status=device_status,
         )
         Device.objects.create(
             name="Device 2",
@@ -582,6 +571,7 @@ class FilterExtensionTest(TestCase):
             role=roles[1],
             tenant=tenants[1],
             location=Location.objects.get(slug="location-2"),
+            status=device_status,
         )
         Device.objects.create(
             name="Device 3",
@@ -589,6 +579,7 @@ class FilterExtensionTest(TestCase):
             role=roles[3],
             tenant=tenants[2],
             location=Location.objects.get(slug="location-3"),
+            status=device_status,
         )
 
     def test_basic_custom_filter(self):

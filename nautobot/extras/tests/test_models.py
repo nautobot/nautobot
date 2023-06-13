@@ -2,6 +2,7 @@ import os
 import tempfile
 from unittest import mock
 import uuid
+import warnings
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -10,7 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings
-
+from django.test.utils import isolate_apps
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase, TransactionTestCase
@@ -24,8 +25,14 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
-from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
-from nautobot.extras.jobs import get_job, Job as JobClass
+from nautobot.extras.choices import (
+    LogLevelChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -38,6 +45,7 @@ from nautobot.extras.models import (
     Job as JobModel,
     JobLogEntry,
     JobResult,
+    ObjectChange,
     Role,
     Secret,
     SecretsGroup,
@@ -46,7 +54,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.utils import get_job_content_type
+from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
@@ -154,39 +162,43 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
     model = ConfigContext
 
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        self.devicetype = DeviceType.objects.create(
+        cls.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
         )
-        self.devicerole = Role.objects.get_for_model(Device).first()
+        cls.devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.create(name="Location Type 1")
-        self.location = Location.objects.create(name="Location 1", location_type=location_type)
-        self.platform = Platform.objects.first()
-        self.tenant = Tenant.objects.first()
-        self.tenantgroup = self.tenant.tenant_group
-        self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
-        self.dynamic_groups = DynamicGroup.objects.create(
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
+        cls.platform = Platform.objects.first()
+        cls.tenant = Tenant.objects.first()
+        cls.tenantgroup = cls.tenant.tenant_group
+        cls.tag, cls.tag2 = Tag.objects.get_for_model(Device)[:2]
+        cls.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
             content_type=ContentType.objects.get_for_model(Device),
             filter={"name": ["Device 1", "Device 2"]},
         )
-        self.dynamic_group_2 = DynamicGroup.objects.create(
+        cls.dynamic_group_2 = DynamicGroup.objects.create(
             name="Dynamic Group 2",
             content_type=ContentType.objects.get_for_model(Device),
             filter={"name": ["Device 2"]},
         )
-        self.vm_dynamic_group = DynamicGroup.objects.create(
+        cls.vm_dynamic_group = DynamicGroup.objects.create(
             name="VM Dynamic Group",
             content_type=ContentType.objects.get_for_model(VirtualMachine),
             filter={"name": ["VM 1"]},
         )
 
-        self.device = Device.objects.create(
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
             name="Device 1",
-            device_type=self.devicetype,
-            role=self.devicerole,
-            location=self.location,
+            device_type=cls.devicetype,
+            role=cls.devicerole,
+            location=cls.location,
+            status=cls.device_status,
         )
 
         ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
@@ -205,22 +217,23 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
     def test_name_uniqueness(self):
         """
-        Verify that two unowned ConfigContexts cannot share the same name (GitHub issue #431).
+        Verify that two ConfigContexts cannot share the same name (GitHub issue #431).
         """
         with self.assertRaises(ValidationError):
             duplicate_context = ConfigContext(name="context 1", weight=200, data={"c": 666})
             duplicate_context.validated_save()
 
-        # If a different context is owned by a GitRepository, that's not considered a duplicate
+        # If a different context is owned by a GitRepository, it's still considered a duplicate as of 2.0
         repo = GitRepository(
             name="Test Git Repository",
-            slug="test-git-repo",
+            slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save(trigger_resync=False)
+        repo.save()
 
-        nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
-        nonduplicate_context.validated_save()
+        with self.assertRaises(ValidationError):
+            nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
+            nonduplicate_context.validated_save()
 
     def test_annotation_same_as_get_for_object(self):
         """
@@ -256,6 +269,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -296,12 +310,14 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         )
         dynamic_group_context.dynamic_groups.add(self.vm_dynamic_group)
 
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = VirtualMachine.objects.create(
             name="VM 1",
             cluster=cluster,
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=vm_status,
         )
         virtual_machine.tags.add(self.tag)
 
@@ -340,6 +356,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -371,6 +388,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
@@ -394,6 +412,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             tenant=self.tenant,
             platform=self.platform,
             role=self.devicerole,
+            status=self.device_status,
             device_type=self.devicetype,
         )
         dynamic_group_context = ConfigContext.objects.create(
@@ -424,7 +443,6 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         # Schemas
         self.schema_validation_pass = ConfigContextSchema.objects.create(
             name="schema-pass",
-            slug="schema-pass",
             data_schema={
                 "type": "object",
                 "additionalProperties": False,
@@ -438,7 +456,6 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         self.schemas_validation_fail = (
             ConfigContextSchema.objects.create(
                 name="schema fail (wrong properties)",
-                slug="schema-fail-wrong-properties",
                 data_schema={
                     "type": "object",
                     "additionalProperties": False,
@@ -447,12 +464,10 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
             ),
             ConfigContextSchema.objects.create(
                 name="schema fail (wrong type)",
-                slug="schema-fail-wrong-type",
                 data_schema={"type": "object", "properties": {"b": {"type": "integer"}}},
             ),
             ConfigContextSchema.objects.create(
                 name="schema fail (wrong format)",
-                slug="schema-fail-wrong-format",
                 data_schema={"type": "object", "properties": {"b": {"type": "string", "format": "ipv4"}}},
             ),
         )
@@ -603,7 +618,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         Assert calling clean on the config context schema object raises a ValidationError
         """
         invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
+            name="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
         )
 
         with self.assertRaises(ValidationError):
@@ -615,7 +630,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         With a JSON schema of type object
         Assert calling clean on the config context schema object raises a ValidationError
         """
-        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema=["not an object"])
+        invalid_schema = ConfigContextSchema(name="invalid", data_schema=["not an object"])
 
         with self.assertRaises(ValidationError):
             invalid_schema.full_clean()
@@ -627,7 +642,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         Assert calling clean on the config context schema object raises a ValidationError
         """
         invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"type": "integer", "properties": {"a": {"type": "string"}}}
+            name="invalid", data_schema={"type": "integer", "properties": {"a": {"type": "string"}}}
         )
 
         with self.assertRaises(ValidationError):
@@ -639,9 +654,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         With a JSON schema with type not present
         Assert calling clean on the config context schema object raises a ValidationError
         """
-        invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"properties": {"a": {"type": "string"}}}
-        )
+        invalid_schema = ConfigContextSchema(name="invalid", data_schema={"properties": {"a": {"type": "string"}}})
 
         with self.assertRaises(ValidationError):
             invalid_schema.full_clean()
@@ -652,7 +665,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         With a JSON schema with properties not present
         Assert calling clean on the config context schema object raises a ValidationError
         """
-        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema={"type": "object"})
+        invalid_schema = ConfigContextSchema(name="invalid", data_schema={"type": "object"})
 
         with self.assertRaises(ValidationError):
             invalid_schema.full_clean()
@@ -673,7 +686,7 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
 
     def test_name_contenttype_uniqueness(self):
         """
-        The pair of (name, content_type) must be unique for an un-owned ExportTemplate.
+        The pair of (name, content_type) must be unique for an ExportTemplate.
 
         See GitHub issue #431.
         """
@@ -683,17 +696,19 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             )
             duplicate_template.validated_save()
 
-        # A differently owned ExportTemplate may have the same name
+        # A differently owned ExportTemplate may not have the same name as of 2.0.
         repo = GitRepository(
             name="Test Git Repository",
-            slug="test-git-repo",
+            slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save(trigger_resync=False)
-        nonduplicate_template = ExportTemplate(
-            content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
-        )
-        nonduplicate_template.validated_save()
+        repo.save()
+
+        with self.assertRaises(ValidationError):
+            nonduplicate_template = ExportTemplate(
+                content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
+            )
+            nonduplicate_template.validated_save()
 
 
 class FileProxyTest(ModelTestCases.BaseModelTestCase):
@@ -737,28 +752,13 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     def setUp(self):
         self.repo = GitRepository(
             name="Test Git Repository",
-            slug="test-git-repo",
+            slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        self.repo.save(trigger_resync=False)
+        self.repo.save()
 
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
-
-    def test_save_relocate_directory(self):
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            with self.settings(GIT_ROOT=tmpdirname):
-                initial_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, initial_path)
-                os.makedirs(initial_path)
-
-                self.repo.slug = "a-new-location"
-                self.repo.save(trigger_resync=False)
-
-                self.assertFalse(os.path.exists(initial_path))
-                new_path = self.repo.filesystem_path
-                self.assertIn(self.repo.slug, new_path)
-                self.assertTrue(os.path.isdir(new_path))
 
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
@@ -783,10 +783,10 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.plugin_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "local/test_pass/TestPass")
+        self.assertEqual(self.local_job.class_path, "pass.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
-        self.assertEqual(self.plugin_job.class_path, "plugins/example_plugin.jobs/ExampleJob")
+        self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
         self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
 
     def test_latest_result(self):
@@ -798,13 +798,24 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
             self.assertTrue(job_model.installed)
-            self.assertFalse(job_model.enabled)
+            # System jobs should be enabled by default, all others are disabled by default
+            if job_model.module_name.startswith("nautobot."):
+                self.assertTrue(job_model.enabled)
+            else:
+                self.assertFalse(job_model.enabled)
             for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "test_duplicate_name" in job_model.job_class.__module__:
+                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
                     pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
                 else:
-                    self.assertFalse(getattr(job_model, f"{field_name}_override"))
-                    self.assertEqual(getattr(job_model, field_name), getattr(job_model.job_class, field_name))
+                    self.assertFalse(
+                        getattr(job_model, f"{field_name}_override"),
+                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                    )
+                    self.assertEqual(
+                        getattr(job_model, field_name),
+                        getattr(job_model.job_class, field_name),
+                        field_name,
+                    )
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
@@ -819,9 +830,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "grouping": "Overridden Grouping",
             "name": "Overridden Name",
             "description": "Overridden Description",
-            "commit_default": not self.job_containing_sensitive_variables.commit_default,
+            "dryrun_default": not self.job_containing_sensitive_variables.dryrun_default,
             "hidden": not self.job_containing_sensitive_variables.hidden,
-            "read_only": not self.job_containing_sensitive_variables.read_only,
             "approval_required": not self.job_containing_sensitive_variables.approval_required,
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
@@ -855,7 +865,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         """Verify that cleaning enforces validation of potentially unsanitized user input."""
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name.too_long_of_a_module_name",
                 job_class_name="JobClass",
                 grouping="grouping",
@@ -865,7 +874,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="ThisIsARidiculouslyLongJobClassNameWhoWouldEverDoSuchAnUtterlyRidiculousThingButBetterSafeThanSorrySinceWeAreDealingWithUserInputHere",
                 grouping="grouping",
@@ -875,7 +883,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="OK now this is just ridiculous. Why would you ever want to deal with typing in 255+ characters of grouping information and have to copy-paste it to the other jobs in the same grouping or risk dealing with typos when typing out such a ridiculously long grouping string? Still, once again, better safe than sorry!",
@@ -885,7 +892,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="grouping",
@@ -895,7 +901,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as handler:
             JobModel(
-                source="local",
                 module_name="module_name",
                 job_class_name="JobClassName",
                 grouping="grouping",
@@ -909,63 +914,15 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         )
 
 
-class JobResultTest(TestCase):
-    """
-    Tests for the `JobResult` model class.
-    """
+class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
+    model = ObjectChange
 
-    def test_related_object(self):
-        """Test that the `related_object` property is computed properly."""
-        # Case 1: Job, identified by class_path.
-        job_class = get_job("local/test_pass/TestPass")
-        job_result = JobResult(
-            name=job_class.class_path,
-            obj_type=get_job_content_type(),
-            task_id=uuid.uuid4(),
-        )
-
-        # Can't just do self.assertEqual(job_result.related_object, job_class) here for some reason
-        self.assertEqual(type(job_result.related_object), type)
-        self.assertTrue(issubclass(job_result.related_object, JobClass))
-        self.assertEqual(job_result.related_object.class_path, "local/test_pass/TestPass")
-
-        job_result.name = "local/no_such_job/NoSuchJob"
-        self.assertIsNone(job_result.related_object)
-
-        job_result.name = "not-a-class-path"
-        self.assertIsNone(job_result.related_object)
-
-        # Case 2: GitRepository, identified by name.
-        repo = GitRepository(
-            name="Test Git Repository",
-            slug="test-git-repo",
-            remote_url="http://localhost/git.git",
-        )
-        repo.save(trigger_resync=False)
-
-        job_result = JobResult(
-            name=repo.name,
-            obj_type=ContentType.objects.get_for_model(repo),
-            task_id=uuid.uuid4(),
-        )
-
-        self.assertEqual(job_result.related_object, repo)
-
-        job_result.name = "No such GitRepository"
-        self.assertIsNone(job_result.related_object)
-
-        # Case 3: Related object with no name, identified by PK/ID
-        ip_address = IPAddress.objects.create(address="1.1.1.1/32")
-        job_result = JobResult(
-            name="irrelevant",
-            obj_type=ContentType.objects.get_for_model(ip_address),
-            task_id=ip_address.pk,
-        )
-
-        self.assertEqual(job_result.related_object, ip_address)
-
-        job_result.task_id = uuid.uuid4()
-        self.assertIsNone(job_result.related_object)
+    @classmethod
+    def setUpTestData(cls):
+        location_oc = Location.objects.first().to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
+        location_oc.request_id = uuid.uuid4()
+        location_oc.change_context = ObjectChangeEventContextChoices.CONTEXT_ORM
+        location_oc.validated_save()
 
 
 class RoleTest(TestCase):
@@ -1432,6 +1389,22 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.status.save()
             self.assertEqual(str(self.status), test)
 
+    @isolate_apps("nautobot.extras.tests")
+    def test_deprecated_mixin_class(self):
+        """Test that inheriting from StatusModel raises a DeprecationWarning."""
+        with warnings.catch_warnings(record=True) as warn_list:
+            warnings.simplefilter("always")
+
+            class MyModel(StatusModel):  # pylint: disable=unused-variable
+                pass
+
+        self.assertEqual(len(warn_list), 1)
+        warning = warn_list[0]
+        self.assertTrue(issubclass(warning.category, DeprecationWarning))
+        self.assertIn("StatusModel is deprecated", str(warning))
+        self.assertIn("Instead of deriving MyModel from StatusModel", str(warning))
+        self.assertIn("please directly declare `status = StatusField(...)` on your model instead", str(warning))
+
 
 class TagTest(ModelTestCases.BaseModelTestCase):
     model = Tag
@@ -1449,20 +1422,15 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "test_pass"
+        module = "pass"
         name = "TestPass"
-        job_class = get_job(f"local/{module}/{name}")
+        job_class = get_job(f"{module}.{name}")
 
-        self.job_result = JobResult.objects.create(
-            name=job_class.class_path,
-            obj_type=get_job_content_type(),
-            user=None,
-            task_id=uuid.uuid4(),
-        )
+        self.job_result = JobResult.objects.create(name=job_class.class_path, user=None)
 
     def test_log_entry_creation(self):
         log = JobLogEntry(
-            log_level=LogLevelChoices.LOG_SUCCESS,
+            log_level=LogLevelChoices.LOG_INFO,
             job_result=self.job_result,
             grouping="run",
             message="This is a test",

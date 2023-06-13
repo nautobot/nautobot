@@ -69,17 +69,25 @@ class GitRepo:
         if url not in self.repo.remotes.origin.urls:
             self.repo.remotes.origin.set_url(url)
 
+    @property
+    def head(self):
+        """Current checked out repository head commit."""
+        return self.repo.head.commit.hexsha
+
     def fetch(self):
         self.repo.remotes.origin.fetch()
 
     def checkout(self, branch, commit_hexsha=None):
         """
         Check out the given branch, and optionally the specified commit within that branch.
+
+        Returns:
+            (str, bool): commit_hexsha the repo contains now, whether any change occurred
         """
         # Short-circuit logic - do we already have this commit checked out?
-        if commit_hexsha and commit_hexsha == self.repo.head.commit.hexsha:
+        if commit_hexsha and commit_hexsha == self.head:
             logger.debug(f"Commit {commit_hexsha} is already checked out.")
-            return commit_hexsha
+            return (commit_hexsha, False)
 
         self.fetch()
         if commit_hexsha:
@@ -92,7 +100,7 @@ class GitRepo:
                 raise RuntimeError(f"Requested to check out commit `{commit_hexsha}`, but it's not in branch {branch}!")
             logger.info(f"Checking out commit `{commit_hexsha}` on branch `{branch}`...")
             self.repo.git.checkout(commit_hexsha)
-            return commit_hexsha
+            return (commit_hexsha, True)
 
         if branch in self.repo.heads:
             branch_head = self.repo.heads[branch]
@@ -117,7 +125,7 @@ class GitRepo:
         self.repo.head.reset(f"origin/{branch}", index=True, working_tree=True)
         commit_hexsha = self.repo.head.reference.commit.hexsha
         logger.info(f"Latest commit on branch `{branch}` is `{commit_hexsha}`")
-        return commit_hexsha
+        return (commit_hexsha, True)
 
     def diff_remote(self, branch):
         logger.debug("Fetching from remote.")

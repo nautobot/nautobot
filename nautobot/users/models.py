@@ -213,7 +213,7 @@ class ObjectPermission(BaseModel):
     identified by ORM query parameters.
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=200, blank=True)
     enabled = models.BooleanField(default=True)
 

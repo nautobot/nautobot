@@ -73,8 +73,11 @@ class Command(BaseCommand):
             >>> get_app_component(file_path="/src/example_plugin/example_plugin/ui/index.js", route_name="example-plugin:examplemodel_list")
             "ExampleModelListView"
         """
-        with open(file_path, "r") as f:
-            js_content = f.read()
+        try:
+            with open(file_path, "r") as f:
+                js_content = f.read()
+        except FileNotFoundError:
+            return None
 
         # Construct a regular expression that matches the specified key and extracts the associated view component
         pattern = rf'routes_view_components:\s*{{[^}}]*"{re.escape(route_name)}"\s*:\s*"([^"]+)"'
@@ -108,17 +111,21 @@ class Command(BaseCommand):
             ]
         """
         data = []
-        module = import_module(f"{app_name}.urls")
-        base_url = app_config.base_url or app_config.label
-        for urlpattern in module.urlpatterns:
-            if component := self.get_app_component(
-                app_base_path / "ui/index.js",
-                f"{base_url}:{urlpattern.name}",
-            ):
-                path_regex = urlpattern.pattern.regex
-                url_path = self.convert_django_url_regex_to_react_route_path(path_regex)
-                data.append({"path": base_url + url_path, "component": component})
-        return data
+        try:
+            module = import_module(f"{app_name}.urls")
+            base_url = app_config.base_url or app_config.label
+            for urlpattern in module.urlpatterns:
+                if component := self.get_app_component(
+                    app_base_path / "ui/index.js",
+                    f"{base_url}:{urlpattern.name}",
+                ):
+                    path_regex = urlpattern.pattern.regex
+                    url_path = self.convert_django_url_regex_to_react_route_path(path_regex)
+                    data.append({"path": base_url + url_path, "component": component})
+            return data
+        except (AttributeError, ModuleNotFoundError):
+            # If an app does not include its url.py file or urls.py does not include a urlpatterns, skip.
+            return data
 
     def render_app_imports(self):
         """Render `app_imports.js`, update `jsconfig.json` to map to the path for each and render `app_routes.json` to register all app routes."""
@@ -145,7 +152,8 @@ class Command(BaseCommand):
             abs_app_ui_path = abs_app_path / "ui"
             app_path = Path(os.path.relpath(abs_app_path, ui_dir))
             app_ui_path = app_path / "ui"
-            app_routes[app_name] = self.render_routes_imports(abs_app_path, app_name, app_config)
+            if app_routes_imports := self.render_routes_imports(abs_app_path, app_name, app_config):
+                app_routes[app_name] = app_routes_imports
 
             # Assert that an App has a UI folder.
             if not abs_app_ui_path.exists():

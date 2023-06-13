@@ -190,6 +190,12 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
             "advanced_ui",
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
+
 
 class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
     model = ComputedField
@@ -274,7 +280,7 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="name", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
     role = DynamicModelMultipleChoiceField(
         queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="name", required=False
@@ -311,13 +317,11 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
 
 class ConfigContextSchemaForm(NautobotModelForm):
     data_schema = JSONField(label="")
-    slug = SlugField()
 
     class Meta:
         model = ConfigContextSchema
         fields = (
             "name",
-            "slug",
             "description",
             "data_schema",
         )
@@ -393,6 +397,12 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "validation_maximum",
             "validation_regex",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
@@ -610,12 +620,24 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
             "tags",
         ]
 
-    def clean(self):
-        super().clean()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        # set dryrun after a successful clean
-        if "_dryrun_create" in self.data or "_dryrun_update" in self.data:
-            self.instance.set_dryrun()
+        if self.instance and self.instance.present_in_database:
+            self.fields["slug"].widget.attrs["readonly"] = True
+
+    def save(self, commit=True):
+        instance = super().save(commit=commit)
+
+        # TODO(jathan): Move sync() call out of the form and into the view. However, in v2 UI this
+        # probably just goes away since UI views will be making API calls. For now, the user is
+        # magically stored on the instance by the view code.
+        if commit:
+            # Set dryrun if that button was clicked in the UI, otherwise perform a normal sync.
+            dry_run = "_dryrun_create" in self.data or "_dryrun_update" in self.data
+            instance.sync(user=instance.user, dry_run=dry_run)
+
+        return instance
 
 
 class GitRepositoryBulkEditForm(NautobotBulkEditForm):
@@ -698,12 +720,6 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
-    _commit = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="Commit changes",
-        help_text="Commit changes to the database (uncheck for a dry-run)",
-    )
     _profile = forms.BooleanField(
         required=False,
         initial=False,
@@ -720,25 +736,15 @@ class JobForm(BootstrapMixin, forms.Form):
         super().__init__(*args, **kwargs)
 
         # Move special fields to the end of the form
-        for field in ["_task_queue", "_commit", "_profile"]:
+        for field in ["_task_queue", "_profile"]:
             value = self.fields.pop(field)
             self.fields[field] = value
 
-    @property
-    def requires_input(self):
-        """
-        A boolean indicating whether the form requires user input (ignore the _commit field).
-        """
-        return bool(len(self.fields) > 1)
-
 
 class JobEditForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = Job
         fields = [
-            "slug",
             "enabled",
             "name_override",
             "name",
@@ -746,12 +752,10 @@ class JobEditForm(NautobotModelForm):
             "grouping",
             "description_override",
             "description",
-            "commit_default_override",
-            "commit_default",
+            "dryrun_default_override",
+            "dryrun_default",
             "hidden_override",
             "hidden",
-            "read_only_override",
-            "read_only",
             "approval_required_override",
             "approval_required",
             "soft_time_limit_override",
@@ -790,7 +794,7 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
     )
-    commit_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    dryrun_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(
         initial=False,
         required=False,
@@ -860,7 +864,7 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
+        to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -935,7 +939,7 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
+        to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     # 2.0 TODO(glenn) filtering by obj_type should be solved by dynamic filter form generation
@@ -963,7 +967,7 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
+        to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
@@ -1055,7 +1059,7 @@ class LocalContextFilterForm(forms.Form):
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     local_config_context_schema = DynamicModelMultipleChoiceField(
-        queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
+        queryset=ConfigContextSchema.objects.all(), to_field_name="name", required=False
     )
 
 
@@ -1161,6 +1165,12 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "destination_hidden",
             "destination_filter",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
 
     def save(self, commit=True):
         # TODO add support for owner when a CR is created in the UI

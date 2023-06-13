@@ -118,7 +118,8 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
         super().__init__(*args, **kwargs)
 
         if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            self.fields.pop("dynamic_groups")
+            # In the case of a nested serializer, we won't have a `dynamic_groups` field at all.
+            self.fields.pop("dynamic_groups", None)
 
     class Meta:
         model = ConfigContext
@@ -310,13 +311,6 @@ class GitRepositorySerializer(NautobotModelSerializer):
         model = GitRepository
         fields = "__all__"
 
-    def validate(self, data):
-        """
-        Add the originating Request as a parameter to be passed when creating/updating a GitRepository.
-        """
-        data["request"] = self.context["request"]
-        return super().validate(data)
-
 
 #
 # GraphQL Queries
@@ -427,20 +421,6 @@ class JobVariableSerializer(serializers.Serializer):
 
 
 #
-# Job Results
-#
-
-
-class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
-    status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
-    obj_type = ContentTypeField(read_only=True)
-
-    class Meta:
-        model = JobResult
-        fields = "__all__"
-
-
-#
 # Scheduled Jobs
 #
 
@@ -450,6 +430,19 @@ class ScheduledJobSerializer(BaseModelSerializer):
 
     class Meta:
         model = ScheduledJob
+        fields = "__all__"
+
+
+#
+# Job Results
+#
+
+
+class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
+    status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
+
+    class Meta:
+        model = JobResult
         fields = "__all__"
 
 
@@ -572,7 +565,6 @@ class JobCreationSerializer(BaseModelSerializer):
 
 class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
-    commit = serializers.BooleanField(required=False, default=None)
     schedule = JobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
 
@@ -580,7 +572,6 @@ class JobInputSerializer(serializers.Serializer):
 class JobMultiPartInputSerializer(serializers.Serializer):
     """JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer for use with multipart/form-data submissions which only accept key-value pairs"""
 
-    _commit = serializers.BooleanField(required=False, default=None)
     _schedule_name = serializers.CharField(max_length=255, required=False)
     _schedule_start_time = serializers.DateTimeField(format=None, required=False)
     _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)

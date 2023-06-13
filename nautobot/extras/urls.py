@@ -451,7 +451,7 @@ urlpatterns = [
     ),
     # 2.0 TODO: JobView should actually be JobRunView, but keeping it as-is for backwards compatibility
     path("jobs/<uuid:pk>/run/", views.JobView.as_view(), name="job_run"),
-    path("jobs/<path:class_path>/", views.JobView.as_view(), name="job"),
+    path("jobs/<str:class_path>/", views.JobView.as_view(), name="job"),
     # Job hooks
     path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
     path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),

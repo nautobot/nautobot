@@ -132,11 +132,13 @@ class JobSourceChoices(ChoiceSet):
     SOURCE_LOCAL = "local"
     SOURCE_GIT = "git"
     SOURCE_PLUGIN = "plugins"
+    SOURCE_SYSTEM = "system"
 
     CHOICES = (
         (SOURCE_LOCAL, "Installed in $JOBS_ROOT"),
         (SOURCE_GIT, "Provided by a Git repository"),
         (SOURCE_PLUGIN, "Part of a plugin"),
+        (SOURCE_SYSTEM, "Provided by Nautobot"),
     )
 
 
@@ -240,26 +242,26 @@ class JobResultStatusChoices(ChoiceSet):
 
 
 class LogLevelChoices(ChoiceSet):
-    LOG_DEFAULT = "default"
-    LOG_SUCCESS = "success"
+    LOG_DEBUG = "debug"
     LOG_INFO = "info"
     LOG_WARNING = "warning"
-    LOG_FAILURE = "failure"
+    LOG_ERROR = "error"
+    LOG_CRITICAL = "critical"
 
     CHOICES = (
-        (LOG_DEFAULT, "Default"),
-        (LOG_SUCCESS, "Success"),
+        (LOG_DEBUG, "Debug"),
         (LOG_INFO, "Info"),
         (LOG_WARNING, "Warning"),
-        (LOG_FAILURE, "Failure"),
+        (LOG_ERROR, "Error"),
+        (LOG_CRITICAL, "Critical"),
     )
 
     CSS_CLASSES = {
-        LOG_DEFAULT: "default",
-        LOG_SUCCESS: "success",
+        LOG_DEBUG: "debug",
         LOG_INFO: "info",
         LOG_WARNING: "warning",
-        LOG_FAILURE: "danger",
+        LOG_ERROR: "error",
+        LOG_CRITICAL: "critical",
     }
 
 

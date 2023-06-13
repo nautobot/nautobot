@@ -143,7 +143,9 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
-                location = Location(name="Location 1", slug="location-1", location_type=location_type)
+                location = Location(
+                    name="Location 1", slug="location-1", location_type=location_type, status=self.statuses[0]
+                )
                 location.save()
 
                 serializer = LocationSerializer(location, context={"request": None})
@@ -185,7 +187,9 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
-                location = Location(name="Location 1", slug="location-1", location_type=location_type)
+                location = Location(
+                    name="Location 1", slug="location-1", location_type=location_type, status=self.statuses[0]
+                )
                 location.save()
 
                 # deepcopy instance state to be used by LocationSerializer and get_snapshots

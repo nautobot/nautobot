@@ -284,13 +284,23 @@ class APIViewTestCases:
                     self.assertIn(field, response_data)
                     if isinstance(response_data[field], list):
                         for entry in response_data[field]:
-                            self.assertTrue(is_uuid(entry))
+                            self.assertIsInstance(entry, dict)
+                            self.assertTrue(is_uuid(entry["id"]))
                     else:
                         if response_data[field] is not None:
-                            # The response should be a detail API URL, ending in the UUID of the relevant object
+                            self.assertIsInstance(response_data[field], dict)
+                            url = response_data[field]["url"]
+                            pk = response_data[field]["id"]
+                            object_type = response_data[field]["object_type"]
+                            # The response should be a brief API object, containing an ID, object_type, and URL ending in the UUID of the relevant object
                             # http://nautobot.example.com/api/circuits/providers/<uuid>/
                             #                                                    ^^^^^^
-                            self.assertTrue(is_uuid(response_data[field].split("/")[-2]))
+                            self.assertTrue(is_uuid(url.split("/")[-2]))
+                            self.assertTrue(is_uuid(pk))
+
+                            with self.subTest(f"Assert object_type {object_type} is valid"):
+                                app_label, model_name = object_type.split(".")
+                                ContentType.objects.get(app_label=app_label, model=model_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):
@@ -395,12 +405,6 @@ class APIViewTestCases:
                     "API sort not identical to QuerySet.order_by",
                 )
 
-                full_list = list(self._get_queryset().values_list("name", flat=True))
-                full_list.sort()
-                self.assertEqual(
-                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
-                )
-
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_descending_ordered(self):
             # Simple sorting check for models with a "name" field
@@ -417,10 +421,14 @@ class APIViewTestCases:
                     "API sort not identical to QuerySet.order_by",
                 )
 
-                full_list = list(self._get_queryset().values_list("name", flat=True))
-                full_list.sort(reverse=True)
-                self.assertEqual(
-                    result_list, full_list[:3], "API sort not identical to expected sort (QuerySet not ordering)"
+                response_ascending = self.client.get(f"{self._get_list_url()}?sort=name&limit=3", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_list_ascending = list(map(lambda p: p["name"], response_ascending.data["results"]))
+
+                self.assertNotEqual(
+                    result_list,
+                    result_list_ascending,
+                    "Same results obtained when sorting by name and by -name (QuerySet not ordering)",
                 )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[], STRICT_FILTERING=True)
@@ -504,7 +512,8 @@ class APIViewTestCases:
             self.maxDiff = None
             # This check is more useful than it might seem. Any related object that wasn't CSV-converted correctly
             # will likely be rendered incorrectly as an API URL, and that API URL *will* differ between the
-            # two responses based on the inclusion or omission of the "?format=csv" parameter.
+            # two responses based on the inclusion or omission of the "?format=csv" parameter. If
+            # you run into this, make sure all serializers have `Meta.fields = "__all__"` set.
             self.assertEqual(
                 response_1.content.decode(response_1.charset), response_2.content.decode(response_2.charset)
             )

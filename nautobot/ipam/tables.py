@@ -20,6 +20,7 @@ from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
 from .models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -27,6 +28,8 @@ from .models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
 
 AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
@@ -38,7 +41,7 @@ UTILIZATION_GRAPH = """
 
 PREFIX_LINK = """
 {% load helpers %}
-{% for i in record.parents|as_range %}
+{% for i in record.ancestors.count|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
     <a href="\
@@ -46,8 +49,7 @@ PREFIX_LINK = """
 {% url 'ipam:prefix' pk=record.pk %}\
 {% else %}\
 {% url 'ipam:prefix_add' %}\
-?prefix={{ record }}\
-{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
+?prefix={{ record }}&namespace={{ object.namespace.pk }}\
 {% if object.location %}&location={{ object.location.pk }}{% endif %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
@@ -56,7 +58,7 @@ PREFIX_LINK = """
 
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% for i in record.parents|as_range %}
+{% for i in record.ancestors.count|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
 <span class="hover_copy">
@@ -65,8 +67,7 @@ PREFIX_COPY_LINK = """
 {% url 'ipam:prefix' pk=record.pk %}\
 {% else %}\
 {% url 'ipam:prefix_add' %}\
-?prefix={{ record }}\
-{% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
+?prefix={{ record }}&namespace={{ object.namespace.pk }}\
 {% if object.location %}&location={{ object.location.pk }}{% endif %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
@@ -211,6 +212,22 @@ VLANGROUP_ADD_VLAN = """
 {% endwith %}
 """
 
+
+#
+# Namespaces
+#
+
+
+class NamespaceTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    tags = TagColumn(url_name="ipam:namespace_list")
+
+    class Meta(BaseTable.Meta):
+        model = Namespace
+        fields = ("pk", "name", "description", "location")
+
+
 #
 # VRFs
 #
@@ -219,9 +236,8 @@ VLANGROUP_ADD_VLAN = """
 class VRFTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    rd = tables.Column(verbose_name="RD")
+    # rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
-    enforce_unique = BooleanColumn(verbose_name="Unique")
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     export_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
     tags = TagColumn(url_name="ipam:vrf_list")
@@ -231,19 +247,54 @@ class VRFTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "rd",
+            # "rd",
+            "namespace",
             "tenant",
-            "enforce_unique",
             "description",
             "import_targets",
             "export_targets",
             "tags",
         )
-        default_columns = ("pk", "name", "rd", "tenant", "description")
+        # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "namespace", "tenant", "description")
+
+
+class VRFDeviceAssignmentTable(BaseTable):
+    """Table for displaying VRF Device Assignments with RD."""
+
+    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    device = tables.Column(
+        linkify=lambda record: record.device.get_absolute_url(), accessor="device.name", verbose_name="Device"
+    )
+    virtual_machine = tables.Column(
+        linkify=lambda record: record.virtual_machine.get_absolute_url(),
+        accessor="virtual_machine.name",
+        verbose_name="Virtual Machine",
+    )
+    rd = tables.Column(verbose_name="VRF RD")
+    tenant = TenantColumn(accessor="vrf.tenant")
+
+    class Meta(BaseTable.Meta):
+        model = VRFDeviceAssignment
+        orderable = False
+        fields = ("vrf", "device", "virtual_machine", "rd", "tenant")
+
+
+class VRFPrefixAssignmentTable(BaseTable):
+    """Table for displaying VRF Prefix Assignments."""
+
+    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    prefix = tables.Column(linkify=True)
+    rd = tables.Column(accessor="vrf.rd", verbose_name="RD")
+    tenant = TenantColumn(accessor="vrf.tenant")
+
+    class Meta(BaseTable.Meta):
+        model = VRFPrefixAssignment
+        fields = ("vrf", "prefix", "rd", "tenant")
 
 
 #
-# Route targets
+#
 #
 
 
@@ -305,22 +356,26 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     prefix = tables.TemplateColumn(
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
-    vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
+    # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
     location = tables.Column(linkify=True)
+    namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True)
+    children = tables.Column(accessor="descendants_count")
     date_allocated = tables.DateTimeColumn()
 
     class Meta(BaseTable.Meta):
         model = Prefix
+        orderable = False
         fields = (
             "pk",
             "prefix",
             "type",
             "status",
             "children",
-            "vrf",
+            # "vrf",
+            "namespace",
             "tenant",
             "location",
             "vlan",
@@ -334,7 +389,8 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "prefix",
             "type",
             "status",
-            "vrf",
+            # "vrf",
+            "namespace",
             "tenant",
             "location",
             "vlan",
@@ -354,11 +410,12 @@ class PrefixDetailTable(PrefixTable):
     class Meta(PrefixTable.Meta):
         fields = (
             "pk",
+            "namespace",
             "prefix",
             "type",
             "status",
             "children",
-            "vrf",
+            # "vrf",
             "utilization",
             "tenant",
             "location",
@@ -369,11 +426,12 @@ class PrefixDetailTable(PrefixTable):
         )
         default_columns = (
             "pk",
+            "namespace",
             "prefix",
             "type",
             "status",
             "children",
-            "vrf",
+            # "vrf",
             "utilization",
             "tenant",
             "location",
@@ -391,9 +449,8 @@ class PrefixDetailTable(PrefixTable):
 class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     address = tables.TemplateColumn(
-        template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "prefix_length")
+        template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "mask_length")
     )
-    vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
     # TODO: add interface M2M
 
@@ -402,7 +459,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "address",
-            "vrf",
+            "type",
             "status",
             "role",
             "tenant",
@@ -424,7 +481,7 @@ class IPAddressDetailTable(IPAddressTable):
         fields = (
             "pk",
             "address",
-            "vrf",
+            "type",
             "status",
             "role",
             "tenant",
@@ -437,7 +494,7 @@ class IPAddressDetailTable(IPAddressTable):
         default_columns = (
             "pk",
             "address",
-            "vrf",
+            "type",
             "status",
             "role",
             "tenant",
@@ -456,7 +513,7 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
         fields = (
             "address",
             "dns_name",
-            "vrf",
+            "type",
             "status",
             "role",
             "tenant",
@@ -471,12 +528,12 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     """
 
     address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
-    vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
+    # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
 
     class Meta(BaseTable.Meta):
         model = IPAddress
-        fields = ("address", "vrf", "status", "role", "tenant", "description")
+        fields = ("address", "type", "status", "role", "tenant", "description")
 
 
 class IPAddressInterfaceTable(InterfaceTable):
@@ -496,6 +553,7 @@ class IPAddressInterfaceTable(InterfaceTable):
             "pk",
             "name",
             "device",
+            "type",
             "status",
             "label",
             "enabled",

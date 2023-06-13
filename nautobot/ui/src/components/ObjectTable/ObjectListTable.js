@@ -1,4 +1,3 @@
-import { RouterButton } from "../RouterButton";
 import { ButtonGroup, SkeletonText } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
@@ -159,14 +158,22 @@ export default function ObjectListTable({
                             Actions
                         </UIButton>
                         <Icon.TbMinusVertical />
-
-                        <RouterButton
+                        <UIButton
                             to={`${location.pathname}add/`}
                             size="sm"
                             leftIcon={<PlusIcon />}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                // Because there is currently no support for Add view in the new UI for production,
+                                // the code below checks if the app is running in production and redirects the user to
+                                // the Add page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
+                                if (process.env.NODE_ENV === "production") {
+                                    document.location.href += "add/";
+                                }
+                            }}
                         >
                             Add {tableTitle}
-                        </RouterButton>
+                        </UIButton>
                     </ButtonGroup>
                 </Box>
             )}

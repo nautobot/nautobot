@@ -5,14 +5,15 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.utils.timezone import make_aware
 
-from nautobot.core.testing import ViewTestCases
+from nautobot.core.testing import post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status, Tag
-from nautobot.ipam.choices import ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -22,6 +23,8 @@ from nautobot.ipam.models import (
     VRF,
 )
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -30,26 +33,26 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         tenants = Tenant.objects.all()[:2]
+        namespace = Namespace.objects.get(name="Global")
 
         cls.form_data = {
             "name": "VRF X",
+            "namespace": namespace.pk,
             "rd": "65000:999",
             "tenant": tenants[0].pk,
-            "enforce_unique": True,
             "description": "A new VRF",
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
         }
 
         cls.csv_data = (
-            "name",
-            "VRF 4",
-            "VRF 5",
-            "VRF 6",
+            "name,rd,namespace",
+            f"VRF 4,abc123,{namespace.name}",
+            f"VRF 5,xyz246,{namespace.name}",
+            f"VRF 6,,{namespace.name}",
         )
 
         cls.bulk_edit_data = {
             "tenant": tenants[1].pk,
-            "enforce_unique": False,
             "description": "New description",
         }
 
@@ -111,6 +114,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @classmethod
     def setUpTestData(cls):
         rir = RIR.objects.first()
+        namespace = Namespace.objects.get(name="Global")
 
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         vrfs = VRF.objects.all()[:2]
@@ -121,6 +125,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
+            "namespace": namespace.pk,
             "location": locations[1].pk,
             "vrf": vrfs[1].pk,
             "tenant": None,
@@ -135,10 +140,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         }
 
         cls.csv_data = (
-            "vrf,prefix,status,rir",
-            f"{vrfs[0].name},10.4.0.0/16,{statuses[0].name},{rir.name}",
-            f"{vrfs[0].name},10.5.0.0/16,{statuses[0].name},{rir.name}",
-            f"{vrfs[0].name},10.6.0.0/16,{statuses[1].name},{rir.name}",
+            "vrf,prefix,status,rir,namespace",
+            f"{vrfs[0].name},10.4.0.0/16,{statuses[0].name},{rir.name},{namespace.name}",
+            f"{vrfs[0].name},10.5.0.0/16,{statuses[0].name},{rir.name},{namespace.name}",
+            f"{vrfs[0].name},10.6.0.0/16,{statuses[1].name},{rir.name},{namespace.name}",
         )
 
         cls.bulk_edit_data = {
@@ -180,17 +185,20 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        vrfs = VRF.objects.all()[:2]
-
+        namespace = Namespace.objects.get(name="Global")
         statuses = Status.objects.get_for_model(IPAddress)
-
         roles = Role.objects.get_for_model(IPAddress)
+        parent, _ = Prefix.objects.get_or_create(
+            prefix="192.0.2.0/24",
+            defaults={"namespace": namespace, "status": statuses[0], "type": "network"},
+        )
 
         cls.form_data = {
-            "vrf": vrfs[1].pk,
+            "namespace": namespace.pk,
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
             "status": statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
             "role": roles[0].pk,
             "nat_inside": None,
             "dns_name": "example",
@@ -199,20 +207,61 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "vrf,address,status",
-            f"{vrfs[0].name},192.0.2.4/24,{statuses[0].name}",
-            f"{vrfs[0].name},192.0.2.5/24,{statuses[0].name}",
-            f"{vrfs[0].name},192.0.2.6/24,{statuses[0].name}",
+            "address,status,parent",
+            f"192.0.2.4/24,{statuses[0].name},{parent.composite_key}",
+            f"192.0.2.5/24,{statuses[0].name},{parent.composite_key}",
+            f"192.0.2.6/24,{statuses[0].name},{parent.composite_key}",
         )
 
         cls.bulk_edit_data = {
-            "vrf": vrfs[1].pk,
             "tenant": None,
             "status": statuses[1].pk,
             "role": roles[1].pk,
+            "type": IPAddressTypeChoices.TYPE_HOST,
             "dns_name": "example",
             "description": "New description",
         }
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        self.form_data = form_data
+        super().test_edit_object_with_permission()
+
+    # TODO Revise these tests by borrowing the pattern that already exists in nautobot.core.testing.api
+    # where by default the same data is used for both create and edit tests, but you have the option to override one or the other if needed.
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        self.form_data = form_data
+        super().test_edit_object_with_constrained_permission()
+
+    def test_host_non_modifiable_once_set(self):
+        """`host` field of the IPAddress should not be modifiable once the IPAddress is created."""
+        ip_address_1 = self._get_queryset().first()
+        ip_address_2 = self._get_queryset().last()
+
+        # Assign model-level permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("edit", ip_address_1)), 200)
+
+        # Try POST with model-level permission, with a different address from that of ip_address_1
+        # a.k.a Try to modify the host field of ip_address_1
+        self.form_data["address"] = ip_address_2.address
+        request = {
+            "path": self._get_url("edit", ip_address_1),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Host address cannot be changed once created", str(response.content))
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -321,18 +370,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-# TODO: Update base class to PrimaryObjectViewTestCase
-# Blocked by absence of standard creation view
-class ServiceTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Service
 
     @classmethod
@@ -341,24 +379,30 @@ class ServiceTestCase(
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
-        device = Device.objects.create(name="Device 1", location=location, device_type=devicetype, role=devicerole)
-
+        devicestatus = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            name="Device 1", location=location, device_type=devicetype, role=devicerole, status=devicestatus
+        )
+        cluster_type = ClusterType.objects.create(name="Circuit Type 2")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=location)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        cls.virtual_machine = VirtualMachine.objects.create(cluster=cluster, name="VM 1", status=vm_status)
         Service.objects.bulk_create(
             [
                 Service(
-                    device=device,
+                    device=cls.device,
                     name="Service 1",
                     protocol=ServiceProtocolChoices.PROTOCOL_TCP,
                     ports=[101],
                 ),
                 Service(
-                    device=device,
+                    device=cls.device,
                     name="Service 2",
                     protocol=ServiceProtocolChoices.PROTOCOL_TCP,
                     ports=[102],
                 ),
                 Service(
-                    device=device,
+                    device=cls.device,
                     name="Service 3",
                     protocol=ServiceProtocolChoices.PROTOCOL_TCP,
                     ports=[103],
@@ -367,7 +411,7 @@ class ServiceTestCase(
         )
 
         cls.form_data = {
-            "device": device.pk,
+            "device": cls.device.pk,
             "virtual_machine": None,
             "name": "Service X",
             "protocol": ServiceProtocolChoices.PROTOCOL_TCP,
@@ -379,9 +423,9 @@ class ServiceTestCase(
 
         cls.csv_data = (
             "device,name,protocol,ports,description",
-            f"{device.natural_key_slug},Service 1,tcp,1,First service",
-            f"{device.natural_key_slug},Service 2,tcp,2,Second service",
-            f'{device.natural_key_slug},Service 3,udp,"3,4,5",Third service',
+            f"{cls.device.composite_key},Service 4,tcp,1,First service",
+            f"{cls.device.composite_key},Service 5,tcp,2,Second service",
+            f'{cls.device.composite_key},Service 6,udp,"3,4,5",Third service',
         )
 
         cls.bulk_edit_data = {
@@ -389,3 +433,69 @@ class ServiceTestCase(
             "ports": "106,107",
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_duplicate_service_name_on_the_same_device_violates_uniqueness_constraint(self):
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        # Duplicate name for a Service that already exists
+        self.form_data["name"] = "Service 1"
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Service with this Name and Device already exists.", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_service_cannot_be_assigned_to_both_device_and_vm(self):
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        # Input a virtual machine as well in the form data
+        self.form_data["virtual_machine"] = self.virtual_machine.pk
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("A service cannot be associated with both a device and a virtual machine.", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_service_cannot_be_assigned_to_neither_device_nor_vm(self):
+        # Assign unconstrained permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        # Input a virtual machine as well in the form data
+        self.form_data["device"] = None
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("A service must be associated with either a device or a virtual machine.", response_body)

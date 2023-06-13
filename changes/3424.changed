@@ -1,0 +1,2 @@
+Added `IPAddress.type` field and moved DHCP/SLAAC status to types.
+Unskipped `nautobot.ipam.tests.test_forms.IPAddressFormTest`

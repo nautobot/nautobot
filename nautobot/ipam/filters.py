@@ -21,6 +21,7 @@ from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -33,6 +34,7 @@ from .models import (
 
 __all__ = (
     "IPAddressFilterSet",
+    "NamespaceFilterSet",
     "PrefixFilterSet",
     "RIRFilterSet",
     "RouteTargetFilterSet",
@@ -41,6 +43,18 @@ __all__ = (
     "VLANGroupFilterSet",
     "VRFFilterSet",
 )
+
+
+class NamespaceFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+        },
+    )
+
+    class Meta:
+        model = Namespace
+        fields = "__all__"
 
 
 class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
@@ -73,10 +87,27 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Export target (ID or name)",
     )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="devices",
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (ID or name)",
+    )
+    prefix = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="prefixes",
+        queryset=Prefix.objects.all(),
+        to_field_name="pk",  # TODO(jathan): Make this work with `prefix` "somehow"
+        label="Device (ID or name)",
+    )
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
 
     class Meta:
         model = VRF
-        fields = ["id", "name", "rd", "enforce_unique", "tags"]
+        fields = ["id", "name", "rd", "tags"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
@@ -127,10 +158,6 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
         method="search",
         label="Search",
     )
-    family = django_filters.NumberFilter(
-        method="filter_ip_family",
-        label="Family",
-    )
 
     def search(self, qs, name, value):
         value = value.strip()
@@ -139,9 +166,6 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
             return qs
 
         return qs.string_search(value)
-
-    def filter_ip_family(self, qs, name, value):
-        return qs.ip_family(value)
 
 
 class PrefixFilterSet(
@@ -171,6 +195,9 @@ class PrefixFilterSet(
     mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
     mask_length__gte = django_filters.NumberFilter(label="mask_length__gte", method="filter_prefix_length_gte")
     mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
+    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
+    # FK, Filtering on the VRF by ID or RD needs to be inverted to filter on the m2m.
+    """
     vrf_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         label="VRF (ID) - Deprecated (use vrf filter)",
@@ -193,6 +220,7 @@ class PrefixFilterSet(
         to_field_name="rd",
         label="VRF (RD)",
     )
+    """
     vlan_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
         label="VLAN (ID)",
@@ -211,10 +239,15 @@ class PrefixFilterSet(
         label="Has RIR",
     )
     type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
 
     class Meta:
         model = Prefix
-        fields = ["date_allocated", "id", "prefix", "tags", "type"]
+        fields = ["date_allocated", "id", "ip_version", "prefix", "tags", "type"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
@@ -304,19 +337,16 @@ class IPAddressFilterSet(
         method="filter_address",
         label="Address",
     )
-    mask_length = django_filters.NumberFilter(
-        method="filter_mask_length",
-        label="Mask length",
-    )
-    vrf_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=VRF.objects.all(),
-        label="VRF (ID) - Deprecated (use vrf filter)",
-    )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="VRF (ID or RD)",
     )
+    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
+    # FK, Filtering on the VRF by ID or RD needs to be inherited from the parent prefix, after
+    # Prefix -> IPAddress parenting has been implemented.
+    """
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrf",
         queryset=VRF.objects.all(),
@@ -330,6 +360,7 @@ class IPAddressFilterSet(
         to_field_name="rd",
         label="VRF (RD)",
     )
+    """
     device = MultiValueCharFilter(
         method="filter_device",
         field_name="name",
@@ -360,10 +391,16 @@ class IPAddressFilterSet(
         to_field_name="name",
         label="VM interfaces (ID or name)",
     )
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        field_name="parent__namespace",
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name", "tags"]
+        fields = ["id", "ip_version", "dns_name", "type", "tags", "mask_length"]
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()
@@ -380,11 +417,6 @@ class IPAddressFilterSet(
             return queryset.net_in(value)
         except ValidationError:
             return queryset.none()
-
-    def filter_mask_length(self, queryset, name, value):
-        if not value:
-            return queryset
-        return queryset.filter(prefix_length=value)
 
     def filter_present_in_vrf(self, queryset, name, value):
         if value is None:

@@ -923,7 +923,7 @@ class CustomFieldDataAPITest(APITestCase):
         csvdata = "\n".join(
             [
                 "name,slug,location_type,status",
-                f"Location N,location-n,{self.lt.natural_key_slug},{self.statuses[0].name}",
+                f"Location N,location-n,{self.lt.composite_key},{self.statuses[0].name}",
             ]
         )
         response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
@@ -950,7 +950,7 @@ class CustomFieldDataAPITest(APITestCase):
         csvdata = "\n".join(
             [
                 "name,slug,location_type,status,cf_choice_cf",
-                f"Location N,location-n,{self.lt.natural_key_slug},{self.statuses[0].name},Frobozz",
+                f"Location N,location-n,{self.lt.composite_key},{self.statuses[0].name},Frobozz",
             ]
         )
         response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
@@ -1114,10 +1114,9 @@ class CustomFieldModelTest(TestCase):
         cf2.content_types.set([ContentType.objects.get_for_model(Rack)])
         cls.lt = LocationType.objects.get(name="Campus")
 
-    def setUp(self):
-        self.location_status = Status.objects.get_for_model(Location).first()
-        self.location1 = Location.objects.create(name="NYC", location_type=self.lt)
-        self.computed_field_one = ComputedField.objects.create(
+        cls.location_status = Status.objects.get_for_model(Location).first()
+        cls.location1 = Location.objects.create(name="NYC", location_type=cls.lt, status=cls.location_status)
+        cls.computed_field_one = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
             key="computed_field_one",
             label="Computed Field One",
@@ -1126,7 +1125,7 @@ class CustomFieldModelTest(TestCase):
             weight=100,
         )
         # Field whose template will raise a TemplateError
-        self.bad_computed_field = ComputedField.objects.create(
+        cls.bad_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
             key="bad_computed_field",
             label="Bad Computed Field",
@@ -1135,7 +1134,7 @@ class CustomFieldModelTest(TestCase):
             weight=100,
         )
         # Field whose template will raise a TypeError
-        self.worse_computed_field = ComputedField.objects.create(
+        cls.worse_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
             key="worse_computed_field",
             label="Worse Computed Field",
@@ -1143,7 +1142,7 @@ class CustomFieldModelTest(TestCase):
             fallback_value="Another template error",
             weight=200,
         )
-        self.non_location_computed_field = ComputedField.objects.create(
+        cls.non_location_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
             key="device_computed_field",
             label="Device Computed Field",
@@ -1152,7 +1151,7 @@ class CustomFieldModelTest(TestCase):
             weight=100,
         )
         # Field whose template will return None, with fallback_value defaulting to empty string
-        self.bad_attribute_computed_field = ComputedField.objects.create(
+        cls.bad_attribute_computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Location),
             key="bad_attribute_computed_field",
             label="Bad Attribute Computed Field",
@@ -1370,10 +1369,12 @@ class CustomFieldFilterTest(TestCase):
         CustomFieldChoice.objects.create(custom_field=cf, value="Foo")
         CustomFieldChoice.objects.create(custom_field=cf, value="Bar")
         cls.location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
             name="Location 1",
             slug="location-1",
             location_type=cls.location_type,
+            status=location_status,
             _custom_field_data={
                 "cf1": 100,
                 "cf2": True,
@@ -1390,6 +1391,7 @@ class CustomFieldFilterTest(TestCase):
             name="Location 2",
             slug="location-2",
             location_type=cls.location_type,
+            status=location_status,
             _custom_field_data={
                 "cf1": 200,
                 "cf2": False,
@@ -1406,10 +1408,15 @@ class CustomFieldFilterTest(TestCase):
             name="Location 3",
             slug="location-3",
             location_type=cls.location_type,
+            status=location_status,
             _custom_field_data={"cf9": ["Foo", "Bar"]},
         )
         Location.objects.create(
-            name="Location 4", slug="location-4", location_type=cls.location_type, _custom_field_data={}
+            name="Location 4",
+            slug="location-4",
+            location_type=cls.location_type,
+            status=location_status,
+            _custom_field_data={},
         )
 
     def test_filter_integer(self):
@@ -1832,7 +1839,8 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 class CustomFieldBackgroundTasks(TransactionTestCase):
     def test_provision_field_task(self):
         location_type = LocationType.objects.create(name="Root Type 1")
-        location = Location(name="Location 1", slug="location-1", location_type=location_type)
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Location 1", slug="location-1", location_type=location_type, status=location_status)
         location.save()
 
         obj_type = ContentType.objects.get_for_model(Location)
@@ -1853,11 +1861,13 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         cf.save()
         cf.content_types.set([obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
+        location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
             slug="location-1",
-            _custom_field_data={"cf1": "foo"},
             location_type=location_type,
+            status=location_status,
+            _custom_field_data={"cf1": "foo"},
         )
         location.save()
 
@@ -1879,8 +1889,13 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         choice = CustomFieldChoice(custom_field=cf, value="Foo")
         choice.save()
         location_type = LocationType.objects.create(name="Root Type 3")
+        location_status = Status.objects.get_for_model(Location).first()
         location = Location(
-            name="Location 1", slug="location-1", _custom_field_data={"cf1": "Foo"}, location_type=location_type
+            name="Location 1",
+            slug="location-1",
+            location_type=location_type,
+            status=location_status,
+            _custom_field_data={"cf1": "Foo"},
         )
         location.save()
 

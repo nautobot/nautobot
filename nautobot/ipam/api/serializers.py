@@ -1,18 +1,21 @@
 from collections import OrderedDict
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     ChoiceField,
     NautobotModelSerializer,
 )
+from nautobot.core.api.serializers import NautobotHyperlinkedRelatedField
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam.api.fields import IPFieldSerializer
-from nautobot.ipam.choices import IPAddressFamilyChoices, PrefixTypeChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
     IPAddress,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -21,6 +24,20 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
+
+
+#
+# Namespaces
+#
+
+
+class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:namespace-detail")
+
+    class Meta:
+        model = Namespace
+        fields = "__all__"
+        list_display_fields = ["name", "description", "location"]
 
 
 #
@@ -138,7 +155,6 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
 
@@ -157,7 +173,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "description",
         ]
         extra_kwargs = {
-            "family": {"read_only": True},
+            "ip_version": {"read_only": True},
             "prefix_length": {"read_only": True},
         }
 
@@ -173,9 +189,9 @@ class PrefixLengthSerializer(serializers.Serializer):
             raise serializers.ValidationError({"prefix_length": "this field must be int type"})
 
         prefix = self.context.get("prefix")
-        if prefix.family == 4 and requested_prefix > 32:
+        if prefix.ip_version == 4 and requested_prefix > 32:
             raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv4"})
-        elif prefix.family == 6 and requested_prefix > 128:
+        elif prefix.ip_version == 6 and requested_prefix > 128:
             raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv6"})
         return data
 
@@ -185,19 +201,14 @@ class AvailablePrefixSerializer(serializers.Serializer):
     Representation of a prefix which does not exist in the database.
     """
 
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     prefix = serializers.CharField(read_only=True)
 
     def to_representation(self, instance):
-        if self.context.get("vrf"):
-            vrf = VRFSerializer(self.context["vrf"], context={"request": self.context["request"]}).data
-        else:
-            vrf = None
         return OrderedDict(
             [
-                ("family", instance.version),
+                ("ip_version", instance.version),
                 ("prefix", str(instance)),
-                ("vrf", vrf),
             ]
         )
 
@@ -208,8 +219,10 @@ class AvailablePrefixSerializer(serializers.Serializer):
 
 
 class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
     address = IPFieldSerializer()
+    namespace = NautobotHyperlinkedRelatedField(
+        view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
+    )
 
     class Meta:
         model = IPAddress
@@ -224,15 +237,28 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "description",
         ]
         extra_kwargs = {
-            "family": {"read_only": True},
-            "prefix_length": {"read_only": True},
+            "ip_version": {"read_only": True},
+            "mask_length": {"read_only": True},
             "nat_outside_list": {"read_only": True},
+            "parent": {"required": False},
         }
 
+    def validate(self, data):
+        namespace = data.get("namespace", None)
+        parent = data.get("parent", None)
+
+        # Only assert namespace/parent on create.
+        if self.instance is None and not any([namespace, parent]):
+            raise ValidationError({"__all__": "One of parent or namespace must be provided"})
+
+        return data
+
     def get_field_names(self, declared_fields, info):
-        """Add nat_outside_list reverse relation to the automatically discovered fields."""
+        """Add reverse relations to the automatically discovered fields."""
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "nat_outside_list")
+        self.extend_field_names(fields, "interfaces")
+        self.extend_field_names(fields, "vm_interfaces")
         return fields
 
 
@@ -241,19 +267,14 @@ class AvailableIPSerializer(serializers.Serializer):
     Representation of an IP address which does not exist in the database.
     """
 
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     address = serializers.CharField(read_only=True)
 
     def to_representation(self, instance):
-        if self.context.get("vrf"):
-            vrf = VRFSerializer(self.context["vrf"], context={"request": self.context["request"]}).data
-        else:
-            vrf = None
         return OrderedDict(
             [
-                ("family", self.context["prefix"].version),
+                ("ip_version", self.context["prefix"].version),
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
-                ("vrf", vrf),
             ]
         )
 

@@ -1,0 +1,1 @@
+Added `interfaces` and `vm_interfaces` fields to REST API representation of `IPAddress`.
