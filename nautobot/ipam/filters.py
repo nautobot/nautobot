@@ -6,6 +6,7 @@ from netaddr.core import AddrFormatError
 
 from nautobot.core.filters import (
     MultiValueCharFilter,
+    MultiValueNumberFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -397,18 +398,24 @@ class IPAddressFilterSet(
         method="_assigned_to_interface",
         label="Has Interface Assignments",
     )
+    ip_version = MultiValueNumberFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "ip_version", "dns_name", "type", "tags", "mask_length"]
+        fields = ["id", "dns_name", "type", "tags", "mask_length"]
 
-    def _assigned_to_interface(self, queryset, name, value):
+    def generate_query__interface_assignments(self, value):
+        """Helper method used by DynamicGroups and by _assigned_to_interface method."""
         if value is not None:
             if value:
-                queryset = queryset.filter(Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False))
+                return Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False)
             else:
-                queryset = queryset.filter(Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True))
-        return queryset
+                return Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True)
+        return Q()
+
+    def _assigned_to_interface(self, queryset, name, value):
+        params = self.generate_query__interface_assignments(value)
+        return queryset.filter(params)
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()

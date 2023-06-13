@@ -337,6 +337,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         # Make sure that the VRFs belong to the same Namespace
         cls.namespace = Namespace.objects.filter(vrfs__isnull=False).first()
         vrfs = VRF.objects.filter(namespace=cls.namespace, rd__isnull=False)[:3]
+        assert len(vrfs) == 3, f"This Namespace {cls.namespace} does not contain enough VRFs."
 
         cls.interface_ct = ContentType.objects.get_for_model(Interface)
         cls.vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
@@ -535,14 +536,16 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_ip_version(self):
-        params = {"ip_version": [6]}
+        params = {"ip_version": "6"}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=6)
         )
-        params = {"ip_version": [4]}
+        params = {"ip_version": "4"}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=4)
         )
+        params = {"ip_version": ""}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_dns_name(self):
         names = list(self.queryset.exclude(dns_name="").distinct_values_list("dns_name", flat=True)[:2])
@@ -601,9 +604,9 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_mask_length(self):
         # Test filtering by a single integer value
-        params = {"mask_length": [self.queryset.first().mask_length]}
+        params = {"mask_length": self.queryset.first().mask_length}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length__in=params["mask_length"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length=params["mask_length"])
         )
         # Test filtering by multiple integer values
         params = {"mask_length": [self.queryset.first().mask_length, self.queryset.last().mask_length]}
