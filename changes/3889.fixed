@@ -1,0 +1,1 @@
+Fixed a bug in `ScheduledJob` data migration where it is trying to delete a non-existent key from a dictionary.

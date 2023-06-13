@@ -42,6 +42,12 @@
                   </td>
               </tr>
               <tr>
+                  <td>Task</td>
+                  <td>
+                      <code>{{ object.task }}</code>
+                  </td>
+              </tr>
+              <tr>
                   <td>Requester</td>
                   <td>
                       {{ object.user }}
@@ -61,12 +67,6 @@
                   <td>Approved At</td>
                   <td>
                       {{ object.approved_at | placeholder }}
-                  </td>
-              </tr>
-              <tr>
-                  <td>Job Class</td>
-                  <td>
-                      {{ object.job_class }}
                   </td>
               </tr>
           </table>

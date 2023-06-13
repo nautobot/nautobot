@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
-from django.utils.functional import cached_property, classproperty
+from django.utils.functional import cached_property
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, JSONArrayField
@@ -15,7 +15,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Interface
-from nautobot.extras.models import RoleField, Status, StatusField
+from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
 from nautobot.virtualization.models import VMInterface
@@ -544,10 +544,6 @@ class Prefix(PrimaryModel):
             self.prefix_length = prefix.prefixlen
             self.ip_version = prefix.version
 
-    # TODO: this function is completely unused at present - remove?
-    def get_duplicates(self):
-        return Prefix.objects.net_equals(self.prefix).filter(namespace=self.namespace).exclude(pk=self.pk)
-
     def clean(self):
         super().clean()
 
@@ -888,6 +884,11 @@ class IPAddress(PrimaryModel):
         help_text="IPv4 or IPv6 host address",
     )
     mask_length = models.IntegerField(null=False, db_index=True, help_text="Length of the network mask, in bits.")
+    type = models.CharField(
+        max_length=50,
+        choices=choices.IPAddressTypeChoices,
+        default=choices.IPAddressTypeChoices.TYPE_HOST,
+    )
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
     parent = models.ForeignKey(
@@ -971,22 +972,7 @@ class IPAddress(PrimaryModel):
             self.mask_length = address.prefixlen
             self.ip_version = address.version
 
-    def get_duplicates(self):
-        return IPAddress.objects.filter(vrf=self.vrf, host=self.host).exclude(pk=self.pk)
-
-    # TODO: The current IPAddress model has no appropriate natural key available yet.
-    natural_key_field_names = ["id"]
-
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def STATUS_SLAAC(cls):  # pylint: disable=no-self-argument
-        """Return a cached "slaac" `Status` object for later reference."""
-        cls.__status_slaac = getattr(cls, "__status_slaac", None)
-        if cls.__status_slaac is None:
-            try:
-                cls.__status_slaac = Status.objects.get_for_model(IPAddress).get(name="SLAAC")
-            except Status.DoesNotExist:
-                logger.error("SLAAC Status not found")
-        return cls.__status_slaac
+    natural_key_field_names = ["parent__namespace", "host"]
 
     def clean(self):
         super().clean()
@@ -998,8 +984,8 @@ class IPAddress(PrimaryModel):
                 raise ValidationError({"address": "Host address cannot be changed once created"})
 
         # Validate IP status selection
-        if self.status == IPAddress.STATUS_SLAAC and self.ip_version != 6:
-            raise ValidationError({"status": "Only IPv6 addresses can be assigned SLAAC status"})
+        if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
+            raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
@@ -1341,6 +1327,10 @@ class Service(PrimaryModel):
             "protocol",
             "ports",
         )  # (protocol, port) may be non-unique
+        constraints = [
+            models.UniqueConstraint(fields=["name", "device"], name="unique_device_service_name"),
+            models.UniqueConstraint(fields=["name", "virtual_machine"], name="unique_virtual_machine_service_name"),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.get_protocol_display()}/{self.port_list})"

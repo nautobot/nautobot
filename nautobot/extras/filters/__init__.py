@@ -658,7 +658,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "job_class": "icontains",
+            "task": "icontains",
             "description": "icontains",
         },
     )

@@ -1,0 +1,1 @@
+Fixed several errors that could occur when defining a model's `natural_key_field_names` to include related object lookups.

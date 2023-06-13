@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 from unittest import mock
 import uuid
+import tempfile
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -440,7 +441,7 @@ class JobTest(TransactionTestCase):
             msg="Profiling test job errored, this indicates that either no profiling file was created or it is malformed.",
         )
 
-        profiling_result = Path(f"/tmp/nautobot-jobresult-{job_result.pk}.pstats")
+        profiling_result = Path(f"{tempfile.gettempdir()}/nautobot-jobresult-{job_result.id}.pstats")
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
 
@@ -818,7 +819,6 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
             ScheduledJob.objects.create(
                 name=f"test{i}",
                 task="pass.TestPass",
-                job_class="pass.TestPass",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
                 start_time=timezone.now() - datetime.timedelta(days=i * 30),
@@ -828,7 +828,6 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         ScheduledJob.objects.create(
             name="test7",
             task="pass.TestPass",
-            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
             start_time=timezone.now() - datetime.timedelta(days=180),
@@ -857,7 +856,6 @@ class ScheduledJobIntervalTestCase(TestCase):
         scheduled_job = ScheduledJob.objects.create(
             name="weekly_interval",
             task="pass.TestPass",
-            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,
             start_time=start_time,

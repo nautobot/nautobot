@@ -1179,7 +1179,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Assert that the local context passes schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
         )
         self.add_permissions("dcim.change_device")
 
@@ -1189,7 +1189,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(str(response.data["local_config_context_schema"]), self.absolute_api_url(schema))
+        self.assertEqual(str(response.data["local_config_context_schema"]["url"]), self.absolute_api_url(schema))
 
     def test_local_config_context_schema_schema_validation_fails(self):
         """
@@ -1198,7 +1198,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         Assert that the local context fails schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
+            name="Schema 2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
         )
         # Add object-level permission
         self.add_permissions("dcim.change_device")
@@ -1602,8 +1602,6 @@ class InterfaceTest(Mixins.BasePortTestMixin):
         self.assertEqual(queryset.bridge, self.interfaces[2])
 
         # Assert LAG
-        self.add_permissions("dcim.add_interface")
-
         response = self.client.post(
             self._get_list_url(), data=self.common_device_or_vc_data[1], format="json", **self.header
         )
@@ -2211,7 +2209,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         self.assertIsNotNone(virtual_chassis_1["master"])
 
         # The `master` key will be a URL now, but it contains the PK
-        master_device = Device.objects.get(pk=virtual_chassis_1["master"].split("/")[-2])
+        master_device = Device.objects.get(pk=virtual_chassis_1["master"]["url"].split("/")[-2])
 
         # Set the virtual_chassis of the master device to null
         url = reverse("dcim-api:device-detail", kwargs={"pk": master_device.id})

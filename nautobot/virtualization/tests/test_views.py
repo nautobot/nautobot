@@ -224,7 +224,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Assert that the local context passes schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
         self.add_permissions("virtualization.add_virtualmachine")
 
@@ -248,7 +248,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Assert that the local context fails schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
         )
         self.add_permissions("virtualization.add_virtualmachine")
 
@@ -356,9 +356,9 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.csv_data = (
             "virtual_machine,name,status",
-            f"{virtualmachines[1].natural_key_slug},Interface 4,{statuses[0].name}",
-            f"{virtualmachines[1].natural_key_slug},Interface 5,{statuses[0].name}",
-            f"{virtualmachines[1].natural_key_slug},Interface 6,{statuses[0].name}",
+            f"{virtualmachines[1].composite_key},Interface 4,{statuses[0].name}",
+            f"{virtualmachines[1].composite_key},Interface 5,{statuses[0].name}",
+            f"{virtualmachines[1].composite_key},Interface 6,{statuses[0].name}",
         )
 
         cls.bulk_edit_data = {

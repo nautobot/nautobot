@@ -30,7 +30,11 @@ curl -s http://nautobot/api/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df
   },
   "address": "10.0.60.39/32",
   "nat_outside_list": [
-    "http://nautobot/api/ipam/ip-addresses/a7569104-ed58-4938-ab6f-cb6a9e584f14/"
+    {
+        "id": "a7569104-ed58-4938-ab6f-cb6a9e584f14",
+        "object_type": "ipam.ipaddress",
+        "url": "http://nautobot/api/ipam/ip-addresses/a7569104-ed58-4938-ab6f-cb6a9e584f14/"
+    }
   ],
   "created": "2023-04-25T12:46:09.152507Z",
   "last_updated": "2023-04-25T12:46:09.163545Z",
@@ -38,10 +42,22 @@ curl -s http://nautobot/api/ipam/ip-addresses/83445aa3-bbd3-4ab4-86f5-36942ce9df
   "mask_length": 32,
   "dns_name": "desktop-08.cook.biz",
   "description": "This is an IP Address",
-  "role": "http://nautobot/api/extras/roles/e7a815b0-2c48-499a-84b8-f20350abe415/",
-  "status": "http://nautobot/api/extras/statuses/b7f6a447-5616-4533-a6d5-a4ece50cd08c/",
+  "role": {
+    "id": "e7a815b0-2c48-499a-84b8-f20350abe415",
+    "object_type": "extras.role",
+    "url": "http://nautobot/api/extras/roles/e7a815b0-2c48-499a-84b8-f20350abe415/",
+  },
+  "status": {
+    "id": "b7f6a447-5616-4533-a6d5-a4ece50cd08c",
+    "object_type": "extras.status",
+    "url": "http://nautobot/api/extras/statuses/b7f6a447-5616-4533-a6d5-a4ece50cd08c/",
+  },
   "vrf": null,
-  "tenant": "http://nautobot/api/tenancy/tenants/501fffe7-5302-40ae-b9e4-27d5e3ff2108/",
+  "tenant": {
+    "id": "501fffe7-5302-40ae-b9e4-27d5e3ff2108",
+    "object_type": "tenancy.tenant",
+    "url": "http://nautobot/api/tenancy/tenants/501fffe7-5302-40ae-b9e4-27d5e3ff2108/",
+  },
   "nat_inside": null,
   "tags": []
 }
@@ -182,10 +198,22 @@ Related objects (e.g. `ForeignKey` fields) are representable in several differen
     "display": "10.0.60.39/32",
     "address": "10.0.60.39/32",
     ...
-    "role": "http://localhost:8080/api/extras/roles/e7a815b0-2c48-499a-84b8-f20350abe415/",
-    "status": "http://localhost:8080/api/extras/statuses/b7f6a447-5616-4533-a6d5-a4ece50cd08c/",
+    "role": {
+        "id": "e7a815b0-2c48-499a-84b8-f20350abe415",
+        "object_type": "extras.role",
+        "url": "http://localhost:8080/api/extras/roles/e7a815b0-2c48-499a-84b8-f20350abe415/",
+    },
+    "status": {
+        "id": "b7f6a447-5616-4533-a6d5-a4ece50cd08c",
+        "object_type": "extras.status",
+        "url": "http://localhost:8080/api/extras/statuses/b7f6a447-5616-4533-a6d5-a4ece50cd08c/",
+    },
     "vrf": null,
-    "tenant": "http://localhost:8080/api/tenancy/tenants/501fffe7-5302-40ae-b9e4-27d5e3ff2108/",
+    "tenant": {
+        "id": "501fffe7-5302-40ae-b9e4-27d5e3ff2108",
+        "object_type": "tenancy.tenant",
+        "url": "http://localhost:8080/api/tenancy/tenants/501fffe7-5302-40ae-b9e4-27d5e3ff2108/",
+    },
     "nat_inside": null,
     "tags": []
 }
@@ -416,7 +444,7 @@ This parameter is an positive integer value that can range from 0 to 10. In most
 
 #### Default/?depth=0
 
-`?depth` parameter defaults to 0 and offers a very lightweight view of the API where all object-related fields are represented by only their URLs:
+`?depth` parameter defaults to 0 and offers a very lightweight view of the API where all object-related fields are represented by a simple object, containing only the `id`, `object_type` and `url` attributes.
 
 ```no-highlight
 curl -s -X GET \
@@ -452,12 +480,29 @@ http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/ | jq '.
     "contact_phone": "",
     "contact_email": "",
     "comments": "Sort share road candidate.",
-    "status": "http://nautobot/api/extras/statuses/28eb334b-4171-4da4-a03a-fa6d0c6a9442/",
+    "status": {
+        "id": "28eb334b-4171-4da4-a03a-fa6d0c6a9442",
+        "object_type": "extras.status",
+        "url": "http://nautobot/api/extras/statuses/28eb334b-4171-4da4-a03a-fa6d0c6a9442/",
+
+    },
     "parent": null,
-    "location_type": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
-    "tenant": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
+    "location_type": {
+        "id": "e3d4a9af-c6c1-4582-b483-a13301eb6e28",
+        "object_type": "dcim.locationtype",
+        "url": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
+    },
+    "tenant": {
+        "id": "5b1feadb-fab0-4f81-a53f-5192d83b0216",
+        "object_type": "tenancy.tenant",
+        "url": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
+    },
     "tags": [
-        "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/",
+        {
+            "id": "a50d4568-27ae-4743-87ac-ffdc22b7f5d2",
+            "object_type": "extras.tag",
+            "url": "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/",
+        }
     ],
     "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
     "custom_fields": {
@@ -468,7 +513,7 @@ http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/ | jq '.
 
 #### ?depth=1
 
-When `?depth=1` is added to the query parameters, all object-related fields, instead of being represented as UUIDs as they are when `?depth=0`, will be represented as nested objects, similar (**but not necessarily identical!**) to the objects that would be retrieved when querying the API directly for those related objects.
+When `?depth=1` is added to the query parameters, all object-related fields, instead of being represented as light-weight objects as they are when `?depth=0`, will be represented as fully-detailed nested objects, similar (**but not necessarily identical!**) to the objects that would be retrieved when querying the API directly for those related objects.
 
 !!! important
     Nested objects retrieved with a greater-than-zero `depth` parameter do not necessarily include all fields that would be included on the fully detailed object that can be retrieved by querying their `url` directly. In particular:
@@ -756,7 +801,7 @@ curl -s -X POST \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.0" \
 http://nautobot/api/ipam/prefixes/ \
---data '{"prefix": "192.0.2.0/24", "location": 8df9e629-4338-438b-8ea9-06114f7be08e}' | jq '.'
+--data '{"prefix": "192.0.2.0/24", "status": "fc32b83f-2448-4602-9d43-fecc6735e4e5", "location": "8df9e629-4338-438b-8ea9-06114f7be08e", "namespace": "1fa6a1a9-84a3-4cf3-a9ad-7e4e7baa134a"}' | jq '.'
 ```
 
 ```json
@@ -768,11 +813,23 @@ http://nautobot/api/ipam/prefixes/ \
     "label": "IPv4"
   },
   "prefix": "192.0.2.0/24",
-  "location": "http://nautobot/api/dcim/locations/8df9e629-4338-438b-8ea9-06114f7be08e/",
-  "vrf": null,
+  "location": {
+    "id": "8df9e629-4338-438b-8ea9-06114f7be08e",
+    "object_type": "dcim.location",
+    "url": "http://nautobot/api/dcim/locations/8df9e629-4338-438b-8ea9-06114f7be08e/",
+  },
+  "namespace": {
+    "id": "1fa6a1a9-84a3-4cf3-a9ad-7e4e7baa134a",
+    "object_type": "ipam.namespace",
+    "url": "http://nautobot/api/ipam/namespaces/1fa6a1a9-84a3-4cf3-a9ad-7e4e7baa134a/",
+  },
   "tenant": null,
   "vlan": null,
-  "status": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+  "status": {
+    "id": "fc32b83f-2448-4602-9d43-fecc6735e4e5",
+    "object_type": "extras.status",
+    "url": "http://nautobot/api/extras/statuses/fc32b83f-2448-4602-9d43-fecc6735e4e5/",
+  },
   "role": null,
   "type": "network",
   "description": "",
@@ -781,6 +838,17 @@ http://nautobot/api/ipam/prefixes/ \
   "created": "2020-08-04T20:08:39.007125Z",
   "last_updated": "2020-08-04T20:08:39.007125Z"
 }
+```
+
+Related fields can be specified using either the primary key, the URL of the related object, or a nested representation similar to what is returned in the `?depth=0` response. For example, the following request is equivalent to the one above:
+
+```no-highlight
+curl -s -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.0" \
+http://nautobot/api/ipam/prefixes/ \
+--data '{"prefix": "192.0.2.0/24", "status": {"id": "fc32b83f-2448-4602-9d43-fecc6735e4e5", "object_type": "extras.status"}, "location": {"id": "8df9e629-4338-438b-8ea9-06114f7be08e", "object_type": "dcim.location"}, "namespace": { "id": "1fa6a1a9-84a3-4cf3-a9ad-7e4e7baa134a", "object_type": "ipam.namespace"} }' | jq '.'
 ```
 
 ### Creating Multiple Objects

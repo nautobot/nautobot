@@ -451,7 +451,6 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     address = tables.TemplateColumn(
         template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "mask_length")
     )
-    # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
     # TODO: add interface M2M
 
@@ -460,7 +459,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "address",
-            # "vrf",
+            "type",
             "status",
             "role",
             "tenant",
@@ -482,7 +481,7 @@ class IPAddressDetailTable(IPAddressTable):
         fields = (
             "pk",
             "address",
-            # "vrf",
+            "type",
             "status",
             "role",
             "tenant",
@@ -495,7 +494,7 @@ class IPAddressDetailTable(IPAddressTable):
         default_columns = (
             "pk",
             "address",
-            # "vrf",
+            "type",
             "status",
             "role",
             "tenant",
@@ -514,7 +513,7 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
         fields = (
             "address",
             "dns_name",
-            # "vrf",
+            "type",
             "status",
             "role",
             "tenant",
@@ -534,8 +533,7 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
 
     class Meta(BaseTable.Meta):
         model = IPAddress
-        # fields = ("address", "vrf", "status", "role", "tenant", "description")
-        fields = ("address", "status", "role", "tenant", "description")
+        fields = ("address", "type", "status", "role", "tenant", "description")
 
 
 class IPAddressInterfaceTable(InterfaceTable):
@@ -555,6 +553,7 @@ class IPAddressInterfaceTable(InterfaceTable):
             "pk",
             "name",
             "device",
+            "type",
             "status",
             "label",
             "enabled",

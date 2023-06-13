@@ -32,7 +32,7 @@ services:
         - "-f"
         - "http://localhost:8080/health/"
     volumes:
-      - node_modules:/source/nautobot/ui/node_modules
+      - node_modules:/opt/nautobot/ui/node_modules
   celery_worker:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
     ports:

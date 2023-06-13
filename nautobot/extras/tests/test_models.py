@@ -1,6 +1,7 @@
 import os
 import tempfile
 from unittest import mock
+import uuid
 import warnings
 
 from django.conf import settings
@@ -24,7 +25,13 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
-from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
+from nautobot.extras.choices import (
+    LogLevelChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
+)
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
@@ -38,6 +45,7 @@ from nautobot.extras.models import (
     Job as JobModel,
     JobLogEntry,
     JobResult,
+    ObjectChange,
     Role,
     Secret,
     SecretsGroup,
@@ -209,22 +217,23 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
     def test_name_uniqueness(self):
         """
-        Verify that two unowned ConfigContexts cannot share the same name (GitHub issue #431).
+        Verify that two ConfigContexts cannot share the same name (GitHub issue #431).
         """
         with self.assertRaises(ValidationError):
             duplicate_context = ConfigContext(name="context 1", weight=200, data={"c": 666})
             duplicate_context.validated_save()
 
-        # If a different context is owned by a GitRepository, that's not considered a duplicate
+        # If a different context is owned by a GitRepository, it's still considered a duplicate as of 2.0
         repo = GitRepository(
             name="Test Git Repository",
-            slug="test-git-repo",
+            slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
         repo.save()
 
-        nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
-        nonduplicate_context.validated_save()
+        with self.assertRaises(ValidationError):
+            nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
+            nonduplicate_context.validated_save()
 
     def test_annotation_same_as_get_for_object(self):
         """
@@ -434,7 +443,6 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         # Schemas
         self.schema_validation_pass = ConfigContextSchema.objects.create(
             name="schema-pass",
-            slug="schema-pass",
             data_schema={
                 "type": "object",
                 "additionalProperties": False,
@@ -448,7 +456,6 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         self.schemas_validation_fail = (
             ConfigContextSchema.objects.create(
                 name="schema fail (wrong properties)",
-                slug="schema-fail-wrong-properties",
                 data_schema={
                     "type": "object",
                     "additionalProperties": False,
@@ -457,12 +464,10 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
             ),
             ConfigContextSchema.objects.create(
                 name="schema fail (wrong type)",
-                slug="schema-fail-wrong-type",
                 data_schema={"type": "object", "properties": {"b": {"type": "integer"}}},
             ),
             ConfigContextSchema.objects.create(
                 name="schema fail (wrong format)",
-                slug="schema-fail-wrong-format",
                 data_schema={"type": "object", "properties": {"b": {"type": "string", "format": "ipv4"}}},
             ),
         )
@@ -613,7 +618,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         Assert calling clean on the config context schema object raises a ValidationError
         """
         invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
+            name="invalid", data_schema={"properties": {"this": "is not a valid json schema"}}
         )
 
         with self.assertRaises(ValidationError):
@@ -625,7 +630,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         With a JSON schema of type object
         Assert calling clean on the config context schema object raises a ValidationError
         """
-        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema=["not an object"])
+        invalid_schema = ConfigContextSchema(name="invalid", data_schema=["not an object"])
 
         with self.assertRaises(ValidationError):
             invalid_schema.full_clean()
@@ -637,7 +642,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         Assert calling clean on the config context schema object raises a ValidationError
         """
         invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"type": "integer", "properties": {"a": {"type": "string"}}}
+            name="invalid", data_schema={"type": "integer", "properties": {"a": {"type": "string"}}}
         )
 
         with self.assertRaises(ValidationError):
@@ -649,9 +654,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         With a JSON schema with type not present
         Assert calling clean on the config context schema object raises a ValidationError
         """
-        invalid_schema = ConfigContextSchema(
-            name="invalid", slug="invalid", data_schema={"properties": {"a": {"type": "string"}}}
-        )
+        invalid_schema = ConfigContextSchema(name="invalid", data_schema={"properties": {"a": {"type": "string"}}})
 
         with self.assertRaises(ValidationError):
             invalid_schema.full_clean()
@@ -662,7 +665,7 @@ class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
         With a JSON schema with properties not present
         Assert calling clean on the config context schema object raises a ValidationError
         """
-        invalid_schema = ConfigContextSchema(name="invalid", slug="invalid", data_schema={"type": "object"})
+        invalid_schema = ConfigContextSchema(name="invalid", data_schema={"type": "object"})
 
         with self.assertRaises(ValidationError):
             invalid_schema.full_clean()
@@ -683,7 +686,7 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
 
     def test_name_contenttype_uniqueness(self):
         """
-        The pair of (name, content_type) must be unique for an un-owned ExportTemplate.
+        The pair of (name, content_type) must be unique for an ExportTemplate.
 
         See GitHub issue #431.
         """
@@ -693,17 +696,19 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             )
             duplicate_template.validated_save()
 
-        # A differently owned ExportTemplate may have the same name
+        # A differently owned ExportTemplate may not have the same name as of 2.0.
         repo = GitRepository(
             name="Test Git Repository",
-            slug="test-git-repo",
+            slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
         repo.save()
-        nonduplicate_template = ExportTemplate(
-            content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
-        )
-        nonduplicate_template.validated_save()
+
+        with self.assertRaises(ValidationError):
+            nonduplicate_template = ExportTemplate(
+                content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
+            )
+            nonduplicate_template.validated_save()
 
 
 class FileProxyTest(ModelTestCases.BaseModelTestCase):
@@ -747,7 +752,7 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     def setUp(self):
         self.repo = GitRepository(
             name="Test Git Repository",
-            slug="test-git-repo",
+            slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
         self.repo.save()
@@ -907,6 +912,17 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             handler.exception.message_dict["approval_required"][0],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+
+class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
+    model = ObjectChange
+
+    @classmethod
+    def setUpTestData(cls):
+        location_oc = Location.objects.first().to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
+        location_oc.request_id = uuid.uuid4()
+        location_oc.change_context = ObjectChangeEventContextChoices.CONTEXT_ORM
+        location_oc.validated_save()
 
 
 class RoleTest(TestCase):

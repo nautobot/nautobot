@@ -822,10 +822,12 @@ class ScheduledJob(BaseModel):
     """Model representing a periodic task."""
 
     name = models.CharField(
-        max_length=200, verbose_name="Name", help_text="Short Description For This Task", db_index=True
+        max_length=200, verbose_name="Name", help_text="Human-readable description of this scheduled task", unique=True
     )
     task = models.CharField(
-        max_length=200,
+        # JOB_MAX_NAME_LENGTH is the longest permitted module name as well as the longest permitted class name,
+        # so we need to permit a task name of MAX.MAX at a minimum:
+        max_length=JOB_MAX_NAME_LENGTH + 1 + JOB_MAX_NAME_LENGTH,
         verbose_name="Task Name",
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
         db_index=True,
@@ -835,12 +837,6 @@ class ScheduledJob(BaseModel):
     # deleting the corresponding Job record.
     job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
-    )
-    job_class = models.CharField(
-        max_length=255,
-        verbose_name="Job Class",
-        help_text="Name of the fully qualified Nautobot Job class path",
-        db_index=True,
     )
     interval = models.CharField(choices=JobExecutionType, max_length=255)
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
@@ -930,9 +926,6 @@ class ScheduledJob(BaseModel):
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
-
-    # TODO: there's currently no natural key for ScheduledJob
-    natural_key_field_names = ["id"]
 
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""

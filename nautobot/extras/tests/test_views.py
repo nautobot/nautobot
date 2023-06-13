@@ -183,7 +183,7 @@ class ConfigContextTestCase(
         Assert that the config context passes schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
         self.add_permissions("extras.add_configcontext")
         self.add_permissions("extras.view_configcontextschema")
@@ -222,7 +222,7 @@ class ConfigContextTestCase(
         Assert that the config context fails schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
         )
         self.add_permissions("extras.add_configcontext")
         self.add_permissions("extras.view_configcontextschema")
@@ -271,13 +271,13 @@ class ConfigContextSchemaTestCase(
     def setUpTestData(cls):
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
         ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
+            name="Schema 2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
         )
         ConfigContextSchema.objects.create(
-            name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
+            name="Schema 3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
         )
         ConfigContextSchema.objects.create(
             name="Schema 4", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
@@ -285,16 +285,12 @@ class ConfigContextSchemaTestCase(
 
         cls.form_data = {
             "name": "Schema X",
-            "slug": "schema-x",
             "data_schema": '{"type": "object","properties": {"baz": {"type": "string"}}}',  # Intentionally misformatted (missing space) to ensure proper formatting on output
         }
 
         cls.bulk_edit_data = {
             "description": "New description",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Schema 4"
 
 
 class CustomLinkTestCase(
@@ -961,7 +957,6 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test1",
             task="pass.TestPass",
-            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
@@ -969,7 +964,6 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test2",
             task="pass.TestPass",
-            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
@@ -977,7 +971,6 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test3",
             task="pass.TestPass",
-            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
@@ -991,7 +984,6 @@ class ScheduledJobTestCase(
             enabled=False,
             name="test4",
             task="pass.TestPass",
-            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -1009,7 +1001,6 @@ class ScheduledJobTestCase(
                 enabled=True,
                 name=name,
                 task="pass.TestPass",
-                job_class="pass.TestPass",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -1041,7 +1032,6 @@ class ScheduledJobTestCase(
             enabled=True,
             name="test11",
             task="pass.TestPass",
-            job_class="pass.TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -1078,7 +1068,6 @@ class ApprovalQueueTestCase(
             name="test1",
             task="dry_run.TestDryRun",
             job_model=self.job_model,
-            job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
@@ -1088,7 +1077,6 @@ class ApprovalQueueTestCase(
             name="test2",
             task="fail.TestFail",
             job_model=self.job_model_2,
-            job_class=self.job_model_2.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
@@ -1102,7 +1090,6 @@ class ApprovalQueueTestCase(
             name="test4",
             task="pass.TestPass",
             job_model=self.job_model,
-            job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=False,
@@ -1762,7 +1749,8 @@ class JobTestCase(
             "_schedule_name": "test",
         }
 
-        for run_url in self.run_urls:
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=run_url)
 
@@ -1784,7 +1772,8 @@ class JobTestCase(
             "_schedule_start_time": str(timezone.now() - timedelta(minutes=1)),
         }
 
-        for run_url in self.run_urls:
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=run_url)
 
@@ -1808,12 +1797,12 @@ class JobTestCase(
             "_schedule_start_time": str(start_time),
         }
 
-        for run_url in self.run_urls:
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
             self.assertRedirects(response, reverse("extras:scheduledjob_list"))
 
-            scheduled = ScheduledJob.objects.last()
-            self.assertEqual(scheduled.name, "test")
+            scheduled = ScheduledJob.objects.get(name=f"test {i}")
             self.assertEqual(scheduled.start_time, start_time)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -1831,7 +1820,8 @@ class JobTestCase(
             "_schedule_name": "test",
             "_schedule_start_time": str(start_time),
         }
-        for run_url in self.run_urls:
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=self.run_urls[1])
 

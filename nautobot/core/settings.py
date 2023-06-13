@@ -238,6 +238,7 @@ SPECTACULAR_SETTINGS = {
         "ConsolePortTypeChoices": "nautobot.dcim.choices.ConsolePortTypeChoices",
         "CustomFieldTypeChoices": "nautobot.extras.choices.CustomFieldTypeChoices",
         "InterfaceTypeChoices": "nautobot.dcim.choices.InterfaceTypeChoices",
+        "IPAddressTypeChoices": "nautobot.ipam.choices.IPAddressTypeChoices",
         "PortTypeChoices": "nautobot.dcim.choices.PortTypeChoices",
         "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
         "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
@@ -814,7 +815,7 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     # "NautobotHyperlinkedRelatedField": {"type": "string", "readOnly": True},
     # type=string results in a free text field; also not what we want. For now,
     # however, this will keep things moving so the unit tests pass.
-    "NautobotHyperlinkedRelatedField": {"type": "string", "format": "uuid"},
+    "NautobotHyperlinkedRelatedField": {"type": "object"},
     "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
     "RelationshipsDataField": {"type": "object"},
     "SlugField": {"type": "string"},

@@ -95,7 +95,6 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Schemas
         schema = ConfigContextSchema.objects.create(
             name="schema",
-            slug="schema",
             data_schema={
                 "type": "object",
                 "additionalProperties": False,

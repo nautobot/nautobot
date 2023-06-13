@@ -32,6 +32,8 @@ from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
     JobExecutionType,
     JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -53,6 +55,7 @@ from nautobot.extras.models import (
     JobLogEntry,
     JobResult,
     Note,
+    ObjectChange,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -267,7 +270,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         Assert that the config context passes schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
         self.add_permissions("extras.add_configcontext")
 
@@ -279,7 +282,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["config_context_schema"], self.absolute_api_url(schema))
+        self.assertEqual(response.data["config_context_schema"]["url"], self.absolute_api_url(schema))
 
     def test_schema_validation_fails(self):
         """
@@ -288,7 +291,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         Assert that the config context fails schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
         )
         self.add_permissions("extras.add_configcontext")
 
@@ -319,17 +322,14 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Schema 4",
-            "slug": "schema-4",
             "data_schema": {"type": "object", "properties": {"foo": {"type": "string"}}},
         },
         {
             "name": "Schema 5",
-            "slug": "schema-5",
             "data_schema": {"type": "object", "properties": {"bar": {"type": "string"}}},
         },
         {
             "name": "Schema 6",
-            "slug": "schema-6",
             "data_schema": {"type": "object", "properties": {"buz": {"type": "string"}}},
         },
         {
@@ -341,18 +341,17 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["owner_content_type"]
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
         ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
         ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
+            name="Schema 2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
         )
         ConfigContextSchema.objects.create(
-            name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
+            name="Schema 3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
         )
 
 
@@ -512,8 +511,6 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
     choices_fields = ["filter_logic", "type"]
-    slug_source = "label"
-    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -2115,7 +2112,6 @@ class ScheduledJobTest(
         ScheduledJob.objects.create(
             name="test1",
             task="pass.TestPass",
-            job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -2125,7 +2121,6 @@ class ScheduledJobTest(
         ScheduledJob.objects.create(
             name="test2",
             task="pass.TestPass",
-            job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -2135,7 +2130,6 @@ class ScheduledJobTest(
         ScheduledJob.objects.create(
             name="test3",
             task="pass.TestPass",
-            job_class=job_model.class_path,
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -2161,9 +2155,8 @@ class JobApprovalTest(APITestCase):
         cls.job_model.enabled = True
         cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
-            name="test",
+            name="test pass",
             task="pass.TestPass",
-            job_class=cls.job_model.class_path,
             job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
@@ -2174,9 +2167,8 @@ class JobApprovalTest(APITestCase):
         cls.dryrun_job_model.enabled = True
         cls.dryrun_job_model.save()
         cls.dryrun_scheduled_job = ScheduledJob.objects.create(
-            name="test",
+            name="test dryrun",
             task="dry_run.TestDryRun",
-            job_class=cls.dryrun_job_model.class_path,
             job_model=cls.dryrun_job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
@@ -2217,7 +2209,6 @@ class JobApprovalTest(APITestCase):
         scheduled_job = ScheduledJob.objects.create(
             name="test",
             task="pass.TestPass",
-            job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2241,7 +2232,6 @@ class JobApprovalTest(APITestCase):
         scheduled_job = ScheduledJob.objects.create(
             name="test",
             task="pass.TestPass",
-            job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
@@ -2259,7 +2249,6 @@ class JobApprovalTest(APITestCase):
         scheduled_job = ScheduledJob.objects.create(
             name="test",
             task="pass.TestPass",
-            job_class=self.job_model.class_path,
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
@@ -2379,6 +2368,69 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             assigned_object_type=ct,
             assigned_object_id=location2.pk,
         )
+
+
+class ObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):
+    model = ObjectChange
+
+    @classmethod
+    def setUpTestData(cls):
+        cc = ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
+        cc_oc = cc.to_objectchange(ObjectChangeActionChoices.ACTION_CREATE)
+        cc_oc.request_id = uuid.uuid4()
+        cc_oc.change_context = ObjectChangeEventContextChoices.CONTEXT_WEB
+        cc_oc.change_context_detail = "extras:configcontext_edit"
+        cc_oc.validated_save()
+
+        location_oc = Location.objects.first().to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
+        location_oc.request_id = uuid.uuid4()
+        location_oc.change_context = ObjectChangeEventContextChoices.CONTEXT_ORM
+        location_oc.validated_save()
+
+        git_oc = ObjectChange.objects.create(
+            user=None,
+            user_name="deleted",
+            request_id=cc_oc.request_id,
+            action=ObjectChangeActionChoices.ACTION_DELETE,
+            changed_object_type=ContentType.objects.get_for_model(GitRepository),
+            changed_object_id=uuid.UUID("7af2e8d5-6d53-4b79-b488-60448aaaa9e8"),
+            change_context=ObjectChangeEventContextChoices.CONTEXT_WEB,
+            change_context_detail="extras:gitrepository_delete",
+            related_object=cc_oc.changed_object,
+            object_repr="demo-git-datasource 2",
+            object_data={
+                "name": "demo-git-datasource 2",
+                "slug": "demo_git_datasource_2",
+                "tags": [],
+                "branch": "main",
+                "created": "2023-06-07T12:49:34.309Z",
+                "remote_url": "https://github.com/nautobot/demo-git-datasource.git",
+                "current_head": "94e88b76e87ccf1fdf48995d72ede86db4623d60",
+                "last_updated": "2023-06-07T12:49:36.368Z",
+                "custom_fields": {},
+                "secrets_group": None,
+                "provided_contents": ["extras.configcontext", "extras.configcontextschema", "extras.exporttemplate"],
+            },
+            object_data_v2={
+                "id": "7af2e8d5-6d53-4b79-b488-60448aaaa9e8",
+                "url": "/api/extras/git-repositories/7af2e8d5-6d53-4b79-b488-60448aaaa9e8/",
+                "name": "demo-git-datasource 2",
+                "slug": "demo_git_datasource_2",
+                "branch": "main",
+                "created": "2023-06-07T12:49:34.309312Z",
+                "display": "demo-git-datasource 2",
+                "notes_url": "/api/extras/git-repositories/7af2e8d5-6d53-4b79-b488-60448aaaa9e8/notes/",
+                "remote_url": "https://github.com/nautobot/demo-git-datasource.git",
+                "object_type": "extras.gitrepository",
+                "current_head": "94e88b76e87ccf1fdf48995d72ede86db4623d60",
+                "last_updated": "2023-06-07T12:49:36.368627Z",
+                "custom_fields": {},
+                "secrets_group": None,
+                "natural_key_slug": "demo-git-datasource+2",
+                "provided_contents": ["extras.configcontextschema", "extras.configcontext", "extras.exporttemplate"],
+            },
+        )
+        git_oc.validated_save()
 
 
 class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTestMixin):
