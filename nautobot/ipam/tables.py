@@ -606,12 +606,12 @@ class VLANGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"vlan_group": "slug"}, verbose_name="VLANs")
+    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"vlan_group": "name"}, verbose_name="VLANs")
     actions = ButtonsColumn(model=VLANGroup, prepend_template=VLANGROUP_ADD_VLAN)
 
     class Meta(BaseTable.Meta):
         model = VLANGroup
-        fields = ("pk", "name", "location", "vlan_count", "slug", "description", "actions")
+        fields = ("pk", "name", "location", "vlan_count", "description", "actions")
         default_columns = ("pk", "name", "location", "vlan_count", "description", "actions")
 
 

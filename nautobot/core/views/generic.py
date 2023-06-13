@@ -334,8 +334,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         """Retrieve an object based on `kwargs`."""
-        # Look up an existing object by slug, PK, or name, if provided.
-        for field in ("slug", "pk", "name"):
+        # Look up an existing object by PK, name, or slug, if provided.
+        for field in ("pk", "name", "slug"):
             if field in kwargs:
                 return get_object_or_404(self.queryset, **{field: kwargs[field]})
         return self.queryset.model()
@@ -512,8 +512,8 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         """Retrieve an object based on `kwargs`."""
-        # Look up an existing object by slug, PK, or name, if provided.
-        for field in ("slug", "pk", "name"):
+        # Look up an existing object by PK, name, or slug, if provided.
+        for field in ("pk", "name", "slug"):
             if field in kwargs:
                 return get_object_or_404(self.queryset, **{field: kwargs[field]})
         return self.queryset.model()

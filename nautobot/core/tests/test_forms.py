@@ -589,11 +589,11 @@ class MultiMatchModelMultipleChoiceFieldTest(TestCase):
     def test_clean(self):
         field = forms.MultiMatchModelMultipleChoiceField(queryset=ipam_models.VLANGroup.objects.all())
         vlan_groups = (
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1"),
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2"),
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3"),
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 1"),
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 2"),
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 3"),
         )
-        input_ = [vlan_groups[0].pk, vlan_groups[1].slug]
+        input_ = [vlan_groups[0].pk, vlan_groups[1].name]
         qs = field.clean(input_)
         expected_output = [vlan_groups[0].pk, vlan_groups[1].pk]
         self.assertQuerysetEqual(qs, values=expected_output, transform=lambda x: x.pk)
@@ -689,7 +689,7 @@ class DynamicFilterFormTest(TestCase):
                     ("tenant", "Tenant (name or ID)"),
                     ("tenant_group", "Tenant Group (name or ID)"),
                     ("time_zone", "Time zone"),
-                    ("vlan_groups", "Vlan groups (slug or ID)"),
+                    ("vlan_groups", "Vlan groups (name or ID)"),
                 ],
             )
 

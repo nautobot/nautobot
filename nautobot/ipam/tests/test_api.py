@@ -576,15 +576,12 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "VLAN Group 4",
-            "slug": "vlan-group-4",
         },
         {
             "name": "VLAN Group 5",
-            "slug": "vlan-group-5",
         },
         {
             "name": "VLAN Group 6",
-            "slug": "vlan-group-6",
         },
         {
             "name": "VLAN Group 7",
@@ -593,7 +590,6 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
 
 class VLANTest(APIViewTestCases.APIViewTestCase):

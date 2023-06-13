@@ -233,7 +233,8 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
     )
     vlan_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="Vlan groups (slug or ID)",
+        to_field_name="name",
+        label="VLAN groups (name or ID)",
     )
     has_vlan_groups = RelatedMembershipBooleanFilter(
         field_name="vlan_groups",

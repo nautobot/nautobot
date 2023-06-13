@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.utils.functional import cached_property
 
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import AutoSlugField, JSONArrayField
+from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
@@ -1115,8 +1115,6 @@ class VLANGroup(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1135,8 +1133,6 @@ class VLANGroup(OrganizationalModel):
             # 2.0 TODO: since location is nullable, and NULL != NULL, this means that we can have multiple non-Location VLANGroups
             # with the same name. This should probably be fixed with a custom validate_unique() function!
             ["location", "name"],
-            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["location", "slug"],
         ]
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"

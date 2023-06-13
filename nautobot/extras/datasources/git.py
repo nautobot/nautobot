@@ -296,7 +296,7 @@ def update_git_config_contexts(repository_record, job_result):
                 logger=logger,
             )
 
-    # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.(json|yaml)
+    # Next, handle the "filter/name" directory structure case - files in <filter_type>/<name>.(json|yaml)
     for filter_type in (
         "locations",
         "device_types",
@@ -323,9 +323,9 @@ def update_git_config_contexts(repository_record, job_result):
             continue
 
         for file_name in os.listdir(dir_path):
-            slug = os.path.splitext(file_name)[0]
+            name = os.path.splitext(file_name)[0]
             job_result.log(
-                f'Loading config context, filter `{filter_type} = [slug: "{slug}"]`, from `{filter_type}/{file_name}`',
+                f'Loading config context, filter `{filter_type} = [name: "{name}"]`, from `{filter_type}/{file_name}`',
                 grouping="config contexts",
                 logger=logger,
             )
@@ -337,7 +337,10 @@ def update_git_config_contexts(repository_record, job_result):
                 # Unlike the above case, these files always contain just a single config context record
 
                 # Add the implied filter to the context metadata
-                context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"slug": slug})
+                if filter_type == "device_types":
+                    context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"model": name})
+                else:
+                    context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"name": name})
 
                 context_name = import_config_context(context_data, repository_record, job_result, logger)
                 managed_config_contexts.add(context_name)
@@ -410,7 +413,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
 
     Note that we don't use extras.api.serializers.ConfigContextSerializer, despite superficial similarities;
     the reason is that the serializer only allows us to identify related objects (Locations, Role, etc.)
-    by their database primary keys, whereas here we need to be able to look them up by other values such as slug.
+    by their database primary keys, whereas here we need to be able to look them up by other values such as name.
     """
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
 

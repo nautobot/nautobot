@@ -557,6 +557,9 @@
 - Model: "VLANGroup"
   Removed Filter: "site_id"
   Comments:
+- Model: "VLANGroup"
+  Removed Filter: "slug"
+  Comments:
 - Model: "VMInterface"
   Removed Filter: "bridge_id"
   Comments:

@@ -445,7 +445,7 @@ class IPAddressFilterSet(
 class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):
     class Meta:
         model = VLANGroup
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class VLANFilterSet(
@@ -472,7 +472,7 @@ class VLANFilterSet(
     )
     vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="VLAN Group (slug or ID)",
+        label="VLAN Group (name or ID)",
     )
 
     class Meta:

@@ -654,7 +654,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
         ("status", "status__name"),
         ("time_zone",),
         ("vlan_groups", "vlan_groups__id"),
-        ("vlan_groups", "vlan_groups__slug"),
+        ("vlan_groups", "vlan_groups__name"),
         ("vlans", "vlans__id"),
         ("vlans", "vlans__vid"),
     ]

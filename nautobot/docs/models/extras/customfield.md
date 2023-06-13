@@ -110,7 +110,6 @@ To set or change custom field values, simply include nested JSON data in your RE
 ```json
 {
     "name": "New Location",
-    "slug": "new-location",
     "custom_fields": {
         "deployed": "2019-03-24"
     }

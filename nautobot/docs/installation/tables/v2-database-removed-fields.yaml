@@ -191,6 +191,9 @@
 - Model: "VLANGroup"
   Removed Field: "site"
   Comments: "Use `location` instead"
+- Model: "VLANGroup"
+  Removed Field: "slug"
+  Comments:
 - Model: "VRF"
   Removed Field: "enforce_unique"
   Comments: "Uniqueness of Prefixes and IPAddresses is now enforced by the database"

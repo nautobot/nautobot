@@ -11,7 +11,6 @@ from nautobot.core.forms import (
     NumericArrayField,
     PrefixFieldMixin,
     ReturnURLForm,
-    SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
@@ -618,14 +617,12 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 
 
 class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
-    slug = SlugField()
 
     class Meta:
         model = VLANGroup
         fields = [
             "location",
             "name",
-            "slug",
             "description",
         ]
 

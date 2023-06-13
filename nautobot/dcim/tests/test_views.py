@@ -613,9 +613,9 @@ class DeviceTypeTestCase(
         """
         Custom import test for YAML-based imports (versus CSV)
         """
-        # TODO: Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
-        #       (not "rear_port_template"). This is intentional as we are testing for backwards compatibility with
-        #       the netbox/devicetype-library repository.
+        # Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
+        # (not "rear_port_template"). Note also inclusion of "slug" even though we removed DeviceType.slug in 2.0.
+        # This is intentional as we are testing backwards compatibility with the netbox/devicetype-library repository.
         manufacturer = Manufacturer.objects.first()
         IMPORT_DATA = f"""
 manufacturer: {manufacturer.name}

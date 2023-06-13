@@ -690,7 +690,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
 
-class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
+class VLANGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = VLANGroup.objects.all()
     filterset = VLANGroupFilterSet
 
@@ -707,10 +707,10 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
         cls.locations[1].parent = cls.locations[0]
         cls.locations[2].parent = cls.locations[1]
 
-        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=cls.locations[0], description="A")
-        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=cls.locations[1], description="B")
-        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", location=cls.locations[2], description="C")
-        VLANGroup.objects.create(name="VLAN Group 4", slug="vlan-group-4", location=None)
+        VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations[0], description="A")
+        VLANGroup.objects.create(name="VLAN Group 2", location=cls.locations[1], description="B")
+        VLANGroup.objects.create(name="VLAN Group 3", location=cls.locations[2], description="C")
+        VLANGroup.objects.create(name="VLAN Group 4", location=None)
 
     def test_description(self):
         descriptions = list(VLANGroup.objects.exclude(description="").values_list("description", flat=True)[:2])
@@ -748,9 +748,9 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         roles = Role.objects.all()[:3]
 
         groups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=cls.locations[0]),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=cls.locations[1]),
-            VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", location=None),
+            VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations[0]),
+            VLANGroup.objects.create(name="VLAN Group 2", location=cls.locations[1]),
+            VLANGroup.objects.create(name="VLAN Group 3", location=None),
         )
 
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
@@ -838,7 +838,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_vlan_group(self):
         groups = list(VLANGroup.objects.filter(vlans__isnull=False).distinct())[:2]
-        filter_params = [{"vlan_group": [groups[0].pk, groups[1].pk]}, {"vlan_group": [groups[0].pk, groups[1].slug]}]
+        filter_params = [{"vlan_group": [groups[0].pk, groups[1].pk]}, {"vlan_group": [groups[0].pk, groups[1].name]}]
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(vlan_group__in=groups)
