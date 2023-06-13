@@ -684,6 +684,59 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.queryset.filter(Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True)),
         )
 
+    def test_present_in_vrf(self):
+        # clear out all the randomly generated route targets and vrfs before running this custom test
+        test_ip_addresses_pk_list = list(self.queryset.values_list("pk", flat=True)[:10])
+        test_ip_addresses = self.queryset[:10]
+        # With advent of `IPAddress.parent`, IPAddresses can't just be bulk deleted without clearing their
+        # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
+        unwanted_ips = self.queryset.exclude(pk__in=test_ip_addresses_pk_list)
+        unwanted_ips.update(parent=None)
+        unwanted_ips.delete()
+        VRF.objects.all().delete()
+        RouteTarget.objects.all().delete()
+        route_targets = (
+            RouteTarget.objects.create(name="65000:100"),
+            RouteTarget.objects.create(name="65000:200"),
+            RouteTarget.objects.create(name="65000:300"),
+        )
+        vrfs = (
+            VRF.objects.create(name="VRF 1", rd="65000:100"),
+            VRF.objects.create(name="VRF 2", rd="65000:200"),
+            VRF.objects.create(name="VRF 3", rd="65000:300"),
+        )
+        vrfs[0].import_targets.add(route_targets[0], route_targets[1], route_targets[2])
+        vrfs[1].export_targets.add(route_targets[1])
+        vrfs[2].export_targets.add(route_targets[2])
+
+        test_ip_addresses[0].parent.vrfs.add(vrfs[0], vrfs[1], vrfs[2])
+        test_ip_addresses[1].parent.vrfs.add(vrfs[0], vrfs[1], vrfs[2])
+        test_ip_addresses[2].parent.vrfs.add(vrfs[0], vrfs[1], vrfs[2])
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"present_in_vrf_id": vrfs[0].pk}, self.queryset).qs,
+            self.queryset.filter(
+                Q(parent__vrfs=vrfs[0]) | Q(parent__vrfs__export_targets__in=vrfs[0].import_targets.all())
+            ).distinct(),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"present_in_vrf_id": vrfs[1].pk}, self.queryset).qs,
+            self.queryset.filter(
+                Q(parent__vrfs=vrfs[1]) | Q(parent__vrfs__export_targets__in=vrfs[1].import_targets.all())
+            ).distinct(),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"present_in_vrf": vrfs[0].rd}, self.queryset).qs,
+            self.queryset.filter(
+                Q(parent__vrfs=vrfs[0]) | Q(parent__vrfs__export_targets__in=vrfs[0].import_targets.all())
+            ).distinct(),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"present_in_vrf": vrfs[1].rd}, self.queryset).qs,
+            self.queryset.filter(
+                Q(parent__vrfs=vrfs[1]) | Q(parent__vrfs__export_targets__in=vrfs[1].import_targets.all())
+            ).distinct(),
+        )
+
     def test_status(self):
         statuses = list(Status.objects.get_for_model(IPAddress).filter(ip_addresses__isnull=False)[:2])
         params = {"status": [statuses[0].name, statuses[1].name]}

@@ -7,7 +7,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.db.models import AutoField, ManyToManyField
+from django.db.models import AutoField, ManyToManyField, Model
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -152,6 +152,8 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
         url = super().to_representation(value)
         if self.queryset:
             model = self.queryset.model
+        elif isinstance(value, Model):
+            model = value._meta.model
         elif isinstance(self.parent, ManyRelatedField) and getattr(self.parent.parent.Meta.model, self.source, False):
             model = getattr(self.parent.parent.Meta.model, self.source).field.model
         elif getattr(self.parent.Meta.model, self.source, False):

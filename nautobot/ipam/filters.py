@@ -344,13 +344,13 @@ class IPAddressFilterSet(
         label="VRF (ID or RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        field_name="vrf",
+        field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         label="VRF (ID)",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
-        field_name="vrf__rd",
+        field_name="parent__vrfs__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
