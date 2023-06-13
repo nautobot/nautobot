@@ -562,7 +562,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         vlan_ct = ContentType.objects.get_for_model(ipam_models.VLAN)
         self.locations_types = [
             dcim_models.LocationType.objects.get(name="Campus"),
-            dcim_models.LocationType.objects.get(name="Building")
+            dcim_models.LocationType.objects.get(name="Building"),
         ]
         for location_type in self.locations_types:
             location_type.content_types.set([vlan_group_ct, vlan_ct])
@@ -588,7 +588,6 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.vlan_group1 = VLANGroupFactory.create(location=self.location1)
         self.vlan_group2 = VLANGroupFactory.create(location=self.location2)
         self.vlan_group3 = VLANGroupFactory.create(location=self.location3)
-
 
     def test_related_by_pk(self):
         data = {

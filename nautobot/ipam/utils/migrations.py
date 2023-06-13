@@ -731,3 +731,21 @@ def ensure_correct_prefix_broadcast(apps):
                 )
             prefix.broadcast = true_broadcast
             prefix.save()
+
+
+def increment_names_of_records_with_similar_names(model: models.Model):
+    """
+    This function increments the names of records with similar names in a given model.
+    """
+    duplicate_records = (
+        model.objects.values("name").order_by("name").annotate(name_count=models.Count("name")).filter(name_count__gt=1)
+    )
+    records_to_update = []
+
+    for duplicate_record in duplicate_records:
+        records = model.objects.filter(name=duplicate_record["name"])[1:]
+        for idx, record in enumerate(records):
+            # Starting from 2 e.g Example Name 2, Example Name 3
+            record.name = f"{record.name} {idx + 2}"
+            records_to_update.append(record)
+    model.objects.bulk_update(records_to_update, ["name"])

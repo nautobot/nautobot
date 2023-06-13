@@ -5,7 +5,7 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-    dependencies = [("ipam", "0035_vlan_vlan_group_default_values")]
+    dependencies = [("ipam", "0037_vlan_vlan_group_default_values")]
 
     operations = [
         migrations.AlterField(

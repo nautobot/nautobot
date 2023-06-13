@@ -2739,16 +2739,11 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         # Test POST, PATCH and PUT
         for method in ["post", "patch", "put"]:
             if method == "post":
-                vlan1_json_data = {
-                    "vid": "1",
-                    "name": "1",
-                    "status": device_status.pk,
-                    "vlan_group": vlan_groups[0].pk
-                }
+                vlan1_json_data = {"vid": "1", "name": "1", "status": device_status.pk, "vlan_group": vlan_groups[0].pk}
                 vlan2_json_data = {
                     "vid": "2",
                     "name": "2",
-                    "status": device_status.pk, 
+                    "status": device_status.pk,
                     "vlan_group": vlan_groups[1].pk,
                 }
             else:
