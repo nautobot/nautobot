@@ -343,10 +343,6 @@ class IPAddressFilterSet(
         to_field_name="rd",
         label="VRF (ID or RD)",
     )
-    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
-    # FK, Filtering on the VRF by ID or RD needs to be inherited from the parent prefix, after
-    # Prefix -> IPAddress parenting has been implemented.
-    """
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrf",
         queryset=VRF.objects.all(),
@@ -360,7 +356,6 @@ class IPAddressFilterSet(
         to_field_name="rd",
         label="VRF (RD)",
     )
-    """
     device = MultiValueCharFilter(
         method="filter_device",
         field_name="name",
@@ -397,10 +392,22 @@ class IPAddressFilterSet(
         to_field_name="name",
         label="Namespace (name or ID)",
     )
+    has_interface_assignments = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        method="_assigned_to_interface",
+        label="Has Interface Assignments",
+    )
 
     class Meta:
         model = IPAddress
         fields = ["id", "ip_version", "dns_name", "type", "tags", "mask_length"]
+
+    def _assigned_to_interface(self, queryset, name, value):
+        if value == True:
+            queryset = queryset.filter(Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False))
+        elif value == False:
+            queryset = queryset.filter(Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True))
+        return queryset
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()
@@ -421,7 +428,9 @@ class IPAddressFilterSet(
     def filter_present_in_vrf(self, queryset, name, value):
         if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
+        return queryset.filter(
+            Q(parent__vrfs=value) | Q(parent__vrfs__export_targets__in=value.import_targets.all())
+        ).distinct()
 
     def filter_device(self, queryset, name, value):
         devices = Device.objects.filter(**{f"{name}__in": value})

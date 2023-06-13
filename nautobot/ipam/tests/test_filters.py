@@ -2,6 +2,7 @@ from unittest import skip
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
+from nautobot.core.filters import RelatedMembershipBooleanFilter
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import (
     Device,
@@ -327,7 +328,6 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         )
 
 
-@skip("Needs to be updated for Namespaces")
 class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = IPAddress.objects.all()
     filterset = IPAddressFilterSet
@@ -335,7 +335,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     @classmethod
     def setUpTestData(cls):
-        vrfs = VRF.objects.filter(rd__isnull=False)[:3]
+        vrf = VRF.objects.first()
+        vrfs = VRF.objects.filter(namespace=vrf.namespace, rd__isnull=False)[:3]
 
         cls.interface_ct = ContentType.objects.get_for_model(Interface)
         cls.vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
@@ -409,14 +410,20 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         statuses = Status.objects.get_for_model(IPAddress)
+        prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
-        cls.namespace = Namespace.objects.first()
-        cls.prefix4 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace)
-        cls.prefix6 = Prefix.objects.create(prefix="2001:db8::/64", namespace=cls.namespace)
+        cls.namespace = vrfs[0].namespace
+        cls.prefix4 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=prefix_status)
+        cls.prefix6 = Prefix.objects.create(prefix="2001:db8::/64", namespace=cls.namespace, status=prefix_status)
+        vrfs[0].prefixes.add(cls.prefix4)
+        vrfs[0].prefixes.add(cls.prefix6)
+        vrfs[1].prefixes.add(cls.prefix4)
+        vrfs[1].prefixes.add(cls.prefix6)
+        vrfs[2].prefixes.add(cls.prefix4)
+        vrfs[2].prefixes.add(cls.prefix6)
         cls.ipv4_address = IPAddress.objects.create(
             address="10.0.0.1/24",
             tenant=None,
-            vrf=None,
             status=statuses[0],
             dns_name="ipaddress-a",
             namespace=cls.namespace,
@@ -424,7 +431,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ip0 = IPAddress.objects.create(
             address="10.0.0.2/24",
             tenant=tenants[0],
-            vrf=vrfs[0],
             status=statuses[0],
             dns_name="ipaddress-b",
             namespace=cls.namespace,
@@ -433,7 +439,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ip1 = IPAddress.objects.create(
             address="10.0.0.3/24",
             tenant=tenants[1],
-            vrf=vrfs[1],
             status=statuses[2],
             role=roles[0],
             dns_name="ipaddress-c",
@@ -443,7 +448,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ip2 = IPAddress.objects.create(
             address="10.0.0.4/24",
             tenant=tenants[2],
-            vrf=vrfs[2],
             status=statuses[1],
             role=roles[1],
             dns_name="ipaddress-d",
@@ -451,16 +455,14 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
         interfaces[2].add_ip_addresses(ip2)
         IPAddress.objects.create(
-            address="10.0.0.1/25",
+            address="10.0.0.5/24",
             tenant=None,
-            vrf=None,
             status=statuses[0],
             namespace=cls.namespace,
         )
         cls.ipv6_address = IPAddress.objects.create(
             address="2001:db8::1/64",
             tenant=None,
-            vrf=None,
             status=statuses[0],
             dns_name="ipaddress-a",
             namespace=cls.namespace,
@@ -468,7 +470,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ip3 = IPAddress.objects.create(
             address="2001:db8::2/64",
             tenant=tenants[0],
-            vrf=vrfs[0],
             status=statuses[0],
             dns_name="ipaddress-b",
             namespace=cls.namespace,
@@ -477,7 +478,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ip4 = IPAddress.objects.create(
             address="2001:db8::3/64",
             tenant=tenants[1],
-            vrf=vrfs[1],
             status=statuses[2],
             role=roles[2],
             dns_name="ipaddress-c",
@@ -487,7 +487,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ip5 = IPAddress.objects.create(
             address="2001:db8::4/64",
             tenant=tenants[2],
-            vrf=vrfs[2],
             status=statuses[1],
             role=roles[1],
             dns_name="ipaddress-d",
@@ -495,9 +494,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
         vminterfaces[2].add_ip_addresses(ip5)
         IPAddress.objects.create(
-            address="2001:db8::1/65",
+            address="2001:db8::5/65",
             tenant=None,
-            vrf=None,
             status=statuses[0],
             namespace=cls.namespace,
         )
@@ -537,11 +535,11 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_ip_version(self):
-        params = {"ip_version": "6"}
+        params = {"ip_version": [6]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=6)
         )
-        params = {"ip_version": "4"}
+        params = {"ip_version": [4]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=4)
         )
@@ -603,25 +601,25 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_mask_length(self):
         # Test filtering by a single integer value
-        params = {"mask_length": self.queryset.first().mask_length}
+        params = {"mask_length": [self.queryset.first().mask_length]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length=params["mask_length"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length__in=params["mask_length"])
         )
         # Test filtering by multiple integer values
         params = {"mask_length": [self.queryset.first().mask_length, self.queryset.last().mask_length]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length=params["mask_length"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length__in=params["mask_length"])
         )
 
     def test_vrf(self):
-        vrfs = list(VRF.objects.filter(ip_addresses__isnull=False, rd__isnull=False).distinct())[:2]
-        params = {"vrf_id": [vrfs[0].pk, vrfs[1].pk]}
+        vrfs = list(VRF.objects.filter(prefixes__ip_addresses__isnull=False, rd__isnull=False).distinct())[:2]
+        params = {"vrf": [vrfs[0].pk, vrfs[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs).distinct()
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent__vrfs__in=vrfs).distinct()
         )
         params = {"vrf": [vrfs[0].pk, vrfs[1].rd]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs).distinct()
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent__vrfs__in=vrfs).distinct()
         )
 
     def test_device(self):
@@ -672,6 +670,18 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vm_interfaces__in=[vm_interfaces[0], vm_interfaces[1]]),
+        )
+
+    def test_has_interface_assignments(self):
+        params = {"has_interface_assignments": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False)),
+        )
+        params = {"has_interface_assignments": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True)),
         )
 
     def test_status(self):
