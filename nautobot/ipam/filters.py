@@ -395,16 +395,15 @@ class IPAddressFilterSet(
     )
     has_interface_assignments = RelatedMembershipBooleanFilter(
         field_name="interfaces",
-        method="_assigned_to_interface",
+        method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
-    ip_version = MultiValueNumberFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name", "type", "tags", "mask_length"]
+        fields = ["id", "ip_version", "dns_name", "type", "tags", "mask_length"]
 
-    def generate_query__interface_assignments(self, value):
+    def generate_query__has_interface_assignments(self, value):
         """Helper method used by DynamicGroups and by _assigned_to_interface method."""
         if value is not None:
             if value:
@@ -413,8 +412,8 @@ class IPAddressFilterSet(
                 return Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True)
         return Q()
 
-    def _assigned_to_interface(self, queryset, name, value):
-        params = self.generate_query__interface_assignments(value)
+    def _has_interface_assignments(self, queryset, name, value):
+        params = self.generate_query__has_interface_assignments(value)
         return queryset.filter(params)
 
     def search_by_parent(self, queryset, name, value):

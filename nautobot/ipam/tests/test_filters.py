@@ -536,15 +536,15 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_ip_version(self):
-        params = {"ip_version": "6"}
+        params = {"ip_version": ["6"]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=6)
         )
-        params = {"ip_version": "4"}
+        params = {"ip_version": ["4"]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=4)
         )
-        params = {"ip_version": ""}
+        params = {"ip_version": [""]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_dns_name(self):
