@@ -6,7 +6,6 @@ from netaddr.core import AddrFormatError
 
 from nautobot.core.filters import (
     MultiValueCharFilter,
-    MultiValueNumberFilter,
     MultiValueUUIDFilter,
     NameSlugSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
