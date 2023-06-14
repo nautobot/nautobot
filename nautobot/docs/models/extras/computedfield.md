@@ -41,6 +41,9 @@ Computed field templates can utilize the context of the object the field is bein
 {{ obj.site.name }}
 ```
 
+!!! note
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for a custom field named `color` on `obj`.
+
 ## Computed Field Template Filters
 
 Computed field templates can also utilize built-in Jinja2 filters or custom ones that have been registered via plugins. These filters can be used by providing the name of the filter function. As an example:

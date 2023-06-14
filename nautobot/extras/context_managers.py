@@ -2,11 +2,10 @@ import uuid
 from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
-from django.db.models.signals import m2m_changed, pre_delete, post_save
 from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
-from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
+from nautobot.extras.signals import change_context_state
 
 
 class ChangeContext:
@@ -91,22 +90,15 @@ def change_logging(change_context):
 
     :param change_context: ChangeContext instance
     """
-    # Curry signals receivers to pass the current request
-    handle_changed_object = curry(_handle_changed_object, change_context)
-    handle_deleted_object = curry(_handle_deleted_object, change_context)
 
-    # Connect our receivers to the post_save and post_delete signals.
-    post_save.connect(handle_changed_object, dispatch_uid="handle_changed_object")
-    m2m_changed.connect(handle_changed_object, dispatch_uid="handle_changed_object")
-    pre_delete.connect(handle_deleted_object, dispatch_uid="handle_deleted_object")
+    # Set change logging state
+    prev_state = change_context_state.set(change_context)
 
     yield
 
-    # Disconnect change logging signals. This is necessary to avoid recording any errant
+    # Reset change logging state. This is necessary to avoid recording any errant
     # changes during test cleanup.
-    post_save.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
-    m2m_changed.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
-    pre_delete.disconnect(handle_deleted_object, dispatch_uid="handle_deleted_object")
+    change_context_state.reset(prev_state)
 
 
 @contextmanager

@@ -248,6 +248,12 @@ class Job(PrimaryModel):
 
     @property
     def latest_result(self):
+        """
+        Return the most recent JobResult object associated with this Job.
+
+        Note that, as a performance optimization for this function's repeated use in
+        JobListview, the returned object only includes its `status` field.
+        """
         if self._latest_result is None:
             self._latest_result = self.job_results.first()
         return self._latest_result

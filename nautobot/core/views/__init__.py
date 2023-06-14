@@ -110,7 +110,7 @@ class HomeView(AccessMixin, TemplateView):
         return self.render_to_response(context)
 
 
-class SearchView(View):
+class SearchView(AccessMixin, View):
     def get(self, request):
         # No query
         if "q" not in request.GET:

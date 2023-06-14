@@ -96,6 +96,13 @@ class HomeViewTestCase(TestCase):
 
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
+    def test_search_bar_redirect_to_login(self):
+        self.client.logout()
+        response = self.client.get(reverse("search") + "?q=prefix")
+        # Assert that if the user is not logged in
+        # SearchForm will redirect the user to the login Page
+        self.assertEqual(response.status_code, 302)
+
     def test_global_and_model_search_bar(self):
         self.add_permissions("dcim.view_location", "dcim.view_device")
 

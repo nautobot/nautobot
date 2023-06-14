@@ -12,6 +12,8 @@ A Job Hook is a mechanism for automatically starting a [job](../../additional-fe
 * **Enabled** - If unchecked, the job hook will be inactive.
 * **Events** - A job hook may trigger on any combination of create, update, and delete events. At least one event type must be selected.
 
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](../../additional-features/jobs.md#enabling-jobs-for-running) for more details.
+
 ## Job Hook Receivers
 
 Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](../../additional-features/jobs.md#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_job_hook`.

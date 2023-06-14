@@ -8,6 +8,7 @@ from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Status, Webhook
+from nautobot.utilities.testing import TransactionTestCase
 
 
 # Use the proper swappable User model
@@ -84,3 +85,18 @@ class WebRequestContextTestCase(TestCase):
         # self.assertEqual(job.args[0], Webhook.objects.get(type_create=True))
         # self.assertEqual(job.args[1]["id"], str(site.pk))
         # self.assertEqual(job.args[2], "site")
+
+
+class WebRequestContextTransactionTestCase(TransactionTestCase):
+    def test_change_log_thread_safe(self):
+        """
+        Emulate a race condition where the change log signal handler
+        is disconnected while there is a pending object change.
+        """
+        user = User.objects.create(username="test-user123")
+        with web_request_context(user, context_detail="test_change_log_context"):
+            with web_request_context(user, context_detail="test_change_log_context"):
+                Site.objects.create(name="Test Site 1")
+            Site.objects.create(name="Test Site 2")
+
+        self.assertEqual(get_changes_for_model(Site).count(), 2)
