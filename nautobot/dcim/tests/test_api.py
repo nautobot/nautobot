@@ -1213,6 +1213,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 3")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        dev.refresh_from_db()
+        self.assertEqual(dev.primary_ip4, dev_ip_addr)
 
     def test_patching_device_redundancy_group(self):
         """
