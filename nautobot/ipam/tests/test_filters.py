@@ -276,6 +276,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     def test_present_in_vrf(self):
         # clear out all the randomly generated route targets and vrfs before running this custom test
         namespace = Namespace.objects.first()
+        # Set all prefixes to have the same namespace, so we do not have to worry about namespace mismatch later.
         self.queryset.update(namespace=namespace)
         test_prefix_pk_list = list(self.queryset.values_list("pk", flat=True)[:10])
         test_prefixes = self.queryset.all()[:10]
