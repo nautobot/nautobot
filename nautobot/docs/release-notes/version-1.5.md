@@ -148,6 +148,55 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.20 (2023-05-30)
+
+### Added
+
+- [#3400](https://github.com/nautobot/nautobot/issues/3400) - Added documentation on how to enable Jobs and Job hooks.
+- [#3766](https://github.com/nautobot/nautobot/issues/3766) - Add troubleshooting steps for Azure AD SSO Group Sync example.
+
+### Changed
+
+- [#3680](https://github.com/nautobot/nautobot/issues/3680) - Changed device component instantiation to be a separate method.
+
+### Fixed
+
+- [#3503](https://github.com/nautobot/nautobot/issues/3503) - Fixed FieldError when sorting VMs list by primary IP.
+- [#3616](https://github.com/nautobot/nautobot/issues/3616) - Fixed `location` filter on `CircuitFilterSet` and `ProviderFilterSet`.
+- [#3787](https://github.com/nautobot/nautobot/issues/3787) - Fixed MySQL `Out of sort memory` error on `JobListView` and `JobResultListView`.
+- [#3789](https://github.com/nautobot/nautobot/issues/3789) - Fixed Exception `unsupported operand type(s) for -: 'list' and 'list'` for MultiObjectVar with missing UUID.
+
+## v1.5.19 (2023-05-16)
+
+### Added
+
+- [#3695](https://github.com/nautobot/nautobot/issues/3695) - Added note to documentation about using `{{ obj.cf }}` to access custom fields in jinja templates.
+
+### Changed
+
+- [#3617](https://github.com/nautobot/nautobot/issues/3617) - SearchForms on Nautobot homepage now redirect users to login page when they are not authenticated.
+- [#3663](https://github.com/nautobot/nautobot/issues/3663) - Modified `delete_button` and `edit_button` template tags to lookup `pk` and `slug` without the need to specify the lookup key.
+- [#3703](https://github.com/nautobot/nautobot/issues/3703) - Added generic views documentation to navigation panel.
+
+### Dependencies
+
+- [#3549](https://github.com/nautobot/nautobot/issues/3549) - Updated `django` to `~3.2.19` to address `CVE-2023-31047`.
+- [#3549](https://github.com/nautobot/nautobot/issues/3549) - Updated `mkdocs` to `~1.4.3`.
+- [#3549](https://github.com/nautobot/nautobot/issues/3549) - Updated `psycopg2-binary` to `~2.9.6`.
+- [#3698](https://github.com/nautobot/nautobot/issues/3698) - Updated `social-auth-core` to `~4.4.0` to permit addressing `CVE-2022-2309`.
+- [#3753](https://github.com/nautobot/nautobot/issues/3753) - Updated indirect dev dependency `pymdown-extensions` to `10.0` to address `CVE-2023-32309`.
+
+### Fixed
+
+- [#3704](https://github.com/nautobot/nautobot/issues/3704) - Fixed GitRepository fetching on Home Page when getting repo-based Job's name.
+- [#3726](https://github.com/nautobot/nautobot/issues/3726) - Fixed a `KeyError` when filtering Cables in the UI by `termination_a_type` or `termination_b_type`.
+
+### Security
+
+- [#3698](https://github.com/nautobot/nautobot/issues/3698) - Updated `lxml` to `~4.9.2` to address `CVE-2022-2309`. This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+- [#3724](https://github.com/nautobot/nautobot/issues/3724) - Updated `django` to `~3.2.19` due to `CVE-2023-31047`.
+- [#3753](https://github.com/nautobot/nautobot/issues/3753) - Updated indirect dev dependency `pymdown-extensions` to `10.0` to address `CVE-2023-32309`. This should not be installed in a production environment by default but should be updated if you have installed it.
+
 ## v1.5.18 (2023-05-01)
 
 ### Added
