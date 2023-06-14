@@ -842,16 +842,21 @@ class Prefix(PrimaryModel):
             UtilizationData (namedtuple): (numerator, denominator)
         """
         denominator = self.prefix.size
+        child_ips = netaddr.IPSet()
+        child_prefixes = netaddr.IPSet()
 
         if self.type == choices.PrefixTypeChoices.TYPE_POOL:
             pool_ips = IPAddress.objects.filter(
                 parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
             ).values_list("host", flat=True)
-            numerator_set = netaddr.IPSet(pool_ips)
+            child_ips = netaddr.IPSet(pool_ips)
         elif self.type == choices.PrefixTypeChoices.TYPE_NETWORK:
-            numerator_set = netaddr.IPSet(self.ip_addresses.values_list("host", flat=True))
-        elif self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            numerator_set = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
+            child_ips = netaddr.IPSet(self.ip_addresses.values_list("host", flat=True))
+
+        if self.type != choices.PrefixTypeChoices.TYPE_POOL:
+            child_prefixes = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
+
+        numerator_set = child_ips | child_prefixes
 
         # Exclude network and broadcast address from the denominator unless they've been assigned to an IPAddress or child pool.
         # Only applies to IPv4 network prefixes with a prefix length of /30 or shorter
