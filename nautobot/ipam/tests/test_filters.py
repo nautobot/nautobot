@@ -1,4 +1,3 @@
-from unittest import skip
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
@@ -44,7 +43,6 @@ from nautobot.virtualization.models import (
 )
 
 
-@skip("Needs to be updated for Namespaces")
 class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     """VRF Filterset tests
 
@@ -159,7 +157,6 @@ class RIRTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(is_private=False))
 
 
-@skip("Needs to be updated for Namespaces")
 class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Prefix.objects.all()
     filterset = PrefixFilterSet
@@ -187,9 +184,15 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), count)
 
     def test_ip_version(self):
-        params = {"ip_version": "6"}
+        params = {"ip_version": ["6"]}
         ipv6_prefixes = self.queryset.filter(ip_version=6)
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
+        params = {"ip_version": ["4"]}
+        ipv4_prefixes = self.queryset.filter(ip_version=4)
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv4_prefixes)
+        params = {"ip_version": [""]}
+        all_prefixes = self.queryset.all()
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
 
     def test_within(self):
         unique_description = f"test_{__name__}"
@@ -247,28 +250,42 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
                 )
 
     def test_vrf(self):
-        prefixes = self.queryset.filter(vrf__rd__isnull=False)[:2]
-        vrfs = [prefixes[0].vrf, prefixes[1].vrf]
-        params = {"vrf_id": [vrfs[0].pk, vrfs[1].pk]}
+        namespace = Namespace.objects.first()
+        self.queryset.update(namespace=namespace)
+        prefixes = self.queryset[:2]
+        vrfs = (
+            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=namespace),
+            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=namespace),
+        )
+        prefixes[0].vrfs.add(vrfs[0])
+        prefixes[0].vrfs.add(vrfs[1])
+        prefixes[1].vrfs.add(vrfs[0])
+        prefixes[1].vrfs.add(vrfs[1])
+        prefixes = self.queryset.filter(vrfs__rd__isnull=False)[:2]
+        vrfs = [prefixes[0].vrfs.first(), prefixes[1].vrfs.first()]
+        params = {"vrf": [vrfs[0].pk, vrfs[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(vrf__in=vrfs)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(vrfs__in=vrfs)
         )
         params = {"vrf": [vrfs[0].pk, vrfs[1].rd]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(vrf__rd__in=[vrfs[0].rd, vrfs[1].rd]),
+            self.queryset.filter(vrfs__rd__in=[vrfs[0].rd, vrfs[1].rd]),
         )
 
     def test_present_in_vrf(self):
         # clear out all the randomly generated route targets and vrfs before running this custom test
-        test_prefixes = list(self.queryset.values_list("pk", flat=True)[:10])
+        namespace = Namespace.objects.first()
+        self.queryset.update(namespace=namespace)
+        test_prefix_pk_list = list(self.queryset.values_list("pk", flat=True)[:10])
+        test_prefixes = self.queryset.all()[:10]
+        # Delete all IPAddress objects first so we can safely delete Prefix objects.
+        IPAddress.objects.all().delete()
         # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
-        unwanted_prefixes = self.queryset.exclude(pk__in=test_prefixes)
+        unwanted_prefixes = self.queryset.exclude(pk__in=test_prefix_pk_list)
         unwanted_prefixes.update(parent=None)
         unwanted_prefixes.delete()
-        self.queryset.all().update(vrf=None)
-        IPAddress.objects.all().update(vrf=None)
         VRF.objects.all().delete()
         RouteTarget.objects.all().delete()
         route_targets = (
@@ -277,20 +294,32 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             RouteTarget.objects.create(name="65000:300"),
         )
         vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:100"),
-            VRF.objects.create(name="VRF 2", rd="65000:200"),
-            VRF.objects.create(name="VRF 3", rd="65000:300"),
+            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=namespace),
+            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=namespace),
+            VRF.objects.create(name="VRF 3", rd="65000:300", namespace=namespace),
         )
         vrfs[0].import_targets.add(route_targets[0], route_targets[1], route_targets[2])
         vrfs[1].export_targets.add(route_targets[1])
         vrfs[2].export_targets.add(route_targets[2])
-        self.queryset.filter(pk__in=[test_prefixes[0], test_prefixes[1]]).update(vrf=vrfs[0])
-        self.queryset.filter(pk__in=[test_prefixes[2], test_prefixes[3]]).update(vrf=vrfs[1])
-        self.queryset.filter(pk__in=[test_prefixes[4], test_prefixes[5]]).update(vrf=vrfs[2])
-        self.assertEqual(self.filterset({"present_in_vrf_id": vrfs[0].pk}, self.queryset).qs.count(), 6)
-        self.assertEqual(self.filterset({"present_in_vrf_id": vrfs[1].pk}, self.queryset).qs.count(), 2)
-        self.assertEqual(self.filterset({"present_in_vrf": vrfs[0].rd}, self.queryset).qs.count(), 6)
-        self.assertEqual(self.filterset({"present_in_vrf": vrfs[1].rd}, self.queryset).qs.count(), 2)
+        test_prefixes[0].vrfs.add(vrfs[0], vrfs[1])
+        test_prefixes[1].vrfs.add(vrfs[0], vrfs[1])
+        test_prefixes[2].vrfs.add(vrfs[0], vrfs[1])
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"present_in_vrf_id": vrfs[0].pk}, self.queryset).qs,
+            self.queryset.filter(Q(vrfs=vrfs[0]) | Q(vrfs__export_targets__in=vrfs[0].import_targets.all())).distinct(),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"present_in_vrf_id": vrfs[1].pk}, self.queryset).qs,
+            self.queryset.filter(Q(vrfs=vrfs[1]) | Q(vrfs__export_targets__in=vrfs[1].import_targets.all())).distinct(),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"present_in_vrf": vrfs[0].rd}, self.queryset).qs,
+            self.queryset.filter(Q(vrfs=vrfs[0]) | Q(vrfs__export_targets__in=vrfs[0].import_targets.all())).distinct(),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"present_in_vrf": vrfs[1].rd}, self.queryset).qs,
+            self.queryset.filter(Q(vrfs=vrfs[1]) | Q(vrfs__export_targets__in=vrfs[1].import_targets.all())).distinct(),
+        )
 
     def test_location(self):
         location_type_1 = LocationType.objects.get(name="Campus")
@@ -704,10 +733,16 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             RouteTarget.objects.create(name="65000:300"),
         )
         vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:100"),
-            VRF.objects.create(name="VRF 2", rd="65000:200"),
-            VRF.objects.create(name="VRF 3", rd="65000:300"),
+            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=self.namespace),
+            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=self.namespace),
+            VRF.objects.create(name="VRF 3", rd="65000:300", namespace=self.namespace),
         )
+        test_ip_addresses[0].parent.namespace = self.namespace
+        test_ip_addresses[0].validated_save()
+        test_ip_addresses[1].parent.namespace = self.namespace
+        test_ip_addresses[1].validated_save()
+        test_ip_addresses[2].parent.namespace = self.namespace
+        test_ip_addresses[2].validated_save()
         vrfs[0].import_targets.add(route_targets[0], route_targets[1], route_targets[2])
         vrfs[1].export_targets.add(route_targets[1])
         vrfs[2].export_targets.add(route_targets[2])
