@@ -991,13 +991,9 @@ class IPAddress(PrimaryModel):
         self.dns_name = self.dns_name.lower()
 
     def save(self, *args, **kwargs):
-        if not self.present_in_database:
-            if self._namespace is None:
-                raise ValidationError({"parent": "Namespace could not be determined."})
-            namespace = self._namespace
-        else:
-            namespace = self.parent.namespace
-
+        if self._namespace is None:
+            raise ValidationError({"parent": "Namespace could not be determined."})
+        namespace = self._namespace
         # Determine the closest parent automatically based on the Namespace.
         self.parent = Prefix.objects.get_closest_parent(self.host, namespace=namespace)
 

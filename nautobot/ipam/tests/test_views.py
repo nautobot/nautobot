@@ -187,10 +187,11 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         namespace = Namespace.objects.get(name="Global")
         statuses = Status.objects.get_for_model(IPAddress)
+        prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
         parent, _ = Prefix.objects.get_or_create(
             prefix="192.0.2.0/24",
-            defaults={"namespace": namespace, "status": statuses[0], "type": "network"},
+            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
         )
 
         cls.form_data = {
@@ -262,6 +263,33 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.post(**request)
         self.assertEqual(200, response.status_code)
         self.assertIn("Host address cannot be changed once created", str(response.content))
+
+    def test_move_ip_addresses_between_namespaces(self):
+        ip_address = self._get_queryset().first()
+        new_namespace = Namespace.objects.create(name="Test Namespace")
+        # Assign model-level permission
+        obj_perm = ObjectPermission(name="Test permission", actions=["change"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("edit", ip_address)), 200)
+
+        form_data = self.form_data.copy()
+        form_data["namespace"] = new_namespace.pk
+        request = {
+            "path": self._get_url("edit", ip_address),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        self.assertEqual(200, response.status_code)
+        self.assertIn(f"Could not determine parent Prefix for {ip_address}! Does it exist?", str(response.content))
+        # Change the parent's namespace to the new namespace that we are going to assign the ip_address to.
+        ip_address.parent.namespace = new_namespace
+        ip_address.parent.save()
+        response = self.client.post(**request)
+        self.assertEqual(302, response.status_code)
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
