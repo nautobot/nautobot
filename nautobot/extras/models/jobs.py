@@ -255,7 +255,7 @@ class Job(PrimaryModel):
         JobListview, the returned object only includes its `status` field.
         """
         if self._latest_result is None:
-            self._latest_result = self.results.only("status").first()
+            self._latest_result = self.job_results.only("status").first()
         return self._latest_result
 
     @property
