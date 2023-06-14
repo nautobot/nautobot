@@ -701,43 +701,19 @@ class Device(PrimaryModel, ConfigContextModel):
         # - PowerOutlet depends on PowerPort
         # - FrontPort depends on FrontPort
         component_models = [
-            (ConsolePort, self.device_type.consoleporttemplates.all()),
-            (ConsoleServerPort, self.device_type.consoleserverporttemplates.all()),
-            (PowerPort, self.device_type.powerporttemplates.all()),
-            (PowerOutlet, self.device_type.poweroutlettemplates.all()),
-            (Interface, self.device_type.interfacetemplates.all()),
-            (RearPort, self.device_type.rearporttemplates.all()),
-            (FrontPort, self.device_type.frontporttemplates.all()),
-            (DeviceBay, self.device_type.devicebaytemplates.all()),
+            (ConsolePort, self.device_type.console_port_templates.all()),
+            (ConsoleServerPort, self.device_type.console_server_port_templates.all()),
+            (PowerPort, self.device_type.power_port_templates.all()),
+            (PowerOutlet, self.device_type.power_outlet_templates.all()),
+            (Interface, self.device_type.interface_templates.all()),
+            (RearPort, self.device_type.rear_port_templates.all()),
+            (FrontPort, self.device_type.front_port_templates.all()),
+            (DeviceBay, self.device_type.device_bay_templates.all()),
         ]
         instantiated_components = []
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(self) for x in templates])
         return instantiated_components
-
-    def to_csv(self):
-        return (
-            self.name or "",
-            self.device_role.name,
-            self.tenant.name if self.tenant else None,
-            self.device_type.manufacturer.name,
-            self.device_type.model,
-            self.platform.name if self.platform else None,
-            self.serial,
-            self.asset_tag,
-            self.get_status_display(),
-            self.site.name,
-            self.location.name if self.location else None,
-            self.rack.group.name if self.rack and self.rack.group else None,
-            self.rack.name if self.rack else None,
-            self.position,
-            self.get_face_display(),
-            self.device_redundancy_group.slug if self.device_redundancy_group else None,
-            self.device_redundancy_group_priority,
-            self.secrets_group.name if self.secrets_group else None,
-            self.primary_ip if self.primary_ip else None,
-            self.comments,
-        )
 
     @property
     def display(self):

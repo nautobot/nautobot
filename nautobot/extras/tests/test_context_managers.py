@@ -3,12 +3,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.core.celery import app
+from nautobot.core.testing import TransactionTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Status, Webhook
-from nautobot.utilities.testing import TransactionTestCase
 
 
 # Use the proper swappable User model
@@ -96,7 +96,7 @@ class WebRequestContextTransactionTestCase(TransactionTestCase):
         user = User.objects.create(username="test-user123")
         with web_request_context(user, context_detail="test_change_log_context"):
             with web_request_context(user, context_detail="test_change_log_context"):
-                Site.objects.create(name="Test Site 1")
-            Site.objects.create(name="Test Site 2")
+                Status.objects.create(name="Test Status 1")
+            Status.objects.create(name="Test Status 2")
 
-        self.assertEqual(get_changes_for_model(Site).count(), 2)
+        self.assertEqual(get_changes_for_model(Status).count(), 2)
