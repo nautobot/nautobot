@@ -1,1 +1,1 @@
-Changed VLANGroup `name` to unique, made VLAN `vlan_group` required.
+Changed VLANGroup `name` to unique.
