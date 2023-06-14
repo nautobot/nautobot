@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django import template
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.models import JobButton
@@ -33,7 +34,7 @@ NO_CONFIRM_BUTTON = """
 """
 
 NO_CONFIRM_FORM = """
-<form id="form_id_{button_id}" action="{% url 'extras:jobbutton_run' pk=button_id %}" method="post" class="form">
+<form id="form_id_{button_id}" action="{button_url}" method="post" class="form">
   {hidden_inputs}
 </form>
 """
@@ -52,7 +53,7 @@ CONFIRM_MODAL = """
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title" id="confirm_modal_label_{button_id}">Confirmation</h4>
       </div>
-      <form id="form_id_{button_id}" action="{% url 'extras:jobbutton_run' pk=button_id %}" method="post" class="form">
+      <form id="form_id_{button_id}" action="{button_url}" method="post" class="form">
         <div class="modal-body">
           {hidden_inputs}
           Run Job <strong>'{job}'</strong> with object <strong>'{object}'</strong>?
@@ -101,6 +102,7 @@ def job_buttons(context, obj):
             "button_id": jb.pk,
             "button_text": jb.text,
             "button_class": jb.button_class,
+            "button_url": reverse("extras:jobbutton_run", kwargs={"pk": jb.pk}),
             "object": obj,
             "job": jb.job,
             "hidden_inputs": hidden_inputs,
@@ -141,6 +143,7 @@ def job_buttons(context, obj):
                 "button_id": jb.pk,
                 "button_text": jb.text,
                 "button_class": "link",
+                "button_url": reverse("extras:jobbutton_run", kwargs={"pk": jb.pk}),
                 "object": obj,
                 "job": jb.job,
                 "hidden_inputs": hidden_inputs,
