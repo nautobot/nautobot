@@ -847,21 +847,19 @@ class Prefix(PrimaryModel):
             pool_ips = IPAddress.objects.filter(
                 parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
             ).values_list("host", flat=True)
-            child_ips = netaddr.IPSet(pool_ips)
-        else:
-            child_ips = netaddr.IPSet(self.ip_addresses.values_list("host", flat=True))
-
-        child_prefixes = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
-        numerator_set = child_prefixes | child_ips
+            numerator_set = netaddr.IPSet(pool_ips)
+        elif self.type == choices.PrefixTypeChoices.TYPE_NETWORK:
+            numerator_set = netaddr.IPSet(self.ip_addresses.values_list("host", flat=True))
+        elif self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
+            numerator_set = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
 
         # Exclude network and broadcast address from the denominator unless they've been assigned to an IPAddress or child pool.
-        # Only applies to IPv4 prefixes with a prefix length of /30 or shorter
+        # Only applies to IPv4 network prefixes with a prefix length of /30 or shorter
         if all(
             [
                 denominator > 2,
-                self.type != choices.PrefixTypeChoices.TYPE_POOL,
+                self.type == choices.PrefixTypeChoices.TYPE_NETWORK,
                 self.ip_version == 4,
-                not self.children.exclude(type=choices.PrefixTypeChoices.TYPE_POOL).exists(),
             ]
         ):
             if not any([self.network in numerator_set, self.broadcast in numerator_set]):

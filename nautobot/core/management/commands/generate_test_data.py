@@ -122,6 +122,8 @@ class Command(BaseCommand):
         VLANFactory.create_batch(20)
         self.stdout.write("Creating Prefixes and IP Addresses...")
         PrefixFactory.create_batch(30)
+        self.stdout.write("Creating Empty Namespaces...")
+        NamespaceFactory.create_batch(5)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(8)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
@@ -182,12 +184,12 @@ class Command(BaseCommand):
                 LocationFactory,
                 RIRFactory,
                 RouteTargetFactory,
-                NamespaceFactory,
                 VRFFactory,
                 VLANGroupFactory,
                 VLANFactory,
                 PrefixFactory,
                 IPAddressFactory,
+                NamespaceFactory,
                 PlatformFactory,
                 DeviceTypeFactory,
                 ManufacturerFactory,

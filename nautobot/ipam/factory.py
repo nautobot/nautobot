@@ -260,7 +260,6 @@ class PrefixFactory(PrimaryModelFactory):
         has_tenant = NautobotBoolIterator()
         has_vlan = NautobotBoolIterator()
         # has_vrf = NautobotBoolIterator()
-        is_container = NautobotBoolIterator()
         is_ipv6 = NautobotBoolIterator()
 
     prefix = factory.Maybe(
@@ -279,13 +278,7 @@ class PrefixFactory(PrimaryModelFactory):
         None,
     )
     status = random_instance(lambda: Status.objects.get_for_model(Prefix), allow_null=False)
-    type = factory.Maybe(
-        "is_container",
-        PrefixTypeChoices.TYPE_CONTAINER,
-        factory.Faker(
-            "random_element", elements=[v for v in PrefixTypeChoices.values() if v != PrefixTypeChoices.TYPE_CONTAINER]
-        ),
-    )
+    type = PrefixTypeChoices.TYPE_CONTAINER  # top level prefix should be a container
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
     vlan = factory.Maybe(
         "has_vlan",
@@ -341,7 +334,8 @@ class PrefixFactory(PrimaryModelFactory):
         if self.type == PrefixTypeChoices.TYPE_CONTAINER:
             child_factory = PrefixFactory
         elif self.type == PrefixTypeChoices.TYPE_NETWORK:
-            child_factory = factory.random.randgen.choice([IPAddressFactory, PrefixFactory])
+            weights = [10, 1]  # prefer ip addresses
+            child_factory = factory.random.randgen.choices([IPAddressFactory, PrefixFactory], weights)[0]
         else:
             return
 
@@ -377,9 +371,10 @@ class PrefixFactory(PrimaryModelFactory):
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
             if self.type == PrefixTypeChoices.TYPE_CONTAINER:
-                child_type = factory.random.randgen.choice(
-                    [PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_CONTAINER]
-                )
+                weights = [10, 1]  # prefer network prefixes
+                child_type = factory.random.randgen.choices(
+                    [PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_CONTAINER], weights
+                )[0]
             else:
                 child_type = PrefixTypeChoices.TYPE_POOL
 
@@ -390,7 +385,6 @@ class PrefixFactory(PrimaryModelFactory):
                 method(
                     prefix=str(address.cidr),
                     location=self.location,
-                    children__max_count=4,
                     is_ipv6=is_ipv6,
                     has_rir=False,
                     namespace=self.namespace,
