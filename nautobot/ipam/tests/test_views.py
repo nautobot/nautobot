@@ -245,10 +245,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         ip_address_2 = self._get_queryset().last()
 
         # Assign model-level permission
-        obj_perm = ObjectPermission(name="Test permission", actions=["change"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        self.add_permissions("ipam.change_ipaddress")
 
         # Try GET with model-level permission
         self.assertHttpStatus(self.client.get(self._get_url("edit", ip_address_1)), 200)
@@ -268,10 +265,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         ip_address = self._get_queryset().first()
         new_namespace = Namespace.objects.create(name="Test Namespace")
         # Assign model-level permission
-        obj_perm = ObjectPermission(name="Test permission", actions=["change"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        self.add_permissions("ipam.change_ipaddress")
 
         # Try GET with model-level permission
         self.assertHttpStatus(self.client.get(self._get_url("edit", ip_address)), 200)
