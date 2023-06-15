@@ -46,7 +46,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status
 from nautobot.ipam.factory import VLANGroupFactory
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 
 
