@@ -192,7 +192,11 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.change_field_value(text_field_name, "test new update", idx=2)
         self.change_field_value(integer_field_name, 8888, idx=2)
         self.change_field_value(
-            select_field_name, "SingleSelect Option C", field_type="select", idx=1, select2_field_name="form-2-lookup_value"
+            select_field_name,
+            "SingleSelect Option C",
+            field_type="select",
+            idx=1,
+            select2_field_name="form-2-lookup_value",
         )
         self.change_field_value(
             multi_select_field_name,
