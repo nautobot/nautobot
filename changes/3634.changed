@@ -1,0 +1,2 @@
+Restored `assigned_to_interface` as a `RelatedMembershipBooleanFilter` with name `has_interface_assignments` on `IPAddressFilterSet`.
+Restored `present_in_vrf` and `present_in_vrf_id` filters on `IPAddressFilterSet`.

@@ -1,12 +1,16 @@
 import re
 import urllib.parse
 
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.core.testing import TestCase
+from nautobot.dcim.models.locations import Location
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 
 
@@ -96,6 +100,13 @@ class HomeViewTestCase(TestCase):
 
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
+    def test_search_bar_redirect_to_login(self):
+        self.client.logout()
+        response = self.client.get(reverse("search") + "?q=prefix")
+        # Assert that if the user is not logged in
+        # SearchForm will redirect the user to the login Page
+        self.assertEqual(response.status_code, 302)
+
     def test_global_and_model_search_bar(self):
         self.add_permissions("dcim.view_location", "dcim.view_device")
 
@@ -149,6 +160,37 @@ class FilterFormsTestCase(TestCase):
             filter_tabs,
             response.content.decode(response.charset),
         )
+
+    def test_filtering_on_custom_select_filter_field(self):
+        """Assert CustomField select and multiple select fields can be filtered using multiple entries"""
+        self.add_permissions("dcim.view_location")
+
+        multi_select_cf = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT, label="Multiple Choice"
+        )
+        select_cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, label="choice")
+        choices = ["Foo", "Bar", "FooBar"]
+        for cf in [multi_select_cf, select_cf]:
+            cf.content_types.set([ContentType.objects.get_for_model(Location)])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[0])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[1])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[2])
+
+        locations = Location.objects.all()[:3]
+        for idx, location in enumerate(locations):
+            location.cf[multi_select_cf.key] = choices[:2]
+            location.cf[select_cf.key] = choices[idx]
+            location.save()
+
+        query_param = (
+            f"?cf_{multi_select_cf.key}={choices[0]}&cf_{multi_select_cf.key}={choices[1]}"
+            f"&cf_{select_cf.key}={choices[0]}&cf_{select_cf.key}={choices[1]}"
+        )
+        url = reverse("dcim:location_list") + query_param
+        response = self.client.get(url)
+        response_content = response.content.decode(response.charset).replace("\n", "")
+        self.assertInHTML(locations[0].name, response_content)
+        self.assertInHTML(locations[1].name, response_content)
 
 
 class ForceScriptNameTestcase(TestCase):

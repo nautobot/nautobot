@@ -116,13 +116,16 @@ class FilterTestCases:
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_boolean_filters_generic(self):
-            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`.
+            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`
+            except for the ones with custom filter logic defined in its `method` attribute.
 
             This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
             that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
             """
             for filter_name, filter_object in self.filterset.get_filters().items():
                 if not isinstance(filter_object, RelatedMembershipBooleanFilter):
+                    continue
+                if filter_object.method is not None:
                     continue
                 field_name = filter_object.field_name
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (True)"):

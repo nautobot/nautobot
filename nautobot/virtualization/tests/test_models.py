@@ -4,6 +4,7 @@ from django.test import TestCase
 
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Status
+from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, ClusterType, Cluster, VMInterface
@@ -70,7 +71,10 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        cls.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location, status=vlan_status)
+        vlan_group = VLANGroupFactory.create(location=location)
+        cls.vlan = VLAN.objects.create(
+            name="VLAN 1", vid=100, location=location, status=vlan_status, vlan_group=vlan_group
+        )
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=clustertype)
         vm_status = Status.objects.get_for_model(VirtualMachine).first()

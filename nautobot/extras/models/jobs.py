@@ -248,8 +248,14 @@ class Job(PrimaryModel):
 
     @property
     def latest_result(self):
+        """
+        Return the most recent JobResult object associated with this Job.
+
+        Note that, as a performance optimization for this function's repeated use in
+        JobListview, the returned object only includes its `status` field.
+        """
         if self._latest_result is None:
-            self._latest_result = self.job_results.first()
+            self._latest_result = self.job_results.only("status").first()
         return self._latest_result
 
     @property
@@ -647,7 +653,7 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is not None:
             job_celery_kwargs.update(celery_kwargs)
 
-        if synchronous:
+        if synchronous or getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs

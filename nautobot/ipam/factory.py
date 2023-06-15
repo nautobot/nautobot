@@ -144,6 +144,30 @@ class VLANGroupFactory(OrganizationalModelFactory):
         "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
     )
 
+    @factory.post_generation
+    def children(self, create, extracted, **kwargs):
+        """Creates child VLANs within the VLANGroup."""
+        if create:
+            return
+
+        # 50% chance to create children
+        if not faker.Faker().pybool():
+            return
+
+        # Default to maximum of 4 children unless overridden in kwargs
+        max_count = int(kwargs.pop("max_count", 4))
+        child_count = faker.Faker().pyint(min_value=0, max_value=max_count)
+        if child_count == 0:
+            return
+
+        if extracted and self.has_location:
+            VLANFactory.create_batch(size=child_count, location=self.location, vlan_group=self)
+
+
+class VLANGroupGetOrCreateFactory(VLANGroupFactory):
+    class Meta:
+        django_get_or_create = "location"
+
 
 class VLANFactory(PrimaryModelFactory):
     class Meta:
@@ -210,6 +234,11 @@ class VLANFactory(PrimaryModelFactory):
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
         django_get_or_create = ("vlan_group", "location", "tenant")
+
+    vlan_group = factory.SubFactory(
+        VLANGroupGetOrCreateFactory,
+        location=factory.SelfAttribute("..location"),
+    )
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -284,7 +313,6 @@ class PrefixFactory(PrimaryModelFactory):
         "has_vlan",
         factory.SubFactory(
             VLANGetOrCreateFactory,
-            vlan_group=None,
             location=factory.SelfAttribute("..location"),
             tenant=factory.SelfAttribute("..tenant"),
         ),

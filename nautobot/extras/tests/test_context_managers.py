@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.core.celery import app
+from nautobot.core.testing import TransactionTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
@@ -84,3 +85,18 @@ class WebRequestContextTestCase(TestCase):
         # self.assertEqual(job.args[0], Webhook.objects.get(type_create=True))
         # self.assertEqual(job.args[1]["id"], str(site.pk))
         # self.assertEqual(job.args[2], "site")
+
+
+class WebRequestContextTransactionTestCase(TransactionTestCase):
+    def test_change_log_thread_safe(self):
+        """
+        Emulate a race condition where the change log signal handler
+        is disconnected while there is a pending object change.
+        """
+        user = User.objects.create(username="test-user123")
+        with web_request_context(user, context_detail="test_change_log_context"):
+            with web_request_context(user, context_detail="test_change_log_context"):
+                Status.objects.create(name="Test Status 1")
+            Status.objects.create(name="Test Status 2")
+
+        self.assertEqual(get_changes_for_model(Status).count(), 2)

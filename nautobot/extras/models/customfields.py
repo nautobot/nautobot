@@ -14,15 +14,16 @@ from django.forms.widgets import TextInput
 from django.utils.safestring import mark_safe
 
 from nautobot.core.forms import (
+    add_blank_choice,
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
     JSONField,
     LaxURLField,
+    MultiValueCharInput,
     NullableDateField,
     StaticSelect2,
     StaticSelect2Multiple,
-    add_blank_choice,
 )
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
@@ -526,14 +527,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             choices = [(cfc.value, cfc.value) for cfc in self.custom_field_choices.all()]
             default_choice = self.custom_field_choices.filter(value=self.default).first()
 
-            if not required or default_choice is None:
-                choices = add_blank_choice(choices)
-
             # Set the initial value to the first available choice (if any)
-            if set_initial and default_choice:
-                initial = default_choice.value
-
             if self.type == CustomFieldTypeChoices.TYPE_SELECT:
+                if not required or default_choice is None:
+                    choices = add_blank_choice(choices)
                 field_class = CSVChoiceField if for_csv_import else forms.ChoiceField
                 field = field_class(
                     choices=choices,
@@ -556,6 +553,21 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             field.help_text = render_markdown(self.description)
 
         return field
+
+    def to_filter_form_field(self, lookup_expr="exact", *args, **kwargs):
+        """Return a filter form field suitable for filtering a CustomField's value for an object."""
+        form_field = self.to_form_field(*args, **kwargs)
+        # We would handle type selection differently because:
+        # 1. We'd need to use StaticSelect2Multiple for lookup_type 'exact' because self.type `select` uses StaticSelect2 by default.
+        # 2. Remove the blank choice since StaticSelect2Multiple is always blank and interprets the blank choice as an extra option.
+        # 3. If lookup_type is not the same as exact, use MultiValueCharInput
+        if self.type == CustomFieldTypeChoices.TYPE_SELECT:
+            if lookup_expr in ["exact", "contains"]:
+                choices = form_field.choices[1:]
+                form_field.widget = StaticSelect2Multiple(choices=choices)
+            else:
+                form_field.widget = MultiValueCharInput()
+        return form_field
 
     def validate(self, value):
         """

@@ -45,7 +45,8 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN
+from nautobot.ipam.factory import VLANGroupFactory
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 
 
@@ -1210,7 +1211,10 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        cls.vlan = VLAN.objects.create(name="VLAN 1", vid=100, location=location, status=vlan_status)
+        vlan_group = VLANGroup.objects.filter(location=location).first()
+        cls.vlan = VLAN.objects.create(
+            name="VLAN 1", vid=100, location=location, status=vlan_status, vlan_group=vlan_group
+        )
         status = Status.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 1",
@@ -1219,15 +1223,17 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             location=location,
             status=status,
         )
+        location_2 = Location.objects.create(
+            name="Other Location",
+            location_type=LocationType.objects.get(name="Campus"),
+            status=Status.objects.get_for_model(Location).first(),
+        )
         cls.other_location_vlan = VLAN.objects.create(
             name="Other Location VLAN",
             vid=100,
-            location=Location.objects.create(
-                name="Other Location",
-                location_type=LocationType.objects.get(name="Campus"),
-                status=Status.objects.get_for_model(Location).first(),
-            ),
+            location=location_2,
             status=vlan_status,
+            vlan_group=VLANGroupFactory.create(location=location_2),
         )
 
         cls.namespace = Namespace.objects.create(name="dcim_test_interface_ip_addresses")
