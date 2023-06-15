@@ -88,7 +88,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     """
     # Avoid circular import
     from nautobot.dcim.models import Device
-    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin, StatusFilter
     from nautobot.extras.models import ConfigContext, Role, Status, Tag
     from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
@@ -105,7 +105,9 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
-    if isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
+    if isinstance(field, CustomFieldFilterMixin):
+        form_field = field.custom_field.to_filter_form_field(lookup_expr=field.lookup_expr)
+    elif isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
         form_field = forms.DecimalField()
     elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
