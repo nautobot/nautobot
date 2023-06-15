@@ -239,7 +239,7 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
         raise
 
     if job_result:
-        job_result.log("Repository dry run successful", level_choice=LogLevelChoices.LOG_SUCCESS, logger=logger)
+        job_result.log("Repository dry run successful", level_choice=LogLevelChoices.LOG_INFO, logger=logger)
     elif logger:
         logger.info("Repository dry run successful")
 

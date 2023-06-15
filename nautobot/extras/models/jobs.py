@@ -653,7 +653,7 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is not None:
             job_celery_kwargs.update(celery_kwargs)
 
-        if synchronous:
+        if synchronous or getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
