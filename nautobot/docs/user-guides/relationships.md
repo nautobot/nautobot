@@ -10,7 +10,7 @@ This table defines repository parameters that are required to establish a relati
 
 |Field|Explanation|
 |:--|:--|
-|Label|Lael of the relationship as displayed to users.|
+|Label|Label of the relationship as displayed to users.|
 |Key|Internal relationship key. Please use underscores rather than dashes.|
 |Description|(Optional) Meaningful description to provide additional relationship details.|
 |[Type](../models/extras/relationship.md#relationship-types)|Cardinality of this relationship.|
