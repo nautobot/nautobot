@@ -86,11 +86,12 @@ def change_logging(change_context):
     # Set change logging state
     prev_state = change_context_state.set(change_context)
 
-    yield
-
-    # Reset change logging state. This is necessary to avoid recording any errant
-    # changes during test cleanup.
-    change_context_state.reset(prev_state)
+    try:
+        yield
+    finally:
+        # Reset change logging state. This is necessary to avoid recording any errant
+        # changes during test cleanup.
+        change_context_state.reset(prev_state)
 
 
 @contextmanager
