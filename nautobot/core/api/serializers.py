@@ -159,7 +159,7 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
             model = self.queryset.model
 
         # foreign key relationship when the destination field is referenced by string not by class
-        elif getattr(self.parent, "Meta", None) and getattr(self.parent.Meta.model, self.source, False):
+        elif getattr(self.parent.Meta.model, self.source, False):
             model = getattr(self.parent.Meta.model, self.source).field.model
         else:
             logger.warning(
