@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{% url 'dcim:rack_list' %}?location={{ object.location.name }}">{{ object.location }}</a></li>
+                <li><a href="{% url 'dcim:rack_list' %}?location={{ object.location.pk }}">{{ object.location }}</a></li>
                 {% if object.rack_group %}
                     {% for rack_group in object.rack_group.ancestors %}
                         <li>{{ rack_group|hyperlinked_object }}</li>
@@ -87,7 +87,7 @@
                 <tr>
                     <td>Devices</td>
                     <td>
-                        <a href="{% url 'dcim:device_list' %}?rack_id={{ object.id }}">{{ device_count }}</a>
+                        <a href="{% url 'dcim:device_list' %}?rack={{ object.id }}">{{ device_count }}</a>
                     </td>
                 </tr>
                 <tr>

@@ -72,7 +72,7 @@ class DeviceTypeTable(BaseTable):
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"device_type_id": "pk"},
+        url_params={"device_type": "pk"},
         verbose_name="Devices",
     )
     tags = TagColumn(url_name="dcim:devicetype_list")

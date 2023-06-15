@@ -115,7 +115,7 @@
                     </tr>
                     <tr>
                         <td>Device Instances</td>
-                        <td><a href="{% url 'dcim:device_list' %}?device_type_id={{ object.pk }}">{{ instance_count }}</a></td>
+                        <td><a href="{% url 'dcim:device_list' %}?device_type={{ object.pk }}">{{ instance_count }}</a></td>
                     </tr>
                 </table>
             </div>

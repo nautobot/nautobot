@@ -23,7 +23,7 @@
                 <tr>
                     <td>Racks</td>
                     <td>
-                        <a href="{% url 'dcim:rack_list' %}?rack_group={{ object.name }}">{{ rack_table.rows|length }}</a>
+                        <a href="{% url 'dcim:rack_list' %}?rack_group={{ object.pk }}">{{ rack_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>
