@@ -4,6 +4,8 @@ from django.core.management import call_command
 from django.conf import settings
 from django.test.runner import DiscoverRunner
 
+from nautobot.core.celery import app, setup_nautobot_job_logging
+
 
 class NautobotTestRunner(DiscoverRunner):
     """
@@ -49,6 +51,7 @@ class NautobotTestRunner(DiscoverRunner):
         super().setup_test_environment(**kwargs)
         # Remove 'testserver' that Django "helpfully" adds automatically to ALLOWED_HOSTS, masking issues like #3065
         settings.ALLOWED_HOSTS.remove("testserver")
+        setup_nautobot_job_logging(None, None, app.conf)
 
     def setup_databases(self, **kwargs):
         result = super().setup_databases(**kwargs)
