@@ -65,9 +65,9 @@ class ExampleModelSerializer(ModelSerializer):
         ]
 ```
 
-In the above example, we add the `detail_view_config` attribute to the Serializer's Meta class. The value of this attribute is a list containing two dict, representing the two columns of the detail view. The first dictionary represents the fields in the first column, while the second dictionary represents the fields in the second column. Each dictionary consists of a key-value pair, where the key is the name of the grouping, and the value is a list of the model fields that should be included in that grouping.
+In the above example, we add the `detail_view_config` attribute to the Serializer's inner `Meta` class. The value of this attribute is a list containing two dictionaries, each representing the two columns of the detail view. The first dictionary represents the fields in the first column, while the second dictionary represents the fields in the second column. Each dictionary consists of a key-value pair, where the key is the name of the grouping, and the value is a list of the model fields that should be included in that grouping.
 
-If a `detail_view_config` is not provided to the Model Serializer, the default view configuration will be used. The default view config displays all non-many-to-many (non-m2m) fields in the left column, and many-to-many (m2m) fields in the right column, with each field having its own grouping.
+If a `detail_view_config` is not provided to the Model Serializer, the default view configuration will be used. The default view configuration displays all non-many-to-many (non-m2m) fields in the left column, and many-to-many (m2m) fields in the right column, with each field having its own grouping.
 
 ### Documenting Your Code
 

@@ -304,8 +304,7 @@ class NautobotMetadata(SimpleMetadata):
         fields_to_add = ["id", "composite_key", "url"]
 
         for section_idx, section in enumerate(view_config):
-            for idx, data in enumerate(section.items()):
-                _, value = data
+            for idx, value in enumerate(section.values()):
                 for field in fields_to_remove:
                     if field in value["fields"]:
                         value["fields"].remove(field)
