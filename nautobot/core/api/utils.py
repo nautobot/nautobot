@@ -326,7 +326,7 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
     """
     Handle serialization of GenericForeignKey fields at an appropriate depth.
 
-    When depth = 0, return the URL for the related object.
+    When depth = 0, return a brief representation of the related object, containing URL, PK, and object_type.
     When depth > 0, return the data for the appropriate nested serializer, plus a "generic_foreign_key = True" field.
 
     Args:
@@ -337,9 +337,15 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
         obj_related_field_name: Object's field name that represents the related object.
     """
     if depth == 0:
-        result = obj_related_field.get_absolute_url(api=True)
+        url = obj_related_field.get_absolute_url(api=True)
         if serializer.context.get("request"):
-            result = serializer.context.get("request").build_absolute_uri(result)
+            url = serializer.context.get("request").build_absolute_uri(url)
+
+        result = {
+            "id": obj_related_field.pk,
+            "object_type": obj_related_field._meta.label_lower,
+            "url": url,
+        }
         return result
     else:
         relation_info = get_relation_info_for_nested_serializers(obj, obj_related_field, obj_related_field_name)

@@ -959,7 +959,7 @@ class CustomFieldDataAPITest(APITestCase):
         csvdata = "\n".join(
             [
                 "name,slug,location_type,status",
-                f"Location N,location-n,{self.lt.natural_key_slug},{self.statuses[0].name}",
+                f"Location N,location-n,{self.lt.composite_key},{self.statuses[0].name}",
             ]
         )
         response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
@@ -986,7 +986,7 @@ class CustomFieldDataAPITest(APITestCase):
         csvdata = "\n".join(
             [
                 "name,slug,location_type,status,cf_choice_cf",
-                f"Location N,location-n,{self.lt.natural_key_slug},{self.statuses[0].name},Frobozz",
+                f"Location N,location-n,{self.lt.composite_key},{self.statuses[0].name},Frobozz",
             ]
         )
         response = self.client.post(url, csvdata, content_type="text/csv", **self.header)

@@ -49,15 +49,11 @@ class IPAddressStatusChoices(ChoiceSet):
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
-    STATUS_DHCP = "dhcp"
-    STATUS_SLAAC = "slaac"
 
     CHOICES = (
         (STATUS_ACTIVE, "Active"),
         (STATUS_RESERVED, "Reserved"),
         (STATUS_DEPRECATED, "Deprecated"),
-        (STATUS_DHCP, "DHCP"),
-        (STATUS_SLAAC, "SLAAC"),
     )
 
 
@@ -92,6 +88,18 @@ class IPAddressRoleChoices(ChoiceSet):
         ROLE_GLBP: "success",
         ROLE_CARP: "success",
     }
+
+
+class IPAddressTypeChoices(ChoiceSet):
+    TYPE_DHCP = "dhcp"
+    TYPE_HOST = "host"
+    TYPE_SLAAC = "slaac"
+
+    CHOICES = (
+        (TYPE_DHCP, "DHCP"),
+        (TYPE_HOST, "Host"),
+        (TYPE_SLAAC, "SLAAC"),
+    )
 
 
 #

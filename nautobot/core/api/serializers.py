@@ -7,7 +7,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.db.models import AutoField, ManyToManyField
+from django.db.models import AutoField, ManyToManyField, Model
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -26,7 +26,7 @@ from nautobot.core.api.utils import (
     nested_serializer_factory,
 )
 from nautobot.core.models.managers import TagsManager
-from nautobot.core.models.utils import construct_natural_key_slug
+from nautobot.core.models.utils import construct_composite_key
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
@@ -100,6 +100,24 @@ class OptInFieldsMixin:
         return self.__pruned_fields
 
 
+@extend_schema_field(
+    {
+        "type": "object",
+        "properties": {
+            "id": {
+                "oneOf": [
+                    {"type": "string", "format": "uuid"},
+                    {"type": "integer"},
+                ]
+            },
+            "object_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]+\\.[a-z][a-z0-9_]+$"},
+            "url": {
+                "type": "string",
+                "format": "uri",
+            },
+        },
+    }
+)
 class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.HyperlinkedRelatedField):
     """DRF's built-in HyperlinkedRelatedField combined with custom to_internal_value() function"""
 
@@ -118,6 +136,40 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
             else:
                 kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
         super().__init__(*args, **kwargs)
+
+    def to_internal_value(self, data):
+        """Convert potentially nested representation to a model instance."""
+        if isinstance(data, dict):
+            if "url" in data:
+                return super().to_internal_value(data["url"])
+            elif "id" in data:
+                return super().to_internal_value(data["id"])
+        return super().to_internal_value(data)
+
+    def to_representation(self, value):
+        """Convert URL representation to a brief nested representation."""
+        url = super().to_representation(value)
+
+        # nested serializer provides an instance
+        if isinstance(value, Model):
+            model = type(value)
+
+        # foreign key relationship
+        elif self.queryset:
+            model = self.queryset.model
+
+        # foreign key relationship when the destination field is referenced by string not by class
+        elif getattr(self.parent.Meta.model, self.source, False):
+            model = getattr(self.parent.Meta.model, self.source).field.model
+        else:
+            logger.warning(
+                "Unable to determine model for related field %r; "
+                "ensure that either the field defines a 'queryset' "
+                "or the Meta defines the related 'model'.",
+                self.field_name,
+            )
+            return {"id": value.pk, "object_type": "unknown.unknown", "url": url}
+        return {"id": value.pk, "object_type": model._meta.label_lower, "url": url}
 
 
 class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializer):
@@ -141,7 +193,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
-    natural_key_slug = serializers.SerializerMethodField()
+    composite_key = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -167,9 +219,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         return getattr(instance, "display", str(instance))
 
     @extend_schema_field(serializers.CharField)
-    def get_natural_key_slug(self, instance):
+    def get_composite_key(self, instance):
         try:
-            return getattr(instance, "natural_key_slug", construct_natural_key_slug(instance.natural_key()))
+            return getattr(instance, "composite_key", construct_composite_key(instance.natural_key()))
         except (AttributeError, NotImplementedError):
             return "unknown"
 

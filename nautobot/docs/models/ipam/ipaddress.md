@@ -9,8 +9,6 @@ Each IP address can also be assigned an operational [`status`](../../models/extr
 * Active
 * Reserved
 * Deprecated
-* DHCP
-* SLAAC (IPv6 Stateless Address Autoconfiguration)
 
 Roles are used to indicate some special attribute of an IP address; for example, use as a loopback or as the the virtual IP for a VRRP group. (Note that functional roles are conceptual in nature, and thus cannot be customized by the user.) Available roles include:
 
@@ -21,6 +19,12 @@ Roles are used to indicate some special attribute of an IP address; for example,
 * VRRP
 * HSRP
 * GLBP
+
+Types are used to indicate special functions of an IP address such as DHCP or SLAAC. The default is "host":
+
+* Host
+* DHCP
+* SLAAC (IPv6 Stateless Address Autoconfiguration)
 
 An IP address can be assigned to any device or virtual machine interface, and an interface may have multiple IP addresses assigned to it. Further, each device and virtual machine may have one of its interface IPs designated as its primary IP per address family (one for IPv4 and one for IPv6).
 
