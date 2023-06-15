@@ -1211,7 +1211,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroupFactory.create(location=location)
+        vlan_group = VLANGroup.objects.filter(location=location).first()
         cls.vlan = VLAN.objects.create(
             name="VLAN 1", vid=100, location=location, status=vlan_status, vlan_group=vlan_group
         )
