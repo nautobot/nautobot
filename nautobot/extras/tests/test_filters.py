@@ -79,7 +79,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.ipam.filters import VLANFilterSet
-from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
@@ -1257,9 +1257,10 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_group = VLANGroup.objects.first()
         cls.vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status),
-            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status),
+            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),
         )
 
         RelationshipAssociation(
@@ -1383,10 +1384,11 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_group = VLANGroup.objects.first()
         cls.vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status),
-            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status),
-            VLAN.objects.create(vid=3, name="VLAN 3", status=vlan_status),
+            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=3, name="VLAN 3", status=vlan_status, vlan_group=vlan_group),
         )
         cls.relationship_associations = (
             RelationshipAssociation(

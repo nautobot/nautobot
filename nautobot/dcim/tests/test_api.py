@@ -51,7 +51,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
 
@@ -1475,11 +1475,12 @@ class InterfaceTest(Mixins.BasePortTestMixin):
             ),
         )
 
+        vlan_group = VLANGroup.objects.first()
         vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status),
-            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status),
-            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status),
+            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status, vlan_group=vlan_group),
         )
 
         cls.create_data = [
