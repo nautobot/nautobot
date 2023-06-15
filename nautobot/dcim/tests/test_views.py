@@ -81,7 +81,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
-from nautobot.ipam.models import VLAN, IPAddress, Namespace, Prefix, VLANGroup
+from nautobot.ipam.models import VLAN, VLANGroup, IPAddress, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
