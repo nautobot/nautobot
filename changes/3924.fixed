@@ -1,0 +1,1 @@
+Fixed a potential server hang at startup when a misconfigured GitRepository is present.
