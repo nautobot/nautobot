@@ -1463,7 +1463,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user").prefetch_related("logs")
+    queryset = JobResult.objects.defer("data").select_related("job_model", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1475,7 +1475,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").all()
+    queryset = JobResult.objects.defer("data").all()
     table = tables.JobResultTable
 
 

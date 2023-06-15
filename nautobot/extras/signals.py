@@ -25,7 +25,7 @@ from .webhooks import enqueue_webhooks
 
 # thread safe change context state variable
 change_context_state = contextvars.ContextVar("change_context_state", default=None)
-logger = logging.getLogger("nautobot.extras.signals")
+logger = logging.getLogger(__name__)
 
 
 #
