@@ -79,7 +79,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.ipam.filters import VLANFilterSet
-from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix, VLANGroup
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 

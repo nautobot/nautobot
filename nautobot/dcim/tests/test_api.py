@@ -51,7 +51,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix, VLANGroup
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
 

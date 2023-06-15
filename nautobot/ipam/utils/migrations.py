@@ -739,16 +739,17 @@ def increment_names_of_records_with_similar_names(model: models.Model):
     """
     cache = set()
     records_to_update = []
-    for instance in model.objects.all():
+    for instance in model.objects.all().iterator():
         name = instance.name
         counter = 1
         while name in cache:
-            max_name_length = model.name.field.max_length
-            name = f"{instance.name[:max_name_length]} {counter}"
+            suffix = f" {counter}"
+            max_name_length = model.name.field.max_length - len(suffix)
+            name = f"{instance.name[:max_name_length]}{suffix}"
             counter += 1
 
         if name != instance.name:
-            print(f'{model._meta.verbose_name} instance {instance.id} is being renamed to "{name}" for uniqueness')
+            print(f'   {model._meta.verbose_name} instance {instance.id} is being renamed to "{name}" for uniqueness')
             instance.name = name
             records_to_update.append(instance)
         cache.add(name)

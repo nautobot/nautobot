@@ -2753,12 +2753,12 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
-                vlan1_json_data = {"status": device_status.pk, "id": str(vlan1.id), "vlan_group": vlan1.vlan_group.pk}
+                vlan1_json_data = {"status": device_status.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan1_json_data.update({"vid": "4", "name": vlan1.name})
 
-                vlan2_json_data = {"status": device_status.pk, "id": str(vlan2.id), "vlan_group": vlan2.vlan_group.pk}
+                vlan2_json_data = {"status": device_status.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
                     vlan2_json_data.update({"vid": "5", "name": vlan2.name})

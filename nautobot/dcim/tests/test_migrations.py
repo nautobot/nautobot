@@ -256,11 +256,9 @@ class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
         ]
 
         self.vlans = [
-            self.vlan.objects.create(name="VLAN 1", vid=1, site=sites[1], vlan_group=self.vlan_groups[0]),
-            self.vlan.objects.create(name="VLAN 2", vid=2, site=sites[2], vlan_group=self.vlan_groups[0]),
-            self.vlan.objects.create(
-                name="VLAN 3", vid=3, site=sites[3], location=locations[2], vlan_group=self.vlan_groups[0]
-            ),
+            self.vlan.objects.create(name="VLAN 1", vid=1, site=sites[1]),
+            self.vlan.objects.create(name="VLAN 2", vid=2, site=sites[2]),
+            self.vlan.objects.create(name="VLAN 3", vid=3, site=sites[3], location=locations[2]),
         ]
 
         self.computed_field.objects.create(

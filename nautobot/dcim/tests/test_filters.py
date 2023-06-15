@@ -283,7 +283,6 @@ def common_test_data(cls):
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), location=loc0, status=prefix_status)
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), location=loc1, status=prefix_status)
 
-    # TODO: remove these once we have a Sites fixture; for now SiteTestCase needs VLANGroups and VLANs with Sites
     vlan_groups = (
         VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=loc0),
         VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=loc0),

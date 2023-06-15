@@ -172,6 +172,7 @@ class VLANFactory(PrimaryModelFactory):
         model = VLAN
         exclude = (
             "has_description",
+            "has_vlan_group",
             "has_location",
             "has_role",
             "has_tenant",
@@ -214,13 +215,14 @@ class VLANFactory(PrimaryModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
-    vlan_group = random_instance(VLANGroup, allow_null=False)
+    has_vlan_group = NautobotBoolIterator()
+    vlan_group = factory.Maybe("has_vlan_group", random_instance(VLANGroup, allow_null=False), None)
 
     has_location = NautobotBoolIterator()
     location = factory.Maybe(
-        "has_location",
+        "has_vlan_group",
         factory.LazyAttribute(lambda vlan: vlan.vlan_group.location),
-        None,
+        factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 
     has_tenant = NautobotBoolIterator()

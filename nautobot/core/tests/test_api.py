@@ -591,8 +591,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_pk(self):
         data = {
-            "vid": 150,
-            "name": "Test VLAN 150",
+            "vid": 100,
+            "name": "Test VLAN 100",
             "location": self.location1.pk,
             "status": self.statuses.first().pk,
             "vlan_group": self.vlan_group1.pk,
@@ -642,8 +642,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_attributes_no_match(self):
         data = {
-            "vid": 120,
-            "name": "Test VLAN 120",
+            "vid": 100,
+            "name": "Test VLAN 100",
             "status": self.statuses.first().pk,
             "location": {"name": "Location X"},
             "vlan_group": self.vlan_group1.pk,
@@ -659,8 +659,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_attributes_multiple_matches(self):
         data = {
-            "vid": 130,
-            "name": "Test VLAN 130",
+            "vid": 100,
+            "name": "Test VLAN 100",
             "status": self.statuses.first().pk,
             "location": {
                 "parent": {
@@ -680,8 +680,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
     def test_related_by_invalid(self):
         data = {
-            "vid": 140,
-            "name": "Test VLAN 140",
+            "vid": 100,
+            "name": "Test VLAN 100",
             "location": "XXX",
             "status": self.statuses.first().pk,
             "vlan_group": self.vlan_group2.pk,
