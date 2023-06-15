@@ -18,7 +18,8 @@ from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Device, Platform, Rack, Location, LocationType
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.factory import VLANGroupFactory
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 
@@ -40,10 +41,17 @@ class RelationshipBaseTest(TestCase):
         ]
 
         cls.vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_groups = (VLANGroupFactory.create(location=cls.locations[idx]) for idx in range(3))
         cls.vlans = [
-            VLAN.objects.create(name="VLAN A", vid=100, location=cls.locations[0], status=cls.vlan_status),
-            VLAN.objects.create(name="VLAN B", vid=100, location=cls.locations[1], status=cls.vlan_status),
-            VLAN.objects.create(name="VLAN C", vid=100, location=cls.locations[2], status=cls.vlan_status),
+            VLAN.objects.create(
+                name="VLAN A", vid=100, location=cls.locations[0], status=cls.vlan_status, vlan_group=vlan_groups[0]
+            ),
+            VLAN.objects.create(
+                name="VLAN B", vid=100, location=cls.locations[1], status=cls.vlan_status, vlan_group=vlan_groups[0]
+            ),
+            VLAN.objects.create(
+                name="VLAN C", vid=100, location=cls.locations[2], status=cls.vlan_status, vlan_group=vlan_groups[0]
+            ),
         ]
 
         cls.m2m_1 = Relationship(
@@ -1135,6 +1143,7 @@ class RequiredRelationshipTestMixin(TestCase):
             required_on="source",
         )
         relationship_o2o.validated_save()
+        vlan_group = VLANGroup.objects.first()
 
         tests_params = [
             # Required many-to-many:
@@ -1143,6 +1152,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "vid": "1",
                     "name": "New VLAN",
                     "status": str(Status.objects.get_for_model(VLAN).first().pk),
+                    "vlan_group": str(vlan_group.pk),
                 },
                 "relationship": relationship_m2m,
                 "required_objects_generator": [

@@ -351,10 +351,10 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "vid,name,status",
-            f"104,VLAN104,{status_1.name}",
-            f"105,VLAN105,{status_1.name}",
-            f"106,VLAN106,{status_1.name}",
+            "vid,name,status,vlan_group",
+            f"104,VLAN104,{status_1.name},{vlangroups[0].composite_key}",
+            f"105,VLAN105,{status_1.name},{vlangroups[0].composite_key}",
+            f"106,VLAN106,{status_1.name},{vlangroups[0].composite_key}",
         )
 
         cls.bulk_edit_data = {

@@ -14,7 +14,7 @@ from nautobot.dcim.models import Location, LocationType
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, VirtualMachine
 
 
@@ -482,7 +482,9 @@ class ChangeLogAPITest(APITestCase):
             mode=InterfaceModeChoices.MODE_TAGGED,
         )
         vlan_statuses = Status.objects.get_for_model(VLAN)
-        tagged_vlan = VLAN.objects.create(vid=100, name="Vlan100", status=vlan_statuses[0])
+        tagged_vlan = VLAN.objects.create(
+            vid=100, name="Vlan100", status=vlan_statuses[0], vlan_group=VLANGroup.objects.first()
+        )
 
         payload = {"tagged_vlans": [str(tagged_vlan.pk)], "description": "test vm interface m2m change"}
         self.assertEqual(ObjectChange.objects.count(), 0)

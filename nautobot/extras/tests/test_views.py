@@ -2172,10 +2172,11 @@ class RelationshipAssociationTestCase(
             ),
         )
         vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_group = VLANGroup.objects.first()
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status),
-            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status),
-            VLAN.objects.create(vid=3, name="VLAN 3", status=vlan_status),
+            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=3, name="VLAN 3", status=vlan_status, vlan_group=vlan_group),
         )
 
         RelationshipAssociation(

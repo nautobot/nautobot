@@ -292,7 +292,7 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                         // DynamicGroupSerializer has a `children` field which fits an inappropriate if condition
                         // in select2.min.js, which will result in the incorrect rendering of DynamicGroup DynamicChoiceField.
                         // So we nullify the field here since we do not need this field.
-                        if (record.url.includes("dynamic-groups")){
+                        if (record?.url ? record.url.includes("dynamic-groups") : false){
                             record.children = undefined;
                         }
 
