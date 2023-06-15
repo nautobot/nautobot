@@ -151,8 +151,10 @@ class VRF(PrimaryModel):
     class Meta:
         ordering = ("namespace", "name", "rd")  # (name, rd) may be non-unique
         unique_together = [
-            ["namespace", "name"],
             ["namespace", "rd"],
+            # TODO: desirable in the future, but too-strict for 1.x-to-2.0 data migrations,
+            #       where multiple different-RD VRFs with the same name may already exist.
+            # ["namespace", "name"],
         ]
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
@@ -277,8 +279,10 @@ class VRFDeviceAssignment(BaseModel):
         unique_together = [
             ["vrf", "device"],
             ["vrf", "virtual_machine"],
-            ["device", "rd", "name"],
-            ["virtual_machine", "rd", "name"],
+            # TODO: desirable in the future, but too strict for 1.x-to-2.0 data migrations,
+            #       as multiple "cleanup" VRFs in different cleanup namespaces might be assigned to a single device/VM.
+            # ["device", "rd", "name"],
+            # ["virtual_machine", "rd", "name"],
         ]
 
     def __str__(self):

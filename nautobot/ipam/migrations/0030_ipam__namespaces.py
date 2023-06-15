@@ -79,9 +79,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "unique_together": {
-                    ("device", "rd", "name"),
                     ("vrf", "virtual_machine"),
-                    ("virtual_machine", "rd", "name"),
                     ("vrf", "device"),
                 },
             },
