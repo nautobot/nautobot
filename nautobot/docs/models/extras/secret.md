@@ -31,4 +31,4 @@ In some cases you may have a collection of closely related secrets values that a
 - A "Git Token" secret could use the *Environment Variable* provider and specify the `variable` name as `"GIT_TOKEN_{{ obj.slug | replace('-', '_') | upper }}"`, so that a Git repository `golden-config` would be able to retrieve its token value from `$GIT_TOKEN_GOLDEN_CONFIG`.
 
 !!! note
-    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for a custom field named `color` on `obj`.
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.

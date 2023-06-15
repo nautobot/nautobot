@@ -17,7 +17,7 @@ Height: {{ rack.u_height }}U
 ```
 
 !!! note
-    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for a custom field named `color` on `obj`.
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
 
 A MIME type and file extension can optionally be defined for each export template. The default MIME type is `text/plain`.
 

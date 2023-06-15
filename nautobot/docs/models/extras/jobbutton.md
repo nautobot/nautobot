@@ -76,7 +76,7 @@ The button will only appear if they have the permission to run jobs.
 ![Job Buttons on Site object](../../media/models/site_jobbuttons.png "Job Buttons on Site object")
 
 !!! note
-    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for a custom field named `color` on `obj`.
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
 
 ## Job Button Receivers
 

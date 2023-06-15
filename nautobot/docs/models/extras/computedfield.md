@@ -42,7 +42,7 @@ Computed field templates can utilize the context of the object the field is bein
 ```
 
 !!! note
-    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for a custom field named `color` on `obj`.
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
 
 ## Computed Field Template Filters
 
