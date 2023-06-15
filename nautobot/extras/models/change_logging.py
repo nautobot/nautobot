@@ -111,6 +111,12 @@ class ObjectChange(BaseModel):
     class Meta:
         ordering = ["-time"]
         get_latest_by = "time"
+        # [request_id, changed_object_type, changed_object_id] is not sufficient to uniquely identify an ObjectChange,
+        # as a single bulk-create or bulk-edit REST API request may modify the same object multiple times, such as in
+        # the case of creating CircuitTerminations for both ends of a single Circuit in a single request.
+        unique_together = [
+            ["time", "request_id", "changed_object_type", "changed_object_id"],
+        ]
         indexes = [
             models.Index(
                 name="extras_objectchange_triple_idx",

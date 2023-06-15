@@ -7,7 +7,7 @@ import {
     Heading,
     SidebarButton,
 } from "@nautobot/nautobot-ui";
-import { Link as ReactRouterLink } from "react-router-dom";
+import { Link as ReactRouterLink, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
     isLoggedInSelector,
@@ -21,6 +21,7 @@ export default function SidebarNav() {
     const isLoggedIn = useSelector(isLoggedInSelector);
     const currentContext = useSelector(getCurrentContextSelector);
     const menuInfo = useSelector(getMenuInfoSelector);
+    const location = useLocation();
 
     let CurrentContextIcon = <></>;
 
@@ -72,6 +73,10 @@ export default function SidebarNav() {
                                                                 menu_arr.length -
                                                                     1
                                                             }
+                                                            active={
+                                                                menu[1] ===
+                                                                location.pathname
+                                                            }
                                                         >
                                                             {menu[0]}
                                                         </SidebarButton>
@@ -122,6 +127,10 @@ export default function SidebarNav() {
                                                                                     submenu_idx ===
                                                                                     submenu_arr.length -
                                                                                         1
+                                                                                }
+                                                                                active={
+                                                                                    submenu[1] ===
+                                                                                    location.pathname
                                                                                 }
                                                                             >
                                                                                 {

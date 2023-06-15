@@ -32,7 +32,7 @@ def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
             return []
 
         # Make it a list if it's a string.
-        if isinstance(value, str):
+        if isinstance(value, (str, int)):
             value = [value]
 
         return [

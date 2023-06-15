@@ -11,7 +11,7 @@ from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
 from nautobot.extras.models import Role, Status
-from nautobot.ipam.choices import IPAddressStatusChoices, PrefixTypeChoices
+from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -673,13 +673,27 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.assertEqual(nat_inside.nat_outside_list.all()[1], nat_outside2)
         self.assertEqual(nat_inside.nat_outside_list.all()[2], nat_outside3)
 
-    def test_create_ip_address_without_slaac_status(self):
-        slaac_status_name = IPAddressStatusChoices.as_dict()[IPAddressStatusChoices.STATUS_SLAAC]
-        IPAddress.objects.filter(status__name=slaac_status_name).delete()
-        Status.objects.get(name=slaac_status_name).delete()
-        Prefix.objects.create(prefix="1.1.1.0/24", status=self.status, namespace=self.namespace)
-        IPAddress.objects.create(address="1.1.1.1/32", status=self.status, namespace=self.namespace)
-        self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
+    def test_create_ip_address_with_slaac_type(self):
+        """Assert that SLAAC can only be set on IPv6 addresses."""
+        # IPv6 be cool.
+        Prefix.objects.create(prefix="1976:2023::/40", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(
+            address="1976:2023::1/128",
+            status=self.status,
+            type=IPAddressTypeChoices.TYPE_SLAAC,
+            namespace=self.namespace,
+        )
+        self.assertTrue(IPAddress.objects.filter(address="1976:2023::1/128").exists())
+
+        # IPv4 be uncool.
+        with self.assertRaises(ValidationError):
+            ip = IPAddress(
+                address="192.0.2.17/32",
+                status=self.status,
+                namespace=self.namespace,
+                type=IPAddressTypeChoices.TYPE_SLAAC,
+            )
+            ip.validated_save()
 
     def test_get_closest_parent(self):
         for ip in IPAddress.objects.all():

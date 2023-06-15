@@ -195,32 +195,25 @@ class PrefixFilterSet(
     mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
     mask_length__gte = django_filters.NumberFilter(label="mask_length__gte", method="filter_prefix_length_gte")
     mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
-    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
-    # FK, Filtering on the VRF by ID or RD needs to be inverted to filter on the m2m.
-    """
-    vrf_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=VRF.objects.all(),
-        label="VRF (ID) - Deprecated (use vrf filter)",
-    )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="VRF (ID or RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        field_name="vrf",
+        field_name="vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         label="VRF",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
-        field_name="vrf__rd",
+        field_name="vrfs__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
         label="VRF (RD)",
     )
-    """
     vlan_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
         label="VLAN (ID)",
@@ -311,15 +304,14 @@ class PrefixFilterSet(
         if isinstance(value, str):
             value = VRF.objects.get(pk=value)
 
-        # This stringification is done to make the `pretty_print_query()` output look human-readable,
-        # and nothing more. It would work as complex objects but looks bad in the web UI.
-        targets = [str(t) for t in value.import_targets.values_list("pk", flat=True)]
-        query = Q(vrf=str(value.pk)) | Q(vrf__export_targets__in=targets)
+        query = Q(vrfs=value) | Q(vrfs__export_targets__in=value.import_targets.all())
         return query
 
     def filter_present_in_vrf(self, queryset, name, value):
+        if value is None:
+            return queryset.none
         params = self.generate_query_filter_present_in_vrf(value)
-        return queryset.filter(params)
+        return queryset.filter(params).distinct()
 
 
 class IPAddressFilterSet(
@@ -343,24 +335,19 @@ class IPAddressFilterSet(
         to_field_name="rd",
         label="VRF (ID or RD)",
     )
-    # TODO(jathan): Since Prefixes are now assigned to VRFs via m2m and not the other way around via
-    # FK, Filtering on the VRF by ID or RD needs to be inherited from the parent prefix, after
-    # Prefix -> IPAddress parenting has been implemented.
-    """
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        field_name="vrf",
+        field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         label="VRF (ID)",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
-        field_name="vrf__rd",
+        field_name="parent__vrfs__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
         label="VRF (RD)",
     )
-    """
     device = MultiValueCharFilter(
         method="filter_device",
         field_name="name",
@@ -397,10 +384,28 @@ class IPAddressFilterSet(
         to_field_name="name",
         label="Namespace (name or ID)",
     )
+    has_interface_assignments = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        method="_has_interface_assignments",
+        label="Has Interface Assignments",
+    )
 
     class Meta:
         model = IPAddress
-        fields = ["id", "ip_version", "dns_name", "tags", "mask_length"]
+        fields = ["id", "ip_version", "dns_name", "type", "tags", "mask_length"]
+
+    def generate_query__has_interface_assignments(self, value):
+        """Helper method used by DynamicGroups and by _assigned_to_interface method."""
+        if value is not None:
+            if value:
+                return Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False)
+            else:
+                return Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True)
+        return Q()
+
+    def _has_interface_assignments(self, queryset, name, value):
+        params = self.generate_query__has_interface_assignments(value)
+        return queryset.filter(params)
 
     def search_by_parent(self, queryset, name, value):
         value = value.strip()
@@ -418,10 +423,18 @@ class IPAddressFilterSet(
         except ValidationError:
             return queryset.none()
 
+    def generate_query_filter_present_in_vrf(self, value):
+        if isinstance(value, str):
+            value = VRF.objects.get(pk=value)
+
+        query = Q(parent__vrfs=value) | Q(parent__vrfs__export_targets__in=value.import_targets.all())
+        return query
+
     def filter_present_in_vrf(self, queryset, name, value):
         if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
+        params = self.generate_query_filter_present_in_vrf(value)
+        return queryset.filter(params).distinct()
 
     def filter_device(self, queryset, name, value):
         devices = Device.objects.filter(**{f"{name}__in": value})

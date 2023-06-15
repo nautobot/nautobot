@@ -7,7 +7,7 @@ from django.conf import settings
 from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
-from nautobot.core.models.constants import NATURAL_KEY_SLUG_SEPARATOR
+from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
 
 
 logger = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ class NautobotCSVRenderer(BaseRenderer):
         headers = base_headers + cf_headers
 
         # Coerce important fields, if present, to the front of the list
-        for priority_header in ["id", "natural_key_slug", "display", "name"]:
+        for priority_header in ["id", "composite_key", "display", "name"]:
             if priority_header in headers:
                 headers.remove(priority_header)
                 headers.insert(0, priority_header)
@@ -130,13 +130,13 @@ class NautobotCSVRenderer(BaseRenderer):
                 # See corresponding logic in NautobotCSVParser.
                 value = ""
             elif isinstance(value, dict):
-                if "natural_key_slug" in value:
+                if "composite_key" in value:
                     # A nested related object
                     if value.get("generic_foreign_key"):
                         # A *generic* nested related object
-                        value = NATURAL_KEY_SLUG_SEPARATOR.join([value["object_type"], value["natural_key_slug"]])
+                        value = COMPOSITE_KEY_SEPARATOR.join([value["object_type"], value["composite_key"]])
                     else:
-                        value = value["natural_key_slug"]
+                        value = value["composite_key"]
                 elif "value" in value and "label" in value:
                     # An enum type
                     value = value["value"]
@@ -145,15 +145,13 @@ class NautobotCSVRenderer(BaseRenderer):
             elif isinstance(value, (list, tuple, set)):
                 if isinstance(value, set):
                     value = sorted(value)
-                if value and isinstance(value[0], dict) and "natural_key_slug" in value[0]:
+                if value and isinstance(value[0], dict) and "composite_key" in value[0]:
                     # Multiple nested related objects
                     if value[0].get("generic_foreign_key"):
                         # Multiple *generic* nested related obects
-                        value = [
-                            NATURAL_KEY_SLUG_SEPARATOR.join([v["object_type"], v["natural_key_slug"]]) for v in value
-                        ]
+                        value = [COMPOSITE_KEY_SEPARATOR.join([v["object_type"], v["composite_key"]]) for v in value]
                     else:
-                        value = [v["natural_key_slug"] for v in value]
+                        value = [v["composite_key"] for v in value]
                 # The below makes for better UX than `json.dump()` for most current cases.
                 value = ",".join([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):

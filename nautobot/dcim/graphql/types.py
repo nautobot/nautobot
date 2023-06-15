@@ -120,7 +120,6 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMix
     cable_peer_rear_port = graphene.Field("nautobot.dcim.graphql.types.RearPortType")
     connected_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
     connected_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
-    ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
     # Resolver Definitions
     resolve_cable_peer_circuit_termination = construct_resolver("CircuitTermination", "cable_peer")
@@ -129,14 +128,6 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMix
     resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
     resolve_connected_circuit_termination = construct_resolver("CircuitTermination", "connected_endpoint")
     resolve_connected_interface = construct_resolver("Interface", "connected_endpoint")
-
-    # Interface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
-    # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
-    @gql_optimizer.resolver_hints(
-        model_field="ip_addresses",
-    )
-    def resolve_ip_addresses(self, args):
-        return self.ip_addresses.all()
 
 
 class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):

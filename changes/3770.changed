@@ -1,0 +1,3 @@
+Modified the text color to be gray-1 for the sidebarNav components.
+In Layout.js, also made the 'Return to Legacy UI' link gray-1 for consistency.
+Made the sidebar button links be orange when selected and on that page.

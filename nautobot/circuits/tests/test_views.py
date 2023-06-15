@@ -192,8 +192,8 @@ class CircuitTerminationTestCase(
 
         cls.csv_data = (
             "term_side,circuit,location,provider_network,port_speed",
-            f"A,{circuit.natural_key_slug},{location.natural_key_slug}",
-            f"Z,{circuit.natural_key_slug},,{provider_network.natural_key_slug},1000",
+            f"A,{circuit.composite_key},{location.composite_key}",
+            f"Z,{circuit.composite_key},,{provider_network.composite_key},1000",
         )
 
     def test_circuit_termination_detail_200(self):

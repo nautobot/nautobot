@@ -350,6 +350,9 @@
 - Model: "Prefix"
   Removed Filter: "site_id"
   Comments:
+- Model: "Prefix"
+  Removed Filter: "vrf_id"
+  Comments: "Use vrf filter instead"
 - Model: "Provider"
   Removed Filter: "region"
   Comments:

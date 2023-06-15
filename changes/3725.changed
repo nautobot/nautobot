@@ -1,0 +1,1 @@
+Changed REST API nested hyperlink to a brief object representation consisting of its ID, URL, and object_type.
