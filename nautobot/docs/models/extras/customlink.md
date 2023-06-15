@@ -51,6 +51,9 @@ As another example, if you wanted to show only devices belonging to a certain ma
 
 The link will only appear when viewing a device with a manufacturer name of "Cisco."
 
+!!! note
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
+
 ## Link Groups
 
 Group names can be specified to organize links into groups. Links with the same group name will render as a dropdown menu beneath a single button bearing the name of the group.
