@@ -54,7 +54,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
             custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
 
         for x in ["A", "B", "C"]:
-            CustomFieldChoice.objects.create(custom_field=self.custom_fields[2], value=f"Option {x}")
+            CustomFieldChoice.objects.create(custom_field=self.custom_fields[2], value=f"SingleSelect Option {x}")
             CustomFieldChoice.objects.create(custom_field=self.custom_fields[3], value=f"MultiSelect Option {x}")
 
     def tearDown(self):
@@ -162,27 +162,28 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.browser.find_by_id("id__filterbtn").click()
         self.change_field_value(text_field_name, "example-text")
         self.change_field_value(integer_field_name, 4356)
-        self.change_field_value(select_field_name, "Option A", field_type="select")
-        self.change_field_value(multi_select_field_name, "Option A", field_type="select")
+        self.change_field_value(select_field_name, "SingleSelect Option A", field_type="select")
+        self.change_field_value(multi_select_field_name, "MultiSelect Option A", field_type="select")
         self.browser.find_by_xpath(apply_btn_xpath).click()  # Click on apply filter button
         self.assertTrue(self.browser.is_text_present("example-text"))
         self.assertTrue(self.browser.is_text_present("4356"))
-        self.assertTrue(self.browser.is_text_present("Option A"))
+        self.assertTrue(self.browser.is_text_present("SingleSelect Option A"))
         self.assertTrue(self.browser.is_text_present("MultiSelect Option A"))
 
         # Assert on update of field in Default Filter the update is replicated on Advanced Filter
         self.browser.find_by_id("id__filterbtn").click()
         self.change_field_value(text_field_name, "test new", idx=1)
         self.change_field_value(integer_field_name, 1111, idx=1)
-        self.change_field_value(select_field_name, "Option B", field_type="select")
+        self.change_field_value(select_field_name, "SingleSelect Option B", field_type="select")
+        self.change_field_value(multi_select_field_name, "MultiSelect Option B", field_type="select")
         self.browser.find_by_xpath("//a[@href='#advanced-filter']").click()
         self.assertEqual(self.browser.find_by_name(text_field_name)[2].value, "test new")
         self.assertEqual(self.browser.find_by_name(integer_field_name)[2].value, "1111")
         # CustomSelect Field is a MultiValueCharField, and the only way to get its values is using this approach.
         # Its values are the  options available on the select field
         custom_select_field = self.browser.find_by_name(select_field_name)[2].find_by_tag("option")
-        self.assertEqual(custom_select_field[0].value, "Option A")
-        self.assertEqual(custom_select_field[1].value, "Option B")
+        self.assertEqual(custom_select_field[0].value, "SingleSelect Option A")
+        self.assertEqual(custom_select_field[1].value, "SingleSelect Option B")
         custom_multi_select_field = self.browser.find_by_name(multi_select_field_name)[2].find_by_tag("option")
         self.assertEqual(custom_multi_select_field[0].value, "MultiSelect Option A")
         self.assertEqual(custom_multi_select_field[1].value, "MultiSelect Option B")
@@ -191,7 +192,7 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.change_field_value(text_field_name, "test new update", idx=2)
         self.change_field_value(integer_field_name, 8888, idx=2)
         self.change_field_value(
-            select_field_name, "Option C", field_type="select", idx=1, select2_field_name="form-1-lookup_value"
+            select_field_name, "SingleSelect Option C", field_type="select", idx=1, select2_field_name="form-2-lookup_value"
         )
         self.change_field_value(
             multi_select_field_name,
@@ -204,10 +205,10 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.assertEqual(self.browser.find_by_name(text_field_name)[1].value, "test new update")
         self.assertEqual(self.browser.find_by_name(integer_field_name)[1].value, "8888")
         custom_select_values = self.browser.find_by_name(select_field_name)[1].find_by_tag("option")
-        self.assertEqual(custom_select_values[0].value, "Option A")
-        self.assertEqual(custom_select_values[1].value, "Option B")
-        self.assertEqual(custom_select_values[2].value, "Option C")
-        multi_custom_select_values = self.browser.find_by_name(select_field_name)[1].find_by_tag("option")
+        self.assertEqual(custom_select_values[0].value, "SingleSelect Option A")
+        self.assertEqual(custom_select_values[1].value, "SingleSelect Option B")
+        self.assertEqual(custom_select_values[2].value, "SingleSelect Option C")
+        multi_custom_select_values = self.browser.find_by_name(multi_select_field_name)[1].find_by_tag("option")
         self.assertEqual(multi_custom_select_values[0].value, "MultiSelect Option A")
         self.assertEqual(multi_custom_select_values[1].value, "MultiSelect Option B")
         self.assertEqual(multi_custom_select_values[2].value, "MultiSelect Option C")
@@ -216,5 +217,5 @@ class ListViewFilterTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(apply_btn_xpath).click()  # Click on apply filter button
         self.assertTrue(self.browser.is_text_present("test new update"))
         self.assertTrue(self.browser.is_text_present("8888"))
-        self.assertTrue(self.browser.is_text_present("Option C"))
+        self.assertTrue(self.browser.is_text_present("SingleSelect Option C"))
         self.assertTrue(self.browser.is_text_present("MultiSelect Option C"))

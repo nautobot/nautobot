@@ -562,7 +562,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         # 2. Remove the blank choice since StaticSelect2Multiple is always blank and interprets the blank choice as an extra option.
         # 3. If lookup_type is not the same as exact, use MultiValueCharInput
         if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-            if lookup_expr == "exact":
+            if lookup_expr in ["exact", "contains"]:
                 choices = form_field.choices[1:]
                 form_field.widget = StaticSelect2Multiple(choices=choices)
             else:
