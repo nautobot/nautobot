@@ -1,6 +1,6 @@
 import { Tab, Tabs, TabList, TabPanel, TabPanels } from "@nautobot/nautobot-ui";
 
-import { RenderCol, RenderNotesTab, RenderChangeLogsTab } from ".";
+import { RenderColumn, RenderNotesTab, RenderChangeLogsTab } from ".";
 
 function RenderTabs({
     layoutSchema,
@@ -23,7 +23,7 @@ function RenderTabs({
             <TabPanels>
                 {Object.entries(layoutSchema.tabs).map(([_, tabData], idx) => (
                     <TabPanel key={idx}>
-                        <RenderCol
+                        <RenderColumn
                             tabData={tabData}
                             data={data}
                             schema={schema}

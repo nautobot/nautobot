@@ -2,7 +2,7 @@ import { NautobotGrid, NautobotGridItem } from "@nautobot/nautobot-ui";
 
 import RenderGroup from "./RenderGroup";
 
-function RenderCol({ tabData, data, schema }) {
+function RenderColumn({ tabData, data, schema }) {
     return (
         <NautobotGrid columns="2">
             {tabData.map((group, idx) => (
@@ -22,4 +22,4 @@ function RenderCol({ tabData, data, schema }) {
     );
 }
 
-export default RenderCol;
+export default RenderColumn;

@@ -18,9 +18,9 @@ import {
 } from "@nautobot/nautobot-ui";
 import { useCallback, useMemo } from "react";
 
-import Paginator from "../paginator";
-import ObjectTableItem from "./ObjectTableItem";
 import LoadingWidget from "../LoadingWidget";
+import ObjectTableItem from "./ObjectTableItem";
+import Paginator from "../paginator";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {

@@ -1,4 +1,4 @@
-export { default as RenderCol } from "./RenderCol";
+export { default as RenderColumn } from "./RenderColumn";
 export { default as RenderTable } from "./RenderTable";
 export { default as RenderGroup } from "./RenderGroup";
 export { default as RenderNotesTab } from "./RenderNotesTab";
