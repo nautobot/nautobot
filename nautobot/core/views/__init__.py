@@ -110,8 +110,13 @@ class HomeView(AccessMixin, TemplateView):
         return self.render_to_response(context)
 
 
-class SearchView(View):
+class SearchView(AccessMixin, View):
     def get(self, request):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
         # No query
         if "q" not in request.GET:
             return render(

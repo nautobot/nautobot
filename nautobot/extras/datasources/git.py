@@ -98,7 +98,9 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
     return GitJobResult(job_result=job_result, repository_record=repository_record)
 
 
-def get_repo_from_url_to_path_and_from_branch(repository_record):
+def get_repo_from_url_to_path_and_from_branch(
+    repository_record, logger=None, job_result=None
+):  # pylint: disable=redefined-outer-name
     """Returns the from_url, to_path and from_branch of a Git Repo
     Returns:
         namedtuple (GitRepoInfo): (
@@ -152,10 +154,8 @@ def ensure_git_repository(
     repository_record, job_result=None, logger=None, head=None  # pylint: disable=redefined-outer-name
 ):
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-
-    Note that this function may be called independently of the `GitRepositorySync` job,
+    Note that this function may be called independently of the `GitRepositoryiSync` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
-
     Args:
       repository_record (GitRepository): Repository to ensure the state of.
       job_result (JobResult): Optional JobResult to store results into.
@@ -166,7 +166,9 @@ def ensure_git_repository(
       bool: Whether any change to the local repo actually occurred.
     """
 
-    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
+        repository_record, logger=logger, job_result=job_result
+    )
 
     try:
         repo_helper = GitRepo(to_path, from_url)
@@ -213,7 +215,9 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
         job_result (JobResult): Optional JobResult to store results into.
         logger (logging.Logger): Optional Logger to additionally log results to.
     """
-    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
+        repository_record, logger=logger, job_result=job_result
+    )
 
     try:
         repo_helper = GitRepo(to_path, from_url, clone_initially=False)

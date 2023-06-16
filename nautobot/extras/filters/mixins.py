@@ -5,6 +5,7 @@ from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
+    FILTER_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.core.filters import (
@@ -66,6 +67,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldNumberFilter,
             CustomFieldTypeChoices.TYPE_JSON: CustomFieldJSONFilter,
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
         }
 
         custom_fields = CustomField.objects.filter(
@@ -89,11 +91,11 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
     def _get_custom_field_filter_lookup_dict(filter_type):
         # Choose the lookup expression map based on the filter type
         if issubclass(filter_type, (CustomFieldMultiValueNumberFilter, CustomFieldMultiValueDateFilter)):
-            lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
+            return FILTER_NUMERIC_BASED_LOOKUP_MAP
+        elif issubclass(filter_type, CustomFieldMultiSelectFilter):
+            return FILTER_NEGATION_LOOKUP_MAP
         else:
-            lookup_map = FILTER_CHAR_BASED_LOOKUP_MAP
-
-        return lookup_map
+            return FILTER_CHAR_BASED_LOOKUP_MAP
 
     # TODO 2.0: Transition CustomField filters to nautobot.core.filters.MultiValue* filters and
     # leverage BaseFilterSet to add dynamic lookup expression filters. Remove CustomField.filter_logic field
@@ -109,6 +111,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldMultiValueDateFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldMultiValueNumberFilter,
             CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiValueCharFilter,
+            CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
             CustomFieldTypeChoices.TYPE_TEXT: CustomFieldMultiValueCharFilter,
             CustomFieldTypeChoices.TYPE_URL: CustomFieldMultiValueCharFilter,
         }
