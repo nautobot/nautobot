@@ -191,36 +191,32 @@ class APIViewTestCases:
             response = self.client.options(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_options_object_detail_view_config(self):
-            """
-            Make an OPTIONS request for a single object and assert the detail view config is generated well.
-            """
-            serializer = get_serializer_for_model(self._get_queryset().model)
-            # TODO(timizuo): Also test for default case, where detail_view_config is not provided.
-            if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
-                url = self._get_detail_url(self._get_queryset().first())
-                response = self.client.options(url, **self.header)
-                response_view_config = response.data["view_options"]["retrieve"]
-                self.assertHttpStatus(response, status.HTTP_200_OK)
+            with self.subTest("Asset Detail View Config is generated well"):
+                serializer = get_serializer_for_model(self._get_queryset().model)
+                # TODO(timizuo): Also test for default case, where detail_view_config is not provided and detail_view_config with `include_others`
+                if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
+                    response_view_config = response.data["view_options"]["retrieve"]
+                    self.assertHttpStatus(response, status.HTTP_200_OK)
 
-                with self.subTest("Assert specific fields(`id`, `composite_key`, `url`)."):
-                    # Assert specific fields(`id`, `composite_key`, `url`) are present only at the end of the first col group fields.
-                    special_fields = ["id", "composite_key", "url"]
-                    for col_idx, col in enumerate(response_view_config):
-                        for group_idx, (group_title, group) in enumerate(col.items()):
-                            group_fields = group["fields"]
-                            # Config set on the serializer
-                            fields = detail_view_config[col_idx][group_title]["fields"]
-                            if group_idx == 0 == col_idx:
-                                self.assertEqual(special_fields, group_fields[-3:])
-                                self.assertFalse(any(field in special_fields for field in group_fields[:-3]))
-                            else:
-                                self.assertFalse(any(field in special_fields for field in group_fields))
-                            # Assert response from options correspond to the view config set on the serializer
-                            self.assertTrue(
-                                all(field in group_fields for field in fields if field not in special_fields)
-                            )
+                    # By Convention all special fields should only be present at the end of the first col group fields.
+                    # Assert special fields(`id`, `composite_key`, `url`) are present only at the end of the first col group fields.
+                    with self.subTest("Assert special fields(`id`, `composite_key`, `url`)."):
+                        special_fields = ["id", "composite_key", "url"]
+                        for col_idx, col in enumerate(response_view_config):
+                            for group_idx, (group_title, group) in enumerate(col.items()):
+                                group_fields = group["fields"]
+                                # Config on the serializer
+                                fields = detail_view_config[col_idx][group_title]["fields"]
+                                if group_idx == 0 == col_idx:
+                                    # Asset that the 3 special fields exists at the end of this group fields
+                                    self.assertEqual(special_fields, group_fields[-3:])
+                                    self.assertFalse(any(field in special_fields for field in group_fields[:-3]))
+                                else:
+                                    self.assertFalse(any(field in special_fields for field in group_fields))
+                                # Assert response from options correspond to the view config set on the serializer
+                                self.assertTrue(
+                                    all(field in group_fields for field in fields if field not in special_fields)
+                                )
 
     class ListObjectsViewTestCase(APITestCase):
         choices_fields = None

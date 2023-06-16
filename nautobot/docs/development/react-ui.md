@@ -53,21 +53,28 @@ class ExampleModelSerializer(ModelSerializer):
     ...
     class Meta:
         ...
-        detail_view_config = [
-            {
-                "Group Name 1": {"fields": ["name", ...]},
-                "Group Name 2": {"fields": [...]},
-            },
-            {
-                "Group Name 3": {"fields": [...]},
-                "Group Name 4": {"fields": [...]},
-            },
-        ]
+        detail_view_config = {
+            "layout": [
+                {
+                    "Group Name 1": {"fields": ["name", ...]},
+                    "Group Name 2": {"fields": [...]},
+                },
+                {
+                    "Group Name 3": {"fields": [...]},
+                    "Group Name 4": {"fields": [...]},
+                },
+            ],
+            "include_others": False
+        }
 ```
 
-In the above example, we add the `detail_view_config` attribute to the Serializer's inner `Meta` class. The value of this attribute is a list containing two dictionaries, each representing the two columns of the detail view. The first dictionary represents the fields in the first column, while the second dictionary represents the fields in the second column. Each dictionary consists of a key-value pair, where the key is the name of the grouping, and the value is a list of the model fields that should be included in that grouping.
+In the above example, we add the `detail_view_config` attribute to the Serializer's inner `Meta` class. The value of this attribute is a dict containing `layout` and `include_others`(optional). the `layout` is a list containing two dictionaries, each representing the two columns of the detail view. The first dictionary represents the fields in the first column, while the second dictionary represents the fields in the second column. Each dictionary consists of a key-value pair, where the key is the name of the grouping, and the value is a list of the model fields that should be included in that grouping.
+The optional key `include_others`, when set to `True`, adds missing serializer fields from the `detail_view_config["layout"]` to the view_config layout.
 
 If a `detail_view_config` is not provided to the Model Serializer, the default view configuration will be used. The default view configuration displays all non-many-to-many (non-m2m) fields in the left column, and many-to-many (m2m) fields in the right column, with each field having its own grouping.
+
+!!! note
+    `Other Fields` cannot be used as a group name as this is a reserved keyword.
 
 ### Documenting Your Code
 

@@ -22,7 +22,6 @@ import Paginator from "../paginator";
 import ObjectTableItem from "./ObjectTableItem";
 import LoadingWidget from "../LoadingWidget";
 
-
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
         // TODO: ui-schema should be providing the name of the field used to describe the object (name)

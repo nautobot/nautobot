@@ -58,7 +58,6 @@ function TableColumnDisplay({ obj }) {
     }
 }
 
-
 export default function ObjectTableItem({ name, obj, url }) {
     if (url && obj) {
         return (
