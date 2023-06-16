@@ -19,7 +19,6 @@ from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
 from nautobot.core.celery import (
-    add_nautobot_log_handler,
     app,
     NautobotKombuJSONEncoder,
     setup_nautobot_job_logging,
