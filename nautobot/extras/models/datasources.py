@@ -1,4 +1,5 @@
 """Models for representing external data sources."""
+from importlib.util import find_spec
 import os
 
 from django.conf import settings
@@ -81,13 +82,20 @@ class GitRepository(PrimaryModel):
     def clean(self):
         super().clean()
 
-        if self.slug != "":
-            check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
+        if self.present_in_database and self.slug != self.__initial_slug:
+            raise ValidationError(
+                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
+                f"requested slug is {self.slug}"
+            )
 
-            if self.present_in_database and self.slug != self.__initial_slug:
+        if not self.present_in_database:
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
+            # Check on create whether the proposed slug conflicts with a module name already in the Python environment.
+            # Because we add GIT_ROOT to the end of sys.path, trying to import this repository will instead
+            # import the earlier-found Python module in its place, which would be undesirable.
+            if find_spec(self.slug) is not None:
                 raise ValidationError(
-                    f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
-                    f"requested slug is {self.slug}"
+                    f'Please choose a different slug, as "{self.slug}" is an existing Python package or module.'
                 )
 
     def get_latest_sync(self):
