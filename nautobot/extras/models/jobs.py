@@ -19,7 +19,6 @@ from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
 from nautobot.core.celery import (
-    add_nautobot_log_handler,
     app,
     NautobotKombuJSONEncoder,
     setup_nautobot_job_logging,
@@ -653,18 +652,17 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is not None:
             job_celery_kwargs.update(celery_kwargs)
 
-        if synchronous or getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+        if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
             job_result.save()
 
             # setup synchronous task logging
-            redirect_logger = get_logger("celery.redirected")
-            add_nautobot_log_handler(redirect_logger)
             setup_nautobot_job_logging(None, None, app.conf)
 
             # redirect stdout/stderr to logger and run task
+            redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
                 eager_result = job_model.job_task.apply(
