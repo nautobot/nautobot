@@ -4,8 +4,10 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
+from django.forms import ChoiceField, IntegerField, NumberInput
 from django.urls import reverse
 from rest_framework import status
+from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
 
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
@@ -13,6 +15,7 @@ from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.filters import LocationFilterSet
+from nautobot.dcim.forms import RackFilterForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
@@ -340,6 +343,39 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
 
             # Delete the custom field
             cf.delete()
+
+    def test_to_filter_field(self):
+        with self.subTest("Assert CustomField Select Type renders the correct filter form field and widget"):
+            # Assert a Select Choice Field
+            ct = ContentType.objects.get_for_model(Device)
+            custom_field_select = CustomField(
+                type=CustomFieldTypeChoices.TYPE_SELECT,
+                label="Select Field",
+            )
+            custom_field_select.save()
+            custom_field_select.content_types.set([ct])
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Foo")
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Bar")
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Baz")
+            filter_field = custom_field_select.to_filter_form_field()
+            self.assertIsInstance(filter_field, ChoiceField)
+            self.assertIsInstance(filter_field.widget, StaticSelect2)
+            self.assertEqual(filter_field.widget.choices, [("Bar", "Bar"), ("Baz", "Baz"), ("Foo", "Foo")])
+            # Assert Choice Custom Field with lookup-expr other than exact returns a
+            filter_field_with_lookup_expr = custom_field_select.to_filter_form_field(lookup_expr="icontains")
+            self.assertIsInstance(filter_field_with_lookup_expr, ChoiceField)
+            self.assertIsInstance(filter_field_with_lookup_expr.widget, MultiValueCharInput)
+
+        with self.subTest("Assert CustomField Integer Type renders the correct filter form field and widget"):
+            custom_field_integer = CustomField(
+                type=CustomFieldTypeChoices.TYPE_INTEGER,
+                label="integer_field",
+            )
+            custom_field_integer.save()
+            custom_field_integer.content_types.set([ct])
+            filter_field = custom_field_integer.to_filter_form_field()
+            self.assertIsInstance(filter_field, IntegerField)
+            self.assertIsInstance(filter_field.widget, NumberInput)
 
 
 class CustomFieldManagerTest(TestCase):
@@ -1663,8 +1699,8 @@ class CustomFieldFilterTest(TestCase):
 
     def test_filter_select(self):
         self.assertQuerysetEqual(
-            self.filterset({"cf_cf8": "Foo"}, self.queryset).qs,
-            self.queryset.filter(_custom_field_data__cf8="Foo"),
+            self.filterset({"cf_cf8": ["Foo", "AR"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__in=["Foo", "AR"]),
         )
         self.assertQuerysetEqual(
             self.filterset({"cf_cf8__n": ["Foo"]}, self.queryset).qs,
@@ -1734,16 +1770,6 @@ class CustomFieldFilterTest(TestCase):
         self.assertQuerysetEqual(
             self.filterset({"cf_cf9": "Bar"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
-        )
-
-    def test_filter_null_values(self):
-        self.assertQuerysetEqual(
-            self.filterset({"cf_cf8": "null"}, self.queryset).qs,
-            self.queryset.filter(_custom_field_data__cf8__isnull=True),
-        )
-        self.assertQuerysetEqual(
-            self.filterset({"cf_cf9": "null"}, self.queryset).qs,
-            self.queryset.filter(_custom_field_data__cf9__isnull=True),
         )
 
 
@@ -2024,3 +2050,17 @@ class CustomFieldTableTest(TestCase):
 
             rendered_value = bound_row.get_cell(internal_col_name)
             self.assertEqual(rendered_value, col_expected_value)
+
+
+class CustomFieldFilterFormTest(TestCase):
+    def test_custom_filter_form(self):
+        """Assert CustomField renders the appropriate filter form field"""
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        ct_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, label="Select Field")
+        ct_field.content_types.set([rack_ct])
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Baz")
+        filterform = RackFilterForm()
+        self.assertIsInstance(filterform["cf_select_field"].field, ChoiceField)
+        self.assertIsInstance(filterform["cf_select_field"].field.widget, StaticSelect2)

@@ -2700,14 +2700,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             )
 
         device_status = Status.objects.get_for_model(Device).first()
+        vlan_groups = VLANGroup.objects.all()[:2]
 
         # Try deleting all devices and then creating 2 VLANs (fails):
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",
             data=[
-                {"vid": "1", "name": "1", "status": device_status.pk},
-                {"vid": "2", "name": "2", "status": device_status.pk},
+                {"vid": "7", "name": "7", "status": device_status.pk, "vlan_group": vlan_groups[0].pk},
+                {"vid": "8", "name": "8", "status": device_status.pk, "vlan_group": vlan_groups[1].pk},
             ],
         )
         self.assertHttpStatus(response, 400)
@@ -2739,26 +2740,28 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         for method in ["post", "patch", "put"]:
             if method == "post":
                 vlan1_json_data = {
-                    "vid": "1",
+                    "vid": "13",
                     "name": "1",
                     "status": device_status.pk,
+                    "vlan_group": vlan_groups[0].pk,
                 }
                 vlan2_json_data = {
-                    "vid": "2",
+                    "vid": "22",
                     "name": "2",
                     "status": device_status.pk,
+                    "vlan_group": vlan_groups[1].pk,
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
                 vlan1_json_data = {"status": device_status.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
-                    vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
+                    vlan1_json_data.update({"vid": "4", "name": vlan1.name})
 
                 vlan2_json_data = {"status": device_status.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
-                    vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})
+                    vlan2_json_data.update({"vid": "5", "name": vlan2.name})
 
             # Try method without specifying required relationships for either vlan1 or vlan2 (fails)
             json_data = [vlan1_json_data, vlan2_json_data]

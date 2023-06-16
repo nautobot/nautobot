@@ -1978,7 +1978,7 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
             device_bay.save()
             messages.success(
                 request,
-                f"{removed_device,} has been removed from {device_bay}.",
+                f"Removed {removed_device} from {device_bay}.",
             )
 
             return redirect("dcim:device", pk=device_bay.device.pk)

@@ -684,22 +684,9 @@ class Device(PrimaryModel, ConfigContextModel):
 
         super().save(*args, **kwargs)
 
-        # If this is a new Device, instantiate all of the related components per the DeviceType definition
+        # If this is a new Device, instantiate all related components per the DeviceType definition
         if is_new:
-            ConsolePort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.console_port_templates.all()]
-            )
-            ConsoleServerPort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.console_server_port_templates.all()]
-            )
-            PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.power_port_templates.all()])
-            PowerOutlet.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.power_outlet_templates.all()]
-            )
-            Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interface_templates.all()])
-            RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rear_port_templates.all()])
-            FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.front_port_templates.all()])
-            DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.device_bay_templates.all()])
+            self.create_components()
 
         # Update Location and Rack assignment for any child Devices
         devices = Device.objects.filter(parent_bay__device=self)
@@ -707,6 +694,26 @@ class Device(PrimaryModel, ConfigContextModel):
             device.location = self.location
             device.rack = self.rack
             device.save()
+
+    def create_components(self):
+        """Create device components from the device type definition."""
+        # The order of these is significant as
+        # - PowerOutlet depends on PowerPort
+        # - FrontPort depends on FrontPort
+        component_models = [
+            (ConsolePort, self.device_type.console_port_templates.all()),
+            (ConsoleServerPort, self.device_type.console_server_port_templates.all()),
+            (PowerPort, self.device_type.power_port_templates.all()),
+            (PowerOutlet, self.device_type.power_outlet_templates.all()),
+            (Interface, self.device_type.interface_templates.all()),
+            (RearPort, self.device_type.rear_port_templates.all()),
+            (FrontPort, self.device_type.front_port_templates.all()),
+            (DeviceBay, self.device_type.device_bay_templates.all()),
+        ]
+        instantiated_components = []
+        for model, templates in component_models:
+            model.objects.bulk_create([x.instantiate(self) for x in templates])
+        return instantiated_components
 
     @property
     def display(self):
