@@ -9,6 +9,7 @@ from rest_framework import fields as drf_fields, relations as drf_relations, ser
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
+from nautobot.core.exceptions import ViewConfigException
 from nautobot.core.templatetags.helpers import bettertitle
 
 
@@ -181,6 +182,8 @@ class NautobotMetadata(SimpleMetadata):
     - uiSchema: The object UI schema which describes the form layout in the UI
     """
 
+    view_serializer = None
+
     def determine_actions(self, request, view):
         """Generate the actions and return the names of the allowed methods."""
         actions = []
@@ -255,6 +258,8 @@ class NautobotMetadata(SimpleMetadata):
         # If there's a serializer, do the needful to bind the schema/uiSchema.
         if hasattr(view, "get_serializer"):
             serializer = view.get_serializer()
+            # TODO(timizuo): Replace every serializer passed as an attribute to a method with this
+            self.view_serializer = serializer
             # TODO(jathan): Bit of a WIP here. Will likely refactor. There might be cases where we
             # want to explicitly override the UI field ordering, but that's not yet accounted for
             # here. For now the assertion is always put the `list_display_fields` first, and then
@@ -272,6 +277,16 @@ class NautobotMetadata(SimpleMetadata):
             metadata["view_options"] = self.determine_view_options(request, serializer)
 
         return metadata
+
+    def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields):
+        """Add fields from view serializer fields that are missing from view_config_layout."""
+        serializer_fields = self.view_serializer.fields.keys()
+        view_config_fields = [
+            field for config in view_config_layout for field_list in config.values() for field in field_list["fields"]
+        ]
+        missing_fields = list(set(serializer_fields) - set(view_config_fields) - set(exclude_fields))
+        view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
+        return view_config_layout
 
     def restructure_view_config(self, view_config):
         """
@@ -302,15 +317,19 @@ class NautobotMetadata(SimpleMetadata):
         # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
         fields_to_remove = ["composite_key", "url", "display", "status", "id"]
         fields_to_add = ["id", "composite_key", "url"]
+        view_config_layout = view_config.get("layout")
 
-        for section_idx, section in enumerate(view_config):
+        for section_idx, section in enumerate(view_config_layout):
             for idx, value in enumerate(section.values()):
                 for field in fields_to_remove:
                     if field in value["fields"]:
                         value["fields"].remove(field)
                 if section_idx == 0 and idx == 0:
                     value["fields"].extend(fields_to_add)
-        return view_config
+
+        if view_config.get("include_others", False):
+            view_config_layout = self.add_missing_field_to_view_config_layout(view_config_layout, fields_to_remove)
+        return view_config_layout
 
     def get_m2m_and_non_m2m_fields(self, serializer):
         """
@@ -337,38 +356,58 @@ class NautobotMetadata(SimpleMetadata):
         Generate detail view config for the view based on the serializer's fields.
 
         Examples:
-            >>> SerializerDetailViewConfig(DeviceSerializer()).view_config().
-            [
-                {
-                    Device: {
-                        "fields": ["name", "subdevice_role", "height", "comments"...]
+            >>> get_default_detail_view_config(serializer).
+            {
+                "layout":[
+                    {
+                        Device: {
+                            "fields": ["name", "subdevice_role", "height", "comments"...]
+                        }
+                    },
+                    {
+                        Tags: {
+                            "fields": ["tags"]
+                        }
                     }
-                },
-                {
-                    Tags: {
-                        "fields": ["tags"]
-                    }
-                }
-            ]
+                ]
+            }
 
         Returns:
             A list representing the view config.
         """
         m2m_fields, other_fields = self.get_m2m_and_non_m2m_fields(serializer)
+        # TODO(timizuo): How do we get verbose_name of not model serializers?
         model_verbose_name = serializer.Meta.model._meta.verbose_name
-        return [
-            {
-                bettertitle(model_verbose_name): {
-                    "fields": [field["name"] for field in other_fields],
-                }
-            },
-            {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
-        ]
+        return {
+            "layout": [
+                {
+                    bettertitle(model_verbose_name): {
+                        "fields": [field["name"] for field in other_fields],
+                    }
+                },
+                {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
+            ]
+        }
 
     def determine_detail_view_schema(self, serializer):
         """Determine the layout option that would be used for the detail view"""
         if hasattr(serializer.Meta, "detail_view_config"):
-            view_config = serializer.Meta.detail_view_config
+            view_config = self.validate_view_config(serializer.Meta.detail_view_config)
         else:
             view_config = self.get_default_detail_view_config(serializer)
         return self.restructure_view_config(view_config)
+
+    def validate_view_config(self, view_config):
+        """Validate view config"""
+
+        # 1. Validate key `layout` is in view_config; as this is a required key is creating a view config
+        if not view_config["layout"]:
+            raise ViewConfigException("`layout` is a required key in creating a custom view_config")
+
+        # 2. Validate `Other Fields` is not part of a layout group name, as this is a nautobot reserver keyword for group names
+        if any(
+            group_name for col in view_config["layout"] for group_name in col.keys() if group_name == "Other Fields"
+        ):
+            raise ViewConfigException("`Other Fields` is a reserved group name keyword.")
+
+        return view_config
