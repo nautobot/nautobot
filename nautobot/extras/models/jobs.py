@@ -653,7 +653,12 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is not None:
             job_celery_kwargs.update(celery_kwargs)
 
+        # When running synchronously (explicitly on this call or globally), the celery worker
+        # setup_nautobot_job_logging() doesn't get called by a worker signal, so we need to do it here.
         if synchronous or getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            setup_nautobot_job_logging(None, None, app.conf)
+
+        if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
@@ -661,8 +666,6 @@ class JobResult(BaseModel, CustomFieldModel):
 
             # setup synchronous task logging
             redirect_logger = get_logger("celery.redirected")
-            add_nautobot_log_handler(redirect_logger)
-            setup_nautobot_job_logging(None, None, app.conf)
 
             # redirect stdout/stderr to logger and run task
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
