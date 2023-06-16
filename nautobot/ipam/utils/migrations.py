@@ -673,12 +673,12 @@ def get_next_prefix_cleanup_namespace(apps, prefix, base_name=BASE_NAME):
         if created:
             return namespace
 
-        cidr = f"{prefix.network}/{prefix.prefix_length}"
         has_dupe = namespace.prefixes.filter(network=prefix.network, prefix_length=prefix.prefix_length).exists()
 
         if has_dupe:
             # TODO: useful but potentially very noisy. Do migrations have a verbosity option?
             # if "test" not in sys.argv:
+            #     cidr = f"{prefix.network}/{prefix.prefix_length}"
             #     print(f"    Prefix {cidr} is duplicated in NS {namespace.name}")
             counter += 1
             continue
