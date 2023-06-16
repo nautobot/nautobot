@@ -567,7 +567,6 @@ class Prefix(PrimaryModel):
         try:
             return super().delete(*args, **kwargs)
         except models.ProtectedError as err:
-
             for instance in err.protected_objects:
                 # This will be either IPAddress or Prefix.
                 protected_model = instance._meta.model
