@@ -522,58 +522,62 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         prefix = Prefix.objects.create(
             prefix="10.0.0.0/24", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace
         )
-        prefixes = [
-            Prefix(prefix="10.0.0.0/26", status=self.status, namespace=self.namespace),
-            Prefix(prefix="10.0.0.128/26", status=self.status, namespace=self.namespace),
-        ]
-        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
-        self.assertEqual(prefix.get_utilization(), (128, 256))
+        slash26 = Prefix.objects.create(prefix="10.0.0.0/26", status=self.status, namespace=self.namespace)
+        slash25 = Prefix.objects.create(prefix="10.0.0.128/25", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (192, 256))
 
-        # IPv4 Non-container Prefix /24
-        prefix.type = PrefixTypeChoices.TYPE_NETWORK
         # Create 32 IPAddresses within the Prefix
-        ip_list = [
-            IPAddress(address=f"10.0.0.{i}/24", status=self.status, namespace=self.namespace) for i in range(1, 33)
-        ]
-        # Create IPAddress objects for network and broadcast addresses
-        ip_list += [
-            IPAddress(address="10.0.0.0/32", status=self.status, namespace=self.namespace),
-            IPAddress(address="10.0.0.255/32", status=self.status, namespace=self.namespace),
-        ]
-        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
+        for i in range(1, 33):
+            IPAddress.objects.create(address=f"10.0.0.{i}/32", status=self.status, namespace=self.namespace)
 
-        # The parent prefix has no children because of the two child /26 prefixes.
-        self.assertEqual(prefix.get_utilization(), (0, 254))
+        # The parent prefix utilization does not change because the ip addresses are parented to the child /26 prefix.
+        self.assertEqual(prefix.get_utilization(), (192, 256))
 
-        # The first child will have 32 IPs
-        slash26 = prefix.descendants().first()
+        # The /26 will have 32 IPs
         self.assertEqual(slash26.get_utilization(), (32, 62))
 
-        # Change prefix to a pool, network and broadcast address will count toward numerator and denominator in utilization
-        prefix.type = PrefixTypeChoices.TYPE_POOL
-        slash26.type = PrefixTypeChoices.TYPE_POOL
-        # Parent prefix only has one child IP (10.0.0.255)
-        self.assertEqual(prefix.get_utilization(), (1, 256))
-        # The slash26 will have 33.
-        self.assertEqual(slash26.get_utilization(), (33, 64))
+        # Create IPAddress objects for network and broadcast addresses
+        IPAddress.objects.create(address="10.0.0.0/32", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="10.0.0.63/32", status=self.status, namespace=self.namespace)
+
+        # The /26 denominator will change to 64
+        self.assertEqual(slash26.get_utilization(), (34, 64))
+
+        # Add a pool, entire pool will count toward numerator in utilization
+        pool = Prefix.objects.create(
+            prefix="10.0.0.128/30", type=PrefixTypeChoices.TYPE_POOL, status=self.status, namespace=self.namespace
+        )
+        self.assertEqual(slash25.get_utilization(), (4, 128))
+
+        # When the pool does not overlap with broadcast or network address, the denominator decrements by 2
+        pool.network = "10.0.0.132"
+        pool.save()
+        self.assertEqual(slash25.get_utilization(), (4, 126))
 
         # IPv4 Non-container Prefix /31, network and broadcast addresses count toward utilization
         prefix = Prefix.objects.create(prefix="10.0.1.0/31", status=self.status, namespace=self.namespace)
-        ip_list = [
-            IPAddress(address="10.0.1.0/32", status=self.status, namespace=self.namespace),
-            IPAddress(address="10.0.1.1/32", status=self.status, namespace=self.namespace),
-        ]
-        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
+        IPAddress.objects.create(address="10.0.1.0/32", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="10.0.1.1/32", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (2, 2))
 
-        # IPv6 Non-container Prefix, network and broadcast addresses count toward utilization
-        prefix = Prefix.objects.create(prefix="aaaa::/124", status=self.status, namespace=self.namespace)
-        ip_list = [
-            IPAddress(address="aaaa::0/128", status=self.status, namespace=self.namespace),
-            IPAddress(address="aaaa::f/128", status=self.status, namespace=self.namespace),
-        ]
-        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
+        # IPv6 Non-container Prefix, first and last addresses count toward utilization
+        prefix = Prefix.objects.create(prefix="aaab::/124", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaab::1/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaab::2/128", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (2, 16))
+
+        prefix = Prefix.objects.create(prefix="aaaa::/124", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaaa::0/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaaa::f/128", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (2, 16))
+
+        # single address prefixes
+        prefix = Prefix.objects.create(prefix="cccc::1/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="cccc::1/128", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (1, 1))
+        prefix = Prefix.objects.create(prefix="1.1.1.1/32", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="1.1.1.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (1, 1))
 
         # Large Prefix
         large_prefix = Prefix.objects.create(
@@ -581,13 +585,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         )
 
         # 25% utilization
-        prefixes = [
-            Prefix(prefix="22.0.0.0/12", status=self.status, namespace=self.namespace),
-            Prefix(prefix="22.16.0.0/12", status=self.status, namespace=self.namespace),
-            Prefix(prefix="22.32.0.0/12", status=self.status, namespace=self.namespace),
-            Prefix(prefix="22.48.0.0/12", status=self.status, namespace=self.namespace),
-        ]
-        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
+        Prefix.objects.create(prefix="22.0.0.0/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="22.16.0.0/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="22.32.0.0/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="22.48.0.0/12", status=self.status, namespace=self.namespace)
         self.assertEqual(large_prefix.get_utilization(), (4194304, 16777216))
 
         # 50% utilization
@@ -604,13 +605,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         )
 
         # 25% utilization
-        prefixes = [
-            Prefix(prefix="ab00::/12", status=self.status, namespace=self.namespace),
-            Prefix(prefix="ab10::/12", status=self.status, namespace=self.namespace),
-            Prefix(prefix="ab20::/12", status=self.status, namespace=self.namespace),
-            Prefix(prefix="ab30::/12", status=self.status, namespace=self.namespace),
-        ]
-        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
+        Prefix.objects.create(prefix="ab00::/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="ab10::/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="ab20::/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="ab30::/12", status=self.status, namespace=self.namespace)
         self.assertEqual(large_prefix_v6.get_utilization(), (2**118, 2**120))
 
         # 50% utilization

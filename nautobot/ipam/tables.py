@@ -410,8 +410,8 @@ class PrefixDetailTable(PrefixTable):
     class Meta(PrefixTable.Meta):
         fields = (
             "pk",
-            "namespace",
             "prefix",
+            "namespace",
             "type",
             "status",
             "children",
@@ -426,8 +426,8 @@ class PrefixDetailTable(PrefixTable):
         )
         default_columns = (
             "pk",
-            "namespace",
             "prefix",
+            "namespace",
             "type",
             "status",
             "children",

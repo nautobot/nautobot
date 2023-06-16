@@ -326,16 +326,16 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of the first available IP address within a parent prefix.
         """
         prefix = Prefix.objects.create(
-            prefix="192.0.2.0/30",
+            prefix="192.0.2.0/29",
             namespace=self.namespace,
-            type=choices.PrefixTypeChoices.TYPE_POOL,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
             status=self.status,
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
-        # Create all four available IPs with individual requests
-        for i in range(1, 5):
+        # Create all six available IPs with individual requests
+        for i in range(1, 7):
             data = {
                 "description": f"Test IP {i}",
                 "namespace": self.namespace.pk,
@@ -357,30 +357,30 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         prefix = Prefix.objects.create(
             prefix="192.0.2.0/29",
-            type=choices.PrefixTypeChoices.TYPE_POOL,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
             namespace=self.namespace,
             status=self.status,
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
-        # Try to create nine IPs (only eight are available)
+        # Try to create seven IPs (only six are available)
         data = [
             {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
-            for i in range(1, 10)
-        ]  # 9 IPs
+            for i in range(1, 8)
+        ]  # 7 IPs
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
-        # Create all eight available IPs in a single request
+        # Create all six available IPs in a single request
         data = [
             {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
-            for i in range(1, 9)
-        ]  # 8 IPs
+            for i in range(1, 7)
+        ]  # 6 IPs
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(len(response.data), 8)
+        self.assertEqual(len(response.data), 6)
 
 
 class ParallelPrefixTest(APITransactionTestCase):

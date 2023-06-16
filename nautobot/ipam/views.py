@@ -397,6 +397,9 @@ class PrefixListView(generic.ObjectListView):
         "rir",
         "role",
         "status",
+    ).prefetch_related(
+        "ip_addresses",
+        "children",
     )
 
 

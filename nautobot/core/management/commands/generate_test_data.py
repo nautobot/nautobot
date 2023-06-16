@@ -1,9 +1,14 @@
+import hashlib
+import json
 import os
 
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.utils.crypto import get_random_string
+
+from nautobot.core.settings_funcs import is_truthy
 
 
 class Command(BaseCommand):
@@ -61,6 +66,7 @@ class Command(BaseCommand):
             )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.factory import (
+                IPAddressFactory,
                 NamespaceFactory,
                 PrefixFactory,
                 RIRFactory,
@@ -101,12 +107,12 @@ class Command(BaseCommand):
         LocationFactory.create_batch(7, has_parent=True)
         LocationFactory.create_batch(40)
         LocationFactory.create_batch(10, has_parent=False)
-        self.stdout.write("Creating Namespaces...")
-        NamespaceFactory.create_batch(1)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
         RouteTargetFactory.create_batch(20)
+        self.stdout.write("Creating Namespaces...")
+        NamespaceFactory.create_batch(10)
         self.stdout.write("Creating VRFs...")
         VRFFactory.create_batch(10, has_tenant=True)
         VRFFactory.create_batch(10, has_tenant=False)
@@ -116,6 +122,8 @@ class Command(BaseCommand):
         VLANFactory.create_batch(20)
         self.stdout.write("Creating Prefixes and IP Addresses...")
         PrefixFactory.create_batch(30)
+        self.stdout.write("Creating Empty Namespaces...")
+        NamespaceFactory.create_batch(5)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(8)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
@@ -164,6 +172,49 @@ class Command(BaseCommand):
         # ClusterFactory.create_batch(10)
         # VirtualMachineFactory.create_batch(10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
+
+        self._output_hash_for_factory_models(
+            factories=[
+                RoleFactory,
+                StatusFactory,
+                TagFactory,
+                TenantGroupFactory,
+                TenantFactory,
+                LocationTypeFactory,
+                LocationFactory,
+                RIRFactory,
+                RouteTargetFactory,
+                VRFFactory,
+                VLANGroupFactory,
+                VLANFactory,
+                PrefixFactory,
+                IPAddressFactory,
+                NamespaceFactory,
+                PlatformFactory,
+                DeviceTypeFactory,
+                ManufacturerFactory,
+                DeviceRedundancyGroupFactory,
+                CircuitTypeFactory,
+                ProviderNetworkFactory,
+                CircuitFactory,
+                ProviderFactory,
+                CircuitTerminationFactory,
+            ]
+        )
+
+    def _output_hash_for_factory_models(self, factories):
+        """Output a hash of the IDs of all objects in the given factories' model.
+
+        Used for identifying factory determinism problems in unit tests. Only prints if GITHUB_ACTIONS environment variable is set to "true".
+        """
+        if not is_truthy(os.environ.get("GITHUB_ACTIONS", "false")):
+            return
+
+        for factory in factories:
+            model = factory._meta.get_model_class()
+            model_ids = list(model.objects.order_by("id").values_list("id", flat=True))
+            sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
+            self.stdout.write(f"SHA256 hash for {model.__name__}: {sha256_hash}")
 
     def handle(self, *args, **options):
         if options["flush"]:

@@ -33,7 +33,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         tenants = Tenant.objects.all()[:2]
-        namespace = Namespace.objects.get(name="Global")
+        namespace = Namespace.objects.create(name="ipam_test_views_vrf_test")
 
         cls.form_data = {
             "name": "VRF X",
@@ -114,7 +114,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @classmethod
     def setUpTestData(cls):
         rir = RIR.objects.first()
-        namespace = Namespace.objects.get(name="Global")
+        namespace = Namespace.objects.create(name="ipam_test_views_prefix_test")
 
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         vrfs = VRF.objects.all()[:2]
@@ -185,7 +185,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        namespace = Namespace.objects.get(name="Global")
+        namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
         statuses = Status.objects.get_for_model(IPAddress)
         roles = Role.objects.get_for_model(IPAddress)
         parent, _ = Prefix.objects.get_or_create(

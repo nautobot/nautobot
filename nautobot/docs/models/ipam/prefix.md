@@ -34,3 +34,15 @@ The `date_allocated` field can be used to track any date and time you would like
 
 +++ 2.0.0
     The `date_allocated` and `rir` fields were added, migrating data from the removed `Aggregate` model.
+
+## Prefix utilization calculation
+
++/- 2.0.0
+
+The `get_utilization` method on the `ipam.Prefix` model has been updated in 2.0 to account for the `Prefix.type` field. The behavior is now as follows:
+
+* If the `Prefix.type` is `Container`, the utilization is calculated as the sum of the total address space of all child prefixes.
+* If the `Prefix.type` is `Pool`, the utilization is calculated as the sum of the total number of IP addresses within the pool's range.
+* If the `Prefix.type` is `Network`:
+    * The utilization is calculated as the sum of the total address space of all child `Pool` prefixes plus the total number of child IP addresses.
+    * For IPv4 networks larger than /31, if neither the first or last address is occupied by either a pool or an IP address, they are subtracted from the total size of the prefix.

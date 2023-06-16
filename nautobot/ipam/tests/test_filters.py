@@ -12,7 +12,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
-from nautobot.ipam.factory import PrefixFactory
+from nautobot.ipam.factory import PrefixFactory, VRFFactory
 from nautobot.ipam.filters import (
     IPAddressFilterSet,
     PrefixFilterSet,
@@ -364,9 +364,12 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     @classmethod
     def setUpTestData(cls):
-        # Make sure that the VRFs belong to the same Namespace
-        cls.namespace = Namespace.objects.filter(vrfs__isnull=False).first()
-        vrfs = VRF.objects.filter(namespace=cls.namespace, rd__isnull=False)[:3]
+        # Create some VRFs that belong to the same Namespace and have an rd
+        cls.namespace = Namespace.objects.create(name="ip_address_test_case")
+        VRFFactory.create_batch(3, namespace=cls.namespace, has_rd=True)
+        # Create some VRFs without an rd
+        VRFFactory.create_batch(3, namespace=cls.namespace, has_rd=False)
+        vrfs = VRF.objects.filter(namespace=cls.namespace, rd__isnull=False)
         assert len(vrfs) == 3, f"This Namespace {cls.namespace} does not contain enough VRFs."
 
         cls.interface_ct = ContentType.objects.get_for_model(Interface)

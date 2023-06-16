@@ -46,7 +46,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status
 from nautobot.ipam.factory import VLANGroupFactory
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 
 
@@ -1215,7 +1215,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
         cls.vlan = VLAN.objects.create(
             name="VLAN 1", vid=100, location=location, status=vlan_status, vlan_group=vlan_group
         )
-        status = Status.objects.get_for_model(Device)[0]
+        status = Status.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
@@ -1235,6 +1235,15 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             status=vlan_status,
             vlan_group=VLANGroupFactory.create(location=location_2),
         )
+
+        cls.namespace = Namespace.objects.create(name="dcim_test_interface_ip_addresses")
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        ip_address_status = Status.objects.get_for_model(IPAddress).first()
+        Prefix.objects.create(prefix="1.1.1.0/24", status=prefix_status, namespace=cls.namespace)
+        for last_octet in range(1, 11):
+            IPAddress.objects.create(
+                address=f"1.1.1.{last_octet}/32", status=ip_address_status, namespace=cls.namespace
+            )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = Interface.objects.create(
@@ -1272,7 +1281,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
         )
-        ips = list(IPAddress.objects.all()[:10])
+        ips = list(IPAddress.objects.filter(parent__namespace=self.namespace))
 
         # baseline (no interface to ip address relationships exists)
         self.assertFalse(IPAddressToInterface.objects.filter(interface=interface).exists())
@@ -1297,7 +1306,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
         )
-        ips = list(IPAddress.objects.all()[:10])
+        ips = list(IPAddress.objects.filter(parent__namespace=self.namespace))
 
         # baseline (no interface to ip address relationships exists)
         self.assertFalse(IPAddressToInterface.objects.filter(interface=interface).exists())

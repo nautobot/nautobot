@@ -327,14 +327,14 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         except netaddr.AddrFormatError as err:
             raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
 
-    def get_closest_parent(self, cidr, namespace, max_prefix_length=0):
+    def get_closest_parent(self, cidr, shortest_prefix_length=0, include_self=False):
         """
         Return the closest matching parent Prefix for a `cidr` even if it doesn't exist in the database.
 
         Args:
             cidr (str): IPv4/IPv6 CIDR string
-            namespace (Namespace): Namespace instance
-            max_prefix_length (int): Maximum prefix length depth for closest parent lookup
+            shortest_prefix_length (int, optional): Shortest prefix length for closest parent lookup. Defaults to 0.
+            include_self (bool, optional): Include the provided `cidr` in the search. Defaults to False.
         """
         # Validate that it's a real CIDR
         cidr = self._validate_cidr(cidr)
@@ -342,37 +342,23 @@ class PrefixQuerySet(BaseNetworkQuerySet):
         ip_version = cidr.version
 
         try:
-            max_prefix_length = int(max_prefix_length)
+            shortest_prefix_length = int(shortest_prefix_length)
         except ValueError:
-            raise ValidationError({"max_prefix_length": f"Invalid prefix_length: {max_prefix_length}."})
-
-        # Walk the supernets backwrds from smallest to largest prefix.
-        try:
-            supernets = cidr.supernet(prefixlen=max_prefix_length)
-        except ValueError as err:
-            raise ValidationError({"max_prefix_length": str(err)})
-        else:
-            supernets.reverse()
-
-        # Enumerate all unique networks and prefixes
-        networks = {str(s.network) for s in supernets}
-        del supernets  # Free the memory because it could be quite large.
+            raise ValidationError({"shortest_prefix_length": f"Invalid prefix_length: {shortest_prefix_length}."})
 
         # Prepare the queryset filter
         lookup_kwargs = {
-            "network__in": networks,
-            # TODO(jathan): This might be flawed if an IPAddress has a prefix_length that excludes it from a
-            # parent that should otherwise contain it. If we encounter issues in the future for
-            # identifying closest parent prefixes, this might be a starting point.
-            "prefix_length__lte": cidr.prefixlen,
+            "network__lte": cidr.value,
+            "prefix_length__gte": shortest_prefix_length,
             "broadcast__gte": broadcast,
             "ip_version": ip_version,
-            "namespace": namespace,
         }
 
         # Search for possible ancestors by network/prefix, returning them in reverse order, so that
         # we can choose the first one.
         possible_ancestors = self.filter(**lookup_kwargs).order_by("-prefix_length")
+        if not include_self:
+            possible_ancestors = possible_ancestors.exclude(network=cidr.value, prefix_length=cidr.prefixlen)
 
         # If we've got any matches, the first one is our closest parent.
         try:
