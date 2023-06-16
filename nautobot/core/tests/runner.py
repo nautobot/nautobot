@@ -51,7 +51,9 @@ class NautobotTestRunner(DiscoverRunner):
         super().setup_test_environment(**kwargs)
         # Remove 'testserver' that Django "helpfully" adds automatically to ALLOWED_HOSTS, masking issues like #3065
         settings.ALLOWED_HOSTS.remove("testserver")
-        setup_nautobot_job_logging(None, None, app.conf)
+        if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            # Make sure logs get captured when running Celery tasks, even though we don't have/need a Celery worker
+            setup_nautobot_job_logging(None, None, app.conf)
 
     def setup_databases(self, **kwargs):
         result = super().setup_databases(**kwargs)

@@ -670,9 +670,10 @@ class BaseJob(Task):
                 queryset = var.field_attrs["queryset"].filter(pk__in=value)
                 if queryset.count() < len(value):
                     # Not all objects found
-                    not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
+                    found_pks = set(queryset.values_list("pk", flat=True))
+                    not_found_pks = set(value).difference(found_pks)
                     raise queryset.model.DoesNotExist(
-                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
+                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pks)}]"
                     )
                 return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
 
