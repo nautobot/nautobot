@@ -5,7 +5,7 @@ Sometimes it is desirable to create a new kind of relationship between one (or m
 To create a relationship, from the top-level navigation menu select **Extensibility > Data Management > Relationships**
 
 !!! tip
-    Because relationship information can be included in the REST API and in GraphQL, we strongly recommend that when defining a relationship, you provide a slug that contains underscores rather than dashes (`my_relationship_slug`, not `my-relationship-slug`), as some features may not work optimally if dashes are included in the slug.
+    Because relationship information can be included in the REST API and in GraphQL, when defining a relationship, you must provide a `key` that contains underscores rather than dashes (`my_relationship_key`, not `my-relationship-key`), as some features would not work optimally if dashes are included in the key.
 
 ## Relationship Types
 
@@ -48,12 +48,12 @@ An important note is that the filters have to be defined in **FilterSet** rather
 As an example, let's create a relationship between Circuits and Devices.
 In our situation we only would terminate Circuits on Devices with the Device Role of `edge`.
 
-To prevent the Circuit Relationship from showing up on any other Device, use a JSON filter to limit the Relationship to only Devices with Device Role whose slug is `edge`:
+To prevent the Circuit Relationship from showing up on any other Device, use a JSON filter to limit the Relationship to only Devices with a Role named `Edge`:
 
 ```json
 {
     "role": [
-        "edge"
+        "Edge"
     ]
 }
 ```
@@ -109,7 +109,6 @@ From our many to many example above, we would use the following data to create t
 ```json
 {
     "name": "Device VLANs",
-    "slug": "device-vlans",
     "type": "many-to-many",
     "source_type": "ipam.vlan",
     "destination_type": "dcim.device"
@@ -124,7 +123,7 @@ From our many to many example above, we would use the following data to create t
 
 To get object relationships and associations from the REST API, you can query any object endpoint with the `?include=relationships` query parameter included, for example `GET /api/dcim/devices/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships`. The API response will include a nested dictionary of relationships and associations applicable to the object(s) retrieved.
 
-Similarly, you can update the relationship associations for a given object via an HTTP `POST` or `PATCH` request, generally by including the nested key `["relationships"][<relationship-slug>]["source"|"destination"|"peer"]["objects"]` with a list of objects to associate.
+Similarly, you can update the relationship associations for a given object via an HTTP `POST` or `PATCH` request, generally by including the nested key `["relationships"][<relationship_key>]["source"|"destination"|"peer"]["objects"]` with a list of objects to associate.
 
 For more details on this feature, refer to the [REST API documentation](../../rest-api/overview.md).
 

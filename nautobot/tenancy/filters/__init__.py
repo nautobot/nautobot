@@ -1,7 +1,7 @@
 import django_filters
 
 from nautobot.core.filters import (
-    NameSlugSearchFilterSet,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -25,7 +25,7 @@ __all__ = (
 )
 
 
-class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class TenantGroupFilterSet(NautobotFilterSet, NameSearchFilterSet):
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         label="Parent tenant group (name or ID)",
@@ -105,7 +105,8 @@ class TenantFilterSet(NautobotFilterSet):
     )
     locations = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
-        label="Locations (slugs and/or IDs)",
+        to_field_name="name",
+        label="Locations (names and/or IDs)",
     )
     has_locations = RelatedMembershipBooleanFilter(
         field_name="locations",

@@ -37,26 +37,22 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
         self.parent_location_1 = dcim_models.Location.objects.create(
             name="Test Parent Location 1",
-            slug="test-parent-location-1",
             location_type=self.location_type,
             status=status,
         )
         self.parent_location_2 = dcim_models.Location.objects.create(
             name="Test Parent Location 2",
-            slug="test-parent-location-2",
             location_type=self.location_type,
             status=status,
         )
         self.parent_location_2a = dcim_models.Location.objects.create(
             name="Test Parent Location 2A",
-            slug="test-parent-location-2a",
             parent=self.parent_location_2,
             location_type=self.location_type,
             status=status,
         )
         self.parent_location_2ab = dcim_models.Location.objects.create(
             name="Test Parent Location 2A-B",
-            slug="test-parent-location-2a-b",
             parent=self.parent_location_2a,
             location_type=self.location_type,
             status=status,
@@ -64,42 +60,37 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         self.child_location_1 = dcim_models.Location.objects.create(
             parent=self.parent_location_1,
             name="Test Child Location 1",
-            slug="test-child-location-1",
             location_type=self.location_type,
             status=status,
         )
         self.child_location_2 = dcim_models.Location.objects.create(
             parent=self.parent_location_2,
             name="Test Child Location 2",
-            slug="test-child-location-2",
             location_type=self.location_type,
             status=status,
         )
         self.child_location_2a = dcim_models.Location.objects.create(
             parent=self.parent_location_2a,
             name="Test Child Location 2a",
-            slug="test-child-location-2a",
             location_type=self.location_type,
             status=status,
         )
         self.child_location_2ab = dcim_models.Location.objects.create(
             parent=self.parent_location_2ab,
             name="Test Child Location 2a-b",
-            slug="test-child-location-2a-b",
             location_type=self.location_type,
             status=status,
         )
         self.child_location_0 = dcim_models.Location.objects.create(
             parent=None,
             name="Test Child Location 0",
-            slug="test-child-location0",
             location_type=self.location_type,
             status=status,
         )
         self.queryset = dcim_models.Location.objects.filter(name__icontains="Test Child Location")
 
-    def test_filter_single_slug(self):
-        kwargs = {"parent": [self.parent_location_1.slug]}
+    def test_filter_single_name(self):
+        kwargs = {"parent": [self.parent_location_1.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_1])
@@ -110,8 +101,8 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
         self.assertQuerysetEqual(qs, [self.child_location_1])
 
-    def test_filter_multiple_slug(self):
-        kwargs = {"parent": [self.parent_location_1.slug, self.parent_location_2.slug]}
+    def test_filter_multiple_name(self):
+        kwargs = {"parent": [self.parent_location_1.name, self.parent_location_2.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
@@ -124,8 +115,8 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
         self.assertQuerysetEqual(qs, [self.child_location_0])
 
-    def test_filter_combined_slug(self):
-        kwargs = {"parent": [self.parent_location_1.slug, settings.FILTERS_NULL_CHOICE_VALUE]}
+    def test_filter_combined_name(self):
+        kwargs = {"parent": [self.parent_location_1.name, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1])
@@ -138,8 +129,8 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
             qs, [self.child_location_0, self.child_location_2, self.child_location_2a, self.child_location_2ab]
         )
 
-    def test_filter_single_slug_exclude(self):
-        kwargs = {"parent__n": [self.parent_location_1.slug]}
+    def test_filter_single_name_exclude(self):
+        kwargs = {"parent__n": [self.parent_location_1.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
@@ -152,8 +143,8 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
         self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1])
 
-    def test_filter_multiple_slug_exclude(self):
-        kwargs = {"parent__n": [self.parent_location_1.slug, self.parent_location_2.slug]}
+    def test_filter_multiple_name_exclude(self):
+        kwargs = {"parent__n": [self.parent_location_1.name, self.parent_location_2.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_0])
@@ -166,8 +157,8 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
             qs, [self.child_location_1, self.child_location_2, self.child_location_2a, self.child_location_2ab]
         )
 
-    def test_filter_combined_slug_exclude(self):
-        kwargs = {"parent__n": [self.parent_location_1.slug, settings.FILTERS_NULL_CHOICE_VALUE]}
+    def test_filter_combined_name_exclude(self):
+        kwargs = {"parent__n": [self.parent_location_1.name, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.child_location_2, self.child_location_2a, self.child_location_2ab])
@@ -319,8 +310,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
 
     def test_get_filter_predicate(self):
         """
-        Test that `get_filter_predicate()` has hybrid results depending on whether value is a UUID
-        or a slug.
+        Test that `get_filter_predicate()` has hybrid results depending on whether value is a UUID or a name.
         """
 
         # Test UUID (pk)
@@ -785,19 +775,16 @@ class DynamicFilterLookupExpressionTest(TestCase):
             dcim_models.DeviceType(
                 manufacturer=manufacturers[0],
                 model="Model 1",
-                slug="model-1",
                 is_full_depth=True,
             ),
             dcim_models.DeviceType(
                 manufacturer=manufacturers[1],
                 model="Model 2",
-                slug="model-2",
                 is_full_depth=True,
             ),
             dcim_models.DeviceType(
                 manufacturer=manufacturers[2],
                 model="Model 3",
-                slug="model-3",
                 is_full_depth=False,
             ),
         )
@@ -909,78 +896,78 @@ class DynamicFilterLookupExpressionTest(TestCase):
             dcim_models.Location.objects.exclude(name="Location 1"),
         )
 
-    def test_location_slug_icontains(self):
-        params = {"slug__ic": ["-1"]}
+    def test_location_name_icontains(self):
+        params = {"name__ic": ["-1"]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.filter(slug__icontains="-1"),
+            dcim_models.Location.objects.filter(name__icontains="-1"),
         )
 
-    def test_location_slug_icontains_negation(self):
-        params = {"slug__nic": ["-1"]}
+    def test_location_name_icontains_negation(self):
+        params = {"name__nic": ["-1"]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.exclude(slug__icontains="-1"),
+            dcim_models.Location.objects.exclude(name__icontains="-1"),
         )
 
-    def test_location_slug_startswith(self):
-        startswith = dcim_models.Location.objects.first().slug[:3]
-        params = {"slug__isw": [startswith]}
+    def test_location_name_startswith(self):
+        startswith = dcim_models.Location.objects.first().name[:3]
+        params = {"name__isw": [startswith]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.filter(slug__istartswith=startswith),
+            dcim_models.Location.objects.filter(name__istartswith=startswith),
         )
 
-    def test_location_slug_startswith_negation(self):
-        startswith = dcim_models.Location.objects.first().slug[:3]
-        params = {"slug__nisw": [startswith]}
+    def test_location_name_startswith_negation(self):
+        startswith = dcim_models.Location.objects.first().name[:3]
+        params = {"name__nisw": [startswith]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.exclude(slug__icontains=startswith),
+            dcim_models.Location.objects.exclude(name__icontains=startswith),
         )
 
-    def test_location_slug_endswith(self):
-        endswith = dcim_models.Location.objects.first().slug[-2:]
-        params = {"slug__iew": [endswith]}
+    def test_location_name_endswith(self):
+        endswith = dcim_models.Location.objects.first().name[-2:]
+        params = {"name__iew": [endswith]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.filter(slug__iendswith=endswith),
+            dcim_models.Location.objects.filter(name__iendswith=endswith),
         )
 
-    def test_location_slug_endswith_negation(self):
-        endswith = dcim_models.Location.objects.first().slug[-2:]
-        params = {"slug__niew": [endswith]}
+    def test_location_name_endswith_negation(self):
+        endswith = dcim_models.Location.objects.first().name[-2:]
+        params = {"name__niew": [endswith]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.exclude(slug__iendswith=endswith),
+            dcim_models.Location.objects.exclude(name__iendswith=endswith),
         )
 
-    def test_location_slug_regex(self):
-        params = {"slug__re": ["-1$"]}
+    def test_location_name_regex(self):
+        params = {"name__re": ["-1$"]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.filter(slug__regex="-1$"),
+            dcim_models.Location.objects.filter(name__regex="-1$"),
         )
 
-    def test_location_slug_regex_negation(self):
-        params = {"slug__nre": ["-1$"]}
+    def test_location_name_regex_negation(self):
+        params = {"name__nre": ["-1$"]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.exclude(slug__regex="-1$"),
+            dcim_models.Location.objects.exclude(name__regex="-1$"),
         )
 
-    def test_location_slug_iregex(self):
-        params = {"slug__ire": ["location"]}
+    def test_location_name_iregex(self):
+        params = {"name__ire": ["location"]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.filter(slug__iregex="location"),
+            dcim_models.Location.objects.filter(name__iregex="location"),
         )
 
-    def test_location_slug_iregex_negation(self):
-        params = {"slug__nire": ["location"]}
+    def test_location_name_iregex_negation(self):
+        params = {"name__nire": ["location"]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.exclude(slug__iregex="location"),
+            dcim_models.Location.objects.exclude(name__iregex="location"),
         )
 
     def test_location_asn_lt(self):
@@ -1016,10 +1003,10 @@ class DynamicFilterLookupExpressionTest(TestCase):
         )
 
     def test_location_parent_negation(self):
-        params = {"parent__n": [self.locations[0].parent.slug]}
+        params = {"parent__n": [self.locations[0].parent.name]}
         self.assertQuerysetEqual(
             dcim_filters.LocationFilterSet(params, self.location_queryset).qs,
-            dcim_models.Location.objects.exclude(parent__slug__in=[self.locations[0].parent.slug]),
+            dcim_models.Location.objects.exclude(parent__name__in=[self.locations[0].parent.name]),
         )
 
     def test_location_parent_id_negation(self):
@@ -1246,15 +1233,14 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         self.lt = dcim_models.LocationType.objects.get(name="Campus")
         status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
         self.parent_location_1 = dcim_models.Location.objects.create(
-            name="Test Parent Location 1", slug="test-parent-location-1", location_type=self.lt, status=status
+            name="Test Parent Location 1", location_type=self.lt, status=status
         )
         self.parent_location_2 = dcim_models.Location.objects.create(
-            name="Test Parent Location 2", slug="test-parent-location-2", location_type=self.lt, status=status
+            name="Test Parent Location 2", location_type=self.lt, status=status
         )
         self.child_location_1 = dcim_models.Location.objects.create(
             parent=self.parent_location_1,
             name="Test Child Location 1",
-            slug="test-child-location1",
             location_type=self.lt,
             asn=1234,
             status=status,
@@ -1262,7 +1248,6 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         self.child_location_2 = dcim_models.Location.objects.create(
             parent=self.parent_location_2,
             name="Test Child Location 2",
-            slug="test-child-location2",
             location_type=self.lt,
             asn=12345,
             status=status,
@@ -1270,14 +1255,12 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         self.child_location_3 = dcim_models.Location.objects.create(
             parent=None,
             name="Test Child Location 3",
-            slug="test-child-location3",
             location_type=self.lt,
             status=status,
         )
         self.child_location_4 = dcim_models.Location.objects.create(
             parent=None,
             name="Test Child Location4",
-            slug="test-child-location4",
             location_type=self.lt,
             status=status,
         )

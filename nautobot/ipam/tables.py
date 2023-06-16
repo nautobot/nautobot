@@ -80,7 +80,7 @@ PREFIX_COPY_LINK = """
 
 PREFIX_ROLE_LINK = """
 {% if record.role %}
-    <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.slug }}">{{ record.role }}</a>
+    <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
 {% else %}
     &mdash;
 {% endif %}
@@ -193,7 +193,7 @@ VLAN_PREFIXES = """
 
 VLAN_ROLE_LINK = """
 {% if record.role %}
-    <a href="{% url 'ipam:vlan_list' %}?role={{ record.role.slug }}">{{ record.role }}</a>
+    <a href="{% url 'ipam:vlan_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
 {% else %}
     &mdash;
 {% endif %}
@@ -410,8 +410,8 @@ class PrefixDetailTable(PrefixTable):
     class Meta(PrefixTable.Meta):
         fields = (
             "pk",
-            "namespace",
             "prefix",
+            "namespace",
             "type",
             "status",
             "children",
@@ -426,8 +426,8 @@ class PrefixDetailTable(PrefixTable):
         )
         default_columns = (
             "pk",
-            "namespace",
             "prefix",
+            "namespace",
             "type",
             "status",
             "children",
@@ -606,12 +606,12 @@ class VLANGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"vlan_group": "slug"}, verbose_name="VLANs")
+    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"vlan_group": "name"}, verbose_name="VLANs")
     actions = ButtonsColumn(model=VLANGroup, prepend_template=VLANGROUP_ADD_VLAN)
 
     class Meta(BaseTable.Meta):
         model = VLANGroup
-        fields = ("pk", "name", "location", "vlan_count", "slug", "description", "actions")
+        fields = ("pk", "name", "location", "vlan_count", "description", "actions")
         default_columns = ("pk", "name", "location", "vlan_count", "description", "actions")
 
 

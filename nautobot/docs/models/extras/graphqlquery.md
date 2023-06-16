@@ -23,6 +23,6 @@ If the user wants to create a new query, at the bottom of the "Queries" tab ther
 An API endpoint has be created to allow running of saved queries through a simple POST request.
 
 * Request: `POST`
-* URL: `{server_address}/api/extras/graphql-queries/{slug}/run/`
+* URL: `{server_address}/api/extras/graphql-queries/{uuid}/run/`
 * Content-type: `application/json`
 * Body: JSON of query variables `{"variable_1": "value_1", "variable_2": "value_2"}`

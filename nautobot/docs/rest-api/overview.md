@@ -468,7 +468,6 @@ http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/ | jq '.
     "created": "2023-04-12T19:29:06.884754Z",
     "last_updated": "2023-04-12T19:29:06.906503Z",
     "name": "Campus-01",
-    "slug": "campus-01",
     "description": "Local take each compare court exactly.",
     "facility": "328",
     "asn": null,
@@ -558,7 +557,6 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
         "created": "2023-04-12T19:29:06.884754Z",
         "last_updated": "2023-04-12T19:29:06.906503Z",
         "name": "Campus-01",
-        "slug": "campus-01",
         "description": "Local take each compare court exactly.",
         "facility": "328",
         "asn": null,
@@ -585,7 +583,6 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
         "created": "2023-04-12T19:29:06.707759Z",
         "last_updated": "2023-04-12T19:29:06.716482Z",
         "name": "Building",
-        "slug": "building",
         "description": "Protect growth bill all hair along.",
         "nestable": false,
         "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/"
@@ -611,7 +608,6 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
             "custom_fields": {},
             "notes_url": "http://nautobot/api/extras/tags/a50d4568-27ae-4743-87ac-ffdc22b7f5d2/notes/",
             "name": "Light blue",
-            "slug": "light-blue",
             "created": "2023-04-12T19:29:05.753433Z",
             "last_updated": "2023-04-12T19:29:05.770752Z",
             "color": "03a9f4",
@@ -666,7 +662,6 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
             "created": "2023-04-12T19:29:06.884754Z",
             "last_updated": "2023-04-12T19:29:06.906503Z",
             "name": "Campus-01",
-            "slug": "campus-01",
             "description": "Local take each compare court exactly.",
             "facility": "328",
             "asn": null,
@@ -694,7 +689,6 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
             "created": "2023-04-12T19:29:06.707759Z",
             "last_updated": "2023-04-12T19:29:06.716482Z",
             "name": "Building",
-            "slug": "building",
             "description": "Protect growth bill all hair along.",
             "nestable": false,
             "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
@@ -712,7 +706,6 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
             "created": "2023-04-12T19:29:06.707759Z",
             "last_updated": "2023-04-12T19:29:06.716482Z",
             "name": "Building",
-            "slug": "building",
             "description": "Protect growth bill all hair along.",
             "nestable": false,
             "parent": "http://nautobot/api/dcim/location-types/e3d4a9af-c6c1-4582-b483-a13301eb6e28/",
@@ -775,8 +768,8 @@ GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
 }
 ```
 
-* Under the `"relationships"` key, there will be one key per Relationship that applies to this model, corresponding to the `slug` of that Relationship.
-    * Under each slug key, there will be information about the Relationship itself, plus any of `"source"`, `"destination"`, or `"peer"` keys (depending on the type and directionality of the Relationship).
+* Under the `"relationships"` key, there will be one key per Relationship that applies to this model, corresponding to the `key` of that Relationship.
+    * Under each key, there will be information about the Relationship itself, plus any of `"source"`, `"destination"`, or `"peer"` keys (depending on the type and directionality of the Relationship).
         * Under the `"source"`, `"destination"`, or `"peer"` keys, there are the following keys:
             * `"label"` - a human-readable description of the related objects
             * `"object_type"` - the content-type of the related objects
@@ -861,9 +854,9 @@ curl -X POST -H "Authorization: Token $TOKEN" \
 -H "Accept: application/json; version=2.0; indent=4" \
 http://nautobot/api/dcim/sites/ \
 --data '[
-{"name": "Site 1", "slug": "site-1", "region": {"name": "United States"}},
-{"name": "Site 2", "slug": "site-2", "region": {"name": "United States"}},
-{"name": "Site 3", "slug": "site-3", "region": {"name": "United States"}}
+{"name": "Site 1", "region": {"name": "United States"}},
+{"name": "Site 2", "region": {"name": "United States"}},
+{"name": "Site 3", "region": {"name": "United States"}}
 ]'
 ```
 
@@ -939,14 +932,14 @@ It is possible to modify the objects associated via Relationship with an object 
 ```json
 {
     "relationships": {
-        "site-to-vrf": {
+        "site_to_vrf": {
             "destination": {
                 "objects": [
                     {"name": "blue"}
                 ]
             }
         },
-        "vrfs-to-sites": {
+        "vrfs_to_sites": {
             "source": {
                 "objects": [
                     {"name": "green"},
@@ -961,7 +954,7 @@ It is possible to modify the objects associated via Relationship with an object 
 ```json
 {
     "relationships": {
-        "site-to-vrf": {
+        "site_to_vrf": {
             "destination": {
                 "objects": ["3e3c58f9-4f63-44ba-acee-f0c42430eba7"]
             }
@@ -971,7 +964,7 @@ It is possible to modify the objects associated via Relationship with an object 
 ```
 
 !!! Note
-    Relationship slugs can be omitted from the `"relationships"` dictionary, in which case the associations for that Relationship will be left unmodified. In the second example above, the existing association for the `"site-to-vrf"` Relationship would be replaced, but the `"vrfs-to-sites"` Relationship's associations would remain as-is.
+    Relationship keys can be omitted from the `"relationships"` dictionary, in which case the associations for that Relationship will be left unmodified. In the second example above, the existing association for the `"site_to_vrf"` Relationship would be replaced, but the `"vrfs_to_sites"` Relationship's associations would remain as-is.
 
 ### Updating Multiple Objects
 

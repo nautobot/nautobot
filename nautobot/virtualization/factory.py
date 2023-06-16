@@ -19,7 +19,6 @@ class ClusterTypeFactory(OrganizationalModelFactory):
         exclude = ("has_description",)
 
     name = UniqueFaker("color")
-    # Slug isn't defined here since it inherits from name.
 
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
@@ -31,7 +30,6 @@ class ClusterGroupFactory(OrganizationalModelFactory):
         exclude = ("has_description",)
 
     name = UniqueFaker("color")
-    # Slug isn't defined here since it inherits from name.
 
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")

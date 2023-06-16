@@ -11,7 +11,7 @@
     <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
     {% if result.job_model is not None %}
         <li>{{ result.job_model.grouping }}</li>
-        <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.slug }}">
+        <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.name }}">
             {{ result.job_model }}
         </a></li>
     {% elif associated_record %}

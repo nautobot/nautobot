@@ -82,13 +82,13 @@
             <tr>
                 <td>Child Location Type(s)</td>
                 <td>
-                    <a href="{% url 'dcim:locationtype_list' %}?parent={{ object.slug }}">{{ children_table.rows|length }}</a>
+                    <a href="{% url 'dcim:locationtype_list' %}?parent={{ object.name }}">{{ children_table.rows|length }}</a>
                 </td>
             </tr>
             <tr>
                 <td>Locations</td>
                 <td>
-                    <a href="{% url 'dcim:location_list' %}?location_type={{ object.slug }}">{{ locations_table.rows|length }}</a>
+                    <a href="{% url 'dcim:location_list' %}?location_type={{ object.name }}">{{ locations_table.rows|length }}</a>
                 </td>
             </tr>
         </table>

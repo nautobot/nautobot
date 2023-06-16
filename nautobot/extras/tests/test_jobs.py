@@ -35,9 +35,147 @@ from nautobot.extras.models import CustomField, FileProxy, JobHook, JobResult, R
 from nautobot.extras.models.models import JobLogEntry
 
 
-class JobTest(TransactionTestCase):
+class JobTest(TestCase):
     """
-    Test basic jobs to ensure importing works.
+    Test job features that don't require a transaction test case.
+    """
+
+    def test_field_default(self):
+        """
+        Job test with field that is a default value that is falsey.
+        https://github.com/nautobot/nautobot/issues/2039
+        """
+        module = "field_default"
+        name = "TestFieldDefault"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class().as_form()
+
+        self.assertInHTML(
+            """<tr><th><label for="id_var_int">Var int:</label></th><td>
+<input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
+<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
+<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
+<input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
+<br><span class="helptext">Test default without default</span></td></tr>""",
+            form.as_table(),
+        )
+
+    def test_field_order(self):
+        """
+        Job test with field order.
+        """
+        module = "field_order"
+        name = "TestFieldOrder"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class().as_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_profile"])
+
+    def test_no_field_order(self):
+        """
+        Job test without field_order.
+        """
+        module = "no_field_order"
+        name = "TestNoFieldOrder"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class().as_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_profile"])
+
+    def test_no_field_order_inherited_variable(self):
+        """
+        Job test without field_order with a variable inherited from the base class
+        """
+        module = "no_field_order"
+        name = "TestDefaultFieldOrderWithInheritance"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class().as_form()
+        self.assertSequenceEqual(
+            list(form.fields.keys()),
+            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_profile"],
+        )
+
+    def test_dryrun_default(self):
+        """Test that dryrun_default is reflected in job form."""
+        module = "dry_run"
+        name = "TestDryRun"
+        job_class, job_model = get_job_class_and_model(module, name)
+
+        # not overridden on job model, initial form field value should match job class
+        job_model.dryrun_default_override = False
+        job_model.save()
+        form = job_class().as_form()
+        self.assertEqual(form.fields["dryrun"].initial, job_class.dryrun_default)
+
+        # overridden on job model, initial form field value should match job model
+        job_model.dryrun_default_override = True
+        job_model.dryrun_default = not job_class.dryrun_default
+        job_model.save()
+        form = job_class().as_form()
+        self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_task_queues(self, mock_get_celery_queues):
+        """
+        Test job form with custom task queues defined on the job class
+        """
+        module = "task_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
+        job_class, _ = get_job_class_and_model(module, name)
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="celery">celery (4 workers)</option>
+            <option value="nonexistent">nonexistent (0 workers)</option></select><br>
+            <span class="helptext">The task queue to route this job to</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
+            form.as_table(),
+        )
+
+    @mock.patch("nautobot.extras.utils.get_celery_queues")
+    def test_job_class_task_queues_override(self, mock_get_celery_queues):
+        """
+        Test job form with custom task queues defined on the job class and overridden on the model
+        """
+        module = "task_queues"
+        name = "TestWorkerQueues"
+        mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
+        job_class, job_model = get_job_class_and_model(module, name)
+        job_model.task_queues = ["default", "priority"]
+        job_model.task_queues_override = True
+        job_model.save()
+        form = job_class().as_form()
+        self.assertInHTML(
+            """<tr><th><label for="id__task_queue">Task queue:</label></th>
+            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
+            <option value="default">default (1 worker)</option>
+            <option value="priority">priority (0 workers)</option>
+            </select><br><span class="helptext">The task queue to route this job to</span>
+            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
+            form.as_table(),
+        )
+
+    def test_supports_dryrun(self):
+        """
+        Test job class supports_dryrun field and job model supports_dryrun field
+        """
+
+        module = "dry_run"
+        name = "TestDryRun"
+        job_class, job_model = get_job_class_and_model(module, name)
+        self.assertTrue(job_class.supports_dryrun)
+        self.assertTrue(job_model.supports_dryrun)
+
+        module = "pass"
+        name = "TestPass"
+        job_class, job_model = get_job_class_and_model(module, name)
+        self.assertFalse(job_class.supports_dryrun)
+        self.assertFalse(job_model.supports_dryrun)
+
+
+class JobTransactionTest(TransactionTestCase):
+    """
+    Test job features that require a transaction test case.
     """
 
     databases = ("default", "job_logs")
@@ -97,59 +235,6 @@ class JobTest(TransactionTestCase):
         name = "TestFail"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-
-    def test_field_default(self):
-        """
-        Job test with field that is a default value that is falsey.
-        https://github.com/nautobot/nautobot/issues/2039
-        """
-        module = "field_default"
-        name = "TestFieldDefault"
-        job_class = get_job(f"{module}.{name}")
-        form = job_class().as_form()
-
-        self.assertInHTML(
-            """<tr><th><label for="id_var_int">Var int:</label></th><td>
-<input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
-<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
-<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
-<input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
-<br><span class="helptext">Test default without default</span></td></tr>""",
-            form.as_table(),
-        )
-
-    def test_field_order(self):
-        """
-        Job test with field order.
-        """
-        module = "field_order"
-        name = "TestFieldOrder"
-        job_class = get_job(f"{module}.{name}")
-        form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_profile"])
-
-    def test_no_field_order(self):
-        """
-        Job test without field_order.
-        """
-        module = "no_field_order"
-        name = "TestNoFieldOrder"
-        job_class = get_job(f"{module}.{name}")
-        form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_profile"])
-
-    def test_no_field_order_inherited_variable(self):
-        """
-        Job test without field_order with a variable inherited from the base class
-        """
-        module = "no_field_order"
-        name = "TestDefaultFieldOrderWithInheritance"
-        job_class = get_job(f"{module}.{name}")
-        form = job_class().as_form()
-        self.assertSequenceEqual(
-            list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_profile"],
-        )
 
     def test_atomic_transaction_decorator_job_pass(self):
         """
@@ -368,66 +453,6 @@ class JobTest(TransactionTestCase):
         latest_job_result = job_model.latest_result
         self.assertEqual(job_result_2.date_done, latest_job_result.date_done)
 
-    @mock.patch("nautobot.extras.utils.get_celery_queues")
-    def test_job_class_task_queues(self, mock_get_celery_queues):
-        """
-        Test job form with custom task queues defined on the job class
-        """
-        module = "task_queues"
-        name = "TestWorkerQueues"
-        mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
-        job_class, _ = get_job_class_and_model(module, name)
-        form = job_class().as_form()
-        self.assertInHTML(
-            """<tr><th><label for="id__task_queue">Task queue:</label></th>
-            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
-            <option value="celery">celery (4 workers)</option>
-            <option value="nonexistent">nonexistent (0 workers)</option></select><br>
-            <span class="helptext">The task queue to route this job to</span>
-            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
-            form.as_table(),
-        )
-
-    @mock.patch("nautobot.extras.utils.get_celery_queues")
-    def test_job_class_task_queues_override(self, mock_get_celery_queues):
-        """
-        Test job form with custom task queues defined on the job class and overridden on the model
-        """
-        module = "task_queues"
-        name = "TestWorkerQueues"
-        mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
-        job_class, job_model = get_job_class_and_model(module, name)
-        job_model.task_queues = ["default", "priority"]
-        job_model.task_queues_override = True
-        job_model.save()
-        form = job_class().as_form()
-        self.assertInHTML(
-            """<tr><th><label for="id__task_queue">Task queue:</label></th>
-            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
-            <option value="default">default (1 worker)</option>
-            <option value="priority">priority (0 workers)</option>
-            </select><br><span class="helptext">The task queue to route this job to</span>
-            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
-            form.as_table(),
-        )
-
-    def test_supports_dryrun(self):
-        """
-        Test job class supports_dryrun field and job model supports_dryrun field
-        """
-
-        module = "dry_run"
-        name = "TestDryRun"
-        job_class, job_model = get_job_class_and_model(module, name)
-        self.assertTrue(job_class.supports_dryrun)
-        self.assertTrue(job_model.supports_dryrun)
-
-        module = "pass"
-        name = "TestPass"
-        job_class, job_model = get_job_class_and_model(module, name)
-        self.assertFalse(job_class.supports_dryrun)
-        self.assertFalse(job_model.supports_dryrun)
-
     def test_job_profiling(self):
         module = "profiling"
         name = "TestProfilingJob"
@@ -444,25 +469,6 @@ class JobTest(TransactionTestCase):
         profiling_result = Path(f"{tempfile.gettempdir()}/nautobot-jobresult-{job_result.id}.pstats")
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
-
-    def test_dryrun_default(self):
-        """Test that dryrun_default is reflected in job form."""
-        module = "dry_run"
-        name = "TestDryRun"
-        job_class, job_model = get_job_class_and_model(module, name)
-
-        # not overridden on job model, initial form field value should match job class
-        job_model.dryrun_default_override = False
-        job_model.save()
-        form = job_class().as_form()
-        self.assertEqual(form.fields["dryrun"].initial, job_class.dryrun_default)
-
-        # overridden on job model, initial form field value should match job model
-        job_model.dryrun_default_override = True
-        job_model.dryrun_default = not job_class.dryrun_default
-        job_model.save()
-        form = job_class().as_form()
-        self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
 
 
 class JobFileUploadTest(TransactionTestCase):
@@ -627,7 +633,7 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
 
         # Test location with a value for custom_field
-        location_1 = Location.objects.filter(slug="test-location-one")
+        location_1 = Location.objects.filter(name="Test Location One")
         self.assertEqual(location_1.count(), 1)
         location_1 = location_1.first()
         self.assertEqual(CustomField.objects.filter(label="cf1").count(), 1)
@@ -635,36 +641,17 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.assertEqual(location_1.cf["cf1"], "some-value")
 
         # Test location with default value for custom field
-        location_2 = Location.objects.filter(slug="test-location-two")
+        location_2 = Location.objects.filter(name="Test Location Two")
         self.assertEqual(location_2.count(), 1)
         location_2 = location_2.first()
         self.assertIn("cf1", location_2.cf)
         self.assertEqual(location_2.cf["cf1"], "-")
 
 
-class JobButtonReceiverTest(TransactionTestCase):
+class JobButtonReceiverTest(TestCase):
     """
-    Test job button receiver.
+    Test job button receiver features that don't require a transaction test case.
     """
-
-    def setUp(self):
-        super().setUp()
-
-        # Initialize fake request that will be required to run jobs
-        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
-        self.request.id = uuid.uuid4()
-        self.request.user = self.user
-
-        self.location_type = LocationType.objects.create(name="Test Root Type 2")
-        status = Status.objects.get_for_model(Location).first()
-        self.location = Location.objects.create(
-            name="Test Job Button Location 1", location_type=self.location_type, status=status
-        )
-        content_type = ContentType.objects.get_for_model(Location)
-        self.data = {
-            "object_pk": self.location.pk,
-            "object_model_name": f"{content_type.app_label}.{content_type.model}",
-        }
 
     def test_form_field(self):
         module = "job_button_receiver"
@@ -694,16 +681,10 @@ class JobButtonReceiverTest(TransactionTestCase):
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertTrue(job_model.is_job_button_receiver)
 
-    def test_missing_receive_job_button_method(self):
-        module = "job_button_receiver"
-        name = "TestJobButtonReceiverFail"
-        job_result = create_job_result_and_run_job(module, name, **self.data)
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
-
-class JobHookReceiverTest(TransactionTestCase):
+class JobButtonReceiverTransactionTest(TransactionTestCase):
     """
-    Test job hook receiver.
+    Test job button receiver features that require a transaction test case.
     """
 
     def setUp(self):
@@ -714,15 +695,28 @@ class JobHookReceiverTest(TransactionTestCase):
         self.request.id = uuid.uuid4()
         self.request.user = self.user
 
-        # generate an ObjectChange by creating a new location
-        with web_request_context(self.user):
-            location_type = LocationType.objects.create(name="Test Root Type 1")
-            status = Status.objects.get_for_model(Location).first()
-            location = Location(name="Test Location 1", location_type=location_type, status=status)
-            location.save()
-        location.refresh_from_db()
-        oc = get_changes_for_model(location).first()
-        self.data = {"object_change": oc.id}
+        self.location_type = LocationType.objects.create(name="Test Root Type 2")
+        status = Status.objects.get_for_model(Location).first()
+        self.location = Location.objects.create(
+            name="Test Job Button Location 1", location_type=self.location_type, status=status
+        )
+        content_type = ContentType.objects.get_for_model(Location)
+        self.data = {
+            "object_pk": self.location.pk,
+            "object_model_name": f"{content_type.app_label}.{content_type.model}",
+        }
+
+    def test_missing_receive_job_button_method(self):
+        module = "job_button_receiver"
+        name = "TestJobButtonReceiverFail"
+        job_result = create_job_result_and_run_job(module, name, **self.data)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+
+
+class JobHookReceiverTest(TestCase):
+    """
+    Test job hook receiver features that don't require a transaction test case.
+    """
 
     def test_form_field(self):
         module = "job_hook_receiver"
@@ -750,6 +744,30 @@ class JobHookReceiverTest(TransactionTestCase):
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertTrue(job_model.is_job_hook_receiver)
 
+
+class JobHookReceiverTransactionTest(TransactionTestCase):
+    """
+    Test job hook receiver features that require a transaction test case.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        # Initialize fake request that will be required to run jobs
+        self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+        # generate an ObjectChange by creating a new location
+        with web_request_context(self.user):
+            location_type = LocationType.objects.create(name="Test Root Type 1")
+            status = Status.objects.get_for_model(Location).first()
+            location = Location(name="Test Location 1", location_type=location_type, status=status)
+            location.save()
+        location.refresh_from_db()
+        oc = get_changes_for_model(location).first()
+        self.data = {"object_change": oc.id}
+
     def test_object_change_context(self):
         module = "job_hook_receiver"
         name = "TestJobHookReceiverChange"
@@ -766,9 +784,40 @@ class JobHookReceiverTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
 
-class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
+class JobHookTest(TestCase):
     """
-    Test job hooks.
+    Test job hook features that don't require a transaction test case.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        module = "job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        self.job_class, self.job_model = get_job_class_and_model(module, name)
+        job_hook = JobHook(
+            name="JobHookTest",
+            type_create=True,
+            job=self.job_model,
+        )
+        obj_type = ContentType.objects.get_for_model(Location)
+        self.location_type = LocationType.objects.create(name="Test Root Type 2")
+        job_hook.save()
+        job_hook.content_types.set([obj_type])
+
+    @mock.patch.object(JobResult, "enqueue_job")
+    def test_enqueue_job_hook_skipped(self, mock_enqueue_job):
+        change_context = JobHookChangeContext(user=self.user)
+        status = Status.objects.get_for_model(Location).first()
+        with change_logging(change_context):
+            Location.objects.create(name="Test Job Hook Location 2", location_type=self.location_type, status=status)
+
+        self.assertFalse(mock_enqueue_job.called)
+
+
+class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
+    """
+    Test job hook features that require a transaction test case.
     """
 
     def setUp(self):
@@ -788,6 +837,7 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
         job_hook.content_types.set([obj_type])
 
     def test_enqueue_job_hook(self):
+        self.assertEqual(JobLogEntry.objects.count(), 0)
         with web_request_context(user=self.user):
             status = Status.objects.get_for_model(Location).first()
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
@@ -802,15 +852,6 @@ class JobHookTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
             ]
             log_messages = JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
             self.assertSequenceEqual(log_messages, expected_log_messages)
-
-    @mock.patch.object(JobResult, "enqueue_job")
-    def test_enqueue_job_hook_skipped(self, mock_enqueue_job):
-        change_context = JobHookChangeContext(user=self.user)
-        status = Status.objects.get_for_model(Location).first()
-        with change_logging(change_context):
-            Location.objects.create(name="Test Job Hook Location 2", location_type=self.location_type, status=status)
-
-        self.assertFalse(mock_enqueue_job.called)
 
 
 class RemoveScheduledJobManagementCommandTestCase(TestCase):

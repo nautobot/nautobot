@@ -230,7 +230,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     )
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
     dynamic_groups = DynamicModelMultipleChoiceField(
-        queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+        queryset=DynamicGroup.objects.all(), to_field_name="name", required=False
     )
 
     # Conditional enablement of dynamic groups filtering
@@ -281,11 +281,11 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
     schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="name", required=False)
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     role = DynamicModelMultipleChoiceField(
         queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="name", required=False
     )
-    type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
+    type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="model", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
         queryset=ClusterGroup.objects.all(), to_field_name="name", required=False
@@ -298,7 +298,7 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     device_redundancy_group = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(), to_field_name="name", required=False
     )
-    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
+    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="name", required=False)
     dynamic_groups = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(), to_field_name="name", required=False
     )
@@ -1358,7 +1358,6 @@ class StatusBulkEditForm(NautobotBulkEditForm):
 
 
 class TagForm(NautobotModelForm):
-    slug = SlugField()
     content_types = ModelMultipleChoiceField(
         label="Content Type(s)",
         queryset=TaggableClassesQuery().as_queryset(),
@@ -1366,7 +1365,7 @@ class TagForm(NautobotModelForm):
 
     class Meta:
         model = Tag
-        fields = ["name", "slug", "color", "description", "content_types"]
+        fields = ["name", "color", "description", "content_types"]
 
     def clean(self):
         data = super().clean()

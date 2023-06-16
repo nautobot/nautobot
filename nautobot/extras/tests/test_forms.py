@@ -239,7 +239,6 @@ class NoteModelFormTestCase(TestCase):
 
         cls.location_form_base_data = {
             "name": "Location 1",
-            "slug": "location-1",
             "location_type": cls.location_type.pk,
             "status": status.pk,
         }
@@ -341,12 +340,8 @@ class RelationshipModelFormTestCase(TestCase):
             address="10.2.2.2/24", namespace=cls.namespace, status=cls.ipaddress_status
         )
 
-        cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(
-            name="VLAN Group 1", slug="vlan-group-1", location=cls.location
-        )
-        cls.vlangroup_2 = ipam_models.VLANGroup.objects.create(
-            name="VLAN Group 2", slug="vlan-group-2", location=cls.location
-        )
+        cls.vlangroup_1 = ipam_models.VLANGroup.objects.create(name="VLAN Group 1", location=cls.location)
+        cls.vlangroup_2 = ipam_models.VLANGroup.objects.create(name="VLAN Group 2", location=cls.location)
 
         cls.relationship_1 = Relationship(
             label="BGP Router-ID",
@@ -395,7 +390,6 @@ class RelationshipModelFormTestCase(TestCase):
         cls.vlangroup_form_base_data = {
             "location": cls.location.pk,
             "name": "New VLAN Group",
-            "slug": "new-vlan-group",
         }
 
     def test_create_relationship_associations_valid_1(self):
@@ -672,7 +666,6 @@ class RelationshipModelFormTestCase(TestCase):
             instance=self.vlangroup_1,
             data={
                 "name": self.vlangroup_1.name,
-                "slug": self.vlangroup_1.slug,
                 "location": self.location,
                 f"cr_{self.relationship_2.key}__source": self.device_2.pk,
             },

@@ -14,7 +14,7 @@ Once created the Content Type for a Dynamic Group may not be modified as this re
 
 Dynamic Groups can be created through the UI under _Organization > Dynamic Groups_ and clicking the "Add" button, or through the REST API.
 
-Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-site-ams01` and a **Slug**, which should be a simple database-friendly string. By default, the slug will be automatically generated from the name, however you may customize it if you like. You must select a **Content Type** for the group that determines the kind of objects that can be members of the group and the corresponding filtering parameters available. Finally, you may also assign an optional human-friendly **Description** (e.g. "Devices in site AMS01").
+Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-site-ams01`. You must select a **Content Type** for the group that determines the kind of objects that can be members of the group and the corresponding filtering parameters available. Finally, you may also assign an optional human-friendly **Description** (e.g. "Devices in site AMS01").
 
 Once a new Dynamic Group is created, the group can be configured by clicking the "Edit" button to specify **Filter Fields** or **Child Groups** to use to narrow down the group's member objects. More on this below.
 
@@ -99,12 +99,12 @@ Now, let's say that you add a third site to your network. This site is currently
 (
   (
     (
-      site__slug='ams01' OR site__slug='bkk01'
+      location__name='ams01' OR location__name='bkk01'
     ) AND (
       status__name='Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__name='Active'
+    location__name='can01' AND status__name='Active'
   )
 )
 ```
@@ -137,12 +137,12 @@ The "Devices of Interest" Dynamic Group now contains the filtered Devices from b
 (
   (
     (
-      site__slug='ams01' OR site__slug='bkk01'
+      location__name='ams01' OR location__name='bkk01'
     ) AND (
       status__name'Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__name='Active'
+    location__name='can01' AND status__name='Active'
   )
 )
 ```
@@ -185,15 +185,15 @@ You can see the filter logic that this combination of groups results in:
 (
   (
     (
-      site__slug='ams01' OR site__slug='bkk01'
+      location__name='ams01' OR location__name='bkk01'
     ) AND (
       status__name='Active' OR status__name='Offline'
     )
   ) OR (
-    site__slug='can01' AND status__name'Active'
+    location__name='can01' AND status__name'Active'
   ) OR (
-    site__slug='del01' AND (
-      NOT (site__slug='del01' AND status__name='Decommissioning')
+    location__name='del01' AND (
+      NOT (location__name='del01' AND status__name='Decommissioning')
     )
   )
 )
@@ -304,7 +304,7 @@ Because `first-child` and `second-child` are "included" by way of the `union` se
 !!! note
     But what about the `AND` coming from the association of `first-child`, you might be asking?
 
-    Well, that `AND` is also passed through because the default behavior when performing queryset filtering is to join all filter statements together with `AND`. For example, consider when you perform this from the Django ORM `Device.objects.filter(site__slug="ams01")` the outcome is in fact equivalent to `AND site__slug="ams01"`. Therefore, for the first child group (literally `first-child` in this case), initial `AND` will be omitted.
+    Well, that `AND` is also passed through because the default behavior when performing queryset filtering is to join all filter statements together with `AND`. For example, consider when you perform this from the Django ORM `Device.objects.filter(location__name="ams01")` the outcome is in fact equivalent to `AND location__name="ams01"`. Therefore, for the first child group (literally `first-child` in this case), initial `AND` will be omitted.
 
 Continuing on to the children of `third-child`, the same iteration rules apply. The filter from `nested-child` gets applied to the filter being passed through from its parent, `third-child`, except that the "exclude" (boolean `NOT`) operator is still applied from the association of `third-child` to parent resulting in `(NOT nested-child`).
 
@@ -406,7 +406,6 @@ POST /api/extras/dynamic-groups/
 
 {
     "name": "parent",
-    "slug": "parent",
     "description": "I am a parent group with nested children.",
     "content-type": "dcim.device",
     "filter": {},
@@ -421,7 +420,6 @@ Response:
     "display": "parent",
     "url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/",
     "name": "parent",
-    "slug": "parent",
     "description": "I am the parent group with nested children.",
     "content_type": "dcim.device",
     "filter": {},
@@ -441,26 +439,25 @@ Response:
 
 Updating or deleting a Dynamic Group is done by sending a request to the detail endpoint for that object.
 
-A Dynamic Group may be updated using `PUT` or `PATCH` (for a partial update) requests. A `PUT` request requires the entire object to be updated in place. For example if you wanted to update the `name` and the `slug` together, leaving every other field with their current values as provided:
+A Dynamic Group may be updated using `PUT` or `PATCH` (for a partial update) requests. A `PUT` request requires the entire object to be updated in place. For example if you wanted to update the `name` and the `description` together, leaving every other field with their current values as provided:
 
 ```json
 PUT /api/extras/dynamic-groups/{uuid}/
 
 {
     "name": "I am the best parent group",
-    "slug": "best-parent",
-    "description": "I am the parent group with nested children.",
+    "description": "I am the best parent group with nested children.",
     "filter": {}
 }
 ```
 
-Performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we wanted to update only the `slug` for a group:
+Performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we wanted to update only the `name` for a group:
 
 ```json
 PATCH /api/extras/dynamic-group-memberships/{uuid}/
 
 {
-    "slug": "best-parent"
+    "name": "I am the best parent group"
 }
 ```
 
@@ -489,8 +486,8 @@ Request:
 POST /api/extras/dynamic-group-memberships/
 
 {
-    "group": {"slug": "first-child"},
-    "parent_group": {"slug": "parent"},
+    "group": {"name": "first-child"},
+    "parent_group": {"name": "parent"},
     "operator": "intersection",
     "weight": 10
 }
@@ -508,7 +505,6 @@ Response:
         "id": "97188a74-eddd-46d8-be41-909c1ece1d43",
         "url": "http://localhost:6789/api/extras/dynamic-groups/97188a74-eddd-46d8-be41-909c1ece1d43/",
         "name": "first-child",
-        "slug": "first-child",
         "content_type": "dcim.device"
     },
     "parent_group": {
@@ -516,7 +512,6 @@ Response:
         "id": "1f825078-b6dc-4b12-9463-be5a9189b03f",
         "url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/",
         "name": "parent",
-        "slug": "parent",
         "content_type": "dcim.device"
     },
     "operator": "intersection",
@@ -534,7 +529,6 @@ GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
     "display": "parent",
     "url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/",
     "name": "parent",
-    "slug": "parent",
     "description": "",
     "content_type": "dcim.device",
     "filter": {},
@@ -548,7 +542,6 @@ GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
                 "id": "97188a74-eddd-46d8-be41-909c1ece1d43",
                 "url": "http://localhost:6789/api/extras/dynamic-groups/97188a74-eddd-46d8-be41-909c1ece1d43/",
                 "name": "first-child",
-                "slug": "first-child",
                 "content_type": "dcim.device"
             },
             "parent_group": {
@@ -556,7 +549,6 @@ GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
                 "id": "1f825078-b6dc-4b12-9463-be5a9189b03f",
                 "url": "http://localhost:6789/api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/",
                 "name": "parent",
-                "slug": "parent",
                 "content_type": "dcim.device"
             },
             "operator": "intersection",
@@ -580,8 +572,8 @@ A Dynamic Group Membership may be updated using `PUT` or `PATCH` (for a partial 
 PUT /api/extras/dynamic-group-memberships/{uuid}/
 
 {
-    "group": {"slug": "first-child"},
-    "parent_group": {"slug": "parent"},
+    "group": {"name": "first-child"},
+    "parent_group": {"name": "parent"},
     "operator": "difference",
     "weight": 10
 }

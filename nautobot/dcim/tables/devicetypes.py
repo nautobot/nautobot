@@ -46,7 +46,6 @@ class ManufacturerTable(BaseTable):
     device_type_count = tables.Column(verbose_name="Device Types")
     inventory_item_count = tables.Column(verbose_name="Inventory Items")
     platform_count = tables.Column(verbose_name="Platforms")
-    slug = tables.Column()
     actions = ButtonsColumn(Manufacturer)
 
     class Meta(BaseTable.Meta):
@@ -58,7 +57,6 @@ class ManufacturerTable(BaseTable):
             "inventory_item_count",
             "platform_count",
             "description",
-            "slug",
             "actions",
         )
 
@@ -74,7 +72,7 @@ class DeviceTypeTable(BaseTable):
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"device_type_id": "pk"},
+        url_params={"device_type": "pk"},
         verbose_name="Devices",
     )
     tags = TagColumn(url_name="dcim:devicetype_list")
@@ -85,7 +83,6 @@ class DeviceTypeTable(BaseTable):
             "pk",
             "model",
             "manufacturer",
-            "slug",
             "part_number",
             "u_height",
             "is_full_depth",

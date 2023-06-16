@@ -158,7 +158,7 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         )
 
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type")
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
 
@@ -216,9 +216,9 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(location__in=params["location"])
         )
-        params = {"location": [self.locations[0].slug, self.locations[1].slug]}
+        params = {"location": [self.locations[0].name, self.locations[1].name]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(location__slug__in=params["location"])
+            self.filterset(params, self.queryset).qs, self.queryset.filter(location__name__in=params["location"])
         )
 
     def test_cluster_group(self):
@@ -535,10 +535,10 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(cluster__location__in=params["location"])
         )
-        params = {"location": [self.locations[0].slug, self.locations[1].slug]}
+        params = {"location": [self.locations[0].name, self.locations[1].name]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(cluster__location__slug__in=params["location"]),
+            self.queryset.filter(cluster__location__name__in=params["location"]),
         )
 
     def test_role(self):

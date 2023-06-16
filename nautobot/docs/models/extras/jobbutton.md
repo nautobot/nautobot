@@ -52,7 +52,7 @@ Only buttons which render with non-empty text are included on the page. You can 
 For example, if you only want to display a button for active devices, you could set the button text to
 
 ```jinja2
-{% if obj.status.slug == 'active' %}Provision{% endif %}
+{% if obj.status.name == 'Active' %}Provision{% endif %}
 ```
 
 The button will not appear when viewing a device with any status other than `Active`.

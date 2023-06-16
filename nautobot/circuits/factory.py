@@ -21,7 +21,6 @@ class CircuitTypeFactory(OrganizationalModelFactory):
         exclude = ("has_description",)
 
     name = UniqueFaker("color")
-    # Slug isn't defined here since it inherits from name.
 
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
@@ -33,7 +32,6 @@ class ProviderFactory(PrimaryModelFactory):
         exclude = ("has_asn", "has_account", "has_portal_url", "has_noc_contact", "has_admin_contact", "has_comments")
 
     name = UniqueFaker("company")
-    # Slug isn't defined here since it inherits from name.
 
     has_asn = NautobotBoolIterator()
     asn = factory.Maybe("has_asn", factory.Faker("pyint", min_value=4200000000, max_value=4294967294), None)

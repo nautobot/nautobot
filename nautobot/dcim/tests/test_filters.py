@@ -150,7 +150,6 @@ def common_test_data(cls):
             manufacturer=manufacturers[0],
             comments="Device type 1",
             model="Model 1",
-            slug="model-1",
             part_number="Part Number 1",
             u_height=1,
             is_full_depth=True,
@@ -159,7 +158,6 @@ def common_test_data(cls):
             manufacturer=manufacturers[1],
             comments="Device type 2",
             model="Model 2",
-            slug="model-2",
             part_number="Part Number 2",
             u_height=2,
             is_full_depth=True,
@@ -169,7 +167,6 @@ def common_test_data(cls):
             manufacturer=manufacturers[2],
             comments="Device type 3",
             model="Model 3",
-            slug="model-3",
             part_number="Part Number 3",
             u_height=3,
             is_full_depth=False,
@@ -179,9 +176,9 @@ def common_test_data(cls):
     cls.device_types = device_types
 
     rack_groups = (
-        RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=loc0),
-        RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=loc1),
-        RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", location=loc1),
+        RackGroup.objects.create(name="Rack Group 1", location=loc0),
+        RackGroup.objects.create(name="Rack Group 2", location=loc1),
+        RackGroup.objects.create(name="Rack Group 3", location=loc1),
     )
 
     power_panels = (
@@ -284,9 +281,9 @@ def common_test_data(cls):
     Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), location=loc1, status=prefix_status)
 
     vlan_groups = (
-        VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=loc0),
-        VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=loc0),
-        VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3", location=loc1),
+        VLANGroup.objects.create(name="VLAN Group 1", location=loc0),
+        VLANGroup.objects.create(name="VLAN Group 2", location=loc0),
+        VLANGroup.objects.create(name="VLAN Group 3", location=loc1),
     )
 
     vlan_status = Status.objects.get_for_model(VLAN).first()
@@ -587,13 +584,13 @@ def common_test_data(cls):
     devices[1].tags.set(Tag.objects.get_for_model(Device)[:3])
 
 
-class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
+class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = LocationType.objects.all()
     filterset = LocationTypeFilterSet
     generic_filter_tests = [
         ("description",),
         ("parent", "parent__id"),
-        ("parent", "parent__slug"),
+        ("parent", "parent__name"),
     ]
 
     @classmethod
@@ -623,7 +620,7 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase):
             )
 
 
-class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Location.objects.all()
     filterset = LocationFilterSet
     tenancy_related_name = "locations"
@@ -643,22 +640,22 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         ("latitude",),
         ("longitude",),
         ("location_type", "location_type__id"),
-        ("location_type", "location_type__slug"),
+        ("location_type", "location_type__name"),
         ("parent", "parent__id"),
-        ("parent", "parent__slug"),
+        ("parent", "parent__name"),
         ("physical_address",),
         ("power_panels", "power_panels__id"),
         ("power_panels", "power_panels__name"),
         ("prefixes", "prefixes__id"),
         ("rack_groups", "rack_groups__id"),
-        ("rack_groups", "rack_groups__slug"),
+        ("rack_groups", "rack_groups__name"),
         ("racks", "racks__id"),
         ("racks", "racks__name"),
         ("shipping_address",),
         ("status", "status__name"),
         ("time_zone",),
         ("vlan_groups", "vlan_groups__id"),
-        ("vlan_groups", "vlan_groups__slug"),
+        ("vlan_groups", "vlan_groups__name"),
         ("vlans", "vlans__id"),
         ("vlans", "vlans__vid"),
     ]
@@ -668,13 +665,13 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         common_test_data(cls)
 
     def test_subtree(self):
-        params = {"subtree": [self.loc1.slug, self.nested_loc.pk]}
+        params = {"subtree": [self.loc1.name, self.nested_loc.pk]}
         expected = Location.objects.get(name=self.loc1.name).descendants(include_self=True)
         expected |= Location.objects.get(name=self.nested_loc.name).descendants(include_self=True)
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected.distinct())
 
     def test_child_location_type(self):
-        params = {"child_location_type": ["room", LocationType.objects.get(name="Floor").pk]}
+        params = {"child_location_type": ["Room", LocationType.objects.get(name="Floor").pk]}
         query_params = Q(
             location_type__children__in=[LocationType.objects.get(name="Room"), LocationType.objects.get(name="Floor")]
         ) | Q(
@@ -699,13 +696,13 @@ class LocationFilterSetTestCase(FilterTestCases.NameSlugFilterTestCase, FilterTe
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.filter(pk=value))
 
 
-class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
+class RackGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = RackGroup.objects.all()
     filterset = RackGroupFilterSet
     generic_filter_tests = [
         ("description",),
         ("parent", "parent__id"),
-        ("parent", "parent__slug"),
+        ("parent", "parent__name"),
         ("power_panels", "power_panels__id"),
         ("power_panels", "power_panels__name"),
         ("racks", "racks__id"),
@@ -719,28 +716,24 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
         RackGroup.objects.create(
             name="Child Rack Group 1",
-            slug="rack-group-1c",
             location=cls.loc0,
             parent=parent_rack_groups[0],
             description="A",
         )
         RackGroup.objects.create(
             name="Child Rack Group 2",
-            slug="rack-group-2c",
             location=cls.loc0,
             parent=parent_rack_groups[1],
             description="B",
         )
         RackGroup.objects.create(
             name="Child Rack Group 3",
-            slug="rack-group-3c",
             location=cls.loc1,
             parent=parent_rack_groups[2],
             description="C",
         )
         RackGroup.objects.create(
             name="Rack Group 4",
-            slug="rack-group-4",
             location=cls.loc1,
         )
 
@@ -750,7 +743,7 @@ class RackGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"children": [child_groups[0].pk, child_groups[1].pk]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         with self.subTest():
-            rack_group_4 = RackGroup.objects.filter(slug="rack-group-4").first()
+            rack_group_4 = RackGroup.objects.filter(name="Rack Group 4").first()
             params = {"children": [rack_group_4.pk, rack_group_4.pk]}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
@@ -770,7 +763,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         ("power_feeds", "power_feeds__id"),
         ("power_feeds", "power_feeds__name"),
         ("rack_group", "rack_group__id"),
-        ("rack_group", "rack_group__slug"),
+        ("rack_group", "rack_group__name"),
         ("rack_reservations", "rack_reservations__id"),
         ("role", "role__name"),
         ("serial",),
@@ -784,7 +777,7 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     def setUpTestData(cls):
         common_test_data(cls)
 
-        rack_group = RackGroup.objects.get(slug="rack-group-3")
+        rack_group = RackGroup.objects.get(name="Rack Group 3")
         tenant = Tenant.objects.filter(tenant_group__isnull=False).first()
         rack_role = Role.objects.get_for_model(Rack).first()
 
@@ -839,7 +832,7 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Te
         ("rack", "rack__id"),
         ("rack", "rack__name"),
         ("rack_group", "rack__rack_group__id"),
-        ("rack_group", "rack__rack_group__slug"),
+        ("rack_group", "rack__rack_group__name"),
         ("user", "user__id"),
         ("user", "user__username"),
     ]
@@ -860,7 +853,7 @@ class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
     generic_filter_tests = [
         ("description",),
         ("device_types", "device_types__id"),
-        ("device_types", "device_types__slug"),
+        ("device_types", "device_types__model"),
         ("inventory_items", "inventory_items__id"),
         ("inventory_items", "inventory_items__name"),
         ("platforms", "platforms__id"),
@@ -916,7 +909,6 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
             manufacturer=manufacturer,
             comments="Device type 4",
             model="Model 4",
-            slug="model-4",
             part_number="Part Number 4",
             u_height=4,
             is_full_depth=True,
@@ -1071,7 +1063,7 @@ class Mixins:
         generic_filter_tests = [
             ("description",),
             ("device_type", "device_type__id"),
-            ("device_type", "device_type__slug"),
+            ("device_type", "device_type__model"),
             ("label",),
             ("name",),
         ]
@@ -1274,7 +1266,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("device_redundancy_group", "device_redundancy_group__name"),
         ("device_redundancy_group_priority",),
         ("device_type", "device_type__id"),
-        ("device_type", "device_type__slug"),
+        ("device_type", "device_type__model"),
         ("front_ports", "front_ports__id"),
         ("interfaces", "interfaces__id"),
         ("mac_address", "interfaces__mac_address"),
@@ -1289,7 +1281,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("rack", "rack__id"),
         ("rack", "rack__name"),
         ("rack_group", "rack__rack_group__id"),
-        ("rack_group", "rack__rack_group__slug"),
+        ("rack_group", "rack__rack_group__name"),
         ("rear_ports", "rear_ports__id"),
         ("role", "role__id"),
         ("role", "role__name"),
@@ -1313,7 +1305,6 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             manufacturer=cls.manufacturers[0],
             comments="Non-component Device Type",
             model="Non-component Model",
-            slug="non-component-model",
             part_number="Part Number 1",
             u_height=1,
             is_full_depth=True,
@@ -2268,8 +2259,8 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
         common_test_data(cls)
 
         device_role = Role.objects.get_for_model(Device).first()
-        parent_device_type = DeviceType.objects.get(slug="model-2")
-        child_device_type = DeviceType.objects.get(slug="model-3")
+        parent_device_type = DeviceType.objects.get(model="Model 2")
+        child_device_type = DeviceType.objects.get(model="Model 3")
 
         device_statuses = Status.objects.get_for_model(Device)
 
@@ -2428,7 +2419,7 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1")
         device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
 
@@ -2530,9 +2521,9 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         )
 
         device_types = (
-            DeviceType.objects.get(slug="model-1"),
-            DeviceType.objects.get(slug="model-2"),
-            DeviceType.objects.get(slug="model-3"),
+            DeviceType.objects.get(model="Model 1"),
+            DeviceType.objects.get(model="Model 2"),
+            DeviceType.objects.get(model="Model 3"),
         )
 
         device_role = Role.objects.get_for_model(Device).first()
@@ -2776,7 +2767,7 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
         ("power_feeds", "power_feeds__id"),
         ("power_feeds", "power_feeds__name"),
         ("rack_group", "rack_group__id"),
-        ("rack_group", "rack_group__slug"),
+        ("rack_group", "rack_group__name"),
     ]
 
     @classmethod

@@ -1,6 +1,6 @@
 # Roles
 
-The Role model represents a role that can be assigned to a device, rack, virtual machine, IP address, VLAN, or prefix. Each role is identified by a unique name and has a slug, weight, color and content-types associated with it.
+The Role model represents a role that can be assigned to a device, rack, virtual machine, IP address, VLAN, or prefix. Each role is identified by a unique name and has a weight, color and content-types associated with it.
 
 ## Role Basics
 

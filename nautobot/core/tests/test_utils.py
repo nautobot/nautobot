@@ -286,15 +286,15 @@ class PrettyPrintQueryTest(TestCase):
         # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
         # pylint: disable=unsupported-binary-operation
         queries = [
-            ((Q(location__slug="ams01") | Q(location__slug="ang01")) & ~Q(status__name="Active"))
+            ((Q(location__name="ams01") | Q(location__name="ang01")) & ~Q(status__name="Active"))
             | Q(status__name="Planned"),
-            (Q(location__slug="ams01") | Q(location__slug="ang01")) & ~Q(status__name="Active"),
-            Q(location__slug="ams01") | Q(location__slug="ang01"),
-            Q(location__slug="ang01") & ~Q(status__name="Active"),
-            Q(location__slug="ams01", status__name="Planned"),
-            Q(location__slug="ang01"),
+            (Q(location__name="ams01") | Q(location__name="ang01")) & ~Q(status__name="Active"),
+            Q(location__name="ams01") | Q(location__name="ang01"),
+            Q(location__name="ang01") & ~Q(status__name="Active"),
+            Q(location__name="ams01", status__name="Planned"),
+            Q(location__name="ang01"),
             Q(status__id=12345),
-            Q(location__slug__in=["ams01", "ang01"]),
+            Q(location__name__in=["ams01", "ang01"]),
         ]
         # pylint: enable=unsupported-binary-operation
         results = [
@@ -302,7 +302,7 @@ class PrettyPrintQueryTest(TestCase):
 (
   (
     (
-      location__slug='ams01' OR location__slug='ang01'
+      location__name='ams01' OR location__name='ang01'
     ) AND (
       NOT (status__name='Active')
     )
@@ -311,28 +311,28 @@ class PrettyPrintQueryTest(TestCase):
             """\
 (
   (
-    location__slug='ams01' OR location__slug='ang01'
+    location__name='ams01' OR location__name='ang01'
   ) AND (
     NOT (status__name='Active')
   )
 )""",
             """\
 (
-  location__slug='ams01' OR location__slug='ang01'
+  location__name='ams01' OR location__name='ang01'
 )""",
             """\
 (
-  location__slug='ang01' AND (
+  location__name='ang01' AND (
     NOT (status__name='Active')
   )
 )""",
             """\
 (
-  location__slug='ams01' AND status__name='Planned'
+  location__name='ams01' AND status__name='Planned'
 )""",
             """\
 (
-  location__slug='ang01'
+  location__name='ang01'
 )""",
             """\
 (
@@ -340,7 +340,7 @@ class PrettyPrintQueryTest(TestCase):
 )""",
             """\
 (
-  location__slug__in=['ams01', 'ang01']
+  location__name__in=['ams01', 'ang01']
 )""",
         ]
 
@@ -391,15 +391,15 @@ class LookupRelatedFunctionTest(TestCase):
 
     def test_build_lookup_label(self):
         with self.subTest():
-            label = filtering.build_lookup_label("slug__iew", "iendswith")
+            label = filtering.build_lookup_label("name__iew", "iendswith")
             self.assertEqual(label, "ends with (iew)")
 
         with self.subTest("Test negation"):
-            label = filtering.build_lookup_label("slug__niew", "iendswith")
+            label = filtering.build_lookup_label("name__niew", "iendswith")
             self.assertEqual(label, "not ends with (niew)")
 
         with self.subTest("Test for exact: without a lookup expr"):
-            label = filtering.build_lookup_label("slug", "exact")
+            label = filtering.build_lookup_label("name", "exact")
             self.assertEqual(label, "exact")
 
     def test_get_all_lookup_expr_for_field(self):

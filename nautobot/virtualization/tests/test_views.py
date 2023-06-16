@@ -73,12 +73,8 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(
-                name="Location 1", slug="location-1", location_type=location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location 2", slug="location-2", location_type=location_type, status=location_status
-            ),
+            Location.objects.create(name="Location 1", location_type=location_type, status=location_status),
+            Location.objects.create(name="Location 2", location_type=location_type, status=location_status),
         )
 
         clustergroups = ClusterGroupFactory.create_batch(2)
@@ -139,12 +135,8 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(
-                name="Location 1", slug="location-1", location_type=location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location 2", slug="location-2", location_type=location_type, status=location_status
-            ),
+            Location.objects.create(name="Location 1", location_type=location_type, status=location_status),
+            Location.objects.create(name="Location 2", location_type=location_type, status=location_status),
         )
 
         platforms = Platform.objects.all()[:2]
@@ -285,9 +277,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
-        location = Location.objects.create(
-            name="Location 1", slug="location-1", location_type=location_type, status=location_status
-        )
+        location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
         devicerole = Role.objects.get_for_model(Device).first()
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)

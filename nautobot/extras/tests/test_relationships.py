@@ -59,7 +59,7 @@ class RelationshipBaseTest(TestCase):
             key="vlan_rack",
             source_type=cls.rack_ct,
             source_label="My Vlans",
-            source_filter={"location": [cls.locations[0].slug, cls.locations[1].slug, cls.locations[2].slug]},
+            source_filter={"location": [cls.locations[0].name, cls.locations[1].name, cls.locations[2].name]},
             destination_type=cls.vlan_ct,
             destination_label="My Racks",
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -226,9 +226,9 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
             label="Another Vlan to Rack",
             key="vlan_rack_2",
             source_type=self.location_ct,
-            source_filter={"name": [self.locations[1].slug]},
+            source_filter={"name": [self.locations[1].name]},
             destination_type=self.rack_ct,
-            destination_filter={"location": [self.locations[0].slug]},
+            destination_filter={"location": [self.locations[0].name]},
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
 
@@ -350,7 +350,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
         self.assertEqual(
-            field.query_params, {"location": [self.locations[0].slug, self.locations[1].slug, self.locations[2].slug]}
+            field.query_params, {"location": [self.locations[0].name, self.locations[1].name, self.locations[2].name]}
         )
 
         field = self.m2ms_1.to_form_field("peer")
@@ -1176,7 +1176,6 @@ class RequiredRelationshipTestMixin(TestCase):
             {
                 "create_data": {
                     "name": "New Platform 1",
-                    "slug": "new-platform-1",
                     "napalm_args": "null",
                 },
                 "relationship": relationship_o2m,
@@ -1198,7 +1197,6 @@ class RequiredRelationshipTestMixin(TestCase):
             {
                 "create_data": {
                     "name": "New Circuit Type",
-                    "slug": "new-circuit-type",
                 },
                 "relationship": relationship_o2o,
                 "required_objects_generator": [

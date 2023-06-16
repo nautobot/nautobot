@@ -19,7 +19,6 @@ class NaturalOrderingTestCase(TestCase):
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
-            slug="test-device-type-1",
         )
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()

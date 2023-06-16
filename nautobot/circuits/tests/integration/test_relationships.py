@@ -43,7 +43,6 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         )
         location = Location.objects.create(
             name="Test Location",
-            slug="test-location",
             status=location_status,
             location_type=location_type,
         )

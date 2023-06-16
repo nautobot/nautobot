@@ -64,10 +64,10 @@ Or for a Permission to work with Secrets that use `text-file`, but only files lo
 Accessing a Secret's value from code is as simple as calling its `get_value()` method. Providing an `obj` parameter for context is recommended so as to allow for proper handling of templated secret parameters:
 
 ```python
->>> secret = Secret.objects.get(slug="napalm-username")
+>>> secret = Secret.objects.get(name="NAPALM Username")
 >>> secret.get_value()
 'user'
->>> secret = Secret.objects.get(slug="napalm-password")
+>>> secret = Secret.objects.get(name="NAPALM Password")
 >>> secret.get_value(obj=device1)
 'secret-device1-password'
 ```
@@ -77,7 +77,7 @@ In the case where a secret's value cannot be retrieved successfully, Nautobot wi
 ```python
 >>> from nautobot.extras.secrets.exceptions import SecretError
 >>> try:
-...     Secret.objects.get(slug="napalm-secret").get_value()
+...     Secret.objects.get(name="NAPALM Secret").get_value()
 ... except SecretError as exc:
 ...     print(exc)
 ...
@@ -87,7 +87,7 @@ SecretValueNotFoundError: Secret "NAPALM Secret" (provider "EnvironmentVariableS
 In many cases, rather than accessing a specific Secret directly, you will be working with a Secrets Group instead. To retrieve the value of a specific secret within a group, use the group's `get_secret_value()` method, again with the option of providing an `obj` for template context:
 
 ```python
->>> secrets_group = SecretsGroup.objects.get(slug="netconf-credentials")
+>>> secrets_group = SecretsGroup.objects.get(name="NETCONF Credentials")
 >>> from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 >>> secrets_group.get_secret_value(
 ...     access_type=SecretsGroupAccessTypeChoices.TYPE_NETCONF,

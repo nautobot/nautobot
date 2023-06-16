@@ -202,7 +202,7 @@ def prepare_cloned_fields(instance):
 
         # For foreign-key fields, if the ModelForm's field has a defined `to_field_name`,
         # use that field from the related object instead of its PK.
-        # Example: Location.parent, LocationForm().fields["parent"].to_field_name = "slug", so use slug rather than PK.
+        # Example: Location.parent, LocationForm().fields["parent"].to_field_name = "name", so use name rather than PK.
         if isinstance(field, ForeignKey):
             related_object = getattr(instance, field_name)
             if (

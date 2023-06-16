@@ -13,7 +13,7 @@ class TenancyModelFilterSetMixin(django_filters.FilterSet):
         queryset=TenantGroup.objects.all(),
         field_name="tenant__tenant_group",
         to_field_name="name",
-        label="Tenant Group (slug or ID)",
+        label="Tenant Group (name or ID)",
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Tenant.objects.all(),

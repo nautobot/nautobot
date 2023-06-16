@@ -1,0 +1,6 @@
+Corrected leftover "natural key slug" reference in `object_bulk_create.html`.
+Corrected incorrect logic in generic view test `test_list_objects_filtered` and `test_list_objects_unknown_filter_strict_filtering`.
+Fixed leftover reference to `GraphQLQuery.slug` in `CustomGraphQLView`.
+Fixed leftover references to `slug` in various detail view and edit view templates.
+Fixed leftover references to `slug` in various IPAM table columns.
+Fixed various leftover references to `slug` fields in the documentation.

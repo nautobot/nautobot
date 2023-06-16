@@ -41,7 +41,6 @@ class TaggedItemTest(APITestCase):
     def test_create_tagged_item(self):
         data = {
             "name": "Test Location",
-            "slug": "test-location",
             "status": Status.objects.get_for_model(Location).first().pk,
             "tags": [str(t.pk) for t in self.tags],
             "location_type": self.location_type.pk,
@@ -103,7 +102,6 @@ class TaggedItemTest(APITestCase):
         tag.content_types.remove(ContentType.objects.get_for_model(Location))
         data = {
             "name": "Test Location",
-            "slug": "test-location",
             "status": Status.objects.get_for_model(Location).first().pk,
             "tags": [tag.id],
             "location_type": self.location_type.pk,

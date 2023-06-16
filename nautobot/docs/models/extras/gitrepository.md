@@ -85,11 +85,11 @@ Here is an example `_metadata` key defined:
 ```json
 {
     "_metadata": {
-        "name": "Region NYC servers",
+        "name": "Location NYC servers",
         "weight": 1000,
-        "description": "NTP and Syslog servers for region NYC",
+        "description": "NTP and Syslog servers for location NYC",
         "is_active": true,
-        "regions": [{"slug": "nyc"}],
+        "locations": [{"name": "NYC"}],
         "config_context_schema": "Config Context Schema 1"
     },
     "acl": {
@@ -133,42 +133,44 @@ For files in the root of the `/config_contexts/` directory, a single file may de
 - _metadata:
     name: "Router hostname pattern"
     roles:
-      - slug: "router"
+      - name: "Router"
   hostname_pattern_string: "rtr-.+"
 - _metadata:
     name: "Console Server hostname pattern"
     roles:
-      - slug: "console-server"
+      - name: "Console Server"
   hostname_pattern_string: "cs-.+"
 - _metadata:
     name: "Switches hostname pattern"
     roles:
-      - slug: "aggr-switch"
-      - slug: "services-switch"
+      - name: "Aggregation Switch"
+      - name: "Services Switch"
   hostname_pattern_string: "switch-.+"
 - _metadata:
     name: "Appliance hostname pattern"
     roles:
-      - slug: "security-appliance"
+      - name: "Security Appliance"
   hostname_pattern_string: "fw-.+"
 ...
 ```
 
-The `_metadata` key will map to the attributes required when creating a config context via the UI or API such as name and the scope of the config context. If we take a look at the first element, the name assigned to the config context will be `"Router hostname pattern"` and be scoped to `roles` with a slug of `router`.
+The `_metadata` key will map to the attributes required when creating a config context via the UI or API such as name and the scope of the config context. If we take a look at the first element, the name assigned to the config context will be `"Router hostname pattern"` and be scoped to `roles` with a name of `Router`.
 
 Any key/value pair defined at the same level as `_metadata` will be converted to the config context data. Keeping with the first element, it will have a key set as `hostname_pattern_string` with a value of `rtr-.+`.
 
 #### Implicit Config Contexts
 
-Implicit config context files will have the following folder/file structure `/config_contexts/<filter>/<slug>.[json|yaml]`, in which case their path and filename will be taken as an implicit scope for the context. For example:
+Implicit config context files will have the following folder/file structure `/config_contexts/<filter>/<name>.[json|yaml]`, in which case their path and filename will be taken as an implicit scope for the context. For example:
 
 ```shell
 config_contexts/
-  regions/
-    nyc.yaml       # YAML data, with implicit scoping to the Region with slug "nyc"
-  sites/
-    nyc-01.json    # JSON data, with implicit scoping to the Site with slug "nyc-01"
+  locations/
+    NYC.yaml       # YAML data, with implicit scoping to the Location with name "NYC"
+    NYC 01.json    # JSON data, with implicit scoping to the Location with name "NYC 01"
 ```
+
++/- 2.0.0
+    In Nautobot 1.x, the filenames were interpreted as `slug` strings for the related objects. In Nautobot 2.0 and later, the filenames are based on the `name` (or for `device-types` files, the `model`) of the related object instead.
 
 The implicit config contexts will be defined using dictionaries for both `_metadata` and any context data for the config context.
 

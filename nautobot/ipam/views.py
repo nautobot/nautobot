@@ -397,6 +397,9 @@ class PrefixListView(generic.ObjectListView):
         "rir",
         "role",
         "status",
+    ).prefetch_related(
+        "ip_addresses",
+        "children",
     )
 
 
@@ -760,7 +763,7 @@ class VLANGroupView(generic.ObjectView):
 
         return {
             "first_available_vlan": instance.get_next_available_vid(),
-            "bulk_querystring": f"vlan_group_id={instance.pk}",
+            "bulk_querystring": f"vlan_group={instance.pk}",
             "vlan_table": vlan_table,
             "permissions": permissions,
             "vlans_count": vlans_count,
