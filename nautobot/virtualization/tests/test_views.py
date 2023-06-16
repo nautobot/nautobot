@@ -265,6 +265,18 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.post(**request), 200)
         self.assertEqual(self._get_queryset().filter(name="Virtual Machine X").count(), 0)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_sort_by_ip_address(self):
+        # Assert https://github.com/nautobot/nautobot/issues/3503 is fixed.
+        self.add_permissions("virtualization.view_virtualmachine")
+        url = self._get_url("list") + "?sort=primary_ip"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response = response.content.decode(response.charset)
+        self.assertInHTML("Virtual Machine 1", response)
+        self.assertInHTML("Virtual Machine 2", response)
+        self.assertInHTML("Virtual Machine 3", response)
+
 
 class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = VMInterface
