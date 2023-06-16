@@ -185,17 +185,17 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
+        cls.namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
         statuses = Status.objects.get_for_model(IPAddress)
-        prefix_status = Status.objects.get_for_model(Prefix).first()
+        cls.prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
         parent, _ = Prefix.objects.get_or_create(
             prefix="192.0.2.0/24",
-            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
+            defaults={"namespace": cls.namespace, "status": cls.prefix_status, "type": "network"},
         )
 
         cls.form_data = {
-            "namespace": namespace.pk,
+            "namespace": cls.namespace.pk,
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
             "status": statuses[1].pk,
@@ -227,6 +227,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         instance = self._get_queryset().first()
         form_data = self.form_data.copy()
         form_data["address"] = instance.address  # Host address is not modifiable
+        form_data["namespace"] = instance.parent.namespace.pk
         self.form_data = form_data
         super().test_edit_object_with_permission()
 
@@ -236,6 +237,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         instance = self._get_queryset().first()
         form_data = self.form_data.copy()
         form_data["address"] = instance.address  # Host address is not modifiable
+        form_data["namespace"] = instance.parent.namespace.pk
         self.form_data = form_data
         super().test_edit_object_with_constrained_permission()
 
@@ -261,27 +263,33 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn("Host address cannot be changed once created", str(response.content))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_move_ip_addresses_between_namespaces(self):
-        ip_address = self._get_queryset().first()
+        instance = self._get_queryset().first()
         new_namespace = Namespace.objects.create(name="Test Namespace")
         # Assign model-level permission
         self.add_permissions("ipam.change_ipaddress")
 
         # Try GET with model-level permission
-        self.assertHttpStatus(self.client.get(self._get_url("edit", ip_address)), 200)
+        self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
 
         form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
         form_data["namespace"] = new_namespace.pk
         request = {
-            "path": self._get_url("edit", ip_address),
+            "path": self._get_url("edit", instance),
             "data": post_data(form_data),
         }
         response = self.client.post(**request)
         self.assertEqual(200, response.status_code)
-        self.assertIn(f"Could not determine parent Prefix for {ip_address}! Does it exist?", str(response.content))
-        # Change the parent's namespace to the new namespace that we are going to assign the ip_address to.
-        ip_address.parent.namespace = new_namespace
-        ip_address.parent.save()
+        self.assertIn(f"Could not determine parent Prefix for {instance}! Does it exist?", str(response.content))
+        # Create an exact copy of the parent prefix but in a different namespace. See if the re-parenting is successful
+        Prefix.objects.create(
+            prefix=instance.parent.prefix,
+            namespace=new_namespace,
+            status=instance.parent.status,
+            type=instance.parent.type,
+        )
         response = self.client.post(**request)
         self.assertEqual(302, response.status_code)
 
