@@ -5,7 +5,7 @@ Tags are user-defined labels which can be applied to a variety of objects within
 +++ 1.3.0
     When created, a `Tag` can be associated to one or more model content-types using a many-to-many relationship. The tag will then apply only to models belonging to those associated content-types.
 
-Each tag has a name, label, color, content-types and a URL-friendly slug. For example, the slug for a tag named "Dunder Mifflin, Inc." would be `dunder-mifflin-inc`. The slug is generated automatically and makes tags easier to work with as URL parameters. Each tag can also be assigned a description indicating its purpose.
+Each tag has a name, label, color, and permitted content-types. Each tag can also be assigned a description indicating its purpose.
 
 Objects can be filtered by the tags they have applied. For example, the following API request will retrieve all devices tagged as "monitored":
 
@@ -56,7 +56,6 @@ Example of ORM creation:
 ```python
 Tag.objects.get_or_create(
     name="Cisco-3650CX",
-    slug="cisco-3650cx",
     description="Device tag for Cisco 3650CX series",
     color="2196f3"
 )

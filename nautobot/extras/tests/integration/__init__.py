@@ -14,9 +14,7 @@ def create_test_device():
     manufacturer = Manufacturer.objects.create(
         name=f"Test Manufacturer {test_uuid}",
     )
-    device_type = DeviceType.objects.create(
-        manufacturer=manufacturer, model=f"Test Model {test_uuid}", slug=f"test-model-{test_uuid}"
-    )
+    device_type = DeviceType.objects.create(manufacturer=manufacturer, model=f"Test Model {test_uuid}")
     location_type = LocationType.objects.create(name=f"Test Location Type {test_uuid}")
     location_type.content_types.add(ContentType.objects.get_for_model(Device))
     location_status = Status.objects.get_for_model(Location).first()

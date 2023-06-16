@@ -6,7 +6,6 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     SmallTextarea,
-    SlugField,
     TagFilterField,
 )
 from nautobot.dcim.form_mixins import (
@@ -93,7 +92,6 @@ class ProviderFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
 
 
 class ProviderNetworkForm(NautobotModelForm):
-    slug = SlugField()
     provider = DynamicModelChoiceField(queryset=Provider.objects.all())
     comments = CommentField(label="Comments")
 
@@ -102,12 +100,11 @@ class ProviderNetworkForm(NautobotModelForm):
         fields = [
             "provider",
             "name",
-            "slug",
             "description",
             "comments",
             "tags",
         ]
-        fieldsets = (("Provider Network", ("provider", "name", "slug", "description", "comments", "tags")),)
+        fieldsets = (("Provider Network", ("provider", "name", "description", "comments", "tags")),)
 
 
 class ProviderNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -226,7 +223,7 @@ class CircuitFilterForm(
         queryset=ProviderNetwork.objects.all(),
         required=False,
         query_params={"provider": "$provider"},
-        to_field_name="slug",
+        to_field_name="name",
         label="Provider Network",
     )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")

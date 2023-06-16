@@ -587,13 +587,15 @@ class JSONFieldTest(testing.TestCase):
 
 class MultiMatchModelMultipleChoiceFieldTest(TestCase):
     def test_clean(self):
-        field = forms.MultiMatchModelMultipleChoiceField(queryset=ipam_models.VLANGroup.objects.all())
-        vlan_groups = (
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1"),
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2"),
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3"),
+        field = forms.MultiMatchModelMultipleChoiceField(
+            queryset=ipam_models.VLANGroup.objects.all(), to_field_name="name"
         )
-        input_ = [vlan_groups[0].pk, vlan_groups[1].slug]
+        vlan_groups = (
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 1"),
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 2"),
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 3"),
+        )
+        input_ = [vlan_groups[0].pk, vlan_groups[1].name]
         qs = field.clean(input_)
         expected_output = [vlan_groups[0].pk, vlan_groups[1].pk]
         self.assertQuerysetEqual(qs, values=expected_output, transform=lambda x: x.pk)
@@ -646,7 +648,7 @@ class DynamicFilterFormTest(TestCase):
                 location_form._get_lookup_field_choices(),
                 [
                     ("asn", "ASN"),
-                    ("child_location_type", "Child location type (slug or ID)"),
+                    ("child_location_type", "Child location type (name or ID)"),
                     ("circuit_terminations", "Circuit terminations"),
                     ("clusters", "Clusters (name or ID)"),
                     ("comments", "Comments"),
@@ -658,6 +660,8 @@ class DynamicFilterFormTest(TestCase):
                     ("devices", "Devices (name or ID)"),
                     ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
                     ("facility", "Facility"),
+                    ("has_vlan_groups", "Has VLAN groups"),
+                    ("has_vlans", "Has VLANs"),
                     ("has_circuit_terminations", "Has circuit terminations"),
                     ("has_clusters", "Has clusters"),
                     ("has_devices", "Has devices"),
@@ -665,32 +669,29 @@ class DynamicFilterFormTest(TestCase):
                     ("has_prefixes", "Has prefixes"),
                     ("has_rack_groups", "Has rack groups"),
                     ("has_racks", "Has racks"),
-                    ("has_vlan_groups", "Has vlan groups"),
-                    ("has_vlans", "Has vlans"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("latitude", "Latitude"),
-                    ("location_type", "Location type (slug or ID)"),
-                    ("subtree", "Location(s) and descendants thereof (slug or ID)"),
+                    ("location_type", "Location type (name or ID)"),
+                    ("subtree", "Location(s) and descendants thereof (name or ID)"),
                     ("longitude", "Longitude"),
                     ("name", "Name"),
                     ("content_type", "Object types allowed to be associated with this Location Type"),
-                    ("parent", "Parent location (slug or ID)"),
+                    ("parent", "Parent location (name or ID)"),
                     ("physical_address", "Physical address"),
                     ("power_panels", "Power panels (name or ID)"),
                     ("prefixes", "Prefixes"),
                     ("racks", "Rack (name or ID)"),
-                    ("rack_groups", "Rack groups (slug or ID)"),
+                    ("rack_groups", "Rack groups (name or ID)"),
                     ("shipping_address", "Shipping address"),
-                    ("slug", "Slug"),
                     ("status", "Status"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
                     ("tenant", "Tenant (name or ID)"),
-                    ("tenant_group", "Tenant Group (slug or ID)"),
+                    ("tenant_group", "Tenant Group (name or ID)"),
                     ("time_zone", "Time zone"),
-                    ("vlan_groups", "Vlan groups (slug or ID)"),
+                    ("vlan_groups", "VLAN groups (name or ID)"),
                 ],
             )
 
@@ -754,7 +755,6 @@ class DynamicFilterFormTest(TestCase):
 
         request_querydict = QueryDict(mutable=True)
         request_querydict.setlistdefault("name__ic", ["Location"])
-        request_querydict.setlistdefault("slug", ["location-1"])
         request_querydict.setlistdefault("status", ["active"])
         request_querydict.setlistdefault("has_vlans", ["True"])
         request_querydict.setlistdefault("created__gte", ["2022-09-05 11:22:33"])
@@ -773,14 +773,10 @@ class DynamicFilterFormTest(TestCase):
             # Assert lookup_value is a CharField
             self.assertIsInstance(form.fields["lookup_value"], django_forms.CharField)
 
-            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-1")
-            self.assertEqual(form.fields["lookup_type"]._choices, [("slug", "exact")])
-            self.assertIsInstance(form.fields["lookup_value"], django_forms.CharField)
-
         with self.subTest("Test for lookup_value with a ChoiceField and APISelectMultiple widget"):
             # If `lookup_field` value is a relational field(ManyToMany, ForeignKey etc.) and `lookup_type` lookup expr is `exact` or `in` then,
             # `lookup_value` field should be a ChoiceField with APISelectMultiple widget
-            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-2")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-1")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -808,7 +804,7 @@ class DynamicFilterFormTest(TestCase):
         with self.subTest("Test for lookup_value with a NullBooleanField and StaticSelect2 widget"):
             # If `lookup_field` value is a boolean filter and `lookup_type` lookup expr is `exact`, then
             # `lookup_value` field should be a NullBooleanField with StaticSelect2 widget
-            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-3")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-2")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -828,7 +824,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertEqual(form.fields["lookup_value"].widget.choices, [("True", "Yes"), ("False", "No")])
 
         with self.subTest("Test for lookup_value with a DateTimeField"):
-            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-4")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-3")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
@@ -842,7 +838,7 @@ class DynamicFilterFormTest(TestCase):
             self.assertIsInstance(form.fields["lookup_value"].widget, forms.DateTimePicker)
 
         with self.subTest("Test for lookup_value with an IntegerField"):
-            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-5")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-4")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {

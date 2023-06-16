@@ -59,13 +59,11 @@ If no body template is specified, the request body will be populated with a JSON
         "display": "Campus A",
         "url": "/api/dcim/locations/5e4f9a91-372b-46df-a50a-c26357475bee/",
         "name": "Campus A",
-        "slug": "campus-a",
         "status": {
             "display": "Active",
             "id": "363a431c-c784-40b5-8513-758cafd174ad",
             "url": "/api/extras/statuses/363a431c-c784-40b5-8513-758cafd174ad/",
             "name": "Active",
-            "slug": "active",
             "created": "2023-02-14T00:00:00Z",
             "last_updated": "2023-02-14T19:40:13.216150Z"
         },
@@ -78,7 +76,6 @@ If no body template is specified, the request body will be populated with a JSON
             "asn": null,
             "url": "/api/dcim/locations/5e4f9a91-372b-46df-a50a-c26357475bee/",
             "name": "Campus A",
-            "slug": "campus-a",
             ...
         },
         "differences": {
@@ -88,7 +85,6 @@ If no body template is specified, the request body will be populated with a JSON
                 "asn": null,
                 "url": "/api/dcim/locations/5e4f9a91-372b-46df-a50a-c26357475bee/",
                 "name": "Campus A",
-                "slug": "campus-a",
                 ...
             }
         }

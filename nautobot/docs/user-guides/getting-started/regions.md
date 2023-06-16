@@ -31,21 +31,18 @@ North America:
 
 1. Leave the `Parent` blank; **North America** will be a top-tier Region
 2. Populate the `Name` to be `North America`
-    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
 3. Click on the `Create and Add Another` button
 
 Canada:
 
 1. Select **North America** as the `Parent` from the drop-down menu selector
 2. Populate the `Name` to be `Canada`
-    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
 3. Click on the `Create and Add Another` button
 
 Vancouver:
 
 1. Select **Canada** as the `Parent` from the drop-down menu selector
 2. Populate the `Name` to be `Vancouver`
-    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
 3. Click on the `Create` button
 
 ![Create region](../images/getting-started-nautobot-ui/6-create-region.png)

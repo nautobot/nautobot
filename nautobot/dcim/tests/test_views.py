@@ -96,7 +96,7 @@ def create_test_device(name):
     location_type, _ = LocationType.objects.get_or_create(name="Campus")
     location_status = Status.objects.get_for_model(Location).first()
     location, _ = Location.objects.get_or_create(
-        name="Test Location 1", slug="test-location-1", location_type=location_type, status=location_status
+        name="Test Location 1", location_type=location_type, status=location_status
     )
     manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
@@ -135,7 +135,6 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # so we need to make sure we're not trying to introduce a reference loop to the LocationType tree...
         cls.form_data = {
             "name": "Intermediate 2",
-            "slug": "intermediate-2",
             # "parent": lt1.pk, # TODO: Either overload how EditObjectViewTestCase finds an editable object or write a specific test case for this.
             "description": "Another intermediate type",
             "content_types": [ContentType.objects.get_for_model(Rack).pk, ContentType.objects.get_for_model(Device).pk],
@@ -143,14 +142,11 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,parent,description,content_types,nestable",
-            f"Intermediate 3,intermediate-3,{lt1.name},Another intermediate type,ipam.prefix,false",
-            f'Intermediate 4,intermediate-4,{lt1.name},Another intermediate type,"ipam.prefix,dcim.device",false',
-            "Root 3,root-3,,Another root type,,true",
+            "name,parent,description,content_types,nestable",
+            f"Intermediate 3,{lt1.name},Another intermediate type,ipam.prefix,false",
+            f'Intermediate 4,{lt1.name},Another intermediate type,"ipam.prefix,dcim.device",false',
+            "Root 3,,Another root type,,true",
         )
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Root"
 
     def _get_queryset(self):
         return super()._get_queryset().order_by("last_updated")
@@ -181,7 +177,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "location_type": lt1.pk,
             "parent": None,
             "name": "Root 3",
-            "slug": "root-3",
             "status": status.pk,
             "tenant": tenant.pk,
             "facility": "Facility X",
@@ -200,10 +195,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,location_type,parent,status,tenant,description",
-            f'Root 3,root-3,"{lt1.name}",,{status.name},,',
-            f'Intermediate 2,intermediate-2,"{lt2.name}",{loc2.composite_key},{status.name},"{tenant.name}",Hello world!',
-            f'Leaf 2,leaf-2,"{lt3.name}",{loc3.composite_key},{status.name},"{tenant.name}",',
+            "name,location_type,parent,status,tenant,description",
+            f'Root 3,"{lt1.name}",,{status.name},,',
+            f'Intermediate 2,"{lt2.name}",{loc2.composite_key},{status.name},"{tenant.name}",Hello world!',
+            f'Leaf 2,"{lt3.name}",{loc3.composite_key},{status.name},"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
@@ -216,9 +211,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "time_zone": pytz.timezone("US/Eastern"),
         }
 
-        # No slug_source/slug_test_object here because Location uses the composite [parent__name, name]
-        # and the test doesn't support that idea yet
-
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
@@ -227,27 +219,24 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
-        RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=location)
-        RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", location=location)
+        RackGroup.objects.create(name="Rack Group 1", location=location)
+        RackGroup.objects.create(name="Rack Group 2", location=location)
+        RackGroup.objects.create(name="Rack Group 3", location=location)
         RackGroup.objects.create(name="Rack Group 8", location=location)
 
         cls.form_data = {
             "name": "Rack Group X",
-            "slug": "rack-group-x",
             "location": location.pk,
             "description": "A new rack group",
         }
 
         cls.csv_data = (
-            "location,name,slug,description",
-            f"{location.composite_key},Rack Group 4,rack-group-4,Fourth rack group",
-            f"{location.composite_key},Rack Group 5,rack-group-5,Fifth rack group",
-            f"{location.composite_key},Rack Group 6,rack-group-6,Sixth rack group",
-            f"{location.composite_key},Rack Group 7,,Seventh rack group",
+            "location,name,description",
+            f"{location.composite_key},Rack Group 4,Fourth rack group",
+            f"{location.composite_key},Rack Group 5,Fifth rack group",
+            f"{location.composite_key},Rack Group 6,Sixth rack group",
+            f"{location.composite_key},Rack Group 7,Seventh rack group",
         )
-        cls.slug_test_object = "Rack Group 8"
-        cls.slug_source = "name"
 
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -260,7 +249,7 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        rack_group = RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=location)
+        rack_group = RackGroup.objects.create(name="Rack Group 1", location=location)
 
         rack_status = Status.objects.get_for_model(Rack).first()
         rack = Rack.objects.create(name="Rack 1", location=location, rack_group=rack_group, status=rack_status)
@@ -307,8 +296,8 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Assign power panels generated to the class object for use later.
         cls.powerpanels = powerpanels
         rackgroups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=cls.locations[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=cls.locations[1]),
+            RackGroup.objects.create(name="Rack Group 1", location=cls.locations[0]),
+            RackGroup.objects.create(name="Rack Group 2", location=cls.locations[1]),
         )
 
         rackroles = Role.objects.get_for_model(Rack)[:2]
@@ -432,9 +421,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Create Devices
         manufacturer = Manufacturer.objects.first()
 
-        device_types = (
-            DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
-        )
+        device_types = (DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer),)
 
         device_roles = Role.objects.get_for_model(Device)[:1]
 
@@ -579,15 +566,14 @@ class DeviceTypeTestCase(
     def setUpTestData(cls):
         manufacturers = Manufacturer.objects.all()[:2]
 
-        DeviceType.objects.create(model="Test Device Type 1", slug="device-type-1", manufacturer=manufacturers[0])
-        DeviceType.objects.create(model="Test Device Type 2", slug="device-type-2", manufacturer=manufacturers[0])
-        DeviceType.objects.create(model="Test Device Type 3", slug="device-type-3", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 1", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 2", manufacturer=manufacturers[0])
+        DeviceType.objects.create(model="Test Device Type 3", manufacturer=manufacturers[0])
         DeviceType.objects.create(model="Test Device Type 4", manufacturer=manufacturers[1])
 
         cls.form_data = {
             "manufacturer": manufacturers[1].pk,
             "model": "Device Type X",
-            "slug": "device-type-x",
             "part_number": "123ABC",
             "u_height": 2,
             "is_full_depth": True,
@@ -601,9 +587,6 @@ class DeviceTypeTestCase(
             "u_height": 3,
             "is_full_depth": False,
         }
-
-        cls.slug_source = "model"
-        cls.slug_test_object = "Test Device Type 4"
 
     # Temporary FIXME(jathan): Literally just trying to get the tests running so
     # we can keep moving on the fixture factories. This should be removed once
@@ -628,9 +611,9 @@ class DeviceTypeTestCase(
         """
         Custom import test for YAML-based imports (versus CSV)
         """
-        # TODO: Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
-        #       (not "rear_port_template"). This is intentional as we are testing for backwards compatibility with
-        #       the netbox/devicetype-library repository.
+        # Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
+        # (not "rear_port_template"). Note also inclusion of "slug" even though we removed DeviceType.slug in 2.0.
+        # This is intentional as we are testing backwards compatibility with the netbox/devicetype-library repository.
         manufacturer = Manufacturer.objects.first()
         IMPORT_DATA = f"""
 manufacturer: {manufacturer.name}
@@ -833,8 +816,8 @@ class ConsolePortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
         devicetypes = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2"),
         )
 
         ConsolePortTemplate.objects.create(device_type=devicetypes[0], name="Console Port Template 1")
@@ -865,8 +848,8 @@ class ConsoleServerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateVie
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
         devicetypes = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2"),
         )
 
         ConsoleServerPortTemplate.objects.create(device_type=devicetypes[0], name="Console Server Port Template 1")
@@ -897,8 +880,8 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
         devicetypes = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2"),
         )
 
         PowerPortTemplate.objects.create(device_type=devicetypes[0], name="Power Port Template 1")
@@ -934,7 +917,7 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
 
         PowerOutletTemplate.objects.create(device_type=devicetype, name="Power Outlet Template 1")
         PowerOutletTemplate.objects.create(device_type=devicetype, name="Power Outlet Template 2")
@@ -971,8 +954,8 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
         devicetypes = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2"),
         )
 
         InterfaceTemplate.objects.create(device_type=devicetypes[0], name="Interface Template 1")
@@ -1007,7 +990,7 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
 
         rearports = (
             RearPortTemplate.objects.create(device_type=devicetype, name="Rear Port Template 1"),
@@ -1064,8 +1047,8 @@ class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
         devicetypes = (
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"),
-            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2", slug="device-type-2"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1"),
+            DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2"),
         )
 
         RearPortTemplate.objects.create(device_type=devicetypes[0], name="Rear Port Template 1")
@@ -1101,13 +1084,11 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             DeviceType.objects.create(
                 manufacturer=manufacturer,
                 model="Device Type 1",
-                slug="device-type-1",
                 subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
             ),
             DeviceType.objects.create(
                 manufacturer=manufacturer,
                 model="Device Type 2",
-                slug="device-type-2",
                 subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
             ),
         )
@@ -1162,7 +1143,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
-        rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1", slug="rack-group-1")
+        rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1")
 
         rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
@@ -1173,8 +1154,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         manufacturer = Manufacturer.objects.first()
 
         devicetypes = (
-            DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer),
-            DeviceType.objects.create(model="Device Type 2", slug="device-type-2", manufacturer=manufacturer),
+            DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer),
+            DeviceType.objects.create(model="Device Type 2", manufacturer=manufacturer),
         )
 
         deviceroles = Role.objects.get_for_model(Device)[:2]
@@ -2483,7 +2464,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.first()
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
 
@@ -2569,8 +2550,8 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         rackgroups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=locations[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=locations[1]),
+            RackGroup.objects.create(name="Rack Group 1", location=locations[0]),
+            RackGroup.objects.create(name="Rack Group 2", location=locations[1]),
         )
 
         PowerPanel.objects.create(location=locations[0], rack_group=rackgroups[0], name="Power Panel 1")
@@ -2675,7 +2656,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.view_powerfeed")
         # Setup base device info
         manufacturer = Manufacturer.objects.first()
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
         device = Device.objects.create(
@@ -2709,12 +2690,10 @@ class PathTraceViewTestCase(ModelViewTestCase):
         active = Status.objects.get(name="Active")
         connected = Status.objects.get(name="Connected")
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.get(name="Campus")
-        location = Location.objects.create(
-            location_type=location_type, name="Location 1", slug="location-1", status=active
-        )
+        location = Location.objects.create(location_type=location_type, name="Location 1", status=active)
         device = Device.objects.create(
             device_type=devicetype, role=devicerole, name="Device 1", location=location, status=active
         )

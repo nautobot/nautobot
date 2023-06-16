@@ -273,20 +273,17 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "VLAN Group X",
-            "slug": "vlan-group-x",
             "location": location.pk,
             "description": "A new VLAN group",
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "VLAN Group 4,vlan-group-4,Fourth VLAN group",
-            "VLAN Group 5,vlan-group-5,Fifth VLAN group",
-            "VLAN Group 6,vlan-group-6,Sixth VLAN group",
-            "VLAN Group 7,,Seventh VLAN group",
+            "name,description",
+            "VLAN Group 4,Fourth VLAN group",
+            "VLAN Group 5,Fifth VLAN group",
+            "VLAN Group 6,Sixth VLAN group",
+            "VLAN Group 7,Seventh VLAN group",
         )
-        cls.slug_source = "name"
-        cls.slug_test_object = VLANGroup.objects.first().name
 
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -298,8 +295,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         location_1 = cls.locations.first()
 
         vlangroups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=cls.locations.first()),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=cls.locations.last()),
+            VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations.first()),
+            VLANGroup.objects.create(name="VLAN Group 2", location=cls.locations.last()),
         )
 
         roles = Role.objects.get_for_model(VLAN)[:2]

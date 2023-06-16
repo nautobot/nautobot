@@ -14,6 +14,10 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name="vlangroup",
-            unique_together={("location", "slug")},
+            unique_together={},
+        ),
+        migrations.RemoveField(
+            model_name="vlangroup",
+            name="slug",
         ),
     ]

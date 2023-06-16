@@ -58,7 +58,6 @@ class CableLengthTestCase(TestCase):
         cls.devicetype = DeviceType.objects.create(
             manufacturer=cls.manufacturer,
             model="Test Device Type 1",
-            slug="test-device-type-1",
         )
         cls.devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
@@ -124,7 +123,7 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         ]
         for custom_field in custom_fields:
             custom_field.content_types.set([ContentType.objects.get_for_model(Interface)])
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048")
         interface_template_1 = InterfaceTemplate.objects.create(
             device_type=device_type,
             name="Test_Template_1",
@@ -166,7 +165,7 @@ class InterfaceTemplateTestCase(TestCase):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048", slug="ff2048")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="FrameForwarder 2048")
         InterfaceTemplate.objects.create(
             device_type=device_type,
             name="Test_Template_1",
@@ -215,7 +214,7 @@ class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
         cls.location_type_a = LocationType.objects.get(name="Campus")
         cls.location_a = Location.objects.filter(location_type=cls.location_type_a).first()
         cls.location_status = Status.objects.get_for_model(Location).first()
-        cls.rackgroup_a1 = RackGroup(location=cls.location_a, name="RackGroup A1", slug="rackgroup-a1")
+        cls.rackgroup_a1 = RackGroup(location=cls.location_a, name="RackGroup A1")
         cls.rackgroup_a1.save()
         cls.rackgroup_a2 = RackGroup(location=cls.location_a, parent=cls.rackgroup_a1, name="RackGroup A2")
         cls.rackgroup_a2.save()
@@ -319,8 +318,8 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
         cls.location2 = Location.objects.create(
             name="Location2", location_type=cls.location_type_a, status=cls.location_status
         )
-        cls.group1 = RackGroup.objects.create(name="TestGroup1", slug="test-group-1", location=cls.location1)
-        cls.group2 = RackGroup.objects.create(name="TestGroup2", slug="test-group-2", location=cls.location2)
+        cls.group1 = RackGroup.objects.create(name="TestGroup1", location=cls.location1)
+        cls.group2 = RackGroup.objects.create(name="TestGroup2", location=cls.location2)
         cls.rack = Rack.objects.create(
             name="TestRack1",
             facility_id="A101",
@@ -335,12 +334,10 @@ class RackTestCase(ModelTestCases.BaseModelTestCase):
             "ff2048": DeviceType.objects.create(
                 manufacturer=cls.manufacturer,
                 model="FrameForwarder 2048",
-                slug="ff2048",
             ),
             "cc5000": DeviceType.objects.create(
                 manufacturer=cls.manufacturer,
                 model="CurrentCatapult 5000",
-                slug="cc5000",
                 u_height=0,
             ),
         }
@@ -593,7 +590,6 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
         location = Location(
             location_type=self.root_type,
             name="Location A",
-            slug="location-a",
             status=status,
             longitude=55.1234567896,
             latitude=55.1234567896,
@@ -684,7 +680,6 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
-            slug="test-device-type-1",
         )
         self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).first()
@@ -908,7 +903,6 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
-            slug="test-device-type-1",
         )
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
@@ -1207,7 +1201,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         vlan_status = Status.objects.get_for_model(VLAN).first()

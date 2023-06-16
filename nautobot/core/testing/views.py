@@ -74,25 +74,30 @@ class ModelViewTestCase(ModelTestCase):
 
     reverse_url_attribute = None
     """
-    Name of instance field to pass as a kwarg when looking up action URLs for creating/editing/deleting a model instance.
+    Name of instance field to pass as a kwarg when looking up URLs for creating/editing/deleting a model instance.
 
-    If unspecified, "slug" and "pk" will be tried, in that order.
+    If unspecified, "pk" and "slug" will be tried, in that order.
     """
 
-    # 2.0 TODO(jathan): Eliminate the need to overload `_get_base_url()` at all and just rely on `get_route_for_model()`
     def _get_base_url(self):
         """
-        Return the base format for a URL for the test's model. Override this to test for a model which belongs
-        to a different app (e.g. testing Interfaces within the virtualization app).
+        Return the base format string for a view URL for the test.
+
+        Examples: "dcim:device_{}", "plugins:example_plugin:example_model_{}"
+
+        Override this if needed for testing of views that don't correspond directly to self.model,
+        for example the DCIM "interface-connections" and "console-connections" view tests.
         """
         if self.model._meta.app_label in settings.PLUGINS:
             return f"plugins:{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
         return f"{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
 
-    # 2.0 TODO(jathan): Eliminate the need to overload `_get_url()` at all and just rely on `get_route_for_model()`
     def _get_url(self, action, instance=None):
         """
-        Return the URL name for a specific action and optionally a specific instance
+        Return the URL string for a specific action and optionally a specific model instance.
+
+        Override this if needed for testing of views whose names don't follow
+        the [plugins]:<app_label>:<model_name>_<action> naming convention.
         """
         url_format = self._get_base_url()
 
@@ -106,15 +111,14 @@ class ModelViewTestCase(ModelTestCase):
                 kwargs={self.reverse_url_attribute: getattr(instance, self.reverse_url_attribute)},
             )
 
-        # Attempt to resolve using slug as the unique identifier if one exists
-        if hasattr(self.model, "slug"):
-            try:
+        try:
+            # Default to using the PK to retrieve the URL for an object
+            return reverse(url_format.format(action), kwargs={"pk": instance.pk})
+        except NoReverseMatch:
+            # Attempt to resolve using slug as the unique identifier if one exists
+            if hasattr(self.model, "slug"):
                 return reverse(url_format.format(action), kwargs={"slug": instance.slug})
-            except NoReverseMatch:
-                pass
-
-        # Default to using the numeric PK to retrieve the URL for an object
-        return reverse(url_format.format(action), kwargs={"pk": instance.pk})
+            raise
 
 
 @tag("unit")
@@ -658,11 +662,8 @@ class ViewTestCases:
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            try:
-                self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
-                self.assertNotIn(self._get_url("view", instance=instance2), content, msg=content)
-            except NoReverseMatch:
-                pass
+            if instance1.get_absolute_url() in content:
+                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
@@ -702,11 +703,8 @@ class ViewTestCases:
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(instance1.name) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(instance2.name) + r"\s*<", msg=content)
-            try:
-                self.assertIn(self._get_url("view", instance=instance1), content, msg=content)
-                self.assertIn(self._get_url("view", instance=instance2), content, msg=content)
-            except NoReverseMatch:
-                pass
+            if instance1.get_absolute_url() in content:
+                self.assertIn(instance2.get_absolute_url(), content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):

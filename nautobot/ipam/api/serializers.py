@@ -98,21 +98,6 @@ class VLANGroupSerializer(NautobotModelSerializer):
         model = VLANGroup
         fields = "__all__"
         list_display_fields = ["name", "location", "vlan_count", "description"]
-        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        validators = []
-
-    def validate(self, data):
-        # Validate uniqueness of name and slug if a location has been assigned.
-        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        if data.get("location", None):
-            for field in ["name", "slug"]:
-                validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("location", field))
-                validator(data, self)
-
-        # Enforce model validation
-        super().validate(data)
-
-        return data
 
 
 class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):

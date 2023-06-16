@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 from collections import OrderedDict
 
@@ -11,7 +10,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
-from django.utils.text import slugify
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
@@ -21,7 +19,7 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import AutoSlugField, ForeignKeyWithAutoRelatedName
+from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName
 from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
@@ -642,18 +640,15 @@ class Note(BaseModel, ChangeLoggedModel):
     )
     user_name = models.CharField(max_length=150, editable=False)
 
-    slug = AutoSlugField(populate_from="assigned_object")
     note = models.TextField()
     objects = BaseManager.from_queryset(NotesQuerySet)()
 
     class Meta:
         ordering = ["created"]
-
-    def slugify_function(self, content):
-        return slugify(f"{str(content)[:50]}-{datetime.now().isoformat()}")
+        unique_together = [["assigned_object_type", "assigned_object_id", "user_name", "created"]]
 
     def __str__(self):
-        return str(self.slug)
+        return f"{self.assigned_object} - {self.created.isoformat()}"
 
     def save(self, *args, **kwargs):
         # Record the user's name as static strings

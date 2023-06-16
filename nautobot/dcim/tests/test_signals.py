@@ -21,7 +21,7 @@ class VirtualChassisTest(TestCase):
         """Setup Test Data for VirtualChassis Signal tests."""
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type", slug="device-type")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type")
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
 

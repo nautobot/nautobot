@@ -627,7 +627,7 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
 
         # Test location with a value for custom_field
-        location_1 = Location.objects.filter(slug="test-location-one")
+        location_1 = Location.objects.filter(name="Test Location One")
         self.assertEqual(location_1.count(), 1)
         location_1 = location_1.first()
         self.assertEqual(CustomField.objects.filter(label="cf1").count(), 1)
@@ -635,7 +635,7 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.assertEqual(location_1.cf["cf1"], "some-value")
 
         # Test location with default value for custom field
-        location_2 = Location.objects.filter(slug="test-location-two")
+        location_2 = Location.objects.filter(name="Test Location Two")
         self.assertEqual(location_2.count(), 1)
         location_2 = location_2.first()
         self.assertIn("cf1", location_2.cf)

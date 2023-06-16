@@ -1132,7 +1132,7 @@ An example from editing a Provider object:
 {
     'content_type': <ContentType: circuits | provider>,
     'filter_form': <ProviderFilterForm bound=True, valid=Unknown, fields=(region;site;location;q;asn;tag)>,
-    'form': <ProviderForm bound=False, valid=Unknown, fields=(name;slug;asn;account;portal_url;noc_contact;admin_contact;comments;tags;object_note)>,
+    'form': <ProviderForm bound=False, valid=Unknown, fields=(name;asn;account;portal_url;noc_contact;admin_contact;comments;tags;object_note)>,
     'object': <Provider: NautobotProvider>,
     'permissions': {'add': True, 'change': True, 'delete': True, 'view': True},
     'return_url': '/circuits/providers/nautobotprovider',

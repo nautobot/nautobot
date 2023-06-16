@@ -41,6 +41,9 @@
 - Model/Endpoint: "DeviceRedundancyGroup"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "DeviceType"
+  Removed Field: "slug"
+  Comments:
 - Model/Endpoint: "DynamicGroup"
   Removed Field: "slug"
   Comments:
@@ -74,7 +77,16 @@
 - Model/Endpoint: "Location"
   Removed Field: "site"
   Comments: "Use `parent` instead"
+- Model/Endpoint: "Location"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "LocationType"
+  Removed Field: "slug"
+  Comments:
 - Model/Endpoint: "Manufacturer"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Note"
   Removed Field: "slug"
   Comments:
 - Model/Endpoint: "Platform"
@@ -98,12 +110,18 @@
 - Model/Endpoint: "Provider"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "ProviderNetwork"
+  Removed Field: "slug"
+  Comments:
 - Model/Endpoint: "Rack"
   Removed Field: "site"
   Comments: "Use `location` instead"
 - Model/Endpoint: "RackGroup"
   Removed Field: "site"
   Comments: "Use `location` instead"
+- Model/Endpoint: "RackGroup"
+  Removed Field: "slug"
+  Comments:
 - Model/Endpoint: "RelationshipAssociation"
   Removed Field: "slug"
   Comments:
@@ -128,6 +146,9 @@
 - Model/Endpoint: "Status"
   Removed Field: "slug"
   Comments:
+- Model/Endpoint: "Tag"
+  Removed Field: "slug"
+  Comments:
 - Model/Endpoint: "Tenant"
   Removed Field: "slug"
   Comments:
@@ -143,6 +164,9 @@
 - Model/Endpoint: "VLANGroup"
   Removed Field: "site"
   Comments: "Use `location` instead"
+- Model/Endpoint: "VLANGroup"
+  Removed Field: "slug"
+  Comments:
 - Model/Endpoint: "VRF"
   Removed Field: "enforce_unique"
   Comments: "Uniqueness of Prefixes and IPAddresses is now enforced at the database level"

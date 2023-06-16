@@ -61,15 +61,13 @@ class GitTest(TransactionTestCase):
         # Needed for use with the change_logging decorator
         self.mock_request.id = uuid.uuid4()
 
-        self.location_type = LocationType.objects.create(name="Test Location Type", slug="test-location-type")
+        self.location_type = LocationType.objects.create(name="Test Location Type")
         self.location_type.content_types.add(ContentType.objects.get_for_model(Device))
         status = Status.objects.create(name="Active Test")
         status.content_types.add(ContentType.objects.get_for_model(Location))
         self.location = Location.objects.create(location_type=self.location_type, name="Test Location", status=status)
         self.manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
-        self.device_type = DeviceType.objects.create(
-            manufacturer=self.manufacturer, model="Frobozz 1000", slug="frobozz1000"
-        )
+        self.device_type = DeviceType.objects.create(manufacturer=self.manufacturer, model="Frobozz 1000")
         role = Role.objects.create(name="Active Test")
         role.content_types.add(ContentType.objects.get_for_model(Device))
         status.content_types.add(ContentType.objects.get_for_model(Device))
@@ -148,14 +146,14 @@ class GitTest(TransactionTestCase):
                         "description": "NTP servers for Frobozz 1000 devices **only**",
                         "is_active": True,
                         "config_context_schema": "Config Context Schema 1",
-                        "device_types": [{"slug": self.device_type.slug}],
+                        "device_types": [{"model": self.device_type.model}],
                     },
                     "ntp-servers": ["172.16.10.22", "172.16.10.33"],
                 },
                 fd,
             )
 
-        with open(os.path.join(path, "config_contexts", "locations", f"{self.location.slug}.json"), "w") as fd:
+        with open(os.path.join(path, "config_contexts", "locations", f"{self.location.name}.json"), "w") as fd:
             json.dump(
                 {
                     "_metadata": {"name": "Location context", "is_active": False},
@@ -190,7 +188,7 @@ class GitTest(TransactionTestCase):
     def empty_repo(self, path, url, *args, **kwargs):
         os.remove(os.path.join(path, "__init__.py"))
         os.remove(os.path.join(path, "config_contexts", "context.yaml"))
-        os.remove(os.path.join(path, "config_contexts", "locations", f"{self.location.slug}.json"))
+        os.remove(os.path.join(path, "config_contexts", "locations", f"{self.location.name}.json"))
         os.remove(os.path.join(path, "config_contexts", "devices", f"{self.device.name}.json"))
         os.remove(os.path.join(path, "config_context_schemas", "schema-1.yaml"))
         os.remove(os.path.join(path, "export_templates", "dcim", "device", "template.j2"))

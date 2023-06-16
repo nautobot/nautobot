@@ -1,0 +1,8 @@
+Changed many FilterSet filters to filter on (name or ID) instead of (slug or ID) since the relevant model `slug` fields have been removed.
+Changed FilterSet filters referring to `DeviceType` objects to filter on (model or ID) instead of (slug or ID).
+Changed `NaturalKeyOrPKMultipleChoiceFilter` default `to_field_name` from `slug` to `name`.
+Replaced `NameSlugSearchFilterSet` with `NameSearchFilterSet`.
+Changed default `ModelViewTestCase._get_url()` behavior to prefer `pk`-based URLs over `slug`-based URLs.
+Changed `ObjectEditView.get_object()` and `ObjectDeleteView.get_object()` to prefer `pk`-based object lookups over `slug`-based lookups.
+Revised development best-practices documentation around the inclusion of `slug` fields in models.
+Changed Git repository provided "implicit" config context files to be based on `name` (or `model` in the case of DeviceType contexts) instead of `slug`.

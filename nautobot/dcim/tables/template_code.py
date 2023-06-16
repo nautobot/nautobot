@@ -103,7 +103,7 @@ POWERFEED_CABLETERMINATION = """
 """
 
 RACKGROUP_ELEVATIONS = """
-<a href="{% url 'dcim:rack_elevation_list' %}?location={{ record.location.slug }}&rack_group_id={{ record.pk }}" class="btn btn-xs btn-primary" title="View elevations">
+<a href="{% url 'dcim:rack_elevation_list' %}?location={{ record.location.pk }}&rack_group={{ record.pk }}" class="btn btn-xs btn-primary" title="View elevations">
     <i class="mdi mdi-server"></i>
 </a>
 """

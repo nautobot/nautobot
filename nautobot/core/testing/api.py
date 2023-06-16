@@ -519,9 +519,6 @@ class APIViewTestCases:
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
         def check_expected_slug(self, obj):
-            if not getattr(self, "slug_source", None):
-                self.skipTest("No slug_source defined for this test")
-
             slug_source = self.slug_source if isinstance(self.slug_source, (list, tuple)) else [self.slug_source]
             expected_slug = ""
             for source_item in slug_source:

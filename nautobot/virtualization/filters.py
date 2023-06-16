@@ -5,7 +5,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
-    NameSlugSearchFilterSet,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -35,7 +35,7 @@ __all__ = (
 )
 
 
-class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class ClusterTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         to_field_name="name",
@@ -51,7 +51,7 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
         fields = ["id", "name", "description"]
 
 
-class ClusterGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class ClusterGroupFilterSet(NautobotFilterSet, NameSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         to_field_name="name",
@@ -158,8 +158,8 @@ class VirtualMachineFilterSet(
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         field_name="cluster__location",
-        to_field_name="slug",
-        label="Location (slug or ID)",
+        to_field_name="name",
+        label="Location (name or ID)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Platform.objects.all(),

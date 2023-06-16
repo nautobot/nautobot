@@ -29,7 +29,7 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ["noc_contact"],
         ["portal_url"],
         ["provider_networks", "provider_networks__id"],
-        ["provider_networks", "provider_networks__slug"],
+        ["provider_networks", "provider_networks__name"],
     )
 
     @classmethod
@@ -60,7 +60,7 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
         )
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-        params = {"location": [self.locations[0].slug, self.locations[1].slug]}
+        params = {"location": [self.locations[0].name, self.locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
@@ -88,7 +88,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["provider", "provider__id"],
         ["provider", "provider__name"],
         ["provider_network", "circuit_terminations__provider_network__id"],
-        ["provider_network", "circuit_terminations__provider_network__slug"],
+        ["provider_network", "circuit_terminations__provider_network__name"],
         ["circuit_type", "circuit_type__id"],
         ["circuit_type", "circuit_type__name"],
         ["status", "status__name"],
@@ -110,7 +110,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         expected = self.queryset.filter(circuit_terminations__location__in=[locations[0].pk, locations[1].pk])
         params = {"location": [locations[0].pk, locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-        params = {"location": [locations[0].slug, locations[1].slug]}
+        params = {"location": [locations[0].name, locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
     def test_search(self):
@@ -129,7 +129,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         ["description"],
         ["port_speed"],
         ["pp_info"],
-        ["provider_network", "provider_network__slug"],
+        ["provider_network", "provider_network__name"],
         ["provider_network", "provider_network__id"],
         ["upstream_speed"],
         ["xconnect_id"],
@@ -195,7 +195,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
 
-class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
+class ProviderNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = ProviderNetwork.objects.all()
     filterset = ProviderNetworkFilterSet
 

@@ -22,7 +22,6 @@ from nautobot.core.forms import (
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
-    SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
@@ -146,7 +145,7 @@ class ConnectCableExcludeIDMixin:
 class DeviceComponentFilterForm(NautobotFilterForm):
     field_order = ["q", "location"]
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -232,7 +231,6 @@ class ComponentForm(BootstrapMixin, forms.Form):
 
 class LocationTypeForm(NautobotModelForm):
     parent = DynamicModelChoiceField(queryset=LocationType.objects.all(), required=False)
-    slug = SlugField()
     content_types = MultipleContentTypeField(
         feature="locations",
         help_text="The object type(s) that can be associated to a Location of this type",
@@ -241,7 +239,7 @@ class LocationTypeForm(NautobotModelForm):
 
     class Meta:
         model = LocationType
-        fields = ("parent", "name", "slug", "description", "nestable", "content_types")
+        fields = ("parent", "name", "description", "nestable", "content_types")
 
 
 class LocationTypeFilterForm(NautobotFilterForm):
@@ -256,12 +254,11 @@ class LocationTypeFilterForm(NautobotFilterForm):
 
 
 class LocationForm(NautobotModelForm, TenancyForm):
-    slug = SlugField(slug_source=("parent", "name"))
     location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
     parent = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         query_params={"child_location_type": "$location_type"},
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
     )
     comments = CommentField()
@@ -272,7 +269,6 @@ class LocationForm(NautobotModelForm, TenancyForm):
             "location_type",
             "parent",
             "name",
-            "slug",
             "status",
             "tenant_group",
             "tenant",
@@ -347,10 +343,10 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
 
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
-        queryset=LocationType.objects.all(), to_field_name="slug", required=False
+        queryset=LocationType.objects.all(), to_field_name="name", required=False
     )
-    parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     tag = TagFilterField(model)
 
 
@@ -365,7 +361,6 @@ class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
         required=False,
         query_params={"location": "$location"},
     )
-    slug = SlugField()
 
     class Meta:
         model = RackGroup
@@ -373,7 +368,6 @@ class RackGroupForm(LocatableModelFormMixin, NautobotModelForm):
             "location",
             "parent",
             "name",
-            "slug",
             "description",
         )
 
@@ -382,7 +376,7 @@ class RackGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     model = RackGroup
     parent = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         query_params={"location": "$location"},
     )
@@ -607,7 +601,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -646,7 +640,6 @@ class ManufacturerForm(NautobotModelForm):
 
 class DeviceTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
-    slug = SlugField(slug_source="model")
     comments = CommentField()
 
     class Meta:
@@ -654,7 +647,6 @@ class DeviceTypeForm(NautobotModelForm):
         fields = [
             "manufacturer",
             "model",
-            "slug",
             "part_number",
             "u_height",
             "is_full_depth",
@@ -692,7 +684,6 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
         fields = [
             "manufacturer",
             "model",
-            "slug",
             "part_number",
             "u_height",
             "is_full_depth",
@@ -715,7 +706,7 @@ class DeviceTypeFilterForm(NautobotFilterForm):
     model = DeviceType
     q = forms.CharField(required=False, label="Search")
     manufacturer = DynamicModelMultipleChoiceField(
-        queryset=Manufacturer.objects.all(), to_field_name="slug", required=False
+        queryset=Manufacturer.objects.all(), to_field_name="name", required=False
     )
     subdevice_role = forms.MultipleChoiceField(
         choices=add_blank_choice(SubdeviceRoleChoices),
@@ -3097,7 +3088,7 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
 class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     model = Cable
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
@@ -3131,7 +3122,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
 
 
 class ConsoleConnectionFilterForm(BootstrapMixin, forms.Form):
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -3142,7 +3133,7 @@ class ConsoleConnectionFilterForm(BootstrapMixin, forms.Form):
 
 
 class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -3153,7 +3144,7 @@ class PowerConnectionFilterForm(BootstrapMixin, forms.Form):
 
 
 class InterfaceConnectionFilterForm(BootstrapMixin, forms.Form):
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
@@ -3329,7 +3320,7 @@ class VirtualChassisBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 class VirtualChassisFilterForm(NautobotFilterForm):
     model = VirtualChassis
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     tenant_group = DynamicModelMultipleChoiceField(
         queryset=TenantGroup.objects.all(),
         to_field_name="name",
@@ -3477,7 +3468,7 @@ class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin,
 class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     model = PowerFeed
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     power_panel = DynamicModelMultipleChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,

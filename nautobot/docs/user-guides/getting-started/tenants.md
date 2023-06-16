@@ -11,8 +11,7 @@ To create a Tenant:
 1. Click on **Organization** on the top navigation menu
 2. Find **Tenants** and click on the `+`
 3. Populate the `Name` field
-4. The `Slug` field will auto-populate based on the `Name` field, but this can be manually overwritten
-5. Click the `Create` button
+4. Click the `Create` button
 
 ![Add tenant](../images/getting-started-nautobot-ui/12-add-tenant.png)
 

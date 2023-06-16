@@ -18,7 +18,7 @@
                 <tr>
                     <td>Assigned Prefixes</td>
                     <td>
-                        <a href="{% url 'ipam:prefix_list' %}?rir={{ object.slug }}">{{ assigned_prefix_table.rows|length }}</a>
+                        <a href="{% url 'ipam:prefix_list' %}?rir={{ object.name }}">{{ assigned_prefix_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>

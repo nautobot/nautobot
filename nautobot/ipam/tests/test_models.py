@@ -719,7 +719,7 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
         self.assertIn(f'VLAN groups may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
     def test_get_next_available_vid(self):
-        vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
+        vlangroup = VLANGroup.objects.create(name="VLAN Group 1")
         status = Status.objects.get_for_model(VLAN).first()
         VLAN.objects.bulk_create(
             (

@@ -46,7 +46,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
             Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
             Q(tenants=obj.tenant) | Q(tenants=None),
-            Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
+            Q(tags__name__in=obj.tags.names()) | Q(tags=None),
         ]
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             query.append(Q(dynamic_groups__in=obj.dynamic_groups) | Q(dynamic_groups=None))

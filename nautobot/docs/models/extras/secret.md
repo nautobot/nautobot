@@ -27,8 +27,8 @@ When defining a new Secret, you will need to select the desired secrets provider
 
 In some cases you may have a collection of closely related secrets values that all follow a similar retrieval pattern. For example you might have a directory of text files each containing the unique password for a specific device, or have defined a set of environment variables providing authentication tokens for each different Git repository. In this case, to reduce the need for repeated data entry, Nautobot provides an option to use Jinja2 templates to dynamically alter the provider parameters of a given Secret based on the requesting object. The relevant object is passed to Jinja2 as `obj`. Thus, for example:
 
-- A "Device Password" secret could use the *Text File* provider and specify the file `path` as `"/opt/nautobot/device_passwords/{{ obj.site.slug }}/{{ obj.name }}.txt"`, so that a device `csr1` at site `nyc` would be able to retrieve its password value from `/opt/nautobot/device_passwords/nyc/csr1.txt`.
-- A "Git Token" secret could use the *Environment Variable* provider and specify the `variable` name as `"GIT_TOKEN_{{ obj.slug | replace('-', '_') | upper }}"`, so that a Git repository `golden-config` would be able to retrieve its token value from `$GIT_TOKEN_GOLDEN_CONFIG`.
+- A "Device Password" secret could use the *Text File* provider and specify the file `path` as `"/opt/nautobot/device_passwords/{{ obj.location.name }}/{{ obj.name }}.txt"`, so that a device `csr1` at location `NYC` would be able to retrieve its password value from `/opt/nautobot/device_passwords/NYC/csr1.txt`.
+- A "Git Token" secret could use the *Environment Variable* provider and specify the `variable` name as `"GIT_TOKEN_{{ obj.slug | upper }}"`, so that a Git repository `golden_config` would be able to retrieve its token value from `$GIT_TOKEN_GOLDEN_CONFIG`.
 
 !!! note
     To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.

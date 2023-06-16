@@ -14,7 +14,7 @@
                 <tr>
                     <td>Clusters</td>
                     <td>
-                        <a href="{% url 'virtualization:cluster_list' %}?type={{ object.slug }}">{{ cluster_table.rows|length }}</a>
+                        <a href="{% url 'virtualization:cluster_list' %}?type={{ object.name }}">{{ cluster_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>

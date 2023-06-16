@@ -95,9 +95,7 @@ class WebhookTest(APITestCase):
 
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
-                location = Location(
-                    name="Location 1", slug="location-1", status=self.statuses[0], location_type=location_type
-                )
+                location = Location(name="Location 1", status=self.statuses[0], location_type=location_type)
                 location.save()
 
                 location.name = "Location Update"
@@ -143,9 +141,7 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
-                location = Location(
-                    name="Location 1", slug="location-1", location_type=location_type, status=self.statuses[0]
-                )
+                location = Location(name="Location 1", location_type=location_type, status=self.statuses[0])
                 location.save()
 
                 serializer = LocationSerializer(location, context={"request": None})
@@ -187,9 +183,7 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
-                location = Location(
-                    name="Location 1", slug="location-1", location_type=location_type, status=self.statuses[0]
-                )
+                location = Location(name="Location 1", location_type=location_type, status=self.statuses[0])
                 location.save()
 
                 # deepcopy instance state to be used by LocationSerializer and get_snapshots
@@ -243,9 +237,7 @@ class WebhookTest(APITestCase):
 
             with web_request_context(self.user, change_id=request_id):
                 location_type = LocationType.objects.get(name="Campus")
-                location = Location(
-                    name="Location 1", slug="location-1", status=self.statuses[0], location_type=location_type
-                )
+                location = Location(name="Location 1", status=self.statuses[0], location_type=location_type)
                 location.save()
 
                 location.name = "Location Update"

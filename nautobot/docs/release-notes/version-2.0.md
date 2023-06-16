@@ -210,15 +210,15 @@ Check out the specific changes documented in the table at [UI and REST API Filte
 
 #### Enhanced Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
-Many filter fields have been enhanced to enable filtering by both slugs and UUID primary keys.
+Many filter fields have been enhanced to enable filtering by both names and UUID primary keys.
 
-For example in v1.X, to filter `Regions` with a specific `parent` value in the UI or make changes to them via Rest API, you are only able to input slugs as the filter values:
+For example in v1.X, to filter `RackGroups` with a specific `parent` value in the UI or make changes to them via the REST API, you could only to input slugs as the filter values:
 
-`/dcim/regions/?parent=<slug>`
+`/dcim/rack-groups/?parent=<slug>`
 
-Now in v2.x, you are able to filter those `Regions` by slugs or UUID primary keys:
+Now in v2.x, you are able to filter those `RackGroups` by their parent(s) names or UUID primary keys:
 
-`/dcim/regions/?parent=<slug>` or `/dcim/regions/?parent=<uuid>`
+`/dcim/rack-groups/?parent=<name>` or `/dcim/rack-groups/?parent=<uuid>`
 
 Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#enhanced-filter-fields)
 
@@ -270,15 +270,15 @@ In Nautobot 1.x, for some of the foreign-key related fields:
     - The field was shadowed for the purpose of replacing the PK filter with a lookup-based on a more human-readable value (typically `slug`, if available).
     - A PK-based filter was available as well, generally with a name suffixed by `_id`
 
-Now these two filter fields will be replaced by a single filter field that can support both slugs and UUID primary keys as inputs; As a result, PK-based filters suffixed by `_id` will no longer be supported in v2.0.
+Now these two filter fields will be replaced by a single filter field that can support both names and UUID primary keys as inputs; As a result, PK-based filters suffixed by `_id` will no longer be supported in v2.0.
 
-For example in v1.X, to filter `Devices` with a specific `site` value in the UI or make changes to them via Rest API with a UUID primary key, you will use:
+For example in v1.X, to filter `Circuits` with a specific `provider` value in the UI or make changes to them via the REST API with a UUID primary key, you would use:
 
-`/dcim/devices/?site_id=<uuid>`
+`/circuits/circuits/?provider_id=<uuid>`
 
 Now in v2.x, that format is no longer supported. Instead, you would use:
 
-`/dcim/devices/?site=<uuid>`
+`/circuits/circuits/?provider=<uuid>`
 
 Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields)
 
@@ -492,7 +492,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#3256](https://github.com/nautobot/nautobot/issues/3256) - Added Site and Region data migration for ComputedFields, CustomFields, CustomLinks, ExportTemplates, ImageAttachments, JobHooks, Notes, Relationships, Webhooks, Statuses and Tags
 - [#3283](https://github.com/nautobot/nautobot/issues/3283) - Added Site and Region migration to Location for filter data of DynamicGroups.
 - [#3360](https://github.com/nautobot/nautobot/issues/3360) - Added an alternate approach to updating model feature registry without having to decorate a model with `@extras_features`.
-- [#3364](https://github.com/nautobot/nautobot/issues/3364) - Added FK fields migrated_location to Site and Region models before data migration is applied.
+- [#3364](https://github.com/nautobot/nautobot/issues/3364) - Added FK fields `migrated_location` to Site and Region models before data migration is applied.
 - [#3403](https://github.com/nautobot/nautobot/issues/3403) - Added support for Nautobot Apps to provide Django Constance Fields for the settings.
 - [#3418](https://github.com/nautobot/nautobot/issues/3418) - Added ObjectPermission Data Migration from Region/Site to Location.
 

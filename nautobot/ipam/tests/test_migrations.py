@@ -100,12 +100,12 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
             setattr(self, f"aggregate{i+5}", aggregate)
 
         # tags
-        self.prefix_tag_a = self.tag.objects.create(name="PrefixTagA", slug="prefixtaga")
-        self.prefix_tag_b = self.tag.objects.create(name="PrefixTagB", slug="prefixtagb")
+        self.prefix_tag_a = self.tag.objects.create(name="PrefixTagA")
+        self.prefix_tag_b = self.tag.objects.create(name="PrefixTagB")
         self.prefix_tag_a.content_types.add(self.prefix_ct)
         self.prefix_tag_b.content_types.add(self.prefix_ct)
-        self.aggregate_tag_a = self.tag.objects.create(name="AggregateTagA", slug="aggregatetaga")
-        self.aggregate_tag_b = self.tag.objects.create(name="AggregateTagB", slug="aggregatetagb")
+        self.aggregate_tag_a = self.tag.objects.create(name="AggregateTagA")
+        self.aggregate_tag_b = self.tag.objects.create(name="AggregateTagB")
         self.aggregate_tag_a.content_types.add(self.aggregate_ct)
         self.aggregate_tag_b.content_types.add(self.aggregate_ct)
         self.prefix1.tags.add("PrefixTagA")

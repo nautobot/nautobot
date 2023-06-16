@@ -31,11 +31,7 @@ To create a new Device Role:
 2. Find **Device Roles** on the drop-down menu
 3. Select `+`
 4. In the `Add a new device role` form, populate the `Name`
-    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
 5. Click on Create
-
-!!! note
-    A `slug` is a short label for something, containing only letters, numbers, underscores or hyphens. They’re generally used within URLs. For example: `/dcim/device-roles/customer-edge/`
 
 ![Create a device role](../images/getting-started-nautobot-ui/3-create-role.png)
 
@@ -53,7 +49,6 @@ To create a new Manufacturer:
 2. Find **Manufacturers** on the drop-down
 3. Select **+**
 4. In the `Add a new manufacturer` form, populate the `Name`
-     * The `Slug` will auto-populate based on the entered `Name`, but can be manually overwritten
 5. Click on `Create`
 
 ![Create a manufacturer](../images/getting-started-nautobot-ui/2-create-manufacturer.png)
@@ -93,7 +88,6 @@ To create a new Site:
 2. Find **Sites**
 3. Select **+** to go to the `Add a new site` form
 4. Populate the Site's `Name`
-    * The `Slug` will auto-populate based on the `Name` field, but can be manually overwritten
 5. Set the `Status` to `Active` in the drop-down selector
 6. Click on `Create` at the bottom of the form (not shown)
 

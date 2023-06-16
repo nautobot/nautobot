@@ -24,12 +24,9 @@ The optional grouping field allows you to group custom fields into collapsible m
 
 ![Custom Field Grouping](./images/custom-fields/custom_field_detail_grouped.png)
 
-#### Slug
+#### Key
 
-The slug is used to create the URL endpoint for the custom field and is also used as the key in the underlying custom field data dictionary. This is automatically created from the label if not supplied. The default value should be sufficient for most deployments.
-
-!!! tip
-    Because custom field data is included in the database, in the REST API and in GraphQL, we strongly recommend that when defining a custom field, you provide a `slug` that contains underscores rather than dashes (`my_field_slug`, not `my-field-slug`), as some features may not work optimally if dashes are included in the slug. Similarly, the provided `name` should also contain only alphanumeric characters and underscores, as it is currently treated in some cases like a slug.
+The key is used as the key in the underlying custom field data dictionary. This is automatically created from the label if not supplied. The default value should be sufficient for most deployments.
 
 #### Type
 
@@ -170,7 +167,7 @@ Custom fields augment an existing model so retrieving custom field values is dif
 '1970-01-01'
 ```
 
-The `slug` of the custom field is used as the key for the associated object's data dictionary.
+The `key` of the custom field is used as the key for the associated object's data dictionary.
 
 ### Retrieve Custom Field Data in the Rest API
 

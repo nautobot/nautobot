@@ -50,8 +50,6 @@ class NameColorContentTypesModel(
     shared amongst models that requires these fields: name, color, content_types and description.
     """
 
-    # TODO(timizuo): Tag should inherit from this model; but
-    #  cant because of field conflicts: name and slug field.
     content_types = models.ManyToManyField(
         to=ContentType,
         help_text="The content type(s) to which this model applies.",
