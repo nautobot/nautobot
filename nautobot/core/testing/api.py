@@ -208,7 +208,7 @@ class APIViewTestCases:
                                 # Config on the serializer
                                 fields = detail_view_config[col_idx][group_title]["fields"]
                                 if group_idx == 0 == col_idx:
-                                    # Asset that the 3 special fields exists at the end of this group fields
+                                    # Assert that the 3 special fields exists at the end of this group fields
                                     self.assertEqual(special_fields, group_fields[-3:])
                                     self.assertFalse(any(field in special_fields for field in group_fields[:-3]))
                                 else:
