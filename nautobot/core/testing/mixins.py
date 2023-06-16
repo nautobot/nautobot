@@ -45,6 +45,7 @@ class NautobotTestCaseMixin:
 
     user_permissions = ()
     client_class = NautobotTestClient
+    databases = ("default", "job_logs")
 
     def setUpNautobot(self, client=True, populate_status=False):
         """Setup shared testuser, statuses and client."""
