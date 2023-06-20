@@ -200,6 +200,39 @@ class LocationSerializer(
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
 
+        detail_view_config = {
+            "layout": [
+                {
+                    "Location": {
+                        "fields": [
+                            "name",
+                            "location_type",
+                            "tenant",
+                            "description",
+                            "facility",
+                            "asn",
+                            "time_zone",
+                            "latitude",
+                            "longitude",
+                        ]
+                    },
+                    "Contact Info": {
+                        "fields": [
+                            "physical_address",
+                            "shipping_address",
+                            "contact_name",
+                            "contact_phone",
+                            "contact_email",
+                        ]
+                    },
+                },
+                {
+                    "Tags": {"fields": ["tags"]},
+                    "Comments": {"fields": ["comments"]},
+                },
+            ],
+        }
+
     def validate(self, data):
         # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.
         if data.get("parent") and data.get("name"):
@@ -242,6 +275,24 @@ class RackSerializer(
         # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
         # This prevents facility_id from being interpreted as a required field.
         validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
+        detail_view_config = {
+            "layout": [
+                {
+                    "Rack": {
+                        "fields": [
+                            "name",
+                            "location",
+                            "rack_group",
+                        ]
+                    },
+                },
+                {
+                    "Tags": {"fields": ["tags"]},
+                    "Comments": {"fields": ["comments"]},
+                },
+            ],
+            "include_others": True,
+        }
 
     def validate(self, data):
         # Validate uniqueness of (rack_group, facility_id) since we omitted the automatically-created validator above.

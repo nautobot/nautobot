@@ -33,3 +33,9 @@ class FilterSetFieldNotFound(Exception):
     """
     An exception indicating that a filterset field could not be found.
     """
+
+
+class ViewConfigException(Exception):
+    """
+    An exception indicating that a detail view config is invalid.
+    """

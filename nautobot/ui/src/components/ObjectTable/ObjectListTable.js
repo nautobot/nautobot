@@ -16,11 +16,11 @@ import {
     EditIcon,
     useToast,
 } from "@nautobot/nautobot-ui";
-import Paginator from "@components/paginator";
 import { useCallback, useMemo } from "react";
 
-import TableItem from "@components/TableItem";
-import LoadingWidget from "./LoadingWidget";
+import LoadingWidget from "../LoadingWidget";
+import ObjectTableItem from "./ObjectTableItem";
+import Paginator from "../paginator";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
@@ -81,7 +81,7 @@ export default function ObjectListTable({
                                 ? props.row.original
                                 : props.row.original[props.column.id];
                         return (
-                            <TableItem
+                            <ObjectTableItem
                                 name={key}
                                 obj={props.getValue()}
                                 url={getTableItemLink(idx, column_data)}
