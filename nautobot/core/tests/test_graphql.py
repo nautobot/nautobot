@@ -1368,7 +1368,7 @@ query {
                 IPAddress.objects.filter(host="10.0.1.1").count(),
             ),
             (
-                'ip_version: "4"',
+                "ip_version: 4",
                 IPAddress.objects.filter(ip_version=4).count(),
             ),
             (
