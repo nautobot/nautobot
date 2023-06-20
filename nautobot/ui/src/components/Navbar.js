@@ -2,10 +2,12 @@ import { useSelector } from "react-redux";
 import {
     Link as ReactRouterLink,
     NavLink as ReactRouterNavLink,
+    useMatch,
 } from "react-router-dom";
 import {
     AutomationIcon,
     DcimIcon,
+    HomeIcon,
     Input,
     InputGroup,
     InputLeftElement,
@@ -35,8 +37,24 @@ export function Navbar() {
     const currentContext = useSelector(getCurrentContextSelector);
     const currentUser = useSelector(currentUserSelector);
 
+    const isHomeActive =
+        useMatch({
+            path: "/",
+            exact: true,
+        }) !== null;
+
     return (
         <UINavbar>
+            <ReactRouterNavLink exact to="/">
+                <NavbarSection
+                    children="Home"
+                    leftIcon={<HomeIcon />}
+                    isActive={isHomeActive}
+                    as="span"
+                    paddingRight={0}
+                />
+            </ReactRouterNavLink>
+
             <NavbarSections>
                 {[
                     {
