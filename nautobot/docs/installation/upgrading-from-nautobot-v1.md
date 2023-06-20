@@ -185,8 +185,7 @@ These sweeping changes made to model filter fields will, in some cases, invalida
 
 If you have invalid filters in your `DynamicGroup` instances, the following output should be expected:
 
-no-highlight
-```
+```no-highlight
 >>> Auditing existing DynamicGroup data for invalid filters ...
 
     DynamicGroup instance with name `Test DP` and content type `dcim | rack` has an invalid filter `site`
@@ -206,8 +205,7 @@ no-highlight
 
 If your filter data is valid, you should see a success message at the end of the output:
 
-no-highlight
-```
+```no-highlight
 >>> Auditing existing DynamicGroup data for invalid filters ...
 
 
