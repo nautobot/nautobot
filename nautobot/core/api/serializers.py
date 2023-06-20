@@ -154,7 +154,7 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
             model = self.queryset.model
         elif isinstance(self.parent, ManyRelatedField) and getattr(self.parent.parent.Meta.model, self.source, False):
             model = getattr(self.parent.parent.Meta.model, self.source).field.model
-        elif getattr(self.parent.Meta.model, self.source, False):
+        elif getattr(self.parent, "Meta", None) and getattr(self.parent.Meta.model, self.source, False):
             model = getattr(self.parent.Meta.model, self.source).field.model
         else:
             logger.warning(

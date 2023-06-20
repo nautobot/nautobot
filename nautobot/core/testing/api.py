@@ -192,23 +192,34 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
             with self.subTest("Asset Detail View Config is generated well"):
+                # Namings Help
+                # 1. detail_view_config: This is the detail view config set in the serializer.Meta.detail_view_config
+                # 2. detail_view_schema: This is the retrieve schema generated from an OPTIONS request.
                 serializer = get_serializer_for_model(self._get_queryset().model)
-                # TODO(timizuo): Also test for default case, where detail_view_config is not provided and detail_view_config with `include_others`
                 if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
-                    response_view_config = response.data["view_options"]["retrieve"]
+                    detail_view_schema = response.data["view_options"]["retrieve"]
                     self.assertHttpStatus(response, status.HTTP_200_OK)
 
-                    # By Convention all special fields should only be present at the end of the first col group fields.
-                    # Assert special fields(`id`, `composite_key`, `url`) are present only at the end of the first col group fields.
+                    # According to convention, `special_fields(`id`, `composite_key`, `url`)` should only exist at the end of the first col first group in
+                    # the `detail_view_schema` and should be deleted from any other places it may appear in the `detail_view_schema`. Assert this is True.
                     with self.subTest("Assert special fields(`id`, `composite_key`, `url`)."):
                         special_fields = ["id", "composite_key", "url"]
-                        for col_idx, col in enumerate(response_view_config):
+
+                        if detail_view_config.get("include_others"):
+                            # Handle `Other Fields` specially as `Other Field` is dynamically added by nautobot and not part of the serializer view config
+                            other_fields = detail_view_schema[0]["Other Fields"]["fields"]
+                            self.assertFalse(any(field for field in other_fields if field in special_fields))
+
+                        for col_idx, col in enumerate(detail_view_schema):
                             for group_idx, (group_title, group) in enumerate(col.items()):
+                                if group_title == "Other Fields":
+                                    continue
                                 group_fields = group["fields"]
                                 # Config on the serializer
-                                fields = detail_view_config[col_idx][group_title]["fields"]
+                                fields = detail_view_config["layout"][col_idx][group_title]["fields"]
+                                # According to convention, special_fields should only exist at the end of the first col group and should be
+                                # deleted from any other places it may appear in the layout. Assert this is True.
                                 if group_idx == 0 == col_idx:
-                                    # Assert that the 3 special fields only exists at the end of this group fields.
                                     self.assertEqual(special_fields, group_fields[-len(special_fields) :])
                                     self.assertFalse(
                                         any(field in special_fields for field in group_fields[: -len(special_fields)])

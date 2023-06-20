@@ -231,7 +231,6 @@ class LocationSerializer(
                     "Comments": {"fields": ["comments"]},
                 },
             ],
-            "include_others": True,
         }
 
     def validate(self, data):

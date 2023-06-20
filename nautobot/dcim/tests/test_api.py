@@ -603,6 +603,46 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'class="slot" height="19" width="190"', response.content)
 
+    def test_detail_view_schema(self):
+        url = self._get_detail_url(self._get_queryset().first())
+        response = self.client.options(url, **self.header)
+        detail_view_schema = response.data["view_options"]["retrieve"]
+
+        expected_schema = [
+            {
+                "Rack": {"fields": ["name", "location", "rack_group", "id", "composite_key", "url"]},
+                "Other Fields": {
+                    "fields": [
+                        "asset_tag",
+                        "computed_fields",
+                        "created",
+                        "custom_fields",
+                        "desc_units",
+                        "device_count",
+                        "facility_id",
+                        "last_updated",
+                        "notes_url",
+                        "object_type",
+                        "outer_depth",
+                        "outer_unit",
+                        "outer_width",
+                        "power_feed_count",
+                        "relationships",
+                        "role",
+                        "serial",
+                        "tenant",
+                        "type",
+                        "u_height",
+                        "width",
+                    ]
+                },
+            },
+            {"Tags": {"fields": ["tags"]}, "Comments": {"fields": ["comments"]}},
+        ]
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(expected_schema, detail_view_schema)
+
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation

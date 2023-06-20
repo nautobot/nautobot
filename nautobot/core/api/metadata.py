@@ -1,4 +1,5 @@
 import contextlib
+from copy import deepcopy
 from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
@@ -284,7 +285,7 @@ class NautobotMetadata(SimpleMetadata):
         view_config_fields = [
             field for config in view_config_layout for field_list in config.values() for field in field_list["fields"]
         ]
-        missing_fields = list(set(serializer_fields) - set(view_config_fields) - set(exclude_fields))
+        missing_fields = sorted(set(serializer_fields) - set(view_config_fields) - set(exclude_fields))
         view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
         return view_config_layout
 
@@ -317,7 +318,8 @@ class NautobotMetadata(SimpleMetadata):
         # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
         fields_to_remove = ["composite_key", "url", "display", "status", "id"]
         fields_to_add = ["id", "composite_key", "url"]
-        view_config_layout = view_config.get("layout")
+        # Make a deepcopy to avoid altering view_config
+        view_config_layout = deepcopy(view_config.get("layout"))
 
         for section_idx, section in enumerate(view_config_layout):
             for idx, value in enumerate(section.values()):
