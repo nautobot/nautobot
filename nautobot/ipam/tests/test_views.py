@@ -284,7 +284,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn(f"Could not determine parent Prefix for {instance}! Does it exist?", str(response.content))
         # Create an exact copy of the parent prefix but in a different namespace. See if the re-parenting is successful
-        Prefix.objects.create(
+        new_parent = Prefix.objects.create(
             prefix=instance.parent.prefix,
             namespace=new_namespace,
             status=instance.parent.status,
@@ -292,6 +292,8 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         response = self.client.post(**request)
         self.assertEqual(302, response.status_code)
+        created_ip = IPAddress.objects.get(parent__namespace=new_namespace, address=instance.address)
+        self.assertEqual(created_ip.parent, new_parent)
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
