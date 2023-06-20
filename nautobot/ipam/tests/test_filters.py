@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from nautobot.core.testing import FilterTestCases
+from nautobot.core.testing import TestCase, FilterTestCases
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -11,8 +11,7 @@ from nautobot.dcim.models import (
     Manufacturer,
 )
 from nautobot.extras.models import Role, Status, Tag
-from nautobot.ipam.choices import ServiceProtocolChoices
-from nautobot.ipam.factory import PrefixFactory, VRFFactory
+from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.filters import (
     IPAddressFilterSet,
     PrefixFilterSet,
@@ -158,6 +157,11 @@ class RIRTestCase(FilterTestCases.NameOnlyFilterTestCase):
 
 
 class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+    """Generic filter test case for tests that can use randomized factory data.
+
+    For testing prefix filters with custom test data use PrefixFilterCustomDataTestCase.
+    """
+
     queryset = Prefix.objects.all()
     filterset = PrefixFilterSet
     tenancy_related_name = "prefixes"
@@ -194,51 +198,124 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         all_prefixes = self.queryset.all()
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
 
-    def test_within(self):
-        unique_description = f"test_{__name__}"
-        qs = self.queryset.filter(description=unique_description)
-        matches = (
-            PrefixFactory(description=unique_description, prefix="10.0.1.2/31", children__max_count=0).pk,
-            PrefixFactory(description=unique_description, prefix="10.0.1.4/31", children__max_count=0).pk,
+    def test_mask_length(self):
+        for prefix_length in self.queryset.values_list("prefix_length", flat=True):
+            with self.subTest(prefix_length):
+                params = {"mask_length": prefix_length}
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs,
+                    self.queryset.filter(prefix_length=prefix_length),
+                )
+
+
+class PrefixFilterCustomDataTestCase(TestCase):
+    """Filter test case that requires clearing out factory data and building specific test data."""
+
+    queryset = Prefix.objects.all()
+    filterset = PrefixFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        IPAddress.objects.all().delete()
+        Prefix.objects.update(parent=None)
+        Prefix.objects.all().delete()
+
+        cls.namespace = Namespace.objects.create(name="Prefix Test Case Namespace")
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+
+        Prefix.objects.create(
+            prefix="10.0.0.0/16",
+            namespace=cls.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+            status=prefix_status,
         )
-        PrefixFactory(description=unique_description, prefix="10.0.0.0/16")
-        PrefixFactory(description=unique_description, prefix="2.2.2.2/31")
-        PrefixFactory(description=unique_description, prefix="4.4.4.4/31")
+        Prefix.objects.create(
+            prefix="10.0.1.0/24",
+            namespace=cls.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+            status=prefix_status,
+        )
+        Prefix.objects.create(
+            prefix="10.0.1.2/31",
+            namespace=cls.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=prefix_status,
+        )
+        Prefix.objects.create(
+            prefix="10.0.1.4/31",
+            namespace=cls.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=prefix_status,
+        )
+        Prefix.objects.create(prefix="2.2.2.2/31", namespace=cls.namespace, status=prefix_status)
+        Prefix.objects.create(prefix="4.4.4.4/31", namespace=cls.namespace, status=prefix_status)
+
+        Prefix.objects.create(
+            prefix="2001:db8::/32",
+            namespace=cls.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+            status=prefix_status,
+        )
+        Prefix.objects.create(
+            prefix="2001:db8:0:1::/64",
+            namespace=cls.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=prefix_status,
+        )
+        Prefix.objects.create(
+            prefix="2001:db8:0:2::/64",
+            namespace=cls.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=prefix_status,
+        )
+        Prefix.objects.create(
+            prefix="2001:db8:0:2::/65",
+            namespace=cls.namespace,
+            type=PrefixTypeChoices.TYPE_POOL,
+            status=prefix_status,
+        )
+        Prefix.objects.create(prefix="abcd::/32", namespace=cls.namespace, status=prefix_status)
+
+    def test_search(self):
+        prefixes = Prefix.objects.all()[:2]
+        test_values = [
+            prefixes[0].cidr_str,
+            str(prefixes[0].network),
+            str(prefixes[1].network),
+        ]
+        for value in test_values:
+            params = {"q": value}
+            count = self.queryset.string_search(value).count()
+            self.assertEqual(self.filterset(params, self.queryset).qs.count(), count)
+
+    def test_ip_version(self):
+        params = {"ip_version": ["6"]}
+        ipv6_prefixes = self.queryset.filter(ip_version=6)
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
+        params = {"ip_version": ["4"]}
+        ipv4_prefixes = self.queryset.filter(ip_version=4)
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv4_prefixes)
+        params = {"ip_version": [""]}
+        all_prefixes = self.queryset.all()
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
+
+    def test_within(self):
+        matches = Prefix.objects.filter(network__in=["10.0.1.0", "10.0.1.2", "10.0.1.4"])
         params = {"within": "10.0.0.0/16"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, qs).qs, qs.filter(pk__in=matches))
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches)
 
     def test_within_include(self):
-        unique_description = f"test_{__name__}"
-        qs = self.queryset.filter(description=unique_description)
-        matches = (
-            PrefixFactory(description=unique_description, prefix="10.0.0.0/16", children__max_count=0).pk,
-            PrefixFactory(description=unique_description, prefix="10.0.1.2/31", children__max_count=0).pk,
-            PrefixFactory(description=unique_description, prefix="10.0.1.4/31", children__max_count=0).pk,
-        )
-        PrefixFactory(description=unique_description, prefix="2.2.2.2/31")
-        PrefixFactory(description=unique_description, prefix="4.4.4.4/31")
+        matches = self.queryset.filter(network__in=["10.0.0.0", "10.0.1.0", "10.0.1.2", "10.0.1.4"])
         params = {"within_include": "10.0.0.0/16"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, qs).qs, qs.filter(pk__in=matches))
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches)
 
     def test_contains(self):
-        unique_description = f"test_{__name__}"
-        qs = self.queryset.filter(description=unique_description)
-        matches_ipv4 = (
-            PrefixFactory(description=unique_description, prefix="10.0.0.0/16", children__max_count=0).pk,
-            PrefixFactory(description=unique_description, prefix="10.0.1.0/24", children__max_count=0).pk,
-        )
-        matches_ipv6 = (
-            PrefixFactory(description=unique_description, prefix="2001:db8::/32", children__max_count=0).pk,
-            PrefixFactory(description=unique_description, prefix="2001:db8:0:1::/64", children__max_count=0).pk,
-        )
-        PrefixFactory(prefix="10.2.2.0/31")
-        PrefixFactory(prefix="192.168.0.0/16")
-        PrefixFactory(prefix="2001:db8:0:2::/64")
-        PrefixFactory(prefix="abcd::/32")
+        matches_ipv4 = self.queryset.filter(network__in=["10.0.0.0", "10.0.1.0"])
+        matches_ipv6 = self.queryset.filter(network__in=["2001:db8::", "2001:db8:0:1::"])
         params = {"contains": "10.0.1.0/24"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, qs).qs, qs.filter(pk__in=matches_ipv4))
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv4)
         params = {"contains": "2001:db8:0:1::/64"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, qs).qs, qs.filter(pk__in=matches_ipv6))
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv6)
 
     def test_mask_length(self):
         for prefix_length in self.queryset.values_list("prefix_length", flat=True):
@@ -250,43 +327,28 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
                 )
 
     def test_vrf(self):
-        namespace = Namespace.objects.first()
-        self.queryset.update(namespace=namespace)
         prefixes = self.queryset[:2]
         vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=namespace),
-            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=namespace),
+            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=self.namespace),
+            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=self.namespace),
         )
         prefixes[0].vrfs.add(vrfs[0])
         prefixes[0].vrfs.add(vrfs[1])
         prefixes[1].vrfs.add(vrfs[0])
         prefixes[1].vrfs.add(vrfs[1])
-        prefixes = self.queryset.filter(vrfs__rd__isnull=False)[:2]
-        vrfs = [prefixes[0].vrfs.first(), prefixes[1].vrfs.first()]
         params = {"vrf": [vrfs[0].pk, vrfs[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(vrfs__in=vrfs)
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(vrfs__in=vrfs).distinct(),
         )
         params = {"vrf": [vrfs[0].pk, vrfs[1].rd]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(vrfs__rd__in=[vrfs[0].rd, vrfs[1].rd]),
+            self.queryset.filter(vrfs__in=vrfs).distinct(),
         )
 
     def test_present_in_vrf(self):
-        # clear out all the randomly generated route targets and vrfs before running this custom test
-        namespace = Namespace.objects.first()
-        # Set all prefixes to have the same namespace, so we do not have to worry about namespace mismatch later.
-        self.queryset.update(namespace=namespace)
-        test_prefix_pk_list = list(self.queryset.values_list("pk", flat=True)[:10])
-        test_prefixes = self.queryset.all()[:10]
-        # Delete all IPAddress objects first so we can safely delete Prefix objects.
-        IPAddress.objects.all().delete()
-        # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
-        # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
-        unwanted_prefixes = self.queryset.exclude(pk__in=test_prefix_pk_list)
-        unwanted_prefixes.update(parent=None)
-        unwanted_prefixes.delete()
+        test_prefixes = list(self.queryset[:3])
         VRF.objects.all().delete()
         RouteTarget.objects.all().delete()
         route_targets = (
@@ -295,9 +357,9 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             RouteTarget.objects.create(name="65000:300"),
         )
         vrfs = (
-            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=namespace),
-            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=namespace),
-            VRF.objects.create(name="VRF 3", rd="65000:300", namespace=namespace),
+            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=self.namespace),
+            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=self.namespace),
+            VRF.objects.create(name="VRF 3", rd="65000:300", namespace=self.namespace),
         )
         vrfs[0].import_targets.add(route_targets[0], route_targets[1], route_targets[2])
         vrfs[1].export_targets.add(route_targets[1])
@@ -329,10 +391,15 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         test_locations = (
             Location.objects.create(name="Location 1", location_type=location_type_1, status=loc_status),
             Location.objects.create(name="Location 2", location_type=location_type_2, status=loc_status),
+            Location.objects.create(name="Location 3", location_type=location_type_2, status=loc_status),
         )
         test_locations[1].parent = test_locations[0]
-        PrefixFactory(location=test_locations[0])
-        PrefixFactory(location=test_locations[1])
+        test_prefixes = list(self.queryset[:3])
+        test_prefixes[0].location = test_locations[0]
+        test_prefixes[1].location = test_locations[1]
+        test_prefixes[2].location = test_locations[2]
+        self.queryset.bulk_update(test_prefixes, ["location"])
+
         params = {"location": [test_locations[0].pk, test_locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
@@ -345,8 +412,14 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         )
 
     def test_vlan(self):
-        vlans = list(VLAN.objects.filter(prefixes__isnull=False)[:2])
-        params = {"vlan_id": [vlans[0], vlans[1]]}
+        vlans = list(VLAN.objects.all()[:2])
+        test_prefixes = list(self.queryset[:3])
+        test_prefixes[0].vlan = vlans[0]
+        test_prefixes[1].vlan = vlans[1]
+        test_prefixes[2].vlan = vlans[1]
+        self.queryset.bulk_update(test_prefixes, ["vlan"])
+
+        params = {"vlan_id": [vlans[0].pk, vlans[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vlan__in=vlans)
         )
@@ -365,10 +438,14 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     @classmethod
     def setUpTestData(cls):
         # Create some VRFs that belong to the same Namespace and have an rd
-        cls.namespace = Namespace.objects.create(name="ip_address_test_case")
-        VRFFactory.create_batch(3, namespace=cls.namespace, has_rd=True)
+        cls.namespace = Namespace.objects.create(name="IP Address Test Case Namespace")
+        VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace)
+        VRF.objects.create(name="VRF 2", rd="65000:200", namespace=cls.namespace)
+        VRF.objects.create(name="VRF 3", rd="65000:300", namespace=cls.namespace)
         # Create some VRFs without an rd
-        VRFFactory.create_batch(3, namespace=cls.namespace, has_rd=False)
+        VRF.objects.create(name="VRF 4", namespace=cls.namespace)
+        VRF.objects.create(name="VRF 5", namespace=cls.namespace)
+        VRF.objects.create(name="VRF 6", namespace=cls.namespace)
         vrfs = VRF.objects.filter(namespace=cls.namespace, rd__isnull=False)
         assert len(vrfs) == 3, f"This Namespace {cls.namespace} does not contain enough VRFs."
 

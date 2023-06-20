@@ -65,6 +65,7 @@ class Command(BaseCommand):
                 LocationFactory,
             )
             from nautobot.extras.utils import TaggableClassesQuery
+            from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
                 IPAddressFactory,
                 NamespaceFactory,
@@ -121,7 +122,9 @@ class Command(BaseCommand):
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
         self.stdout.write("Creating Prefixes and IP Addresses...")
-        PrefixFactory.create_batch(30)
+        for i in range(15):
+            PrefixFactory.create(prefix=f"10.{i}.0.0/16", type=PrefixTypeChoices.TYPE_CONTAINER)
+            PrefixFactory.create(prefix=f"2001:db8:0:{i}::/64", type=PrefixTypeChoices.TYPE_CONTAINER)
         self.stdout.write("Creating Empty Namespaces...")
         NamespaceFactory.create_batch(5)
         self.stdout.write("Creating Manufacturers...")
