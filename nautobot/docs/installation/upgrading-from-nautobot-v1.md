@@ -179,6 +179,41 @@ Please see the [documentation on the `?depth` query parameter](../rest-api/overv
 
 ## UI, GraphQL, and REST API Filter Changes
 
+### Post Migration Helper Command `audit_dynamic_groups`
+
+These sweeping changes made to model filter fields will, in some cases, invalidate existing `DynamicGroup` instances' filter data. `nautobot-server audit_dynmaic_groups` is a helper command to assist users in cleaning up `DynamicGroup` filter data by spotting invalid filters and outputting them to the command line interface. You should run this command after your Nautobot instances is upgraded to v2.x.
+
+If you have invalid filters in your `DynamicGroup` instances, the following output should be expected:
+
+no-highlight
+```
+>>> Auditing existing DynamicGroup data for invalid filters ...
+
+    DynamicGroup instance with name `Test DP` and content type `dcim | rack` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP` and content type `dcim | rack` has an invalid filter `length`
+    DynamicGroup instance with name `Test DP` and content type `dcim | rack` has an invalid filter `region`
+    DynamicGroup instance with name `Test DP 1` and content type `ipam | IP address` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP 1` and content type `ipam | IP address` has an invalid filter `length`
+    DynamicGroup instance with name `Test DP 2` and content type `dcim | device` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP 2` and content type `dcim | device` has an invalid filter `region`
+    DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `length`
+    DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `region`
+    DynamicGroup instance with name `Test DP 4` and content type `example_plugin | another example model` has an invalid filter `site`
+
+>>> Please fix the broken filters stated above according to the documentations at available'<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes'
+```
+
+If your filter data is valid, you should see a success message at the end of the output:
+
+no-highlight
+```
+>>> Auditing existing DynamicGroup data for invalid filters ...
+
+
+>>> All DynamicGroup filters are validated successfully!
+```
+
 ### Removed Changelog URL from View Context
 
 `changelog_url` is no longer provided in the `ObjectView` context. To get a model instance's changelog URL, you can retrieve it from the instance itself if it supports it: `model_instance.get_changelog_url()`.
