@@ -23,11 +23,11 @@ def build_lookup_label(field_name, _verbose_name):
     Return lookup expr with its verbose name
 
     Args:
-        field_name (str): Field name e.g slug__iew
+        field_name (str): Field name e.g name__iew
         _verbose_name (str): The verbose name for the lookup expr which is suffixed to the field name e.g iew -> iendswith
 
     Examples:
-        >>> build_lookup_label("slug__iew", "iendswith")
+        >>> build_lookup_label("name__iew", "iendswith")
         >>> "ends-with (iew)"
     """
     verbose_name = verbose_lookup_expr(_verbose_name) or "exact"
@@ -88,7 +88,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     """
     # Avoid circular import
     from nautobot.dcim.models import Device
-    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin, StatusFilter
     from nautobot.extras.models import ConfigContext, Role, Status, Tag
     from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
@@ -105,7 +105,9 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
-    if isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
+    if isinstance(field, CustomFieldFilterMixin):
+        form_field = field.custom_field.to_filter_form_field(lookup_expr=field.lookup_expr)
+    elif isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
         form_field = forms.DecimalField()
     elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
@@ -126,10 +128,13 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(
         field, ContentTypeMultipleChoiceFilter
     ):  # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
-        # models that have sucha  filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
+        # models that have such a filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
         from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
 
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
+        # Cable-connectable models use "cable_terminations", not "cables", as the feature name
+        if plural_name == "cables":
+            plural_name == "cable_terminations"
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:

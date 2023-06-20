@@ -137,16 +137,15 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         ProviderNetwork.objects.bulk_create(
             [
-                ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
-                ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[0]),
-                ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 1", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 2", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 3", provider=providers[0]),
                 ProviderNetwork(name="Provider Network 8", provider=providers[0]),
             ]
         )
 
         cls.form_data = {
             "name": "ProviderNetwork X",
-            "slug": "provider-network-x",
             "provider": providers[1].pk,
             "description": "A new ProviderNetwork",
             "comments": "Longer description goes here",
@@ -154,11 +153,11 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,provider,description",
-            f'Provider Network 4,provider-network-4,"{providers[0].name}",Foo',
-            f'Provider Network 5,provider-network-5,"{providers[0].name}",Bar',
-            f'Provider Network 6,provider-network-6,"{providers[0].name}",Baz',
-            f'Provider Network 7,,"{providers[0].name}",Baz',
+            "name,provider,description",
+            f'Provider Network 4,"{providers[0].name}",Foo',
+            f'Provider Network 5,"{providers[0].name}",Bar',
+            f'Provider Network 6,"{providers[0].name}",Baz',
+            f'Provider Network 7,"{providers[0].name}",Baz',
         )
 
         cls.bulk_edit_data = {
@@ -166,9 +165,6 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
             "comments": "New comments",
         }
-
-        cls.slug_test_object = "Provider Network 8"
-        cls.slug_source = "name"
 
 
 class CircuitTerminationTestCase(
@@ -208,7 +204,6 @@ class CircuitTerminationTestCase(
         provider = Provider.objects.first()
         provider_network = ProviderNetwork.objects.create(
             name="Test Provider Network",
-            slug="test-provider-network",
             provider=provider,
         )
         circuit_type = CircuitType.objects.first()
@@ -246,12 +241,10 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
         provider_networks = (
             ProviderNetwork.objects.create(
                 name="Test Provider Network 1",
-                slug="test-provider-network-1",
                 provider=provider,
             ),
             ProviderNetwork.objects.create(
                 name="Test Provider Network 2",
-                slug="test-provider-network-2",
                 provider=provider,
             ),
         )

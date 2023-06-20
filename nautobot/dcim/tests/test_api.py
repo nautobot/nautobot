@@ -51,7 +51,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
 
@@ -151,7 +151,6 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeMo
         "nestable": True,
     }
     choices_fields = []  # TODO: what would we need to get ["content_types"] added as a choices field?
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -178,7 +177,6 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeMo
             },
             {
                 "name": "Closet",
-                "slug": "closet",
                 "parent": lt3.pk,
                 "content_types": ["dcim.device"],
                 "description": "An enclosed space smaller than a room",
@@ -189,7 +187,6 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeMo
 class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = Location
     choices_fields = []
-    slug_source = ["parent__slug", "name"]
 
     @classmethod
     def setUpTestData(cls):
@@ -222,7 +219,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
             },
             {
                 "name": "RTP12",
-                "slug": "rtp-12",
                 "location_type": cls.lt2.pk,
                 "parent": cls.loc1.pk,
                 "status": cls.location_statuses[0].pk,
@@ -240,7 +236,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         # Changing location_type of an existing instance is not permitted
         cls.update_data = {
             "name": "A revised location",
-            "slug": "a-different-slug",
             "status": cls.location_statuses[1].pk,
         }
         cls.bulk_update_data = {
@@ -256,7 +251,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         url = reverse("dcim-api:location-list")
         location = {
             "name": "foo",
-            "slug": "foo",
             "status": self.location_statuses[0].pk,
             "time_zone": None,
             "location_type": self.lt1.pk,
@@ -276,7 +270,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         url = reverse("dcim-api:location-list")
         location = {
             "name": "foo",
-            "slug": "foo",
             "status": self.location_statuses[0].pk,
             "time_zone": "",
             "location_type": self.lt1.pk,
@@ -297,7 +290,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         time_zone = "UTC"
         location = {
             "name": "foo",
-            "slug": "foo",
             "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
@@ -318,7 +310,6 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         time_zone = "IDONOTEXIST"
         location = {
             "name": "foo",
-            "slug": "foo",
             "status": self.location_statuses[0].pk,
             "time_zone": time_zone,
             "location_type": self.lt1.pk,
@@ -350,7 +341,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -361,8 +351,8 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
             Location.objects.create(name="Location 2", location_type=location_type, status=cls.status),
         )
         cls.parent_rack_groups = (
-            RackGroup.objects.create(location=cls.locations[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
-            RackGroup.objects.create(location=cls.locations[1], name="Parent Rack Group 2", slug="parent-rack-group-2"),
+            RackGroup.objects.create(location=cls.locations[0], name="Parent Rack Group 1"),
+            RackGroup.objects.create(location=cls.locations[1], name="Parent Rack Group 2"),
         )
 
         location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
@@ -370,38 +360,32 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
         RackGroup.objects.create(
             location=cls.locations[0],
             name="Rack Group 1",
-            slug="rack-group-1",
             parent=cls.parent_rack_groups[0],
         )
         RackGroup.objects.create(
             location=cls.locations[0],
             name="Rack Group 2",
-            slug="rack-group-2",
             parent=cls.parent_rack_groups[0],
         )
         RackGroup.objects.create(
             location=cls.locations[0],
             name="Rack Group 3",
-            slug="rack-group-3",
             parent=cls.parent_rack_groups[0],
         )
 
         cls.create_data = [
             {
                 "name": "Test Rack Group 4",
-                "slug": "test-rack-group-4",
                 "location": cls.locations[1].pk,
                 "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 5",
-                "slug": "test-rack-group-5",
                 "location": cls.locations[1].pk,
                 "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 6",
-                "slug": "test-rack-group-6",
                 "location": cls.locations[1].pk,
                 "parent": cls.parent_rack_groups[1].pk,
             },
@@ -469,8 +453,8 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         locations = Location.objects.all()[:2]
 
         rack_groups = (
-            RackGroup.objects.create(location=locations[0], name="Rack Group 1", slug="rack-group-1"),
-            RackGroup.objects.create(location=locations[1], name="Rack Group 2", slug="rack-group-2"),
+            RackGroup.objects.create(location=locations[0], name="Rack Group 1"),
+            RackGroup.objects.create(location=locations[1], name="Rack Group 2"),
         )
 
         rack_roles = Role.objects.get_for_model(Rack)
@@ -726,7 +710,6 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
         "part_number": "ABC123",
     }
     choices_fields = ["subdevice_role"]
-    slug_source = "model"
 
     @classmethod
     def setUpTestData(cls):
@@ -736,17 +719,14 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
-                "slug": "device-type-4",
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
-                "slug": "device-type-5",
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 6",
-                "slug": "device-type-6",
             },
             {
                 "manufacturer": manufacturer_id,
@@ -1273,6 +1253,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 3")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        dev.refresh_from_db()
+        self.assertEqual(dev.primary_ip4, dev_ip_addr)
 
     def test_patching_device_redundancy_group(self):
         """
@@ -1513,11 +1495,12 @@ class InterfaceTest(Mixins.BasePortTestMixin):
             ),
         )
 
+        vlan_group = VLANGroup.objects.first()
         vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status),
-            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status),
-            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status),
+            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status, vlan_group=vlan_group),
         )
 
         cls.create_data = [
@@ -2274,10 +2257,10 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         rack_groups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", location=locations[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", location=locations[0]),
-            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", location=locations[0]),
-            RackGroup.objects.create(name="Rack Group 4", slug="rack-group-3", location=locations[1]),
+            RackGroup.objects.create(name="Rack Group 1", location=locations[0]),
+            RackGroup.objects.create(name="Rack Group 2", location=locations[0]),
+            RackGroup.objects.create(name="Rack Group 3", location=locations[0]),
+            RackGroup.objects.create(name="Rack Group 4", location=locations[1]),
         )
 
         PowerPanel.objects.create(location=locations[0], rack_group=rack_groups[0], name="Power Panel 1")
@@ -2312,7 +2295,7 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        rackgroup = RackGroup.objects.create(location=location, name="Rack Group 1", slug="rack-group-1")
+        rackgroup = RackGroup.objects.create(location=location, name="Rack Group 1")
         rackrole = Role.objects.get_for_model(Rack).first()
         rackstatus = Status.objects.get_for_model(Rack).first()
 

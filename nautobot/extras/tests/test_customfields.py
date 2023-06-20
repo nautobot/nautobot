@@ -4,8 +4,10 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
+from django.forms import ChoiceField, IntegerField, NumberInput
 from django.urls import reverse
 from rest_framework import status
+from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
 
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
@@ -13,6 +15,7 @@ from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
 from nautobot.dcim.filters import LocationFilterSet
+from nautobot.dcim.forms import RackFilterForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
@@ -26,9 +29,9 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         super().setUp()
         location_status = Status.objects.get_for_model(Location).first()
         lt = LocationType.objects.get(name="Campus")
-        Location.objects.create(name="Location A", slug="location-a", status=location_status, location_type=lt)
-        Location.objects.create(name="Location B", slug="location-b", status=location_status, location_type=lt)
-        Location.objects.create(name="Location C", slug="location-c", status=location_status, location_type=lt)
+        Location.objects.create(name="Location A", status=location_status, location_type=lt)
+        Location.objects.create(name="Location B", status=location_status, location_type=lt)
+        Location.objects.create(name="Location C", status=location_status, location_type=lt)
 
     def test_immutable_fields(self):
         """Some fields may not be changed once set, due to the potential for complex downstream effects."""
@@ -115,13 +118,12 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
             cf = CustomField(type=data["field_type"], label="My Field", required=False)
             cf.save()  # not validated_save this time, as we're testing backwards-compatibility
             cf.content_types.set([obj_type])
-            # Assert that slug and label were auto-populated correctly
-            # 2.0 TODO: slug and label will become mandatory fields to specify.
+            # Assert that key was auto-populated correctly
             cf.refresh_from_db()
             self.assertEqual(cf.key, slugify_dashes_to_underscores(cf.label))
 
             # Assign a value to the first Location
-            location = Location.objects.get(slug="location-a")
+            location = Location.objects.get(name="Location A")
             location.cf[cf.key] = data["field_value"]
             location.validated_save()
 
@@ -155,7 +157,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
 
         # Assign a value to the first Location
-        location = Location.objects.get(slug="location-a")
+        location = Location.objects.get(name="Location A")
         location.cf[cf.key] = "Option A"
         location.validated_save()
 
@@ -189,7 +191,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
 
         # Assign a value to the first Location
-        location = Location.objects.get(slug="location-a")
+        location = Location.objects.get(name="Location A")
         location.cf[cf.key] = ["Option A", "Option B"]
         location.validated_save()
 
@@ -276,7 +278,7 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
         cf.content_types.set([obj_type])
 
         # Assign a disallowed value (list) to the first Location
-        location = Location.objects.get(slug="location-a")
+        location = Location.objects.get(name="Location A")
         location.cf[cf.key] = ["I", "am", "a", "list"]
         with self.assertRaises(ValidationError) as context:
             location.validated_save()
@@ -340,6 +342,39 @@ class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we ha
 
             # Delete the custom field
             cf.delete()
+
+    def test_to_filter_field(self):
+        with self.subTest("Assert CustomField Select Type renders the correct filter form field and widget"):
+            # Assert a Select Choice Field
+            ct = ContentType.objects.get_for_model(Device)
+            custom_field_select = CustomField(
+                type=CustomFieldTypeChoices.TYPE_SELECT,
+                label="Select Field",
+            )
+            custom_field_select.save()
+            custom_field_select.content_types.set([ct])
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Foo")
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Bar")
+            CustomFieldChoice.objects.create(custom_field=custom_field_select, value="Baz")
+            filter_field = custom_field_select.to_filter_form_field()
+            self.assertIsInstance(filter_field, ChoiceField)
+            self.assertIsInstance(filter_field.widget, StaticSelect2)
+            self.assertEqual(filter_field.widget.choices, [("Bar", "Bar"), ("Baz", "Baz"), ("Foo", "Foo")])
+            # Assert Choice Custom Field with lookup-expr other than exact returns a
+            filter_field_with_lookup_expr = custom_field_select.to_filter_form_field(lookup_expr="icontains")
+            self.assertIsInstance(filter_field_with_lookup_expr, ChoiceField)
+            self.assertIsInstance(filter_field_with_lookup_expr.widget, MultiValueCharInput)
+
+        with self.subTest("Assert CustomField Integer Type renders the correct filter form field and widget"):
+            custom_field_integer = CustomField(
+                type=CustomFieldTypeChoices.TYPE_INTEGER,
+                label="integer_field",
+            )
+            custom_field_integer.save()
+            custom_field_integer.content_types.set([ct])
+            filter_field = custom_field_integer.to_filter_form_field()
+            self.assertIsInstance(filter_field, IntegerField)
+            self.assertIsInstance(filter_field.widget, NumberInput)
 
 
 class CustomFieldManagerTest(TestCase):
@@ -445,8 +480,8 @@ class CustomFieldDataAPITest(APITestCase):
         # Create some locations
         cls.lt = LocationType.objects.get(name="Campus")
         cls.locations = (
-            Location.objects.create(name="Location 1", slug="location-1", status=cls.statuses[0], location_type=cls.lt),
-            Location.objects.create(name="Location 2", slug="location-2", status=cls.statuses[0], location_type=cls.lt),
+            Location.objects.create(name="Location 1", status=cls.statuses[0], location_type=cls.lt),
+            Location.objects.create(name="Location 2", status=cls.statuses[0], location_type=cls.lt),
         )
 
         # Assign custom field values for location 2
@@ -511,7 +546,6 @@ class CustomFieldDataAPITest(APITestCase):
         """
         data = {
             "name": "Location 3",
-            "slug": "location-3",
             "location_type": self.lt.pk,
             "status": self.statuses[0].pk,
         }
@@ -551,7 +585,6 @@ class CustomFieldDataAPITest(APITestCase):
         """
         data = {
             "name": "Location 3",
-            "slug": "location-3",
             "status": self.statuses[0].pk,
             "location_type": self.lt.pk,
             "custom_fields": {
@@ -609,19 +642,16 @@ class CustomFieldDataAPITest(APITestCase):
         data = (
             {
                 "name": "Location 3",
-                "slug": "location-3",
                 "location_type": self.lt.pk,
                 "status": self.statuses[0].pk,
             },
             {
                 "name": "Location 4",
-                "slug": "location-4",
                 "location_type": self.lt.pk,
                 "status": self.statuses[0].pk,
             },
             {
                 "name": "Location 5",
-                "slug": "location-5",
                 "location_type": self.lt.pk,
                 "status": self.statuses[0].pk,
             },
@@ -676,21 +706,18 @@ class CustomFieldDataAPITest(APITestCase):
         data = (
             {
                 "name": "Location 3",
-                "slug": "location-3",
                 "status": self.statuses.first().pk,
                 "location_type": self.lt.pk,
                 "custom_fields": custom_field_data,
             },
             {
                 "name": "Location 4",
-                "slug": "location-4",
                 "status": self.statuses.first().pk,
                 "location_type": self.lt.pk,
                 "custom_fields": custom_field_data,
             },
             {
                 "name": "Location 5",
-                "slug": "location-5",
                 "status": self.statuses.first().pk,
                 "location_type": self.lt.pk,
                 "custom_fields": custom_field_data,
@@ -878,7 +905,6 @@ class CustomFieldDataAPITest(APITestCase):
         """
         data = {
             "name": "Location 4",
-            "slug": "location-4",
             "status": self.statuses[0].pk,
             "location_type": self.lt.pk,
             "custom_fields": {
@@ -909,7 +935,6 @@ class CustomFieldDataAPITest(APITestCase):
 
         data = {
             "name": "Location N",
-            "slug": "location-n",
             "location_type": self.lt.pk,
             "status": self.statuses[0].pk,
         }
@@ -922,8 +947,8 @@ class CustomFieldDataAPITest(APITestCase):
         # Try in CSV format too
         csvdata = "\n".join(
             [
-                "name,slug,location_type,status",
-                f"Location N,location-n,{self.lt.composite_key},{self.statuses[0].name}",
+                "name,location_type,status",
+                f"Location N,{self.lt.composite_key},{self.statuses[0].name}",
             ]
         )
         response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
@@ -933,7 +958,6 @@ class CustomFieldDataAPITest(APITestCase):
     def test_create_invalid_select_choice(self):
         data = {
             "name": "Location N",
-            "slug": "location-n",
             "location_type": self.lt.pk,
             "status": self.statuses[0].pk,
             "custom_fields": {
@@ -949,8 +973,8 @@ class CustomFieldDataAPITest(APITestCase):
         # Try in CSV format too
         csvdata = "\n".join(
             [
-                "name,slug,location_type,status,cf_choice_cf",
-                f"Location N,location-n,{self.lt.composite_key},{self.statuses[0].name},Frobozz",
+                "name,location_type,status,cf_choice_cf",
+                f"Location N,{self.lt.composite_key},{self.statuses[0].name},Frobozz",
             ]
         )
         response = self.client.post(url, csvdata, content_type="text/csv", **self.header)
@@ -1010,7 +1034,6 @@ class CustomFieldImportTest(TestCase):
         data = (
             [
                 "name",
-                "slug",
                 "location_type",
                 "status",
                 "cf_text",
@@ -1023,7 +1046,6 @@ class CustomFieldImportTest(TestCase):
             ],
             [
                 "Location 1",
-                "location-1",
                 "Test Root",
                 location_status.name,
                 "ABC",
@@ -1036,7 +1058,6 @@ class CustomFieldImportTest(TestCase):
             ],
             [
                 "Location 2",
-                "location-2",
                 "Test Root",
                 location_status.name,
                 "DEF",
@@ -1047,7 +1068,7 @@ class CustomFieldImportTest(TestCase):
                 "Choice B",
                 '"Choice A,Choice B"',
             ],
-            ["Location 3", "location-3", "Test Root", location_status.name, "", "", "", "", "", "", ""],
+            ["Location 3", "Test Root", location_status.name, "", "", "", "", "", "", ""],
         )
         if "example_plugin" in settings.PLUGINS:
             data[0].append("cf_example_plugin_auto_custom_field")
@@ -1164,9 +1185,7 @@ class CustomFieldModelTest(TestCase):
         Check that custom field data is present on the instance immediately after being set and after being fetched
         from the database.
         """
-        location = Location(
-            name="Test Location", slug="test-location", status=self.location_status, location_type=self.lt
-        )
+        location = Location(name="Test Location", status=self.location_status, location_type=self.lt)
 
         # Check custom field data on new instance
         location.cf["foo"] = "abc"
@@ -1181,7 +1200,7 @@ class CustomFieldModelTest(TestCase):
         """
         Setting custom field data for a non-applicable (or non-existent) CustomField should log a warning.
         """
-        location = Location(name="Test Location", slug="test-location", location_type=self.lt)
+        location = Location(name="Test Location", location_type=self.lt)
 
         # Set custom field data
         location.cf["foo"] = "abc"
@@ -1200,7 +1219,7 @@ class CustomFieldModelTest(TestCase):
         cf3.save()
         cf3.content_types.set([ContentType.objects.get_for_model(Location)])
 
-        location = Location(name="Test Location", slug="test-location", location_type=self.lt)
+        location = Location(name="Test Location", location_type=self.lt)
 
         # Set custom field data with a required field omitted
         location.cf["foo"] = "abc"
@@ -1372,7 +1391,6 @@ class CustomFieldFilterTest(TestCase):
         location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
             name="Location 1",
-            slug="location-1",
             location_type=cls.location_type,
             status=location_status,
             _custom_field_data={
@@ -1389,7 +1407,6 @@ class CustomFieldFilterTest(TestCase):
         )
         Location.objects.create(
             name="Location 2",
-            slug="location-2",
             location_type=cls.location_type,
             status=location_status,
             _custom_field_data={
@@ -1406,14 +1423,12 @@ class CustomFieldFilterTest(TestCase):
         )
         Location.objects.create(
             name="Location 3",
-            slug="location-3",
             location_type=cls.location_type,
             status=location_status,
             _custom_field_data={"cf9": ["Foo", "Bar"]},
         )
         Location.objects.create(
             name="Location 4",
-            slug="location-4",
             location_type=cls.location_type,
             status=location_status,
             _custom_field_data={},
@@ -1663,8 +1678,8 @@ class CustomFieldFilterTest(TestCase):
 
     def test_filter_select(self):
         self.assertQuerysetEqual(
-            self.filterset({"cf_cf8": "Foo"}, self.queryset).qs,
-            self.queryset.filter(_custom_field_data__cf8="Foo"),
+            self.filterset({"cf_cf8": ["Foo", "AR"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__in=["Foo", "AR"]),
         )
         self.assertQuerysetEqual(
             self.filterset({"cf_cf8__n": ["Foo"]}, self.queryset).qs,
@@ -1736,16 +1751,6 @@ class CustomFieldFilterTest(TestCase):
             self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
         )
 
-    def test_filter_null_values(self):
-        self.assertQuerysetEqual(
-            self.filterset({"cf_cf8": "null"}, self.queryset).qs,
-            self.queryset.filter(_custom_field_data__cf8__isnull=True),
-        )
-        self.assertQuerysetEqual(
-            self.filterset({"cf_cf9": "null"}, self.queryset).qs,
-            self.queryset.filter(_custom_field_data__cf9__isnull=True),
-        )
-
 
 class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
     model = CustomFieldChoice
@@ -1766,7 +1771,6 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
         self.location_type = LocationType.objects.get(name="Campus")
         self.location = Location(
             name="Location 1",
-            slug="location-1",
             location_type=self.location_type,
             _custom_field_data={
                 "cf1": "Foo",
@@ -1840,7 +1844,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
     def test_provision_field_task(self):
         location_type = LocationType.objects.create(name="Root Type 1")
         location_status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Location 1", slug="location-1", location_type=location_type, status=location_status)
+        location = Location(name="Location 1", location_type=location_type, status=location_status)
         location.save()
 
         obj_type = ContentType.objects.get_for_model(Location)
@@ -1864,7 +1868,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
-            slug="location-1",
             location_type=location_type,
             status=location_status,
             _custom_field_data={"cf1": "foo"},
@@ -1892,7 +1895,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
-            slug="location-1",
             location_type=location_type,
             status=location_status,
             _custom_field_data={"cf1": "Foo"},
@@ -1983,7 +1985,7 @@ class CustomFieldTableTest(TestCase):
         # Create a location
         location_type = LocationType.objects.create(name="Root Type 4")
         self.location = Location.objects.create(
-            name="Location Custom", slug="location-1", status=statuses.first(), location_type=location_type
+            name="Location Custom", status=statuses.first(), location_type=location_type
         )
 
         # Assign custom field values for location 2
@@ -2024,3 +2026,17 @@ class CustomFieldTableTest(TestCase):
 
             rendered_value = bound_row.get_cell(internal_col_name)
             self.assertEqual(rendered_value, col_expected_value)
+
+
+class CustomFieldFilterFormTest(TestCase):
+    def test_custom_filter_form(self):
+        """Assert CustomField renders the appropriate filter form field"""
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        ct_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, label="Select Field")
+        ct_field.content_types.set([rack_ct])
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Foo")
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Bar")
+        CustomFieldChoice.objects.create(custom_field=ct_field, value="Baz")
+        filterform = RackFilterForm()
+        self.assertIsInstance(filterform["cf_select_field"].field, ChoiceField)
+        self.assertIsInstance(filterform["cf_select_field"].field.widget, StaticSelect2)

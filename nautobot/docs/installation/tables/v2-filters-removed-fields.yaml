@@ -164,10 +164,13 @@
 - Model: "DeviceBay"
   Removed Filter: "site_id"
   Comments:
+- Model: "DeviceRedundancyGroup"
+  Removed Filter: "slug"
+  Comments:
 - Model: "DeviceType"
   Removed Filter: "manufacturer_id"
   Comments:
-- Model: "DeviceRedundancyGroup"
+- Model: "DeviceType"
   Removed Filter: "slug"
   Comments:
 - Model: "DynamicGroup"
@@ -261,7 +264,13 @@
   Removed Filter: "site_id"
   Comments:
 - Model: "Location"
+  Removed Filter: "slug"
+  Comments:
+- Model: "Location"
   Removed Filter: "tenant_group_id"
+  Comments:
+- Model: "LocationType"
+  Removed Filter: "slug"
   Comments:
 - Model: "Manufacturer"
   Removed Filter: "slug"
@@ -350,6 +359,9 @@
 - Model: "Prefix"
   Removed Filter: "site_id"
   Comments:
+- Model: "Prefix"
+  Removed Filter: "vrf_id"
+  Comments: "Use vrf filter instead"
 - Model: "Provider"
   Removed Filter: "region"
   Comments:
@@ -367,6 +379,9 @@
   Comments:
 - Model: "ProviderNetwork"
   Removed Filter: "provider_id"
+  Comments:
+- Model: "ProviderNetwork"
+  Removed Filter: "slug"
   Comments:
 - Model: "Rack"
   Removed Filter: "group_id"
@@ -403,6 +418,9 @@
   Comments:
 - Model: "RackGroup"
   Removed Filter: "site_id"
+  Comments:
+- Model: "RackGroup"
+  Removed Filter: "slug"
   Comments:
 - Model: "RackReservation"
   Removed Filter: "group_id"
@@ -462,6 +480,9 @@
   Removed Filter: "slug"
   Comments:
 - Model: "Status"
+  Removed Filter: "slug"
+  Comments:
+- Model: "Tag"
   Removed Filter: "slug"
   Comments:
 - Model: "Tenant"
@@ -538,6 +559,9 @@
   Comments:
 - Model: "VLANGroup"
   Removed Filter: "site_id"
+  Comments:
+- Model: "VLANGroup"
+  Removed Filter: "slug"
   Comments:
 - Model: "VMInterface"
   Removed Filter: "bridge_id"

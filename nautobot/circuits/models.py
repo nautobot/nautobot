@@ -6,7 +6,6 @@ from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
 from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 
 from .choices import CircuitTerminationSideChoices
@@ -30,7 +29,6 @@ __all__ = (
 )
 class ProviderNetwork(PrimaryModel):
     name = models.CharField(max_length=100, db_index=True)
-    slug = AutoSlugField(populate_from="name")
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)

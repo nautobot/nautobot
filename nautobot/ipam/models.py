@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.utils.functional import cached_property
 
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import AutoSlugField, JSONArrayField
+from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
@@ -705,7 +705,6 @@ class Prefix(PrimaryModel):
 
         return query.filter(
             ip_version=self.ip_version,
-            prefix_length__gte=self.prefix_length,
             network__gte=self.network,
             broadcast__lte=self.broadcast,
             namespace=self.namespace,
@@ -832,29 +831,46 @@ class Prefix(PrimaryModel):
         return f"{next(available_ips.__iter__())}/{self.prefix_length}"
 
     def get_utilization(self):
-        """Get the child prefix size and parent size.
+        """Return the utilization of this prefix as a UtilizationData object.
 
-        For Prefixes with a type of "container", get the number child prefixes. For all others, count child IP addresses.
+        For prefixes containing other prefixes, all direct child prefixes are considered fully utilized.
+
+        For prefixes containing IP addresses and/or pools, pools are considered fully utilized while
+        only IP addresses that are not contained within pools are added to the utilization.
 
         Returns:
             UtilizationData (namedtuple): (numerator, denominator)
         """
-        if self.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
-            child_prefixes = netaddr.IPSet(p.prefix for p in self.descendants())
-            return UtilizationData(numerator=child_prefixes.size, denominator=self.prefix.size)
+        denominator = self.prefix.size
+        child_ips = netaddr.IPSet()
+        child_prefixes = netaddr.IPSet()
 
-        else:
-            prefix_size = self.prefix.size
-            if all(
-                [
-                    self.ip_version == 4,
-                    self.prefix_length < 31,
-                    self.type != choices.PrefixTypeChoices.TYPE_POOL,
-                ]
-            ):
-                prefix_size -= 2
-            child_count = prefix_size - self.get_available_ips().size
-            return UtilizationData(numerator=child_count, denominator=prefix_size)
+        if self.type == choices.PrefixTypeChoices.TYPE_POOL:
+            pool_ips = IPAddress.objects.filter(
+                parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+            ).values_list("host", flat=True)
+            child_ips = netaddr.IPSet(pool_ips)
+        elif self.type == choices.PrefixTypeChoices.TYPE_NETWORK:
+            child_ips = netaddr.IPSet(self.ip_addresses.values_list("host", flat=True))
+
+        if self.type != choices.PrefixTypeChoices.TYPE_POOL:
+            child_prefixes = netaddr.IPSet(p.prefix for p in self.children.only("network", "prefix_length").iterator())
+
+        numerator_set = child_ips | child_prefixes
+
+        # Exclude network and broadcast address from the denominator unless they've been assigned to an IPAddress or child pool.
+        # Only applies to IPv4 network prefixes with a prefix length of /30 or shorter
+        if all(
+            [
+                denominator > 2,
+                self.type == choices.PrefixTypeChoices.TYPE_NETWORK,
+                self.ip_version == 4,
+            ]
+        ):
+            if not any([self.network in numerator_set, self.broadcast in numerator_set]):
+                denominator -= 2
+
+        return UtilizationData(numerator=numerator_set.size, denominator=denominator)
 
 
 @extras_features(
@@ -999,7 +1015,11 @@ class IPAddress(PrimaryModel):
             namespace = self.parent.namespace
 
         # Determine the closest parent automatically based on the Namespace.
-        self.parent = Prefix.objects.get_closest_parent(self.host, namespace=namespace)
+        self.parent = (
+            Prefix.objects.filter(namespace=namespace)
+            .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
+            .get_closest_parent(self.host, include_self=True)
+        )
 
         super().save(*args, **kwargs)
 
@@ -1114,9 +1134,7 @@ class VLANGroup(OrganizationalModel):
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
-    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
+    name = models.CharField(max_length=100, db_index=True, unique=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1131,13 +1149,6 @@ class VLANGroup(OrganizationalModel):
             "location",
             "name",
         )  # (location, name) may be non-unique
-        unique_together = [
-            # 2.0 TODO: since location is nullable, and NULL != NULL, this means that we can have multiple non-Location VLANGroups
-            # with the same name. This should probably be fixed with a custom validate_unique() function!
-            ["location", "name"],
-            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["location", "slug"],
-        ]
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
 

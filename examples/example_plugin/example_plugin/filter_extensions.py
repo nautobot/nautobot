@@ -18,14 +18,14 @@ class TenantFilterExtension(FilterExtension):
             field_name="description", label="Description", method=suffix_search
         ),
         "example_plugin_dtype": MultiValueCharFilter(
-            field_name="locations__devices__device_type__slug", label="Device Type"
+            field_name="locations__devices__device_type__model", label="Device Type (model)"
         ),
     }
 
     filterform_fields = {
         "example_plugin_description": forms.CharField(required=False, label="Description"),
         "example_plugin_dtype": forms.CharField(required=False, label="Device Type"),
-        "slug__ic": forms.CharField(required=False, label="Slug Contains"),
+        "name__ic": forms.CharField(required=False, label="Name Contains"),
         "example_plugin_sdescrip": forms.CharField(required=False, label="Suffix Description"),
     }
 

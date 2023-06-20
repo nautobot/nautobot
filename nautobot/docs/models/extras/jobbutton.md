@@ -24,6 +24,8 @@ The buttons appear at the top right corner of an object's individual detail page
 
 ![Job Button Form](../../media/models/jobbutton_form.png "Job Button Form")
 
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](../../additional-features/jobs.md#enabling-jobs-for-running) for more details.
+
 ## Required Permissions
 
 !!! note
@@ -33,13 +35,13 @@ The buttons appear at the top right corner of an object's individual detail page
 
 The following context data is available within the template when rendering a Job Button's text.
 
-| Variable | Description |
-|----------|-------------|
-| `obj`      | The Nautobot object being displayed |
-| `debug`    | A boolean indicating whether debugging is enabled |
-| `request`  | The current WSGI request |
-| `user`     | The current user (if authenticated) |
-| `perms`    | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
+| Variable  | Description                                                                                                       |
+| --------- | ----------------------------------------------------------------------------------------------------------------- |
+| `obj`     | The Nautobot object being displayed                                                                               |
+| `debug`   | A boolean indicating whether debugging is enabled                                                                 |
+| `request` | The current WSGI request                                                                                          |
+| `user`    | The current user (if authenticated)                                                                               |
+| `perms`   | The [permissions](https://docs.djangoproject.com/en/stable/topics/auth/default/#permissions) assigned to the user |
 
 All [built-in Jinja2 filters](../../additional-features/template-filters.md) are available and it's also possible to [develop and register custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters).
 
@@ -50,7 +52,7 @@ Only buttons which render with non-empty text are included on the page. You can 
 For example, if you only want to display a button for active devices, you could set the button text to
 
 ```jinja2
-{% if obj.status.slug == 'active' %}Provision{% endif %}
+{% if obj.status.name == 'Active' %}Provision{% endif %}
 ```
 
 The button will not appear when viewing a device with any status other than `Active`.
@@ -72,6 +74,9 @@ As a last example, you can hide the button for users that lack the proper permis
 The button will only appear if they have the permission to run jobs.
 
 ![Job Buttons on Site object](../../media/models/site_jobbuttons.png "Job Buttons on Site object")
+
+!!! note
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
 
 ## Job Button Receivers
 

@@ -59,7 +59,7 @@ class LocatableModelFilterFormMixin(forms.Form):
 
     location = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )

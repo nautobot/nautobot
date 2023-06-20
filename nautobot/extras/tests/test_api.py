@@ -207,7 +207,7 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         Test rendering config context data for a device.
         """
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
@@ -380,9 +380,7 @@ class CreatedUpdatedFilterTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        cls.rackgroup1 = RackGroup.objects.create(
-            location=cls.location1, name="Test Rack Group 1", slug="test-rack-group-1"
-        )
+        cls.rackgroup1 = RackGroup.objects.create(location=cls.location1, name="Test Rack Group 1")
         cls.rackrole1 = Role.objects.get_for_model(Rack).first()
         cls.rackstatus1 = Status.objects.get_for_model(Rack).first()
         cls.rack1 = Rack.objects.create(
@@ -614,22 +612,15 @@ class DynamicGroupTestMixin:
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(
-                name="Location 1", slug="location-1", location_type=location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location 2", slug="location-2", location_type=location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location 3", slug="location-3", location_type=location_type, status=location_status
-            ),
+            Location.objects.create(name="Location 1", location_type=location_type, status=location_status),
+            Location.objects.create(name="Location 2", location_type=location_type, status=location_status),
+            Location.objects.create(name="Location 3", location_type=location_type, status=location_status),
         )
 
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="device Type 1",
-            slug="device-type-1",
         )
         device_role = Role.objects.get_for_model(Device).first()
         statuses = Status.objects.get_for_model(Device)
@@ -671,7 +662,7 @@ class DynamicGroupTestMixin:
             DynamicGroup.objects.create(
                 name="API DynamicGroup 3",
                 content_type=cls.content_type,
-                filter={"location": [f"{locations[2].slug}"]},
+                filter={"location": [f"{locations[2].name}"]},
             ),
         ]
 
@@ -683,7 +674,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
         {
             "name": "API DynamicGroup 4",
             "content_type": "dcim.device",
-            "filter": {"location": ["location-1"]},
+            "filter": {"location": ["Location 1"]},
         },
         {
             "name": "API DynamicGroup 5",
@@ -693,7 +684,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
         {
             "name": "API DynamicGroup 6",
             "content_type": "dcim.device",
-            "filter": {"location": ["location-2"]},
+            "filter": {"location": ["Location 2"]},
         },
     ]
 
@@ -960,11 +951,11 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
         },
         {
             "name": "graphql-query-5",
-            "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
+            "query": '{ devices(role: "edge") { id, name, role { name } } }',
         },
         {
             "name": "Graphql Query 6",
-            "query": '{ devices(role: "edge") { id, name, role { name slug } } }',
+            "query": '{ devices(role: "edge") { id, name, role { name } } }',
         },
     ]
 
@@ -977,7 +968,7 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
             ),
             GraphQLQuery(
                 name="graphql-query-2",
-                query='{ devices(role: "edge") { id, name, role { name slug } } }',
+                query='{ devices(role: "edge") { id, name, role { name } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
@@ -1000,7 +991,6 @@ query ($device: [String!]) {
     }
     tags {
       name
-      slug
     }
     role {
       name
@@ -1014,7 +1004,6 @@ query ($device: [String!]) {
     }
     location {
       name
-      slug
       vlans {
         id
         name
@@ -2471,11 +2460,9 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
     ]
 
     bulk_update_data = {
-        "source_filter": {"slug": ["some-slug"]},
+        "source_filter": {"name": ["some-name"]},
     }
     choices_fields = ["destination_type", "source_type", "type", "required_on"]
-    slug_source = "label"
-    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
@@ -2585,7 +2572,6 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="device Type 1",
-            slug="device-type-1",
         )
         device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
@@ -2700,14 +2686,15 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             )
 
         device_status = Status.objects.get_for_model(Device).first()
+        vlan_groups = VLANGroup.objects.all()[:2]
 
         # Try deleting all devices and then creating 2 VLANs (fails):
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",
             data=[
-                {"vid": "1", "name": "1", "status": device_status.pk},
-                {"vid": "2", "name": "2", "status": device_status.pk},
+                {"vid": "7", "name": "7", "status": device_status.pk, "vlan_group": vlan_groups[0].pk},
+                {"vid": "8", "name": "8", "status": device_status.pk, "vlan_group": vlan_groups[1].pk},
             ],
         )
         self.assertHttpStatus(response, 400)
@@ -2739,26 +2726,28 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         for method in ["post", "patch", "put"]:
             if method == "post":
                 vlan1_json_data = {
-                    "vid": "1",
+                    "vid": "13",
                     "name": "1",
                     "status": device_status.pk,
+                    "vlan_group": vlan_groups[0].pk,
                 }
                 vlan2_json_data = {
-                    "vid": "2",
+                    "vid": "22",
                     "name": "2",
                     "status": device_status.pk,
+                    "vlan_group": vlan_groups[1].pk,
                 }
             else:
                 vlan1, vlan2 = VLANFactory.create_batch(2)
                 vlan1_json_data = {"status": device_status.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
-                    vlan1_json_data.update({"vid": vlan1.vid, "name": vlan1.name})
+                    vlan1_json_data.update({"vid": "4", "name": vlan1.name})
 
                 vlan2_json_data = {"status": device_status.pk, "id": str(vlan2.id)}
                 # Add required fields for PUT method:
                 if method == "put":
-                    vlan2_json_data.update({"vid": vlan2.vid, "name": vlan2.name})
+                    vlan2_json_data.update({"vid": "5", "name": vlan2.name})
 
             # Try method without specifying required relationships for either vlan1 or vlan2 (fails)
             json_data = [vlan1_json_data, vlan2_json_data]
@@ -2808,21 +2797,12 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         cls.relationship.validated_save()
         cls.lt = LocationType.objects.get(name="Campus")
         cls.locations = (
-            Location.objects.create(
-                name="Empty Location", slug="empty", status=cls.location_status, location_type=cls.lt
-            ),
-            Location.objects.create(
-                name="Occupied Location", slug="occupied", status=cls.location_status, location_type=cls.lt
-            ),
-            Location.objects.create(
-                name="Another Empty Location",
-                slug="another-empty",
-                status=cls.location_status,
-                location_type=cls.lt,
-            ),
+            Location.objects.create(name="Empty Location", status=cls.location_status, location_type=cls.lt),
+            Location.objects.create(name="Occupied Location", status=cls.location_status, location_type=cls.lt),
+            Location.objects.create(name="Another Empty Location", status=cls.location_status, location_type=cls.lt),
         )
         manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
         cls.devices = [
@@ -3361,16 +3341,15 @@ class StatusTest(APIViewTestCases.APIViewTestCase):
 class TagTest(APIViewTestCases.APIViewTestCase):
     model = Tag
     create_data = [
-        {"name": "Tag 4", "slug": "tag-4", "content_types": [Location._meta.label_lower]},
-        {"name": "Tag 5", "slug": "tag-5", "content_types": [Location._meta.label_lower]},
-        {"name": "Tag 6", "slug": "tag-6", "content_types": [Location._meta.label_lower]},
+        {"name": "Tag 4", "content_types": [Location._meta.label_lower]},
+        {"name": "Tag 5", "content_types": [Location._meta.label_lower]},
+        {"name": "Tag 6", "content_types": [Location._meta.label_lower]},
     ]
 
     @classmethod
     def setUpTestData(cls):
         cls.update_data = {
             "name": "A new tag name",
-            "slug": "a-new-tag-name",
             "content_types": [f"{ct.app_label}.{ct.model}" for ct in TaggableClassesQuery().as_queryset()],
         }
         cls.bulk_update_data = {
@@ -3384,7 +3363,7 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
-        tag = Tag.objects.filter(slug=data["slug"])
+        tag = Tag.objects.filter(name=data["name"])
         self.assertHttpStatus(response, 400)
         self.assertFalse(tag.exists())
         self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
@@ -3393,7 +3372,6 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("extras.add_tag")
         data = {
             "name": "Tag 8",
-            "slug": "tag-8",
         }
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)

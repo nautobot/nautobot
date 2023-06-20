@@ -974,7 +974,7 @@ class TagTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Tag
-        fields = ("pk", "name", "items", "slug", "color", "content_types", "description", "actions")
+        fields = ("pk", "name", "items", "color", "content_types", "description", "actions")
 
 
 class TaggedItemTable(BaseTable):

@@ -186,8 +186,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     schema = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="config_context_schema",
         queryset=ConfigContextSchema.objects.all(),
-        to_field_name="slug",
-        label="Schema (slug or PK)",
+        to_field_name="name",
+        label="Schema (name or PK)",
     )
     location_id = django_filters.ModelMultipleChoiceFilter(
         field_name="locations",
@@ -197,7 +197,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     location = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="locations",
         queryset=Location.objects.all(),
-        label="Location (ID or slug)",
+        to_field_name="name",
+        label="Location (name or ID)",
     )
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name="device_types",
@@ -207,7 +208,8 @@ class ConfigContextFilterSet(BaseFilterSet):
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="device_types",
         queryset=DeviceType.objects.all(),
-        label="Device Type (ID or slug)",
+        to_field_name="model",
+        label="Device Type (model or ID)",
     )
     platform_id = django_filters.ModelMultipleChoiceFilter(
         field_name="platforms",
@@ -265,10 +267,10 @@ class ConfigContextFilterSet(BaseFilterSet):
         label="Device Redundancy Group (name or PK)",
     )
     tag = django_filters.ModelMultipleChoiceFilter(
-        field_name="tags__slug",
+        field_name="tags",
         queryset=Tag.objects.all(),
-        to_field_name="slug",
-        label="Tag (slug)",
+        to_field_name="name",
+        label="Tag (name)",
     )
     role = ConfigContextRoleFilter()
 
@@ -946,7 +948,6 @@ class TagFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "content_types__model": "icontains",
         },
     )
@@ -956,7 +957,7 @@ class TagFilterSet(NautobotFilterSet):
 
     class Meta:
         model = Tag
-        fields = ["id", "name", "slug", "color", "content_types"]
+        fields = ["id", "name", "color", "content_types"]
 
 
 #

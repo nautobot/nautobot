@@ -21,7 +21,7 @@ class BaseModelTest(TestCase):
 class ModelUtilsTestCase(TestCase):
     def test_construct_deconstruct_composite_key(self):
         """Test that construct_composite_key() and deconstruct_composite_key() work and are symmetric."""
-        for values, expected_slug in (
+        for values, expected_composite_key in (
             (["alpha"], "alpha"),  # simplest case
             (["alpha", "beta"], "alpha;beta"),  # multiple inputs
             (["10.1.1.1/24", "fe80::1"], "10.1.1.1%2F24;fe80::1"),  # URL-safe ASCII characters, / is *not* path safe
@@ -29,9 +29,9 @@ class ModelUtilsTestCase(TestCase):
             (["💩", "Everyone's favorite!"], "%F0%9F%92%A9;Everyone%27s+favorite%21"),  # Emojis and unsafe ASCII
         ):
             with self.subTest(values=values):
-                slug = construct_composite_key(values)
-                self.assertEqual(slug, expected_slug)
-                self.assertEqual(deconstruct_composite_key(slug), values)
+                composite_key = construct_composite_key(values)
+                self.assertEqual(composite_key, expected_composite_key)
+                self.assertEqual(deconstruct_composite_key(composite_key), values)
 
 
 class NaturalKeyTestCase(TestCase):

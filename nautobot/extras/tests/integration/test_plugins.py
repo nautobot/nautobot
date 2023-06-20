@@ -183,7 +183,6 @@ class PluginTabsTestCase(SeleniumTestCase):
         provider = Provider.objects.create(name="Test Provider", asn=12345)
         ProviderNetwork.objects.create(
             name="Test Provider Network",
-            slug="test-provider-network",
             provider=provider,
         )
         circuit_type = CircuitType.objects.create(name="Test Circuit Type")

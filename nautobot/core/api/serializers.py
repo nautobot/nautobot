@@ -7,7 +7,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.db.models import AutoField, ManyToManyField
+from django.db.models import AutoField, ManyToManyField, Model
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -15,7 +15,6 @@ from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerialize
 from rest_framework import serializers
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.relations import ManyRelatedField
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
@@ -150,11 +149,17 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
     def to_representation(self, value):
         """Convert URL representation to a brief nested representation."""
         url = super().to_representation(value)
-        if self.queryset:
+
+        # nested serializer provides an instance
+        if isinstance(value, Model):
+            model = type(value)
+
+        # foreign key relationship
+        elif self.queryset:
             model = self.queryset.model
-        elif isinstance(self.parent, ManyRelatedField) and getattr(self.parent.parent.Meta.model, self.source, False):
-            model = getattr(self.parent.parent.Meta.model, self.source).field.model
-        elif getattr(self.parent, "Meta", None) and getattr(self.parent.Meta.model, self.source, False):
+
+        # foreign key relationship when the destination field is referenced by string not by class
+        elif getattr(self.parent.Meta.model, self.source, False):
             model = getattr(self.parent.Meta.model, self.source).field.model
         else:
             logger.warning(

@@ -19,7 +19,6 @@ from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
 from nautobot.core.celery import (
-    add_nautobot_log_handler,
     app,
     NautobotKombuJSONEncoder,
     setup_nautobot_job_logging,
@@ -248,8 +247,14 @@ class Job(PrimaryModel):
 
     @property
     def latest_result(self):
+        """
+        Return the most recent JobResult object associated with this Job.
+
+        Note that, as a performance optimization for this function's repeated use in
+        JobListview, the returned object only includes its `status` field.
+        """
         if self._latest_result is None:
-            self._latest_result = self.job_results.first()
+            self._latest_result = self.job_results.only("status").first()
         return self._latest_result
 
     @property
@@ -654,11 +659,10 @@ class JobResult(BaseModel, CustomFieldModel):
             job_result.save()
 
             # setup synchronous task logging
-            redirect_logger = get_logger("celery.redirected")
-            add_nautobot_log_handler(redirect_logger)
             setup_nautobot_job_logging(None, None, app.conf)
 
             # redirect stdout/stderr to logger and run task
+            redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
                 eager_result = job_model.job_task.apply(
@@ -750,7 +754,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(
         max_length=500,
-        help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Buttons which render as empty text will not be displayed.",
+        help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Buttons which render as empty text will not be displayed.",
     )
     job = models.ForeignKey(
         to="extras.Job",

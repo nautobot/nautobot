@@ -101,6 +101,8 @@ class VRFFactory(PrimaryModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
 
+    namespace = random_instance(Namespace, allow_null=False)
+
     @factory.post_generation
     def import_targets(self, create, extracted, **kwargs):
         if create:
@@ -141,6 +143,30 @@ class VLANGroupFactory(OrganizationalModelFactory):
     location = factory.Maybe(
         "has_location", random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False), None
     )
+
+    @factory.post_generation
+    def children(self, create, extracted, **kwargs):
+        """Creates child VLANs within the VLANGroup."""
+        if create:
+            return
+
+        # 50% chance to create children
+        if not faker.Faker().pybool():
+            return
+
+        # Default to maximum of 4 children unless overridden in kwargs
+        max_count = int(kwargs.pop("max_count", 4))
+        child_count = faker.Faker().pyint(min_value=0, max_value=max_count)
+        if child_count == 0:
+            return
+
+        if extracted and self.has_location:
+            VLANFactory.create_batch(size=child_count, location=self.location, vlan_group=self)
+
+
+class VLANGroupGetOrCreateFactory(VLANGroupFactory):
+    class Meta:
+        django_get_or_create = "location"
 
 
 class VLANFactory(PrimaryModelFactory):
@@ -209,6 +235,11 @@ class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
         django_get_or_create = ("vlan_group", "location", "tenant")
 
+    vlan_group = factory.SubFactory(
+        VLANGroupGetOrCreateFactory,
+        location=factory.SelfAttribute("..location"),
+    )
+
 
 class VRFGetOrCreateFactory(VRFFactory):
     class Meta:
@@ -222,9 +253,8 @@ class NamespaceFactory(PrimaryModelFactory):
 
     class Meta:
         model = Namespace
-        django_get_or_create = ("name",)
 
-    name = factory.Faker("text", max_nb_chars=20)
+    name = UniqueFaker("text", max_nb_chars=20)
 
 
 class PrefixFactory(PrimaryModelFactory):
@@ -259,7 +289,6 @@ class PrefixFactory(PrimaryModelFactory):
         has_tenant = NautobotBoolIterator()
         has_vlan = NautobotBoolIterator()
         # has_vrf = NautobotBoolIterator()
-        is_container = NautobotBoolIterator()
         is_ipv6 = NautobotBoolIterator()
 
     prefix = factory.Maybe(
@@ -278,25 +307,18 @@ class PrefixFactory(PrimaryModelFactory):
         None,
     )
     status = random_instance(lambda: Status.objects.get_for_model(Prefix), allow_null=False)
-    type = factory.Maybe(
-        "is_container",
-        PrefixTypeChoices.TYPE_CONTAINER,
-        factory.Faker(
-            "random_element", elements=[v for v in PrefixTypeChoices.values() if v != PrefixTypeChoices.TYPE_CONTAINER]
-        ),
-    )
+    type = PrefixTypeChoices.TYPE_CONTAINER  # top level prefix should be a container
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
     vlan = factory.Maybe(
         "has_vlan",
         factory.SubFactory(
             VLANGetOrCreateFactory,
-            vlan_group=None,
             location=factory.SelfAttribute("..location"),
             tenant=factory.SelfAttribute("..tenant"),
         ),
         None,
     )
-    namespace = factory.SubFactory(NamespaceFactory)
+    namespace = random_instance(Namespace, allow_null=False)
     # TODO: Update for M2M tests
     # vrf = factory.Maybe(
     #     "has_vrf",
@@ -336,8 +358,15 @@ class PrefixFactory(PrimaryModelFactory):
         action = "create" if create else "build"
         is_ipv6 = self.ip_version == 6
 
-        # Create child prefixes for containers, otherwise create child ip addresses
-        child_factory = PrefixFactory if self.type == PrefixTypeChoices.TYPE_CONTAINER else IPAddressFactory
+        # Create child prefixes for containers, randomly create prefixes or ip addresses for networks
+        if self.type == PrefixTypeChoices.TYPE_CONTAINER:
+            child_factory = PrefixFactory
+        elif self.type == PrefixTypeChoices.TYPE_NETWORK:
+            weights = [10, 1]  # prefer ip addresses
+            child_factory = factory.random.randgen.choices([IPAddressFactory, PrefixFactory], weights)[0]
+        else:
+            return
+
         method = getattr(child_factory, action)
 
         # Default to maximum of 4 children unless overridden in kwargs
@@ -369,6 +398,14 @@ class PrefixFactory(PrimaryModelFactory):
             if child_cidr > 128 or self.ip_version == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
+            if self.type == PrefixTypeChoices.TYPE_CONTAINER:
+                weights = [10, 1]  # prefer network prefixes
+                child_type = factory.random.randgen.choices(
+                    [PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_CONTAINER], weights
+                )[0]
+            else:
+                child_type = PrefixTypeChoices.TYPE_POOL
+
             # Create child prefixes, preserving location, vrf and is_ipv6 from parent
             for count, address in enumerate(self.prefix.subnet(child_cidr)):
                 if count == child_count:
@@ -376,10 +413,10 @@ class PrefixFactory(PrimaryModelFactory):
                 method(
                     prefix=str(address.cidr),
                     location=self.location,
-                    children__max_count=4,
                     is_ipv6=is_ipv6,
                     has_rir=False,
                     namespace=self.namespace,
+                    type=child_type,
                     **kwargs,
                 )
 

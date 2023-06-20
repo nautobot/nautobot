@@ -7,7 +7,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import JSONField, ManyToManyField
 from django.forms.models import model_to_dict
-from django.utils.text import slugify
 from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
 
@@ -236,4 +235,4 @@ class NautobotTestCaseMixin:
             DeprecationWarning,
             stacklevel=2,
         )
-        return [extras_models.Tag.objects.create(name=name, slug=slugify(name)) for name in names]
+        return [extras_models.Tag.objects.create(name=name) for name in names]

@@ -98,7 +98,9 @@ def get_job_result_and_repository_record(repository_pk, job_result_pk, logger): 
     return GitJobResult(job_result=job_result, repository_record=repository_record)
 
 
-def get_repo_from_url_to_path_and_from_branch(repository_record):
+def get_repo_from_url_to_path_and_from_branch(
+    repository_record, logger=None, job_result=None
+):  # pylint: disable=redefined-outer-name
     """Returns the from_url, to_path and from_branch of a Git Repo
     Returns:
         namedtuple (GitRepoInfo): (
@@ -152,10 +154,8 @@ def ensure_git_repository(
     repository_record, job_result=None, logger=None, head=None  # pylint: disable=redefined-outer-name
 ):
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-
-    Note that this function may be called independently of the `GitRepositorySync` job,
+    Note that this function may be called independently of the `GitRepositoryiSync` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
-
     Args:
       repository_record (GitRepository): Repository to ensure the state of.
       job_result (JobResult): Optional JobResult to store results into.
@@ -166,7 +166,9 @@ def ensure_git_repository(
       bool: Whether any change to the local repo actually occurred.
     """
 
-    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
+        repository_record, logger=logger, job_result=job_result
+    )
 
     try:
         repo_helper = GitRepo(to_path, from_url)
@@ -213,7 +215,9 @@ def git_repository_dry_run(repository_record, job_result=None, logger=None):  # 
         job_result (JobResult): Optional JobResult to store results into.
         logger (logging.Logger): Optional Logger to additionally log results to.
     """
-    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
+    from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
+        repository_record, logger=logger, job_result=job_result
+    )
 
     try:
         repo_helper = GitRepo(to_path, from_url, clone_initially=False)
@@ -296,7 +300,7 @@ def update_git_config_contexts(repository_record, job_result):
                 logger=logger,
             )
 
-    # Next, handle the "filter/slug directory structure case - files in <filter_type>/<slug>.(json|yaml)
+    # Next, handle the "filter/name" directory structure case - files in <filter_type>/<name>.(json|yaml)
     for filter_type in (
         "locations",
         "device_types",
@@ -323,9 +327,9 @@ def update_git_config_contexts(repository_record, job_result):
             continue
 
         for file_name in os.listdir(dir_path):
-            slug = os.path.splitext(file_name)[0]
+            name = os.path.splitext(file_name)[0]
             job_result.log(
-                f'Loading config context, filter `{filter_type} = [slug: "{slug}"]`, from `{filter_type}/{file_name}`',
+                f'Loading config context, filter `{filter_type} = [name: "{name}"]`, from `{filter_type}/{file_name}`',
                 grouping="config contexts",
                 logger=logger,
             )
@@ -337,7 +341,10 @@ def update_git_config_contexts(repository_record, job_result):
                 # Unlike the above case, these files always contain just a single config context record
 
                 # Add the implied filter to the context metadata
-                context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"slug": slug})
+                if filter_type == "device_types":
+                    context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"model": name})
+                else:
+                    context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"name": name})
 
                 context_name = import_config_context(context_data, repository_record, job_result, logger)
                 managed_config_contexts.add(context_name)
@@ -410,7 +417,7 @@ def import_config_context(context_data, repository_record, job_result, logger): 
 
     Note that we don't use extras.api.serializers.ConfigContextSerializer, despite superficial similarities;
     the reason is that the serializer only allows us to identify related objects (Locations, Role, etc.)
-    by their database primary keys, whereas here we need to be able to look them up by other values such as slug.
+    by their database primary keys, whereas here we need to be able to look them up by other values such as name.
     """
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
 

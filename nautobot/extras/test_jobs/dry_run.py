@@ -19,7 +19,6 @@ class TestDryRun(Job):
         """
         obj = Status(
             name="Test Status",
-            slug="test-status",
         )
         if not dryrun:
             obj.save()

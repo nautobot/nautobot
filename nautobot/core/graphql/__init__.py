@@ -38,7 +38,7 @@ def execute_saved_query(saved_query_name, **kwargs):
     """Execute saved query from the ORM.
 
     Args:
-        - saved_query_slug (str): Slug of a saved GraphQL query.
+        - saved_query_name (str): Name of a saved GraphQL query.
         - variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
         - request (django.test.client.RequestFactory, optional): Used to authenticate.
         - user (django.contrib.auth.models.User, optional): Used to authenticate.

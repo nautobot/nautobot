@@ -256,22 +256,6 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
         model = RackGroup
         fields = "__all__"
         list_display_fields = ["name", "location", "rack_count", "description"]
-        # Omit the UniqueTogetherValidator that would be automatically added to validate (location, slug). This
-        # prevents slug from being interpreted as a required field.
-        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        validators = [UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("location", "name"))]
-
-    def validate(self, data):
-        # Validate uniqueness of (location, slug) since we omitted the automatically-created validator from Meta.
-        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        if data.get("slug", None):
-            validator = UniqueTogetherValidator(queryset=RackGroup.objects.all(), fields=("location", "slug"))
-            validator(data, self)
-
-        # Enforce model validation
-        super().validate(data)
-
-        return data
 
 
 class RackSerializer(
@@ -400,22 +384,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         model = DeviceType
         fields = "__all__"
         list_display_fields = ["model", "manufacturer", "part_number", "u_height", "is_full_depth", "device_count"]
-        # Omit the UniqueTogetherValidator that would be automatically added to validate (manufacturer, slug). This
-        # prevents slug from being interpreted as a required field.
-        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        validators = [UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "model"))]
-
-    def validate(self, data):
-        # Validate uniqueness of (manufacturer, slug) since we omitted the automatically-created validator from Meta.
-        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        if data.get("slug", None):
-            validator = UniqueTogetherValidator(queryset=DeviceType.objects.all(), fields=("manufacturer", "slug"))
-            validator(data, self)
-
-        # Enforce model validation
-        super().validate(data)
-
-        return data
 
 
 class ConsolePortTemplateSerializer(NautobotModelSerializer):

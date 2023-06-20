@@ -92,7 +92,7 @@ class FilterTestCases:
                 `generic_filter_tests` with explicit field names.
                 For example, to test a NaturalKeyOrPKMultipleChoiceFilter, use:
                     generic_filter_tests = (
-                        ["filter_name", "field_name__slug"],
+                        ["filter_name", "field_name__name"],
                         ["filter_name", "field_name__id"],
                     )
 
@@ -116,13 +116,16 @@ class FilterTestCases:
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_boolean_filters_generic(self):
-            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`.
+            """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`
+            except for the ones with custom filter logic defined in its `method` attribute.
 
             This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
             that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
             """
             for filter_name, filter_object in self.filterset.get_filters().items():
                 if not isinstance(filter_object, RelatedMembershipBooleanFilter):
+                    continue
+                if filter_object.method is not None:
                     continue
                 field_name = filter_object.field_name
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (True)"):
@@ -146,7 +149,7 @@ class FilterTestCases:
                     break
             else:
                 self.fail(f"Couldn't find any {self.queryset.model._meta.object_name} with at least two Tags.")
-            params = {"tags": [tags[0].slug, tags[1].pk]}
+            params = {"tags": [tags[0].name, tags[1].pk]}
             filterset_result = self.filterset(params, self.queryset).qs
             # Tags is an AND filter not an OR filter
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()

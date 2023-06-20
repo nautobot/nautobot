@@ -111,7 +111,6 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         location_type.content_types.add(device_ct)
         location = Location.objects.create(
             name="location",
-            slug="location",
             status=Status.objects.get_for_model(Location).first(),
             location_type=location_type,
         )

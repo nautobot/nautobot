@@ -33,7 +33,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         tenants = Tenant.objects.all()[:2]
-        namespace = Namespace.objects.get(name="Global")
+        namespace = Namespace.objects.create(name="ipam_test_views_vrf_test")
 
         cls.form_data = {
             "name": "VRF X",
@@ -114,7 +114,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @classmethod
     def setUpTestData(cls):
         rir = RIR.objects.first()
-        namespace = Namespace.objects.get(name="Global")
+        namespace = Namespace.objects.create(name="ipam_test_views_prefix_test")
 
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         vrfs = VRF.objects.all()[:2]
@@ -185,7 +185,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        namespace = Namespace.objects.get(name="Global")
+        namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
         statuses = Status.objects.get_for_model(IPAddress)
         roles = Role.objects.get_for_model(IPAddress)
         parent, _ = Prefix.objects.get_or_create(
@@ -273,20 +273,17 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.form_data = {
             "name": "VLAN Group X",
-            "slug": "vlan-group-x",
             "location": location.pk,
             "description": "A new VLAN group",
         }
 
         cls.csv_data = (
-            "name,slug,description",
-            "VLAN Group 4,vlan-group-4,Fourth VLAN group",
-            "VLAN Group 5,vlan-group-5,Fifth VLAN group",
-            "VLAN Group 6,vlan-group-6,Sixth VLAN group",
-            "VLAN Group 7,,Seventh VLAN group",
+            "name,description",
+            "VLAN Group 4,Fourth VLAN group",
+            "VLAN Group 5,Fifth VLAN group",
+            "VLAN Group 6,Sixth VLAN group",
+            "VLAN Group 7,Seventh VLAN group",
         )
-        cls.slug_source = "name"
-        cls.slug_test_object = VLANGroup.objects.first().name
 
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -298,8 +295,8 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         location_1 = cls.locations.first()
 
         vlangroups = (
-            VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1", location=cls.locations.first()),
-            VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2", location=cls.locations.last()),
+            VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations.first()),
+            VLANGroup.objects.create(name="VLAN Group 2", location=cls.locations.last()),
         )
 
         roles = Role.objects.get_for_model(VLAN)[:2]
@@ -354,10 +351,10 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "vid,name,status",
-            f"104,VLAN104,{status_1.name}",
-            f"105,VLAN105,{status_1.name}",
-            f"106,VLAN106,{status_1.name}",
+            "vid,name,status,vlan_group",
+            f"104,VLAN104,{status_1.name},{vlangroups[0].composite_key}",
+            f"105,VLAN105,{status_1.name},{vlangroups[0].composite_key}",
+            f"106,VLAN106,{status_1.name},{vlangroups[0].composite_key}",
         )
 
         cls.bulk_edit_data = {

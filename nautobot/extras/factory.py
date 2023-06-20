@@ -1,6 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.utils.text import slugify
-
 import factory
 import faker
 
@@ -75,7 +73,6 @@ class TagFactory(OrganizationalModelFactory):
         exclude = ("has_description",)
 
     name = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[1])
-    slug = factory.LazyAttribute(lambda tag: slugify(tag.name))
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
 
     has_description = NautobotBoolIterator()

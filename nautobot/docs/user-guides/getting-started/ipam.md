@@ -22,9 +22,8 @@ To create a RIR:
 1. Click on **IPAM** in the top-level navigation menu
 2. Find **RIRs** and click on the **+**; this takes you to the `Add a new RIR` form
 3. Specify the RIR `Name`
-4. The `Slug` will auto-populate based on the `Name` field, but this default can be manually overwritten
-5. There is a checkbox to flag `Private` (internal use) only
-6. Click on the `Create` button
+4. There is a checkbox to flag `Private` (internal use) only
+5. Click on the `Create` button
 
 ![Add RIR](../images/getting-started-nautobot-ui/27-add-rir.png)
 

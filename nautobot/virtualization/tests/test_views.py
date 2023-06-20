@@ -6,6 +6,7 @@ from nautobot.core.testing import ViewTestCases, post_data
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Location, LocationType, Platform
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
+from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import VLAN
 from nautobot.virtualization.factory import ClusterGroupFactory, ClusterTypeFactory
 from nautobot.virtualization.models import (
@@ -72,12 +73,8 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(
-                name="Location 1", slug="location-1", location_type=location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location 2", slug="location-2", location_type=location_type, status=location_status
-            ),
+            Location.objects.create(name="Location 1", location_type=location_type, status=location_status),
+            Location.objects.create(name="Location 2", location_type=location_type, status=location_status),
         )
 
         clustergroups = ClusterGroupFactory.create_batch(2)
@@ -138,12 +135,8 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         locations = (
-            Location.objects.create(
-                name="Location 1", slug="location-1", location_type=location_type, status=location_status
-            ),
-            Location.objects.create(
-                name="Location 2", slug="location-2", location_type=location_type, status=location_status
-            ),
+            Location.objects.create(name="Location 1", location_type=location_type, status=location_status),
+            Location.objects.create(name="Location 2", location_type=location_type, status=location_status),
         )
 
         platforms = Platform.objects.all()[:2]
@@ -264,6 +257,18 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.post(**request), 200)
         self.assertEqual(self._get_queryset().filter(name="Virtual Machine X").count(), 0)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_sort_by_ip_address(self):
+        # Assert https://github.com/nautobot/nautobot/issues/3503 is fixed.
+        self.add_permissions("virtualization.view_virtualmachine")
+        url = self._get_url("list") + "?sort=primary_ip"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response = response.content.decode(response.charset)
+        self.assertInHTML("Virtual Machine 1", response)
+        self.assertInHTML("Virtual Machine 2", response)
+        self.assertInHTML("Virtual Machine 3", response)
+
 
 class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = VMInterface
@@ -272,9 +277,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def setUpTestData(cls):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
-        location = Location.objects.create(
-            name="Location 1", slug="location-1", location_type=location_type, status=location_status
-        )
+        location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
         devicerole = Role.objects.get_for_model(Device).first()
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
@@ -298,11 +301,12 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.selected_objects_parent_name = virtualmachines[0].name
 
         vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_group = VLANGroupFactory.create(location=location)
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN1", location=location, status=vlan_status),
-            VLAN.objects.create(vid=101, name="VLAN101", location=location, status=vlan_status),
-            VLAN.objects.create(vid=102, name="VLAN102", location=location, status=vlan_status),
-            VLAN.objects.create(vid=103, name="VLAN103", location=location, status=vlan_status),
+            VLAN.objects.create(vid=1, name="VLAN1", location=location, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=101, name="VLAN101", location=location, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=102, name="VLAN102", location=location, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=103, name="VLAN103", location=location, status=vlan_status, vlan_group=vlan_group),
         )
 
         obj_type = ContentType.objects.get_for_model(VMInterface)

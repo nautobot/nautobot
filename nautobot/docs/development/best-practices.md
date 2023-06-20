@@ -107,7 +107,10 @@ Nautobot doesn't currently have a similar class provided for `ManyToManyField`; 
 
 ### Slug Field
 
-Moving forward in Nautobot, all models should have a `slug` field. This field can be safely/correctly used in URL patterns, dictionary keys, GraphQL and REST API. Nautobot has provided the `AutoSlugField` to handle automatically populating the `slug` field from another field(s). Generally speaking model slugs should be populated from the `name` field. Below is an example on defining the `slug` field.
++/- 2.0.0
+    Models should generally **not** have a `slug` field, and should use the model's primary key (UUID) in URL patterns for both the UI and the REST API. All models should have a human-friendly natural key, either a single unique field (typically `name`) or a minimally complex unique-together set of fields (such as `DeviceType`'s `(manufacturer, model)`).
+
+For models that have a strong use case for a `slug` or similar field (such as `GitRepository.slug`, which defines a module name for Python imports from the repository, or `CustomField.key`, which defines the key used to access this field in the REST API and GraphQL), Nautobot provides the `AutoSlugField` to handle automatically populating the `slug` field from another field(s). Generally speaking model slugs should be populated from the `name` field. Below is an example on defining the `slug` field.
 
 ```python
 from django.db import models
@@ -258,9 +261,9 @@ class UserFilter(NautobotFilterSet):
 
 - In Nautobot 2.0 and later, for all foreign-key related fields and their corresponding reverse-relations:
     - If there is no appropriate single field that could be used as a natural key (e.g. a globally-unique `name` or `slug`), then the default filtering behavior for this field (using `django_filters.ModelMultipleChoiceFilter`) can be used for now, until [issue 2875](https://github.com/nautobot/nautobot/issues/2875) is implemented to allow for the use of multiple fields with `NaturalKeyOrPKMultipleChoiceFilter`.
-    - Otherwise, the field **must** be shadowed with a Nautobot `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `slug` depending on the value of the incoming argument (e.g. UUID string vs. slug string).
+    - Otherwise, the field **must** be shadowed with a Nautobot `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `name` depending on the value of the incoming argument (e.g. UUID string vs. name string).
         - This provides an advantage over the default `django_filters.ModelMultipleChoiceFilter` which only supports a UUID (`pk`) value as an input.
-    - Fields that use `name` or some other natural key field instead of `slug` can set the `to_field_name` argument on `NaturalKeyOrPKMultipleChoiceFilter` accordingly.
+    - Fields that use `slug` or some other natural key field instead of `name` can set the `to_field_name` argument on `NaturalKeyOrPKMultipleChoiceFilter` accordingly.
 
 ```python
 # Typical usage
@@ -274,13 +277,13 @@ from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 ```
 
 ```python
-# Optionally, using the to_field_name argument to look up by "name" instead of by "slug"
+# Optionally, using the to_field_name argument to look up by "slug" instead of by "name"
 from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 
-    provider = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=Provider.objects.all(),
-        label="Provider (name or ID)",
+    git_repository = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="slug",
+        queryset=GitRepository.objects.all(),
+        label="Git repository (slug or ID)",
     )
 ```
 

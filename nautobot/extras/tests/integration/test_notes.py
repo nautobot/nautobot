@@ -26,9 +26,7 @@ class NoteTestCase(SeleniumTestCase):
         """
         location_type, _ = LocationType.objects.get_or_create(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
-        location = Location.objects.create(
-            name="Location 1", slug="location-1", location_type=location_type, status=location_status
-        )
+        location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
 
         # Navigate to the created location.
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:location", kwargs={"pk": location.pk})}')

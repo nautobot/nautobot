@@ -8,7 +8,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Count, Sum, Q
 
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, JSONArrayField
+from nautobot.core.models.fields import NaturalOrderingField, JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.models.utils import array_to_string
@@ -47,8 +47,6 @@ class RackGroup(TreeModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.CASCADE,
@@ -60,8 +58,6 @@ class RackGroup(TreeModel, OrganizationalModel):
         ordering = ("name",)
         unique_together = [
             ["location", "name"],
-            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["location", "slug"],
         ]
 
     natural_key_field_names = ["name", "location"]  # location needs to be last since it's a variadic natural key

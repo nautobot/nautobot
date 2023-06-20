@@ -172,11 +172,12 @@ def create_custom_statuses(
         for choice_kwargs in choices:
             # Since statuses are customizable now, we need to gracefully handle the case where a status
             # has had its name, slug, color and/or description changed from the defaults.
-            # First, try to find by slug
+            # First, try to find by slug if applicable
             defaults = choice_kwargs.copy()
             slug = defaults.pop("slug")
             try:
-                # may fail if a status with a different slug has a name matching this one
+                # May fail with an IntegrityError if a status with a different slug has a name matching this one
+                # May fail with a FieldError if the Status model no longer has a slug field
                 obj, created = Status.objects.get_or_create(slug=slug, defaults=defaults)
             except (IntegrityError, FieldError) as error:
                 # OK, what if we look up by name instead?
@@ -192,17 +193,17 @@ def create_custom_statuses(
                 except IntegrityError as err:
                     raise SystemExit(
                         f"Unexpected error while running data migration to populate status for {model_path}: {err}"
-                    )
+                    ) from err
 
             # Make sure the content-type is associated.
             if content_type not in obj.content_types.all():
                 obj.content_types.add(content_type)
 
             if created and verbosity >= 2:
-                print(f"      Adding and linking status {obj.name} ({obj.slug})", flush=True)
+                print(f"      Adding and linking status {obj.name}", flush=True)
                 added_total += 1
             elif not created and verbosity >= 2:
-                print(f"      Linking to existing status {obj.name} ({obj.slug})", flush=True)
+                print(f"      Linking to existing status {obj.name}", flush=True)
                 linked_total += 1
 
     if verbosity >= 2:
@@ -247,14 +248,14 @@ def clear_status_choices(
 
         if not clear_all_model_statuses:
             # Only clear default statuses for this model
-            slugs = [choice_kwargs["slug"] for choice_kwargs in choices]
+            names = [choice_kwargs["name"] for choice_kwargs in choices]
         else:
             # Clear all statuses for this model
-            slugs = Status.objects.filter(content_types=content_type).values_list("slug", flat=True)
+            names = Status.objects.filter(content_types=content_type).values_list("name", flat=True)
 
-        for slug in slugs:
+        for name in names:
             try:
-                obj = Status.objects.get(slug=slug)
+                obj = Status.objects.get(name=name)
                 obj.content_types.remove(content_type)
                 if not obj.content_types.all().exists():
                     obj.delete()

@@ -45,7 +45,7 @@ class BaseModel(models.Model):
         """
 
         # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug"]  # TODO: Eventually all PKs
+        fields = ["pk"]
         actions = ["retrieve", "detail", ""]  # TODO: Eventually all retrieve
 
         for field in fields:

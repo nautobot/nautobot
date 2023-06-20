@@ -32,7 +32,7 @@ def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
             return []
 
         # Make it a list if it's a string.
-        if isinstance(value, str):
+        if isinstance(value, (str, int)):
             value = [value]
 
         return [
@@ -391,13 +391,13 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
     """
     Filter that supports filtering on values matching the `pk` field and another
     field of a foreign-key related object. The desired field is set using the `to_field_name`
-    keyword argument on filter initialization (defaults to `slug`).
+    keyword argument on filter initialization (defaults to `name`).
     """
 
     field_class = forms.MultiMatchModelMultipleChoiceField
 
     def __init__(self, *args, **kwargs):
-        self.natural_key = kwargs.setdefault("to_field_name", "slug")
+        self.natural_key = kwargs.setdefault("to_field_name", "name")
         super().__init__(*args, **kwargs)
 
     def get_filter_predicate(self, v):
@@ -425,8 +425,8 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
             v = str(v)  # Cast possible UUID instance to a string
             is_pk = True
 
-        # If it's not a pk, then it's a slug and the filter predicate needs to be nested (e.g.
-        # `{"site__slug": "ams01"}`) so that it can be usable in `Q` objects.
+        # If it's not a pk, then it's a name and the filter predicate needs to be nested (e.g.
+        # `{"location__name": "ams01"}`) so that it can be usable in `Q` objects.
         if not is_pk:
             name = f"{self.field_name}__{self.field.to_field_name}"
         else:
@@ -467,7 +467,7 @@ class TagFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
 class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
     """
-    Filter that matches on the given model(s) (identified by slug and/or pk) _as well as their tree descendants._
+    Filter that matches on the given model(s) (identified by name and/or pk) _as well as their tree descendants._
 
     For example, if we have:
 
@@ -500,7 +500,7 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         # Construct a list of filter predicates that will be used to generate the Q object.
         predicates = []
         for obj in value:
-            # Try to get the `to_field_name` (e.g. `slug`) or just pass the object through.
+            # Try to get the `to_field_name` (e.g. `name`) or just pass the object through.
             val = getattr(obj, self.field.to_field_name, obj)
             if val == self.null_value:
                 val = None
@@ -757,10 +757,9 @@ class BaseFilterSet(django_filters.FilterSet):
         return self._errors
 
 
-class NameSlugSearchFilterSet(django_filters.FilterSet):
+class NameSearchFilterSet(django_filters.FilterSet):
     """
-    A base class for adding the search method to models which only expose the `name` and `slug` fields
+    A base class for adding the search method to models which only expose the `name` field in searches.
     """
 
-    # TODO Modify and rename this class after slugs are removed from all models.
-    q = SearchFilter(filter_predicates={"name": "icontains", "slug": "icontains"})
+    q = SearchFilter(filter_predicates={"name": "icontains"})

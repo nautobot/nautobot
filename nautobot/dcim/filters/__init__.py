@@ -10,7 +10,7 @@ from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
-    NameSlugSearchFilterSet,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -123,10 +123,11 @@ __all__ = (
 )
 
 
-class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class LocationTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=LocationType.objects.all(),
-        label="Parent location type (slug or ID)",
+        to_field_name="name",
+        label="Parent location type (name or ID)",
     )
     content_types = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("locations").get_choices,
@@ -134,7 +135,7 @@ class LocationTypeFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = LocationType
-        fields = ["id", "name", "slug", "description", "nestable"]
+        fields = ["id", "name", "description", "nestable"]
 
 
 class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
@@ -157,21 +158,25 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
     )
     location_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=LocationType.objects.all(),
-        label="Location type (slug or ID)",
+        to_field_name="name",
+        label="Location type (name or ID)",
     )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Location.objects.all(),
-        label="Parent location (slug or ID)",
+        to_field_name="name",
+        label="Parent location (name or ID)",
     )
     subtree = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Location.objects.all(),
-        label="Location(s) and descendants thereof (slug or ID)",
+        to_field_name="name",
+        label="Location(s) and descendants thereof (name or ID)",
         method="_subtree",
     )
     child_location_type = NaturalKeyOrPKMultipleChoiceFilter(
-        method="_child_location_type",
         queryset=LocationType.objects.all(),
-        label="Child location type (slug or ID)",
+        to_field_name="name",
+        label="Child location type (name or ID)",
+        method="_child_location_type",
     )
     content_type = ContentTypeMultipleChoiceFilter(
         field_name="location_type__content_types",
@@ -206,7 +211,8 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
     )
     rack_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Rack groups (slug or ID)",
+        to_field_name="name",
+        label="Rack groups (name or ID)",
     )
     has_rack_groups = RelatedMembershipBooleanFilter(
         field_name="rack_groups",
@@ -227,15 +233,16 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
     )
     vlan_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="Vlan groups (slug or ID)",
+        to_field_name="name",
+        label="VLAN groups (name or ID)",
     )
     has_vlan_groups = RelatedMembershipBooleanFilter(
         field_name="vlan_groups",
-        label="Has vlan groups",
+        label="Has VLAN groups",
     )
     has_vlans = RelatedMembershipBooleanFilter(
         field_name="vlans",
-        label="Has vlans",
+        label="Has VLANs",
     )
     vlans = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="vid",
@@ -262,7 +269,6 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         fields = [
             "id",
             "name",
-            "slug",
             "description",
             "asn",
             "circuit_terminations",
@@ -311,14 +317,16 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         return queryset.filter(params)
 
 
-class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):
+class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Parent (slug or ID)",
+        to_field_name="name",
+        label="Parent (name or ID)",
     )
     children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Children (slug or ID)",
+        to_field_name="name",
+        label="Children (name or ID)",
     )
     has_children = RelatedMembershipBooleanFilter(
         field_name="children",
@@ -342,7 +350,7 @@ class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSl
 
     class Meta:
         model = RackGroup
-        fields = ["id", "name", "slug", "description", "racks"]
+        fields = ["id", "name", "description", "racks"]
 
 
 class RackFilterSet(
@@ -370,7 +378,8 @@ class RackFilterSet(
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack_group",
-        label="Rack group (slug or ID)",
+        to_field_name="name",
+        label="Rack group (name or ID)",
     )
     type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
     width = django_filters.MultipleChoiceFilter(choices=RackWidthChoices)
@@ -426,7 +435,8 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__rack_group",
-        label="Rack group (slug or ID)",
+        to_field_name="name",
+        label="Rack group (name or ID)",
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
@@ -445,7 +455,7 @@ class RackReservationFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         fields = ["id", "created", "description", "tags"]
 
 
-class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class ManufacturerFilterSet(NautobotFilterSet, NameSearchFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=InventoryItem.objects.all(),
@@ -458,7 +468,8 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     device_types = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
-        label="Device types (slug or ID)",
+        to_field_name="model",
+        label="Device types (model or ID)",
     )
     has_device_types = RelatedMembershipBooleanFilter(
         field_name="device_types",
@@ -609,7 +620,6 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         fields = [
             "id",
             "model",
-            "slug",
             "part_number",
             "u_height",
             "is_full_depth",
@@ -731,7 +741,7 @@ class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilt
         fields = []
 
 
-class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class PlatformFilterSet(NautobotFilterSet, NameSearchFilterSet):
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
@@ -791,7 +801,8 @@ class DeviceFilterSet(
     )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
-        label="Device type (slug or ID)",
+        to_field_name="model",
+        label="Device type (model or ID)",
     )
     platform = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Platform.objects.all(), to_field_name="name", label="Platform (name or ID)"
@@ -799,7 +810,8 @@ class DeviceFilterSet(
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         field_name="rack__rack_group",
-        label="Rack group (slug or ID)",
+        to_field_name="name",
+        label="Rack group (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rack = NaturalKeyOrPKMultipleChoiceFilter(
@@ -829,7 +841,7 @@ class DeviceFilterSet(
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
         to_field_name="name",
-        label="Secrets group (slug or ID)",
+        label="Secrets group (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     virtual_chassis = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1240,9 +1252,10 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
         },
     )
     location = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device__location",
         queryset=Location.objects.all(),
-        label="Location (slug or ID)",
+        field_name="device__location",
+        to_field_name="name",
+        label="Location (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     device = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1295,12 +1308,14 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     location = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="master__location",
         queryset=Location.objects.all(),
-        label="Location (slug or ID)",
+        to_field_name="name",
+        label="Location (name or ID)",
     )
     tenant = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="master__tenant",
         queryset=Tenant.objects.all(),
-        label="Tenant (slug or ID)",
+        to_field_name="name",
+        label="Tenant (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     members = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1328,7 +1343,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
     location_id = MultiValueUUIDFilter(method="filter_device", field_name="device__location_id", label="Location (ID)")
     location = MultiValueCharFilter(
-        method="filter_device", field_name="device__location__slug", label="Location (name)"
+        method="filter_device", field_name="device__location__name", label="Location (name)"
     )
     tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
     tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__name", label="Tenant (name)")
@@ -1385,7 +1400,7 @@ class ConnectionFilterSetMixin:
     def filter_location(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return queryset.filter(device__location__slug=value)
+        return queryset.filter(device__location__name=value)
 
     def filter_device(self, queryset, name, value):
         if not value:
@@ -1402,7 +1417,7 @@ class ConnectionFilterSet(ConnectionFilterSetMixin):
 class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     location = django_filters.CharFilter(
         method="filter_location",
-        label="Location (slug)",
+        label="Location (name)",
     )
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
@@ -1415,7 +1430,7 @@ class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
 class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     location = django_filters.CharFilter(
         method="filter_location",
-        label="Location (slug)",
+        label="Location (name)",
     )
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
@@ -1428,7 +1443,7 @@ class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
 class InterfaceConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     location = django_filters.CharFilter(
         method="filter_location",
-        label="Location (slug)",
+        label="Location (name)",
     )
     device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
@@ -1442,7 +1457,8 @@ class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"name": "icontains"})
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
-        label="Rack group (slug or ID)",
+        to_field_name="name",
+        label="Rack group (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_feeds = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1467,7 +1483,8 @@ class PowerFeedFilterSet(
     location = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="power_panel__location",
         queryset=Location.objects.all(),
-        label="Location (slug or ID)",
+        to_field_name="name",
+        label="Location (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_panel = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1500,7 +1517,7 @@ class PowerFeedFilterSet(
         ]
 
 
-class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSlugSearchFilterSet):
+class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSearchFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),

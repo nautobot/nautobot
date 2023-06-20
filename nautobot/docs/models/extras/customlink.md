@@ -38,7 +38,7 @@ Only links which render with non-empty text are included on the page. You can em
 For example, if you only want to display a link for active devices, you could set the link text to
 
 ```jinja2
-{% if obj.status.slug == 'active' %}View NMS{% endif %}
+{% if obj.status.name == 'Active' %}View NMS{% endif %}
 ```
 
 The link will not appear when viewing a device with any status other than "active."
@@ -50,6 +50,9 @@ As another example, if you wanted to show only devices belonging to a certain ma
 ```
 
 The link will only appear when viewing a device with a manufacturer name of "Cisco."
+
+!!! note
+    To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
 
 ## Link Groups
 

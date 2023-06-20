@@ -32,7 +32,6 @@ class LocationTypeTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "slug",
             "parent",
             "nestable",
             "content_types",
@@ -64,7 +63,6 @@ class LocationTable(StatusTableMixin, BaseTable):
         fields = (
             "pk",
             "name",
-            "slug",
             "status",
             "location_type",
             "parent",

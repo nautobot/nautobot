@@ -38,8 +38,8 @@ class NautobotTemplatetagsHelperTest(TestCase):
         )
         # Optionally you can request a field other than the object's display string
         self.assertEqual(
-            helpers.hyperlinked_object(location, "slug"),
-            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location.slug}</a>',
+            helpers.hyperlinked_object(location, "name"),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location.name}</a>',
         )
         # If you request a nonexistent field, it defaults to the string representation
         self.assertEqual(

@@ -165,9 +165,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
-        cls.devicetype = DeviceType.objects.create(
-            manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
-        )
+        cls.devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         cls.devicerole = Role.objects.get_for_model(Device).first()
         location_type = LocationType.objects.create(name="Location Type 1")
         location_status = Status.objects.get_for_model(Location).first()
@@ -954,7 +952,7 @@ class SecretTest(ModelTestCases.BaseModelTestCase):
         self.environment_secret_templated = Secret.objects.create(
             name="Environment Variable Templated Secret",
             provider="environment-variable",
-            parameters={"variable": "NAUTOBOT_TEST_{{ obj.slug | upper }}"},
+            parameters={"variable": "NAUTOBOT_TEST_{{ obj.name | upper }}"},
         )
         self.text_file_secret = Secret.objects.create(
             name="Text File Secret",
@@ -964,11 +962,12 @@ class SecretTest(ModelTestCases.BaseModelTestCase):
         self.text_file_secret_templated = Secret.objects.create(
             name="Text File Templated Secret",
             provider="text-file",
-            parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.slug }}", "secret-file.txt")},
+            parameters={"path": os.path.join(tempfile.gettempdir(), "{{ obj.name }}", "secret-file.txt")},
         )
 
         self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        self.location.slug = "nyc"
+        self.location.name = "nyc"
+        self.location.save()
 
     def test_environment_variable_value_not_found(self):
         """Failure to retrieve an environment variable raises an exception."""
@@ -1413,7 +1412,7 @@ class TagTest(ModelTestCases.BaseModelTestCase):
         tag = Tag(name="Testing Unicode: 台灣")
         tag.save()
 
-        self.assertEqual(tag.slug, "testing-unicode-台灣")
+        self.assertEqual(tag.name, "Testing Unicode: 台灣")
 
 
 class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase

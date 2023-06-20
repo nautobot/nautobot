@@ -13,6 +13,8 @@
   Class/Function(s): "ButtonActionColorChoices"
 - Module: "nautobot.core.choices"
   Class/Function(s): "ButtonActionIconChoices"
+- Module: "nautobot.core.filters"
+  Class/Function(s): "NameSlugSearchFilterSet"
 - Module: "nautobot.core.forms.utils"
   Class/Function(s): "parse_csv"
 - Module: "nautobot.core.forms.utils"

@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.core.models import BaseManager
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
@@ -92,8 +92,6 @@ class DeviceType(PrimaryModel):
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
     model = models.CharField(max_length=100)
-    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
@@ -127,8 +125,6 @@ class DeviceType(PrimaryModel):
         ordering = ["manufacturer", "model"]
         unique_together = [
             ["manufacturer", "model"],
-            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["manufacturer", "slug"],
         ]
 
     def __str__(self):
@@ -149,7 +145,6 @@ class DeviceType(PrimaryModel):
             (
                 ("manufacturer", self.manufacturer.name),
                 ("model", self.model),
-                ("slug", self.slug),
                 ("part_number", self.part_number),
                 ("u_height", self.u_height),
                 ("is_full_depth", self.is_full_depth),
@@ -256,7 +251,7 @@ class DeviceType(PrimaryModel):
         elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
-                url = f"{reverse('dcim:device_list')}?manufacturer_id={self.manufacturer_id}&device_type_id={self.pk}"
+                url = f"{reverse('dcim:device_list')}?manufacturer={self.manufacturer_id}&device_type={self.pk}"
                 raise ValidationError(
                     {
                         "u_height": mark_safe(
@@ -684,22 +679,9 @@ class Device(PrimaryModel, ConfigContextModel):
 
         super().save(*args, **kwargs)
 
-        # If this is a new Device, instantiate all of the related components per the DeviceType definition
+        # If this is a new Device, instantiate all related components per the DeviceType definition
         if is_new:
-            ConsolePort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.console_port_templates.all()]
-            )
-            ConsoleServerPort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.console_server_port_templates.all()]
-            )
-            PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.power_port_templates.all()])
-            PowerOutlet.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.power_outlet_templates.all()]
-            )
-            Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interface_templates.all()])
-            RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rear_port_templates.all()])
-            FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.front_port_templates.all()])
-            DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.device_bay_templates.all()])
+            self.create_components()
 
         # Update Location and Rack assignment for any child Devices
         devices = Device.objects.filter(parent_bay__device=self)
@@ -707,6 +689,26 @@ class Device(PrimaryModel, ConfigContextModel):
             device.location = self.location
             device.rack = self.rack
             device.save()
+
+    def create_components(self):
+        """Create device components from the device type definition."""
+        # The order of these is significant as
+        # - PowerOutlet depends on PowerPort
+        # - FrontPort depends on FrontPort
+        component_models = [
+            (ConsolePort, self.device_type.console_port_templates.all()),
+            (ConsoleServerPort, self.device_type.console_server_port_templates.all()),
+            (PowerPort, self.device_type.power_port_templates.all()),
+            (PowerOutlet, self.device_type.power_outlet_templates.all()),
+            (Interface, self.device_type.interface_templates.all()),
+            (RearPort, self.device_type.rear_port_templates.all()),
+            (FrontPort, self.device_type.front_port_templates.all()),
+            (DeviceBay, self.device_type.device_bay_templates.all()),
+        ]
+        instantiated_components = []
+        for model, templates in component_models:
+            model.objects.bulk_create([x.instantiate(self) for x in templates])
+        return instantiated_components
 
     @property
     def display(self):
