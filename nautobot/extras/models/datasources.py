@@ -82,6 +82,10 @@ class GitRepository(PrimaryModel):
     def clean(self):
         super().clean()
 
+        # Autogenerate slug now, rather than in pre_save(), if not set already, as we need to check it below.
+        if self.slug == "":
+            self._meta.get_field("slug").create_slug(self, add=(not self.present_in_database))
+
         if self.present_in_database and self.slug != self.__initial_slug:
             raise ValidationError(
                 f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
