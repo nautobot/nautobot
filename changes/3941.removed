@@ -1,0 +1,3 @@
+Removed `device, rd, name` and `virtual_machine, rd, name` uniqueness constraints on `VRFDeviceAssignment`.
+Removed `namespace, name` uniqueness constraint on `VRF`.
+Removed some overly verbose messaging in IPAM migration utilities.

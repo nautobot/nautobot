@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterUniqueTogether(
             name="vrf",
-            unique_together={("namespace", "rd"), ("namespace", "name")},
+            unique_together={("namespace", "rd")},
         ),
         migrations.AlterUniqueTogether(
             name="prefix",

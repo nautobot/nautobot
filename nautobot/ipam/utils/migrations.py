@@ -295,8 +295,9 @@ def reparent_prefixes(apps):
             parent = get_closest_parent(apps, pfx, pfx.namespace.prefixes.all())
             if pfx.namespace != parent.namespace:
                 raise ValidationError("Prefix and parent are in different Namespaces")
-            if "test" not in sys.argv:
-                print(f">>> {pfx.network}/{pfx.prefix_length} parent: {parent.network}/{parent.prefix_length}")
+            # TODO: useful but potentially very noisy. Do migrations have a verbosity option?
+            # if "test" not in sys.argv:
+            #     print(f">>> {pfx.network}/{pfx.prefix_length} parent: {parent.network}/{parent.prefix_length}")
             pfx.parent = parent
             pfx.save()
         except Prefix.DoesNotExist:
@@ -672,12 +673,13 @@ def get_next_prefix_cleanup_namespace(apps, prefix, base_name=BASE_NAME):
         if created:
             return namespace
 
-        cidr = f"{prefix.network}/{prefix.prefix_length}"
         has_dupe = namespace.prefixes.filter(network=prefix.network, prefix_length=prefix.prefix_length).exists()
 
         if has_dupe:
-            if "test" not in sys.argv:
-                print(f"    Prefix {cidr} is duplicated in NS {namespace.name}")
+            # TODO: useful but potentially very noisy. Do migrations have a verbosity option?
+            # if "test" not in sys.argv:
+            #     cidr = f"{prefix.network}/{prefix.prefix_length}"
+            #     print(f"    Prefix {cidr} is duplicated in NS {namespace.name}")
             counter += 1
             continue
 
