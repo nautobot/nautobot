@@ -18,10 +18,10 @@ class Command(BaseCommand):
             dynamic_group_model_filter = get_filterset_for_model(dynamic_group_model)
             valid_filterset_fields = dynamic_group_model_filter().filters
             filter_data = dynamic_group.filter
-            for filter in filter_data.keys():
-                if filter not in valid_filterset_fields:
+            for filter_field in filter_data.keys():
+                if filter_field not in valid_filterset_fields:
                     print(
-                        f"    DynamicGroup instance with name `{dynamic_group.name}` and content type `{dynamic_group.content_type}` has an invalid filter `{filter}`"
+                        f"    DynamicGroup instance with name `{dynamic_group.name}` and content type `{dynamic_group.content_type}` has an invalid filter `{filter_field}`"
                     )
                     is_valid = False
         if is_valid:
