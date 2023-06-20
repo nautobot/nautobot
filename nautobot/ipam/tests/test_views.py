@@ -185,16 +185,17 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
+        cls.namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
         statuses = Status.objects.get_for_model(IPAddress)
+        cls.prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
         parent, _ = Prefix.objects.get_or_create(
             prefix="192.0.2.0/24",
-            defaults={"namespace": namespace, "status": statuses[0], "type": "network"},
+            defaults={"namespace": cls.namespace, "status": cls.prefix_status, "type": "network"},
         )
 
         cls.form_data = {
-            "namespace": namespace.pk,
+            "namespace": cls.namespace.pk,
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
             "status": statuses[1].pk,
@@ -226,6 +227,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         instance = self._get_queryset().first()
         form_data = self.form_data.copy()
         form_data["address"] = instance.address  # Host address is not modifiable
+        form_data["namespace"] = instance.parent.namespace.pk
         self.form_data = form_data
         super().test_edit_object_with_permission()
 
@@ -235,6 +237,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         instance = self._get_queryset().first()
         form_data = self.form_data.copy()
         form_data["address"] = instance.address  # Host address is not modifiable
+        form_data["namespace"] = instance.parent.namespace.pk
         self.form_data = form_data
         super().test_edit_object_with_constrained_permission()
 
@@ -244,10 +247,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         ip_address_2 = self._get_queryset().last()
 
         # Assign model-level permission
-        obj_perm = ObjectPermission(name="Test permission", actions=["change"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        self.add_permissions("ipam.change_ipaddress")
 
         # Try GET with model-level permission
         self.assertHttpStatus(self.client.get(self._get_url("edit", ip_address_1)), 200)
@@ -262,6 +262,38 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.post(**request)
         self.assertEqual(200, response.status_code)
         self.assertIn("Host address cannot be changed once created", str(response.content))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_move_ip_addresses_between_namespaces(self):
+        instance = self._get_queryset().first()
+        new_namespace = Namespace.objects.create(name="Test Namespace")
+        # Assign model-level permission
+        self.add_permissions("ipam.change_ipaddress")
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
+
+        form_data = self.form_data.copy()
+        form_data["address"] = instance.address  # Host address is not modifiable
+        form_data["namespace"] = new_namespace.pk
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        self.assertEqual(200, response.status_code)
+        self.assertIn(f"Could not determine parent Prefix for {instance}! Does it exist?", str(response.content))
+        # Create an exact copy of the parent prefix but in a different namespace. See if the re-parenting is successful
+        new_parent = Prefix.objects.create(
+            prefix=instance.parent.prefix,
+            namespace=new_namespace,
+            status=instance.parent.status,
+            type=instance.parent.type,
+        )
+        response = self.client.post(**request)
+        self.assertEqual(302, response.status_code)
+        created_ip = IPAddress.objects.get(parent__namespace=new_namespace, address=instance.address)
+        self.assertEqual(created_ip.parent, new_parent)
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

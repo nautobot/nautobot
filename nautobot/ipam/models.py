@@ -1012,7 +1012,7 @@ class IPAddress(PrimaryModel):
                 raise ValidationError({"parent": "Namespace could not be determined."})
             namespace = self._namespace
         else:
-            namespace = self.parent.namespace
+            namespace = self._namespace or self.parent.namespace
 
         # Determine the closest parent automatically based on the Namespace.
         self.parent = (
