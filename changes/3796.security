@@ -1,0 +1,1 @@
+Updated requests to 2.31.0 to address CVE-2023-32681. This is a development dependency and will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
