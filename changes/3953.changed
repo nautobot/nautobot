@@ -1,0 +1,3 @@
+Added HomeIcon and linked to "/".
+Removed static "Home" text.
+Fixed padding to be consistent.
