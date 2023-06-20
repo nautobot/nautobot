@@ -1,0 +1,1 @@
+Fixed a GraphQL error when querying Interface `mac_address` when unset/null/empty values are present.
