@@ -29,5 +29,5 @@ class Command(BaseCommand):
         else:
             print(
                 "\n>>> Please fix the broken filters stated above according to the documentations at available"
-                "'<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes'"
+                "'<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes'\n"
             )
