@@ -801,6 +801,45 @@ def integration_test(
 
 @task(
     help={
+        "dataset": "File (.sql.tar.gz) to start from that will untar to 'nautobot.sql'",
+        "db_engine": "mysql or postgres",
+        "db_name": "Temporary database to create, test, and destroy",
+    },
+)
+def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_migration_test"):
+    """Test database migration from a given dataset to latest Nautobot schema."""
+    if is_truthy(context.nautobot.local):
+        run_command(context, command=f"tar zxvf {dataset}")
+    else:
+        # DB must be running, else will fail with errors like:
+        # dropdb: error: could not connect to database template1: could not connect to server: No such file or directory
+        start(context, service="db")
+        source_file = os.path.basename(dataset)
+        context.run(f"docker cp '{dataset}' nautobot-db-1:/tmp/{source_file}")
+        run_command(context, command=f"tar zxvf /tmp/{source_file}", service="db")
+
+    if db_engine == "postgres":
+        run_command(context, command=f"sh -c 'dropdb --if-exists -U $POSTGRES_USER {db_name}'", service="db")
+        run_command(context, command=f"sh -c 'createdb -U $POSTGRES_USER {db_name}'", service="db")
+        run_command(context, command=f"sh -c 'psql -U $POSTGRES_USER -d {db_name} -f nautobot.sql'", service="db")
+    else:
+        base_command = "mysql --user=$MYSQL_USER --password=$MYSQL_PASSWORD --host localhost"
+        run_command(context, command=f"sh -c '{base_command} -e \"DROP DATABASE IF EXISTS {db_name};\"'", service="db")
+        run_command(context, command=f"sh -c '{base_command} -e \"CREATE DATABASE {db_name};\"'", service="db")
+        run_command(context, command=f"sh -c '{base_command} {db_name} < nautobot.sql'", service="db")
+
+    if is_truthy(context.nautobot.local):
+        run_command(context, command="nautobot-server migrate", env={"NAUTOBOT_DB_NAME": db_name})
+    else:
+        # We MUST use "docker-compose run ..." here as "docker-compose exec" doesn't support an `--env` flag.
+        docker_compose(
+            context,
+            command=f"run --rm --env NAUTOBOT_DB_NAME={db_name} --entrypoint 'nautobot-server migrate' nautobot",
+        )
+
+
+@task(
+    help={
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",

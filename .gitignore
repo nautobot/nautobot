@@ -11,6 +11,7 @@ gunicorn.py
 invoke.yml
 nautobot.log
 nautobot.pid
+nautobot.sql
 .DS_Store
 .idea
 .coverage
