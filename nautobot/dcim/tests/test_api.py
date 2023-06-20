@@ -1523,6 +1523,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
+                "mac_address": None,
             },
             {
                 "device": cls.devices[0].pk,
