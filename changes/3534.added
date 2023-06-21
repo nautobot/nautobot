@@ -1,0 +1,1 @@
+Added optional args and kwargs to `BaseModel.validated_save()` that pass through to the model's `save` method.
