@@ -14,8 +14,9 @@ class BaseModelFactory(DjangoModelFactory):
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
         """Override default DjangoModelFactory behavior to call validated_save() instead of just save()."""
+        using = kwargs.pop("using", cls._meta.database)
         obj = model_class(*args, **kwargs)
-        obj.validated_save()
+        obj.validated_save(using=using)
         return obj
 
 

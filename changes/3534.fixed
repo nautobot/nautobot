@@ -1,0 +1,2 @@
+Fixed confusing unit test failure message when trying to run a non-existent test.
+Fixed unit tests sometimes clearing out the default database.
