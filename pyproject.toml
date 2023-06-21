@@ -192,7 +192,7 @@ pylint = {version = "~2.14.5", python = "^3.7.2"}
 # Pylint extensions for Django
 pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 # Integration Tests
-requests = "~2.27.1"
+requests = ">=2.27.1,<2.32.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
 rich = "~12.5.1"
 # Selenium web drivers for live integration testing
