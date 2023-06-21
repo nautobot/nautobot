@@ -1,0 +1,1 @@
+Added a Nautobot 2.0 pre-migration management command aptly named `pre_migrate`.
