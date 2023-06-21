@@ -58,8 +58,8 @@ function TableColumnDisplay({ obj }) {
     }
 }
 
-export default function TableItem({ name, obj, url }) {
-    if (url) {
+export default function ObjectTableItem({ name, obj, url }) {
+    if (url && obj) {
         return (
             <Link to={url}>
                 <TableColumnDisplay obj={obj} />

@@ -121,6 +121,17 @@ export const baseApi = createApi({
     }),
 });
 
+export const fetcher = (url) =>
+    fetch(url, { credentials: "include" }).then((res) => {
+        // We have to do this here because 4xx and 5xx errors
+        // are considered as a successful request.
+        if (!res.ok) {
+            throw new Error("Something Went Wrong");
+        } else {
+            return res.json();
+        }
+    });
+
 export const {
     useGetSessionQuery,
     useGetUIMenuQuery,

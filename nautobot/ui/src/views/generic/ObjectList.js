@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useParams } from "react-router-dom";
 import { NautobotGridItem, Text } from "@nautobot/nautobot-ui";
 
-import ObjectListTable from "@components/ObjectListTable";
+import { ObjectListTable } from "@components";
 import GenericView from "@views/generic/GenericView";
 import { useGetRESTAPIQuery } from "@utils/api";
 import {
@@ -110,6 +110,7 @@ export default function GenericObjectListView() {
     return (
         <GenericView>
             <NautobotGridItem>
+                {/* TODO(timizuo): Use @component/ObjectTable instead, after pagination control has been added to @component/ObjectTable */}
                 <ObjectListTable
                     tableData={listData.results}
                     defaultHeaders={defaultHeaders}

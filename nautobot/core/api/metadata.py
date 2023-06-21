@@ -1,13 +1,17 @@
+import contextlib
+from copy import deepcopy
 from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 import drf_react_template.schema_form_encoder as schema
 from rest_framework import exceptions
-from rest_framework import fields as drf_fields
-from rest_framework import serializers as drf_serializers
+from rest_framework import fields as drf_fields, relations as drf_relations, serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
+
+from nautobot.core.exceptions import ViewConfigException
+from nautobot.core.templatetags.helpers import bettertitle
 
 
 # FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
@@ -56,10 +60,11 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
 
         This has been overloaded with an `elif` to account for `ManyRelatedField`.
         """
-        result = {}
         type_map_obj = self._get_type_map_value(field)
-        result["type"] = type_map_obj["type"]
-        result["title"] = self._get_title(field, name)
+        result = {
+            "type": type_map_obj["type"] or "string",
+            "title": self._get_title(field, name),
+        }
 
         if isinstance(field, drf_serializers.ListField):
             if field.allow_empty:
@@ -72,40 +77,46 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
             result["items"] = self._get_field_properties(field.child_relation, "")
             result["uniqueItems"] = True
         else:
+            if isinstance(field, drf_serializers.RelatedField):
+                result["uniqueItems"] = True
+                if hasattr(field, "queryset") and hasattr(field.queryset, "model"):
+                    model_options = field.queryset.model._meta
+                    result["required"] = field.required
+                    # Custom Keyword: modelName and appLabel
+                    # This Keyword represents the model name of the uuid model
+                    # and appLabel represents the app_name of the model
+                    result["modelName"] = model_options.model_name
+                    result["appLabel"] = model_options.app_label
             if field.allow_null:
                 result["type"] = [result["type"], "null"]
-            enum = type_map_obj.get("enum")
-            if enum:
+            if enum := type_map_obj.get("enum"):
                 if enum == "choices":
                     choices = field.choices
                     result["enum"] = list(choices.keys())
                     result["enumNames"] = list(choices.values())
                 if isinstance(enum, (list, tuple)):
-                    if isinstance(enum, (list, tuple)):
-                        result["enum"] = [item[0] for item in enum]
-                        result["enumNames"] = [item[1] for item in enum]
-                    else:
-                        result["enum"] = enum
-                        result["enumNames"] = list(enum)
-
-            # Process "format"
-            format_ = type_map_obj["format"]
-            if format_:
+                    result["enum"] = [item[0] for item in enum]
+                    result["enumNames"] = [item[1] for item in enum]
+            if format_ := type_map_obj["format"]:
                 result["format"] = format_
 
-            # Process "readOnly"
-            read_only = type_map_obj["readOnly"]
-            if read_only:
+            if read_only := field.read_only:
                 result["readOnly"] = read_only
 
-            try:
+            with contextlib.suppress(drf_fields.SkipField):
                 result["default"] = field.get_default()
-            except drf_fields.SkipField:
-                pass
 
         result = self._set_validation_properties(field, result)
 
         return result
+
+    @staticmethod
+    def _filter_fields(all_fields):
+        """
+        Override super._filter_fields to return all fields, including read-only fields,
+        as read-only fields have to be displayed in Detail View.
+        """
+        return tuple((name, field) for name, field in all_fields)
 
 
 class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcessor):
@@ -172,6 +183,8 @@ class NautobotMetadata(SimpleMetadata):
     - uiSchema: The object UI schema which describes the form layout in the UI
     """
 
+    view_serializer = None
+
     def determine_actions(self, request, view):
         """Generate the actions and return the names of the allowed methods."""
         actions = []
@@ -199,7 +212,6 @@ class NautobotMetadata(SimpleMetadata):
 
     def determine_view_options(self, request, serializer):
         """Determine view options that will be used for non-form display metadata."""
-        view_options = {}
         list_display = []
         fields = []
 
@@ -234,10 +246,11 @@ class NautobotMetadata(SimpleMetadata):
             column_data = processor._get_column_properties(field, field_name)
             fields.append(column_data)
 
-        view_options["list_display_fields"] = list_display
-        view_options["fields"] = fields
-
-        return view_options
+        return {
+            "retrieve": self.determine_detail_view_schema(serializer),
+            "list_display_fields": list_display,
+            "fields": fields,
+        }
 
     def determine_metadata(self, request, view):
         """This is the metadata that gets returned on an `OPTIONS` request."""
@@ -246,6 +259,8 @@ class NautobotMetadata(SimpleMetadata):
         # If there's a serializer, do the needful to bind the schema/uiSchema.
         if hasattr(view, "get_serializer"):
             serializer = view.get_serializer()
+            # TODO(timizuo): Replace every serializer passed as an attribute to a method with this
+            self.view_serializer = serializer
             # TODO(jathan): Bit of a WIP here. Will likely refactor. There might be cases where we
             # want to explicitly override the UI field ordering, but that's not yet accounted for
             # here. For now the assertion is always put the `list_display_fields` first, and then
@@ -256,7 +271,6 @@ class NautobotMetadata(SimpleMetadata):
             metadata.update(
                 {
                     "schema": NautobotSchemaProcessor(serializer, request.parser_context).get_schema(),
-                    # "uiSchema": NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema(),
                     "uiSchema": ui_schema,
                 }
             )
@@ -264,3 +278,138 @@ class NautobotMetadata(SimpleMetadata):
             metadata["view_options"] = self.determine_view_options(request, serializer)
 
         return metadata
+
+    def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields):
+        """Add fields from view serializer fields that are missing from view_config_layout."""
+        serializer_fields = self.view_serializer.fields.keys()
+        view_config_fields = [
+            field for config in view_config_layout for field_list in config.values() for field in field_list["fields"]
+        ]
+        missing_fields = sorted(set(serializer_fields) - set(view_config_fields) - set(exclude_fields))
+        view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
+        return view_config_layout
+
+    def restructure_view_config(self, view_config):
+        """
+        Restructure the view config by removing specific fields ("composite_key", "url", "display", "status", "id")
+        from the view config and adding standard fields ("id", "composite_key", "url") to the first item's fields.
+
+        This operation aims to establish a standardized and consistent way of displaying the fields "id", "composite_key",
+        and "url" within the view config.
+
+        Example:
+            >>> view_config = [
+                {
+                    Location: {fields: ["display", "name",...]},
+                    Others: {fields: ["tenant", "tenant_group", "status"]}
+                },
+                ...
+            ]
+            >>> restructure_view_config(view_config)
+            [
+                {
+                    Location: {fields: ["name","id","composite_key","url"]},
+                    Others: {fields: ["tenant", "tenant_group"]}
+                },
+                ...
+            ]
+        """
+
+        # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
+        fields_to_remove = ["composite_key", "url", "display", "status", "id"]
+        fields_to_add = ["id", "composite_key", "url"]
+        # Make a deepcopy to avoid altering view_config
+        view_config_layout = deepcopy(view_config.get("layout"))
+
+        for section_idx, section in enumerate(view_config_layout):
+            for idx, value in enumerate(section.values()):
+                for field in fields_to_remove:
+                    if field in value["fields"]:
+                        value["fields"].remove(field)
+                if section_idx == 0 and idx == 0:
+                    value["fields"].extend(fields_to_add)
+
+        if view_config.get("include_others", False):
+            view_config_layout = self.add_missing_field_to_view_config_layout(view_config_layout, fields_to_remove)
+        return view_config_layout
+
+    def get_m2m_and_non_m2m_fields(self, serializer):
+        """
+        Retrieve the many-to-many (m2m) fields and other non-m2m fields from the serializer.
+
+        Returns:
+            A tuple containing two lists: m2m_fields and non m2m fields.
+                - m2m_fields: A list of dictionaries, each containing the name and label of an m2m field.
+                - non_m2m_fields: A list of dictionaries, each containing the name and label of a non m2m field.
+        """
+        m2m_fields = []
+        non_m2m_fields = []
+
+        for field_name, field in serializer.fields.items():
+            if isinstance(field, drf_relations.ManyRelatedField):
+                m2m_fields.append({"name": field_name, "label": field.label or field_name})
+            else:
+                non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
+
+        return m2m_fields, non_m2m_fields
+
+    def get_default_detail_view_config(self, serializer):
+        """
+        Generate detail view config for the view based on the serializer's fields.
+
+        Examples:
+            >>> get_default_detail_view_config(serializer).
+            {
+                "layout":[
+                    {
+                        Device: {
+                            "fields": ["name", "subdevice_role", "height", "comments"...]
+                        }
+                    },
+                    {
+                        Tags: {
+                            "fields": ["tags"]
+                        }
+                    }
+                ]
+            }
+
+        Returns:
+            A list representing the view config.
+        """
+        m2m_fields, other_fields = self.get_m2m_and_non_m2m_fields(serializer)
+        # TODO(timizuo): How do we get verbose_name of not model serializers?
+        model_verbose_name = serializer.Meta.model._meta.verbose_name
+        return {
+            "layout": [
+                {
+                    bettertitle(model_verbose_name): {
+                        "fields": [field["name"] for field in other_fields],
+                    }
+                },
+                {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
+            ]
+        }
+
+    def determine_detail_view_schema(self, serializer):
+        """Determine the layout option that would be used for the detail view"""
+        if hasattr(serializer.Meta, "detail_view_config"):
+            view_config = self.validate_view_config(serializer.Meta.detail_view_config)
+        else:
+            view_config = self.get_default_detail_view_config(serializer)
+        return self.restructure_view_config(view_config)
+
+    def validate_view_config(self, view_config):
+        """Validate view config"""
+
+        # 1. Validate key `layout` is in view_config; as this is a required key is creating a view config
+        if not view_config["layout"]:
+            raise ViewConfigException("`layout` is a required key in creating a custom view_config")
+
+        # 2. Validate `Other Fields` is not part of a layout group name, as this is a nautobot reserver keyword for group names
+        if any(
+            group_name for col in view_config["layout"] for group_name in col.keys() if group_name == "Other Fields"
+        ):
+            raise ViewConfigException("`Other Fields` is a reserved group name keyword.")
+
+        return view_config

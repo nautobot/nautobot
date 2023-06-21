@@ -194,7 +194,9 @@ def reassign_site_model_instances_to_locations(apps, site_lt):
     site_lt.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
 
     # Circuits App
-    cts = CircuitTermination.objects.filter(location__isnull=True).select_related("site__migrated_location")
+    cts = CircuitTermination.objects.filter(location__isnull=True, site__isnull=False).select_related(
+        "site__migrated_location"
+    )
     for ct in cts:
         ct.location = ct.site.migrated_location
     CircuitTermination.objects.bulk_update(cts, ["location"], 1000)

@@ -113,6 +113,10 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMix
         filterset_class = InterfaceFilterSet
         exclude = ["_name"]
 
+    # At the DB level, mac_address is null=False, but empty strings are represented as null in the ORM and REST API,
+    # so for consistency, we'll keep that same representation in GraphQL.
+    mac_address = graphene.String(required=False)
+
     # Field Definitions
     cable_peer_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
     cable_peer_front_port = graphene.Field("nautobot.dcim.graphql.types.FrontPortType")
