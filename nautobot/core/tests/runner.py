@@ -54,22 +54,27 @@ class NautobotTestRunner(DiscoverRunner):
     def setup_databases(self, **kwargs):
         result = super().setup_databases(**kwargs)
 
-        if settings.TEST_USE_FACTORIES:
-            print("Pre-populating test database with factory data...")
+        if settings.TEST_USE_FACTORIES and result:
             command = ["generate_test_data", "--flush", "--no-input"]
             if settings.TEST_FACTORY_SEED is not None:
                 command += ["--seed", settings.TEST_FACTORY_SEED]
             if self.cache_test_fixtures:
                 command += ["--cache-test-fixtures"]
-            call_command(*command)
+            for connection in result:
+                db_name = connection[0].alias
+                print(f'Pre-populating test database "{db_name}" with factory data...')
+                db_command = command + ["--database", db_name]
+                call_command(*db_command)
 
         return result
 
     def teardown_databases(self, old_config, **kwargs):
-        if settings.TEST_USE_FACTORIES:
-            print("Emptying test database...")
-            call_command("flush", "--no-input")
-            print("Database emptied!")
+        if settings.TEST_USE_FACTORIES and old_config:
+            for connection in old_config:
+                db_name = connection[0].alias
+                print(f'Emptying test database "{db_name}"...')
+                call_command("flush", "--no-input", "--database", db_name)
+                print(f"Database {db_name} emptied!")
 
         super().teardown_databases(old_config, **kwargs)
 

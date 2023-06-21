@@ -35,8 +35,13 @@ class Command(BaseCommand):
             default="development/factory_dump.json",
             help="Fixture file to use with --cache-test-fixtures.",
         )
+        parser.add_argument(
+            "--database",
+            default=DEFAULT_DB_ALIAS,
+            help='The database to generate the test data in. Defaults to the "default" database.',
+        )
 
-    def _generate_factory_data(self, seed):
+    def _generate_factory_data(self, seed, db_name):
 
         try:
             import factory.random
@@ -76,56 +81,56 @@ class Command(BaseCommand):
         factory.random.reseed_random(seed)
 
         self.stdout.write("Creating Statuses...")
-        populate_status_choices(verbosity=0)
-        StatusFactory.create_batch(10)
+        populate_status_choices(verbosity=0, using=db_name)
+        StatusFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating Tags...")
         # Ensure that we have some tags that are applicable to all relevant content-types
-        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset())
+        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset(), using=db_name)
         # ...and some tags that apply to a random subset of content-types
-        TagFactory.create_batch(15)
+        TagFactory.create_batch(15, using=db_name)
         self.stdout.write("Creating TenantGroups...")
-        TenantGroupFactory.create_batch(10, has_parent=False)
-        TenantGroupFactory.create_batch(10, has_parent=True)
+        TenantGroupFactory.create_batch(10, has_parent=False, using=db_name)
+        TenantGroupFactory.create_batch(10, has_parent=True, using=db_name)
         self.stdout.write("Creating Tenants...")
-        TenantFactory.create_batch(10, has_group=False)
-        TenantFactory.create_batch(10, has_group=True)
+        TenantFactory.create_batch(10, has_group=False, using=db_name)
+        TenantFactory.create_batch(10, has_group=True, using=db_name)
         self.stdout.write("Creating Regions...")
-        RegionFactory.create_batch(15, has_parent=False)
-        RegionFactory.create_batch(5, has_parent=True)
+        RegionFactory.create_batch(15, has_parent=False, using=db_name)
+        RegionFactory.create_batch(5, has_parent=True, using=db_name)
         self.stdout.write("Creating Sites...")
-        SiteFactory.create_batch(15)
+        SiteFactory.create_batch(15, using=db_name)
         self.stdout.write("Creating LocationTypes...")
-        LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
+        LocationTypeFactory.create_batch(7, using=db_name)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(20)  # we need more locations with sites since it can be nested now.
+        LocationFactory.create_batch(20, using=db_name)  # we need more locations with sites since it can be nested now.
         self.stdout.write("Creating RIRs...")
-        RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
+        RIRFactory.create_batch(9, using=db_name)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
-        RouteTargetFactory.create_batch(20)
+        RouteTargetFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating VRFs...")
-        VRFFactory.create_batch(20)
+        VRFFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating IP/VLAN Roles...")
-        RoleFactory.create_batch(10)
+        RoleFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating VLANGroups...")
-        VLANGroupFactory.create_batch(20)
+        VLANGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating VLANs...")
-        VLANFactory.create_batch(20)
+        VLANFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
-        AggregateFactory.create_batch(5, has_tenant_group=True)
-        AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True)
-        AggregateFactory.create_batch(10)
+        AggregateFactory.create_batch(5, has_tenant_group=True, using=db_name)
+        AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True, using=db_name)
+        AggregateFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating Manufacturers...")
-        ManufacturerFactory.create_batch(14)  # All 14 hard-coded Manufacturers for now.
+        ManufacturerFactory.create_batch(14, using=db_name)  # All 14 hard-coded Manufacturers for now.
         self.stdout.write("Creating Platforms (with manufacturers)...")
-        PlatformFactory.create_batch(20, has_manufacturer=True)
+        PlatformFactory.create_batch(20, has_manufacturer=True, using=db_name)
         self.stdout.write("Creating Platforms (without manufacturers)...")
-        PlatformFactory.create_batch(5, has_manufacturer=False)
+        PlatformFactory.create_batch(5, has_manufacturer=False, using=db_name)
         self.stdout.write("Creating DeviceTypes...")
-        DeviceTypeFactory.create_batch(20)
+        DeviceTypeFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating DeviceRedundancyGroups...")
-        DeviceRedundancyGroupFactory.create_batch(10)
+        DeviceRedundancyGroupFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating DeviceRoles...")
-        DeviceRoleFactory.create_batch(10)
+        DeviceRoleFactory.create_batch(10, using=db_name)
 
     def handle(self, *args, **options):
         if options["flush"]:
@@ -133,7 +138,7 @@ class Command(BaseCommand):
                 confirm = input(
                     f"""\
 You have requested a flush of the database before generating new data.
-This will IRREVERSIBLY DESTROY all data in the "{connections[DEFAULT_DB_ALIAS].settings_dict['NAME']}" database,
+This will IRREVERSIBLY DESTROY all data in the "{connections[options['database']].settings_dict['NAME']}" database,
 including all user accounts, and return each table to an empty state.
 Are you SURE you want to do this?
 
@@ -143,13 +148,15 @@ Type 'yes' to continue, or 'no' to cancel: """
                     self.stdout.write("Cancelled.")
                     return
 
-            self.stdout.write(self.style.WARNING("Flushing all existing data from the database..."))
-            call_command("flush", "--no-input")
+            self.stdout.write(
+                self.style.WARNING(f'Flushing all existing data from the database "{options["database"]}"...')
+            )
+            call_command("flush", "--no-input", "--database", options["database"])
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             call_command("loaddata", options["fixture_file"])
         else:
-            self._generate_factory_data(options["seed"])
+            self._generate_factory_data(options["seed"], options["database"])
 
             if options["cache_test_fixtures"]:
                 call_command(
@@ -164,4 +171,4 @@ Type 'yes' to continue, or 'no' to cancel: """
 
                 self.stdout.write(self.style.SUCCESS(f"Dumped factory data to {options['fixture_file']}"))
 
-        self.stdout.write(self.style.SUCCESS("Database populated successfully!"))
+        self.stdout.write(self.style.SUCCESS(f"Database {options['database']} populated successfully!"))
