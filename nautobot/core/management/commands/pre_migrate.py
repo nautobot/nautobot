@@ -107,8 +107,7 @@ class Command(BaseCommand):
                 message_lines = err_item.message.splitlines()
                 for line in message_lines:
                     self.stderr.write(self.style.ERROR(f"    {line}"))
-                else:
-                    self.stderr.write("\n")
+                self.stderr.write("\n")
             sys.exit(1)  # Exit uncleanly.
         else:
             self.stdout.write(self.style.SUCCESS("All pre-migration checks passed."))
