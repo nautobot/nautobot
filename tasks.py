@@ -819,11 +819,11 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         run_command(context, command=f"tar zxvf /tmp/{source_file}", service="db")
 
     if db_engine == "postgres":
-        run_command(context, command=f"sh -c 'dropdb --if-exists -U $POSTGRES_USER {db_name}'", service="db")
-        run_command(context, command=f"sh -c 'createdb -U $POSTGRES_USER {db_name}'", service="db")
-        run_command(context, command=f"sh -c 'psql -U $POSTGRES_USER -d {db_name} -f nautobot.sql'", service="db")
+        run_command(context, command=f"sh -c 'dropdb --if-exists -U $NAUTOBOT_DB_USER {db_name}'", service="db")
+        run_command(context, command=f"sh -c 'createdb -U $NAUTOBOT_DB_USER {db_name}'", service="db")
+        run_command(context, command=f"sh -c 'psql -U $NAUTOBOT_DB_USER -d {db_name} -f nautobot.sql'", service="db")
     else:
-        base_command = "mysql --user=$MYSQL_USER --password=$MYSQL_PASSWORD --host localhost"
+        base_command = "mysql --user=$NAUTOBOT_DB_USER --password=$NAUTOBOT_DB_PASSWORD --host localhost"
         run_command(context, command=f"sh -c '{base_command} -e \"DROP DATABASE IF EXISTS {db_name};\"'", service="db")
         run_command(context, command=f"sh -c '{base_command} -e \"CREATE DATABASE {db_name};\"'", service="db")
         run_command(context, command=f"sh -c '{base_command} {db_name} < nautobot.sql'", service="db")
