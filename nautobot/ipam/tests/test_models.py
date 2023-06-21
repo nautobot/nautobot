@@ -653,7 +653,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="11.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        Prefix.objects.create(
+        pool_prefix = Prefix.objects.create(
             prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
         )
 
@@ -739,6 +739,30 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             Prefix.objects.create(
                 prefix="12.0.0.0/7", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
             )
+
+        with self.subTest("Test that valid children can be created"):
+            Prefix.objects.create(
+                prefix="10.0.0.0/25", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+            Prefix.objects.create(
+                prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        with self.assertRaises(
+            ValidationError,
+            msg="Test that modifying a prefix's type fails if it would result in an invalid parent/child relationship",
+        ):
+            pool_prefix.type = PrefixTypeChoices.TYPE_NETWORK
+            pool_prefix.validated_save()
+
+        with self.subTest(
+            "Test that modifying a prefix's type is allowed if it does not create an invalid relationship"
+        ):
+            child = Prefix.objects.create(
+                prefix="10.0.0.0/28", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+            child.type = PrefixTypeChoices.TYPE_CONTAINER
+            child.validated_save()
 
     def test_parenting_constraints_on_delete(self):
         """Test that Prefix parenting correctly raises validation errors when deleting a prefix would create an invalid parent/child relationship."""

@@ -462,8 +462,6 @@ class PrefixQuerysetTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        IPAddress.objects.all().delete()
-
         # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
         IPAddress.objects.all().delete()

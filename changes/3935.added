@@ -1,1 +1,1 @@
-Added constraints to the `parent` field on `Prefix` based on the prefixs and the parents `type`.
+Added constraints to the `parent` field on `Prefix` based on the prefix's `type` and the parent's `type`.

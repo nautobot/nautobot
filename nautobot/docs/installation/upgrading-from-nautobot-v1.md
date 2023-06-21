@@ -93,7 +93,7 @@ The following changes have been made to the `Prefix` model.
 
 #### Prefix Parenting Constraints
 
-The following constraints have been added to the `Prefix` model:
+The following constraints have been added to the `Prefix` model in order to ensure more accurate network modeling:
 
 - A `Prefix` of type `Container` can only have a parent of type `Container`
 - A `Prefix` of type `Network` can only have a parent of type `Container`
