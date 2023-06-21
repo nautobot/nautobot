@@ -1,11 +1,12 @@
+# TOOD(jathan): This file MUST NOT be merged into Nautobot v2 (next).
+
 import argparse
 import collections
 import itertools
-import sys
 
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from nautobot.dcim.models import VirtualChassis
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, ExportTemplate
@@ -102,12 +103,12 @@ class Command(BaseCommand):
                 errors[func_name].append(err)
 
         if errors:
-            self.stderr.write(self.style.ERROR("One or more pre-migration checks failed:"))
+            msg = "One or more pre-migration checks failed:\n"
             for err_item in itertools.chain.from_iterable(errors.values()):
                 message_lines = err_item.message.splitlines()
                 for line in message_lines:
-                    self.stderr.write(self.style.ERROR(f"    {line}"))
-                self.stderr.write("\n")
-            sys.exit(1)  # Exit uncleanly.
+                    msg += f"    {line}\n"
+                msg += "\n"
+            raise CommandError(msg)
         else:
             self.stdout.write(self.style.SUCCESS("All pre-migration checks passed."))
