@@ -99,7 +99,7 @@ class GitRepository(PrimaryModel):
             # import the earlier-found Python module in its place, which would be undesirable.
             if find_spec(self.slug) is not None:
                 raise ValidationError(
-                    f'Please choose a different slug, as "{self.slug}" is an existing Python package or module.'
+                    f'Please choose a different slug, as "{self.slug}" is an installed Python package or module.'
                 )
 
     def get_latest_sync(self):
