@@ -9,20 +9,18 @@ from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
-from django.utils.module_loading import import_string
 
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
 
 from nautobot.core.signals import nautobot_database_ready
+from nautobot.extras.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.extras.registry import registry
-
-
-MENU_TABS = ("Inventory", "Networks", "Security", "Automation", "Platform")
+from nautobot.extras.plugins.utils import import_object
 
 
 logger = logging.getLogger(__name__)
-registry["nav_menu"] = dict({tab: {"groups": {}, "permissions": set()} for tab in MENU_TABS})
+registry["nav_menu"] = {"tabs": {}}
 registry["homepage_layout"] = {"panels": {}}
 
 
@@ -44,17 +42,13 @@ class NautobotConfig(AppConfig):
         """
         Ready function initiates the import application.
         """
-        try:
-            homepage_layout = import_string(f"{self.name}.{self.homepage_layout}")
+        homepage_layout = import_object(f"{self.name}.{self.homepage_layout}")
+        if homepage_layout is not None:
             register_homepage_panels(self.path, self.label, homepage_layout)
-        except ModuleNotFoundError:
-            pass
 
-        try:
-            menu_items = import_string(f"{self.name}.{self.menu_tabs}")
+        menu_items = import_object(f"{self.name}.{self.menu_tabs}")
+        if menu_items is not None:
             register_menu_items(menu_items)
-        except ModuleNotFoundError:
-            pass
 
 
 def create_or_check_entry(grouping, record, key, path):
@@ -68,80 +62,76 @@ def create_or_check_entry(grouping, record, key, path):
 
 def register_menu_items(tab_list):
     """
-    Create or update the `registry["nav_menu"]` dictionary with the provided objects to define the nav bar.
+    Using the imported object a dictionary is either created or updated with objects to create
+    the navbar.
 
-    The dictionary is built from three key objects, NavMenuTab, NavMenuGroup (which may be nested, once),
-    and NavMenuItem.
-
-    This dictionary is then presented via the REST API to the Nautobot UI frontend.
+    The dictionary is built from four key objects, NavMenuTab, NavMenuGroup, NavMenuItem and
+    NavMenuButton. The Django template then uses this dictionary to generate the navbar HTML.
     """
     for nav_tab in tab_list:
-        if not isinstance(nav_tab, NavMenuTab):
-            raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {nav_tab}")
-        if nav_tab.name not in MENU_TABS:
-            raise ValueError(f"Unexpected NavMenuTab name: {nav_tab.name}")
+        if isinstance(nav_tab, NavMenuTab):
+            create_or_check_entry(registry["nav_menu"]["tabs"], nav_tab, nav_tab.name, f"{nav_tab.name}")
 
-        tab_perms = registry["nav_menu"][nav_tab.name]["permissions"]
-        registry_groups = registry["nav_menu"][nav_tab.name]["groups"]
-        # TODO: allow for recursive (more than two-level) nesting of groups?
-        for group in nav_tab.groups:
-            if not isinstance(group, NavMenuGroup):
-                raise TypeError(f"Expected a NavMenuGroup, but got {group}")
+            tab_perms = set()
+            registry_groups = registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
+            for group in nav_tab.groups:
+                create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
 
-            create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
+                group_perms = set()
+                for item in group.items:
+                    # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
+                    try:
+                        item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)
+                    except NoReverseMatch as e:
+                        # Catch the invalid link here and render the link name as an error message in the template
+                        logger.debug("%s", e)
+                        item.name = "ERROR: Invalid link!"
 
-            group_perms = registry_groups[group.name]["permissions"]
-            for item in group.items:
-                if not isinstance(item, (NavMenuGroup, NavMenuItem)):
-                    raise TypeError(f"Expected NavMenuItem or NavMenuGroup, but found {item}")
-                create_or_check_entry(
-                    registry_groups[group.name]["items"],
-                    item,
-                    item.name,
-                    f"{nav_tab.name} -> {group.name} -> {item.name}",
-                )
-
-                item_perms = registry_groups[group.name]["items"][item.name]["permissions"]
-                if isinstance(item, NavMenuGroup):
-                    for inner_item in item.items:
-                        if not isinstance(inner_item, NavMenuItem):
-                            raise TypeError(f"Expected a NavMenuItem, but found {inner_item}")
-
-                        create_or_check_entry(
-                            registry_groups[group.name]["items"][item.name]["items"],
-                            inner_item,
-                            inner_item.name,
-                            f"{nav_tab.name} -> {group.name} -> {item.name} -> {inner_item.name}",
-                        )
-                        item_perms |= inner_item.permissions
-
-                    registry_groups[group.name]["items"][item.name]["items"] = OrderedDict(
-                        sorted(
-                            registry_groups[group.name]["items"][item.name]["items"].items(),
-                            key=lambda kv_pair: kv_pair[1]["weight"],
-                        )
+                    create_or_check_entry(
+                        registry_groups[group.name]["items"],
+                        item,
+                        item.link,
+                        f"{nav_tab.name} -> {group.name} -> {item.link}",
                     )
 
+                    registry_buttons = registry_groups[group.name]["items"][item.link]["buttons"]
+                    for button in item.buttons:
+                        create_or_check_entry(
+                            registry_buttons,
+                            button,
+                            button.title,
+                            f"{nav_tab.name} -> {group.name} -> {item.link} -> {button.title}",
+                        )
+
+                    # Add sorted buttons to group registry dict
+                    registry_groups[group.name]["items"][item.link]["buttons"] = OrderedDict(
+                        sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                    )
+
+                    group_perms |= set(perms for perms in item.permissions)
+
+                # Add sorted items to group registry dict
+                registry_groups[group.name]["items"] = OrderedDict(
+                    sorted(registry_groups[group.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
+                )
                 # Add collected permissions to group
-                registry_groups[group.name]["items"][item.name]["permissions"] = item_perms
+                registry_groups[group.name]["permissions"] = group_perms
+                # Add collected permissions to tab
+                tab_perms |= group_perms
 
-                group_perms |= item_perms
-
-            # Add sorted items to group registry dict
-            registry_groups[group.name]["items"] = OrderedDict(
-                sorted(registry_groups[group.name]["items"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
+            # Add sorted groups to tab dict
+            registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
+                sorted(registry_groups.items(), key=lambda kv_pair: kv_pair[1]["weight"])
             )
-            # Add collected permissions to group
-            registry_groups[group.name]["permissions"] = group_perms
-            # Add collected permissions to tab
-            tab_perms |= group_perms
+            # Add collected permissions to tab dict
+            registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] |= tab_perms
+        else:
+            raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {nav_tab}")
 
-        # Add sorted groups to tab dict
-        registry["nav_menu"][nav_tab.name]["groups"] = OrderedDict(
-            sorted(registry_groups.items(), key=lambda kv_pair: kv_pair[1]["weight"])
+        # Order all tabs in dict
+        registry["nav_menu"]["tabs"] = OrderedDict(
+            sorted(registry["nav_menu"]["tabs"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
         )
-        # Add collected permissions to tab dict
-        registry["nav_menu"][nav_tab.name]["permissions"] |= tab_perms
 
 
 def register_homepage_panels(path, label, homepage_layout):
@@ -411,32 +401,28 @@ class HomePageItem(HomePageBase, PermissionsMixin):
 
 class NavMenuTab(NavMenuBase, PermissionsMixin):
     """
-    This class represents a top-level Nautobot "menu context" such as Inventory or Networks.
+    Ths class represents a navigation menu tab. This is built up from a name and a weight value. The name is
+    the display text and the weight defines its position in the navbar.
 
-    It has a `name` (the menu context name) and a `weight` (which is mostly irrelevant these days).
-
-    It contains a list of `NavMenuGroup` instances as children.
-
-    In Nautobot 1.x, these could be augmented arbitrarily by apps and plugins;
-    but in 2.0 and later there is a fixed list of these (`nautobot.core.apps.MENU_TABS`) that cannot be altered.
+    Groups are each specified as a list of NavMenuGroup instances.
     """
 
+    permissions = []
     groups = []
 
     @property
-    def initial_dict(self) -> dict:
-        """Attributes to be stored when adding this item to the nav menu data for the first time."""
+    def initial_dict(self):
         return {
+            "weight": self.weight,
             "groups": {},
-            "permissions": self.permissions,
+            "permissions": set(),
         }
 
     @property
-    def fixed_fields(self) -> tuple:
-        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
-        return (("weight", self.weight),)
+    def fixed_fields(self):
+        return ()
 
-    def __init__(self, name, permissions=None, groups=None):
+    def __init__(self, name, permissions=None, groups=None, weight=1000):
         """
         Ensure tab properties.
 
@@ -444,113 +430,203 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
             name (str): The name of the tab.
             permissions (list): The permissions required to view this tab.
             groups (list): List of groups to be rendered in this tab.
+            weight (int): The weight of this tab.
         """
         super().__init__(permissions)
-        if name not in MENU_TABS:
-            raise ValueError(f"NavMenuTab name must be one of {MENU_TABS}")
         self.name = name
+        self.weight = weight
         if groups is not None:
             if not isinstance(groups, (list, tuple)):
                 raise TypeError("Groups must be passed as a tuple or list.")
-            if not all(isinstance(group, NavMenuGroup) for group in groups):
+            elif not all(isinstance(group, NavMenuGroup) for group in groups):
                 raise TypeError("All groups defined in a tab must be an instance of NavMenuGroup")
             self.groups = groups
 
 
 class NavMenuGroup(NavMenuBase, PermissionsMixin):
     """
-    This class represents a group of menu items within a `NavMenuTab`.
+    Ths class represents a navigation menu group. This is built up from a name and a weight value. The name is
+    the display text and the weight defines its position in the navbar.
 
-    It has a `name` (display string) and a `weight` which controls its position relative to other groups/items.
-
-    In Nautobot 1.x this could only contain `NavMenuItem`s as children;
-    in 2.x this has been relaxed to also permit a top-level `NavMenuGroup` to contain other `NavMenuGroup` objects.
+    Items are each specified as a list of NavMenuItem instances.
     """
 
+    permissions = []
     items = []
 
     @property
-    def initial_dict(self) -> dict:
-        """Attributes to be stored when adding this item to the nav menu data for the first time."""
+    def initial_dict(self):
         return {
             "weight": self.weight,
-            "permissions": self.permissions,
             "items": {},
         }
 
     @property
-    def fixed_fields(self) -> tuple:
-        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
-        return (("weight", self.weight),)
+    def fixed_fields(self):
+        return ()
 
-    def __init__(self, name, weight=1000, permissions=None, items=None):
+    def __init__(self, name, items=None, weight=1000):
         """
         Ensure group properties.
 
         Args:
             name (str): The name of the group.
-            weight (int): The weight of this group.
-            permissions (set): The permissions to access this group.
             items (list): List of items to be rendered in this group.
+            weight (int): The weight of this group.
         """
-        super().__init__(permissions)
         self.name = name
         self.weight = weight
 
         if items is not None and not isinstance(items, (list, tuple)):
             raise TypeError("Items must be passed as a tuple or list.")
-        if not all(isinstance(item, (type(self), NavMenuItem)) for item in items):
-            raise TypeError("All items defined in a group must be an instance of NavMenuGroup or NavMenuItem")
+        elif not all(isinstance(item, NavMenuItem) for item in items):
+            raise TypeError("All items defined in a group must be an instance of NavMenuItem")
         self.items = items
 
 
 class NavMenuItem(NavMenuBase, PermissionsMixin):
     """
-    This class represents a navigation menu item that leads to a specific page (a "leaf" in the nav menu, if you will).
-
-    These are contained within `NavMenuGroup` objects.
+    This class represents a navigation menu item. This constitutes primary link and its text, but also allows for
+    specifying additional link buttons that appear to the right of the item in the nav menu.
 
     Links are specified as Django reverse URL strings.
+    Buttons are each specified as a list of NavMenuButton instances.
     """
 
     @property
-    def initial_dict(self) -> dict:
-        """Attributes to be stored when adding this item to the nav menu data for the first time."""
+    def initial_dict(self):
         return {
+            "name": self.name,
             "weight": self.weight,
+            "buttons": {},
             "permissions": self.permissions,
-            "link": self.link,
+            "args": [],
+            "kwargs": {},
         }
 
     @property
-    def fixed_fields(self) -> tuple:
-        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
+    def fixed_fields(self):
         return (
-            ("weight", self.weight),
+            ("name", self.name),
             ("permissions", self.permissions),
-            ("link", self.link),
         )
 
-    def __init__(self, link, name, args=None, kwargs=None, permissions=None, weight=1000):
+    permissions = []
+    buttons = []
+    args = []
+    kwargs = {}
+
+    def __init__(self, link, name, args=None, kwargs=None, permissions=None, buttons=(), weight=1000):
         """
         Ensure item properties.
 
         Args:
-            link (str): The named link to be used for this item. `reverse(link, args, kwargs)` will be called.
+            link (str): The link to be used for this item.
             name (str): The name of the item.
             args (list): Arguments that are being passed to the url with reverse() method
             kwargs (dict): Keyword arguments are are being passed to the url with reverse() method
             permissions (list): The permissions required to view this item.
+            buttons (list): List of buttons to be rendered in this item.
             weight (int): The weight of this item.
         """
         super().__init__(permissions)
+        self.link = link
         self.name = name
         self.weight = weight
-        try:
-            self.link = reverse(link, args=args, kwargs=kwargs)
-        except NoReverseMatch as e:
-            logger.error("Error in link construction for %s: %s", self.name, e)
-            self.link = ""
+        self.args = args
+        self.kwargs = kwargs
+
+        if not isinstance(buttons, (list, tuple)):
+            raise TypeError("Buttons must be passed as a tuple or list.")
+        elif not all(isinstance(button, NavMenuButton) for button in buttons):
+            raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
+        self.buttons = buttons
+
+
+class NavMenuButton(NavMenuBase, PermissionsMixin):
+    """
+    This class represents a button within a PluginMenuItem. Note that button colors should come from
+    ButtonColorChoices.
+    """
+
+    @property
+    def initial_dict(self):
+        return {
+            "link": self.link,
+            "icon_class": self.icon_class,
+            "button_class": self.button_class,
+            "weight": self.weight,
+            "buttons": {},
+            "permissions": self.permissions,
+        }
+
+    @property
+    def fixed_fields(self):
+        return (
+            ("button_class", self.button_class),
+            ("icon_class", self.icon_class),
+            ("link", self.link),
+            ("permissions", self.permissions),
+        )
+
+    def __init__(
+        self,
+        link,
+        title,
+        icon_class,
+        button_class=ButtonActionColorChoices.DEFAULT,
+        permissions=None,
+        weight=1000,
+    ):
+        """
+        Ensure button properties.
+
+        Args:
+            link (str): The link to be used for this button.
+            title (str): The title of the button.
+            icon_class (str): The icon class to be used as the icon for the start of the button.
+            button_class (str): The button class defines to be used to define the style of the button.
+            permissions (list): The permissions required to view this button.
+            weight (int): The weight of this button.
+        """
+        super().__init__(permissions)
+        self.link = link
+        self.title = title
+        self.icon_class = icon_class
+        self.weight = weight
+        self.button_class = button_class
+
+
+class NavMenuAddButton(NavMenuButton):
+    """Add button subclass."""
+
+    def __init__(self, *args, **kwargs):
+        """Ensure button properties."""
+        if "title" not in kwargs:
+            kwargs["title"] = "Add"
+        if "icon_class" not in kwargs:
+            kwargs["icon_class"] = ButtonActionIconChoices.ADD
+        if "button_class" not in kwargs:
+            kwargs["button_class"] = ButtonActionColorChoices.ADD
+        if "weight" not in kwargs:
+            kwargs["weight"] = 100
+        super().__init__(*args, **kwargs)
+
+
+class NavMenuImportButton(NavMenuButton):
+    """Import button subclass."""
+
+    def __init__(self, *args, **kwargs):
+        """Ensure button properties."""
+        if "title" not in kwargs:
+            kwargs["title"] = "Import"
+        if "icon_class" not in kwargs:
+            kwargs["icon_class"] = ButtonActionIconChoices.IMPORT
+        if "button_class" not in kwargs:
+            kwargs["button_class"] = ButtonActionColorChoices.IMPORT
+        if "weight" not in kwargs:
+            kwargs["weight"] = 200
+        super().__init__(*args, **kwargs)
 
 
 def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):

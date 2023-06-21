@@ -1,72 +1,153 @@
-from nautobot.core.apps import NavMenuGroup, NavMenuItem, NavMenuTab
+from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 
 menu_items = (
     NavMenuTab(
-        name="Inventory",
+        name="Organization",
+        weight=100,
         groups=(
             NavMenuGroup(
-                name="Devices",
-                weight=100,
+                name="Tags",
+                weight=400,
                 items=(
                     NavMenuItem(
-                        name="Dynamic Groups",
-                        weight=900,
-                        link="extras:dynamicgroup_list",
-                        permissions=["extras.view_dynamicgroup"],
+                        link="extras:tag_list",
+                        name="Tags",
+                        weight=100,
+                        permissions=[
+                            "extras.view_tag",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:tag_add",
+                                permissions=[
+                                    "extras.add_tag",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="extras:tag_import",
+                                permissions=[
+                                    "extras.add_tag",
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),
-        ),
-    ),
-    NavMenuTab(
-        name="Networks",
-        groups=(
             NavMenuGroup(
-                name="Config Contexts",
+                name="Statuses",
                 weight=500,
                 items=(
                     NavMenuItem(
-                        name="Config Contexts",
+                        link="extras:status_list",
+                        name="Statuses",
                         weight=100,
-                        link="extras:configcontext_list",
-                        permissions=["extras.view_configcontext"],
+                        permissions=[
+                            "extras.view_status",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:status_add",
+                                permissions=[
+                                    "extras.add_status",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="extras:status_import",
+                                permissions=[
+                                    "extras.add_status",
+                                ],
+                            ),
+                        ),
                     ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Roles",
+                weight=500,
+                items=(
                     NavMenuItem(
-                        name="Config Context Schemas",
+                        link="extras:role_list",
+                        name="Roles",
                         weight=100,
-                        link="extras:configcontextschema_list",
-                        permissions=["extras.view_configcontextschema"],
+                        permissions=[
+                            "extras.view_status",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:role_add",
+                                permissions=[
+                                    "extras.add_role",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="extras:role_import",
+                                permissions=[
+                                    "extras.add_role",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Dynamic Groups",
+                weight=500,
+                items=(
+                    NavMenuItem(
+                        link="extras:dynamicgroup_list",
+                        name="Dynamic Groups",
+                        weight=100,
+                        permissions=[
+                            "extras.view_dynamicgroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:dynamicgroup_add",
+                                permissions=[
+                                    "extras.add_dynamicgroup",
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),
         ),
     ),
     NavMenuTab(
-        name="Security",
+        name="Secrets",
+        weight=700,
         groups=(
             NavMenuGroup(
                 name="Secrets",
-                weight=500,
+                weight=100,
                 items=(
                     NavMenuItem(
+                        link="extras:secret_list",
                         name="Secrets",
                         weight=100,
-                        link="extras:secret_list",
                         permissions=["extras.view_secret"],
+                        buttons=(
+                            NavMenuAddButton(link="extras:secret_add", permissions=["extras.add_secret"]),
+                            NavMenuImportButton(link="extras:secret_import", permissions=["extras.add_secret"]),
+                        ),
                     ),
                     NavMenuItem(
+                        link="extras:secretsgroup_list",
                         name="Secret Groups",
                         weight=200,
-                        link="extras:secretsgroup_list",
                         permissions=["extras.view_secretsgroup"],
+                        buttons=(
+                            NavMenuAddButton(link="extras:secretsgroup_add", permissions=["extras.add_secretsgroup"]),
+                        ),
                     ),
                 ),
             ),
         ),
     ),
     NavMenuTab(
-        name="Automation",
+        name="Jobs",
+        weight=800,
         groups=(
             NavMenuGroup(
                 name="Jobs",
@@ -79,6 +160,7 @@ menu_items = (
                         permissions=[
                             "extras.view_job",
                         ],
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="extras:scheduledjob_approval_queue_list",
@@ -87,6 +169,7 @@ menu_items = (
                         permissions=[
                             "extras.view_job",
                         ],
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="extras:scheduledjob_list",
@@ -96,6 +179,7 @@ menu_items = (
                             "extras.view_job",
                             "extras.view_scheduledjob",
                         ],
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="extras:jobresult_list",
@@ -104,6 +188,7 @@ menu_items = (
                         permissions=[
                             "extras.view_jobresult",
                         ],
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="extras:jobhook_list",
@@ -112,6 +197,14 @@ menu_items = (
                         permissions=[
                             "extras.view_jobhook",
                         ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:jobhook_add",
+                                permissions=[
+                                    "extras.add_jobhook",
+                                ],
+                            ),
+                        ),
                     ),
                     NavMenuItem(
                         link="extras:jobbutton_list",
@@ -120,119 +213,244 @@ menu_items = (
                         permissions=[
                             "extras.view_jobbutton",
                         ],
-                    ),
-                ),
-            ),
-            NavMenuGroup(
-                name="Extensibility",
-                weight=9999,  # always last
-                items=(
-                    NavMenuItem(
-                        link="extras:webhook_list",
-                        name="Webhooks",
-                        weight=100,
-                        permissions=["extras.view_webhook"],
-                    ),
-                    NavMenuItem(
-                        name="GraphQL Queries",
-                        weight=200,
-                        link="extras:graphqlquery_list",
-                        permissions=["extras.view_graphqlquery"],
-                    ),
-                    NavMenuItem(
-                        name="Export Templates",
-                        weight=300,
-                        link="extras:exporttemplate_list",
-                        permissions=["extras.view_exporttemplate"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:jobbutton_add",
+                                permissions=[
+                                    "extras.add_jobbutton",
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),
         ),
     ),
     NavMenuTab(
-        name="Platform",
+        name="Extensibility",
+        weight=900,
         groups=(
             NavMenuGroup(
-                name="Platform",
+                name="Logging",
                 weight=100,
                 items=(
                     NavMenuItem(
-                        name="Installed Apps",
+                        link="extras:objectchange_list",
+                        name="Change Log",
                         weight=100,
-                        link="plugins:plugins_list",
-                        permissions=["is_staff"],
-                    ),
-                    NavMenuItem(
-                        name="Git Repositories",
-                        weight=200,
-                        link="extras:gitrepository_list",
-                        permissions=["extras.view_gitrepository"],
+                        permissions=[
+                            "extras.view_objectchange",
+                        ],
+                        buttons=(),
                     ),
                 ),
             ),
             NavMenuGroup(
-                name="Governance",
+                name="Data Sources",
                 weight=200,
                 items=(
                     NavMenuItem(
-                        name="Change Log",
+                        link="extras:gitrepository_list",
+                        name="Git Repositories",
                         weight=100,
-                        link="extras:objectchange_list",
-                        permissions=["extras.view_objectchange"],
-                    ),
-                ),
-            ),
-            NavMenuGroup(
-                name="Reference Data",
-                weight=300,
-                items=(
-                    NavMenuItem(
-                        name="Tags",
-                        weight=100,
-                        link="extras:tag_list",
-                        permissions=["extras.view_tag"],
-                    ),
-                    NavMenuItem(
-                        name="Statuses",
-                        weight=200,
-                        link="extras:status_list",
-                        permissions=["extras.view_status"],
-                    ),
-                    NavMenuItem(
-                        name="Roles",
-                        weight=300,
-                        link="extras:role_list",
-                        permissions=["extras.view_role"],
+                        permissions=[
+                            "extras.view_gitrepository",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:gitrepository_add",
+                                permissions=[
+                                    "extras.add_gitrepository",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="extras:gitrepository_import",
+                                permissions=[
+                                    "extras.add_gitrepository",
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),
             NavMenuGroup(
                 name="Data Management",
-                weight=400,
+                weight=300,
                 items=(
                     NavMenuItem(
-                        name="Relationships",
+                        link="extras:graphqlquery_list",
+                        name="GraphQL Queries",
                         weight=100,
+                        permissions=[
+                            "extras.view_graphqlquery",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:graphqlquery_add",
+                                permissions=[
+                                    "extras.add_graphqlquery",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="extras:relationship_list",
-                        permissions=["extras.view_relationship"],
-                    ),
-                    NavMenuItem(
-                        name="Computed Fields",
+                        name="Relationships",
                         weight=200,
-                        link="extras:computedfield_list",
-                        permissions=["extras.view_computedfield"],
+                        permissions=[
+                            "extras.view_relationship",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:relationship_add",
+                                permissions=[
+                                    "extras.add_relationship",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Automation",
+                weight=500,
+                items=(
+                    NavMenuItem(
+                        link="extras:configcontext_list",
+                        name="Config Contexts",
+                        weight=100,
+                        permissions=[
+                            "extras.view_configcontext",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:configcontext_add",
+                                permissions=[
+                                    "extras.add_configcontext",
+                                ],
+                            ),
+                        ),
                     ),
                     NavMenuItem(
-                        name="Custom Fields",
-                        weight=300,
-                        link="extras:customfield_list",
-                        permissions=["extras.view_customfield"],
+                        link="extras:configcontextschema_list",
+                        name="Config Context Schemas",
+                        weight=100,
+                        permissions=[
+                            "extras.view_configcontextschema",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:configcontextschema_add",
+                                permissions=[
+                                    "extras.add_configcontextschema",
+                                ],
+                            ),
+                        ),
                     ),
                     NavMenuItem(
-                        name="Custom Links",
+                        link="extras:exporttemplate_list",
+                        name="Export Templates",
+                        weight=200,
+                        permissions=[
+                            "extras.view_exporttemplate",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:exporttemplate_add",
+                                permissions=[
+                                    "extras.add_exporttemplate",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:webhook_list",
+                        name="Webhooks",
                         weight=400,
+                        permissions=[
+                            "extras.view_webhook",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:webhook_add",
+                                permissions=[
+                                    "extras.add_webhook",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Miscellaneous",
+                weight=600,
+                items=(
+                    NavMenuItem(
+                        link="extras:computedfield_list",
+                        name="Computed Fields",
+                        weight=100,
+                        permissions=[
+                            "extras.view_computedfield",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:computedfield_add",
+                                permissions=[
+                                    "extras.add_computedfield",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:customfield_list",
+                        name="Custom Fields",
+                        weight=200,
+                        permissions=[
+                            "extras.view_customfield",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:customfield_add",
+                                permissions=[
+                                    "extras.add_customfield",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="extras:customlink_list",
-                        permissions=["extras.view_customlink"],
+                        name="Custom Links",
+                        weight=300,
+                        permissions=[
+                            "extras.view_customlink",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:customlink_add",
+                                permissions=[
+                                    "extras.add_customlink",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+    NavMenuTab(
+        name="Plugins",
+        weight=5000,
+        groups=(
+            NavMenuGroup(
+                name="General",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="plugins:plugins_list",
+                        name="Installed Plugins",
+                        weight=100,
+                        permissions=["is_staff"],
+                        buttons=(),
                     ),
                 ),
             ),
