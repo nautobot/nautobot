@@ -1,0 +1,3 @@
+Moved LoadingWidget up & to the left of the ButtonGroup in ObjectListTable.
+Modified when SkeletonText appears in ObjectListTable to include on page number changes.
+Removed top: "40%" from LoadingWidget.
