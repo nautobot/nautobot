@@ -1,8 +1,6 @@
 # TODO(jathan): This file MUST NOT be merged into Nautobot v2 (next).
 
 import argparse
-import collections
-import itertools
 
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -92,7 +90,7 @@ class Command(BaseCommand):
             check_exporttemplate_uniqueness,
             check_virtualchassis_uniqueness,
         ]
-        errors = collections.defaultdict(list)
+        errors = []
 
         for check in checks:
             func_name = check.__code__.co_name
@@ -100,11 +98,11 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f">>> Running check: {func_name}..."))
                 check()
             except ValidationError as err:
-                errors[func_name].append(err)
+                errors.append(err)
 
         if errors:
             msg = "One or more pre-migration checks failed:\n"
-            for err_item in itertools.chain.from_iterable(errors.values()):
+            for err_item in errors:
                 message_lines = err_item.message.splitlines()
                 for line in message_lines:
                     msg += f"    {line}\n"
