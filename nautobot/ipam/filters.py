@@ -237,10 +237,11 @@ class PrefixFilterSet(
         to_field_name="name",
         label="Namespace (name or ID)",
     )
+    ip_version = django_filters.NumberFilter()
 
     class Meta:
         model = Prefix
-        fields = ["date_allocated", "id", "ip_version", "prefix", "tags", "type"]
+        fields = ["date_allocated", "id", "prefix", "tags", "type"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
@@ -389,10 +390,11 @@ class IPAddressFilterSet(
         method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
+    ip_version = django_filters.NumberFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "ip_version", "dns_name", "type", "tags", "mask_length"]
+        fields = ["id", "dns_name", "type", "tags", "mask_length"]
 
     def generate_query__has_interface_assignments(self, value):
         """Helper method used by DynamicGroups and by _assigned_to_interface method."""
