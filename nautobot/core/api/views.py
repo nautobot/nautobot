@@ -784,6 +784,42 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    def format_and_remove_hidden_menu(self, request, data, hide_restricted_ui):
+        """
+        Formats the menu data and removes hidden menu items based on user permissions.
+
+        Args:
+            request: The request object.
+            data (Union[dict, str]): The menu data to format and filter. Can be either a dictionary or a string.
+            hide_restricted_ui (bool): Flag indicating whether to hide restricted menu items.
+
+        Returns:
+            Union[dict, str]: The formatted menu data without hidden items. Returns a dict if `data` is a
+            `dict`, otherwise returns a string.
+
+        Example:
+            Input:
+            {
+                "Devices": {
+                    "permission": [...],
+                    "weight": "",
+                    "data": "data value"
+                },
+            }
+
+            Output:
+            {"Devices": "data value"}
+        """
+        if isinstance(data, dict):
+            return_value = {}
+            for name, value in data.items():
+                if not hide_restricted_ui or any(
+                    request.user.has_perm(permission) for permission in value["permissions"]
+                ):
+                    return_value[name] = self.format_and_remove_hidden_menu(request, value["data"], hide_restricted_ui)
+            return return_value
+        return data
+
     @extend_schema(exclude=True)
     def get(self, request):
         """Get the menu data for the requesting user.
@@ -822,41 +858,11 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
             },
         }
         """
-        base_menu = registry["nav_menu"]
+        base_menu = registry["new_ui_nav_menu"]
         HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
 
-        filtered_menu = {}
-        for context, context_details in base_menu.items():
-            if HIDE_RESTRICTED_UI and not any(
-                request.user.has_perm(permission) for permission in context_details["permissions"]
-            ):
-                continue
-            filtered_menu[context] = {}
-            for group_name, group_details in context_details["groups"].items():
-                if HIDE_RESTRICTED_UI and not any(
-                    request.user.has_perm(permission) for permission in group_details["permissions"]
-                ):
-                    continue
-                filtered_menu[context][group_name] = {}
-                for item_name, item_details in group_details["items"].items():
-                    if HIDE_RESTRICTED_UI and not any(
-                        request.user.has_perm(permission) for permission in item_details["permissions"]
-                    ):
-                        continue
-                    if "items" in item_details:
-                        # It's a sub-group
-                        filtered_menu[context][group_name][item_name] = {}
-                        for subitem_name, subitem_details in item_details["items"].items():
-                            if HIDE_RESTRICTED_UI and not any(
-                                request.user.has_perm(perm) for perm in subitem_details["permissions"]
-                            ):
-                                continue
-                            filtered_menu[context][group_name][item_name][subitem_name] = subitem_details["link"]
-                    else:
-                        # It's a menu item
-                        filtered_menu[context][group_name][item_name] = item_details["link"]
-
-        return Response(filtered_menu)
+        formatted_data = self.format_and_remove_hidden_menu(request, base_menu, HIDE_RESTRICTED_UI)
+        return Response(formatted_data)
 
 
 class GetObjectCountsView(NautobotAPIVersionMixin, APIView):

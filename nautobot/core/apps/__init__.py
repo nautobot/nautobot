@@ -37,6 +37,8 @@ class NautobotConfig(AppConfig):
 
     homepage_layout = "homepage.layout"
     menu_tabs = "navigation.menu_items"
+    # New UI Navigation
+    navigation = "navigation.navigation"
     searchable_models = []  # models included in global search; list of ["modelname", "modelname", "modelname"...]
 
     def ready(self):
@@ -51,6 +53,10 @@ class NautobotConfig(AppConfig):
         if menu_items is not None:
             register_menu_items(menu_items)
 
+        navigation = import_object(f"{self.name}.{self.navigation}")
+        if navigation is not None:
+            register_new_ui_menu_items(navigation)
+
 
 def create_or_check_entry(grouping, record, key, path):
     if key not in grouping:
@@ -60,13 +66,11 @@ def create_or_check_entry(grouping, record, key, path):
             if grouping[key][attr] != value:
                 logger.error("Unable to redefine %s on %s from %s to %s", attr, path, grouping[key][attr], value)
 
-
-# TODO(timizuo): Merge into `create_or_check_entry`
-def create_or_check_entry_new(grouping, record, key, path):
-    if key not in grouping:
-        grouping[key] = record.value
-    elif isinstance(record, NavItem):
-        logger.error("Unable to redefine %s on %s from %s to %s", key, path, grouping[key], record.value)
+    if isinstance(record, (NavContext, NavGrouping)):
+        groups = record.groups if isinstance(record, NavContext) else record.items
+        for item in groups:
+            create_or_check_entry(grouping[key]["data"], item, item.name, f"{path} -> {item.name}")
+            grouping[key]["data"] = dict(sorted(grouping[key]["data"].items(), key=lambda x: x[1]["weight"]))
 
 
 def register_menu_items(tab_list):
@@ -144,19 +148,9 @@ def register_menu_items(tab_list):
 
 
 def register_new_ui_menu_items(context_list):
+    # TODO(timizuo): Implement Ordering of fields by weight
     for nav_context in context_list:
-        create_or_check_entry_new(registry["new_ui_nav_menu"], nav_context, nav_context.name, nav_context.name)
-        for group in nav_context.groups:
-            create_or_check_entry_new(
-                registry["new_ui_nav_menu"][nav_context.name], group, group.name, f"{nav_context.name} -> {group.name}"
-            )
-            for item in group.items:
-                create_or_check_entry_new(
-                    registry["new_ui_nav_menu"][nav_context.name][group.name],
-                    item,
-                    item.name,
-                    f"{nav_context.name} -> {group.name} -> {item.name}",
-                )
+        create_or_check_entry(registry["new_ui_nav_menu"], nav_context, nav_context.name, nav_context.name)
 
 
 def register_homepage_panels(path, label, homepage_layout):
@@ -664,10 +658,11 @@ class NavMenuImportButton(NavMenuButton):
         super().__init__(*args, **kwargs)
 
 
-class NavContext(NewUINavMenuBase):
-    def __init__(self, name, groups):
+class NavContext(NavMenuBase):
+    def __init__(self, name, groups, weight=1000):
         self.name = name
         self.groups = groups
+        self.weight = weight
         self.validate()
 
     def validate(self):
@@ -676,44 +671,72 @@ class NavContext(NewUINavMenuBase):
         if self.name not in nav_context_names:
             raise TypeError(f"`{self.name}` is an invalid context name, valid choices are: {nav_context_names}")
 
-        if not all(isinstance(group, NavGrouping) for group in self.groups):
-            # TODO: TypeError might not be the right error to throw
-            raise TypeError("Invalid groups found, NavContext.groups can only be a list of NavGrouping")
+        if self.groups:
+            groups = self.groups
+            if not isinstance(groups, (list, tuple)):
+                raise TypeError("Groups must be passed as a tuple or list.")
+            elif not all(isinstance(group, NavGrouping) for group in groups):
+                raise TypeError("All groups defined in a tab must be an instance of NavGrouping")
 
     @property
-    def value(self):
-        # return {group.name: group.to_value_representation() for group in self.groups}
-        return {}
+    def initial_dict(self):
+        return {
+            "weight": self.weight,
+            "data": {},
+        }
+
+    @property
+    def fixed_fields(self):
+        return ()
 
 
-class NavGrouping(NewUINavMenuBase):
-    def __init__(self, name, items):
+class NavGrouping(NavMenuBase, PermissionsMixin):
+    def __init__(self, name, items, weight=1000):
         self.name = name
         self.items = items
+        self.weight = weight
         self.validate()
 
     def validate(self):
-        if not all(isinstance(item, NavItem) for item in self.items):
-            # TODO: TypeError might not be the right error to throw
-            raise TypeError("Invalid items found in `items`, NavContext.items can only be a list of NavItem")
+        if self.items:
+            items = self.items
+            if items is not None and not isinstance(items, (list, tuple)):
+                raise TypeError("Items must be passed as a tuple or list.")
+
+            if not all(isinstance(item, (NavItem, self.__class__)) for item in items):
+                raise TypeError("All items defined in a group must be an instance of NavItem or NavGrouping")
 
     @property
-    def value(self):
-        # return { item.name: item.to_value_representation() for item in self.items }
-        return {}
+    def initial_dict(self):
+        return {
+            "weight": self.weight,
+            "data": {},
+        }
+
+    @property
+    def fixed_fields(self):
+        return ()
 
 
-class NavItem(NewUINavMenuBase):
-    def __init__(self, name, link, *args, **kwargs):
+class NavItem(NavMenuBase, PermissionsMixin):
+    def __init__(self, name, link, permissions, weight=1000, *args, **kwargs):
         self.name = name
         self.link = link
+        self.permissions = permissions
+        self.weight = weight
         self.args = args
         self.kwargs = kwargs
-        self.validate()
 
-    def validate(self):
-        # check if item in path
-        pass
+    @property
+    def initial_dict(self):
+        return {"name": self.name, "weight": self.weight, "permissions": self.permissions, "data": self.url()}
+
+    @property
+    def fixed_fields(self):
+        return (
+            ("name", self.name),
+            ("permissions", self.permissions),
+        )
 
     def url(self):
         try:
@@ -722,10 +745,6 @@ class NavItem(NewUINavMenuBase):
             # Catch the invalid link here and render the link name as an error message in the template
             logger.debug("%s", e)
             return "ERROR: Invalid link!"
-
-    @property
-    def value(self):
-        return self.url()
 
 
 def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):
