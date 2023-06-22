@@ -1,0 +1,3 @@
+Restyled the pagination section with proper spacing/alignment.
+Modified the back "<" and next ">" arrows to navigate to the previous/next page, respectively, rather than the first/last page.
+The back "<" and next ">" arrows no longer show when they aren't relevant (i.e. when on the first/last page).
