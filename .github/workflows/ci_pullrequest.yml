@@ -308,6 +308,7 @@ jobs:
           - "development/datasets/nautobot_1.5.16_postgres.tar.gz"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
       NAUTOBOT_DB_USER: "nautobot"
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
@@ -337,7 +338,6 @@ jobs:
     needs:
       - "pylint"
       - "tests-postgres"
-      - "tests-mysql"
 
   performance-test:
     runs-on: "ubuntu-20.04"
