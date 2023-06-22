@@ -824,7 +824,8 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         run_command(context, command=f"sh -c 'createdb {common_args} {db_name}'", service="db")
         run_command(context, command=f"sh -c 'psql {common_args} -d {db_name} -f nautobot.sql'", service="db")
     else:
-        base_command = "mysql --user=$NAUTOBOT_DB_USER --password=$NAUTOBOT_DB_PASSWORD --host localhost"
+        # "weird historical idiosyncrasy in MySQL where 'localhost' means a UNIX socket, and '127.0.0.1' means TCP/IP"
+        base_command = "mysql --user=$NAUTOBOT_DB_USER --password=$NAUTOBOT_DB_PASSWORD --host 127.0.0.1"
         run_command(context, command=f"sh -c '{base_command} -e \"DROP DATABASE IF EXISTS {db_name};\"'", service="db")
         run_command(context, command=f"sh -c '{base_command} -e \"CREATE DATABASE {db_name};\"'", service="db")
         run_command(context, command=f"sh -c '{base_command} {db_name} < nautobot.sql'", service="db")
