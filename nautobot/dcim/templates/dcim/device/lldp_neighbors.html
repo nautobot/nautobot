@@ -74,7 +74,7 @@ $(document).ready(function() {
                 // Clean up hostnames/interfaces learned via LLDP
                 var neighbor_host = neighbor['remote_system_name'] || ""; // sanitize hostname if it's null to avoid breaking the split func
                 var neighbor_port = neighbor['remote_port'] || ""; // sanitize port if it's null to avoid breaking the split func
-                var lldp_device = neighbor_host.split(".")[0];  // Strip off any trailing domain name
+                var lldp_device = neighbor_host.split(".").slice(0, -2).join(".");  // Strip off any trailing domain name, leaving any sub-domain part intact
                 var lldp_interface = neighbor_port.split(".")[0];   // Strip off any trailing subinterface ID
 
                 // Add LLDP neighbors to table
