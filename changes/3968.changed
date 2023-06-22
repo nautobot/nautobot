@@ -1,0 +1,1 @@
+Changed lldp_device parser to only strip domain and tld parts from neighbor_host allowing a device subdomain to be correctly matched.
