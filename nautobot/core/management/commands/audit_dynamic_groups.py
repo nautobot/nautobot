@@ -28,6 +28,6 @@ class Command(BaseCommand):
             self.stdout.write("\n>>> All DynamicGroup filters are validated successfully!")
         else:
             self.stdout.write(
-                "\n>>> Please fix the broken filters stated above according to the documentations available at:\n"
+                "\n>>> Please fix the broken filters stated above according to the documentation available at:\n"
                 "<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes\n"
             )
