@@ -1,4 +1,4 @@
-import { ButtonGroup, SkeletonText } from "@chakra-ui/react";
+import { ButtonGroup, Flex, SkeletonText, Spacer } from "@chakra-ui/react";
 import * as Icon from "react-icons/tb";
 import { useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
@@ -133,48 +133,57 @@ export default function ObjectListTable({
     return (
         <Box background="white-0" borderRadius="md" padding="md" ref={topRef}>
             {!include_button ? null : (
-                <Box display="flex" justifyContent="space-between" mb="sm">
+                <Flex align="center" height="60px">
                     <Heading
                         as="h1"
                         size="H1"
                         display="flex"
                         alignItems="center"
                         gap="5px"
-                        pb="sm"
                     >
                         <NtcThumbnailIcon width="25px" height="30px" />{" "}
                         {tableTitle}
                     </Heading>
-                    <ButtonGroup pb="sm" alignItems="center">
-                        <UIButton size="sm" variant="secondary" onClick={toast}>
-                            Filters
-                        </UIButton>
-                        <UIButton
-                            size="sm"
-                            variant="primary"
-                            leftIcon={<MeatballsIcon />}
-                        >
-                            Actions
-                        </UIButton>
-                        <Icon.TbMinusVertical />
-                        <UIButton
-                            to={`${location.pathname}add/`}
-                            size="sm"
-                            leftIcon={<PlusIcon />}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                // Because there is currently no support for Add view in the new UI for production,
-                                // the code below checks if the app is running in production and redirects the user to
-                                // the Add page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
-                                if (process.env.NODE_ENV === "production") {
-                                    document.location.href += "add/";
-                                }
-                            }}
-                        >
-                            Add {tableTitle}
-                        </UIButton>
-                    </ButtonGroup>
-                </Box>
+                    <Spacer />
+                    {!data_fetched ? (
+                        <Box pr="sm">
+                            <LoadingWidget name={tableTitle} />
+                        </Box>
+                    ) : (
+                        () => {}
+                    )}
+                    <Box>
+                        <ButtonGroup alignItems="center">
+                            <UIButton size="sm" variant="secondary" onClick={toast}>
+                                Filters
+                            </UIButton>
+                            <UIButton
+                                size="sm"
+                                variant="primary"
+                                leftIcon={<MeatballsIcon />}
+                            >
+                                Actions
+                            </UIButton>
+                            <Icon.TbMinusVertical />
+                            <UIButton
+                                to={`${location.pathname}add/`}
+                                size="sm"
+                                leftIcon={<PlusIcon />}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    // Because there is currently no support for Add view in the new UI for production,
+                                    // the code below checks if the app is running in production and redirects the user to
+                                    // the Add page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
+                                    if (process.env.NODE_ENV === "production") {
+                                        document.location.href += "add/";
+                                    }
+                                }}
+                            >
+                                Add {tableTitle}
+                            </UIButton>
+                        </ButtonGroup>
+                    </Box>
+                </Flex>
             )}
 
             <SkeletonText
@@ -183,15 +192,8 @@ export default function ObjectListTable({
                 skeletonHeight="25"
                 spacing="3"
                 mt="3"
-                isLoaded={data_loaded}
+                isLoaded={data_fetched}
             >
-                {!data_fetched && data_loaded ? (
-                    <Box background="white-0" borderRadius="md" padding="md">
-                        <LoadingWidget name={tableTitle} />
-                    </Box>
-                ) : (
-                    () => {}
-                )}
                 <TableRenderer
                     table={table}
                     containerProps={{ overflow: "auto" }}
