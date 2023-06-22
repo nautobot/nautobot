@@ -311,6 +311,7 @@ jobs:
       NAUTOBOT_DB_USER: "nautobot"
       NAUTOBOT_DB_PASSWORD: "decinablesprewad"
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+      PGPASSWORD: "decinablesprewad"
     services:
       postgres:
         image: "postgres:13-alpine"

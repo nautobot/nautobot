@@ -819,7 +819,7 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         run_command(context, command=f"tar zxvf /tmp/{source_file}", service="db")
 
     if db_engine == "postgres":
-        common_args = "-U $NAUTOBOT_DB_USER -h localhost"
+        common_args = "-U $NAUTOBOT_DB_USER --no-password -h localhost"
         run_command(context, command=f"sh -c 'dropdb --if-exists {common_args} {db_name}'", service="db")
         run_command(context, command=f"sh -c 'createdb {common_args} {db_name}'", service="db")
         run_command(context, command=f"sh -c 'psql {common_args} -d {db_name} -f nautobot.sql'", service="db")
