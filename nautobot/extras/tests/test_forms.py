@@ -331,7 +331,7 @@ class RelationshipModelFormTestCase(TestCase):
             status=cls.device_status,
         )
 
-        cls.namespace = ipam_models.Namespace.objects.first()
+        cls.namespace = ipam_models.Namespace.objects.create(name="test_forms RelationshipModelFormTestCase")
         ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=cls.prefix_status)
         cls.ipaddress_1 = ipam_models.IPAddress.objects.create(
             address="10.1.1.1/24", namespace=cls.namespace, status=cls.ipaddress_status
@@ -749,7 +749,7 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         status = Status.objects.get_for_model(ipam_models.IPAddress).first()
         prefix_status = Status.objects.get_for_model(ipam_models.Prefix).first()
         cls.locations = dcim_models.Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
-        namespace = ipam_models.Namespace.objects.first()
+        namespace = ipam_models.Namespace.objects.create(name="test_forms RelationshipModelBulkEditFormMixinTestCase")
         ipam_models.Prefix.objects.create(prefix="10.0.0.0/8", status=prefix_status, namespace=namespace)
         cls.ipaddresses = [
             ipam_models.IPAddress.objects.create(address="10.1.1.1/24", status=status, namespace=namespace),
