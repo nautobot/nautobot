@@ -23,7 +23,7 @@ export default function Pagination({
     if (paginationRange.length < 2) {
         return null;
     }
-    function onPageNumberChange(pageNumber) {
+    function onPageNumberChange(targetPageNumber) {
         let limit = searchParams.get("limit");
         /* TODO: we need a REST API endpoint to query get_settings_or_config("PAGINATE_COUNT") rather than hard-coding this to 50. */
         // Scroll to the top of the ObjectListTable Container on table reload
@@ -31,16 +31,28 @@ export default function Pagination({
             alignToTop: true,
             behavior: "smooth",
         });
+
+        currentPage++;
+        let newPageNumber;
+        if (targetPageNumber === "<") {
+            newPageNumber = currentPage - 1;
+        } else if (targetPageNumber === ">") {
+            newPageNumber = currentPage + 1;
+        } else {
+            newPageNumber = targetPageNumber;
+        }
+
         setSearchParams({
-            offset: pageSize * (pageNumber - 1),
+            offset: pageSize * (newPageNumber - 1),
             limit: limit ? limit : 50,
         });
     }
+
     currentPage = ~~currentPage;
 
+    let firstPage = 1;
     let lastPage = totalDataCount / pageSize;
     lastPage = ~~lastPage + 1;
-    let firstPage = 1;
 
     const ul_css = {
         display: "flex",
@@ -52,8 +64,10 @@ export default function Pagination({
 
     return (
         <ul style={ul_css}>
-            <li style={li_css} onClick={() => onPageNumberChange(firstPage)}>
-                <Button variant="secondary">{"<"}</Button>
+            <li style={li_css} onClick={() => onPageNumberChange("<")}>
+                {currentPage + 1 > firstPage && (
+                    <Button variant="secondary">{"<"}</Button>
+                )}
             </li>
             {paginationRange.map((pageNumber) => {
                 if (pageNumber === "...") {
@@ -85,8 +99,10 @@ export default function Pagination({
                     );
                 }
             })}
-            <li style={li_css} onClick={() => onPageNumberChange(lastPage)}>
-                <Button variant="secondary">{">"}</Button>
+            <li style={li_css} onClick={() => onPageNumberChange(">")}>
+                {currentPage + 1 < lastPage && (
+                    <Button variant="secondary">{">"}</Button>
+                )}
             </li>
         </ul>
     );
