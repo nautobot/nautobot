@@ -9,7 +9,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from nautobot.extras.models import DynamicGroup
 
-        print("\n>>> Auditing existing DynamicGroup data for invalid filters ...\n")
+        self.stdout.write("\n>>> Auditing existing DynamicGroup data for invalid filters ...\n")
 
         dynamic_groups = DynamicGroup.objects.all().order_by("name")
         is_valid = True
@@ -20,14 +20,14 @@ class Command(BaseCommand):
             filter_data = dynamic_group.filter
             for filter_field in filter_data.keys():
                 if filter_field not in valid_filterset_fields:
-                    print(
+                    self.stdout.write(
                         f"    DynamicGroup instance with name `{dynamic_group.name}` and content type `{dynamic_group.content_type}` has an invalid filter `{filter_field}`"
                     )
                     is_valid = False
         if is_valid:
-            print("\n>>> All DynamicGroup filters are validated successfully!")
+            self.stdout.write("\n>>> All DynamicGroup filters are validated successfully!")
         else:
-            print(
-                "\n>>> Please fix the broken filters stated above according to the documentations at available"
-                "'<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes'\n"
+            self.stdout.write(
+                "\n>>> Please fix the broken filters stated above according to the documentations available at:\n"
+                "<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes\n"
             )
