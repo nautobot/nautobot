@@ -154,7 +154,11 @@ export default function ObjectListTable({
                     )}
                     <Box>
                         <ButtonGroup alignItems="center">
-                            <UIButton size="sm" variant="secondary" onClick={toast}>
+                            <UIButton
+                                size="sm"
+                                variant="secondary"
+                                onClick={toast}
+                            >
                                 Filters
                             </UIButton>
                             <UIButton
