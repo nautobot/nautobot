@@ -175,12 +175,12 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 ### API Query Parameters Changes
 
 Nautobot 2.0 removes the `?brief` query parameter and adds support for the `?depth` query parameter. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are.
-Please see the [documentation on the `?depth` query parameter](../rest-api/overview.md/#depth-query-parameter) for more information.
+Please see the [documentation on the `?depth` query parameter](../rest-api/overview.md#depth-query-parameter) for more information.
 
 ## UI, GraphQL, and REST API Filter Changes
 
 !!! note
-    These sweeping changes made to model filter fields will, in some cases, invalidate existing `DynamicGroup` instances' filter data. Please utilize [`nautobot-server audit_dynamic_groups`](../administration/nautobot-server.md/#audit_dynamic_groups) helper command when you are cleaning up `DynamicGroup` filter data. You should run this command after your Nautobot instance is upgraded to v2.x successfully.
+    These sweeping changes made to model filter fields will, in some cases, invalidate existing `DynamicGroup` instances' filter data. Please utilize the [`nautobot-server audit_dynamic_groups`](../administration/nautobot-server.md#audit_dynamic_groups) helper command when you are cleaning up `DynamicGroup` filter data. You should run this command after your Nautobot instance is upgraded to v2.x successfully.
 
 ### Removed Changelog URL from View Context
 
