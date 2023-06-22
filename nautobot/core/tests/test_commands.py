@@ -26,7 +26,7 @@ class PreMigrateCommandTest(TestCase):
         return (out.getvalue(), err.getvalue())
 
     def test_success(self):
-        """Test that duplicate ConfigContext[Schema] objects result in a failure."""
+        """Test that the command passes with most common data."""
         out, err = self.run_command()
 
         self.assertIn("All pre-migration checks passed.", out)
