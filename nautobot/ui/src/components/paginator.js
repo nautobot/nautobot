@@ -1,10 +1,8 @@
-import { Frame } from "@nautobot/nautobot-ui";
+import { Box, Flex, Spacer } from "@chakra-ui/react";
 import React from "react";
 
 import PaginatorForm from "@components/paginator_form";
 import Pagination from "@components/pagination";
-
-import { NautobotGrid, NautobotGridItem } from "@nautobot/nautobot-ui";
 
 class Paginator extends React.Component {
     constructor(props) {
@@ -53,26 +51,25 @@ class Paginator extends React.Component {
         }
 
         return (
-            <Frame>
-                <NautobotGrid>
-                    <NautobotGridItem colSpan="4">
-                        <Pagination
-                            totalDataCount={data_count}
-                            currentPage={active_page}
-                            pageSize={page_size}
-                            scroll_ref={scroll_ref}
-                        ></Pagination>
-                    </NautobotGridItem>
-                    <NautobotGridItem colSpan="4">
-                        <PaginatorForm
-                            start={start_range}
-                            end={end_range}
-                            total_count={data_count}
-                            scroll_ref={scroll_ref}
-                        ></PaginatorForm>
-                    </NautobotGridItem>
-                </NautobotGrid>
-            </Frame>
+            <Flex paddingTop={10}>
+                <Box>
+                    <Pagination
+                        totalDataCount={data_count}
+                        currentPage={active_page}
+                        pageSize={page_size}
+                        scroll_ref={scroll_ref}
+                    ></Pagination>
+                </Box>
+                <Spacer />
+                <Box>
+                    <PaginatorForm
+                        start={start_range}
+                        end={end_range}
+                        total_count={data_count}
+                        scroll_ref={scroll_ref}
+                    ></PaginatorForm>
+                </Box>
+            </Flex>
         );
     }
 }

@@ -19,7 +19,7 @@ export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
     }
 
     return (
-        <Box width="200px">
+        <Box width="200px" textAlign="right">
             <Select
                 value={
                     searchParams.get("limit") ? searchParams.get("limit") : "50"
