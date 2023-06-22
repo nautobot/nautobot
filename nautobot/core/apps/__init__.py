@@ -21,6 +21,7 @@ from nautobot.extras.plugins.utils import import_object
 
 logger = logging.getLogger(__name__)
 registry["nav_menu"] = {"tabs": {}}
+registry["new_ui_nav_menu"] = {}
 registry["homepage_layout"] = {"panels": {}}
 
 
@@ -58,6 +59,14 @@ def create_or_check_entry(grouping, record, key, path):
         for attr, value in record.fixed_fields:
             if grouping[key][attr] != value:
                 logger.error("Unable to redefine %s on %s from %s to %s", attr, path, grouping[key][attr], value)
+
+
+# TODO(timizuo): Merge into `create_or_check_entry`
+def create_or_check_entry_new(grouping, record, key, path):
+    if key not in grouping:
+        grouping[key] = record.value
+    elif isinstance(record, NavItem):
+        logger.error("Unable to redefine %s on %s from %s to %s", key, path, grouping[key], record.value)
 
 
 def register_menu_items(tab_list):
@@ -132,6 +141,22 @@ def register_menu_items(tab_list):
         registry["nav_menu"]["tabs"] = OrderedDict(
             sorted(registry["nav_menu"]["tabs"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
         )
+
+
+def register_new_ui_menu_items(context_list):
+    for nav_context in context_list:
+        create_or_check_entry_new(registry["new_ui_nav_menu"], nav_context, nav_context.name, nav_context.name)
+        for group in nav_context.groups:
+            create_or_check_entry_new(
+                registry["new_ui_nav_menu"][nav_context.name], group, group.name, f"{nav_context.name} -> {group.name}"
+            )
+            for item in group.items:
+                create_or_check_entry_new(
+                    registry["new_ui_nav_menu"][nav_context.name][group.name],
+                    item,
+                    item.name,
+                    f"{nav_context.name} -> {group.name} -> {item.name}",
+                )
 
 
 def register_homepage_panels(path, label, homepage_layout):
@@ -239,6 +264,16 @@ class NavMenuBase(ABC):  # replaces PermissionsMixin
     def fixed_fields(self) -> tuple:  # to be implemented by subclass
         """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return ()
+
+
+class NewUINavMenuBase(ABC):  # replaces PermissionsMixin
+    """Base class for new ui navigation classes."""
+
+    @property
+    @abstractmethod
+    def value(self):  # to be implemented by each subclass
+        """Attributes to be stored when adding this item to the nav menu data for the first time."""
+        return {}
 
 
 class PermissionsMixin:
@@ -627,6 +662,70 @@ class NavMenuImportButton(NavMenuButton):
         if "weight" not in kwargs:
             kwargs["weight"] = 200
         super().__init__(*args, **kwargs)
+
+
+class NavContext(NewUINavMenuBase):
+    def __init__(self, name, groups):
+        self.name = name
+        self.groups = groups
+        self.validate()
+
+    def validate(self):
+        # NavContext name must belong in this group ("Inventory", "Networks", "Security", "Automation", "Platform")
+        nav_context_names = ("Inventory", "Networks", "Security", "Automation", "Platform")
+        if self.name not in nav_context_names:
+            raise TypeError(f"`{self.name}` is an invalid context name, valid choices are: {nav_context_names}")
+
+        if not all(isinstance(group, NavGrouping) for group in self.groups):
+            # TODO: TypeError might not be the right error to throw
+            raise TypeError("Invalid groups found, NavContext.groups can only be a list of NavGrouping")
+
+    @property
+    def value(self):
+        # return {group.name: group.to_value_representation() for group in self.groups}
+        return {}
+
+
+class NavGrouping(NewUINavMenuBase):
+    def __init__(self, name, items):
+        self.name = name
+        self.items = items
+        self.validate()
+
+    def validate(self):
+        if not all(isinstance(item, NavItem) for item in self.items):
+            # TODO: TypeError might not be the right error to throw
+            raise TypeError("Invalid items found in `items`, NavContext.items can only be a list of NavItem")
+
+    @property
+    def value(self):
+        # return { item.name: item.to_value_representation() for item in self.items }
+        return {}
+
+
+class NavItem(NewUINavMenuBase):
+    def __init__(self, name, link, *args, **kwargs):
+        self.name = name
+        self.link = link
+        self.args = args
+        self.kwargs = kwargs
+        self.validate()
+
+    def validate(self):
+        # check if item in path
+        pass
+
+    def url(self):
+        try:
+            return reverse(self.link, args=self.args, kwargs=self.kwargs)
+        except NoReverseMatch as e:
+            # Catch the invalid link here and render the link name as an error message in the template
+            logger.debug("%s", e)
+            return "ERROR: Invalid link!"
+
+    @property
+    def value(self):
+        return self.url()
 
 
 def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):
