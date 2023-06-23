@@ -250,9 +250,7 @@ class PluginTest(TestCase):
         """
         Validate that example plugin is adding new items to `registry["nav_menu"]`.
         """
-        self.assertIn("Example App", registry["nav_menu"]["Inventory"]["groups"])
-        # Modified this statement since we are passing the url into registry directly instead of the reverse url string
-        self.assertIn("Example Model", registry["nav_menu"]["Inventory"]["groups"]["Example App"]["items"])
+        self.assertIn("Example Group 1", registry["nav_menu"]["tabs"]["Example Menu"]["groups"])
 
     def test_nautobot_database_ready_signal(self):
         """

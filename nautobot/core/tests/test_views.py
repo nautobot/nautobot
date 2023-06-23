@@ -238,9 +238,10 @@ class NavRestrictedUI(TestCase):
         response_content = self.make_request()
         self.assertInHTML(
             f"""
-            <li>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
-            </li>
+            <a href="{self.url}"
+                data-item-weight="{self.item_weight}">
+                Installed Plugins
+            </a>
             """,
             response_content,
         )
@@ -255,9 +256,10 @@ class NavRestrictedUI(TestCase):
         response_content = self.make_request()
         self.assertInHTML(
             f"""
-            <li>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
-            </li>
+            <a href="{self.url}"
+                data-item-weight="{self.item_weight}">
+                Installed Plugins
+            </a>
             """,
             response_content,
         )
@@ -274,11 +276,14 @@ class NavRestrictedUI(TestCase):
         """The "Installed Apps" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
         response_content = self.make_request()
 
+        # print(response_content)
+
         self.assertInHTML(
             f"""
-            <li class="disabled">
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Apps</a>
-            </li>
+            <a href="{self.url}"
+                data-item-weight="{self.item_weight}">
+                Installed Plugins
+            </a>
             """,
             response_content,
         )

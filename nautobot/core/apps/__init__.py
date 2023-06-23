@@ -9,20 +9,21 @@ from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.module_loading import import_string
 
 from constance.apps import ConstanceConfig
 from graphene.types import generic, String
 
+from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.signals import nautobot_database_ready
-from nautobot.extras.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.extras.registry import registry
-from nautobot.extras.plugins.utils import import_object
 
 
 logger = logging.getLogger(__name__)
 registry["nav_menu"] = {"tabs": {}}
 registry["new_ui_nav_menu"] = {}
 registry["homepage_layout"] = {"panels": {}}
+NAV_CONTEXT_NAMES = ("Inventory", "Networks", "Security", "Automation", "Platform")
 
 
 class NautobotConfig(AppConfig):
@@ -45,17 +46,23 @@ class NautobotConfig(AppConfig):
         """
         Ready function initiates the import application.
         """
-        homepage_layout = import_object(f"{self.name}.{self.homepage_layout}")
-        if homepage_layout is not None:
+        try:
+            homepage_layout = import_string(f"{self.name}.{self.homepage_layout}")
             register_homepage_panels(self.path, self.label, homepage_layout)
+        except ModuleNotFoundError:
+            pass
 
-        menu_items = import_object(f"{self.name}.{self.menu_tabs}")
-        if menu_items is not None:
+        try:
+            menu_items = import_string(f"{self.name}.{self.menu_tabs}")
             register_menu_items(menu_items)
+        except ModuleNotFoundError:
+            pass
 
-        navigation = import_object(f"{self.name}.{self.navigation}")
-        if navigation is not None:
+        try:
+            navigation = import_string(f"{self.name}.{self.navigation}")
             register_new_ui_menu_items(navigation)
+        except ModuleNotFoundError:
+            pass
 
 
 def create_or_check_entry(grouping, record, key, path):
@@ -148,7 +155,6 @@ def register_menu_items(tab_list):
 
 
 def register_new_ui_menu_items(context_list):
-    # TODO(timizuo): Implement Ordering of fields by weight
     for nav_context in context_list:
         create_or_check_entry(registry["new_ui_nav_menu"], nav_context, nav_context.name, nav_context.name)
 
@@ -440,7 +446,8 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
     groups = []
 
     @property
-    def initial_dict(self):
+    def initial_dict(self) -> dict:
+        """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
             "weight": self.weight,
             "groups": {},
@@ -448,7 +455,8 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
         }
 
     @property
-    def fixed_fields(self):
+    def fixed_fields(self) -> tuple:
+        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return ()
 
     def __init__(self, name, permissions=None, groups=None, weight=1000):
@@ -484,14 +492,16 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
     items = []
 
     @property
-    def initial_dict(self):
+    def initial_dict(self) -> dict:
+        """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
             "weight": self.weight,
             "items": {},
         }
 
     @property
-    def fixed_fields(self):
+    def fixed_fields(self) -> tuple:
+        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return ()
 
     def __init__(self, name, items=None, weight=1000):
@@ -523,7 +533,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     """
 
     @property
-    def initial_dict(self):
+    def initial_dict(self) -> dict:
+        """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
             "name": self.name,
             "weight": self.weight,
@@ -534,7 +545,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         }
 
     @property
-    def fixed_fields(self):
+    def fixed_fields(self) -> tuple:
+        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return (
             ("name", self.name),
             ("permissions", self.permissions),
@@ -667,26 +679,27 @@ class NavContext(NavMenuBase):
 
     def validate(self):
         # NavContext name must belong in this group ("Inventory", "Networks", "Security", "Automation", "Platform")
-        nav_context_names = ("Inventory", "Networks", "Security", "Automation", "Platform")
-        if self.name not in nav_context_names:
-            raise TypeError(f"`{self.name}` is an invalid context name, valid choices are: {nav_context_names}")
+        if self.name not in NAV_CONTEXT_NAMES:
+            raise TypeError(f"`{self.name}` is an invalid context name, valid choices are: {NAV_CONTEXT_NAMES}")
 
         if self.groups:
             groups = self.groups
             if not isinstance(groups, (list, tuple)):
                 raise TypeError("Groups must be passed as a tuple or list.")
             elif not all(isinstance(group, NavGrouping) for group in groups):
-                raise TypeError("All groups defined in a tab must be an instance of NavGrouping")
+                raise TypeError("All groups defined in a NavContext must be an instance of NavGrouping")
 
     @property
-    def initial_dict(self):
+    def initial_dict(self) -> dict:
+        """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
             "weight": self.weight,
             "data": {},
         }
 
     @property
-    def fixed_fields(self):
+    def fixed_fields(self) -> tuple:
+        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return ()
 
 
@@ -704,35 +717,44 @@ class NavGrouping(NavMenuBase, PermissionsMixin):
                 raise TypeError("Items must be passed as a tuple or list.")
 
             if not all(isinstance(item, (NavItem, self.__class__)) for item in items):
-                raise TypeError("All items defined in a group must be an instance of NavItem or NavGrouping")
+                raise TypeError("All items defined in a NavGrouping must be an instance of NavItem or NavGrouping")
 
     @property
-    def initial_dict(self):
+    def initial_dict(self) -> dict:
+        """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
             "weight": self.weight,
             "data": {},
         }
 
     @property
-    def fixed_fields(self):
+    def fixed_fields(self) -> tuple:
+        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return ()
 
 
 class NavItem(NavMenuBase, PermissionsMixin):
-    def __init__(self, name, link, permissions, weight=1000, *args, **kwargs):
+    def __init__(self, name, link, *args, permissions=None, weight=1000, **kwargs):
         self.name = name
         self.link = link
-        self.permissions = permissions
+        self.permissions = permissions or []
         self.weight = weight
         self.args = args
         self.kwargs = kwargs
 
     @property
-    def initial_dict(self):
-        return {"name": self.name, "weight": self.weight, "permissions": self.permissions, "data": self.url()}
+    def initial_dict(self) -> dict:
+        """Attributes to be stored when adding this item to the nav menu data for the first time."""
+        return {
+            "name": self.name,
+            "weight": self.weight,
+            "permissions": self.permissions,
+            "data": self.url(),
+        }
 
     @property
     def fixed_fields(self):
+        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return (
             ("name", self.name),
             ("permissions", self.permissions),
@@ -742,9 +764,8 @@ class NavItem(NavMenuBase, PermissionsMixin):
         try:
             return reverse(self.link, args=self.args, kwargs=self.kwargs)
         except NoReverseMatch as e:
-            # Catch the invalid link here and render the link name as an error message in the template
-            logger.debug("%s", e)
-            return "ERROR: Invalid link!"
+            logger.error("Error in link construction for %s: %s", self.name, e)
+            return ""
 
 
 def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):

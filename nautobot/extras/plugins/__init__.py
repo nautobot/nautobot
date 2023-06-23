@@ -12,7 +12,6 @@ from django.urls import get_resolver, URLPattern
 
 from nautobot.core.apps import (
     NautobotConfig,
-    NavMenuGroup,
     NavMenuTab,
     register_menu_items,
     register_homepage_panels,
@@ -508,38 +507,15 @@ def register_filter_extensions(filter_extensions, plugin_name):
 
 def register_plugin_menu_items(section_name, menu_items):
     """
-    Register a list of PluginMenuItem instances for a given menu section (e.g. plugin name)
+    Register a list of NavMenuTab instances for a given menu section (e.g. plugin name)
     """
-    new_menu_items = []
     nav_menu_items = set()
-    permissions = set()
 
     for menu_item in menu_items:
         if isinstance(menu_item, NavMenuTab):
             nav_menu_items.add(menu_item)
         else:
-            raise TypeError("Top level objects need to be an instance of NavMenuTab or PluginMenuItem: {menu_tab}")
-
-    if new_menu_items:
-        # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
-        if registry["nav_menu"]["tabs"].get("Plugins"):
-            weight = (
-                registry["nav_menu"]["tabs"]["Plugins"]["groups"][
-                    list(registry["nav_menu"]["tabs"]["Plugins"]["groups"])[-1]
-                ]["weight"]
-                + 100
-            )
-        else:
-            weight = 100
-        nav_menu_items.add(
-            NavMenuTab(
-                name="Plugins",
-                weight=5000,
-                # Permissions cast to tuple to match development pattern.
-                permissions=tuple(permissions),
-                groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
-            ),
-        )
+            raise TypeError("Top level objects need to be an instance of NavMenuTab: {menu_item}")
 
     register_menu_items(nav_menu_items)
 

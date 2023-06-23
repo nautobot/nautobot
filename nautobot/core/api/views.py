@@ -860,7 +860,6 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         """
         base_menu = registry["new_ui_nav_menu"]
         HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
-
         formatted_data = self.format_and_remove_hidden_menu(request, base_menu, HIDE_RESTRICTED_UI)
         return Response(formatted_data)
 

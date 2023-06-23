@@ -2,6 +2,7 @@ from copy import deepcopy
 import csv
 from io import BytesIO, StringIO
 import json
+from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
@@ -744,3 +745,93 @@ class APIOrderingTestCase(testing.APITestCase):
                         )
                     ),
                 )
+
+
+class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
+    def test_get_menu(self):
+        """Asset response from new ui nav menu api returns a well formatted registry["new_ui_nav_menu"] expected by nautobot-ui."""
+
+        # This is a perfect example of how registry["new_ui_nav_menu"] is structured
+        mock_nav_menu_registry = {
+            "Inventory": {
+                "weight": 1000,
+                "data": {
+                    "Devices": {
+                        "weight": 100,
+                        "data": {
+                            "Devices": {
+                                "name": "Devices",
+                                "weight": 100,
+                                "permissions": ["dcim.view_device"],
+                                "data": "/dcim/devices/",
+                            },
+                            "Connections": {
+                                "weight": 700,
+                                "data": {
+                                    "Cables": {
+                                        "name": "Cables",
+                                        "weight": 100,
+                                        "permissions": ["dcim.view_cable"],
+                                        "data": "/dcim/cables/",
+                                    },
+                                    "Console Connections": {
+                                        "name": "Console Connections",
+                                        "weight": 200,
+                                        "permissions": ["dcim.view_consoleport", "dcim.view_consoleserverport"],
+                                        "data": "/dcim/console-connections/",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "Organization": {
+                        "weight": 200,
+                        "data": {
+                            "Locations": {
+                                "name": "Locations",
+                                "weight": 100,
+                                "permissions": ["dcim.view_location"],
+                                "data": "/dcim/locations/",
+                            },
+                            "Location Types": {
+                                "name": "Location Types",
+                                "weight": 200,
+                                "permissions": ["dcim.view_locationtype"],
+                                "data": "/dcim/location-types/",
+                            },
+                        },
+                    },
+                },
+            },
+            "Security": {
+                "weight": 1000,
+                "data": {
+                    "Secrets": {
+                        "weight": 500,
+                        "data": {
+                            "Secrets": {
+                                "name": "Secrets",
+                                "weight": 100,
+                                "permissions": ["extras.view_secret"],
+                                "data": "/extras/secrets/",
+                            },
+                        },
+                    }
+                },
+            },
+        }
+        with patch("nautobot.core.api.views.registry", {"new_ui_nav_menu": mock_nav_menu_registry}):
+            url = reverse("ui-api:get-menu")
+            response = self.client.get(url, **self.header)
+            expected_response = {
+                "Inventory": {
+                    "Devices": {
+                        "Devices": "/dcim/devices/",
+                        "Connections": {"Cables": "/dcim/cables/", "Console Connections": "/dcim/console-connections/"},
+                    },
+                    "Organization": {"Locations": "/dcim/locations/", "Location Types": "/dcim/location-types/"},
+                },
+                "Security": {"Secrets": {"Secrets": "/extras/secrets/"}},
+            }
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, expected_response)

@@ -1,35 +1,95 @@
 # Populating the Navigation Menu
 
-Both core applications and plugins can contribute items to the navigation menu by defining `menu_items` inside of their app's `navigation.py`. Using the key and weight system, a developer can integrate amongst existing menu contexts (a.k.a. tabs), groups, and items.
+Both core applications and plugins can contribute items to the navigation menu by defining `menu_items` inside of their app's `navigation.py`. Using the key and weight system, a developer can integrate amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
 
---- 2.0.0
-    The updated UI does not permit including buttons into the navigation menu items. As such, `NavMenuButton` and its subclasses have been removed, and the `buttons` parameter to `NavMenuItem` is no longer supported.
+## Modifying Existing Menu
 
-## Defining and Modifying Menus
+By defining an object with the same identifier, a developer can modify existing objects. The example below shows modifying an existing tab to have a new group.
 
-Nautobot will intelligently merge the contents of all apps' `menu_items` defined in their `navigation.py` to create the final navigation menu structure. This is done by matching on objects' `name` fields to identify items that need to be consolidated.
-
-The example below shows adding a new group containing a new item under the base `Inventory` menu context. The group is being defined with a weight of `150`, which means it will appear between the already defined `Devices` (weight `100`) and `Organization` (weight `200`) groups in this context.
+A tab object is being created with the same identifier as an existing object using the `name` attribute. Then a group is being created with a weight of `150`, which means it will appear between the already defined `Circuits` and `Provider` groups.
 
 !!! tip
-    Weights for already existing items can be found in the nautobot source code (in `navigation.py`).
+    Weights for already existing items can be found in the nautobot source code (in `navigation.py`) or with a web session open to your nautobot instance, you can inspect an element of the navbar using the developer tools. Each type of element will have an attribute `data-{type}-weight`. The type can be `tab`, `group`, `item` or `button`.
 
-This pattern works for modifying all objects in the tree. New groups can be added to existing tabs and new items can be added to existing groups. The set of tabs is defined by the Nautobot `nautobot.core.apps.MENU_TABS` constant and cannot generally be changed.
+This pattern works for modifying all objects in the tree. New items can be added to existing groups and new buttons can be added to existing items.
 
 ``` python
-menu_items = (
+menu_tabs = (
     NavMenuTab(
-        name="Inventory",
+        name="Circuits",
         groups=(
             NavMenuGroup(
-                name="Example App",
+                name="Example Circuit Group",
                 weight=150,
                 items=(
                     NavMenuItem(
-                        name="Example Model",
-                        weight=100,
                         link="plugins:example_plugin:examplemodel_list",
-                        permissions=["example_plugin.view_examplemodel"],
+                        name="Example Model",
+                        permissions=[
+                            "example_plugin.view_examplemodel"
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="plugins:example_plugin:examplemodel_add",
+                                permissions=[
+                                    "example_plugin.add_examplemodel",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="plugins:example_plugin:examplemodel_import",
+                                permissions=[
+                                    "example_plugin.add_examplemodel"
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+```
+
+## Adding a New Menu
+
+The code below shows how to add a new tab to the navbar. A tab is defined by a `NavMenuTab` object. Similarly a group is defined using `NavMenuGroup`. Both of these objects are used as containers for actual items.
+
+The position in the navigation menu is defined by the weight. The lower the weight the closer to the start of the menus the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
+
+Below you can see `Example Tab` has a weight value of `150`. This means the tab will appear between `Organization` and `Devices`.
+
+``` python
+from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
+
+menu_items = (
+    NavMenuTab(
+        name="Example Tab",
+        weight=150,
+        groups=(
+            NavMenuGroup(
+                name="Example Group 1",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="plugins:example_plugin:examplemodel_list",
+                        link_text="Example Model",
+                        permissions=[
+                            "example_plugin.view_examplemodel"
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="plugins:example_plugin:examplemodel_add",
+                                permissions=[
+                                    "example_plugin.add_examplemodel",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="plugins:example_plugin:examplemodel_import",
+                                permissions=[
+                                    "example_plugin.add_examplemodel"
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),
@@ -47,18 +107,16 @@ menu_items = (
 A `NavMenuTab` has the following attributes:
 
 * `name` - Display name to be shown in navigation menu
-* `permissions` - A list of permissions required to display this object (optional)
+* `weight` - Defines the position the object should be displayed at (optional)
+* `permissions` - A list of permissions required to display this link (optional)
 * `groups` - List or tuple of `NavMenuGroup`
-
---- 2.0.0
-    As the sequence of menu "tabs"/"contexts" in Nautobot is now constant, the `weight` property has been removed from `NavMenuTab`.
 
 A `NavMenuGroup` has the following attributes:
 
 * `name` - Display name to be shown in navigation menu
 * `weight` - Defines the position the object should be displayed at (optional)
-* `permissions` - A list of permissions required to display this object (optional)
-* `items` - List or tuple of `NavMenuGroup` and/or `NavMenuItem`
+* `permissions` - A list of permissions required to display this link (optional)
+* `items` - List or tuple of `NavMenuItem`
 
 A `NavMenuItem` has the following attributes:
 
@@ -66,6 +124,19 @@ A `NavMenuItem` has the following attributes:
 * `name` - The text presented to the user
 * `weight` - Defines the position the object should be displayed at (optional)
 * `permissions` - A list of permissions required to display this link (optional)
+* `buttons` - An iterable of NavMenuButton (or subclasses of NavMenuButton) instances to display (optional)
 
---- 2.0.0
-    The `buttons` attribute was removed from `NavMenuItem`.
+!!! note
+    Any buttons associated within a menu item will be hidden if the user does not have permission to access the menu item, regardless of what permissions are set on the buttons.
+
+A `NavMenuButton` has the following attributes:
+
+* `title` - The tooltip text (displayed when the mouse hovers over the button)
+* `link` - The name of the URL path to which this button links
+* `weight` - Defines the position the object should be displayed at (optional)
+* `icon_class` - Button icon CSS classes (Nautobot currently supports [Material Design Icons](https://materialdesignicons.com) or one of the choices provided by `ButtonActionIconChoices`)
+* `button_class` - One of the choices provided by `ButtonActionColorChoices` (optional)
+* `permissions` - A list of permissions required to display this button (optional)
+
+!!! note
+    `NavMenuAddButton` and `NavMenuImportButton` are subclasses of `NavMenuButton` that can be used to provide the commonly used "Add" and "Import" buttons.
