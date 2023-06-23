@@ -122,7 +122,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20)
         self.stdout.write("Creating Prefixes and IP Addresses...")
-        for i in range(15):
+        for i in range(30):
             PrefixFactory.create(prefix=f"10.{i}.0.0/16", type=PrefixTypeChoices.TYPE_CONTAINER)
             PrefixFactory.create(prefix=f"2001:db8:0:{i}::/64", type=PrefixTypeChoices.TYPE_CONTAINER)
         self.stdout.write("Creating Empty Namespaces...")
