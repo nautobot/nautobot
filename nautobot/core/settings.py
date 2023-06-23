@@ -469,6 +469,11 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
+# Overrides for default serialization/deserialization handlers for dumpdata/loaddata
+SERIALIZATION_MODULES = {
+    "json": "nautobot.core.serializers.json",
+}
+
 # Internationalization
 LANGUAGE_CODE = "en-us"
 USE_I18N = True
