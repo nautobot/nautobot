@@ -3,6 +3,7 @@ import { BrowserRouter } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { NautobotUIProvider } from "@nautobot/nautobot-ui";
 
+import { FiltersPanelContextProvider } from "@components/FiltersPanel";
 import Layout from "@components/Layout";
 import { useGetSessionQuery, useGetUIMenuQuery } from "@utils/api";
 import { updateAuthStateWithSession, updateNavigation } from "@utils/store";
@@ -60,9 +61,11 @@ function App() {
     return (
         <NautobotUIProvider theme={theme}>
             <BrowserRouter>
-                <Layout>
-                    <NautobotRouter />
-                </Layout>
+                <FiltersPanelContextProvider>
+                    <Layout>
+                        <NautobotRouter />
+                    </Layout>
+                </FiltersPanelContextProvider>
             </BrowserRouter>
         </NautobotUIProvider>
     );

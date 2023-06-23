@@ -5,6 +5,7 @@ import {
     Flex,
     NautobotGrid,
 } from "@nautobot/nautobot-ui";
+import { FiltersPanelContainer } from "@components/FiltersPanel";
 import { Navbar } from "@components/Navbar";
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
@@ -120,23 +121,28 @@ export default function GenericView({
             width="full"
         >
             <Navbar appState={currentState} />
-            <Box flex="1" overflow="auto">
-                <Breadcrumbs paddingX="md">
-                    {breadcrumbs.map((props) => (
-                        <Breadcrumb {...props} />
-                    ))}
-                </Breadcrumbs>
 
-                <NautobotGrid
-                    alignItems="start"
-                    columns={columns}
-                    rows={rows}
-                    background={gridBackground}
-                    gridAutoRows="auto"
-                >
-                    {children}
-                </NautobotGrid>
-            </Box>
+            <Flex flex="1" overflow="hidden">
+                <Box flex="1" overflow="auto">
+                    <Breadcrumbs paddingX="md">
+                        {breadcrumbs.map((props) => (
+                            <Breadcrumb {...props} />
+                        ))}
+                    </Breadcrumbs>
+
+                    <NautobotGrid
+                        alignItems="start"
+                        columns={columns}
+                        rows={rows}
+                        background={gridBackground}
+                        gridAutoRows="auto"
+                    >
+                        {children}
+                    </NautobotGrid>
+                </Box>
+
+                <FiltersPanelContainer />
+            </Flex>
         </Flex>
     );
 }

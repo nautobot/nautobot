@@ -14,13 +14,14 @@ import {
     PlusIcon,
     Button,
     EditIcon,
-    useToast,
+    Text,
 } from "@nautobot/nautobot-ui";
 import { useCallback, useMemo } from "react";
 
 import LoadingWidget from "../LoadingWidget";
 import ObjectTableItem from "./ObjectTableItem";
 import Paginator from "../paginator";
+import { useFiltersPanel } from "@components/FiltersPanel";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
@@ -111,6 +112,12 @@ export default function ObjectListTable({
         []
     );
 
+    const filtersPanel = useFiltersPanel({
+        content: <Text>You have successfully opened filters panel.</Text>,
+        id: "object-list-table-filters-panel",
+        title: "Filters",
+    });
+
     const table = useTableRenderer({
         columns: columns,
         data: tableData,
@@ -119,15 +126,6 @@ export default function ObjectListTable({
         state: { columnVisibility },
         onColumnVisibilityChange: setColumnVisibility,
         actionMenu: ActionMenu,
-    });
-
-    const toast = useToast({
-        duration: 5000,
-        isClosable: true,
-        position: "top-right",
-        status: "success",
-        description: "You have successfully made toast.",
-        title: "Ta da!",
     });
 
     return (
@@ -146,7 +144,15 @@ export default function ObjectListTable({
                         {tableTitle}
                     </Heading>
                     <ButtonGroup pb="sm" alignItems="center">
-                        <UIButton size="sm" variant="secondary" onClick={toast}>
+                        <UIButton
+                            size="sm"
+                            variant="secondary"
+                            onClick={() =>
+                                filtersPanel.isOpen
+                                    ? filtersPanel.close()
+                                    : filtersPanel.open()
+                            }
+                        >
                             Filters
                         </UIButton>
                         <UIButton
