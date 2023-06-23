@@ -5,7 +5,7 @@
 {% block buttons %}
     {% if permissions.change %}
         <a type="button" name="_merge" href="{% url merge_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-primary">
-            <span class="mdi mdi-arrow-down-bold" aria-hidden="true"></span> Select and Merge Duplicate IPs
+            <span class="mdi mdi-arrow-down-bold" aria-hidden="true"></span> Find and Merge Duplicate IPs
         </a>
     {% endif %}
 {% endblock %}
