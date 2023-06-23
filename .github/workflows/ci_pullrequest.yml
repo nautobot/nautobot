@@ -299,7 +299,7 @@ jobs:
       - "prettier"
       - "eslint"
 
-  migration-test-mysql:
+  migration-tests-mysql:
     runs-on: "ubuntu-20.04"
     strategy:
       fail-fast: true
@@ -344,7 +344,7 @@ jobs:
       - "pylint"
       - "tests-mysql"
 
-  migration-test-postgres:
+  migration-tests-postgres:
     runs-on: "ubuntu-20.04"
     strategy:
       fail-fast: true
