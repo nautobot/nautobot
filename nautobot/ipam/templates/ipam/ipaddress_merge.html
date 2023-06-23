@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load helpers %}
+{% load static %}
+{% load django_tables2 %}
+
+{% block extra_styles %}
+    {{ block.super }}
+{% endblock %}
+{% block content %}
+<form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+    {% csrf_token %}
+    <table class="table table-responsive attr-table">
+    <thead>
+        <th>
+            IP Address
+        </th>
+        <th>
+            Namespace
+        </th>
+        <th>
+            Mask Length
+        </th>
+        <th>
+            Tenant
+        </th>
+        <th>
+            Status
+        </th>
+        <th>
+            Role
+        </th>
+        <th>
+            Description
+        </th>
+    </thead>
+    <tbody>
+    {% for ip in queryset %}
+            <tr>
+                <td style="display:none">
+                    <input checked="true" type="hidden" id="pk" name="pk" value="{{ip.pk}}">
+                    <label for="pk">{{ip.pk}}</label>
+                </td>
+                <td>
+                    <input checked="true" type="hidden" id="address" name="address" value="{{ip.address}}">
+                    <label for="address">{{ip.address}}</label>
+                </td>
+                <td>
+                    <input type="radio" id="namespace" name="namespace" value="{{ip.parent.namespace.pk}}">
+                    <label for="namespace">{{ip.parent.namespace | placeholder}}</label>
+                </td>
+                <td>
+                    <input type="radio" id="mask_length" name="mask_length" value="{{ip.mask_length}}">
+                    <label for="mask_length">{{ip.mask_length | placeholder }}</label>
+                </td>
+                <td>
+                    <input type="radio" id="tenant" name="tenant" value="{{ip.tenant.pk}}">
+                    <label for="tenant">{{ip.tenant | placeholder}}</label>
+                </td>
+                <td>
+                    <input type="radio" id="status" name="status" value="{{ip.status.pk}}">
+                    <label for="status">{{ip.status | placeholder}}</label>
+                </td>
+                <td>
+                    <input type="radio" id="role" name="role" value="{{ip.role.pk}}">
+                    <label for="role">{{ip.role | placeholder}}</label>
+                </td>
+                <td>
+                    <input type="radio" id="description" name="description" value="{{ip.description}}">
+                    <label for="description">{{ip.description | placeholder }}</label>
+                </td>
+            </tr>
+    {% endfor %}
+    </tbody>    
+</table>
+<div class="row">
+    <div class="pull-right">
+        {% block buttons %}
+            <button type="submit" name="_merge" class="btn btn-primary">Merge and Go to the Next Duplicates</button>
+            <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+        {% endblock %}
+    </div>
+</div>
+</form>
+{% endblock %}

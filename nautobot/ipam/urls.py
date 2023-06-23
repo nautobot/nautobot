@@ -186,6 +186,11 @@ urlpatterns = [
         name="ipaddress_bulk_edit",
     ),
     path(
+        "ip-addresses/merge/",
+        views.IPAddressMergeView.as_view(),
+        name="ipaddress_merge",
+    ),
+    path(
         "ip-addresses/delete/",
         views.IPAddressBulkDeleteView.as_view(),
         name="ipaddress_bulk_delete",

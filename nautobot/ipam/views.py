@@ -1,11 +1,22 @@
-from django.db.models import Prefetch
+import logging
+from django.contrib import messages
+from django.db import transaction
+from django.db import models
+from django.db.models import Prefetch, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
+from django.views.generic import View
 from django_tables2 import RequestConfig
 
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import handle_protectederror
 from nautobot.dcim.models import Device, Interface
+from nautobot.extras.models import Status, Role
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
 from nautobot.ipam.api import serializers
@@ -563,6 +574,11 @@ class IPAddressListView(generic.ObjectListView):
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
+    template_name = "ipam/ipaddress_list.html"
+
+    def extra_context(self):
+        merge_url = "ipam:ipaddress_merge"
+        return {"merge_url": merge_url}
 
 
 class IPAddressView(generic.ObjectView):
@@ -659,6 +675,91 @@ class IPAddressAssignView(generic.ObjectView):
                 "return_url": request.GET.get("return_url"),
             },
         )
+
+
+class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermissionRequiredMixin, View):
+    queryset = IPAddress.objects.all()
+
+    def get_required_permission(self):
+        return get_permission_for_model(self.queryset.model, "change")
+
+    def get(self, request):
+        host_values = self.queryset.values("host").order_by().annotate(count=models.Count("host")).filter(count__gt=1)
+        if host_values:
+            item = host_values[0]
+            queryset = self.queryset.filter(host__in=[item["host"]])
+            return render(
+                request=request,
+                template_name="ipam/ipaddress_merge.html",
+                context={
+                    "queryset": queryset,
+                    "return_url": self.get_return_url(request),
+                },
+            )
+        else:
+            msg = "No duplicate IPs found."
+            messages.warning(request, msg)
+            return redirect(self.get_return_url(request))
+
+    def post(self, request):
+        logger = logging.getLogger(__name__)
+        collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
+        with transaction.atomic():
+            try:
+                _, deleted_info = collapsed_ips.delete()
+                deleted_count = deleted_info[IPAddress._meta.label]
+            except ProtectedError as e:
+                logger.info("Caught ProtectedError while attempting to delete objects")
+                handle_protectederror(collapsed_ips, request, e)
+                return redirect(self.get_return_url(request))
+            merged_attributes = request.POST
+
+            if merged_attributes.get("namespace"):
+                namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
+            else:
+                namespace = None
+            if merged_attributes.get("tenant"):
+                tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
+            else:
+                tenant = None
+            if merged_attributes.get("status"):
+                status = Status.objects.get(pk=merged_attributes.get("status"))
+            else:
+                status = None
+            if merged_attributes.get("role"):
+                role = Role.objects.get(pk=merged_attributes.get("role"))
+            else:
+                role = None
+            merged_ip = IPAddress.objects.create(
+                address=merged_attributes.getlist("address")[0],
+                mask_length=merged_attributes.get("mask_length"),
+                namespace=namespace,
+                tenant=tenant,
+                status=status,
+                role=role,
+                description=merged_attributes.get("description"),
+            )
+            msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name}"
+            if hasattr(merged_ip, "get_absolute_url"):
+                msg = f'{msg} into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
+            else:
+                msg = f"{msg} into {escape(merged_ip)}"
+            logger.info(msg)
+            messages.success(request, mark_safe(msg))
+        host_values = self.queryset.values("host").order_by().annotate(count=models.Count("host")).filter(count__gt=1)
+        if host_values:
+            item = host_values[0]
+            queryset = self.queryset.filter(host__in=[item["host"]])
+            return render(
+                request=request,
+                template_name="ipam/ipaddress_merge.html",
+                context={
+                    "queryset": queryset,
+                    "return_url": self.get_return_url(request),
+                },
+            )
+        else:
+            return redirect(self.get_return_url(request))
 
 
 class IPAddressDeleteView(generic.ObjectDeleteView):
