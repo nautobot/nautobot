@@ -1,0 +1,2 @@
+Removed problematic guidance to use `--natural-primary` flag when running `nautobot-server dumpdata`.
+Added guidance to run `nautobot-server trace_paths` after `nautobot-server loaddata`.

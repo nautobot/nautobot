@@ -9,15 +9,17 @@ In your existing installation of Nautobot with PostgreSQL, run the following com
 ```no-highlight
 nautobot-server dumpdata \
     --natural-foreign \
-    --natural-primary \
-    --exclude contenttypes \
     --exclude auth.permission \
+    --exclude contenttypes \
     --exclude django_rq \
     --format json \
     --indent 2 \
     --traceback \
     > nautobot_dump.json
 ```
+
++/- 1.5.22
+    - We do not recommend at this time using `--natural-primary` as this can result in inconsistent or incorrect data for data models that use GenericForeignKeys, such as `Cable`, `Note`, `ObjectChange`, and `Tag`.
 
 This will result in a file named `nautobot_dump.json`.
 
@@ -50,7 +52,7 @@ With Nautobot pointing to the MySQL database (we recommend creating a new Nautob
 nautobot-server migrate
 ```
 
-## Remove the auto-populated Status records from the MySQL database
+## Remove auto-populated records from the MySQL database
 
 A side effect of the `nautobot-server migrate` command is that it will populate the `Status` table with a number of predefined records. This is normally useful for getting started quickly with Nautobot, but since we're going to be importing data from our other database, these records will likely conflict with the records to be imported. Therefore we need to remove them, using the `nautobot-server nbshell` command in our MySQL instance of Nautobot (`(nautobot-mysql) $` shell prompt):
 
@@ -80,3 +82,11 @@ nautobot-server loaddata --traceback nautobot_dump.json
 ```
 
 Assuming that the command ran to completion with no errors, you should now have a fully populated clone of your original database in MySQL.
+
+## Rebuild cached cable path traces
+
+Because cable path traces contain cached data which includes denormalized references to other database objects, it's possible that this cached data will be inaccurate after doing a `loaddata`. Fortunately there is [a `nautobot-server` command](../administration/nautobot-server.md#trace_paths) to force rebuilding of these caches, and we recommend doing so after the import is completed:
+
+```no-highlight
+nautobot-server trace_paths --force --no-input
+```
