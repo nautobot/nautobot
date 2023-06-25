@@ -8,22 +8,34 @@ class NavBarTestCase(SeleniumTestCase):
 
     fixtures = ["user-data.json"]
     navbar = {
-        "Inventory": {
-            "Organization": {
-                "Locations": {
-                    "permission": "dcim.view_location",
+        "Organization": {
+            "Sites": {
+                "Sites": {
+                    "permission": "dcim.view_site",
+                    "buttons": ["Add", "Import"],
+                },
+                "Regions": {
+                    "permission": "dcim.view_region",
+                    "buttons": ["Add", "Import"],
+                },
+            },
+            "Tags": {
+                "Tags": {
+                    "permission": "extras.view_tag",
+                    "buttons": ["Add", "Import"],
                 },
             },
         },
-        # don't use "Networks" here as the underspecified xpaths below will be fooled by DCIM "Provider Networks"
-        "Automation": {
-            "Extensibility": {
-                "Webhooks": {
-                    "permission": "extras.view_webhook",
+        "Extensibility": {
+            "Data Management": {
+                "Relationships": {
+                    "permission": "extras.view_relationship",
+                    "buttons": [
+                        "Add",
+                    ],
                 },
             },
         },
-        # don't use "Platform" here as the underspecified xpaths below will be fooled by DCIM "Platforms"
     }
 
     def setUp(self):

@@ -591,7 +591,8 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
     """
 
     @property
-    def initial_dict(self):
+    def initial_dict(self) -> dict:
+        """Attributes to be stored when adding this item to the nav menu data for the first time."""
         return {
             "link": self.link,
             "icon_class": self.icon_class,
@@ -602,7 +603,8 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
         }
 
     @property
-    def fixed_fields(self):
+    def fixed_fields(self) -> tuple:
+        """Tuple of (name, attribute) entries describing fields that may not be altered after declaration."""
         return (
             ("button_class", self.button_class),
             ("icon_class", self.icon_class),

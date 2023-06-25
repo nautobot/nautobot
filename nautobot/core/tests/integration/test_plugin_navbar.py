@@ -14,21 +14,47 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
     fixtures = ["user-data.json"]
     navbar = {
-        "Inventory": {
-            "Example App": {
+        "Example Menu": {
+            "Example Group 1": {
                 "Example Model": {
                     "permission": "example_plugin.view_examplemodel",
+                    "buttons": ["Add", "Import"],
                 },
             },
+        },
+        "Circuits": {
             "Circuits": {
                 "Circuits": {
                     "permission": "circuits.view_circuit",
+                    "buttons": ["Add", "Import"],
                 },
-                "Circuit Types": {
+                "Circuit Type": {
                     "permission": "circuits.view_circuittype",
+                    "buttons": ["Add", "Import"],
                 },
+            },
+            "Example Circuit Group": {
+                "Example Model": {
+                    "permission": "example_plugin.view_examplemodel",
+                    "buttons": ["Add", "Import"],
+                },
+            },
+            "Providers": {
                 "Providers": {
                     "permission": "circuits.view_provider",
+                    "buttons": ["Add", "Import"],
+                },
+            },
+        },
+        "Plugins": {
+            "Example Nautobot App": {
+                "Models": {
+                    "permission": "example_plugin.view_examplemodel",
+                    "buttons": ["Add a new example model", "Import example models"],
+                },
+                "Other Models": {
+                    "permission": "example_plugin.view_examplemodel",
+                    "buttons": [],
                 },
             },
         },

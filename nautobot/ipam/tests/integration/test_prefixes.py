@@ -31,8 +31,7 @@ class PrefixHierarchyTest(SeleniumTestCase):
 
         # Navigate to Prefix list view
         self.browser.visit(self.live_server_url)
-        # find_by_partial_text finds both Inventory > Provider Networks as well as the desired Networks top-level menu.
-        self.browser.links.find_by_partial_text("Networks")[1].click()
+        self.browser.links.find_by_partial_text("IPAM").click()
         self.browser.links.find_by_partial_text("Prefixes").click()
 
         self.assertEqual(len(self.browser.find_by_tag("tr")[1].find_by_text("10.0.0.0/16")), 1)  # 10.0.0.0/16 is first
