@@ -1,0 +1,1 @@
+Added a warning notifying users that per_page on a list page exceeds the max_page set.

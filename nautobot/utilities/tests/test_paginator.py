@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from constance.test import override_config
 
+from nautobot.circuits.models import Provider
 from nautobot.dcim.models import Site
 from nautobot.utilities.paginator import get_paginate_count
 from nautobot.utilities.testing import TestCase
@@ -78,3 +79,28 @@ class PaginatorTestCase(TestCase):
             self.assertHttpStatus(response, 200)
             self.assertEqual(response.context["paginator"].per_page, 10)
             self.assertEqual(len(response.context["table"].page), 10)
+        with self.subTest("query parameter with per_page exceeding max page, shows warning"):
+            url = reverse("dcim:location_list")
+            self.add_permissions("dcim.view_location")
+            response = self.client.get(url, {"per_page": 20})
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(response.context["paginator"].per_page, 10)
+            self.assertEqual(len(response.context["table"].page), 10)
+            warning_message = (
+                "Pagination `per_page` has exceeded the maximum page size of 10, triggering a return of 10 items."
+            )
+            self.assertIn(warning_message, response.content.decode(response.charset))
+
+            # Assert Error Message in NautobotUIViewSet
+            providers = (Provider(name=f"p-{x}", slug=f"p-{x}") for x in range(20))
+            Provider.objects.bulk_create(providers)
+            url = reverse("circuits:provider_list")
+            self.add_permissions("circuits.view_provider")
+            response = self.client.get(url, {"per_page": 20})
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(response.context["paginator"].per_page, 10)
+            self.assertEqual(len(response.context["table"].page), 10)
+            warning_message = (
+                "Pagination `per_page` has exceeded the maximum page size of 10, triggering a return of 10 items."
+            )
+            self.assertIn(warning_message, response.content.decode(response.charset))
