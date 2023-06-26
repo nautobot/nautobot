@@ -515,7 +515,7 @@ def register_plugin_menu_items(section_name, menu_items):
         if isinstance(menu_item, NavMenuTab):
             nav_menu_items.add(menu_item)
         else:
-            raise TypeError("Top level objects need to be an instance of NavMenuTab: {menu_item}")
+            raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {menu_item}")
 
     register_menu_items(nav_menu_items)
 
