@@ -80,6 +80,7 @@ class PaginatorTestCase(TestCase):
             self.assertEqual(len(response.context["table"].page), 10)
         with self.subTest("global config PAGINATE_COUNT=50 returns 10 rows"):
             self.user.clear_config("pagination.per_page", commit=True)
+            # Asserting `max_page` restriction on `NautobotUIViewSet`.
             response = self.client.get(reverse("circuits:provider_list"))
             self.assertHttpStatus(response, 200)
             self.assertEqual(response.context["paginator"].per_page, 10)
