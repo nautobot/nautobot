@@ -19,7 +19,9 @@ export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
 
     return (
         <Flex align="center">
-            <Text color="gray-3" pr="sm">Show</Text>
+            <Text color="gray-3" pr="sm">
+                Show
+            </Text>
             <Select
                 value={
                     searchParams.get("limit") ? searchParams.get("limit") : "50"
@@ -37,7 +39,9 @@ export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
                 <option value="200">200</option>
                 <option value="500">500</option>
             </Select>
-            <Text color="gray-3" pl="sm" whiteSpace="nowrap">rows per page</Text>
+            <Text color="gray-3" pl="sm" whiteSpace="nowrap">
+                rows per page
+            </Text>
         </Flex>
     );
 }

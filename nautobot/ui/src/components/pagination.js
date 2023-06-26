@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { usePagination } from "./usePagination";
 import { useSearchParams } from "react-router-dom";
-import { Box, Flex, FormControl, FormErrorMessage, Input, Text } from "@nautobot/nautobot-ui";
+import {
+    Box,
+    Flex,
+    FormControl,
+    FormErrorMessage,
+    Input,
+    Text,
+} from "@nautobot/nautobot-ui";
 import { IconButton } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
@@ -34,7 +41,7 @@ export default function Pagination({
     const [pageNumber, setPageNumber] = useState(trueCurrentPage);
     // State to track the page number form control input validity
     const [isInputInvalid, setIsInputInvalid] = useState(false);
-    
+
     // Keeps the pageNumber var updated to trueCurrentPage (i.e. if trueCurrentPage changes via arrow click)
     useEffect(() => {
         setPageNumber(trueCurrentPage);
@@ -44,7 +51,11 @@ export default function Pagination({
     function handleOnBlur(event) {
         const enteredValue = parseInt(event.target.value);
         // Checks that the entered value is a number and within the valid page range
-        if (!isNaN(enteredValue) && enteredValue >= firstPage && enteredValue <= lastPage) {
+        if (
+            !isNaN(enteredValue) &&
+            enteredValue >= firstPage &&
+            enteredValue <= lastPage
+        ) {
             setPageNumber(enteredValue);
             setIsInputInvalid(false);
 
@@ -55,9 +66,9 @@ export default function Pagination({
 
             // Reset input value
             event.target.value = "";
-        } 
+        }
         // Checks if nothing is entered into input and, if so, do nothing
-        else if (event.target.value == "") {
+        else if (event.target.value === "") {
             setIsInputInvalid(false);
         }
         // Otherwise, mark input as invalid
@@ -99,7 +110,16 @@ export default function Pagination({
 
     return (
         <Flex align="center">
-            <Box color="gray-3" pl="xs" pr="xs" mr="lg" fontSize="md" border='1px' borderColor='gray-1' borderRadius="sm">
+            <Box
+                color="gray-3"
+                pl="xs"
+                pr="xs"
+                mr="lg"
+                fontSize="md"
+                border="1px"
+                borderColor="gray-1"
+                borderRadius="sm"
+            >
                 {totalDataCount} rows
             </Box>
             <Text color="gray-3" whiteSpace="nowrap">
@@ -114,13 +134,18 @@ export default function Pagination({
                     pl="xs"
                     _hover={{
                         transform: "scale(1.2)",
-                        color: "#007DFF"
+                        color: "#007DFF",
                     }}
                 />
             ) : (
-                <Box pl="xs"/>
+                <Box pl="xs" />
             )}
-            <FormControl isInvalid={isInputInvalid} align="center" pl="xs" pr="xs">
+            <FormControl
+                isInvalid={isInputInvalid}
+                align="center"
+                pl="xs"
+                pr="xs"
+            >
                 <Input
                     type="number"
                     placeholder={pageNumber}
@@ -141,11 +166,11 @@ export default function Pagination({
                     pr="xs"
                     _hover={{
                         transform: "scale(1.2)",
-                        color: "#007DFF"
+                        color: "#007DFF",
                     }}
                 />
             ) : (
-                <Box pr="xs"/>
+                <Box pr="xs" />
             )}
             <Text color="gray-3" whiteSpace="nowrap">
                 out of {lastPage}
