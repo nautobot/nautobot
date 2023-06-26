@@ -65,7 +65,7 @@ class PaginatorTestCase(TestCase):
             self.assertHttpStatus(response, 200)
             self.assertEqual(response.context["paginator"].per_page, 10)
             self.assertEqual(len(response.context["table"].page), 10)
-            warning_message = "Requested `per_page`is too large. No more than 10 items may be displayed at a time."
+            warning_message = 'Requested "per_page" is too large. No more than 10 items may be displayed at a time.'
             self.assertIn(warning_message, response.content.decode(response.charset))
         with self.subTest("query parameter per_page=5 returns 5 rows"):
             response = self.client.get(url, {"per_page": 5})
@@ -84,5 +84,5 @@ class PaginatorTestCase(TestCase):
             self.assertHttpStatus(response, 200)
             self.assertEqual(response.context["paginator"].per_page, 10)
             self.assertEqual(len(response.context["table"].page), 10)
-            warning_message = "Requested `per_page` is too large. No more than 10 items may be displayed at a time."
+            warning_message = 'Requested "per_page" is too large. No more than 10 items may be displayed at a time.'
             self.assertIn(warning_message, response.content.decode(response.charset).replace("\n", ""))

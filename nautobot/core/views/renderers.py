@@ -94,7 +94,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             if paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
-                    f"Requested `per_page` is too large. No more than {max_page_size} items may be displayed at a time.",
+                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
                 )
             return RequestConfig(request, paginate).configure(table)
         else:
