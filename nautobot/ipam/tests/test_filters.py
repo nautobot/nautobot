@@ -289,13 +289,13 @@ class PrefixFilterCustomDataTestCase(TestCase):
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), count)
 
     def test_ip_version(self):
-        params = {"ip_version": ["6"]}
+        params = {"ip_version": "6"}
         ipv6_prefixes = self.queryset.filter(ip_version=6)
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
-        params = {"ip_version": ["4"]}
+        params = {"ip_version": "4"}
         ipv4_prefixes = self.queryset.filter(ip_version=4)
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv4_prefixes)
-        params = {"ip_version": [""]}
+        params = {"ip_version": ""}
         all_prefixes = self.queryset.all()
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
 
