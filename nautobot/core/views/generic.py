@@ -323,11 +323,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
-            per_page = request.GET.get("per_page") or request.user.get_config(
-                "pagination.per_page", get_settings_or_config("PAGINATE_COUNT")
-            )
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
-            if int(per_page) > int(max_page_size):
+            if paginate["per_page"] > max_page_size:
                 messages.error(
                     request,
                     f"Pagination `per_page` has exceeded the maximum page size of {max_page_size}, triggering a return of {max_page_size} items.",
