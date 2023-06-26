@@ -696,11 +696,10 @@ def hyperlinked_object_with_color(obj):
 
 
 @register.filter()
-def get_tags_uuids(obj):
-    """Return all tags uuids as a string separated by `,`"""
+def get_obj_uuids(obj):
+    """Return all obj uuids as a string separated by `,`"""
     result = []
     if obj:
         for pk in obj.values_list("pk", flat=True):
             result.append(str(pk))
-        return ",".join(result)
-    return ""
+    return ",".join(result)

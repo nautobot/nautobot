@@ -457,7 +457,17 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     class Meta(BaseTable.Meta):
         model = IPAddress
-        fields = ("pk", "address", "type", "status", "role", "tenant", "dns_name", "description", "parent__namespace")
+        fields = (
+            "pk",
+            "address",
+            "type",
+            "status",
+            "role",
+            "tenant",
+            "dns_name",
+            "description",
+            "parent__namespace",
+        )
         row_attrs = {
             "class": lambda record: "success" if not isinstance(record, IPAddress) else "",
         }

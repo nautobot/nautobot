@@ -27,16 +27,16 @@
                 <table class="table table-hover table-headings">
                 <thead>
                     <th>
-                        IP Address
-                    </th>
-                    <th>
-                        Namespace
+                        Host
                     </th>
                     <th>
                         Mask Length
                     </th>
                     <th>
-                        Tenant
+                        Namespace
+                    </th>
+                    <th>
+                        Type
                     </th>
                     <th>
                         Status
@@ -45,7 +45,16 @@
                         Role
                     </th>
                     <th>
+                        DNS Name
+                    </th>
+                    <th>
                         Description
+                    </th>
+                    <th>
+                        Tenant
+                    </th>
+                    <th>
+                        NAT IP (Inside)
                     </th>
                     <th>
                         Tags
@@ -59,40 +68,52 @@
                                 <label for="pk">{{ip.pk}}</label>
                             </td>
                             <td>
-                                <input checked="true" type="hidden" id="address" name="address" value="{{ip.address}}">
-                                <label for="address">{{ip.address}}</label>
-                            </td>
-                            <td>
-                                <input type="radio" id="namespace" name="namespace" value="{{ip.parent.namespace.pk}}" required>
-                                <label for="namespace">{{ip.parent.namespace | placeholder}}</label>
+                                <input checked="true" type="hidden" id="host" name="host" value="{{ip.host}}">
+                                <label for="host">{{ip.host}}</label>
                             </td>
                             <td>
                                 <input type="radio" id="mask_length" name="mask_length" value="{{ip.mask_length}}" required>
                                 <label for="mask_length">{{ip.mask_length | placeholder }}</label>
                             </td>
                             <td>
-                                <input type="radio" id="tenant" name="tenant" value="{{ip.tenant.pk}}" required>
-                                <label for="tenant">{{ip.tenant | placeholder}}</label>
+                                <input type="radio" id="namespace" name="namespace" value="{{ip.parent.namespace.pk}}" required>
+                                <label for="namespace">{{ip.parent.namespace | hyperlinked_object }}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="type" name="type" value="{{ip.type}}" required>
+                                <label for="type">{{ip.type}}</label>
                             </td>
                             <td>
                                 <input type="radio" id="status" name="status" value="{{ip.status.pk}}" required>
-                                <label for="status">{{ip.status | placeholder}}</label>
+                                <label for="status">{{ip.status | hyperlinked_object}}</label>
                             </td>
                             <td>
                                 <input type="radio" id="role" name="role" value="{{ip.role.pk}}" required>
-                                <label for="role">{{ip.role | placeholder}}</label>
+                                <label for="role">{{ip.role | hyperlinked_object}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="dns_name" name="dns_name" value="{{ip.dns_name}}" required>
+                                <label for="dns_name">{{ip.dns_name | placeholder}}</label>
                             </td>
                             <td>
                                 <input type="radio" id="description" name="description" value="{{ip.description}}" required>
                                 <label for="description">{{ip.description | placeholder }}</label>
                             </td>
                             <td>
-                                <input type="radio" id="tags" name="tags" value="{{ip.tags.all | get_tags_uuids}}">
+                                <input type="radio" id="tenant" name="tenant" value="{{ip.tenant.pk}}" required>
+                                <label for="tenant">{{ip.tenant | hyperlinked_object}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="nat_inside" name="nat_inside" value="{{ip.nat_inside.pk}}" required>
+                                <label for="nat_inside">{{ip.nat_inside | hyperlinked_object}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="tags" name="tags" value="{{ip.tags.all | get_obj_uuids}}">
                                 <label for="tags">
                                     {% for tag in ip.tags.all %}
                                         {% tag tag url %}
                                     {% empty %}
-                                        <span class="text-muted">No tags assigned</span>
+                                        {{ ip.tags.all | placeholder }}
                                     {% endfor %}
                                 </label>
                             </td>

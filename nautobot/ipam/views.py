@@ -576,10 +576,6 @@ class IPAddressListView(generic.ObjectListView):
     table = tables.IPAddressDetailTable
     template_name = "ipam/ipaddress_list.html"
 
-    def extra_context(self):
-        merge_url = "ipam:ipaddress_merge"
-        return {"merge_url": merge_url}
-
 
 class IPAddressView(generic.ObjectView):
     queryset = IPAddress.objects.select_related("tenant", "status", "role")
@@ -714,18 +710,12 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                 return redirect(self.get_return_url(request))
             merged_attributes = request.POST
 
-            if merged_attributes.get("namespace"):
-                namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
-            else:
-                namespace = None
+            namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
+            status = Status.objects.get(pk=merged_attributes.get("status"))
             if merged_attributes.get("tenant"):
                 tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
             else:
                 tenant = None
-            if merged_attributes.get("status"):
-                status = Status.objects.get(pk=merged_attributes.get("status"))
-            else:
-                status = None
             if merged_attributes.get("role"):
                 role = Role.objects.get(pk=merged_attributes.get("role"))
             else:
@@ -734,23 +724,26 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                 tag_pk_list = merged_attributes.get("tags").split(",")
                 tags = Tag.objects.filter(pk__in=tag_pk_list)
             else:
-                tags = None
+                tags = []
+            if merged_attributes.get("nat_inside"):
+                nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
+            else:
+                nat_inside = None
             merged_ip = IPAddress.objects.create(
-                address=merged_attributes.getlist("address")[0],
-                mask_length=merged_attributes.get("mask_length"),
+                address=merged_attributes.getlist("host")[0],
                 namespace=namespace,
-                tenant=tenant,
+                type=merged_attributes.get("type"),
                 status=status,
                 role=role,
+                dns_name=merged_attributes.get("dns_name", ""),
                 description=merged_attributes.get("description"),
+                mask_length=merged_attributes.get("mask_length"),
+                tenant=tenant,
+                nat_inside=nat_inside,
             )
-            if tags:
-                merged_ip.tags.set(tags)
+            merged_ip.tags.set(tags)
             msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name}"
-            if hasattr(merged_ip, "get_absolute_url"):
-                msg = f'{msg} into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
-            else:
-                msg = f"{msg} into {escape(merged_ip)}"
+            msg = f'{msg} into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
             logger.info(msg)
             messages.success(request, mark_safe(msg))
         host_values = self.queryset.values("host").order_by().annotate(count=models.Count("host")).filter(count__gt=1)

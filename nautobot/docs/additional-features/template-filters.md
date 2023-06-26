@@ -87,6 +87,15 @@ Access a specific item/key in a dictionary.
 {{ labels|get_item(key) }}
 ```
 
+### get_obj_uuids
+
+Return all the object uuids as a string separated by a comma.
+
+```django
+# Django Template
+{{ ip.tags.all | get_obj_uuids }}
+```
+
 ### has_one_or_more_perms
 
 Return True if the user has *at least one* of the permissions in the list.
