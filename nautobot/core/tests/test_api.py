@@ -750,88 +750,106 @@ class APIOrderingTestCase(testing.APITestCase):
 class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
     def test_get_menu(self):
         """Asset response from new ui nav menu api returns a well formatted registry["new_ui_nav_menu"] expected by nautobot-ui."""
-
-        # This is a perfect example of how registry["new_ui_nav_menu"] is structured
-        mock_nav_menu_registry = {
+        url = reverse("ui-api:get-menu")
+        response = self.client.get(url, **self.header)
+        expected_response = {
             "Inventory": {
-                "weight": 1000,
-                "data": {
-                    "Devices": {
-                        "weight": 100,
-                        "data": {
-                            "Devices": {
-                                "name": "Devices",
-                                "weight": 100,
-                                "permissions": ["dcim.view_device"],
-                                "data": "/dcim/devices/",
-                            },
-                            "Connections": {
-                                "weight": 700,
-                                "data": {
-                                    "Cables": {
-                                        "name": "Cables",
-                                        "weight": 100,
-                                        "permissions": ["dcim.view_cable"],
-                                        "data": "/dcim/cables/",
-                                    },
-                                    "Console Connections": {
-                                        "name": "Console Connections",
-                                        "weight": 200,
-                                        "permissions": ["dcim.view_consoleport", "dcim.view_consoleserverport"],
-                                        "data": "/dcim/console-connections/",
-                                    },
-                                },
-                            },
-                        },
+                "Devices": {
+                    "Devices": "/dcim/devices/",
+                    "Device Types": "/dcim/device-types/",
+                    "Platforms": "/dcim/platforms/",
+                    "Manufacturers": "/dcim/manufacturers/",
+                    "Virtual Chassis": "/dcim/virtual-chassis/",
+                    "Device Redundancy Groups": "/dcim/device-redundancy-groups/",
+                    "Connections": {
+                        "Cables": "/dcim/cables/",
+                        "Console Connections": "/dcim/console-connections/",
+                        "Power Connections": "/dcim/power-connections/",
+                        "Interface Connections": "/dcim/interface-connections/",
                     },
-                    "Organization": {
-                        "weight": 200,
-                        "data": {
-                            "Locations": {
-                                "name": "Locations",
-                                "weight": 100,
-                                "permissions": ["dcim.view_location"],
-                                "data": "/dcim/locations/",
-                            },
-                            "Location Types": {
-                                "name": "Location Types",
-                                "weight": 200,
-                                "permissions": ["dcim.view_locationtype"],
-                                "data": "/dcim/location-types/",
-                            },
-                        },
+                    "Components": {
+                        "Interfaces": "/dcim/interfaces/",
+                        "Front Ports": "/dcim/front-ports/",
+                        "Rear Ports": "/dcim/rear-ports/",
+                        "Console Ports": "/dcim/console-ports/",
+                        "Console Server Ports": "/dcim/console-server-ports/",
+                        "Power Ports": "/dcim/power-ports/",
+                        "Power Outlets": "/dcim/power-outlets/",
+                        "Device Bays": "/dcim/device-bays/",
+                        "Inventory Items": "/dcim/inventory-items/",
                     },
+                    "Dynamic Groups": "/extras/dynamic-groups/",
+                    "Racks": "/dcim/racks/",
+                    "Rack Groups": "/dcim/rack-groups/",
+                    "Rack Reservations": "/dcim/rack-reservations/",
+                    "Rack Elevations": "/dcim/rack-elevations/",
+                },
+                "Organization": {"Locations": "/dcim/locations/", "Location Types": "/dcim/location-types/"},
+                "Tenancy": {"Tenants": "/tenancy/tenants/", "Tenant Groups": "/tenancy/tenant-groups/"},
+                "Circuits": {
+                    "Circuits": "/circuits/circuits/",
+                    "Circuit Terminations": "/circuits/circuit-terminations/",
+                    "Circuit Types": "/circuits/circuit-types/",
+                    "Providers": "/circuits/providers/",
+                    "Provider Networks": "/circuits/provider-networks/",
+                },
+                "Power": {"Power Feeds": "/dcim/power-feeds/", "Power Panels": "/dcim/power-panels/"},
+                "Virtualization": {
+                    "Virtual Machines": "/virtualization/virtual-machines/",
+                    "VM Interfaces": "/virtualization/interfaces/",
+                    "Clusters": "/virtualization/clusters/",
+                    "Cluster Types": "/virtualization/cluster-types/",
+                    "Cluster Groups": "/virtualization/cluster-groups/",
                 },
             },
-            "Security": {
-                "weight": 1000,
-                "data": {
-                    "Secrets": {
-                        "weight": 500,
-                        "data": {
-                            "Secrets": {
-                                "name": "Secrets",
-                                "weight": 100,
-                                "permissions": ["extras.view_secret"],
-                                "data": "/extras/secrets/",
-                            },
-                        },
-                    }
+            "Networks": {
+                "IP Management": {
+                    "IP Addresses": "/ipam/ip-addresses/",
+                    "Prefixes": "/ipam/prefixes/",
+                    "RIRs": "/ipam/rirs/",
+                },
+                "Layer 2 / Switching": {"VLANs": "/ipam/vlans/", "VLAN Groups": "/ipam/vlan-groups/"},
+                "Layer 3 / Routing": {
+                    "Namespaces": "/ipam/namespaces/",
+                    "VRFs": "/ipam/vrfs/",
+                    "Route Targets": "/ipam/route-targets/",
+                },
+                "Services": {"Services": "/ipam/services/"},
+                "Config Contexts": {
+                    "Config Contexts": "/extras/config-contexts/",
+                    "Config Context Schemas": "/extras/config-context-schemas/",
+                },
+            },
+            "Security": {"Secrets": {"Secrets": "/extras/secrets/", "Secret Groups": "/extras/secrets-groups/"}},
+            "Automation": {
+                "Jobs": {
+                    "Jobs": "/extras/jobs/",
+                    "Job Approval Queue": "/extras/jobs/scheduled-jobs/approval-queue/",
+                    "Scheduled Jobs": "/extras/jobs/scheduled-jobs/",
+                    "Job Results": "/extras/job-results/",
+                    "Job Hooks": "/extras/job-hooks/",
+                    "Job Buttons": "/extras/job-buttons/",
+                },
+                "Extensibility": {
+                    "Webhooks": "/extras/webhooks/",
+                    "GraphQL Queries": "/extras/graphql-queries/",
+                    "Export Templates": "/extras/export-templates/",
+                },
+            },
+            "Platform": {
+                "Platform": {
+                    "Installed Apps": "/plugins/installed-plugins/",
+                    "Git Repositories": "/extras/git-repositories/",
+                },
+                "Governance": {"Change Log": "/extras/object-changes/"},
+                "Reference Data": {"Tags": "/extras/tags/", "Statuses": "/extras/statuses/", "Roles": "/extras/roles/"},
+                "Data Management": {
+                    "Relationships": "/extras/relationships/",
+                    "Computed Fields": "/extras/computed-fields/",
+                    "Custom Fields": "/extras/custom-fields/",
+                    "Custom Links": "/extras/custom-links/",
                 },
             },
         }
-        with patch("nautobot.core.api.views.registry", {"new_ui_nav_menu": mock_nav_menu_registry}):
-            url = reverse("ui-api:get-menu")
-            response = self.client.get(url, **self.header)
-            expected_response = {
-                "Inventory": {
-                    "Devices": {
-                        "Devices": "/dcim/devices/",
-                        "Connections": {"Cables": "/dcim/cables/", "Console Connections": "/dcim/console-connections/"},
-                    },
-                    "Organization": {"Locations": "/dcim/locations/", "Location Types": "/dcim/location-types/"},
-                },
-                "Security": {"Secrets": {"Secrets": "/extras/secrets/"}},
-            }
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data, expected_response)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, expected_response)
