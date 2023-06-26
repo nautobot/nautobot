@@ -1,10 +1,10 @@
 import React from "react";
-import { Box, Text, Select } from "@nautobot/nautobot-ui";
+import { Text, Select } from "@nautobot/nautobot-ui";
+import { Flex } from "@chakra-ui/react";
 import { useSearchParams } from "react-router-dom";
 
 export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
     let [searchParams, setSearchParams] = useSearchParams();
-    let paginator_string = `Showing ${start} - ${end} of ${total_count}`;
     function onPageSizeChange(event) {
         let offset = searchParams.get("offset");
         // Scroll to the top of the ObjectListTable Container on table reload
@@ -19,7 +19,8 @@ export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
     }
 
     return (
-        <Box width="200px" textAlign="right">
+        <Flex align="center">
+            <Text color="gray-3" pr="sm">Show</Text>
             <Select
                 value={
                     searchParams.get("limit") ? searchParams.get("limit") : "50"
@@ -37,7 +38,7 @@ export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
                 <option value="200">200</option>
                 <option value="500">500</option>
             </Select>
-            <Text>{paginator_string}</Text>
-        </Box>
+            <Text color="gray-3" pl="sm" whiteSpace="nowrap">rows per page</Text>
+        </Flex>
     );
 }
