@@ -15,7 +15,7 @@ from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import Status, Role
+from nautobot.extras.models import Role, Status, Tag
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
@@ -730,6 +730,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                 role = Role.objects.get(pk=merged_attributes.get("role"))
             else:
                 role = None
+            if merged_attributes.get("tags"):
+                tag_pk_list = merged_attributes.get("tags").split(",")
+                tags = Tag.objects.filter(pk__in=tag_pk_list)
+            else:
+                tags = None
             merged_ip = IPAddress.objects.create(
                 address=merged_attributes.getlist("address")[0],
                 mask_length=merged_attributes.get("mask_length"),
@@ -739,6 +744,8 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                 role=role,
                 description=merged_attributes.get("description"),
             )
+            if tags:
+                merged_ip.tags.set(tags)
             msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name}"
             if hasattr(merged_ip, "get_absolute_url"):
                 msg = f'{msg} into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'

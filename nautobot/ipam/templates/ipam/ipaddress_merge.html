@@ -47,9 +47,9 @@
                     <th>
                         Description
                     </th>
-                    <!-- <th>
+                    <th>
                         Tags
-                    </th> -->
+                    </th>
                 </thead>
                 <tbody>
                 {% for ip in queryset %}
@@ -86,14 +86,16 @@
                                 <input type="radio" id="description" name="description" value="{{ip.description}}" required>
                                 <label for="description">{{ip.description | placeholder }}</label>
                             </td>
-                            <!-- <td>
-                                <input type="radio" id="tags" name="tags" value="{{ip.tags}}">
+                            <td>
+                                <input type="radio" id="tags" name="tags" value="{{ip.tags.all | get_tags_uuids}}">
                                 <label for="tags">
                                     {% for tag in ip.tags.all %}
-                                        {{ tag }}
+                                        {% tag tag url %}
+                                    {% empty %}
+                                        <span class="text-muted">No tags assigned</span>
                                     {% endfor %}
                                 </label>
-                            </td> -->
+                            </td>
                         </tr>
                 {% endfor %}
                 </tbody>    

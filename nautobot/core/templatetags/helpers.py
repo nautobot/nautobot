@@ -693,3 +693,14 @@ def hyperlinked_object_with_color(obj):
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
     return "—"
+
+
+@register.filter()
+def get_tags_uuids(obj):
+    """Return all tags uuids as a string separated by `,`"""
+    result = []
+    if obj:
+        for pk in obj.values_list("pk", flat=True):
+            result.append(str(pk))
+        return ",".join(result)
+    return ""
