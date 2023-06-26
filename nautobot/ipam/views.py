@@ -680,7 +680,9 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         return get_permission_for_model(self.queryset.model, "change")
 
     def get(self, request):
-        host_values = self.queryset.values("host").order_by().annotate(count=models.Count("host")).filter(count__gt=1)
+        host_values = (
+            self.queryset.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
+        )
         if host_values:
             item = host_values[0]
             queryset = self.queryset.filter(host__in=[item["host"]])
@@ -700,53 +702,61 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
     def post(self, request):
         logger = logging.getLogger(__name__)
         collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
-        with transaction.atomic():
-            try:
-                _, deleted_info = collapsed_ips.delete()
-                deleted_count = deleted_info[IPAddress._meta.label]
-            except ProtectedError as e:
-                logger.info("Caught ProtectedError while attempting to delete objects")
-                handle_protectederror(collapsed_ips, request, e)
-                return redirect(self.get_return_url(request))
-            merged_attributes = request.POST
-
-            namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
-            status = Status.objects.get(pk=merged_attributes.get("status"))
-            if merged_attributes.get("tenant"):
-                tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
-            else:
-                tenant = None
-            if merged_attributes.get("role"):
-                role = Role.objects.get(pk=merged_attributes.get("role"))
-            else:
-                role = None
-            if merged_attributes.get("tags"):
-                tag_pk_list = merged_attributes.get("tags").split(",")
-                tags = Tag.objects.filter(pk__in=tag_pk_list)
-            else:
-                tags = []
-            if merged_attributes.get("nat_inside"):
-                nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
-            else:
-                nat_inside = None
-            merged_ip = IPAddress.objects.create(
-                address=merged_attributes.getlist("host")[0],
-                namespace=namespace,
-                type=merged_attributes.get("type"),
-                status=status,
-                role=role,
-                dns_name=merged_attributes.get("dns_name", ""),
-                description=merged_attributes.get("description"),
-                mask_length=merged_attributes.get("mask_length"),
-                tenant=tenant,
-                nat_inside=nat_inside,
-            )
-            merged_ip.tags.set(tags)
-            msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name}"
-            msg = f'{msg} into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
-            logger.info(msg)
-            messages.success(request, mark_safe(msg))
-        host_values = self.queryset.values("host").order_by().annotate(count=models.Count("host")).filter(count__gt=1)
+        merged_attributes = request.POST
+        if collapsed_ips and "_skip" not in request.POST:
+            with transaction.atomic():
+                namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
+                status = Status.objects.get(pk=merged_attributes.get("status"))
+                if merged_attributes.get("tenant"):
+                    tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
+                else:
+                    tenant = None
+                if merged_attributes.get("role"):
+                    role = Role.objects.get(pk=merged_attributes.get("role"))
+                else:
+                    role = None
+                if merged_attributes.get("tags"):
+                    tag_pk_list = merged_attributes.get("tags").split(",")
+                    tags = Tag.objects.filter(pk__in=tag_pk_list)
+                else:
+                    tags = []
+                if merged_attributes.get("nat_inside"):
+                    nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
+                else:
+                    nat_inside = None
+                merged_ip = collapsed_ips.filter(parent__namespace=namespace)
+                merged_ip.update(
+                    host=merged_attributes.get("host"),
+                    type=merged_attributes.get("type"),
+                    status=status,
+                    role=role,
+                    dns_name=merged_attributes.get("dns_name", ""),
+                    description=merged_attributes.get("description"),
+                    mask_length=merged_attributes.get("mask_length"),
+                    tenant=tenant,
+                    nat_inside=nat_inside,
+                )
+                merged_ip = merged_ip.first()
+                merged_ip.tags.set(tags)
+                collapsed_ips = collapsed_ips.exclude(pk=merged_ip.pk)
+                try:
+                    _, deleted_info = collapsed_ips.delete()
+                    deleted_count = deleted_info[IPAddress._meta.label]
+                except ProtectedError as e:
+                    logger.info("Caught ProtectedError while attempting to delete objects")
+                    handle_protectederror(collapsed_ips, request, e)
+                    return redirect(self.get_return_url(request))
+                msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name}"
+                msg = f'{msg} into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
+                logger.info(msg)
+                messages.success(request, mark_safe(msg))
+        host_values = (
+            self.queryset.filter(host__gt=merged_attributes.get("host"))
+            .values("host")
+            .order_by("host")
+            .annotate(count=models.Count("host"))
+            .filter(count__gt=1)
+        )
         if host_values:
             item = host_values[0]
             queryset = self.queryset.filter(host__in=[item["host"]])
@@ -759,6 +769,8 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                 },
             )
         else:
+            msg = "No duplicate IPs found."
+            messages.warning(request, msg)
             return redirect(self.get_return_url(request))
 
 
