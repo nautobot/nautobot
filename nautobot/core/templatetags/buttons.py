@@ -1,4 +1,5 @@
 from django import template
+from django.conf import settings
 from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.views import utils as views_utils
@@ -117,12 +118,15 @@ def export_button(context, content_type=None):
             export_url = reverse(lookup.get_route_for_model(content_type.model_class(), "list", api=True))
         except NoReverseMatch:
             export_url = None
+        default_filename = f"{settings.BRANDING_PREPENDED_FILENAME}{content_type.model}_data.csv"
     else:
         export_templates = []
         export_url = None
+        default_filename = ""
 
     return {
         "export_url": export_url,
+        "default_filename": default_filename,
         "url_params": context["request"].GET,
         "export_templates": export_templates,
     }
