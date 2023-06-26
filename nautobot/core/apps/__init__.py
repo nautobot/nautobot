@@ -266,16 +266,6 @@ class NavMenuBase(ABC):  # replaces PermissionsMixin
         return ()
 
 
-class NewUINavMenuBase(ABC):  # replaces PermissionsMixin
-    """Base class for new ui navigation classes."""
-
-    @property
-    @abstractmethod
-    def value(self):  # to be implemented by each subclass
-        """Attributes to be stored when adding this item to the nav menu data for the first time."""
-        return {}
-
-
 class PermissionsMixin:
     """Ensure permissions through init."""
 
@@ -673,6 +663,11 @@ class NavMenuImportButton(NavMenuButton):
 
 
 class NavContext(NavMenuBase):
+    """Ths class represents a navigation menu tab for new ui.
+
+    Groups are each specified as a list of NavGrouping instances.
+    """
+
     def __init__(self, name, groups, weight=1000):
         self.name = name
         self.groups = groups
@@ -706,6 +701,13 @@ class NavContext(NavMenuBase):
 
 
 class NavGrouping(NavMenuBase, PermissionsMixin):
+    """
+    Ths class represents a navigation menu group for the new ui. This is built up from a name and a weight value. The name is
+    the display text and the weight defines its position in the navigation sidebar.
+
+    Items are each specified as a list of NavItem or NavGrouping instances.
+    """
+
     def __init__(self, name, items, weight=1000):
         self.name = name
         self.items = items
@@ -736,6 +738,12 @@ class NavGrouping(NavMenuBase, PermissionsMixin):
 
 
 class NavItem(NavMenuBase, PermissionsMixin):
+    """
+    This class represents a navigation menu item for the new ui. This constitutes link and its text.
+
+    Links are specified as Django reverse URL strings.
+    """
+
     def __init__(self, name, link, *args, permissions=None, weight=1000, **kwargs):
         self.name = name
         self.link = link
