@@ -316,7 +316,7 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         # Delete the custom field
         # find_by_partial_text finds both Inventory > Platform as well as the desired top-level Platform menu
-        self.browser.links.find_by_partial_text("Platform")[1].click()
+        self.browser.links.find_by_partial_text("Extensibility").click()
         self.browser.links.find_by_partial_text("Custom Fields").click()
         self.browser.links.find_by_partial_text("Device Selection Field").click()
         self.browser.links.find_by_partial_text("Delete").click()
