@@ -54,14 +54,19 @@ class PaginatorTestCase(TestCase):
     def test_enforce_max_page_size(self):
         """Request an object list view and assert that the MAX_PAGE_SIZE setting is enforced"""
         Site.objects.bulk_create([Site(name=f"TestSite{x}") for x in range(20)])
+        providers = (Provider(name=f"p-{x}", slug=f"p-{x}") for x in range(20))
+        Provider.objects.bulk_create(providers)
         url = reverse("dcim:site_list")
         self.add_permissions("dcim.view_site")
+        self.add_permissions("circuits.view_provider")
         self.client.force_login(self.user)
         with self.subTest("query parameter per_page=20 returns 10 rows"):
             response = self.client.get(url, {"per_page": 20})
             self.assertHttpStatus(response, 200)
             self.assertEqual(response.context["paginator"].per_page, 10)
             self.assertEqual(len(response.context["table"].page), 10)
+            warning_message = "Requested `per_page`is too large. No more than 10 items may be displayed at a time."
+            self.assertIn(warning_message, response.content.decode(response.charset))
         with self.subTest("query parameter per_page=5 returns 5 rows"):
             response = self.client.get(url, {"per_page": 5})
             self.assertHttpStatus(response, 200)
@@ -75,32 +80,9 @@ class PaginatorTestCase(TestCase):
             self.assertEqual(len(response.context["table"].page), 10)
         with self.subTest("global config PAGINATE_COUNT=50 returns 10 rows"):
             self.user.clear_config("pagination.per_page", commit=True)
-            response = self.client.get(url)
+            response = self.client.get(reverse("circuits:provider_list"))
             self.assertHttpStatus(response, 200)
             self.assertEqual(response.context["paginator"].per_page, 10)
             self.assertEqual(len(response.context["table"].page), 10)
-        with self.subTest("query parameter with per_page exceeding max page, shows warning"):
-            url = reverse("dcim:location_list")
-            self.add_permissions("dcim.view_location")
-            response = self.client.get(url, {"per_page": 20})
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.context["paginator"].per_page, 10)
-            self.assertEqual(len(response.context["table"].page), 10)
-            warning_message = (
-                "Pagination `per_page` has exceeded the maximum page size of 10, triggering a return of 10 items."
-            )
-            self.assertIn(warning_message, response.content.decode(response.charset))
-
-            # Assert Error Message in NautobotUIViewSet
-            providers = (Provider(name=f"p-{x}", slug=f"p-{x}") for x in range(20))
-            Provider.objects.bulk_create(providers)
-            url = reverse("circuits:provider_list")
-            self.add_permissions("circuits.view_provider")
-            response = self.client.get(url, {"per_page": 20})
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.context["paginator"].per_page, 10)
-            self.assertEqual(len(response.context["table"].page), 10)
-            warning_message = (
-                "Pagination `per_page` has exceeded the maximum page size of 10, triggering a return of 10 items."
-            )
-            self.assertIn(warning_message, response.content.decode(response.charset))
+            warning_message = "Requested `per_page` is too large. No more than 10 items may be displayed at a time."
+            self.assertIn(warning_message, response.content.decode(response.charset).replace("\n", ""))

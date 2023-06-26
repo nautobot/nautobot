@@ -10,6 +10,7 @@ from nautobot.core.forms import SearchForm
 from nautobot.core.utilities import check_filter_for_display
 from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
 from nautobot.extras.utils import get_base_template
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
@@ -89,6 +90,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            if paginate["per_page"] > max_page_size:
+                messages.warning(
+                    request,
+                    f"Requested `per_page` is too large. No more than {max_page_size} items may be displayed at a time.",
+                )
             return RequestConfig(request, paginate).configure(table)
         else:
             pk_list = kwargs.get("pk_list", [])

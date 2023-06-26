@@ -30,7 +30,6 @@ from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
-from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.forms import (
     BootstrapMixin,
@@ -537,15 +536,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         List the model instances.
         """
-        per_page = request.GET.get("per_page") or request.user.get_config(
-            "pagination.per_page", get_settings_or_config("PAGINATE_COUNT")
-        )
-        max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
-        if int(per_page) > int(max_page_size):
-            messages.error(
-                request,
-                f"Pagination `per_page` has exceeded the maximum page size of {max_page_size}, triggering a return of {max_page_size} items.",
-            )
         context = {}
         if "export" in request.GET:
             queryset = self.get_queryset()

@@ -26,6 +26,7 @@ from nautobot.core.forms import SearchForm
 from nautobot.core.utilities import check_filter_for_display
 from nautobot.extras.models import CustomField, ExportTemplate
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.error_handlers import handle_protectederror
 from nautobot.utilities.exceptions import AbortTransaction
 from nautobot.utilities.forms import (
@@ -38,7 +39,6 @@ from nautobot.utilities.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
-from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms.forms import DynamicFilterFormSet
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
@@ -325,9 +325,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             table_config_form = TableConfigForm(table=table)
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
             if paginate["per_page"] > max_page_size:
-                messages.error(
+                messages.warning(
                     request,
-                    f"Requested <code>per_page</code> is too large. No more than {max_page_size} items may be displayed at a time.",
+                    f"Requested `per_page`is too large. No more than {max_page_size} items may be displayed at a time.",
                 )
 
         # For the search form field, use a custom placeholder.
