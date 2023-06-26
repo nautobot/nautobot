@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
 from django.http import Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -21,7 +21,7 @@ from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.filter_backends import NautobotFilterBackend
-from nautobot.core.api.utils import get_data_for_serializer_parameter, get_serializer_for_model
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
@@ -31,7 +31,6 @@ from nautobot.core.api.views import (
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
-from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.filters import RoleFilterSet
