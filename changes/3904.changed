@@ -1,0 +1,6 @@
+Restyled the pagination section.
+Added proper spacing/alignment to pagination section.
+Modified the back "<" and next ">" arrows to navigate to the previous/next page, respectively, rather than the first/last page.
+The back "<" and next ">" arrows no longer show when they aren't relevant (i.e. when on the first/last page).
+Added Input component for changing the page number, in addition to using the arrows.
+Added total number of rows to footer.
