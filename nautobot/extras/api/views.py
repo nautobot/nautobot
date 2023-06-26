@@ -112,84 +112,6 @@ class NotesViewSetMixin:
         return self.get_paginated_response(serializer.data)
 
 
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-# TODO: Why is this in extras instead of core?
-class FormFieldsViewSetMixin:
-    """TODO: docstring needed."""
-
-    # TODO: shouldn't this function generally be named "get_field_groups" not "get_field_group"?
-    def get_field_group(self):
-        return []
-
-    # TODO: schema doesn't *look* correct to me based on a reading of the below code. Should this even be in the schema?
-    @extend_schema(
-        responses={
-            200: {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "type": {"type": "string"},
-                        "label": {"type": "string"},
-                        "required": {"type": "string"},
-                        "help_text": {"type": "string"},
-                        "choices": {"type": "array", "items": {"type": "array"}},
-                    },
-                },
-            }
-        }
-    )
-    @action(detail=False, url_path="form-fields", methods=["get"])
-    def form_fields(self, request):
-        groups = self.get_field_group()
-        model = self.queryset.model
-        fields = get_data_for_serializer_parameter(model)
-        if groups:
-            data = {
-                group_name: [fields.get(field) for field in group_fields] for group_name, group_fields in groups.items()
-            }
-        else:
-            model_name = model._meta.model_name
-            data = {model_name.capitalize(): fields.values()}
-
-        return Response(data)
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-# TODO: Why is this in extras instead of core?
-class TableFieldsViewSetMixin:
-    """TODO: docstring needed."""
-
-    # TODO: this schema is definitely incorrect. Should this view even be in the schema?
-    @extend_schema(
-        responses={
-            200: {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "type": {"type": "string"},
-                        "label": {"type": "string"},
-                        "required": {"type": "string"},
-                        "help_text": {"type": "string"},
-                        "choices": {"type": "array", "items": {"type": "array"}},
-                    },
-                },
-            }
-        }
-    )
-    @action(detail=False, url_path="table-fields", methods=["get"])
-    def table_fields(self, request):
-        table = get_table_for_model(self.queryset.model)
-        table_instance = table(user=request.user, data=[])
-        data = [
-            {"name": item[0], "label": item[1]}
-            for item in table_instance.configurable_columns
-            if item[0] in table_instance.visible_columns
-        ]
-        return Response({"data": data})
-
-
 #
 #  Computed Fields
 #
@@ -327,22 +249,11 @@ class CustomFieldModelViewSet(ModelViewSet):
         return context
 
 
-class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin, FormFieldsViewSetMixin, TableFieldsViewSetMixin):
+class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin):
     """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
 
     Can also be used for models derived from BaseModel, so long as they support Notes.
     """
-
-    # TODO: this currently throws a 500 error in drf_react_template because it's returning an HttpResponse but
-    # drf_react_template thinks it's a REST endpoint that should be returning a JsonResponse
-    @action(detail=True, url_path="app_full_width_fragment")
-    def app_full_width_fragment(self, request, pk):
-        """
-        Return html fragment from a plugin.
-        """
-        obj = get_object_or_404(self.queryset, pk=pk)
-
-        return render(request, "generic/object_retrieve_plugin_full_width.html", {"object": obj})
 
 
 #
@@ -981,7 +892,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 #
 
 
-class NoteViewSet(ModelViewSet, TableFieldsViewSetMixin):
+class NoteViewSet(ModelViewSet):
     queryset = Note.objects.select_related("user")
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
@@ -996,7 +907,7 @@ class NoteViewSet(ModelViewSet, TableFieldsViewSetMixin):
 #
 
 
-class ObjectChangeViewSet(ReadOnlyModelViewSet, TableFieldsViewSetMixin):
+class ObjectChangeViewSet(ReadOnlyModelViewSet):
     """
     Retrieve a list of recent changes.
     """
