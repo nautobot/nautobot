@@ -14,7 +14,8 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.testing import TestCase, TransactionTestCase
+from nautobot.core.testing import TestCase
+from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
@@ -737,15 +738,12 @@ class FileProxyTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(FileAttachment.objects.count(), 0)
 
 
-class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
+class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the GitRepository model class.
-
-    Note: This is a TransactionTestCase, rather than a TestCase, because the GitRepository save() method uses
-    transaction.on_commit(), which doesn't get triggered in a normal TestCase.
     """
 
-    SAMPLE_TOKEN = "dc6542736e7b02c159d14bc08f972f9ec1e2c45fa"
+    model = GitRepository
 
     def setUp(self):
         self.repo = GitRepository(
@@ -753,10 +751,34 @@ class GitRepositoryTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
             slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        self.repo.save()
+        self.repo.validated_save()
 
     def test_filesystem_path(self):
         self.assertEqual(self.repo.filesystem_path, os.path.join(settings.GIT_ROOT, self.repo.slug))
+
+    def test_slug_no_change(self):
+        """Confirm that a slug cannot be changed after creation."""
+        self.repo.slug = "a_different_slug"
+        with self.assertRaises(ValidationError):
+            self.repo.validated_save()
+
+    def test_no_module_clobbering(self):
+        """Confirm that a slug that shadows an existing Python module is safely rejected."""
+        repo = GitRepository(name=":sus:", slug="nautobot", remote_url="http://localhost/git.git")
+        with self.assertRaises(ValidationError) as handler:
+            repo.validated_save()
+        self.assertIn("Please choose a different slug", str(handler.exception))
+
+        repo.slug = "sys"
+        with self.assertRaises(ValidationError) as handler:
+            repo.validated_save()
+        self.assertIn("Please choose a different slug", str(handler.exception))
+
+        # How about part of the stdlib that we don't normally load?
+        repo.slug = "tkinter"
+        with self.assertRaises(ValidationError) as handler:
+            repo.validated_save()
+        self.assertIn("Please choose a different slug", str(handler.exception))
 
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
@@ -923,8 +945,10 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         location_oc.validated_save()
 
 
-class RoleTest(TestCase):
+class RoleTest(NautobotTestCaseMixin, ModelTestCases.BaseModelTestCase):
     """Tests for `Role` model class."""
+
+    model = Role
 
     def test_get_for_models(self):
         """Test get_for_models returns a Roles for those models."""
@@ -1443,22 +1467,21 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         self.assertEqual(log_object.grouping, log.grouping)
 
 
-class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
-    def test_type_error_not_raised_when_calling_check_for_conflicts(self):
-        """
-        Test type error not raised when calling Webhook.check_for_conflicts() without passing all accepted arguments
-        """
-        device_content_type = ContentType.objects.get_for_model(Device)
-        url = "http://example.com/test"
+class WebhookTest(ModelTestCases.BaseModelTestCase):
+    model = Webhook
 
-        webhooks = [
+    def setUp(self):
+        device_content_type = ContentType.objects.get_for_model(Device)
+        self.url = "http://example.com/test"
+
+        self.webhooks = [
             Webhook(
                 name="webhook-1",
                 enabled=True,
                 type_create=True,
                 type_update=True,
                 type_delete=False,
-                payload_url=url,
+                payload_url=self.url,
                 http_method="POST",
                 http_content_type="application/json",
             ),
@@ -1468,19 +1491,21 @@ class WebhookTest(TestCase):  # TODO: change to BaseModelTestCase
                 type_create=False,
                 type_update=False,
                 type_delete=True,
-                payload_url=url,
+                payload_url=self.url,
                 http_method="POST",
                 http_content_type="application/json",
             ),
         ]
-        for webhook in webhooks:
+        for webhook in self.webhooks:
             webhook.save()
             webhook.content_types.add(device_content_type)
 
-        data = {"type_create": True}
-
-        conflicts = Webhook.check_for_conflicts(instance=webhooks[1], type_create=data.get("type_create"))
+    def test_type_error_not_raised_when_calling_check_for_conflicts(self):
+        """
+        Test type error not raised when calling Webhook.check_for_conflicts() without passing all accepted arguments
+        """
+        conflicts = Webhook.check_for_conflicts(instance=self.webhooks[1], type_create=True)
         self.assertEqual(
             conflicts["type_create"],
-            [f"A webhook already exists for create on dcim | device to URL {url}"],
+            [f"A webhook already exists for create on dcim | device to URL {self.url}"],
         )
