@@ -327,7 +327,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             if paginate["per_page"] > max_page_size:
                 messages.error(
                     request,
-                    f"Pagination `per_page` has exceeded the maximum page size of {max_page_size}, triggering a return of {max_page_size} items.",
+                    f"Requested <code>per_page</code> is too large. No more than {max_page_size} items may be displayed at a time.",
                 )
 
         # For the search form field, use a custom placeholder.
