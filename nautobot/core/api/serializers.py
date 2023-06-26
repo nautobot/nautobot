@@ -199,12 +199,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
         if not self.is_nested:
-            # We set our default depth value here to 1 because in OpenAPISchema
-            # get_serializer_context() (where we get the depth from self.request.query_params) is not called
-            # so in order to have enough information present in the OpenAPISchema, we set depth here to 1
-            # RestAPI serializer is not affected by this because get_serializer_context() is always called
-            # and depth is either passed into the request.query_params, or default to 0.
-            self.Meta.depth = self.context.get("depth", 1)
+            self.Meta.depth = self.context.get("depth", 0)
 
     @property
     def is_nested(self):
