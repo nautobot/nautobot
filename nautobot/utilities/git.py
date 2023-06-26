@@ -25,6 +25,11 @@ GIT_STATUS_MAP = {
     "X": "Unknown",
 }
 
+# Environment variables to set on appropriate `git` CLI calls
+GIT_ENVIRONMENT = {
+    "GIT_TERMINAL_PROMPT": "0",  # never prompt for user input such as credentials - important to avoid hangs!
+}
+
 
 def swap_status_initials(data):
     """Swap Git status initials with its equivalent."""
@@ -59,10 +64,12 @@ class GitRepo:
             url (str): git repo url
             clone_initially (bool): True if the repo needs to be cloned
         """
-        if os.path.isdir(path):
+        if os.path.isdir(path) and os.path.isdir(os.path.join(path, ".git")):
             self.repo = Repo(path=path)
         elif clone_initially:
-            self.repo = Repo.clone_from(url, to_path=path)
+            # Don't log `url` as it may include authentication details.
+            logger.debug("Cloning git repository to %s...", path)
+            self.repo = Repo.clone_from(url, to_path=path, env=GIT_ENVIRONMENT)
         else:
             self.repo = Repo.init(path)
             self.repo.create_remote("origin", url=url)
@@ -71,7 +78,8 @@ class GitRepo:
             self.repo.remotes.origin.set_url(url)
 
     def fetch(self):
-        self.repo.remotes.origin.fetch()
+        with self.repo.git.custom_environment(**GIT_ENVIRONMENT):
+            self.repo.remotes.origin.fetch()
 
     def checkout(self, branch, commit_hexsha=None):
         """

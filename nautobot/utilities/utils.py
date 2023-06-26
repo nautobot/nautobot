@@ -50,7 +50,6 @@ def csv_format(data):
     """
     csv = []
     for value in data:
-
         # Represent None or False with empty string
         if value is None or value is False:
             csv.append("")
@@ -456,14 +455,6 @@ def flatten_iterable(iterable):
                 yield j
         else:
             yield i
-
-
-# Taken from django.utils.functional (<3.0)
-def curry(_curried_func, *args, **kwargs):
-    def _curried(*moreargs, **morekwargs):
-        return _curried_func(*args, *moreargs, **{**kwargs, **morekwargs})
-
-    return _curried
 
 
 def array_to_string(array):
