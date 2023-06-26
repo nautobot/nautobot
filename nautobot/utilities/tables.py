@@ -10,6 +10,8 @@ from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
+from mptt.models import MPTTModel
+from tree_queries.models import TreeNode
 
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
@@ -57,6 +59,12 @@ class BaseTable(tables.Table):
                     relationship, side=RelationshipSideChoices.SIDE_DESTINATION
                 )
             # symmetric relationships are already handled above in the source_type case
+
+        if model := getattr(self.Meta, "model", None):
+            # Disable ordering on these models(Tree Models) as sorting on UI results in rows appears
+            # to be children of the wrong parent rows.
+            if issubclass(model, (MPTTModel, TreeNode)):
+                kwargs["orderable"] = False
 
         # Init table
         super().__init__(*args, **kwargs)
