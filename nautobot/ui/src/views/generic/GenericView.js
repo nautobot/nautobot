@@ -8,11 +8,7 @@ import {
 import { Navbar } from "@components/Navbar";
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
-import {
-    Link as ReactRouterLink,
-    useLocation,
-    useMatch,
-} from "react-router-dom";
+import { Link as ReactRouterLink, useLocation } from "react-router-dom";
 
 import { useGetUIMenuQuery } from "@utils/api";
 import { uiUrl } from "@utils/url";
@@ -113,12 +109,6 @@ export default function GenericView({
 
     const currentState = useSelector((state) => state.appState);
 
-    const isHomeActive =
-        useMatch({
-            path: "/",
-            exact: true,
-        }) !== null;
-
     return (
         <Flex
             direction="column"
@@ -128,11 +118,7 @@ export default function GenericView({
             width="full"
         >
             <Navbar appState={currentState} />
-            <Box
-                flex="1"
-                overflow="auto"
-                padding={isHomeActive ? "md" : undefined}
-            >
+            <Box flex="1" overflow="auto" padding="md">
                 <Breadcrumbs paddingX="md">
                     {breadcrumbs.map((props) => (
                         <Breadcrumb {...props} />
