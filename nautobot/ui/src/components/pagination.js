@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { usePagination } from "./usePagination";
 import { useSearchParams } from "react-router-dom";
-import { Box, Text } from "@nautobot/nautobot-ui";
-import { Flex, FormControl, FormErrorMessage, IconButton, Input } from "@chakra-ui/react";
+import { Box, Flex, FormControl, FormErrorMessage, Input, Text } from "@nautobot/nautobot-ui";
+import { IconButton } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
 export default function Pagination({

@@ -1,6 +1,5 @@
 import React from "react";
-import { Text, Select } from "@nautobot/nautobot-ui";
-import { Flex } from "@chakra-ui/react";
+import { Flex, Text, Select } from "@nautobot/nautobot-ui";
 import { useSearchParams } from "react-router-dom";
 
 export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
