@@ -526,7 +526,9 @@ class NautobotCSVRendererTest(TestCase):
 
     def test_render_success(self):
         location_type = dcim_models.LocationType.objects.filter(parent__isnull=False).first()
-        data = dcim_serializers.LocationTypeSerializer(instance=location_type, context={"request": None}).data
+        data = dcim_serializers.LocationTypeSerializer(
+            instance=location_type, context={"request": None, "depth": 1}
+        ).data
         csv_text = NautobotCSVRenderer().render(data)
 
         # Make sure a) it's well-constructed parsable CSV and b) it contains what we expect it to, within reason
