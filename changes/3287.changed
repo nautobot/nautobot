@@ -1,0 +1,1 @@
+Changed the `ip_version` filters in `PrefixFilterSet` and `IPAddressFilterSet` to `django_filters.NumberFilter`.

@@ -28,6 +28,48 @@ nautobot-server migrate --help
 
 ## Available Commands
 
+### `audit_dynamic_groups`
+
+`nautobot-server audit_dynamic_groups`
+
+After upgrading your Nautobot instance from v1.x to v2.x, breaking changes made to model filter fields will, in some cases, invalidate existing `DynamicGroup` instances' filter data. `nautobot-server audit_dynamic_groups` is a helper command to assist you in cleaning up `DynamicGroup` filter data by spotting invalid filters and outputting them to the command line interface.
+
+```no-highlight
+nautobot-server audit_dynamic_groups
+```
+
+Example output:
+
+If you have invalid filters in your `DynamicGroup` instances, the following output should be expected:
+
+```no-highlight
+>>> Auditing existing DynamicGroup data for invalid filters ...
+
+    DynamicGroup instance with name `Test DP` and content type `dcim | rack` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP` and content type `dcim | rack` has an invalid filter `length`
+    DynamicGroup instance with name `Test DP` and content type `dcim | rack` has an invalid filter `region`
+    DynamicGroup instance with name `Test DP 1` and content type `ipam | IP address` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP 1` and content type `ipam | IP address` has an invalid filter `length`
+    DynamicGroup instance with name `Test DP 2` and content type `dcim | device` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP 2` and content type `dcim | device` has an invalid filter `region`
+    DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `length`
+    DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `region`
+    DynamicGroup instance with name `Test DP 4` and content type `example_plugin | another example model` has an invalid filter `site`
+
+>>> Please fix the broken filters stated above according to the documentation available at:
+<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes
+```
+
+If your filter data is valid, you should see a success message at the end of the output:
+
+```no-highlight
+>>> Auditing existing DynamicGroup data for invalid filters ...
+
+
+>>> All DynamicGroup filters are validated successfully!
+```
+
 ### `celery`
 
 `nautobot-server celery`

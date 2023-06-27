@@ -85,7 +85,7 @@ export default function GenericView({
     gridBackground = "",
 }) {
     const { pathname } = useLocation();
-    const { menu, isSuccess } = useGetUIMenuQuery();
+    const { data: menu, isSuccess } = useGetUIMenuQuery();
 
     const breadcrumbs = useMemo(
         () =>
@@ -99,8 +99,8 @@ export default function GenericView({
                     ];
                 }
                 return breadcrumbsRecursive(
-                    findMenuPathRecursive(pathname, menu.data),
-                    menu.data,
+                    findMenuPathRecursive(pathname, menu),
+                    menu,
                     objectData
                 );
             })(),
@@ -119,7 +119,7 @@ export default function GenericView({
         >
             <Navbar appState={currentState} />
             <Box flex="1" overflow="auto" padding="md">
-                <Breadcrumbs paddingX="md">
+                <Breadcrumbs paddingX="md" position="relative" zIndex="5">
                     {breadcrumbs.map((props) => (
                         <Breadcrumb {...props} />
                     ))}

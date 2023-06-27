@@ -46,6 +46,9 @@ class Tag(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, Not
 
     objects = BaseManager.from_queryset(TagQuerySet)()
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         ordering = ["name"]
 
