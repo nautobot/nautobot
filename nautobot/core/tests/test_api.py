@@ -2,7 +2,6 @@ from copy import deepcopy
 import csv
 from io import BytesIO, StringIO
 import json
-from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
