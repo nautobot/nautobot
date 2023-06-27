@@ -60,7 +60,7 @@ class PaginatorTestCase(testing.TestCase):
         )
         url = reverse("dcim:location_list")
         self.add_permissions("dcim.view_location")
-        providers = (circuits_models.Provider(name=f"p-{x}", slug=f"p-{x}") for x in range(20))
+        providers = (circuits_models.Provider(name=f"p-{x}") for x in range(20))
         circuits_models.Provider.objects.bulk_create(providers)
         self.add_permissions("circuits.view_provider")
         self.client.force_login(self.user)
