@@ -7,9 +7,7 @@
         <ul class="dropdown-menu dropdown-menu-right">
             {% if export_url %}
                 <li>
-                    <a href="{{ export_url }}?{% if url_params %}{{ url_params.urlencode }}&{% endif %}format=csv"
-                       download="{{ default_filename }}"
-                    >
+                    <a href="{{ export_url }}?{% if url_params %}{{ url_params.urlencode }}&{% endif %}format=csv">
                         Default format
                     </a>
                 </li>
@@ -29,7 +27,6 @@
 {% elif export_url %}
     <a href="{{ export_url }}?{% if url_params %}{{ url_params.urlencode }}&{% endif %}format=csv"
        class="btn btn-success"
-       download="{{ default_filename }}"
     >
         <span class="mdi mdi-database-export" aria-hidden="true"></span> Export
     </a>

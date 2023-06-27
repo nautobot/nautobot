@@ -510,6 +510,10 @@ class APIViewTestCases:
             )
             self.assertHttpStatus(response_1, status.HTTP_200_OK)
             self.assertEqual(response_1.get("Content-Type"), "text/csv; charset=UTF-8")
+            self.assertEqual(
+                response_1.get("Content-Disposition"),
+                f'attachment; filename="nautobot_{self.model.__name__.lower()}_data.csv"',
+            )
 
             # Try same request specifying CSV format via the ACCEPT header
             response_2 = self.client.get(
@@ -517,6 +521,10 @@ class APIViewTestCases:
             )
             self.assertHttpStatus(response_2, status.HTTP_200_OK)
             self.assertEqual(response_2.get("Content-Type"), "text/csv; charset=UTF-8")
+            self.assertEqual(
+                response_2.get("Content-Disposition"),
+                f'attachment; filename="nautobot_{self.model.__name__.lower()}_data.csv"',
+            )
 
             self.maxDiff = None
             # This check is more useful than it might seem. Any related object that wasn't CSV-converted correctly
@@ -639,6 +647,10 @@ class APIViewTestCases:
 
             response = self.client.get(self._get_detail_url(instance) + "?format=csv", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(
+                response.get("Content-Disposition"),
+                f'attachment; filename="nautobot_{self.model.__name__.lower()}_data.csv"',
+            )
             csv_data = response.content.decode(response.charset)
 
             serializer_class = get_serializer_for_model(self.model)
