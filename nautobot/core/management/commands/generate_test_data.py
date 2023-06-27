@@ -40,8 +40,14 @@ class Command(BaseCommand):
             default="development/factory_dump.json",
             help="Fixture file to use with --cache-test-fixtures.",
         )
+        parser.add_argument(
+            "--database",
+            default=DEFAULT_DB_ALIAS,
+            help='The database to generate the test data in. Defaults to the "default" database.',
+        )
 
-    def _generate_factory_data(self, seed):
+    def _generate_factory_data(self, seed, db_name):
+
         try:
             import factory.random
 
@@ -87,73 +93,73 @@ class Command(BaseCommand):
         self.stdout.write("Creating Roles...")
         RoleFactory.create_batch(20)
         self.stdout.write("Creating Statuses...")
-        populate_status_choices(verbosity=0)
-        StatusFactory.create_batch(10)
+        populate_status_choices(verbosity=0, using=db_name)
+        StatusFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating Tags...")
         # Ensure that we have some tags that are applicable to all relevant content-types
-        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset())
+        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset(), using=db_name)
         # ...and some tags that apply to a random subset of content-types
-        TagFactory.create_batch(15)
+        TagFactory.create_batch(15, using=db_name)
         self.stdout.write("Creating TenantGroups...")
-        TenantGroupFactory.create_batch(10, has_parent=False)
-        TenantGroupFactory.create_batch(10, has_parent=True)
+        TenantGroupFactory.create_batch(10, has_parent=False, using=db_name)
+        TenantGroupFactory.create_batch(10, has_parent=True, using=db_name)
         self.stdout.write("Creating Tenants...")
-        TenantFactory.create_batch(10, has_tenant_group=False)
-        TenantFactory.create_batch(10, has_tenant_group=True)
+        TenantFactory.create_batch(10, has_tenant_group=False, using=db_name)
+        TenantFactory.create_batch(10, has_tenant_group=True, using=db_name)
         self.stdout.write("Creating LocationTypes...")
-        LocationTypeFactory.create_batch(7)  # only 7 unique LocationTypes are hard-coded presently
+        LocationTypeFactory.create_batch(7, using=db_name)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
         # First 7 locations must be created in specific order so subsequent objects have valid parents to reference
-        LocationFactory.create_batch(7, has_parent=True)
-        LocationFactory.create_batch(40)
-        LocationFactory.create_batch(10, has_parent=False)
+        LocationFactory.create_batch(7, has_parent=True, using=db_name)
+        LocationFactory.create_batch(40, using=db_name)
+        LocationFactory.create_batch(10, has_parent=False, using=db_name)
         self.stdout.write("Creating RIRs...")
-        RIRFactory.create_batch(9)  # only 9 unique RIR names are hard-coded presently
+        RIRFactory.create_batch(9, using=db_name)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
-        RouteTargetFactory.create_batch(20)
+        RouteTargetFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Namespaces...")
-        NamespaceFactory.create_batch(10)
+        NamespaceFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating VRFs...")
-        VRFFactory.create_batch(10, has_tenant=True)
-        VRFFactory.create_batch(10, has_tenant=False)
+        VRFFactory.create_batch(10, has_tenant=True, using=db_name)
+        VRFFactory.create_batch(10, has_tenant=False, using=db_name)
         self.stdout.write("Creating VLANGroups...")
-        VLANGroupFactory.create_batch(20)
+        VLANGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating VLANs...")
-        VLANFactory.create_batch(20)
+        VLANFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Prefixes and IP Addresses...")
-        PrefixFactory.create_batch(30)
+        PrefixFactory.create_batch(30, using=db_name)
         self.stdout.write("Creating Empty Namespaces...")
-        NamespaceFactory.create_batch(5)
+        NamespaceFactory.create_batch(5, using=db_name)
         self.stdout.write("Creating Manufacturers...")
-        ManufacturerFactory.create_batch(8)  # First 8 hard-coded Manufacturers
+        ManufacturerFactory.create_batch(8, using=db_name)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
-        PlatformFactory.create_batch(20, has_manufacturer=True)
+        PlatformFactory.create_batch(20, has_manufacturer=True, using=db_name)
         self.stdout.write("Creating Platforms (without manufacturers)...")
-        PlatformFactory.create_batch(5, has_manufacturer=False)
+        PlatformFactory.create_batch(5, has_manufacturer=False, using=db_name)
         self.stdout.write("Creating Manufacturers without Platforms...")
-        ManufacturerFactory.create_batch(4)  # 4 more hard-coded Manufacturers
+        ManufacturerFactory.create_batch(4, using=db_name)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
-        DeviceTypeFactory.create_batch(30)
+        DeviceTypeFactory.create_batch(30, using=db_name)
         self.stdout.write("Creating Manufacturers without DeviceTypes or Platforms...")
-        ManufacturerFactory.create_batch(2)  # Last 2 hard-coded Manufacturers
+        ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
-        DeviceRedundancyGroupFactory.create_batch(20)
+        DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating CircuitTypes...")
-        CircuitTypeFactory.create_batch(20)
+        CircuitTypeFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Providers...")
-        ProviderFactory.create_batch(20)
+        ProviderFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating ProviderNetworks...")
-        ProviderNetworkFactory.create_batch(20)
+        ProviderNetworkFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Circuits...")
-        CircuitFactory.create_batch(40)
+        CircuitFactory.create_batch(40, using=db_name)
         self.stdout.write("Creating Providers without Circuits...")
-        ProviderFactory.create_batch(20)
+        ProviderFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating CircuitTerminations...")
-        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="A")
-        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="Z")
-        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="A")
-        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="Z")
-        CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False)
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="A", using=db_name)
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="Z", using=db_name)
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="A", using=db_name)
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="Z", using=db_name)
+        CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False, using=db_name)
         CircuitTerminationFactory.create_batch(
             size=2,
             has_location=True,
@@ -162,6 +168,7 @@ class Command(BaseCommand):
             has_xconnect_id=True,
             has_pp_info=True,
             has_description=True,
+            using=db_name,
         )
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
         # UserFactory.create_batch(10)
@@ -222,7 +229,7 @@ class Command(BaseCommand):
                 confirm = input(
                     f"""\
 You have requested a flush of the database before generating new data.
-This will IRREVERSIBLY DESTROY all data in the "{connections[DEFAULT_DB_ALIAS].settings_dict['NAME']}" database,
+This will IRREVERSIBLY DESTROY all data in the "{connections[options['database']].settings_dict['NAME']}" database,
 including all user accounts, and return each table to an empty state.
 Are you SURE you want to do this?
 
@@ -232,14 +239,16 @@ Type 'yes' to continue, or 'no' to cancel: """
                     self.stdout.write("Cancelled.")
                     return
 
-            self.stdout.write(self.style.WARNING("Flushing all existing data from the database..."))
-            call_command("flush", "--no-input")
+            self.stdout.write(
+                self.style.WARNING(f'Flushing all existing data from the database "{options["database"]}"...')
+            )
+            call_command("flush", "--no-input", "--database", options["database"])
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
             call_command("loaddata", options["fixture_file"])
         else:
-            self._generate_factory_data(options["seed"])
+            self._generate_factory_data(options["seed"], options["database"])
 
             if options["cache_test_fixtures"]:
                 self.stdout.write(self.style.WARNING(f"Saving factory data to file {options['fixture_file']}"))
@@ -254,4 +263,4 @@ Type 'yes' to continue, or 'no' to cancel: """
 
                 self.stdout.write(self.style.SUCCESS(f"Dumped factory data to {options['fixture_file']}"))
 
-        self.stdout.write(self.style.SUCCESS("Database populated successfully!"))
+        self.stdout.write(self.style.SUCCESS(f"Database {options['database']} populated successfully!"))
