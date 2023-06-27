@@ -18,6 +18,7 @@ from nautobot.dcim.models import Interface
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices
+from nautobot.ipam import constants
 from nautobot.virtualization.models import VMInterface
 from .constants import (
     SERVICE_PORT_MAX,
@@ -562,7 +563,7 @@ class Prefix(PrimaryModel):
         """
         A Prefix with children will be impossible to delete and raise a `ProtectedError`.
 
-        If a Prefix has children, this catch the error and explicitly update the
+        If a Prefix has children, this catches the error and explicitly updates the
         `protected_objects` from the exception setting their parent to the old parent of this
         prefix, and then this prefix will be deleted.
         """
@@ -570,18 +571,37 @@ class Prefix(PrimaryModel):
         try:
             return super().delete(*args, **kwargs)
         except models.ProtectedError as err:
-            # This will be either IPAddress or Prefix.
-            protected_model = tuple(err.protected_objects)[0]._meta.model
+            for instance in err.protected_objects:
+                # This will be either IPAddress or Prefix.
+                protected_model = instance._meta.model
 
-            # IPAddress objects must have a parent.
-            if protected_model == IPAddress and self.parent is None:
-                raise models.ProtectedError(
-                    msg=(
-                        f"Cannot delete Prefix {self} because it has child IPAddress objects that "
-                        "would no longer have a parent."
-                    ),
-                    protected_objects=err.protected_objects,
-                ) from err
+                # IPAddress objects must have a valid parent.
+                if protected_model == IPAddress and (
+                    self.parent is None or self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK
+                ):
+                    raise models.ProtectedError(
+                        msg=(
+                            f"Cannot delete Prefix {self} because it has child IPAddress objects that "
+                            "would no longer have a valid parent."
+                        ),
+                        protected_objects=err.protected_objects,
+                    ) from err
+
+                # Prefix objects must have a valid parent
+                elif (
+                    protected_model == Prefix
+                    and self.parent is not None
+                    and constants.PREFIX_ALLOWED_PARENT_TYPES[instance.type] != self.parent.type
+                ):
+                    raise models.ProtectedError(
+                        msg=(
+                            f"Cannot delete Prefix {self} because it has child Prefix objects that "
+                            "would no longer have a valid parent."
+                        ),
+                        protected_objects=err.protected_objects,
+                    ) from err
+                elif protected_model not in (IPAddress, Prefix):
+                    raise
 
             # Update protected objects to use the new parent and delete the old parent (self).
             protected_pks = (po.pk for po in err.protected_objects)
@@ -599,6 +619,34 @@ class Prefix(PrimaryModel):
         if supernets:
             parent = max(supernets, key=operator.attrgetter("prefix_length"))
             self.parent = parent
+
+        # Validate that creation of this prefix does not create an invalid parent/child relationship
+        if self.parent and self.parent.type != constants.PREFIX_ALLOWED_PARENT_TYPES[self.type]:
+            err_msg = f"{self.type.title()} prefixes cannot be children of {self.parent.type.title()} prefixes"
+            raise ValidationError({"type": err_msg})
+
+        # This is filtering on prefixes that share my parent and will be reparented to me
+        # but are not the correct type for this parent/child relationship
+        invalid_children = Prefix.objects.filter(
+            ~models.Q(id=self.id),
+            ~models.Q(type__in=constants.PREFIX_ALLOWED_CHILD_TYPES[self.type]),
+            parent_id=self.parent_id,
+            prefix_length__gt=self.prefix_length,
+            ip_version=self.ip_version,
+            network__gte=self.network,
+            broadcast__lte=self.broadcast,
+            namespace=self.namespace,
+        )
+
+        if invalid_children.exists():
+            invalid_child_prefixes = [
+                f"{child.cidr_str} ({child.type})" for child in invalid_children.only("network", "prefix_length")
+            ]
+            err_msg = (
+                f'Creating prefix "{self.prefix}" in namespace "{self.namespace}" with type "{self.type}" '
+                f"would create an invalid parent/child relationship with prefixes {invalid_child_prefixes}"
+            )
+            raise ValidationError({"__all__": err_msg})
 
         super().save(*args, **kwargs)
 
@@ -816,6 +864,21 @@ class Prefix(PrimaryModel):
         )
         return available_ips
 
+    def get_child_ips(self):
+        """
+        Return IP addresses with this prefix as parent if this prefix is a network.
+        If this prefix is a pool, return IP addresses within the pool's address space.
+
+        Returns:
+            IPAddress QuerySet
+        """
+        if self.type == choices.PrefixTypeChoices.TYPE_POOL:
+            return IPAddress.objects.filter(
+                parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+            )
+        else:
+            return self.ip_addresses.all()
+
     def get_first_available_prefix(self):
         """
         Return the first available child prefix within the prefix (or None).
@@ -1024,6 +1087,10 @@ class IPAddress(PrimaryModel):
             .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
             .get_closest_parent(self.host, include_self=True)
         )
+
+        if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
+            err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
+            raise ValidationError({"address": err_msg})
 
         super().save(*args, **kwargs)
 
