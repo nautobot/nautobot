@@ -31,6 +31,8 @@ from nautobot.utilities.forms import (
     StaticSelect2,
     StaticSelect2Multiple,
     add_blank_choice,
+    CommentField,
+    SmallTextarea,
 )
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.templatetags.helpers import render_markdown
@@ -544,6 +546,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                         message=mark_safe(f"Values must match this regex: <code>{self.validation_regex}</code>"),
                     )
                 ]
+
+        # Markdown
+        elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
+            field = CommentField(widget=SmallTextarea, label=None)
 
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
