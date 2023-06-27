@@ -87,13 +87,13 @@ Access a specific item/key in a dictionary.
 {{ labels|get_item(key) }}
 ```
 
-### get_obj_uuids
+### queryset_to_pks
 
-Return all the object uuids as a string separated by a comma.
+Return all object's in a queryset UUIDs/pks as a string separated by a comma.
 
 ```django
 # Django Template
-{{ ip.tags.all | get_obj_uuids }}
+{{ ip.tags.all | queryset_to_pks }}
 ```
 
 ### has_one_or_more_perms

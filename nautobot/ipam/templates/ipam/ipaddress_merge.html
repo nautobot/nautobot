@@ -62,13 +62,29 @@
                     <th>
                         Tags
                     </th>
+                    {% for label in custom_field_labels %}
+                    <th>
+                        {{ label }}
+                    </th>
+                    {% endfor %}
+                    {% with relationships=queryset.first.get_relationships_data %}
+                            {% if relationships.source or relationships.destination or relationships.peer %}
+                                {% for side, relationships in relationships.items %}
+                                    {% for relationship, value in relationships.items %}
+                                    <th>
+                                        {{ value.label }}
+                                    </th>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endif %}
+                    {% endwith %}
                 </thead>
                 <tbody>
                 {% for ip in queryset %}
                         <tr>
                             <td>
                                 <input type="checkbox" id="pk" name="pk" value="{{ip.pk}}" checked>
-                                <label for="pk"></label>
+                                <label for="pk"><a href="{% url 'ipam:ipaddress' ip.pk %}">{{ ip }}</a></label>
                             </td>
                             <td>
                                 {% if forloop.first %}
@@ -150,9 +166,9 @@
                             </td>
                             <td>
                                 {% if forloop.first %}
-                                    <input type="radio" id="tags" name="tags" value="{{ip.tags.all | get_obj_uuids}}" required checked>
+                                    <input type="radio" id="tags" name="tags" value="{{ip.tags.all | queryset_to_pks}}" required checked>
                                 {% else %}
-                                <input type="radio" id="tags" name="tags" value="{{ip.tags.all | get_obj_uuids}}" required>
+                                <input type="radio" id="tags" name="tags" value="{{ip.tags.all | queryset_to_pks}}" required>
                                 {% endif %}
                                 <label for="tags">
                                     {% for tag in ip.tags.all %}
@@ -162,6 +178,49 @@
                                     {% endfor %}
                                 </label>
                             </td>
+                            {% for key in custom_field_keys %}
+                                <td>
+                                    <input type="radio" id="cf_{{key}}" name="cf_{{key}}" value="{{ip.cf | get_item:key }}" required {% if forloop.parentloop.first %} checked {% endif %}>
+                                    <label for="cf_{{key}}">{{ip.cf | get_item:key | placeholder}}</label>
+                                </td>
+                            {% endfor %}
+                            {% with relationships=ip.get_relationships_data %}
+                            {% if relationships.source or relationships.destination or relationships.peer %}
+                                {% for side, relationships in relationships.items %}
+                                    {% for relationship, value in relationships.items %}
+                                        {% if not value.has_many and value.value %}
+                                            <td>
+                                                <input type="radio" id="cr_{{relationship.key}}" name="cr_{{relationship.key}}" value="{{ value.value.pk }}" required {% if forloop.parentloop.parentloop.first %} checked {% endif %}>
+                                                <label for="cr_{{relationship.key}}"><a href="{{ value.url }}">{{ value.value }}</a></label>
+                                            </td>
+                                        {% elif value.has_many and value.queryset.count %}
+                                            <td>
+                                                <input type="radio" id="cr_{{relationship.key}}" name="cr_{{relationship.key}}" value="{{ value.queryset | queryset_to_pks }}" required {% if forloop.parentloop.parentloop.first %} checked {% endif %}>
+                                                <label for="cr_{{relationship.key}}"> 
+                                                    <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.key}}&{{side}}_id={{object.id}}">
+                                                        {{ value.queryset.count }}
+                                                        {% if value.peer_type.model_class is not None %}
+                                                            {% if value.queryset.count > 1 %}
+                                                                {{ value.peer_type.model_class|meta:"verbose_name_plural" }}
+                                                            {% else %}
+                                                                {{ value.peer_type.model_class|meta:"verbose_name" }}
+                                                            {% endif %}
+                                                        {% else %}
+                                                            {{ value.peer_type }}(s)
+                                                        {% endif %}
+                                                    </a>
+                                            </label>
+                                            </td>
+                                        {% else %}
+                                            <td>
+                                                <input type="radio" id="cr_{{relationship.key}}" name="cr_{{relationship.key}}" value="" required {% if forloop.parentloop.parentloop.first %} checked {% endif %}>
+                                                <label for="cr_{{relationship.key}}"><span class="text-muted">&mdash;</span></label>
+                                            </td>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
                         </tr>
                 {% endfor %}
                 </tbody>    

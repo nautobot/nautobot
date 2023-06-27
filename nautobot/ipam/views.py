@@ -1,5 +1,8 @@
 import logging
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.db import transaction
 from django.db import models
 from django.db.models import Prefetch, ProtectedError
@@ -15,7 +18,7 @@ from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import Role, Status, Tag
+from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Status, Tag
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
@@ -23,6 +26,7 @@ from nautobot.ipam.api import serializers
 from nautobot.ipam import choices
 from .models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -675,6 +679,7 @@ class IPAddressAssignView(generic.ObjectView):
 
 class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermissionRequiredMixin, View):
     queryset = IPAddress.objects.all()
+    template_name = "ipam/ipaddress_merge.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "change")
@@ -686,16 +691,28 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         if host_values:
             item = host_values[0]
             queryset = self.queryset.filter(host__in=[item["host"]])
+            cf_keys = CustomField.objects.get_for_model(IPAddress).values_list("key", flat=True)
+            cf_labels = CustomField.objects.get_for_model(IPAddress).values_list("label", flat=True)
+            source_relationships = Relationship.objects.filter(source_type=ContentType.objects.get_for_model(IPAddress))
+            relationship_source_labels = [cr.get_label("source") for cr in source_relationships]
+            destination_relationships = Relationship.objects.filter(
+                destination_type=ContentType.objects.get_for_model(IPAddress)
+            ).exclude(pk__in=source_relationships)
+            relationship_destination_labels = [cr.get_label("destination") for cr in destination_relationships]
             return render(
                 request=request,
-                template_name="ipam/ipaddress_merge.html",
+                template_name=self.template_name,
                 context={
                     "queryset": queryset,
                     "return_url": self.get_return_url(request),
+                    "custom_field_keys": cf_keys,
+                    "custom_field_labels": cf_labels,
+                    "relationship_source_labels": relationship_source_labels,
+                    "relationship_destination_labels": relationship_destination_labels,
                 },
             )
         else:
-            msg = "No duplicate IPs found."
+            msg = "No additional duplicate IPs found."
             messages.warning(request, msg)
             return redirect(self.get_return_url(request))
 
@@ -704,6 +721,7 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
         if collapsed_ips and "_skip" not in request.POST:
+            # with cache.lock("ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT):
             with transaction.atomic():
                 namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
                 status = Status.objects.get(pk=merged_attributes.get("status"))
@@ -724,9 +742,9 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
                 else:
                     nat_inside = None
+                # merge all ips into the ip that already exists in the selected namespace.
                 merged_ip = collapsed_ips.filter(parent__namespace=namespace)
                 merged_ip.update(
-                    host=merged_attributes.get("host"),
                     type=merged_attributes.get("type"),
                     status=status,
                     role=role,
@@ -738,7 +756,127 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                 )
                 merged_ip = merged_ip.first()
                 merged_ip.tags.set(tags)
+                # Update custom_field_data
+                for key in merged_ip._custom_field_data.keys():
+                    merged_ip._custom_field_data[key] = merged_attributes.get("cf_" + key)
+                merged_ip.save()
+                for side, relationships in merged_ip.get_relationships_data().items():
+                    for relationship, value in relationships.items():
+                        if side == "source":
+                            if value.get("has_many"):
+                                RelationshipAssociation.objects.filter(
+                                    relationship=relationship,
+                                    source_id=merged_ip.pk,
+                                ).delete()
+                                if merged_attributes.get("cr_" + relationship.key):
+                                    pk_list = merged_attributes.get("cr_" + relationship.key).split(",")
+                                    updated_associations = RelationshipAssociation.objects.filter(pk__in=pk_list)
+                                    updated_associations.update(source_id=merged_ip.pk)
+                            else:
+                                if merged_attributes.get("cr_" + relationship.key):
+                                    RelationshipAssociation.objects.filter(
+                                        relationship=relationship,
+                                        destination_id=merged_attributes.get("cr_" + relationship.key),
+                                    ).delete()
+                                    RelationshipAssociation.objects.filter(
+                                        relationship=relationship, source_id=merged_ip.pk
+                                    ).delete()
+                                    new_rel = RelationshipAssociation(
+                                        relationship=relationship,
+                                        source_type=relationship.source_type,
+                                        source_id=merged_ip.pk,
+                                        destination_type=relationship.destination_type,
+                                        destination_id=merged_attributes.get("cr_" + relationship.key),
+                                    )
+                                    new_rel.validated_save()
+                        elif side == "destination":
+                            if value.get("has_many"):
+                                RelationshipAssociation.objects.filter(
+                                    relationship=relationship,
+                                    destination_id=merged_ip.pk,
+                                ).delete()
+                                if merged_attributes.get("cr_" + relationship.key):
+                                    pk_list = merged_attributes.get("cr_" + relationship.key).split(",")
+                                    updated_associations = RelationshipAssociation.objects.filter(pk__in=pk_list)
+                                    updated_associations.update(destination_id=merged_ip.pk)
+                            else:
+                                if merged_attributes.get("cr_" + relationship.key):
+                                    RelationshipAssociation.objects.filter(
+                                        relationship=relationship,
+                                        source_id=merged_attributes.get("cr_" + relationship.key),
+                                    ).delete()
+                                    RelationshipAssociation.objects.filter(
+                                        relationship=relationship, destination_id=merged_ip.pk
+                                    ).delete()
+                                    new_rel = RelationshipAssociation(
+                                        relationship=relationship,
+                                        source_type=relationship.source_type,
+                                        source_id=merged_attributes.get("cr_" + relationship.key),
+                                        destination_type=relationship.destination_type,
+                                        destination_id=merged_ip.pk,
+                                    )
+                                    new_rel.validated_save()
+                        else:
+                            lookup = {}
+                            peer_source_associations = RelationshipAssociation.objects.filter(
+                                relationship=relationship, destination_id=merged_ip.pk
+                            )
+                            for association in peer_source_associations:
+                                lookup[str(association.pk)] = association.source_id
+                            peer_source_associations.delete()
+                            peer_destination_associations = RelationshipAssociation.objects.filter(
+                                relationship=relationship, source_id=merged_ip.pk
+                            )
+                            for association in peer_destination_associations:
+                                lookup[str(association.pk)] = association.destination_id
+                            peer_destination_associations.delete()
+                            if value.get("has_many"):
+                                if merged_attributes.get("cr_" + relationship.key):
+                                    pk_list = merged_attributes.get("cr_" + relationship.key).split(",")
+                                    for pk in pk_list:
+                                        if pk in lookup:
+                                            new_rel = RelationshipAssociation(
+                                                relationship=relationship,
+                                                source_type=relationship.source_type,
+                                                source_id=merged_ip.pk,
+                                                destination_type=relationship.destination_type,
+                                                destination_id=lookup.get(pk),
+                                            )
+                                            new_rel.validated_save()
+                                        else:
+                                            rel = RelationshipAssociation.objects.get(pk=pk)
+                                            if rel.source in collapsed_ips and rel.destination in collapsed_ips:
+                                                continue
+                                            elif rel.source in collapsed_ips:
+                                                rel.source_id = merged_ip.pk
+                                            else:
+                                                rel.destination_id = merged_ip.pk
+                                            rel.validated_save()
+                            else:
+                                if merged_attributes.get("cr_" + relationship.key):
+                                    pk = merged_attributes.get("cr_" + relationship.key)
+                                    RelationshipAssociation.objects.filter(relationship=relationship, destination_id=pk).delete()
+                                    RelationshipAssociation.objects.filter(relationship=relationship, source_id=pk).delete()
+                                    new_rel = RelationshipAssociation(
+                                        relationship=relationship,
+                                        source_type=relationship.source_type,
+                                        source_id=merged_ip.pk,
+                                        destination_type=relationship.destination_type,
+                                        destination_id=pk,
+                                    )
+                                    new_rel.validated_save()
                 collapsed_ips = collapsed_ips.exclude(pk=merged_ip.pk)
+                # Update IPAddress relationships before merging IP Addresses.
+                ip_to_interface_assignments = IPAddressToInterface.objects.filter(ip_address__pk__in=collapsed_ips)
+                ip_to_interface_assignments.update(ip_address=merged_ip)
+                devices_ip_4 = Device.objects.filter(primary_ip4__pk__in=collapsed_ips)
+                devices_ip_4.update(primary_ip4=merged_ip)
+                devices_ip_6 = Device.objects.filter(primary_ip6__pk__in=collapsed_ips)
+                devices_ip_6.update(primary_ip6=merged_ip)
+                services = Service.objects.filter(ip_addresses__in=collapsed_ips)
+                for service in services:
+                    service.ip_addresses.add(merged_ip)
+                # Delete Collapsed IPs
                 try:
                     _, deleted_info = collapsed_ips.delete()
                     deleted_count = deleted_info[IPAddress._meta.label]
@@ -746,8 +884,10 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(collapsed_ips, request, e)
                     return redirect(self.get_return_url(request))
-                msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name}"
-                msg = f'{msg} into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
+                msg = (
+                    f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} "
+                    f'into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
+                )
                 logger.info(msg)
                 messages.success(request, mark_safe(msg))
         host_values = (
@@ -760,16 +900,28 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         if host_values:
             item = host_values[0]
             queryset = self.queryset.filter(host__in=[item["host"]])
+            cf_keys = CustomField.objects.get_for_model(IPAddress).values_list("key", flat=True)
+            cf_labels = CustomField.objects.get_for_model(IPAddress).values_list("label", flat=True)
+            source_relationships = Relationship.objects.filter(source_type=ContentType.objects.get_for_model(IPAddress))
+            relationship_source_labels = [cr.get_label("source") for cr in source_relationships]
+            destination_relationships = Relationship.objects.filter(
+                destination_type=ContentType.objects.get_for_model(IPAddress)
+            ).exclude(pk__in=source_relationships)
+            relationship_destination_labels = [cr.get_label("destination") for cr in destination_relationships]
             return render(
                 request=request,
-                template_name="ipam/ipaddress_merge.html",
+                template_name=self.template_name,
                 context={
                     "queryset": queryset,
                     "return_url": self.get_return_url(request),
+                    "custom_field_keys": cf_keys,
+                    "custom_field_labels": cf_labels,
+                    "relationship_source_labels": relationship_source_labels,
+                    "relationship_destination_labels": relationship_destination_labels,
                 },
             )
         else:
-            msg = "No duplicate IPs found."
+            msg = "No additional duplicate IPs found."
             messages.warning(request, msg)
             return redirect(self.get_return_url(request))
 
