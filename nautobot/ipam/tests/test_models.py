@@ -1,10 +1,10 @@
-import random
 from unittest import skipIf
 
 import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError
+from django.db.models import ProtectedError
 from django.test import TestCase
 
 from nautobot.core.testing.models import ModelTestCases
@@ -273,8 +273,12 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.statuses = Status.objects.get_for_model(Prefix)
         self.status = self.statuses.first()
         self.status.content_types.add(ContentType.objects.get_for_model(IPAddress))
-        self.root = Prefix.objects.create(prefix="101.102.0.0/24", status=self.status, namespace=self.namespace)
-        self.parent = Prefix.objects.create(prefix="101.102.0.0/25", status=self.status, namespace=self.namespace)
+        self.root = Prefix.objects.create(
+            prefix="101.102.0.0/24", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        self.parent = Prefix.objects.create(
+            prefix="101.102.0.0/25", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
         self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
         self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
 
@@ -369,9 +373,13 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         # Now let's create some duplicates in another Namespace and perform the same tests.
 
-        namespace = random.choice(Namespace.objects.exclude(id=self.namespace.id))
-        root = Prefix.objects.create(prefix="101.102.0.0/24", status=self.status, namespace=namespace)
-        parent = Prefix.objects.create(prefix="101.102.0.0/25", status=self.status, namespace=namespace)
+        namespace = Namespace.objects.exclude(id=self.namespace.id).first()
+        root = Prefix.objects.create(
+            prefix="101.102.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        parent = Prefix.objects.create(
+            prefix="101.102.0.0/25", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
         child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=namespace)
         child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=namespace)
 
@@ -420,9 +428,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertSetEqual(child_prefix_pks, prefix_pks)
 
     def test_child_ip_addresses(self):
-        parent_prefix = Prefix.objects.create(
-            prefix="10.0.0.0/16", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
-        )
+        parent_prefix = Prefix.objects.create(prefix="10.0.0.0/16", status=self.status, namespace=self.namespace)
         ips = (
             IPAddress.objects.create(address="10.0.0.1/24", status=self.status, namespace=self.namespace),
             IPAddress.objects.create(address="10.0.1.1/24", status=self.status, namespace=self.namespace),
@@ -435,19 +441,22 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.assertSetEqual(child_ip_pks, {ips[0].pk, ips[1].pk, ips[2].pk, ips[3].pk})
 
         # Make sure /31 is handled correctly
-        parent_prefix_31 = Prefix.objects.create(
-            prefix="10.0.4.0/31", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
-        )
+        parent_prefix_31 = Prefix.objects.create(prefix="20.0.4.0/31", status=self.status, namespace=self.namespace)
         ips_31 = (
-            IPAddress.objects.create(address="10.0.4.0/31", status=self.status, namespace=self.namespace),
-            IPAddress.objects.create(address="10.0.4.1/31", status=self.status, namespace=self.namespace),
+            IPAddress.objects.create(address="20.0.4.0/31", status=self.status, namespace=self.namespace),
+            IPAddress.objects.create(address="20.0.4.1/31", status=self.status, namespace=self.namespace),
         )
         child_ip_pks = {p.pk for p in parent_prefix_31.ip_addresses.all()}
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
     def test_get_available_prefixes(self):
         prefixes = [
-            Prefix(prefix="10.0.0.0/16", status=self.status, namespace=self.namespace),  # Parent prefix
+            Prefix(
+                prefix="10.0.0.0/16",
+                status=self.status,
+                namespace=self.namespace,
+                type=PrefixTypeChoices.TYPE_CONTAINER,
+            ),  # Parent prefix
             Prefix(prefix="10.0.0.0/20", status=self.status, namespace=self.namespace),
             Prefix(prefix="10.0.32.0/20", status=self.status, namespace=self.namespace),
             Prefix(prefix="10.0.128.0/18", status=self.status, namespace=self.namespace),
@@ -493,7 +502,12 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
     def test_get_first_available_prefix(self):
         prefixes = [
-            Prefix(prefix="10.0.0.0/16", status=self.status, namespace=self.namespace),  # Parent prefix
+            Prefix(
+                prefix="10.0.0.0/16",
+                status=self.status,
+                namespace=self.namespace,
+                type=PrefixTypeChoices.TYPE_CONTAINER,
+            ),  # Parent prefix
             Prefix(prefix="10.0.0.0/24", status=self.status, namespace=self.namespace),
             Prefix(prefix="10.0.1.0/24", status=self.status, namespace=self.namespace),
             Prefix(prefix="10.0.2.0/24", status=self.status, namespace=self.namespace),
@@ -627,8 +641,189 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         """Test that duplicate Prefixes in the same Namespace raises an error."""
         Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
         duplicate_prefix = Prefix(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
-        # self.assertRaises(IntegrityError, duplicate_prefix.full_clean)
         self.assertRaises(ValidationError, duplicate_prefix.full_clean)
+
+    def test_parenting_constraints_on_save(self):
+        """Test that Prefix parenting correctly raises validation errors when saving a prefix would create an invalid parent/child relationship."""
+
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+        Prefix.objects.create(
+            prefix="10.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        Prefix.objects.create(
+            prefix="11.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        pool_prefix = Prefix.objects.create(
+            prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        )
+
+        with self.assertRaises(ValidationError, msg="Network prefix parent cannot be a network"):
+            Prefix.objects.create(
+                prefix="11.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+
+        with self.assertRaises(ValidationError, msg="Network prefix parent cannot be a pool"):
+            Prefix.objects.create(
+                prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+
+        with self.assertRaises(ValidationError, msg="Container prefix parent cannot be a network"):
+            Prefix.objects.create(
+                prefix="11.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        with self.assertRaises(ValidationError, msg="Container prefix parent cannot be a pool"):
+            Prefix.objects.create(
+                prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        with self.assertRaises(ValidationError, msg="Pool prefix parent cannot be a container"):
+            Prefix.objects.create(
+                prefix="10.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+
+        with self.assertRaises(ValidationError, msg="Pool prefix parent cannot be a pool"):
+            Prefix.objects.create(
+                prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (network parenting container)"
+        ):
+            Prefix.objects.create(
+                prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (pool parenting container)"
+        ):
+            Prefix.objects.create(
+                prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (network parenting network)"
+        ):
+            Prefix.objects.create(
+                prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (pool parenting network)"
+        ):
+            Prefix.objects.create(
+                prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (container parenting pool)"
+        ):
+            Prefix.objects.create(
+                prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        with self.assertRaises(
+            ValidationError, msg="Test that an invalid parent cannot be created (pool parenting pool)"
+        ):
+            Prefix.objects.create(
+                prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+
+        with self.subTest("Test that valid parents can be created"):
+            Prefix.objects.create(
+                prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+            Prefix.objects.create(
+                prefix="12.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+            Prefix.objects.create(
+                prefix="12.0.0.0/7", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        with self.subTest("Test that valid children can be created"):
+            Prefix.objects.create(
+                prefix="10.0.0.0/25", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+            Prefix.objects.create(
+                prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        with self.assertRaises(
+            ValidationError,
+            msg="Test that modifying a prefix's type fails if it would result in an invalid parent/child relationship",
+        ):
+            pool_prefix.type = PrefixTypeChoices.TYPE_NETWORK
+            pool_prefix.validated_save()
+
+        with self.subTest(
+            "Test that modifying a prefix's type is allowed if it does not create an invalid relationship"
+        ):
+            child = Prefix.objects.create(
+                prefix="10.0.0.0/28", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+            child.type = PrefixTypeChoices.TYPE_CONTAINER
+            child.validated_save()
+
+    def test_parenting_constraints_on_delete(self):
+        """Test that Prefix parenting correctly raises validation errors when deleting a prefix would create an invalid parent/child relationship."""
+
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+        root = Prefix.objects.create(
+            prefix="10.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        container = Prefix.objects.create(
+            prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        network = Prefix.objects.create(
+            prefix="10.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        pool = Prefix.objects.create(
+            prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        )
+
+        with self.assertRaises(
+            ProtectedError,
+            msg="Test that deleting a network prefix that would make a pool prefix's parent a container raises a ProtectedError",
+        ):
+            network.delete()
+
+        with self.subTest("Test that deleting a parent prefix properly reparents the child prefixes"):
+            container.delete()
+            root.refresh_from_db()
+            network.refresh_from_db()
+            pool.refresh_from_db()
+            self.assertIsNone(root.parent)
+            self.assertEqual(network.parent, root)
+            self.assertEqual(pool.parent, network)
+
+        ip = IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.subTest("Test that deleting a pool prefix containing IPs succeeds"):
+            self.assertEqual(ip.parent, network)
+            pool.delete()
+            ip.refresh_from_db()
+            self.assertEqual(ip.parent, network)
+
+        with self.assertRaises(
+            ProtectedError,
+            msg="Test that deleting a network prefix that would make an IP's parent a container raises a ProtectedError",
+        ):
+            network.delete()
+
+        with self.subTest("Test that deleting the root prefix succeeds"):
+            root.delete()
+            network.refresh_from_db()
+            self.assertIsNone(network.parent)
+
+        with self.assertRaises(
+            ProtectedError,
+            msg="Test that deleting a network prefix that would orphan an IP raises a ProtectedError",
+        ):
+            network.delete()
+
+        with self.subTest("Test that deleting all child IPs of a network prefix allows the prefix to be deleted"):
+            ip.delete()
+            network.delete()
 
 
 class TestIPAddress(ModelTestCases.BaseModelTestCase):
@@ -705,6 +900,39 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
                     .order_by("-prefix_length")
                     .first(),
                 )
+
+    def test_parenting_constraints(self):
+        """Test that IPAddress parenting correctly raises validation errors when unable to assign a valid parent prefix."""
+
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+
+        Prefix.objects.create(
+            prefix="10.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        Prefix.objects.create(
+            prefix="11.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        Prefix.objects.create(
+            prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        )
+
+        with self.assertRaises(ValidationError, msg="IP Address parent cannot be a container"):
+            IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.assertRaises(Prefix.DoesNotExist, msg="IP Address parent cannot be a pool"):
+            IPAddress.objects.create(address="12.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.assertRaises(Prefix.DoesNotExist, msg="IP Address must have a valid parent"):
+            IPAddress.objects.create(address="13.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.subTest("Test that IP address can be assigned to a valid parent"):
+            IPAddress.objects.create(address="11.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.subTest("Test that IP address can be assigned to a pool that is a child of a network"):
+            Prefix.objects.create(
+                prefix="11.0.0.8/29", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+            IPAddress.objects.create(address="11.0.0.9/32", status=self.status, namespace=namespace)
 
 
 class TestVLANGroup(ModelTestCases.BaseModelTestCase):

@@ -2,7 +2,8 @@ import netaddr
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.extras.models import Status
-from nautobot.ipam.models import Prefix
+from nautobot.ipam.choices import PrefixTypeChoices
+from nautobot.ipam.models import Namespace, Prefix
 
 
 class PrefixHierarchyTest(SeleniumTestCase):
@@ -26,14 +27,27 @@ class PrefixHierarchyTest(SeleniumTestCase):
         Test that 10.0.0.0/24 is shown under 10.0.0.0/16
         """
         status = Status.objects.get_for_model(Prefix).first()
-        Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=status).validated_save()
-        Prefix(prefix=netaddr.IPNetwork("10.0.0.0/24"), status=status).validated_save()
+        namespace = Namespace.objects.create(name="Prefix Hierarchy Test test_child_relationship_visible")
+        Prefix(
+            prefix=netaddr.IPNetwork("10.0.0.0/16"),
+            status=status,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+            namespace=namespace,
+        ).validated_save()
+        Prefix(
+            prefix=netaddr.IPNetwork("10.0.0.0/24"),
+            status=status,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            namespace=namespace,
+        ).validated_save()
 
-        # Navigate to Prefix list view
+        # Navigate to Namespace Prefixes list view
         self.browser.visit(self.live_server_url)
         # find_by_partial_text finds both Inventory > Provider Networks as well as the desired Networks top-level menu.
         self.browser.links.find_by_partial_text("Networks")[1].click()
-        self.browser.links.find_by_partial_text("Prefixes").click()
+        self.browser.links.find_by_partial_text("Namespaces").click()
+        self.browser.links.find_by_text(namespace.name).click()
+        self.browser.find_by_xpath("//ul[@id='tabs']//a[contains(., 'Prefixes')]").click()
 
         self.assertEqual(len(self.browser.find_by_tag("tr")[1].find_by_text("10.0.0.0/16")), 1)  # 10.0.0.0/16 is first
         self.assertEqual(len(self.browser.find_by_tag("tr")[2].find_by_text("10.0.0.0/24")), 1)  # 10.0.0.0/24 is second
