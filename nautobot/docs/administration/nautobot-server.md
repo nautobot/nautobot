@@ -359,6 +359,40 @@ Prompt provided:
 
 Please see the dedicated guide on the [Nautobot Shell](nautobot-shell.md) for more information.
 
+### `pre_migrate`
+
+`nautobot-server pre_migrate`
+
+Performs pre-migration validation checks for Nautobot 2.0.
+
+If the Nautobot 1.5 instance cannot be upgraded, this command will exit uncleanly making it suitable for use in continuous integration workflows.
+
+For example, if any of the pre-migration checks fail, you may see an error message like this:
+
+```no-highlight
+$ nautobot-server pre_migrate
+>>> Running check: check_configcontext_uniqueness...
+>>> Running check: check_exporttemplate_uniqueness...
+>>> Running check: check_virtualchassis_uniqueness...
+CommandError: One or more pre-migration checks failed:
+    You cannot migrate ConfigContext or ConfigContextSchema objects that have non-unique names:
+    - ConfigContext: [{'name': 'cc1', 'count': 2}]
+    - ConfigContextSchema: [{'name': 'ccs1', 'count': 2}]
+
+    You cannot migrate VirtualChassis objects with non-unique names:
+     - [{'name': 'vc1', 'count': 2}]
+```
+
+Otherwise, a clean exit displays "All pre-migration checks passed." incidating that your Nautobot instance is ready to be upgraded to Nautobot 2.0:
+
+```no-highlight
+$ nautobot-server pre_migrate
+>>> Running check: check_configcontext_uniqueness...
+>>> Running check: check_exporttemplate_uniqueness...
+>>> Running check: check_virtualchassis_uniqueness...
+All pre-migration checks passed.
+```
+
 ### `post_upgrade`
 
 `nautobot-server post_upgrade`

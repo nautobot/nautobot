@@ -1,0 +1,1 @@
+Added a warning notifying users when the requested `per_page` on a list page exceeds the `MAX_PAGE_SIZE` set.
