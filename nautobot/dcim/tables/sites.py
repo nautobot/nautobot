@@ -24,7 +24,7 @@ __all__ = (
 
 class RegionTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=MPTT_LINK, attrs={"td": {"class": "text-nowrap"}})
     site_count = tables.Column(verbose_name="Sites")
     actions = ButtonsColumn(Region)
 

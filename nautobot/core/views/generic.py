@@ -312,7 +312,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         if self.table:
             # Construct the objects table
-            table = self.table(self.queryset, user=request.user)
+            # Order By is needed in the table `__init__` method
+            order_by = self.request.GET.getlist("sort")
+            table = self.table(self.queryset, user=request.user, order_by=order_by)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
