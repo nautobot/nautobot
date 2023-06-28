@@ -472,7 +472,7 @@ Markdown rendering is supported for log messages.
     As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.utilities.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../configuration/optional-settings.md#sanitizer_patterns).
 
 !!! note
-    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising any exception (e.g. `ValueError` for malformed input values) will ensure that any database changes are rolled back as part of the process of ending the job. `AbortTransaction` from Nautobot, which was recommended in past versions of the docs, should explicitly _not_ be used, as it is only intended for use by Nautobot's internal job handling.
+    Using `self.log_failure()`, in addition to recording a log message, will flag the overall job as failed, but it will **not** stop the execution of the job, nor will it result in an automatic rollback of any database changes made by the job. To end a job early, you can use a Python `raise` or `return` as appropriate. Raising any exception (e.g. `ValueError` for malformed input values) will ensure that any database changes are rolled back as part of the process of ending the job. `AbortTransaction` from Nautobot, which was recommended in past versions of the docs, should explicitly *not* be used, as it is only intended for use by Nautobot's internal job handling.
 
 ### Accessing Request Data
 
@@ -514,12 +514,12 @@ An administrator or user with `extras.change_job` permission can edit the Job to
 * Navigate to Jobs > Jobs menu
 * Select a job that has been installed
 * Select **Edit** button
-* In the second section titled _Job_, select the **Enabled** checkbox
+* In the second section titled *Job*, select the **Enabled** checkbox
 * Select **Update** button at the bottom
 
 #### Enabling Job Hooks
 
- Job hooks are enabled in a similar fashion, but by using the _default_ filters when navigating to the Jobs page the Job Hooks will not be visible. To enable job hooks:
+ Job hooks are enabled in a similar fashion, but by using the *default* filters when navigating to the Jobs page the Job Hooks will not be visible. To enable job hooks:
 
 * Navigate to Jobs > Jobs menu
 * Select the **Filter** button to bring up the Filter Jobs context
@@ -527,7 +527,7 @@ An administrator or user with `extras.change_job` permission can edit the Job to
 * Select **Apply** button
 * Select a job that has been installed
 * Select **Edit** button
-* In the second section titled _Job_, select the **Enabled** checkbox
+* In the second section titled *Job*, select the **Enabled** checkbox
 * Select **Update** button at the bottom
 
 ### Overriding Metadata
