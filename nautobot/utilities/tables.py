@@ -67,7 +67,7 @@ class BaseTable(tables.Table):
 
         if model := getattr(self.Meta, "model", None):
             # The name nesting is removed when sorting on the UI because it results in rows appearing as children of the wrong parent rows.
-            if issubclass(model, (MPTTModel, TreeNode)) and self.order_by:
+            if issubclass(model, MPTTModel) and self.order_by:
                 self.columns["name"].column.template_code = MPTT_LINK_WITHOUT_NESTING
 
         # Set default empty_text if none was provided
