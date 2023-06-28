@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { usePagination } from "./usePagination";
 import { useSearchParams } from "react-router-dom";
 import {
     Box,
@@ -13,29 +12,14 @@ import { IconButton } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
 export default function Pagination({
-    totalDataCount,
-    siblingCount = 1,
-    currentPage,
+    firstPage,
+    lastPage,
     pageSize,
     scroll_ref,
+    totalDataCount,
+    trueCurrentPage,
 }) {
     let [searchParams, setSearchParams] = useSearchParams();
-
-    const paginationRange = usePagination({
-        currentPage,
-        totalDataCount,
-        siblingCount,
-        pageSize,
-    });
-
-    // currentPage starts from 0
-    currentPage = ~~currentPage;
-    // trueCurrentPage increments currentPage by 1 to get the accurate human-form page number
-    let trueCurrentPage = currentPage + 1;
-
-    let firstPage = 1;
-    let lastPage = totalDataCount / pageSize;
-    lastPage = ~~lastPage + 1;
 
     // State to track the current page number
     const [pageNumber, setPageNumber] = useState(trueCurrentPage);
@@ -77,10 +61,6 @@ export default function Pagination({
         }
     }
 
-    // If there is only one/zero page in the pagination range, we do not render anything.
-    if (paginationRange.length < 2) {
-        return null;
-    }
     function onPageNumberChange(targetPageNumber) {
         let limit = searchParams.get("limit");
         /* TODO: we need a REST API endpoint to query get_settings_or_config("PAGINATE_COUNT") rather than hard-coding this to 50. */
@@ -90,12 +70,11 @@ export default function Pagination({
             behavior: "smooth",
         });
 
-        currentPage++;
         let newPageNumber;
         if (targetPageNumber === "<") {
-            newPageNumber = currentPage - 1;
+            newPageNumber = trueCurrentPage - 1;
         } else if (targetPageNumber === ">") {
-            newPageNumber = currentPage + 1;
+            newPageNumber = trueCurrentPage + 1;
         } else {
             newPageNumber = targetPageNumber;
         }
@@ -125,7 +104,7 @@ export default function Pagination({
             <Text color="gray-3" whiteSpace="nowrap">
                 You are on page
             </Text>
-            {currentPage + 1 > firstPage ? (
+            {trueCurrentPage > firstPage ? (
                 <IconButton
                     onClick={() => onPageNumberChange("<")}
                     icon={<ChevronLeftIcon />}
@@ -157,7 +136,7 @@ export default function Pagination({
                     <FormErrorMessage>Page out of range</FormErrorMessage>
                 )}
             </FormControl>
-            {currentPage + 1 < lastPage ? (
+            {trueCurrentPage < lastPage ? (
                 <IconButton
                     onClick={() => onPageNumberChange(">")}
                     icon={<ChevronRightIcon />}

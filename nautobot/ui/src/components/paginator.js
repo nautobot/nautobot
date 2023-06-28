@@ -1,4 +1,5 @@
-import { Box, Flex, Spacer } from "@chakra-ui/react";
+import { Box, Flex } from "@nautobot/nautobot-ui";
+import { Spacer } from "@chakra-ui/react";
 import React from "react";
 
 import PaginatorForm from "@components/paginator_form";
@@ -11,17 +12,21 @@ class Paginator extends React.Component {
     }
 
     render() {
-        let num_pages;
         let data_count;
-        let page_size;
-        let active_page;
         let scroll_ref;
+        let active_page;
+        let page_size;
+        let num_pages;
+
         data_count = this.props.data_count;
-        active_page = this.props.active_page;
         scroll_ref = this.props.scroll_ref;
+        active_page = this.props.active_page;
         if (!active_page) {
             active_page = 0;
         }
+
+        // trueCurrentPage increments active_page (which starts at 0) by 1 to get the accurate human-form page number
+        let trueCurrentPage = ~~active_page + 1;
 
         if (Object.keys(this.state).length === 0) {
             page_size = this.props.page_size;
@@ -36,36 +41,26 @@ class Paginator extends React.Component {
         }
         // convert float to int
         num_pages = ~~num_pages;
+
         // const pages = [];
 
         // let list_url = url.split("?")[0]; // strip the query parameters to retain the original list url
-        let start_range;
-        let end_range;
-
-        if (active_page === num_pages - 1) {
-            start_range = active_page * page_size + 1;
-            end_range = data_count;
-        } else {
-            start_range = active_page * page_size + 1;
-            end_range = (active_page + 1) * page_size;
-        }
 
         return (
             <Flex paddingTop={10}>
                 <Box>
                     <Pagination
-                        totalDataCount={data_count}
-                        currentPage={active_page}
+                        firstPage={1}
+                        lastPage={num_pages}
                         pageSize={page_size}
                         scroll_ref={scroll_ref}
+                        totalDataCount={data_count}
+                        trueCurrentPage={trueCurrentPage}
                     ></Pagination>
                 </Box>
                 <Spacer />
                 <Box>
                     <PaginatorForm
-                        start={start_range}
-                        end={end_range}
-                        total_count={data_count}
                         scroll_ref={scroll_ref}
                     ></PaginatorForm>
                 </Box>
