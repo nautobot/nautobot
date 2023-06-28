@@ -380,12 +380,12 @@ class BaseJob(Task):
 
     @final
     @classproperty
-    def file_path(cls):  # pylint: disable=no-self-argument
+    def file_path(cls) -> str:  # pylint: disable=no-self-argument
         return inspect.getfile(cls)
 
     @final
     @classproperty
-    def class_path(cls):  # pylint: disable=no-self-argument
+    def class_path(cls) -> str:  # pylint: disable=no-self-argument
         """
         Unique identifier of a specific Job class, in the form <module_name>.<ClassName>.
 
@@ -399,7 +399,7 @@ class BaseJob(Task):
 
     @final
     @classproperty
-    def class_path_dotted(cls):  # pylint: disable=no-self-argument
+    def class_path_dotted(cls) -> str:  # pylint: disable=no-self-argument
         """
         Dotted class_path, suitable for use in things like Python logger names.
 
@@ -409,7 +409,7 @@ class BaseJob(Task):
 
     @final
     @classproperty
-    def class_path_js_escaped(cls):  # pylint: disable=no-self-argument
+    def class_path_js_escaped(cls) -> str:  # pylint: disable=no-self-argument
         """
         Escape various characters so that the class_path can be used as a jQuery selector.
         """
@@ -417,23 +417,23 @@ class BaseJob(Task):
 
     @final
     @classproperty
-    def grouping(cls):  # pylint: disable=no-self-argument
+    def grouping(cls) -> str:  # pylint: disable=no-self-argument
         module = inspect.getmodule(cls)
         return getattr(module, "name", module.__name__)
 
     @final
     @classproperty
-    def name(cls):  # pylint: disable=no-self-argument
+    def name(cls) -> str:  # pylint: disable=no-self-argument
         return getattr(cls.Meta, "name", cls.__name__)
 
     @final
     @classproperty
-    def description(cls):  # pylint: disable=no-self-argument
+    def description(cls) -> str:  # pylint: disable=no-self-argument
         return dedent(getattr(cls.Meta, "description", "")).strip()
 
     @final
     @classproperty
-    def description_first_line(cls):  # pylint: disable=no-self-argument
+    def description_first_line(cls) -> str:  # pylint: disable=no-self-argument
         if cls.description:  # pylint: disable=using-constant-test
             return cls.description.splitlines()[0]
         return ""
@@ -485,12 +485,12 @@ class BaseJob(Task):
 
     @final
     @classproperty
-    def task_queues(cls) -> tuple:  # pylint: disable=no-self-argument
-        return tuple(getattr(cls.Meta, "task_queues", []))
+    def task_queues(cls) -> list:  # pylint: disable=no-self-argument
+        return list(getattr(cls.Meta, "task_queues", []))
 
     @final
     @classproperty
-    def properties_dict(cls):  # pylint: disable=no-self-argument
+    def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
 
@@ -510,7 +510,7 @@ class BaseJob(Task):
 
     @final
     @classproperty
-    def registered_name(cls):  # pylint: disable=no-self-argument
+    def registered_name(cls) -> str:  # pylint: disable=no-self-argument
         return f"{cls.__module__}.{cls.__name__}"
 
     @classmethod

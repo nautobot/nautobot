@@ -440,13 +440,12 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                     # It was inherited and not overridden
                     setattr(job_model, field_name, getattr(job_class, field_name))
 
-            # set supports_dryrun to match the property on the job class
-            job_model.supports_dryrun = job_class.supports_dryrun
-
             if not created:
                 # Mark it as installed regardless
                 job_model.installed = True
-                # Update the `read_only` and `supports_dryrun` flags in case they've changed in the source
+                # Update the non-overridable flags in case they've changed in the source
+                job_model.is_job_hook_receiver = issubclass(job_class, JobHookReceiver)
+                job_model.is_job_button_receiver = issubclass(job_class, JobButtonReceiver)
                 job_model.read_only = job_class.read_only
                 job_model.supports_dryrun = job_class.supports_dryrun
 
