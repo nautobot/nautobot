@@ -60,9 +60,7 @@ class Paginator extends React.Component {
                 </Box>
                 <Spacer />
                 <Box>
-                    <PaginatorForm
-                        scroll_ref={scroll_ref}
-                    ></PaginatorForm>
+                    <PaginatorForm scroll_ref={scroll_ref}></PaginatorForm>
                 </Box>
             </Flex>
         );
