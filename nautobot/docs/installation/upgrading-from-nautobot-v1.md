@@ -1,5 +1,35 @@
 # Upgrading from Nautobot v1.X
 
+## Pre-migration validation
+
+In Nautobot 1.x, starting with 1.5.22, there is a `nautobot-server pre_migrate` command that can be run to check your existing data for compatibility with the data model changes introduced in Nautobot 2.0. You are highly encouraged to run this command before beginning to migrate to Nautobot 2.x as it will catch and report certain data-sanitization issues that cannot be remediated automatically during the migration and will need to be manually corrected before you upgrade.
+
+For example, if any of the pre-migration checks fail, you may see an error message like this:
+
+```no-highlight
+$ nautobot-server pre_migrate
+>>> Running check: check_configcontext_uniqueness...
+>>> Running check: check_exporttemplate_uniqueness...
+>>> Running check: check_virtualchassis_uniqueness...
+CommandError: One or more pre-migration checks failed:
+    You cannot migrate ConfigContext or ConfigContextSchema objects that have non-unique names:
+    - ConfigContext: [{'name': 'cc1', 'count': 2}]
+    - ConfigContextSchema: [{'name': 'ccs1', 'count': 2}]
+
+    You cannot migrate VirtualChassis objects with non-unique names:
+     - [{'name': 'vc1', 'count': 2}]
+```
+
+Otherwise, a clean exit displays "All pre-migration checks passed." incidating that your Nautobot instance is ready to be upgraded to Nautobot 2.0:
+
+```no-highlight
+$ nautobot-server pre_migrate
+>>> Running check: check_configcontext_uniqueness...
+>>> Running check: check_exporttemplate_uniqueness...
+>>> Running check: check_virtualchassis_uniqueness...
+All pre-migration checks passed.
+```
+
 ## Dependency Changes
 
 - Nautobot no longer uses or supports the use of `django-cryptography`.
@@ -91,6 +121,15 @@ The following changes have been made to the `Prefix` model.
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
 
+#### Prefix Parenting Constraints
+
+The following constraints have been added to the `Prefix` model in order to ensure more accurate network modeling:
+
+- A `Prefix` of type `Container` can only have a parent of type `Container`
+- A `Prefix` of type `Network` can only have a parent of type `Container`
+- A `Prefix` of type `Pool` can only have a parent of type `Network`
+- Any `Prefix` can be a root prefix (i.e. have no parent)
+
 ### IPAddress Parenting Concrete Relationship
 
 The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
@@ -98,6 +137,14 @@ The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Pref
 | Removed                | Replaced With   |
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
+
+#### IPAddress Parenting Constraints
+
+The following constraints have been added to the `IPAddress` model:
+
+- An `IPAddress` must have a parent `Prefix` of type `Network`
+- An `IPAddress` cannot be created if a suitable parent `Prefix` of type `Network` does not exist
+- An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network`. This is because the `IPAddress` must have a concrete relationship to a `Network` and the `Pool` membership is derived from the IP address being within the `Pool`'s range.
 
 ### Prefix get_utilization Method
 

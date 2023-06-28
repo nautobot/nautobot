@@ -1,4 +1,3 @@
-import netaddr
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -274,11 +273,6 @@ def common_test_data(cls):
     VirtualMachine.objects.create(
         cluster=clusters[0], name="VM 3", role=cls.device_roles[2], platform=platforms[2], status=vm_status
     )
-
-    prefix_status = Status.objects.get_for_model(Prefix).first()
-    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.0.0/16"), location=loc0, status=prefix_status)
-    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.1.0/24"), location=loc0, status=prefix_status)
-    Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.2.0/24"), location=loc1, status=prefix_status)
 
     vlan_groups = (
         VLANGroup.objects.create(name="VLAN Group 1", location=loc0),

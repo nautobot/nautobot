@@ -148,6 +148,29 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.22 (2023-06-26)
+
+### Added
+
+- [#3534](https://github.com/nautobot/nautobot/issues/3534) - Added optional args and kwargs to `BaseModel.validated_save()` that pass through to the model's `save` method.
+- [#3946](https://github.com/nautobot/nautobot/issues/3946) - Added warning note to job scheduling documentation for the attributes that can prevent scheduling.
+
+### Fixed
+
+- [#3534](https://github.com/nautobot/nautobot/issues/3534) - Fixed confusing unit test failure message when trying to run a non-existent test.
+- [#3534](https://github.com/nautobot/nautobot/issues/3534) - Fixed unit tests sometimes clearing out the default database.
+- [#3658](https://github.com/nautobot/nautobot/issues/3658) - Fixed a typo in the success message when removing a child Device from a Device Bay.
+- [#3739](https://github.com/nautobot/nautobot/issues/3739) - Fixed change log entries not being created for some long running requests.
+- [#3891](https://github.com/nautobot/nautobot/issues/3891) - Fixed a bug preventing Job buttons from supporting the `FORCE_SCRIPT_NAME` setting due to hard-coded URLs.
+- [#3924](https://github.com/nautobot/nautobot/issues/3924) - Fixed a potential server hang at startup when a misconfigured GitRepository is present.
+- [#3948](https://github.com/nautobot/nautobot/issues/3948) - Fixed device name copy button adding an extra space/return.
+- [#3987](https://github.com/nautobot/nautobot/issues/3987) - Fixed issue where download SVG download did not actually download.
+
+### Security
+
+- [#3796](https://github.com/nautobot/nautobot/issues/3796) - Updated `requests` to 2.31.0 to address CVE-2023-32681. This is a development dependency and will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+- [#3843](https://github.com/nautobot/nautobot/issues/3843) - Updated `cryptography` to 41.0.0 due to a statically linked version of OpenSSL which contained vulnerability CVE-2023-2650. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
 ## v1.5.21 (2023-06-12)
 
 ### Added

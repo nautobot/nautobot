@@ -40,3 +40,15 @@ An IP address can be designated as the network address translation (NAT) inside 
 
 +++ 1.3.0
     Support for multiple outside NAT IP addresses was added.
+
+## IPAddress Parenting Concrete Relationship
+
++++ 2.0.0
+
+The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
+
+The following constraints are enforced on the `IPAddress.parent` field:
+
+* An `IPAddress` must have a parent `Prefix` of type `Network`
+* An `IPAddress` cannot be created if a suitable parent `Prefix` of type `Network` does not exist
+* An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network` prefix. This is because the `IPAddress` must have a concrete relationship to a `Network` and the `Pool` membership is derived from the IP address being within the `Pool`'s range, not from the IP's `parent` field.

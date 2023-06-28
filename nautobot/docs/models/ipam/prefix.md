@@ -23,7 +23,7 @@ The prefix model can be set to one of three types through the `type` field. The 
 * Network (default)
 * Pool
 
-If a prefix's type is set to "Pool", Nautobot will treat this prefix as a range (such as a NAT pool) wherein every IP address is valid and assignable. This logic is used when identifying available IP addresses within a prefix. If type is set to "Container" or "Network", Nautobot will assume that the first and last (network and broadcast) addresses within an IPv4 prefix are unusable.
+If a prefix's type is set to "Pool", Nautobot will treat this prefix as a range (such as a NAT pool) wherein every IP address is valid and assignable. This logic is used when identifying available IP addresses within a prefix. If type is set to "Network", Nautobot will assume that the first and last (network and broadcast) addresses within an IPv4 prefix are unusable.
 
 +/- 2.0.0
     The `is_pool` field was removed and its functionality was replaced by the `Prefix.type` field.
@@ -46,3 +46,14 @@ The `get_utilization` method on the `ipam.Prefix` model has been updated in 2.0 
 * If the `Prefix.type` is `Network`:
     * The utilization is calculated as the sum of the total address space of all child `Pool` prefixes plus the total number of child IP addresses.
     * For IPv4 networks larger than /31, if neither the first or last address is occupied by either a pool or an IP address, they are subtracted from the total size of the prefix.
+
+## Prefix hierarchy
+
++++ 2.0.0
+
+Prefixes and IP addresses within a namespace are organized into a hierarchy using the `parent` field. There are limitations on the types of prefixes that can be assigned as parents:
+
+* A `Prefix` of type `Container` can only have a parent of type `Container`
+* A `Prefix` of type `Network` can only have a parent of type `Container`
+* A `Prefix` of type `Pool` can only have a parent of type `Network`
+* Any `Prefix` can be a root prefix (i.e. have no parent)

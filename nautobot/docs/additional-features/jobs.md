@@ -545,12 +545,12 @@ An administrator or user with `extras.change_job` permission can edit the Job to
 * Navigate to Jobs > Jobs menu
 * Select a job that has been installed
 * Select **Edit** button
-* In the second section titled _Job_, select the **Enabled** checkbox
+* In the second section titled **Job**, select the **Enabled** checkbox
 * Select **Update** button at the bottom
 
 #### Enabling Job Hooks
 
- Job hooks are enabled in a similar fashion, but by using the _default_ filters when navigating to the Jobs page the Job Hooks will not be visible. To enable job hooks:
+ Job hooks are enabled in a similar fashion, but by using the **default** filters when navigating to the Jobs page the Job Hooks will not be visible. To enable job hooks:
 
 * Navigate to Jobs > Jobs menu
 * Select the **Filter** button to bring up the Filter Jobs context
@@ -558,7 +558,7 @@ An administrator or user with `extras.change_job` permission can edit the Job to
 * Select **Apply** button
 * Select a job that has been installed
 * Select **Edit** button
-* In the second section titled _Job_, select the **Enabled** checkbox
+* In the second section titled **Job**, select the **Enabled** checkbox
 * Select **Update** button at the bottom
 
 ### Overriding Metadata

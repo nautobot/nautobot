@@ -17,7 +17,7 @@ class BaseNetworkFormTest:
 
     def setUp(self):
         super().setUp()
-        self.namespace = Namespace.objects.first()
+        self.namespace = Namespace.objects.create(name="IPAM Form Test")
         self.status = Status.objects.get(name="Active")
         self.prefix_status = Status.objects.get_for_model(Prefix).first()
         self.ip_status = Status.objects.get_for_model(IPAddress).first()

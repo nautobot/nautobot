@@ -65,7 +65,7 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-    def validated_save(self):
+    def validated_save(self, *args, **kwargs):
         """
         Perform model validation during instance save.
 
@@ -77,7 +77,7 @@ class BaseModel(models.Model):
         command.
         """
         self.full_clean()
-        self.save()
+        self.save(*args, **kwargs)
 
     def natural_key(self) -> list:
         """
