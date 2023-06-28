@@ -422,14 +422,22 @@ class BaseJob(Task):
         return getattr(module, "name", module.__name__)
 
     @final
+    @classmethod
+    def _get_meta_attr_and_assert_type(cls, attr_name, default, expected_type):
+        result = getattr(cls.Meta, attr_name, default)
+        if not isinstance(result, expected_type):
+            raise TypeError(f"Meta.{attr_name} should be {expected_type}, not {type(result)}")
+        return result
+
+    @final
     @classproperty
     def name(cls) -> str:  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "name", cls.__name__)
+        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)
 
     @final
     @classproperty
     def description(cls) -> str:  # pylint: disable=no-self-argument
-        return dedent(getattr(cls.Meta, "description", "")).strip()
+        return dedent(cls._get_meta_attr_and_assert_type("description", "", expected_type=str)).strip()
 
     @final
     @classproperty
@@ -441,42 +449,42 @@ class BaseJob(Task):
     @final
     @classproperty
     def dryrun_default(cls) -> bool:  # pylint: disable=no-self-argument
-        return bool(getattr(cls.Meta, "dryrun_default", False))
+        return cls._get_meta_attr_and_assert_type("dryrun_default", False, expected_type=bool)
 
     @final
     @classproperty
     def hidden(cls) -> bool:  # pylint: disable=no-self-argument
-        return bool(getattr(cls.Meta, "hidden", False))
+        return cls._get_meta_attr_and_assert_type("hidden", False, expected_type=bool)
 
     @final
     @classproperty
     def field_order(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "field_order", None)
+        return cls._get_meta_attr_and_assert_type("field_order", None, expected_type=(list, tuple))
 
     @final
     @classproperty
     def read_only(cls) -> bool:  # pylint: disable=no-self-argument
-        return bool(getattr(cls.Meta, "read_only", False))
+        return cls._get_meta_attr_and_assert_type("read_only", False, expected_type=bool)
 
     @final
     @classproperty
     def approval_required(cls) -> bool:  # pylint: disable=no-self-argument
-        return bool(getattr(cls.Meta, "approval_required", False))
+        return cls._get_meta_attr_and_assert_type("approval_required", False, expected_type=bool)
 
     @final
     @classproperty
     def soft_time_limit(cls) -> int:  # pylint: disable=no-self-argument
-        return int(getattr(cls.Meta, "soft_time_limit", 0))
+        return cls._get_meta_attr_and_assert_type("soft_time_limit", 0, expected_type=int)
 
     @final
     @classproperty
     def time_limit(cls) -> int:  # pylint: disable=no-self-argument
-        return int(getattr(cls.Meta, "time_limit", 0))
+        return cls._get_meta_attr_and_assert_type("time_limit", 0, expected_type=int)
 
     @final
     @classproperty
     def has_sensitive_variables(cls) -> bool:  # pylint: disable=no-self-argument
-        return bool(getattr(cls.Meta, "has_sensitive_variables", True))
+        return cls._get_meta_attr_and_assert_type("has_sensitive_variables", True, expected_type=bool)
 
     @final
     @classproperty
@@ -486,7 +494,7 @@ class BaseJob(Task):
     @final
     @classproperty
     def task_queues(cls) -> list:  # pylint: disable=no-self-argument
-        return list(getattr(cls.Meta, "task_queues", []))
+        return cls._get_meta_attr_and_assert_type("task_queues", [], expected_type=(list, tuple))
 
     @final
     @classproperty
