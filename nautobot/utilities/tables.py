@@ -11,6 +11,7 @@ from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 from mptt.models import MPTTModel
+from tree_queries.models import TreeNode
 
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
@@ -61,13 +62,17 @@ class BaseTable(tables.Table):
                 )
             # symmetric relationships are already handled above in the source_type case
 
+        model = getattr(self.Meta, "model", None)
+        # Disable ordering on these TreeNode Models Table because TreeNode do not support sorting
+        if model and issubclass(model, TreeNode):
+            kwargs["orderable"] = False
+
         # Init table
         super().__init__(*args, **kwargs)
 
-        if model := getattr(self.Meta, "model", None):
-            # The name nesting is removed when sorting on the UI because it results in rows appearing as children of the wrong parent rows.
-            if issubclass(model, MPTTModel) and self.order_by:
-                self.columns["name"].column.template_code = MPTT_LINK_WITHOUT_NESTING
+        # The name nesting is removed when sorting on the UI because it results in rows appearing as children of the wrong parent rows.
+        if model and issubclass(model, MPTTModel) and self.order_by:
+            self.columns["name"].column.template_code = MPTT_LINK_WITHOUT_NESTING
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
