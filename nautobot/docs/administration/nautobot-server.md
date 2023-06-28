@@ -151,18 +151,19 @@ nautobot=> \q
     - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
     - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
-+/- 1.5.22
++/- 1.5.23
     - We do not recommend at this time using `--natural-primary` as this can result in inconsistent or incorrect data for data models that use GenericForeignKeys, such as `Cable`, `Note`, `ObjectChange`, and `Tag`.
+    - We also do not recommend at this time using `--natural-foreign` as it can potentially result in errors if any data models incorrectly implement their `natural_key()` and/or `get_by_natural_key()` API methods.
+    - `contenttypes` must not be excluded from the dump (it could be excluded previously due to the use of `--natural-foreign`).
 
 ```no-highlight
 nautobot-server dumpdata \
-  --natural-foreign \
   --exclude auth.permission \
-  --exclude contenttypes \
   --exclude django_rq \
   --format json \
   --indent 2 \
-  --traceback  > nautobot_dump.json
+  --traceback \
+  > nautobot_dump.json
 ```
 
 Use this command to generate a JSON dump of the database contents.
