@@ -268,6 +268,13 @@ class ModelViewSetMixin:
             self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        # In the case of certain errors, we might not even get to the point of setting request.accepted_media_type
+        if hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type:
+            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model.__name__.lower()}_data.csv"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return super().finalize_response(request, response, *args, **kwargs)
+
     @action(detail=True, url_path="detail-view-config")
     def detail_view_config(self, request, pk):
         """
