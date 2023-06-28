@@ -192,7 +192,7 @@ pylint = {version = "~2.14.5", python = "^3.7.2"}
 # Pylint extensions for Django
 pylint-django = {version = "~2.5.3", python = "^3.7.2"}
 # Integration Tests
-requests = "~2.27.1"
+requests = ">=2.27.1,<2.32.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
 rich = "~12.5.1"
 # Selenium web drivers for live integration testing
@@ -326,7 +326,7 @@ signature-mutators=["unittest.mock.patch"]
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-1.5.md"
+filename = "nautobot/docs/release-notes/version-1.6.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
