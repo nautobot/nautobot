@@ -104,6 +104,22 @@ menu_items = (
                 weight=400,
                 items=(
                     NavMenuItem(
+                        link="ipam:namespace_list",
+                        name="Namespaces",
+                        weight=100,
+                        permissions=[
+                            "ipam.view_namespace",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="ipam:namespace_add",
+                                permissions=[
+                                    "ipam.add_namespace",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="ipam:vrf_list",
                         name="VRFs",
                         weight=100,
