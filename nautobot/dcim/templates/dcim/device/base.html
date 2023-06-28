@@ -53,8 +53,8 @@
 
 {% block masthead %}
     <span class="hover_copy">
-        <h1 id="devicename">
-            {% block title %}{{ object }}{% endblock title %}
+        <h1>
+            <span id="devicename">{% block title %}{{ object }}{% endblock title %}</span>
             <button class="btn btn-xs btn-default hover_copy_button" data-clipboard-target="#devicename">
                 <span class="mdi mdi-content-copy"></span>
             </button>

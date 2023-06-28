@@ -1,5 +1,35 @@
 # Upgrading from Nautobot v1.X
 
+## Pre-migration validation
+
+In Nautobot 1.x, starting with 1.5.22, there is a `nautobot-server pre_migrate` command that can be run to check your existing data for compatibility with the data model changes introduced in Nautobot 2.0. You are highly encouraged to run this command before beginning to migrate to Nautobot 2.x as it will catch and report certain data-sanitization issues that cannot be remediated automatically during the migration and will need to be manually corrected before you upgrade.
+
+For example, if any of the pre-migration checks fail, you may see an error message like this:
+
+```no-highlight
+$ nautobot-server pre_migrate
+>>> Running check: check_configcontext_uniqueness...
+>>> Running check: check_exporttemplate_uniqueness...
+>>> Running check: check_virtualchassis_uniqueness...
+CommandError: One or more pre-migration checks failed:
+    You cannot migrate ConfigContext or ConfigContextSchema objects that have non-unique names:
+    - ConfigContext: [{'name': 'cc1', 'count': 2}]
+    - ConfigContextSchema: [{'name': 'ccs1', 'count': 2}]
+
+    You cannot migrate VirtualChassis objects with non-unique names:
+     - [{'name': 'vc1', 'count': 2}]
+```
+
+Otherwise, a clean exit displays "All pre-migration checks passed." incidating that your Nautobot instance is ready to be upgraded to Nautobot 2.0:
+
+```no-highlight
+$ nautobot-server pre_migrate
+>>> Running check: check_configcontext_uniqueness...
+>>> Running check: check_exporttemplate_uniqueness...
+>>> Running check: check_virtualchassis_uniqueness...
+All pre-migration checks passed.
+```
+
 ## Dependency Changes
 
 - Nautobot no longer uses or supports the use of `django-cryptography`.
