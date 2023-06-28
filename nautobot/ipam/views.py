@@ -1,7 +1,6 @@
 import logging
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db import transaction
 from django.db import models
@@ -18,11 +17,12 @@ from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Status, Tag
+from nautobot.extras.models import CustomField, Role, Status, Tag
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
 from nautobot.ipam.api import serializers
+from nautobot.ipam import choices
 from .models import (
     IPAddress,
     IPAddressToInterface,
@@ -713,71 +713,71 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
         if collapsed_ips and "_skip" not in request.POST:
-            # with cache.lock("ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT):
-            with transaction.atomic():
-                namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
-                status = Status.objects.get(pk=merged_attributes.get("status"))
-                if merged_attributes.get("tenant"):
-                    tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
-                else:
-                    tenant = None
-                if merged_attributes.get("role"):
-                    role = Role.objects.get(pk=merged_attributes.get("role"))
-                else:
-                    role = None
-                if merged_attributes.get("tags"):
-                    tag_pk_list = merged_attributes.get("tags").split(",")
-                    tags = Tag.objects.filter(pk__in=tag_pk_list)
-                else:
-                    tags = []
-                if merged_attributes.get("nat_inside"):
-                    nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
-                else:
-                    nat_inside = None
-                # merge all ips into the ip that already exists in the selected namespace.
-                merged_ip = collapsed_ips.filter(parent__namespace=namespace)
-                merged_ip.update(
-                    type=merged_attributes.get("type"),
-                    status=status,
-                    role=role,
-                    dns_name=merged_attributes.get("dns_name", ""),
-                    description=merged_attributes.get("description"),
-                    mask_length=merged_attributes.get("mask_length"),
-                    tenant=tenant,
-                    nat_inside=nat_inside,
-                )
-                merged_ip = merged_ip.first()
-                merged_ip.tags.set(tags)
-                # Update custom_field_data
-                for key in merged_ip._custom_field_data.keys():
-                    merged_ip._custom_field_data[key] = merged_attributes.get("cf_" + key)
-                merged_ip.save()
-                handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
-                collapsed_ips = collapsed_ips.exclude(pk=merged_ip.pk)
-                # Update IPAddress relationships before merging IP Addresses.
-                ip_to_interface_assignments = IPAddressToInterface.objects.filter(ip_address__pk__in=collapsed_ips)
-                ip_to_interface_assignments.update(ip_address=merged_ip)
-                devices_ip_4 = Device.objects.filter(primary_ip4__pk__in=collapsed_ips)
-                devices_ip_4.update(primary_ip4=merged_ip)
-                devices_ip_6 = Device.objects.filter(primary_ip6__pk__in=collapsed_ips)
-                devices_ip_6.update(primary_ip6=merged_ip)
-                services = Service.objects.filter(ip_addresses__in=collapsed_ips)
-                for service in services:
-                    service.ip_addresses.add(merged_ip)
-                # Delete Collapsed IPs
-                try:
-                    _, deleted_info = collapsed_ips.delete()
-                    deleted_count = deleted_info[IPAddress._meta.label]
-                except ProtectedError as e:
-                    logger.info("Caught ProtectedError while attempting to delete objects")
-                    handle_protectederror(collapsed_ips, request, e)
-                    return redirect(self.get_return_url(request))
-                msg = (
-                    f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} "
-                    f'into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
-                )
-                logger.info(msg)
-                messages.success(request, mark_safe(msg))
+            with cache.lock("ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT):
+                with transaction.atomic():
+                    namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
+                    status = Status.objects.get(pk=merged_attributes.get("status"))
+                    if merged_attributes.get("tenant"):
+                        tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
+                    else:
+                        tenant = None
+                    if merged_attributes.get("role"):
+                        role = Role.objects.get(pk=merged_attributes.get("role"))
+                    else:
+                        role = None
+                    if merged_attributes.get("tags"):
+                        tag_pk_list = merged_attributes.get("tags").split(",")
+                        tags = Tag.objects.filter(pk__in=tag_pk_list)
+                    else:
+                        tags = []
+                    if merged_attributes.get("nat_inside"):
+                        nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
+                    else:
+                        nat_inside = None
+                    # merge all ips into the ip that already exists in the selected namespace.
+                    merged_ip = collapsed_ips.filter(parent__namespace=namespace)
+                    merged_ip.update(
+                        type=merged_attributes.get("type"),
+                        status=status,
+                        role=role,
+                        dns_name=merged_attributes.get("dns_name", ""),
+                        description=merged_attributes.get("description"),
+                        mask_length=merged_attributes.get("mask_length"),
+                        tenant=tenant,
+                        nat_inside=nat_inside,
+                    )
+                    merged_ip = merged_ip.first()
+                    merged_ip.tags.set(tags)
+                    # Update custom_field_data
+                    for key in merged_ip._custom_field_data.keys():
+                        merged_ip._custom_field_data[key] = merged_attributes.get("cf_" + key)
+                    merged_ip.save()
+                    handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
+                    collapsed_ips = collapsed_ips.exclude(pk=merged_ip.pk)
+                    # Update IPAddress relationships before merging IP Addresses.
+                    ip_to_interface_assignments = IPAddressToInterface.objects.filter(ip_address__pk__in=collapsed_ips)
+                    ip_to_interface_assignments.update(ip_address=merged_ip)
+                    devices_ip_4 = Device.objects.filter(primary_ip4__pk__in=collapsed_ips)
+                    devices_ip_4.update(primary_ip4=merged_ip)
+                    devices_ip_6 = Device.objects.filter(primary_ip6__pk__in=collapsed_ips)
+                    devices_ip_6.update(primary_ip6=merged_ip)
+                    services = Service.objects.filter(ip_addresses__in=collapsed_ips)
+                    for service in services:
+                        service.ip_addresses.add(merged_ip)
+                    # Delete Collapsed IPs
+                    try:
+                        _, deleted_info = collapsed_ips.delete()
+                        deleted_count = deleted_info[IPAddress._meta.label]
+                    except ProtectedError as e:
+                        logger.info("Caught ProtectedError while attempting to delete objects")
+                        handle_protectederror(collapsed_ips, request, e)
+                        return redirect(self.get_return_url(request))
+                    msg = (
+                        f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} "
+                        f'into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
+                    )
+                    logger.info(msg)
+                    messages.success(request, mark_safe(msg))
         host_values = (
             self.queryset.filter(host__gt=merged_attributes.get("host"))
             .values("host")
