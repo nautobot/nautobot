@@ -43,8 +43,7 @@ class PrefixHierarchyTest(SeleniumTestCase):
 
         # Navigate to Namespace Prefixes list view
         self.browser.visit(self.live_server_url)
-        # find_by_partial_text finds both Inventory > Provider Networks as well as the desired Networks top-level menu.
-        self.browser.links.find_by_partial_text("Networks")[1].click()
+        self.browser.links.find_by_partial_text("IPAM").click()
         self.browser.links.find_by_partial_text("Namespaces").click()
         self.browser.links.find_by_text(namespace.name).click()
         self.browser.find_by_xpath("//ul[@id='tabs']//a[contains(., 'Prefixes')]").click()
