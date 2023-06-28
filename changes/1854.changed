@@ -1,1 +1,1 @@
-Disabled sorting on tree model tables as it doesn't make sense to sort these.
+Disabled name nesting on MPTT model tables as it doesn't make sense to have nesting on these.

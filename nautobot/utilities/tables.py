@@ -33,6 +33,8 @@ class BaseTable(tables.Table):
         }
 
     def __init__(self, *args, user=None, **kwargs):
+        from nautobot.dcim.tables.template_code import MPTT_LINK_WITHOUT_NESTING  # Avoid Circular Import
+
         # Add custom field columns
         obj_type = ContentType.objects.get_for_model(self._meta.model)
 
@@ -60,14 +62,13 @@ class BaseTable(tables.Table):
                 )
             # symmetric relationships are already handled above in the source_type case
 
-        if model := getattr(self.Meta, "model", None):
-            # Disable ordering on these models(Tree Models) as sorting on UI results in rows appears
-            # to be children of the wrong parent rows.
-            if issubclass(model, (MPTTModel, TreeNode)):
-                kwargs["orderable"] = False
-
         # Init table
         super().__init__(*args, **kwargs)
+
+        if model := getattr(self.Meta, "model", None):
+            # The name nesting is removed when sorting on the UI because it results in rows appearing as children of the wrong parent rows.
+            if issubclass(model, (MPTTModel, TreeNode)) and self.order_by:
+                self.columns["name"].column.template_code = MPTT_LINK_WITHOUT_NESTING
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
