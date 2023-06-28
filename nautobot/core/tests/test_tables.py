@@ -5,7 +5,7 @@ from nautobot.dcim.tables.template_code import MPTT_LINK, MPTT_LINK_WITHOUT_NEST
 
 
 class TableTestCase(TestCase):
-    def test_mttp_model_table_name_nesting_on_sort(self):
+    def test_mptt_model_table_name_nesting_on_sort(self):
         """Assert tree model(MPTTModel) table column `name` template_code is changed when sorting"""
         # The name nesting when sorting on the Tree Model Table results in rows appearing as children of the wrong parent rows which is caused.
         # Assert that this nesting is removed when sorting by changing the default name template code
