@@ -1,5 +1,6 @@
 import netaddr
 
+from nautobot.extras.models import RelationshipAssociation
 from nautobot.ipam.constants import VLAN_VID_MAX, VLAN_VID_MIN
 from nautobot.ipam.models import Prefix, VLAN
 
@@ -93,3 +94,140 @@ def add_available_vlans(vlan_group, vlans):
     vlans.sort(key=lambda v: v.vid if isinstance(v, VLAN) else v["vid"])
 
     return vlans
+
+
+def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips):
+    for side, relationships in merged_ip.get_relationships_data().items():
+        for relationship, value in relationships.items():
+            # could be a pk or a list of pks
+            # When it is a list of pks, the opposite side of ip has_many=True and the list of pks returned are relationship association pks
+            # When it is a single pk, it is the opposite side id of the relationship association
+            new_rel_values = merged_attributes.get("cr_" + relationship.key)
+            if new_rel_values:
+                if side == "source":
+                    if value.get("has_many"):
+                        pk_list = new_rel_values.split(",")
+                        # no-op if RelationshipAssociations already exist
+                        if set(
+                            RelationshipAssociation.objects.filter(relationship=relationship, source_id=merged_ip.pk)
+                        ) == set(RelationshipAssociation.objects.filter(pk__in=pk_list)):
+                            continue
+                        else:
+                            RelationshipAssociation.objects.filter(
+                                relationship=relationship,
+                                source_id=merged_ip.pk,
+                            ).delete()
+                            updated_associations = RelationshipAssociation.objects.filter(pk__in=pk_list)
+                            updated_associations.update(source_id=merged_ip.pk)
+                    else:
+                        RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            destination_id=new_rel_values,
+                        ).delete()
+                        RelationshipAssociation.objects.filter(
+                            relationship=relationship, source_id=merged_ip.pk
+                        ).delete()
+                        new_rel = RelationshipAssociation(
+                            relationship=relationship,
+                            source_type=relationship.source_type,
+                            source_id=merged_ip.pk,
+                            destination_type=relationship.destination_type,
+                            destination_id=new_rel_values,
+                        )
+                        new_rel.validated_save()
+                elif side == "destination":
+                    if value.get("has_many"):
+                        pk_list = new_rel_values.split(",")
+                        # no-op if RelationshipAssociations already exist
+                        if set(
+                            RelationshipAssociation.objects.filter(
+                                relationship=relationship, destination_id=merged_ip.pk
+                            )
+                        ) == set(RelationshipAssociation.objects.filter(pk__in=pk_list)):
+                            continue
+                        else:
+                            RelationshipAssociation.objects.filter(
+                                relationship=relationship,
+                                destination_id=merged_ip.pk,
+                            ).delete()
+                            updated_associations = RelationshipAssociation.objects.filter(pk__in=pk_list)
+                            updated_associations.update(destination_id=merged_ip.pk)
+                    else:
+                        RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            source_id=new_rel_values,
+                        ).delete()
+                        RelationshipAssociation.objects.filter(
+                            relationship=relationship, destination_id=merged_ip.pk
+                        ).delete()
+                        new_rel = RelationshipAssociation(
+                            relationship=relationship,
+                            source_type=relationship.source_type,
+                            source_id=new_rel_values,
+                            destination_type=relationship.destination_type,
+                            destination_id=merged_ip.pk,
+                        )
+                        new_rel.validated_save()
+                else:
+                    # Peer side is very tricky
+                    lookup = {}
+                    peer_source_associations = RelationshipAssociation.objects.filter(
+                        relationship=relationship, destination_id=merged_ip.pk
+                    )
+                    for association in peer_source_associations:
+                        lookup[str(association.pk)] = association.source_id
+                    peer_source_associations.delete()
+                    peer_destination_associations = RelationshipAssociation.objects.filter(
+                        relationship=relationship, source_id=merged_ip.pk
+                    )
+                    for association in peer_destination_associations:
+                        lookup[str(association.pk)] = association.destination_id
+                    peer_destination_associations.delete()
+                    if value.get("has_many"):
+                        pk_list = new_rel_values.split(",")
+                        for pk in pk_list:
+                            if pk in lookup:
+                                new_rel = RelationshipAssociation(
+                                    relationship=relationship,
+                                    source_type=relationship.source_type,
+                                    source_id=merged_ip.pk,
+                                    destination_type=relationship.destination_type,
+                                    destination_id=lookup.get(pk),
+                                )
+                                new_rel.validated_save()
+                            else:
+                                rel = RelationshipAssociation.objects.get(pk=pk)
+                                if rel.source in collapsed_ips and rel.destination in collapsed_ips:
+                                    continue
+                                elif rel.source in collapsed_ips:
+                                    rel.source_id = merged_ip.pk
+                                else:
+                                    rel.destination_id = merged_ip.pk
+                                rel.validated_save()
+                    else:
+                        pk = new_rel_values
+                        RelationshipAssociation.objects.filter(relationship=relationship, destination_id=pk).delete()
+                        RelationshipAssociation.objects.filter(relationship=relationship, source_id=pk).delete()
+                        new_rel = RelationshipAssociation(
+                            relationship=relationship,
+                            source_type=relationship.source_type,
+                            source_id=merged_ip.pk,
+                            destination_type=relationship.destination_type,
+                            destination_id=pk,
+                        )
+                        new_rel.validated_save()
+            else:
+                # if new_rel_values returned here are empty
+                # we make sure that we delete any relationship associations that are related to the surviving IP
+                # The rest of the associations will be deleted when we delete the collapsed IPs.
+                if side == "source":
+                    RelationshipAssociation.objects.filter(relationship=relationship, source_id=merged_ip.pk).delete()
+                elif side == "destination":
+                    RelationshipAssociation.objects.filter(
+                        relationship=relationship, destination_id=merged_ip.pk
+                    ).delete()
+                else:
+                    RelationshipAssociation.objects.filter(relationship=relationship, source_id=merged_ip.pk).delete()
+                    RelationshipAssociation.objects.filter(
+                        relationship=relationship, destination_id=merged_ip.pk
+                    ).delete()
