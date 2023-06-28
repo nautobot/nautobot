@@ -684,13 +684,23 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "change")
 
-    def get(self, request):
-        host_values = (
-            self.queryset.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
-        )
+    def find_duplicate_ips(self, request, merged_attributes=None):
+        if merged_attributes:
+            host_values = (
+                self.queryset.filter(host__gt=merged_attributes.get("host"))
+                .values("host")
+                .order_by("host")
+                .annotate(count=models.Count("host"))
+                .filter(count__gt=1)
+            )
+        else:
+            host_values = (
+                self.queryset.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
+            )
         if host_values:
             item = host_values[0]
             queryset = self.queryset.filter(host__in=[item["host"]])
+            print(queryset.first().get_custom_fields())
             cf_keys = CustomField.objects.get_for_model(IPAddress).values_list("key", flat=True)
             cf_labels = CustomField.objects.get_for_model(IPAddress).values_list("label", flat=True)
             return render(
@@ -707,6 +717,9 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
             msg = "No additional duplicate IPs found."
             messages.warning(request, msg)
             return redirect(self.get_return_url(request))
+
+    def get(self, request):
+        return self.find_duplicate_ips(request)
 
     def post(self, request):
         logger = logging.getLogger(__name__)
@@ -750,17 +763,21 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     merged_ip.tags.set(tags)
                     # Update custom_field_data
                     for key in merged_ip._custom_field_data.keys():
-                        merged_ip._custom_field_data[key] = merged_attributes.get("cf_" + key)
+                        ip_pk = merged_attributes.get("cf_" + key)
+                        merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
                     merged_ip.save()
+                    # Update relationship data
                     handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
                     collapsed_ips = collapsed_ips.exclude(pk=merged_ip.pk)
-                    # Update IPAddress relationships before merging IP Addresses.
+                    # Update IPAddress to Interface Assignments
                     ip_to_interface_assignments = IPAddressToInterface.objects.filter(ip_address__pk__in=collapsed_ips)
                     ip_to_interface_assignments.update(ip_address=merged_ip)
+                    # Update device primary_ip4 and primary_ip6
                     devices_ip_4 = Device.objects.filter(primary_ip4__pk__in=collapsed_ips)
                     devices_ip_4.update(primary_ip4=merged_ip)
                     devices_ip_6 = Device.objects.filter(primary_ip6__pk__in=collapsed_ips)
                     devices_ip_6.update(primary_ip6=merged_ip)
+                    # Update Service m2m field with IPAddresses
                     services = Service.objects.filter(ip_addresses__in=collapsed_ips)
                     for service in services:
                         service.ip_addresses.add(merged_ip)
@@ -778,32 +795,7 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     )
                     logger.info(msg)
                     messages.success(request, mark_safe(msg))
-        host_values = (
-            self.queryset.filter(host__gt=merged_attributes.get("host"))
-            .values("host")
-            .order_by("host")
-            .annotate(count=models.Count("host"))
-            .filter(count__gt=1)
-        )
-        if host_values:
-            item = host_values[0]
-            queryset = self.queryset.filter(host__in=[item["host"]])
-            cf_keys = CustomField.objects.get_for_model(IPAddress).values_list("key", flat=True)
-            cf_labels = CustomField.objects.get_for_model(IPAddress).values_list("label", flat=True)
-            return render(
-                request=request,
-                template_name=self.template_name,
-                context={
-                    "queryset": queryset,
-                    "return_url": self.get_return_url(request),
-                    "custom_field_keys": cf_keys,
-                    "custom_field_labels": cf_labels,
-                },
-            )
-        else:
-            msg = "No additional duplicate IPs found."
-            messages.warning(request, msg)
-            return redirect(self.get_return_url(request))
+        return self.find_duplicate_ips(request, merged_attributes)
 
 
 class IPAddressDeleteView(generic.ObjectDeleteView):

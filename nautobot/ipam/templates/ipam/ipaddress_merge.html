@@ -62,11 +62,16 @@
                     <th>
                         Tags
                     </th>
-                    {% for label in custom_field_labels %}
+                    {% for field, value in queryset.first.get_custom_fields.items %}
+                        <th>
+                            {{ field.label }}
+                        </th>
+                    {% endfor %}
+                    <!-- {% for label in custom_field_labels %}
                     <th>
                         {{ label }}
                     </th>
-                    {% endfor %}
+                    {% endfor %} -->
                     {% with relationships=queryset.first.get_relationships_data %}
                             {% if relationships.source or relationships.destination or relationships.peer %}
                                 {% for side, relationships in relationships.items %}
@@ -178,12 +183,32 @@
                                     {% endfor %}
                                 </label>
                             </td>
-                            {% for key in custom_field_keys %}
+                            {% for field, value in ip.get_custom_fields.items %}
+                                <td>
+                                    <input type="radio" id="cf_{{ field.key }}" name="cf_{{ field.key }}" value="{{ip.pk}}" required {% if forloop.parentloop.first %} checked {% endif %}>
+                                    <label for="cf_{{ field.key }}">
+                                        {% if field.type == 'boolean' %}
+                                                {{ value | render_boolean }}
+                                            {% elif field.type == 'url' and value %}
+                                                <a href="{{ value }}">{{ value|truncatechars:70 }}</a>
+                                            {% elif field.type == 'multi-select' and value %}
+                                                {{ value|join:", " }}
+                                            {% elif field.type == 'json' and value is not None %}
+                                                <pre><code>{{ value|render_json }}</code></pre>
+                                            {% elif value or value == 0 %}
+                                                {{ value }}
+                                            {% else %}
+                                                <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                    </label>
+                                </td>
+                            {% endfor %}
+                            <!-- {% for key in custom_field_keys %}
                                 <td>
                                     <input type="radio" id="cf_{{key}}" name="cf_{{key}}" value="{{ip.cf | get_item:key }}" required {% if forloop.parentloop.first %} checked {% endif %}>
                                     <label for="cf_{{key}}">{{ip.cf | get_item:key | placeholder}}</label>
                                 </td>
-                            {% endfor %}
+                            {% endfor %} -->
                             {% with relationships=ip.get_relationships_data %}
                             {% if relationships.source or relationships.destination or relationships.peer %}
                                 {% for side, relationships in relationships.items %}
