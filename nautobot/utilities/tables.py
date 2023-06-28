@@ -11,7 +11,6 @@ from django.utils.text import Truncator
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 from mptt.models import MPTTModel
-from tree_queries.models import TreeNode
 
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
