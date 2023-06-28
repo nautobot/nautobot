@@ -1,0 +1,1 @@
+Added logic to protect against defining a `GitRepository.slug` that would conflict with existing Python modules.

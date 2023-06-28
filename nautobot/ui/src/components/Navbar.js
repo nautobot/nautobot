@@ -47,7 +47,7 @@ export function Navbar() {
                     {
                         children: "Networks",
                         leftIcon: <IpamIcon />,
-                        to: "/ipam/ip-addresses/",
+                        to: "/ipam/prefixes/",
                     },
                     {
                         children: "Security",

@@ -91,6 +91,15 @@ The following changes have been made to the `Prefix` model.
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
 
+#### Prefix Parenting Constraints
+
+The following constraints have been added to the `Prefix` model in order to ensure more accurate network modeling:
+
+- A `Prefix` of type `Container` can only have a parent of type `Container`
+- A `Prefix` of type `Network` can only have a parent of type `Container`
+- A `Prefix` of type `Pool` can only have a parent of type `Network`
+- Any `Prefix` can be a root prefix (i.e. have no parent)
+
 ### IPAddress Parenting Concrete Relationship
 
 The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
@@ -98,6 +107,14 @@ The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Pref
 | Removed                | Replaced With   |
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
+
+#### IPAddress Parenting Constraints
+
+The following constraints have been added to the `IPAddress` model:
+
+- An `IPAddress` must have a parent `Prefix` of type `Network`
+- An `IPAddress` cannot be created if a suitable parent `Prefix` of type `Network` does not exist
+- An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network`. This is because the `IPAddress` must have a concrete relationship to a `Network` and the `Pool` membership is derived from the IP address being within the `Pool`'s range.
 
 ### Prefix get_utilization Method
 
@@ -175,9 +192,12 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 ### API Query Parameters Changes
 
 Nautobot 2.0 removes the `?brief` query parameter and adds support for the `?depth` query parameter. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are.
-Please see the [documentation on the `?depth` query parameter](../rest-api/overview.md/#depth-query-parameter) for more information.
+Please see the [documentation on the `?depth` query parameter](../rest-api/overview.md#depth-query-parameter) for more information.
 
 ## UI, GraphQL, and REST API Filter Changes
+
+!!! note
+    These sweeping changes made to model filter fields will, in some cases, invalidate existing `DynamicGroup` instances' filter data. Please utilize the [`nautobot-server audit_dynamic_groups`](../administration/nautobot-server.md#audit_dynamic_groups) helper command when you are cleaning up `DynamicGroup` filter data. You should run this command after your Nautobot instance is upgraded to v2.x successfully.
 
 ### Removed Changelog URL from View Context
 

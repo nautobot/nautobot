@@ -59,18 +59,37 @@ def check_interface_vrfs(apps):
     Interface = apps.get_model("dcim", "Interface")
     VMInterface = apps.get_model("virtualization", "VMInterface")
 
-    interfaces_with_multiple_vrfs = Interface.objects.annotate(vrf_count=models.Count("ip_addresses__vrf")).filter(
-        vrf_count__gt=1
+    interfaces_with_multiple_vrfs = (
+        Interface.objects.annotate(vrf_count=models.Count("ip_addresses__vrf", distinct=True))
+        .filter(vrf_count__gt=1)
+        .distinct()
     )
-    vm_interfaces_with_multiple_vrfs = VMInterface.objects.annotate(vrf_count=models.Count("ip_addresses__vrf")).filter(
-        vrf_count__gt=1
+    interfaces_with_mixed_vrfs = (
+        Interface.objects.filter(ip_addresses__vrf__isnull=True).filter(ip_addresses__vrf__isnull=False).distinct()
+    )
+    vm_interfaces_with_multiple_vrfs = (
+        VMInterface.objects.annotate(vrf_count=models.Count("ip_addresses__vrf", distinct=True))
+        .filter(vrf_count__gt=1)
+        .distinct()
+    )
+    vm_interfaces_with_mixed_vrfs = (
+        VMInterface.objects.filter(ip_addresses__vrf__isnull=True).filter(ip_addresses__vrf__isnull=False).distinct()
     )
 
-    if interfaces_with_multiple_vrfs.exists() or vm_interfaces_with_multiple_vrfs.exists():
+    if any(
+        [
+            interfaces_with_multiple_vrfs.exists(),
+            interfaces_with_mixed_vrfs.exists(),
+            vm_interfaces_with_multiple_vrfs.exists(),
+            vm_interfaces_with_mixed_vrfs.exists(),
+        ]
+    ):
         raise ValidationError(
-            "You cannot migrate Interfaces or VMInterfaces that have IPs with differing VRFs.",
-            list(interfaces_with_multiple_vrfs),
-            list(vm_interfaces_with_multiple_vrfs),
+            "You cannot migrate Interfaces or VMInterfaces that have IPs with differing VRFs:\n"
+            f"{list(interfaces_with_multiple_vrfs)}\n"
+            f"{list(interfaces_with_mixed_vrfs)}\n"
+            f"{list(vm_interfaces_with_multiple_vrfs)}\n"
+            f"{list(vm_interfaces_with_mixed_vrfs)}"
         )
 
 
