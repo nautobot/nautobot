@@ -52,3 +52,9 @@ The following constraints are enforced on the `IPAddress.parent` field:
 * An `IPAddress` must have a parent `Prefix` of type `Network`
 * An `IPAddress` cannot be created if a suitable parent `Prefix` of type `Network` does not exist
 * An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network` prefix. This is because the `IPAddress` must have a concrete relationship to a `Network` and the `Pool` membership is derived from the IP address being within the `Pool`'s range, not from the IP's `parent` field.
+
+## De-duplicating IPAddresses
+
++++ 2.0.0
+
+After upgrading to Nautobot v2.0 and its data migrations, you may end up with some duplicate `IP Addresses` across different `Namespaces`. Check out this [IP Address Merge tool](../../user-guides/ip-address-merge-tool.md) to collapse unnecessarily duplicated `IP Addresses`.

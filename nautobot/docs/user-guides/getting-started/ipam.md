@@ -103,3 +103,9 @@ To find information on a particular Prefix:
 ![Verify prefix 1](../images/getting-started-nautobot-ui/37-verify-prefix.png)
 
 ![Verify prefix 2](../images/getting-started-nautobot-ui/38-verify-prefix2.png)
+
+## De-duplicating IPAddresses
+
++++ 2.0.0
+
+After upgrading to Nautobot v2.0 and its data migrations, you may end up with some duplicate `IP Addresses` across different `Namespaces`. Check out this [IP Address Merge tool](../ip-address-merge-tool.md) to collapse unnecessarily duplicated `IP Addresses`.

@@ -14,6 +14,7 @@ After upgrading to Nautobot v2.0 and running the data migrations necessary, some
 ## How to access this tool
 
 To use this tool:
+
 1. Go to the `IPAM` tab on the navigation menu and click on `IP Addresses`. This will take you to the list of `IP Addresses` exist in the database.
 2. On the top right of the page, you will find a group of buttons representing different available actions and the first one should be `Find and Merge Duplicate IPs`.
 3. Click on that button to access the tool.
@@ -21,7 +22,6 @@ To use this tool:
 ![Homepage Navigation](./images/ip-address-merge-tool/navigation.png)
 
 ![Merge Button](./images/ip-address-merge-tool/ip_merge_button.png)
-
 
 ## How to use this tool
 
