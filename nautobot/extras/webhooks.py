@@ -35,6 +35,7 @@ def enqueue_webhooks(instance, user, request_id, action):
         serializer_class = get_serializer_for_model(instance.__class__)
         serializer_context = {
             "request": None,
+            "depth": 1,
         }
         serializer = serializer_class(instance, context=serializer_context)
         most_recent_change = get_changes_for_model(instance).first()

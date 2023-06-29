@@ -649,27 +649,23 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
         RackReservation.objects.create(rack=cls.racks[0], units=[4, 5, 6], user=user, description="Reservation #2")
         RackReservation.objects.create(rack=cls.racks[0], units=[7, 8, 9], user=user, description="Reservation #3")
 
-    def setUp(self):
-        super().setUp()
-
-        # We have to set creation data under setUp() because we need access to the test user.
-        self.create_data = [
+        cls.create_data = [
             {
-                "rack": self.racks[1].pk,
+                "rack": cls.racks[1].pk,
                 "units": [10, 11, 12],
-                "user": self.user.pk,
+                "user": user.pk,
                 "description": "Reservation #4",
             },
             {
-                "rack": self.racks[1].pk,
+                "rack": cls.racks[1].pk,
                 "units": [13, 14, 15],
-                "user": self.user.pk,
+                "user": user.pk,
                 "description": "Reservation #5",
             },
             {
-                "rack": self.racks[1].pk,
+                "rack": cls.racks[1].pk,
                 "units": [16, 17, 18],
-                "user": self.user.pk,
+                "user": user.pk,
                 "description": "Reservation #6",
             },
         ]

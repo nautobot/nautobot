@@ -251,10 +251,6 @@ class RackReservationViewSet(NautobotModelViewSet):
     serializer_class = serializers.RackReservationSerializer
     filterset_class = filters.RackReservationFilterSet
 
-    # Assign user from request
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
 
 #
 # Manufacturers

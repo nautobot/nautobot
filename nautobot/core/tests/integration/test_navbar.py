@@ -8,22 +8,34 @@ class NavBarTestCase(SeleniumTestCase):
 
     fixtures = ["user-data.json"]
     navbar = {
-        "Inventory": {
-            "Organization": {
-                "Locations": {
+        "Organization": {
+            "Locations": {
+                "Location": {
                     "permission": "dcim.view_location",
+                    "buttons": ["Add", "Import"],
+                },
+                "Location Types": {
+                    "permission": "dcim.view_locationtype",
+                    "buttons": ["Add", "Import"],
+                },
+            },
+            "Tags": {
+                "Tags": {
+                    "permission": "extras.view_tag",
+                    "buttons": ["Add", "Import"],
                 },
             },
         },
-        # don't use "Networks" here as the underspecified xpaths below will be fooled by DCIM "Provider Networks"
-        "Automation": {
-            "Extensibility": {
-                "Webhooks": {
-                    "permission": "extras.view_webhook",
+        "Extensibility": {
+            "Data Management": {
+                "Relationships": {
+                    "permission": "extras.view_relationship",
+                    "buttons": [
+                        "Add",
+                    ],
                 },
             },
         },
-        # don't use "Platform" here as the underspecified xpaths below will be fooled by DCIM "Platforms"
     }
 
     def setUp(self):
@@ -66,7 +78,6 @@ class NavBarTestCase(SeleniumTestCase):
         """
         Render navbar from home page with limited permissions.
         """
-        self.add_permissions("dcim.view_location")
         self.add_permissions("extras.view_relationship")
         user_permissions = self.user.get_all_permissions()
 

@@ -102,7 +102,7 @@ class WebhookTest(APITestCase):
                 location.status = self.statuses[1]
                 location.save()
 
-                serializer = LocationSerializer(location, context={"request": None})
+                serializer = LocationSerializer(location, context={"request": None, "depth": 1})
                 oc = get_changes_for_model(location).first()
                 snapshots = oc.get_snapshots()
 

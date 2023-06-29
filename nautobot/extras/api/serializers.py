@@ -20,7 +20,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
-    get_serializers_for_models,
+    nested_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
 )
 from nautobot.core.models.utils import get_all_concrete_models
@@ -129,7 +129,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
         PolymorphicProxySerializer(
             component_name="ConfigContextOwner",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(FeatureQuery("config_context_owners").list_subclasses()),
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("config_context_owners").list_subclasses()),
             allow_null=True,
         )
     )
@@ -162,7 +162,7 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
         PolymorphicProxySerializer(
             component_name="ConfigContextSchemaOwner",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(FeatureQuery("config_context_owners").list_subclasses()),
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("config_context_owners").list_subclasses()),
             allow_null=True,
         )
     )
@@ -282,7 +282,7 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
         PolymorphicProxySerializer(
             component_name="ExportTemplateOwner",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(FeatureQuery("export_template_owners").list_subclasses()),
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("export_template_owners").list_subclasses()),
             allow_null=True,
         )
     )
@@ -642,7 +642,7 @@ class NoteSerializer(BaseModelSerializer):
         PolymorphicProxySerializer(
             component_name="NoteAssignedObject",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(NotesMixin)),
+            serializers=lambda: nested_serializers_for_models(get_all_concrete_models(NotesMixin)),
             allow_null=True,
         )
     )
@@ -681,7 +681,7 @@ class ObjectChangeSerializer(BaseModelSerializer):
         PolymorphicProxySerializer(
             component_name="ObjectChangeChangedObject",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(ChangeLoggedModelsQuery().list_subclasses()),
+            serializers=lambda: nested_serializers_for_models(ChangeLoggedModelsQuery().list_subclasses()),
             allow_null=True,
         )
     )
