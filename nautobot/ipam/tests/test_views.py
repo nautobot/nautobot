@@ -10,7 +10,7 @@ from django.urls import reverse
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.testing import post_data, ModelViewTestCase, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     CustomField,
@@ -314,6 +314,70 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         statuses = Status.objects.get_for_model(IPAddress)
         prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+
+        devices = (
+            Device.objects.create(
+                name="Device 1",
+                location=location,
+                device_type=devicetype,
+                role=devicerole,
+                status=devicestatus,
+            ),
+            Device.objects.create(
+                name="Device 2",
+                location=location,
+                device_type=devicetype,
+                role=devicerole,
+                status=devicestatus,
+            ),
+            Device.objects.create(
+                name="Device 3",
+                location=location,
+                device_type=devicetype,
+                role=devicerole,
+                status=devicestatus,
+            ),
+            Device.objects.create(
+                name="Device 4",
+                location=location,
+                device_type=devicetype,
+                role=devicerole,
+                status=devicestatus,
+            ),
+        )
+        cls.devices = devices
+
+        intf_status = Status.objects.get_for_model(Interface).first()
+        cls.interfaces = (
+            Interface.objects.create(device=cls.devices[0], name="Interface 1", status=intf_status),
+            Interface.objects.create(device=cls.devices[1], name="Interface 2", status=intf_status),
+            Interface.objects.create(device=cls.devices[2], name="Interface 3", status=intf_status),
+        )
+        cls.services = (
+            Service.objects.create(
+                device=devices[0],
+                name="Service 1",
+                protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+                ports=[1],
+            ),
+            Service.objects.create(
+                device=devices[0],
+                name="Service 2",
+                protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+                ports=[2],
+            ),
+            Service.objects.create(
+                device=devices[0],
+                name="Service 3",
+                protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+                ports=[3],
+            ),
+        )
         custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Merge IP CF Text"),
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="Merge IP CF Integer"),
@@ -340,7 +404,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
             type=IPAddressTypeChoices.TYPE_DHCP,
             role=roles[0],
             description="duplicate 1",
-            tenant=None,
+            tenant=Tenant.objects.last(),
             _custom_field_data={
                 "merge_ip_cf_text": "Hello",
                 "merge_ip_cf_integer": 12,
@@ -418,6 +482,18 @@ class IPAddressMergeTestCase(ModelViewTestCase):
             "cf_merge_ip_cf_select": str(cls.dup_ip_3.pk),
             "cf_merge_ip_cf_multi_select": str(cls.dup_ip_2.pk),
         }
+        cls.services[0].ip_addresses.add(cls.dup_ip_1)
+        cls.services[1].ip_addresses.add(cls.dup_ip_2)
+        cls.services[2].ip_addresses.add(cls.dup_ip_3)
+        cls.interfaces[0].ip_addresses.add(cls.dup_ip_1)
+        cls.interfaces[0].device.primary_ip4 = cls.dup_ip_1
+        cls.interfaces[0].device.validated_save()
+        cls.interfaces[1].ip_addresses.add(cls.dup_ip_2)
+        cls.interfaces[1].device.primary_ip4 = cls.dup_ip_2
+        cls.interfaces[1].device.validated_save()
+        cls.interfaces[2].ip_addresses.add(cls.dup_ip_3)
+        cls.interfaces[2].device.primary_ip4 = cls.dup_ip_3
+        cls.interfaces[2].device.validated_save()
 
     @classmethod
     def queryset_to_pks(cls, obj):
@@ -466,6 +542,12 @@ class IPAddressMergeTestCase(ModelViewTestCase):
             self.dup_ip_2._custom_field_data["merge_ip_cf_multi_select"],
         )
         self.assertEqual(num_ips_before - 2, IPAddress.objects.all().count())
+        for service in self.services:
+            self.assertIn(merged_ip, service.ip_addresses.all())
+        for interface in self.interfaces:
+            self.assertIn(merged_ip, interface.ip_addresses.all())
+        # for device in self.devices[:3]:
+        #     self.assertEqual(merged_ip, device.primary_ip4)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_only_one_or_zero_ip_addresses(self):

@@ -720,12 +720,9 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         logger = logging.getLogger(__name__)
         collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
+        operation_invalid = len(collapsed_ips) < 2
         # Check if there are at least two IP addresses for us to merge
-        if len(collapsed_ips) < 2:
-            msg = "Invalid Operation, please select at least two IP Addresses to merge."
-            messages.error(request, mark_safe(msg))
-            return redirect(self.get_return_url(request))
-        if "_skip" not in request.POST:
+        if "_skip" not in request.POST and not operation_invalid:
             with cache.lock("ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT):
                 with transaction.atomic():
                     namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
@@ -748,8 +745,10 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     else:
                         nat_inside = None
                     # merge all ips into the ip that already exists in the selected namespace.
-                    merged_ip = collapsed_ips.filter(parent__namespace=namespace)
-                    merged_ip.update(
+                    ip_in_the_same_namespace = collapsed_ips.filter(parent__namespace=namespace).first()
+                    merged_ip = IPAddress(
+                        host=merged_attributes.get("host"),
+                        parent=ip_in_the_same_namespace.parent,
                         type=merged_attributes.get("type"),
                         status=status,
                         role=role,
@@ -758,25 +757,18 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         mask_length=merged_attributes.get("mask_length"),
                         tenant=tenant,
                         nat_inside=nat_inside,
+                        _custom_field_data=ip_in_the_same_namespace._custom_field_data,
                     )
-                    merged_ip = merged_ip.first()
                     merged_ip.tags.set(tags)
                     # Update custom_field_data
                     for key in merged_ip._custom_field_data.keys():
                         ip_pk = merged_attributes.get("cf_" + key)
                         merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
-                    merged_ip.save()
                     # Update relationship data
                     handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
-                    collapsed_ips = collapsed_ips.exclude(pk=merged_ip.pk)
                     # Update IPAddress to Interface Assignments
                     ip_to_interface_assignments = IPAddressToInterface.objects.filter(ip_address__pk__in=collapsed_ips)
                     ip_to_interface_assignments.update(ip_address=merged_ip)
-                    # Update device primary_ip4 and primary_ip6
-                    devices_ip_4 = Device.objects.filter(primary_ip4__pk__in=collapsed_ips)
-                    devices_ip_4.update(primary_ip4=merged_ip)
-                    devices_ip_6 = Device.objects.filter(primary_ip6__pk__in=collapsed_ips)
-                    devices_ip_6.update(primary_ip6=merged_ip)
                     # Update Service m2m field with IPAddresses
                     services = Service.objects.filter(ip_addresses__in=collapsed_ips)
                     for service in services:
@@ -795,6 +787,7 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     )
                     logger.info(msg)
                     messages.success(request, mark_safe(msg))
+                    merged_ip.validated_save()
         return self.find_duplicate_ips(request, merged_attributes)
 
 
