@@ -459,7 +459,7 @@ class BaseJob(Task):
     @final
     @classproperty
     def field_order(cls):  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("field_order", None, expected_type=(list, tuple))
+        return cls._get_meta_attr_and_assert_type("field_order", [], expected_type=(list, tuple))
 
     @final
     @classproperty
