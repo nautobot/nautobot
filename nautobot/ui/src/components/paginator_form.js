@@ -5,15 +5,30 @@ import { useSearchParams } from "react-router-dom";
 export default function PaginatorForm({ scroll_ref }) {
     let [searchParams, setSearchParams] = useSearchParams();
     function onPageSizeChange(event) {
-        let offset = searchParams.get("offset");
+        let initialOffset = parseInt(searchParams.get("offset"));
+
+        let newLimit = event.target.value;
+        let newOffset;
+
+        let offsetModulo = initialOffset % newLimit;
+
+        // Properly sets the new offset based on the new limit and old offset
+        if (offsetModulo !== 0) {
+            newOffset = initialOffset - offsetModulo;
+        }
+        else {
+            newOffset = initialOffset;
+        }
+
         // Scroll to the top of the ObjectListTable Container on table reload
         scroll_ref.current.scrollIntoView({
             alignToTop: true,
             behavior: "smooth",
         });
+
         setSearchParams({
-            limit: event.target.value,
-            offset: offset ? offset : 0,
+            limit: newLimit,
+            offset: newOffset ? newOffset : 0,
         });
     }
 

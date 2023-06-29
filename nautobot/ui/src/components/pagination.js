@@ -82,8 +82,8 @@ export default function Pagination({
         setIsInputInvalid(false);
 
         setSearchParams({
-            offset: pageSize * (newPageNumber - 1),
             limit: limit ? limit : 50,
+            offset: pageSize * (newPageNumber - 1),
         });
     }
 
