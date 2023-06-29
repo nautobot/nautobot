@@ -704,19 +704,19 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                     correct_associations = RelationshipAssociation.objects.filter(
                         relationship=m2m, source_id=merged_ip.pk
                     )
-                    self.assertEqual(len(associations.difference(correct_associations)), 0)
+                    self.assertEqual(set(associations), set(correct_associations))
                 elif relationship == o2m_source:
                     associations = value.get("queryset")
                     correct_associations = RelationshipAssociation.objects.filter(
                         relationship=o2m_source, source_id=merged_ip.pk
                     )
-                    self.assertEqual(len(associations.difference(correct_associations)), 0)
+                    self.assertEqual(set(associations), set(correct_associations))
                 else:
                     associations = value.get("queryset")
                     correct_associations = RelationshipAssociation.objects.filter(
                         relationship=sym_m2m, source_id=merged_ip.pk
                     ) | RelationshipAssociation.objects.filter(relationship=sym_m2m, destination_id=merged_ip.pk)
-                    self.assertEqual(len(associations.difference(correct_associations)), 0)
+                    self.assertEqual(set(associations), set(correct_associations))
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
