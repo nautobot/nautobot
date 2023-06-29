@@ -15,8 +15,7 @@ export default function PaginatorForm({ scroll_ref }) {
         // Properly sets the new offset based on the new limit and old offset
         if (offsetModulo !== 0) {
             newOffset = initialOffset - offsetModulo;
-        }
-        else {
+        } else {
             newOffset = initialOffset;
         }
 
