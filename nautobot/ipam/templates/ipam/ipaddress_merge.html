@@ -5,6 +5,12 @@
 {% load django_tables2 %}
 
 {% block extra_styles %}
+    <style>
+       td {
+            white-space: nowrap;
+            overflow:hidden;
+       }
+    </style>
     {{ block.super }}
 {% endblock %}
 {% block content %}
@@ -23,7 +29,6 @@
     </div>
     <div class="row">
         <div class="col-md-10 col-md-offset-1">
-            <div class="panel panel-default">
                 <table class="table table-hover table-headings">
                 <thead>
                     <th>
@@ -83,7 +88,7 @@
                 {% for ip in queryset %}
                         <tr>
                             <td>
-                                <input type="checkbox" onclick='handleClick(this);' id="pk" name="pk" value="{{ip.pk}}" checked>&nbsp;
+                                <input type="checkbox" onclick='handleClick(this);' id="pk" name="pk" value="{{ip.pk}}" checked>
                                 <label for="pk"><a href="{% url 'ipam:ipaddress' ip.pk %}">{{ ip }}</a></label>
                             </td>
                             <td>
@@ -201,7 +206,6 @@
                 {% endfor %}
                 </tbody>    
             </table>
-        </div>
     </div>
 </div>
 <div class="row">

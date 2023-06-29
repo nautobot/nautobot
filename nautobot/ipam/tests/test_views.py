@@ -8,6 +8,7 @@ from django.utils.timezone import make_aware
 from django.urls import reverse
 
 from nautobot.circuits.models import Circuit, Provider
+from nautobot.core.templatetags.helpers import queryset_to_pks
 from nautobot.core.testing import post_data, ModelViewTestCase, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
@@ -494,15 +495,6 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         cls.interfaces[2].device.primary_ip4 = cls.dup_ip_3
         cls.interfaces[2].device.validated_save()
 
-    @classmethod
-    def queryset_to_pks(cls, obj):
-        """Return all object UUIDs as a string separated by `,`"""
-        result = []
-        if obj:
-            for pk in obj.values_list("pk", flat=True):
-                result.append(str(pk))
-        return ",".join(result)
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_ip_addresses_success(self):
         self.add_permissions("ipam.change_ipaddress")
@@ -750,18 +742,24 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         for assoc in rel_associations:
             assoc.validated_save()
 
-        self.merge_data["cr_" + m2m.key] = self.queryset_to_pks(
+        # Taking the dup_ip_2's many to many RelationshipAssociations and put into the merge data
+        self.merge_data["cr_" + m2m.key] = queryset_to_pks(
             RelationshipAssociation.objects.filter(relationship=m2m, source_id=self.dup_ip_2.pk)
         )
-        self.merge_data["cr_" + sym_m2m.key] = self.queryset_to_pks(
+        # Taking the dup_ip_2's symmetric many to many RelationshipAssociations and put into the merge data
+        self.merge_data["cr_" + sym_m2m.key] = queryset_to_pks(
             RelationshipAssociation.objects.filter(relationship=sym_m2m, source_id=self.dup_ip_2.pk)
             | RelationshipAssociation.objects.filter(relationship=sym_m2m, destination_id=self.dup_ip_2.pk)
         )
+        # Taking the dup_ip_3's one to one destination_id and put into the merge data
         self.merge_data["cr_" + o2o.key] = str(circuits[2].pk)
+        # Taking the dup_ip_1's symmetric one to one destination_id and put into the merge data
         self.merge_data["cr_" + sym_o2o.key] = str(ips[4].pk)
-        self.merge_data["cr_" + o2m_source.key] = self.queryset_to_pks(
+        # Taking the dup_ip_1's one to many RelationshipAssociations and put into the merge data
+        self.merge_data["cr_" + o2m_source.key] = queryset_to_pks(
             RelationshipAssociation.objects.filter(relationship=o2m_source, source_id=self.dup_ip_1.pk)
         )
+        # Taking the dup_ip_3's one to many source_id and put into the merge data
         self.merge_data["cr_" + o2m_destination.key] = str(providers[1].pk)
         request = {
             "path": self.merge_url,

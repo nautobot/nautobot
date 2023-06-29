@@ -498,7 +498,7 @@ class PrefixIPAddressesView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
         ipaddresses = (
-            instance.get_child_ips()
+            instance.ip_addresses.all()
             .restrict(request.user, "view")
             .select_related("status")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")
@@ -748,6 +748,7 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     ip_in_the_same_namespace = collapsed_ips.filter(parent__namespace=namespace).first()
                     merged_ip = IPAddress(
                         host=merged_attributes.get("host"),
+                        ip_version=ip_in_the_same_namespace.ip_version,
                         parent=ip_in_the_same_namespace.parent,
                         type=merged_attributes.get("type"),
                         status=status,
