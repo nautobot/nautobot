@@ -531,6 +531,8 @@ class Prefix(PrimaryModel):
     def __str__(self):
         return str(self.prefix)
 
+    natural_key_field_names = ["namespace", "prefix"]
+
     def _deconstruct_prefix(self, prefix):
         if prefix:
             if isinstance(prefix, str):
@@ -1223,8 +1225,6 @@ class VLANGroup(OrganizationalModel):
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
 
-    natural_key_field_names = ["name", "location"]  # location needs to be last since it's a variadic natural key
-
     def clean(self):
         super().clean()
 
@@ -1306,7 +1306,7 @@ class VLAN(PrimaryModel):
         "description",
     ]
 
-    natural_key_field_names = ["vid", "vlan_group"]
+    natural_key_field_names = ["pk"]
 
     class Meta:
         ordering = (
@@ -1426,7 +1426,7 @@ class Service(PrimaryModel):
     def parent(self):
         return self.device or self.virtual_machine
 
-    natural_key_field_names = ["name", "device", "virtual_machine"]
+    natural_key_field_names = ["name", "virtual_machine", "device"]
 
     def clean(self):
         super().clean()

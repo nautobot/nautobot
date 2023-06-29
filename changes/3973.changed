@@ -1,0 +1,4 @@
+Changed natural-key for `Prefix` model to `[namespace, prefix]`.
+Changed natural-key for `Service` model to `[name, virtual_machine, device]`.
+Changed natural-key for `VLANGroup` model to simply `[name]`.
+Changed natural-key for `VLAN` model to `[pk]` for now.
