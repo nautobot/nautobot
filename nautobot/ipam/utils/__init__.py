@@ -112,13 +112,12 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                             RelationshipAssociation.objects.filter(relationship=relationship, source_id=merged_ip.pk)
                         ) == set(RelationshipAssociation.objects.filter(pk__in=pk_list)):
                             continue
-                        else:
-                            RelationshipAssociation.objects.filter(
-                                relationship=relationship,
-                                source_id=merged_ip.pk,
-                            ).delete()
-                            updated_associations = RelationshipAssociation.objects.filter(pk__in=pk_list)
-                            updated_associations.update(source_id=merged_ip.pk)
+                        RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            source_id=merged_ip.pk,
+                        ).delete()
+                        updated_associations = RelationshipAssociation.objects.filter(pk__in=pk_list)
+                        updated_associations.update(source_id=merged_ip.pk)
                     else:
                         RelationshipAssociation.objects.filter(
                             relationship=relationship,
@@ -145,13 +144,11 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                             )
                         ) == set(RelationshipAssociation.objects.filter(pk__in=pk_list)):
                             continue
-                        else:
-                            RelationshipAssociation.objects.filter(
-                                relationship=relationship,
-                                destination_id=merged_ip.pk,
-                            ).delete()
-                            updated_associations = RelationshipAssociation.objects.filter(pk__in=pk_list)
-                            updated_associations.update(destination_id=merged_ip.pk)
+                        RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            destination_id=merged_ip.pk,
+                        ).delete()
+                        updated_associations.update(destination_id=merged_ip.pk)
                     else:
                         RelationshipAssociation.objects.filter(
                             relationship=relationship,
@@ -199,7 +196,7 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                                 rel = RelationshipAssociation.objects.get(pk=pk)
                                 if rel.source in collapsed_ips and rel.destination in collapsed_ips:
                                     continue
-                                elif rel.source in collapsed_ips:
+                                if rel.source in collapsed_ips:
                                     rel.source_id = merged_ip.pk
                                 else:
                                     rel.destination_id = merged_ip.pk

@@ -83,7 +83,7 @@
                 {% for ip in queryset %}
                         <tr>
                             <td>
-                                <input type="checkbox" id="pk" name="pk" value="{{ip.pk}}" checked>
+                                <input type="checkbox" onclick='handleClick(this);' id="pk" name="pk" value="{{ip.pk}}" checked>
                                 <label for="pk"><a href="{% url 'ipam:ipaddress' ip.pk %}">{{ ip }}</a></label>
                             </td>
                             <td>
@@ -243,7 +243,7 @@
     </div>
 </div>
 <div class="row">
-    <div class="col-md-10 col-md-offset-7">
+    <div class="col-md-5 col-md-offset-7">
         {% block buttons %}
             <button type="submit" name="_merge" class="btn btn-primary"><i class="mdi mdi-arrow-down-bold"></i> Merge and Go to the Next Duplicates</button>
             <button type="submit" name="_skip" class="btn btn-warning"><i class="mdi mdi-arrow-right-bold"></i> Skip and Go to the Next Duplicates</button>
@@ -253,3 +253,19 @@
 </div>
 </form>
 {% endblock %}
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        // Disable the entire row of attributes from selection if the IP is de-selected from merging.
+        function handleClick(cb) {
+            if (cb.checked == false) {
+                const rads = [...cb.closest("tr").querySelectorAll("[type=radio]")];
+                rads.forEach(rad =>  rad.disabled = true);
+                rads.forEach(rad =>  rad.checked ? rad.checked = false : ()=>{});
+            } else {
+                const rads = [...cb.closest("tr").querySelectorAll("[type=radio]")];
+                rads.forEach(rad =>  rad.disabled = false);
+            }
+        }
+    </script>
+{% endblock javascript %}

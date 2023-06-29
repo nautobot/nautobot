@@ -17,7 +17,7 @@ from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import CustomField, Role, Status, Tag
+from nautobot.extras.models import Role, Status, Tag
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
@@ -700,17 +700,12 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         if host_values:
             item = host_values[0]
             queryset = self.queryset.filter(host__in=[item["host"]])
-            print(queryset.first().get_custom_fields())
-            cf_keys = CustomField.objects.get_for_model(IPAddress).values_list("key", flat=True)
-            cf_labels = CustomField.objects.get_for_model(IPAddress).values_list("label", flat=True)
             return render(
                 request=request,
                 template_name=self.template_name,
                 context={
                     "queryset": queryset,
                     "return_url": self.get_return_url(request),
-                    "custom_field_keys": cf_keys,
-                    "custom_field_labels": cf_labels,
                 },
             )
         else:
@@ -725,7 +720,12 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         logger = logging.getLogger(__name__)
         collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
-        if collapsed_ips and "_skip" not in request.POST:
+        # Check if there are at least two IP addresses for us to merge
+        if len(collapsed_ips) < 2:
+            msg = "Invalid Operation, please select at least two IP Addresses to merge."
+            messages.error(request, mark_safe(msg))
+            return redirect(self.get_return_url(request))
+        if "_skip" not in request.POST:
             with cache.lock("ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT):
                 with transaction.atomic():
                     namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
