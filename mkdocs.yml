@@ -199,6 +199,7 @@ nav:
           - Extras:
               - Config Context: "models/extras/configcontext.md"
               - Config Context Schema: "models/extras/configcontextschema.md"
+              - Git Repository: "models/extras/gitrepository.md"
               - GraphQL Query: "models/extras/graphqlquery.md"
               - Image Attachment: "models/extras/imageattachment.md"
               - Job: "models/extras/job.md"

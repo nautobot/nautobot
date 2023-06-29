@@ -582,6 +582,9 @@ class DeviceIPsReport(Job):
 jobs = [CreateDevices, DeviceConnectionsReport, DeviceIPsReport]
 ```
 
++/- 2.0.0
+    See [Migrating Jobs From Nautobot v1](../apps/migrating-jobs-from-nautobot-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
+
 ### Implementing Custom Validators
 
 Apps can register custom validator classes which implement model validation logic to be executed during a model's `clean()` method. Like template extensions, custom validators are registered to a single model and offer a method which app authors override to implement their validation logic. This is accomplished by subclassing `CustomValidator` and implementing the `clean()` method.
