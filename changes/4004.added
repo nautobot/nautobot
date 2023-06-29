@@ -1,0 +1,1 @@
+Added `--save` option to `nautobot-server validate_models` command.
