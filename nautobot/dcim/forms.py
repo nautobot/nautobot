@@ -703,7 +703,6 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             )
             duplicate_devices = (
                 Device.objects.filter(site=site, name__in=list(duplicate_devices_names))
-                .exclude(rack=self.instance)
                 .values_list("name", flat=True)
             )
             if duplicate_devices:
