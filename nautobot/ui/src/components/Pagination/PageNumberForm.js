@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-    Box,
-    Flex,
-    FormControl,
-    Input,
-    Text,
-} from "@nautobot/nautobot-ui";
+import { Box, Flex, FormControl, Input, Text } from "@nautobot/nautobot-ui";
 import { IconButton } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
