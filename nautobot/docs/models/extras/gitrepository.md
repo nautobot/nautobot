@@ -40,6 +40,9 @@ Whenever a Git repository record is created, updated, or deleted, Nautobot autom
 
 ## Repository Structure
 
++/- 2.0.0
+    Git Repositories are now imported as standard Python packages and therefore all Git Repository top level directories must now contain an `__init__.py` file.
+
 ### Jobs
 
 Jobs defined in Python files located in a `/jobs/` directory at the root of a Git repository will automatically be discovered by Nautobot and made available to be run as a job, just as they would be if manually installed to the [`JOBS_ROOT`](../../configuration/optional-settings.md#jobs_root) directory.
@@ -47,8 +50,8 @@ Jobs defined in Python files located in a `/jobs/` directory at the root of a Gi
 !!! note
     There **must** be an `__init__.py` file in the `/jobs/` directory.
 
-!!! note
-    Just as with jobs manually installed in `JOBS_ROOT`, jobs provided by a Git repository do not support inter-module relative Python imports (i.e., you cannot package Python "libraries" into a Git repository and then import them from Jobs in that repository). If you need to import libraries from Jobs, the libraries either must be installed as a standard Python packaging dependency or as a Nautobot plugin.
++/- 2.0.0
+    Jobs provided by a Git repository are loaded as real Python modules and now support inter-module relative Python imports (i.e., you can package Python "libraries" into a Git repository and then import them from Jobs in that repository).
 
 When syncing or re-syncing a Git repository, the Nautobot database records corresponding to any provided jobs will automatically be refreshed. If a job is removed as a result of the sync, the corresponding database record will *not* be automatically deleted, but will be marked as `installed = False` and will no longer be runnable. A user with appropriate access permissions can delete leftover `Job` database records if desired, but note that this will result in any existing `JobResult` records no longer having a direct reference back to the `Job` that they originated from.
 

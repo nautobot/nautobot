@@ -2,21 +2,14 @@
 
 ## Quick Summary of Job Class Changes
 
-[`self.run(self, data, commit)` must be changed to include all Job variables](#job-run-signature)
-
-[`self.test_*` and `self.post_run()` methods were removed](#test_-and-post_run-methods)
-
-[`read_only` no longer changes the behavior of Nautobot core](#read-only-meta-attribute)
-
-[`self.job_result` should no longer be modified or saved from within a Job](#job_result)
-
-[Jobs must be registered in the celery task registry](#job-registration)
-
-[`self.failed` removed](#tracking-job-state)
-
-[The job logging methods have been renamed and their signature changed](#job-logging)
-
-[The `request` property has been changed to a celery request instead of a Django request](#request-property)
+* [`self.run(self, data, commit)` must be changed to include all Job variables](#job-run-signature)
+* [`self.test_*` and `self.post_run()` methods were removed](#test_-and-post_run-methods)
+* [`read_only` no longer changes the behavior of Nautobot core](#read-only-meta-attribute)
+* [`self.job_result` should no longer be modified or saved from within a Job](#job_result)
+* [Jobs must be registered in the celery task registry](#job-registration)
+* [`self.failed` removed](#tracking-job-state)
+* [The job logging methods have been renamed and their signature changed](#job-logging)
+* [The `request` property has been changed to a celery request instead of a Django request](#request-property)
 
 ## Overview
 
@@ -27,7 +20,7 @@ Some fundamental changes were made to Jobs in Nautobot v2.0. This document outli
 All Jobs are now imported as normal Python packages, instead of virtually imported, which means that Job file code can be shared with other Jobs or Python modules.
 
 !!! important
-    As a result of these changes, the `JOBS_ROOT` directory and all Git Repository top level directories must now contain an `__init__.py` file.
+    As a result of these changes all Git Repository top level directories must now contain an `__init__.py` file.
 
 #### App Provided Jobs
 
@@ -96,7 +89,7 @@ Jobs no longer run in a single atomic [database transaction](https://docs.django
 
 #### Commit Argument
 
-As a result of the default database transaction being removed from Nautobot core, the `commit` argument has been removed. If a Job author wants to provide users the ability to bypass approval when `approval_required` is set, the Job must implement a `dryrun` variable using the newly introduced `DryRunVar`. The desired value of the variable will be passed to the run method just like any other variable but the Job author must implement the logic to handle the dryrun.
+As a result of the default database transaction being removed from Nautobot core, the `commit` argument has been removed. If a Job author wants to provide users the ability to bypass approval when `approval_required` is set, the Job must implement a `dryrun` variable using the newly-introduced `DryRunVar`. The desired value of the variable will be passed to the `run` method just like any other variable, but the Job author must implement the logic to handle the dry run.
 
 The presence of a `dryrun = DryRunVar()` property on the Job class sets the `supports_dryrun` flag on the Job model, which allows users to bypass approval when `approval_required` is set. To implement a dry run variable without allowing users to bypass approval, the `dryrun` variable should use the `BooleanVar` class instead of `DryRunVar`.
 
