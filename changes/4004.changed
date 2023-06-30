@@ -1,0 +1,2 @@
+Changed `Prefix.type` validation with respect to parents and children from strictly-enforced to advisory-only for 2.0.
+Changed `parent` filter on `IPAddress` to be exact-match by PK; the previously present filter is renamed to `prefix`.
