@@ -584,22 +584,22 @@ class Prefix(PrimaryModel):
                         protected_objects=err.protected_objects,
                     ) from err
 
-                # Prefix objects must have a valid parent
-                elif (
-                    protected_model == Prefix
-                    and self.parent is not None
-                    # 3.0 TODO: uncomment this check to enforce it
-                    # and constants.PREFIX_ALLOWED_PARENT_TYPES[instance.type] != self.parent.type
-                ):
-                    raise models.ProtectedError(
-                        msg=(
-                            f"Cannot delete Prefix {self} because it has child Prefix objects that "
-                            "would no longer have a valid parent."
-                        ),
-                        protected_objects=err.protected_objects,
-                    ) from err
                 elif protected_model not in (IPAddress, Prefix):
                     raise
+                # 3.0 TODO: uncomment this check to enforce it
+                # Prefix objects must have a valid parent
+                # elif (
+                #     protected_model == Prefix
+                #     and self.parent is not None
+                #     and constants.PREFIX_ALLOWED_PARENT_TYPES[instance.type] != self.parent.type
+                # ):
+                #     raise models.ProtectedError(
+                #         msg=(
+                #             f"Cannot delete Prefix {self} because it has child Prefix objects that "
+                #             "would no longer have a valid parent."
+                #         ),
+                #         protected_objects=err.protected_objects,
+                #     ) from err
 
             # Update protected objects to use the new parent and delete the old parent (self).
             protected_pks = (po.pk for po in err.protected_objects)
