@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import Pagination from "../Pagination/Pagination";
+import { Pagination } from "@components/Pagination";
 
 describe("Pagination", () => {
     it("renders the pagination form with correct start and end range", () => {

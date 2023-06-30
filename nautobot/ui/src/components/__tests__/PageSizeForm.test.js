@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import PageSizeForm from "../Pagination/PageSizeForm";
+import { PageSizeForm } from "@components/Pagination";
 
 it("PageSizeForm", () => {
     render(

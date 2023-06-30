@@ -20,7 +20,7 @@ import { useCallback, useMemo } from "react";
 
 import LoadingWidget from "../LoadingWidget";
 import ObjectTableItem from "./ObjectTableItem";
-import Pagination from "../Pagination/Pagination";
+import { Pagination } from "@components/Pagination";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {

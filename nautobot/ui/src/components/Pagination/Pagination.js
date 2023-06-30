@@ -2,8 +2,7 @@ import { Box, Flex } from "@nautobot/nautobot-ui";
 import { Spacer } from "@chakra-ui/react";
 import React from "react";
 
-import PageNumberForm from "@components/Pagination/PageNumberForm";
-import PageSizeForm from "@components/Pagination/PageSizeForm";
+import { PageSizeForm, PageNumberForm } from "@components/Pagination";
 
 class Pagination extends React.Component {
     constructor(props) {
