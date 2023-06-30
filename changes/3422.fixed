@@ -1,0 +1,1 @@
+Fixed postgres database healthcheck error message in development environment.
