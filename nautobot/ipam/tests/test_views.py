@@ -537,8 +537,8 @@ class IPAddressMergeTestCase(ModelViewTestCase):
             self.assertIn(merged_ip, service.ip_addresses.all())
         for interface in self.interfaces:
             self.assertIn(merged_ip, interface.ip_addresses.all())
-        # for device in self.devices[:3]:
-        #     self.assertEqual(merged_ip, device.primary_ip4)
+        for device in self.devices[:3]:
+            self.assertEqual(merged_ip, device.primary_ip4)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_only_one_or_zero_ip_addresses(self):

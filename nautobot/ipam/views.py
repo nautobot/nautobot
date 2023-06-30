@@ -770,6 +770,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     # Update IPAddress to Interface Assignments
                     ip_to_interface_assignments = IPAddressToInterface.objects.filter(ip_address__pk__in=collapsed_ips)
                     ip_to_interface_assignments.update(ip_address=merged_ip)
+                    # Update Device primary_ip fields of the Collapsed IPs
+                    device_ip4 = Device.objects.filter(primary_ip4__pk__in=collapsed_ips)
+                    device_ip4.update(primary_ip4=merged_ip)
+                    device_ip6 = Device.objects.filter(primary_ip6__pk__in=collapsed_ips)
+                    device_ip6.update(primary_ip6=merged_ip)
                     # Update Service m2m field with IPAddresses
                     services = Service.objects.filter(ip_addresses__in=collapsed_ips)
                     for service in services:
