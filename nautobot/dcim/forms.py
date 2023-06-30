@@ -701,11 +701,12 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                 .annotate(name_count=Count("name"))
                 .filter(name_count__gt=1)
             )
-            if duplicate_devices := (
+            duplicate_devices = (
                 Device.objects.filter(site=site, name__in=list(duplicate_devices_names))
                 .exclude(rack=self.instance)
                 .values_list("name", flat=True)
-            ):
+            )
+            if duplicate_devices:
                 raise ValidationError(
                     {"site": f"Device with `name` in {list(duplicate_devices)} and site={site} already exists."}
                 )
