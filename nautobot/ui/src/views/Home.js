@@ -60,23 +60,23 @@ export default function Home() {
     return (
         <GenericView columns="1 1 1 1 3 1" gridBackground="white-0">
             <HomePanel
-                icon=<DcimIcon />
+                icon={<DcimIcon />}
                 title="Inventory"
                 data={objectCountData["Inventory"]}
             />
             <HomePanel
-                icon=<IpamIcon />
+                icon={<IpamIcon />}
                 title="Networks"
                 data={objectCountData["Networks"]}
             />
             {/*TODO: this should use objectCountData["Security"]*/}
             <HomePanel
-                icon=<SecurityIcon />
+                icon={<SecurityIcon />}
                 title="Security"
                 data={objectCountData["Security"]}
             />
             <HomePanel
-                icon=<PlatformIcon />
+                icon={<PlatformIcon />}
                 title="Platform"
                 data={objectCountData["Platform"]}
             />

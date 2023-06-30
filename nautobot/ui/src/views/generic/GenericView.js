@@ -93,7 +93,6 @@ export default function GenericView({
                 if (pathname === "/" || !isSuccess || !menu) {
                     return [
                         {
-                            children: "Home",
                             key: `0_home`,
                             type: "text",
                         },
@@ -114,14 +113,19 @@ export default function GenericView({
         <Flex
             direction="column"
             background="gray-0"
-            gap="md"
             height="full"
             paddingTop="md"
             width="full"
         >
             <Navbar appState={currentState} />
-            <Box flex="1" overflow="auto">
-                <Breadcrumbs paddingX="md" position="relative" zIndex="5">
+            <Box
+                flex="1"
+                overflow="auto"
+                paddingX="md"
+                paddingTop="sm"
+                paddingBottom="md"
+            >
+                <Breadcrumbs position="relative" zIndex="5">
                     {breadcrumbs.map((props) => (
                         <Breadcrumb {...props} />
                     ))}
@@ -133,6 +137,7 @@ export default function GenericView({
                     rows={rows}
                     background={gridBackground}
                     gridAutoRows="auto"
+                    marginTop="sm"
                 >
                     {children}
                 </NautobotGrid>
