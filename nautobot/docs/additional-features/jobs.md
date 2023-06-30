@@ -513,7 +513,7 @@ class MyJob(Job):
 ### Accessing User and Job Result
 
 +/- 2.0.0
-    The `request` property has been changed to a celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
+    The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
 
 The user that initiated the job and the job result associated to the job can be accessed through properties on the job class:
 
