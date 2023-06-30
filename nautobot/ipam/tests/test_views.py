@@ -342,13 +342,6 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                 role=devicerole,
                 status=devicestatus,
             ),
-            Device.objects.create(
-                name="Device 4",
-                location=location,
-                device_type=devicetype,
-                role=devicerole,
-                status=devicestatus,
-            ),
         )
         cls.devices = devices
 
@@ -486,14 +479,17 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         cls.services[1].ip_addresses.add(cls.dup_ip_2)
         cls.services[2].ip_addresses.add(cls.dup_ip_3)
         cls.interfaces[0].ip_addresses.add(cls.dup_ip_1)
-        cls.interfaces[0].device.primary_ip4 = cls.dup_ip_1
-        cls.interfaces[0].device.validated_save()
+        device_1 = Device.objects.get(pk=cls.interfaces[0].device.pk)
+        device_1.primary_ip4 = cls.dup_ip_1
+        device_1.save()
         cls.interfaces[1].ip_addresses.add(cls.dup_ip_2)
-        cls.interfaces[1].device.primary_ip4 = cls.dup_ip_2
-        cls.interfaces[1].device.validated_save()
+        device_2 = Device.objects.get(pk=cls.interfaces[1].device.pk)
+        device_2.primary_ip4 = cls.dup_ip_2
+        device_2.save()
         cls.interfaces[2].ip_addresses.add(cls.dup_ip_3)
-        cls.interfaces[2].device.primary_ip4 = cls.dup_ip_3
-        cls.interfaces[2].device.validated_save()
+        device_3 = Device.objects.get(pk=cls.interfaces[2].device.pk)
+        device_3.primary_ip4 = cls.dup_ip_3
+        device_3.save()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_ip_addresses_success(self):
@@ -537,7 +533,8 @@ class IPAddressMergeTestCase(ModelViewTestCase):
             self.assertIn(merged_ip, service.ip_addresses.all())
         for interface in self.interfaces:
             self.assertIn(merged_ip, interface.ip_addresses.all())
-        for device in self.devices[:3]:
+        for device in self.devices:
+            device.refresh_from_db()
             self.assertEqual(merged_ip, device.primary_ip4)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
