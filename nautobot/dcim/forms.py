@@ -701,9 +701,8 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                 .annotate(name_count=Count("name"))
                 .filter(name_count__gt=1)
             )
-            duplicate_devices = (
-                Device.objects.filter(site=site, name__in=list(duplicate_devices_names))
-                .values_list("name", flat=True)
+            duplicate_devices = Device.objects.filter(site=site, name__in=list(duplicate_devices_names)).values_list(
+                "name", flat=True
             )
             if duplicate_devices:
                 raise ValidationError(
