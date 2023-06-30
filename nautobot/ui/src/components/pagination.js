@@ -4,7 +4,6 @@ import {
     Box,
     Flex,
     FormControl,
-    FormErrorMessage,
     Input,
     Text,
 } from "@nautobot/nautobot-ui";
@@ -132,9 +131,6 @@ export default function Pagination({
                     width="50px"
                     onBlur={handleOnBlur}
                 />
-                {isInputInvalid && (
-                    <FormErrorMessage>Page out of range</FormErrorMessage>
-                )}
             </FormControl>
             {trueCurrentPage < lastPage ? (
                 <IconButton
