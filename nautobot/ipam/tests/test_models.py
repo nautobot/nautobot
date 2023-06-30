@@ -11,12 +11,20 @@ from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
 from nautobot.extras.models import Role, Status
-from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup
+from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
+from nautobot.ipam.models import (
+    IPAddress,
+    IPAddressToInterface,
+    Namespace,
+    Prefix,
+    RIR,
+    RouteTarget,
+    Service,
+    VLAN,
+    VLANGroup,
+    VRF,
+)
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
-
-
-# TODO(jathan): Add VRF model tests.
 
 
 class IPAddressToInterfaceTest(TestCase):
@@ -256,6 +264,10 @@ class TestVarbinaryIPField(TestCase):
         prepped = self.field.get_db_prep_value(self.network, connection)
         manual = bytes(self.network_packed)
         self.assertEqual(prepped, manual)
+
+
+class TestNamespace(ModelTestCases.BaseModelTestCase):
+    model = Namespace
 
 
 class TestPrefix(ModelTestCases.BaseModelTestCase):
@@ -935,6 +947,34 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address="11.0.0.9/32", status=self.status, namespace=namespace)
 
 
+class TestRIR(ModelTestCases.BaseModelTestCase):
+    model = RIR
+
+
+class TestRouteTarget(ModelTestCases.BaseModelTestCase):
+    model = RouteTarget
+
+
+class TestService(ModelTestCases.BaseModelTestCase):
+    model = Service
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devicetype = DeviceType.objects.first()
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            name="Device 1", location=location, device_type=devicetype, role=devicerole, status=devicestatus
+        )
+        Service.objects.create(
+            device=device,
+            name="Service 1",
+            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+            ports=[101],
+        )
+
+
 class TestVLANGroup(ModelTestCases.BaseModelTestCase):
     model = VLANGroup
 
@@ -963,7 +1003,7 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
 
 
-class VLANTestCase(ModelTestCases.BaseModelTestCase):
+class TestVLAN(ModelTestCases.BaseModelTestCase):
     model = VLAN
 
     def test_vlan_validation(self):
@@ -990,3 +1030,8 @@ class VLANTestCase(ModelTestCases.BaseModelTestCase):
             f'The assigned group belongs to a location that does not include location "{location.name}"',
             str(cm.exception),
         )
+
+
+class TestVRF(ModelTestCases.BaseModelTestCase):
+    model = VRF
+    # TODO(jathan): Add VRF model tests.
