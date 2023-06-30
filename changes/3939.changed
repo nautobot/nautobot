@@ -1,0 +1,1 @@
+Changed `VirtualMachine.primary_ip4` and `primary_ip6` fields from `OneToOneField` to `ForeignKey`, relaxing the uniqueness constraint.
