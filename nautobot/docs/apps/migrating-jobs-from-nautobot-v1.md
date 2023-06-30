@@ -24,25 +24,25 @@ Some fundamental changes were made to Jobs in Nautobot v2.0. This document outli
 
 ### Job Package Names
 
-All Jobs are now imported as normal Python packages instead of virtually imported which means that Job file code can be shared with other Jobs or Python modules.
+All Jobs are now imported as normal Python packages, instead of virtually imported, which means that Job file code can be shared with other Jobs or Python modules.
 
 !!! important
     As a result of these changes, the `JOBS_ROOT` directory and all Git Repository top level directories must now contain an `__init__.py` file.
 
 #### App Provided Jobs
 
-The package name for Jobs provided by Nautobot Apps will not change.
+The package name for Jobs provided by Nautobot Apps has not changed.
 
 #### Jobs in `JOBS_ROOT`
 
 [`JOBS_ROOT`](../configuration/optional-settings.md#jobs_root) is added to `sys.path` and all modules in that directory will be imported. The package name for Jobs in `JOBS_ROOT` will be `<job_file>`, where `<job_file>` is the name of the Job file without the `.py` extension. If desired, submodules may be used in `JOBS_ROOT` like any normal Python package. For example, a Job class called `AddJob` in `$JOBS_ROOT/my_jobs/math.py` would be imported as `my_jobs.math.AddJob`.
 
-!!! note
+!!! caution
     Take care to avoid naming collisions with existing Python packages when naming Job files in `JOBS_ROOT`.
 
 #### Git Repository Jobs
 
-The package name for Jobs provided by [Git Repositories](../models/extras/gitrepository.md) will be `<git_repository_slug>.jobs`, where `<git_repository_slug>` is the slug of the Git Repository as provided by the user when creating the Git Repository object in Nautobot. All jobs provided by Git Repositories must use the `.jobs` submodule of the Git Repository.
+The package name for Jobs provided by [Git Repositories](../models/extras/gitrepository.md) has changed to `<git_repository_slug>.jobs`, where `<git_repository_slug>` is the slug of the Git Repository as provided by the user when creating the Git Repository object in Nautobot. All jobs provided by Git Repositories must use the `.jobs` submodule of the Git Repository.
 
 ### Run Method Signature
 
@@ -69,14 +69,14 @@ The signature of the `run()` method for Jobs must now accept keyword arguments f
 
 ### `test_*` and `post_run()` Methods
 
-The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
+The `test_*` and `post_run` methods, previously provided for backwards compatibility to NetBox scripts and reports, have been removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by Job authors to perform similar functions.
 
 !!! important
     Be sure to call the `super()` method when overloading any of the job's `before_start`, `on_success`, `on_retry`, `on_failure`, or `after_return` methods
 
 ### Database Transaction Handling
 
-Jobs no longer run in an atomic database transaction by default. If a Job needs to run in a database transaction, you can use the `@transaction.atomic` decorator on the `run()` method or wrap parts of your Job code in the `with transaction.atomic()` context manager.
+Jobs no longer run in a single atomic [database transaction](https://docs.djangoproject.com/en/stable/topics/db/transactions/) by default. If a Job needs to run in a database transaction, you can use the `@transaction.atomic` decorator on the `run()` method or wrap parts of your Job code in the `with transaction.atomic()` context manager.
 
 !!! example
     ```py
@@ -98,17 +98,17 @@ Jobs no longer run in an atomic database transaction by default. If a Job needs 
 
 As a result of the default database transaction being removed from Nautobot core, the `commit` argument has been removed. If a Job author wants to provide users the ability to bypass approval when `approval_required` is set, the Job must implement a `dryrun` variable using the newly introduced `DryRunVar`. The desired value of the variable will be passed to the run method just like any other variable but the Job author must implement the logic to handle the dryrun.
 
-The presence of a `dryrun = DryRunVar()` property on the Job class sets the `supports_dryrun` flag on the Job model, which allows users to bypass approval when `approval_required` is set. To implement a dryrun variable without allowing users to bypass approval, the `dryrun` variable should use the `BooleanVar` class instead of `DryRunVar`.
+The presence of a `dryrun = DryRunVar()` property on the Job class sets the `supports_dryrun` flag on the Job model, which allows users to bypass approval when `approval_required` is set. To implement a dry run variable without allowing users to bypass approval, the `dryrun` variable should use the `BooleanVar` class instead of `DryRunVar`.
 
 The Job `commit_default` property has been renamed to `dryrun_default` and the default value as well as any existing database values have been flipped.
 
 #### Read-Only Meta Attribute
 
-The `read_only` Job field no longer changes the behavior of Nautobot core and is informational only in v2.0.
+The `read_only` Job field no longer forces an automatic database rollback at the end of the Job; it is informational only in v2.0.
 
 ### Job Registration
 
-All Jobs must be registered in the celery task registry to be available in Nautobot. This must be accomplished by calling `nautobot.core.celery.register_jobs(*job_classes)` at the top level of a Job module so that it is registered when the module is imported. The `register_jobs` method accepts one or more job classes as arguments.
+All Jobs must be registered in the Celery task registry to be available in Nautobot. This must be accomplished by calling `nautobot.core.celery.register_jobs(*job_classes)` at the top level of a Job module so that it is registered when the module is imported. The `register_jobs` method accepts one or more job classes as arguments.
 
 !!! example
     ```py
@@ -148,10 +148,10 @@ For more detailed documentation on Job logging see the [Job Logging](../addition
 
 ### Tracking Job State
 
-`JobResult.status` is now automatically tracked by celery. Job authors should no longer manually change `self.job_result.status` or `self.job_result.completed` and should instead raise an exception if the Job status should be set to failed (the failed status is now `"FAILURE"`).
+`JobResult.status` is now automatically tracked by Celery. Job authors should no longer manually change `self.job_result.status` or `self.job_result.completed` and should instead raise an exception if the Job status should be set to failed (the failed status is now `"FAILURE"`).
 
-The Job's `self.failed` flag that was used to determine if a Job failed has been removed. This flag was set to `True` when the `log_failure` method was called. Job authors should track their Job's internal state and raise an exception to fail the Job.
+The Job's built-in`self.failed` flag, that was used to determine if a Job failed, has been removed. This flag was previously set to `True` automatically when the `log_failure` method was called. Job authors should track their Job's internal state and raise an exception to fail the Job when desired.
 
 ### Request Property
 
-The `request` property has been changed to a celery request instead of a Django request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
+The `request` property has been changed to a Celery request instead of a Django request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.

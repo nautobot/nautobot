@@ -355,4 +355,4 @@ The `commit_default` job field has been renamed to `dryrun_default` and the defa
 
 ### Request Property
 
-The `request` property has been changed to a celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
+The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
