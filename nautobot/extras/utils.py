@@ -9,6 +9,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
+from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
@@ -409,42 +410,52 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
             job_name,
         )
 
-    job_model, created = job_model_class.objects.get_or_create(
-        module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
-        job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
-        defaults={
-            "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
-            "name": job_name,
-            "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
-            "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
-            "read_only": job_class.read_only,
-            "supports_dryrun": job_class.supports_dryrun,
-            "installed": True,
-            "enabled": False,
-        },
-    )
+    try:
+        with transaction.atomic():
+            job_model, created = job_model_class.objects.get_or_create(
+                module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+                job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+                defaults={
+                    "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
+                    "name": job_name,
+                    "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
+                    "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
+                    "read_only": job_class.read_only,
+                    "supports_dryrun": job_class.supports_dryrun,
+                    "installed": True,
+                    "enabled": False,
+                },
+            )
 
-    if job_name != default_job_name:
-        job_model.name_override = True
+            if job_name != default_job_name:
+                job_model.name_override = True
 
-    if created and job_model.module_name.startswith("nautobot."):
-        # System jobs should be enabled by default when first created
-        job_model.enabled = True
+            if created and job_model.module_name.startswith("nautobot."):
+                # System jobs should be enabled by default when first created
+                job_model.enabled = True
 
-    for field_name in JOB_OVERRIDABLE_FIELDS:
-        # Was this field directly inherited from the job before, or was it overridden in the database?
-        if not getattr(job_model, f"{field_name}_override", False):
-            # It was inherited and not overridden
-            setattr(job_model, field_name, getattr(job_class, field_name))
+            for field_name in JOB_OVERRIDABLE_FIELDS:
+                # Was this field directly inherited from the job before, or was it overridden in the database?
+                if not getattr(job_model, f"{field_name}_override", False):
+                    # It was inherited and not overridden
+                    setattr(job_model, field_name, getattr(job_class, field_name))
 
-    # set supports_dryrun to match the property on the job class
-    job_model.supports_dryrun = job_class.supports_dryrun
+            if not created:
+                # Mark it as installed regardless
+                job_model.installed = True
+                # Update the non-overridable flags in case they've changed in the source
+                job_model.is_job_hook_receiver = issubclass(job_class, JobHookReceiver)
+                job_model.is_job_button_receiver = issubclass(job_class, JobButtonReceiver)
+                job_model.read_only = job_class.read_only
+                job_model.supports_dryrun = job_class.supports_dryrun
 
-    if not created:
-        # Mark it as installed regardless
-        job_model.installed = True
+            job_model.save()
 
-    job_model.save()
+    except Exception as exc:
+        logger.error(
+            'Exception while trying to create/update a database record for Job class "%s": %s', job_class.__name__, exc
+        )
+        return (None, False)
 
     logger.info(
         '%s Job "%s: %s" from <%s>',
