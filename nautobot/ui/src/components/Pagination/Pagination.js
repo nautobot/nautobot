@@ -2,10 +2,10 @@ import { Box, Flex } from "@nautobot/nautobot-ui";
 import { Spacer } from "@chakra-ui/react";
 import React from "react";
 
-import PaginatorForm from "@components/paginator_form";
-import Pagination from "@components/pagination";
+import PageNumberForm from "@components/Pagination/PageNumberForm";
+import PageSizeForm from "@components/Pagination/PageSizeForm";
 
-class Paginator extends React.Component {
+class Pagination extends React.Component {
     constructor(props) {
         super(props);
         this.state = {};
@@ -49,21 +49,21 @@ class Paginator extends React.Component {
         return (
             <Flex paddingTop={10}>
                 <Box>
-                    <Pagination
+                    <PageNumberForm
                         firstPage={1}
                         lastPage={num_pages}
                         pageSize={page_size}
                         scroll_ref={scroll_ref}
                         totalDataCount={data_count}
                         trueCurrentPage={trueCurrentPage}
-                    ></Pagination>
+                    ></PageNumberForm>
                 </Box>
                 <Spacer />
                 <Box>
-                    <PaginatorForm scroll_ref={scroll_ref}></PaginatorForm>
+                    <PageSizeForm scroll_ref={scroll_ref}></PageSizeForm>
                 </Box>
             </Flex>
         );
     }
 }
-export default Paginator;
+export default Pagination;

@@ -10,7 +10,7 @@ import {
 import { IconButton } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
-export default function Pagination({
+export default function PageNumberForm({
     firstPage,
     lastPage,
     pageSize,

@@ -2,7 +2,7 @@ import React from "react";
 import { Flex, Text, Select } from "@nautobot/nautobot-ui";
 import { useSearchParams } from "react-router-dom";
 
-export default function PaginatorForm({ scroll_ref }) {
+export default function PageSizeForm({ scroll_ref }) {
     let [searchParams, setSearchParams] = useSearchParams();
     function onPageSizeChange(event) {
         let initialOffset = parseInt(searchParams.get("offset"));
