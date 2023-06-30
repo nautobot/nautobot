@@ -584,7 +584,7 @@ class PrefixEditView(generic.ObjectEditView):
                 messages.warning(
                     request,
                     mark_safe(
-                        f"{obj} is a Pool prefix and should not contain other prefixes. {warning_msg}. "
+                        f"{obj} is a Pool prefix and should not contain other prefixes. {warning_msg} "
                         f'Consider either <a href="{edit_url}">changing the type of {obj}</a> '
                         f"to Container or Network, or deleting {children_link}, to resolve this issue."
                     ),
@@ -610,7 +610,7 @@ class PrefixEditView(generic.ObjectEditView):
                 messages.warning(
                     request,
                     mark_safe(
-                        f"{obj} is a Container prefix and should not directly contain IP addresses. {ip_warning_msg}"
+                        f"{obj} is a Container prefix and should not directly contain IP addresses. {ip_warning_msg} "
                         f'Consider either <a href="{edit_url}">changing the type of {obj}</a> to Network, or '
                         f'<a href="{create_url}">creating one or more child prefix(es) of type Network</a> to contain '
                         f"{ip_link}, to resolve this issue."
@@ -620,7 +620,7 @@ class PrefixEditView(generic.ObjectEditView):
                 messages.warning(
                     request,
                     mark_safe(
-                        f"{obj} is a Container prefix and should not directly contain IP addresses. {ip_warning_msg}"
+                        f"{obj} is a Container prefix and should not directly contain IP addresses. {ip_warning_msg} "
                         f'Consider <a href="{edit_url}">changing the type of {obj}</a> to Network '
                         "to resolve this issue."
                     ),

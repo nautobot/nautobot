@@ -653,7 +653,9 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="11.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        pool_prefix = Prefix.objects.create(
+        # 3.0 TODO: replace with the commented below once type enforcement is enabled
+        # pool_prefix = Prefix.objects.create(
+        Prefix.objects.create(
             prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
         )
 
