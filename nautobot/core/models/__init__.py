@@ -1,7 +1,9 @@
 import uuid
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.urls import NoReverseMatch, reverse
+from django.utils.encoding import is_protected_type
 from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
@@ -93,6 +95,8 @@ class BaseModel(models.Model):
                 val = getattr(val, lookup)
                 if val is None:
                     break
+            if not is_protected_type(val):
+                val = str(val)
             vals.append(val)
         # Strip trailing Nones from vals
         while vals and vals[-1] is None:
@@ -159,7 +163,14 @@ class BaseModel(models.Model):
             for field_component in field_name.split("__")[:-1]:
                 model = model._meta.get_field(field_component).remote_field.model
 
-            field = model._meta.get_field(field_name.split("__")[-1])
+            try:
+                field = model._meta.get_field(field_name.split("__")[-1])
+            except FieldDoesNotExist:
+                # Not a database field, maybe it's a property instead?
+                if hasattr(model, field_name) and isinstance(getattr(model, field_name), property):
+                    natural_key_field_lookups.append(field_name)
+                    continue
+                raise
 
             if getattr(field, "remote_field", None) is None:
                 # Not a related field, so the field name is the field lookup

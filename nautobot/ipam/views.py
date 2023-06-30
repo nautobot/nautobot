@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db import models
 from django.db.models import Prefetch, ProtectedError
+from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
@@ -767,14 +768,26 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
                     # Update relationship data
                     handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
+                    # Capture relevant device pk_list before updating IPAddress to Interface Assignments.
+                    # since the update will unset the primary_ip[4/6] field on the device.
+                    # Collapsed_ips can only be one of the two families v4/v6
+                    # One of the querysets here is bound to be emtpy and one of the updates to Device's primary_ip field
+                    # is going to be a no-op
+                    device_ip4 = list(Device.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True))
+                    device_ip6 = list(Device.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True))
+
+                    ip_to_interface_assignments = []
                     # Update IPAddress to Interface Assignments
-                    ip_to_interface_assignments = IPAddressToInterface.objects.filter(ip_address__pk__in=collapsed_ips)
-                    ip_to_interface_assignments.update(ip_address=merged_ip)
-                    # Update Device primary_ip fields of the Collapsed IPs
-                    device_ip4 = Device.objects.filter(primary_ip4__pk__in=collapsed_ips)
-                    device_ip4.update(primary_ip4=merged_ip)
-                    device_ip6 = Device.objects.filter(primary_ip6__pk__in=collapsed_ips)
-                    device_ip6.update(primary_ip6=merged_ip)
+                    for assignment in IPAddressToInterface.objects.filter(ip_address__in=collapsed_ips):
+                        updated_attributes = model_to_dict(assignment)
+                        updated_attributes["ip_address"] = merged_ip
+                        updated_attributes["interface"] = Interface.objects.filter(
+                            pk=updated_attributes["interface"]
+                        ).first()
+                        updated_attributes["vm_interface"] = VMInterface.objects.filter(
+                            pk=updated_attributes["vm_interface"]
+                        ).first()
+                        ip_to_interface_assignments.append(updated_attributes)
                     # Update Service m2m field with IPAddresses
                     services = Service.objects.filter(ip_addresses__in=collapsed_ips)
                     for service in services:
@@ -791,9 +804,14 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} "
                         f'into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
                     )
+                    merged_ip.validated_save()
+                    for assignment in ip_to_interface_assignments:
+                        IPAddressToInterface.objects.create(**assignment)
+                    # Update Device primary_ip fields of the Collapsed IPs
+                    Device.objects.filter(pk__in=device_ip4).update(primary_ip4=merged_ip)
+                    Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
                     logger.info(msg)
                     messages.success(request, mark_safe(msg))
-                    merged_ip.validated_save()
         return self.find_duplicate_ips(request, merged_attributes)
 
 
