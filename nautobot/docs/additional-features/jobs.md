@@ -17,6 +17,11 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
 !!! note
     Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". User input is supported via [job variables](#variables).
 
+## Migrating Jobs from v1 to v2
+
++/- 2.0.0
+    See [Migrating Jobs From Nautobot v1](../apps/migrating-jobs-from-nautobot-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
+
 ## Writing Jobs
 
 Jobs may be installed in one of three ways:
@@ -508,7 +513,7 @@ class MyJob(Job):
 ### Accessing User and Job Result
 
 +/- 2.0.0
-    The web request is no longer accessible to running jobs.
+    The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
 
 The user that initiated the job and the job result associated to the job can be accessed through properties on the job class:
 

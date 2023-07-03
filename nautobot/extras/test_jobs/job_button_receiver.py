@@ -8,13 +8,13 @@ logger = get_task_logger(__name__)
 
 class TestJobButtonReceiverSimple(JobButtonReceiver):
     def receive_job_button(self, obj):
-        logger.info("request.user: %s", self.request.user.username)
+        logger.info("user: %s", self.user.username)
         logger.info(obj.name)
 
 
 class TestJobButtonReceiverComplex(JobButtonReceiver):
     def receive_job_button(self, obj):
-        logger.info("request.user: %s", self.request.user.username)
+        logger.info("user: %s", self.user.username)
         if isinstance(obj, Device):
             logger.info("Device: %s", obj)
         elif isinstance(obj, Location):

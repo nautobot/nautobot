@@ -1,3 +1,4 @@
+from importlib.util import find_spec
 import json
 import logging
 import os
@@ -84,9 +85,16 @@ def import_jobs_as_celery_tasks(sender, database_ready=True, **kwargs):
         for _, module_name, _ in pkgutil.iter_modules([jobs_root]):
             try:
                 logger.debug("Importing Jobs from %s in JOBS_ROOT", module_name)
+                existing_module = find_spec(module_name)
+                if existing_module is not None:
+                    existing_module_path = os.path.realpath(existing_module.origin)
+                    jobs_root_path = os.path.realpath(jobs_root)
+                    if not existing_module_path.startswith(jobs_root_path):
+                        raise ImportError(
+                            f"JOBS_ROOT Jobs module {module_name} conflicts with existing module {existing_module_path}"
+                        )
                 sender.loader.import_task_module(module_name)
             except Exception as exc:
-                # logger.error(f"Unable to load module '{module_name}' from {jobs_root}: {exc:}")
                 logger.exception(exc)
 
     git_root = settings.GIT_ROOT

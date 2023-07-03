@@ -345,6 +345,11 @@ Therefore all code that is calling `JobResult.set_status()` (which has been remo
 
 ## Job Changes
 
+### Migrating Jobs From v1 to v2
+
++/- 2.0.0
+    See [Migrating Jobs From Nautobot v1](../apps/migrating-jobs-from-nautobot-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
+
 ### Fundamental Changes
 
 The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental changes to the job's methods and signatures were required to support this change:
@@ -394,3 +399,7 @@ The `commit_default` job field has been renamed to `dryrun_default` and the defa
 
 !!! important
     Nautobot no longer enforces any job behavior when dryrun is set. It is now the job author's responsibility to define and enforce the execution of a "dry run".
+
+### Request Property
+
+The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
