@@ -75,7 +75,7 @@ export default function GenericObjectListView() {
     let table_name = toTitleCase(model_name, "-");
     if (!data_loaded) {
         return (
-            <GenericView>
+            <GenericView gridBackground="white-0">
                 <NautobotGridItem>
                     <ObjectListTable
                         tableData={{}}
@@ -108,7 +108,7 @@ export default function GenericObjectListView() {
         defaultHeaders = tableHeaders;
     }
     return (
-        <GenericView>
+        <GenericView gridBackground="white-0">
             <NautobotGridItem>
                 {/* TODO(timizuo): Use @component/ObjectTable instead, after pagination control has been added to @component/ObjectTable */}
                 <ObjectListTable
