@@ -1,13 +1,23 @@
-from nautobot.core.apps import NavMenuGroup, NavMenuItem, NavMenuTab
+from nautobot.core.apps import (
+    NavContext,
+    NavGrouping,
+    NavItem,
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuImportButton,
+    NavMenuTab,
+)
 
 
 menu_items = (
     NavMenuTab(
-        name="Inventory",
+        name="Circuits",
+        weight=500,
         groups=(
             NavMenuGroup(
                 name="Circuits",
-                weight=400,
+                weight=100,
                 items=(
                     NavMenuItem(
                         link="circuits:circuit_list",
@@ -16,8 +26,116 @@ menu_items = (
                         permissions=[
                             "circuits.view_circuit",
                         ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="circuits:circuit_add",
+                                permissions=[
+                                    "circuits.add_circuit",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="circuits:circuit_import",
+                                permissions=[
+                                    "circuits.add_circuit",
+                                ],
+                            ),
+                        ),
                     ),
                     NavMenuItem(
+                        link="circuits:circuittype_list",
+                        name="Circuit Types",
+                        weight=200,
+                        permissions=[
+                            "circuits.view_circuittype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="circuits:circuittype_add",
+                                permissions=[
+                                    "circuits.add_circuittype",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="circuits:circuittype_import",
+                                permissions=[
+                                    "circuits.add_circuittype",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Providers",
+                weight=200,
+                items=(
+                    NavMenuItem(
+                        link="circuits:provider_list",
+                        name="Providers",
+                        weight=100,
+                        permissions=[
+                            "circuits.view_provider",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="circuits:provider_add",
+                                permissions=[
+                                    "circuits.add_provider",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="circuits:provider_import",
+                                permissions=[
+                                    "circuits.add_provider",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="circuits:providernetwork_list",
+                        name="Provider Networks",
+                        weight=200,
+                        permissions=[
+                            "circuits.view_providernetwork",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="circuits:providernetwork_add",
+                                permissions=[
+                                    "circuits.add_providernetwork",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="circuits:providernetwork_import",
+                                permissions=[
+                                    "circuits.add_providernetwork",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
+navigation = (
+    NavContext(
+        name="Inventory",
+        groups=(
+            NavGrouping(
+                name="Circuits",
+                weight=400,
+                items=(
+                    NavItem(
+                        link="circuits:circuit_list",
+                        name="Circuits",
+                        weight=100,
+                        permissions=[
+                            "circuits.view_circuit",
+                        ],
+                    ),
+                    NavItem(
                         link="circuits:circuittermination_list",
                         name="Circuit Terminations",
                         weight=200,
@@ -25,7 +143,7 @@ menu_items = (
                             "circuits.view_circuittermination",
                         ],
                     ),
-                    NavMenuItem(
+                    NavItem(
                         link="circuits:circuittype_list",
                         name="Circuit Types",
                         weight=300,
@@ -33,7 +151,7 @@ menu_items = (
                             "circuits.view_circuittype",
                         ],
                     ),
-                    NavMenuItem(
+                    NavItem(
                         link="circuits:provider_list",
                         name="Providers",
                         weight=400,
@@ -41,7 +159,7 @@ menu_items = (
                             "circuits.view_provider",
                         ],
                     ),
-                    NavMenuItem(
+                    NavItem(
                         link="circuits:providernetwork_list",
                         name="Provider Networks",
                         weight=500,

@@ -121,8 +121,8 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         """
         self.browser.visit(self.live_server_url)
 
-        # Click Inventory dropdown button
-        self.browser.links.find_by_partial_text("Inventory")[0].click()
+        # Click Circuits dropdown button
+        self.browser.links.find_by_partial_text("Circuits").click()
 
         # Click Circuits link
         self.browser.links.find_by_partial_text("Circuits")[1].click()

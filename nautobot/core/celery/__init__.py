@@ -217,5 +217,6 @@ nautobot_task = shared_task
 def register_jobs(*jobs):
     """Helper method to register jobs with Celery"""
     for job in jobs:
+        # TODO: should we only register a job if it corresponds to a Job database record?
         logger.debug("Registering job %s.%s", job.__module__, job.__name__)
         app.register_task(job)

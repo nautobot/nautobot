@@ -1,0 +1,1 @@
+Fixed self-referential type loop in the OpenAPI schema that made Swagger UI unusable for some endpoints.

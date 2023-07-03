@@ -375,7 +375,7 @@ class PrefixFactory(PrimaryModelFactory):
         if child_count == 0:
             return
 
-        # Propogate parent tenant to children if parent tenant is set
+        # Propagate parent tenant to children if parent tenant is set
         if self.tenant is not None:
             kwargs.setdefault("tenant", self.tenant)
 

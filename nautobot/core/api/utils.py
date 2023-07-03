@@ -6,7 +6,7 @@ import sys
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
@@ -120,23 +120,43 @@ def get_serializer_for_model(model, prefix=""):
         ) from exc
 
 
-def get_serializers_for_models(models, prefix=""):
+def nested_serializers_for_models(models, prefix=""):
     """
-    Dynamically resolve and return the appropriate serializers for a list of models.
+    Dynamically resolve and return the appropriate nested serializers for a list of models.
 
     Unlike get_serializer_for_model, this will skip any models for which an appropriate serializer cannot be found,
     logging a message instead of raising the SerializerNotFound exception.
 
-    Used primarily in OpenAPI schema generation.
+    Used exclusively in OpenAPI schema generation.
     """
-    serializers = []
+    serializer_classes = []
     for model in models:
         try:
-            serializers.append(get_serializer_for_model(model, prefix=prefix))
+            serializer_classes.append(get_serializer_for_model(model, prefix=prefix))
         except exceptions.SerializerNotFound as exc:
             logger.error("%s", exc)
             continue
-    return serializers
+
+    nested_serializer_classes = []
+    for serializer_class in serializer_classes:
+        nested_serializer_name = f"Nested{serializer_class.__name__}"
+        if nested_serializer_name in NESTED_SERIALIZER_CACHE:
+            nested_serializer_classes.append(NESTED_SERIALIZER_CACHE[nested_serializer_name])
+        else:
+
+            class NautobotNestedSerializer(serializer_class):
+                class Meta(serializer_class.Meta):
+                    fields = ["id", "object_type", "url"]
+
+                def get_field_names(self, declared_fields, info):
+                    """Don't auto-add any other fields to the field_names!"""
+                    return serializers.HyperlinkedModelSerializer.get_field_names(self, declared_fields, info)
+
+            NautobotNestedSerializer.__name__ = nested_serializer_name
+            NESTED_SERIALIZER_CACHE[nested_serializer_name] = NautobotNestedSerializer
+            nested_serializer_classes.append(NautobotNestedSerializer)
+
+    return nested_serializer_classes
 
 
 def is_api_request(request):
@@ -244,18 +264,6 @@ def format_output(field, field_value):
         }
     data.update(kwargs)
     return data
-
-
-# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
-def get_data_for_serializer_parameter(model):
-    """TODO: docstring."""
-    serializer = get_serializer_for_model(model)
-    writeable_fields = {
-        field_name: format_output(field_name, field_value)
-        for field_name, field_value in serializer().get_fields().items()
-        if not field_value.read_only
-    }
-    return writeable_fields
 
 
 def get_relation_info_for_nested_serializers(model_class, related_model, field_name):

@@ -152,7 +152,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "tenant": None,
             "status": statuses[1].pk,
             "role": roles[1].pk,
-            "type": "network",
             "rir": RIR.objects.last().pk,
             "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
             "description": "New description",

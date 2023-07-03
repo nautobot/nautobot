@@ -35,7 +35,7 @@ In any case, each module holds one or more Jobs (Python classes), each of which 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
 +/- 2.0.0
-    All job classes must now be registered with `nautobot.core.celery.register_jobs` on module import. For plugins providing jobs, the module containing the jobs must be imported by the plugin's `__init__.py` and the `register_jobs` method called at import time. The `register_jobs` method accepts one or more job classes as arguments.
+    All job classes must now be registered with `nautobot.core.celery.register_jobs` on module import. For plugins providing jobs, the `register_jobs` method must called from the plugin's `jobs.py` file/submodule at import time. The `register_jobs` method accepts one or more job classes as arguments.
 
 !!! warning
     Make sure you are *not* inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
@@ -545,12 +545,12 @@ An administrator or user with `extras.change_job` permission can edit the Job to
 * Navigate to Jobs > Jobs menu
 * Select a job that has been installed
 * Select **Edit** button
-* In the second section titled _Job_, select the **Enabled** checkbox
+* In the second section titled **Job**, select the **Enabled** checkbox
 * Select **Update** button at the bottom
 
 #### Enabling Job Hooks
 
- Job hooks are enabled in a similar fashion, but by using the _default_ filters when navigating to the Jobs page the Job Hooks will not be visible. To enable job hooks:
+ Job hooks are enabled in a similar fashion, but by using the **default** filters when navigating to the Jobs page the Job Hooks will not be visible. To enable job hooks:
 
 * Navigate to Jobs > Jobs menu
 * Select the **Filter** button to bring up the Filter Jobs context
@@ -558,7 +558,7 @@ An administrator or user with `extras.change_job` permission can edit the Job to
 * Select **Apply** button
 * Select a job that has been installed
 * Select **Edit** button
-* In the second section titled _Job_, select the **Enabled** checkbox
+* In the second section titled **Job**, select the **Enabled** checkbox
 * Select **Update** button at the bottom
 
 ### Overriding Metadata

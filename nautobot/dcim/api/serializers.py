@@ -15,7 +15,7 @@ from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
     get_serializer_for_model,
-    get_serializers_for_models,
+    nested_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
 )
 from nautobot.core.models.utils import get_all_concrete_models
@@ -99,7 +99,7 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
         PolymorphicProxySerializer(
             component_name="CableTermination",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination)),
+            serializers=lambda: nested_serializers_for_models(get_all_concrete_models(CableTermination)),
             allow_null=True,
         )
     )
@@ -134,7 +134,7 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         PolymorphicProxySerializer(
             component_name="PathEndpoint",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint)),
+            serializers=lambda: nested_serializers_for_models(get_all_concrete_models(PathEndpoint)),
             allow_null=True,
         )
     )
@@ -744,7 +744,7 @@ class CableSerializer(
         PolymorphicProxySerializer(
             component_name="CableTermination",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination)),
+            serializers=lambda: nested_serializers_for_models(get_all_concrete_models(CableTermination)),
         )
     )
     def get_termination_a(self, obj):
@@ -754,7 +754,7 @@ class CableSerializer(
         PolymorphicProxySerializer(
             component_name="CableTermination",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination)),
+            serializers=lambda: nested_serializers_for_models(get_all_concrete_models(CableTermination)),
         )
     )
     def get_termination_b(self, obj):
@@ -786,7 +786,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         PolymorphicProxySerializer(
             component_name="PathEndpoint",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint)),
+            serializers=lambda: nested_serializers_for_models(get_all_concrete_models(PathEndpoint)),
         )
     )
     def get_origin(self, obj):
@@ -800,7 +800,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         PolymorphicProxySerializer(
             component_name="PathEndpoint",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(PathEndpoint)),
+            serializers=lambda: nested_serializers_for_models(get_all_concrete_models(PathEndpoint)),
             allow_null=True,
         )
     )
@@ -817,7 +817,7 @@ class CablePathSerializer(serializers.ModelSerializer):
         PolymorphicProxySerializer(
             component_name="CableTermination",
             resource_type_field_name="object_type",
-            serializers=lambda: get_serializers_for_models(get_all_concrete_models(CableTermination)),
+            serializers=lambda: nested_serializers_for_models(get_all_concrete_models(CableTermination)),
             many=True,
         )
     )

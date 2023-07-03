@@ -2313,16 +2313,16 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         location2 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).last()
-        ct = ContentType.objects.get_for_model(Location)
+        cls.location_ct = ContentType.objects.get_for_model(Location)
         user1 = User.objects.create(username="user1", is_active=True)
         user2 = User.objects.create(username="user2", is_active=True)
 
         cls.create_data = [
             {
                 "note": "This is a test.",
-                "assigned_object_id": location1.pk,
+                "assigned_object_id": cls.location1.pk,
                 "assigned_object_type": "dcim.location",
             },
             {
@@ -2332,7 +2332,7 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "note": "This is a note on location 1.",
-                "assigned_object_id": location1.pk,
+                "assigned_object_id": cls.location1.pk,
                 "assigned_object_type": "dcim.location",
             },
         ]
@@ -2342,20 +2342,31 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
         Note.objects.create(
             note="location has been placed on maintenance.",
             user=user1,
-            assigned_object_type=ct,
-            assigned_object_id=location1.pk,
+            assigned_object_type=cls.location_ct,
+            assigned_object_id=cls.location1.pk,
         )
         Note.objects.create(
             note="location maintenance has ended.",
             user=user1,
-            assigned_object_type=ct,
-            assigned_object_id=location1.pk,
+            assigned_object_type=cls.location_ct,
+            assigned_object_id=cls.location1.pk,
         )
         Note.objects.create(
             note="location is under duress.",
             user=user2,
-            assigned_object_type=ct,
+            assigned_object_type=cls.location_ct,
             assigned_object_id=location2.pk,
+        )
+
+    def get_deletable_object(self):
+        """
+        Users only create self-authored notes via the REST API; test_recreate_object_csv needs self.user as author.
+        """
+        return Note.objects.create(
+            note="Delete me!",
+            user=self.user,
+            assigned_object_type=self.location_ct,
+            assigned_object_id=self.location1.pk,
         )
 
 
