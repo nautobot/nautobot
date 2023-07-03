@@ -19,9 +19,6 @@ Some fundamental changes were made to Jobs in Nautobot v2.0. This document outli
 
 All Jobs are now imported as normal Python packages, instead of virtually imported, which means that Job file code can be shared with other Jobs or Python modules.
 
-!!! important
-    As a result of these changes all Git Repository top level directories must now contain an `__init__.py` file.
-
 #### App Provided Jobs
 
 The package name for Jobs provided by Nautobot Apps has not changed.
@@ -36,6 +33,9 @@ The package name for Jobs provided by Nautobot Apps has not changed.
 #### Git Repository Jobs
 
 The package name for Jobs provided by [Git Repositories](../models/extras/gitrepository.md) has changed to `<git_repository_slug>.jobs`, where `<git_repository_slug>` is the slug of the Git Repository as provided by the user when creating the Git Repository object in Nautobot. All jobs provided by Git Repositories must use the `.jobs` submodule of the Git Repository.
+
+!!! important
+    As a result of the changes to the way jobs are imported the top-level directory of any Git Repository that provides Jobs must now contain an `__init__.py` file.
 
 ### Run Method Signature
 
