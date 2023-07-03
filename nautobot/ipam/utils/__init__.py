@@ -97,6 +97,9 @@ def add_available_vlans(vlan_group, vlans):
 
 
 def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips):
+    """
+    Update/Delete RelationshipAssociation instances after we collapsed the IPs.
+    """
     for side, relationships in merged_ip.get_relationships_data().items():
         for relationship, value in relationships.items():
             # could be a pk or a list of pks
@@ -105,6 +108,7 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
             new_rel_values = merged_attributes.get("cr_" + relationship.key)
             if new_rel_values:
                 if side == "source":
+                    # handle when `IPAddress`` is on the source side and the opposite side has many objects.
                     if value.get("has_many"):
                         pk_list = new_rel_values.split(",")
                         # no-op if RelationshipAssociations already exist
@@ -118,6 +122,7 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                         ).delete()
                         updated_associations = RelationshipAssociation.objects.filter(pk__in=pk_list)
                         updated_associations.update(source_id=merged_ip.pk)
+                    # handle when `IPAddress`` is on the source side and the opposite side has a single object.
                     else:
                         RelationshipAssociation.objects.filter(
                             relationship=relationship,
@@ -135,6 +140,7 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                         )
                         new_rel.validated_save()
                 elif side == "destination":
+                    # handle when `IPAddress`` is on the destination side and the opposite side has many objects.
                     if value.get("has_many"):
                         pk_list = new_rel_values.split(",")
                         # no-op if RelationshipAssociations already exist
@@ -149,6 +155,7 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                             destination_id=merged_ip.pk,
                         ).delete()
                         updated_associations.update(destination_id=merged_ip.pk)
+                    # handle when `IPAddress`` is on the destination side and the opposite side has a single object.
                     else:
                         RelationshipAssociation.objects.filter(
                             relationship=relationship,
@@ -167,6 +174,9 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                         new_rel.validated_save()
                 else:
                     # Peer side is very tricky
+                    # We delete all RelationshipAssociations with merged_ip on either side
+                    # and save them destination_id and source_id in a dictionary lookup
+                    # to avoid redundant RelationshipAssociations
                     lookup = {}
                     peer_source_associations = RelationshipAssociation.objects.filter(
                         relationship=relationship, destination_id=merged_ip.pk
@@ -183,6 +193,7 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                     if value.get("has_many"):
                         pk_list = new_rel_values.split(",")
                         for pk in pk_list:
+                            # rebuild the RelationshipAssociation if it is deleted.
                             if pk in lookup:
                                 new_rel = RelationshipAssociation(
                                     relationship=relationship,
@@ -193,6 +204,7 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                                 )
                                 new_rel.validated_save()
                             else:
+                                # update the RelationshipAssociation if it still exists.
                                 rel = RelationshipAssociation.objects.get(pk=pk)
                                 if rel.source in collapsed_ips and rel.destination in collapsed_ips:
                                     continue
@@ -202,7 +214,10 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                                     rel.destination_id = merged_ip.pk
                                 rel.validated_save()
                     else:
+                        # handle peer one to one relationship
                         pk = new_rel_values
+                        # If the relationship is peer one to one then, only one of the below statements will execute
+                        # and the other one should be a no-op and only one RelationshipAssociation will be deleted.
                         RelationshipAssociation.objects.filter(relationship=relationship, destination_id=pk).delete()
                         RelationshipAssociation.objects.filter(relationship=relationship, source_id=pk).delete()
                         new_rel = RelationshipAssociation(
@@ -214,9 +229,9 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                         )
                         new_rel.validated_save()
             else:
-                # if new_rel_values returned here are empty
+                # if new_rel_values returned here are empty, that means the user decided to discard any RelationshipAssociations of that Relationship.
                 # we make sure that we delete any relationship associations that are related to the surviving IP
-                # The rest of the associations will be deleted when we delete the collapsed IPs.
+                # The rest of the associations will be automatically deleted when we delete the collapsed IPs.
                 if side == "source":
                     RelationshipAssociation.objects.filter(relationship=relationship, source_id=merged_ip.pk).delete()
                 elif side == "destination":

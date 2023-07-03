@@ -686,6 +686,10 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         return get_permission_for_model(self.queryset.model, "change")
 
     def find_duplicate_ips(self, request, merged_attributes=None):
+        """
+        Present IP Addresses with the same host values.
+        If not found, return to IPAddressListView with a helpful message.
+        """
         if merged_attributes:
             host_values = (
                 self.queryset.filter(host__gt=merged_attributes.get("host"))
@@ -723,11 +727,13 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         merged_attributes = request.POST
         operation_invalid = len(collapsed_ips) < 2
         # Check if there are at least two IP addresses for us to merge
+        # and if the skip button is pressed instead.
         if "_skip" not in request.POST and not operation_invalid:
             with cache.lock("ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT):
                 with transaction.atomic():
                     namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
                     status = Status.objects.get(pk=merged_attributes.get("status"))
+                    # Retrieve all attributes from the request.
                     if merged_attributes.get("tenant"):
                         tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
                     else:
@@ -745,7 +751,7 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
                     else:
                         nat_inside = None
-                    # merge all ips into the ip that already exists in the selected namespace.
+                    # use IP in the same namespace as a reference.
                     ip_in_the_same_namespace = collapsed_ips.filter(parent__namespace=namespace).first()
                     merged_ip = IPAddress(
                         host=merged_attributes.get("host"),
@@ -775,6 +781,12 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     # is going to be a no-op
                     device_ip4 = list(Device.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True))
                     device_ip6 = list(Device.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True))
+                    vm_ip4 = list(
+                        VirtualMachine.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True)
+                    )
+                    vm_ip6 = list(
+                        VirtualMachine.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True)
+                    )
 
                     ip_to_interface_assignments = []
                     # Update IPAddress to Interface Assignments
@@ -803,11 +815,15 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         f'into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
                     )
                     merged_ip.validated_save()
+                    # After some testing
+                    # We have to update the ForeignKey fields after merged_ip is saved to make the operation valid
                     for assignment in ip_to_interface_assignments:
                         IPAddressToInterface.objects.create(**assignment)
                     # Update Device primary_ip fields of the Collapsed IPs
                     Device.objects.filter(pk__in=device_ip4).update(primary_ip4=merged_ip)
                     Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
+                    VirtualMachine.objects.filter(pk__in=vm_ip4).update(primary_ip4=merged_ip)
+                    VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
                     for service in services:
                         Service.objects.get(pk=service).ip_addresses.add(merged_ip)
                     logger.info(msg)

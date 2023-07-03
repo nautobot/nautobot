@@ -1,6 +1,6 @@
 # Duplicate IP Address Merge Post Migration Tool
 
-Upgrading from Nautobot v1.x to v2.0 can leave many duplicate `IPAddress` objects in the existing database. This tool is designated to help users to reduce unnecessary duplicate `IPAddress` objects by merging them into a single IP Address with all the desired attributes.
+Upgrading from Nautobot v1.x to v2.0 can leave some duplicate `IPAddress` objects in the existing database. This tool is designated to help users to reduce unnecessary duplicate `IPAddress` objects by merging them into a single IP Address with all the desired attributes.
 
 ## When to use this tool
 
