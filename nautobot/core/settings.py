@@ -230,6 +230,9 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
     "REDOC_DIST": "SIDECAR",
+    # Do not list all possible enum values in the description of filter fields and the like
+    # In addition to being highly verbose, it's inaccurate for filter fields like *__ic and *__re
+    "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
     "ENUM_NAME_OVERRIDES": {
         # These choice enums need to be overridden because they get assigned to the `type` field and
         # result in this error:

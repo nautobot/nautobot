@@ -13,7 +13,6 @@ from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import NoReverseMatch, reverse as django_reverse
 from rest_framework import status
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -34,7 +33,6 @@ from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
 from nautobot.core.api import BulkOperationSerializer
-from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.config import get_settings_or_config
@@ -268,78 +266,12 @@ class ModelViewSetMixin:
             self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
 
-    @action(detail=True, url_path="detail-view-config")
-    def detail_view_config(self, request, pk):
-        """
-        Return a JSON of the ObjectDetailView configuration
-        """
-        obj = get_object_or_404(self.queryset, pk=pk)
-        obj_serializer_class = get_serializer_for_model(obj)
-        obj_serializer = obj_serializer_class(data=None)
-        response = self.get_detail_view_config(obj_serializer)
-        response = Response(response)
-        return response
-
-    def get_detail_view_config(self, obj_serializer):
-        all_fields = list(obj_serializer.get_fields().keys())
-        header_fields = ["display", "status", "created", "last_updated"]
-        extra_fields = ["object_type", "relationships", "computed_fields", "custom_fields"]
-        advanced_fields = ["id", "url", "display", "composite_key", "slug", "notes_url"]
-        plugin_tab_1_fields = ["field_1", "field_2", "field_3"]
-        plugin_tab_2_fields = ["field_1", "field_2", "field_3"]
-        main_fields = [
-            field
-            for field in all_fields
-            if field not in header_fields and field not in extra_fields and field not in advanced_fields
-        ]
-        response = {
-            "main": [
-                {
-                    "name": obj_serializer.Meta.model._meta.model_name,
-                    "fields": main_fields,
-                    "colspan": 2,
-                    "rowspan": len(main_fields),
-                },
-                {
-                    "name": "extra",
-                    "fields": extra_fields,
-                    "colspan": 2,
-                    "rowspan": len(extra_fields),
-                },
-            ],
-            "advanced": [
-                {
-                    "name": "advanced data",
-                    "fields": advanced_fields,
-                    "colspan": 3,
-                    "rowspan": len(advanced_fields),
-                    "advanced": "true",
-                }
-            ],
-            "plugin_tab_1": [
-                {
-                    "name": "plugin_data",
-                    "fields": plugin_tab_1_fields,
-                    "colspan": 3,
-                    "rowspan": len(plugin_tab_1_fields),
-                },
-                {
-                    "name": "extra_plugin_data",
-                    "fields": plugin_tab_1_fields,
-                    "colspan": 1,
-                    "rowspan": len(plugin_tab_1_fields),
-                },
-            ],
-            "plugin_tab_2": [
-                {
-                    "name": "plugin_data",
-                    "fields": plugin_tab_2_fields,
-                    "colspan": 3,
-                    "rowspan": len(plugin_tab_2_fields),
-                }
-            ],
-        }
-        return response
+    def finalize_response(self, request, response, *args, **kwargs):
+        # In the case of certain errors, we might not even get to the point of setting request.accepted_media_type
+        if hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type:
+            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model.__name__.lower()}_data.csv"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return super().finalize_response(request, response, *args, **kwargs)
 
 
 class ModelViewSet(
@@ -784,6 +716,42 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    def format_and_remove_hidden_menu(self, request, data, hide_restricted_ui):
+        """
+        Formats the menu data and removes hidden menu items based on user permissions.
+
+        Args:
+            request: The request object.
+            data (Union[dict, str]): The menu data to format and filter. Can be either a dictionary or a string.
+            hide_restricted_ui (bool): Flag indicating whether to hide restricted menu items.
+
+        Returns:
+            Union[dict, str]: The formatted menu data without hidden items. Returns a dict if `data` is a
+            `dict`, otherwise returns a string.
+
+        Example:
+            Input:
+            {
+                "Devices": {
+                    "permission": [...],
+                    "weight": "",
+                    "data": "data value"
+                },
+            }
+
+            Output:
+            {"Devices": "data value"}
+        """
+        if isinstance(data, dict):
+            return_value = {}
+            for name, value in data.items():
+                if not hide_restricted_ui or any(
+                    request.user.has_perm(permission) for permission in value["permissions"]
+                ):
+                    return_value[name] = self.format_and_remove_hidden_menu(request, value["data"], hide_restricted_ui)
+            return return_value
+        return data
+
     @extend_schema(exclude=True)
     def get(self, request):
         """Get the menu data for the requesting user.
@@ -822,41 +790,10 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
             },
         }
         """
-        base_menu = registry["nav_menu"]
+        base_menu = registry["new_ui_nav_menu"]
         HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
-
-        filtered_menu = {}
-        for context, context_details in base_menu.items():
-            if HIDE_RESTRICTED_UI and not any(
-                request.user.has_perm(permission) for permission in context_details["permissions"]
-            ):
-                continue
-            filtered_menu[context] = {}
-            for group_name, group_details in context_details["groups"].items():
-                if HIDE_RESTRICTED_UI and not any(
-                    request.user.has_perm(permission) for permission in group_details["permissions"]
-                ):
-                    continue
-                filtered_menu[context][group_name] = {}
-                for item_name, item_details in group_details["items"].items():
-                    if HIDE_RESTRICTED_UI and not any(
-                        request.user.has_perm(permission) for permission in item_details["permissions"]
-                    ):
-                        continue
-                    if "items" in item_details:
-                        # It's a sub-group
-                        filtered_menu[context][group_name][item_name] = {}
-                        for subitem_name, subitem_details in item_details["items"].items():
-                            if HIDE_RESTRICTED_UI and not any(
-                                request.user.has_perm(perm) for perm in subitem_details["permissions"]
-                            ):
-                                continue
-                            filtered_menu[context][group_name][item_name][subitem_name] = subitem_details["link"]
-                    else:
-                        # It's a menu item
-                        filtered_menu[context][group_name][item_name] = item_details["link"]
-
-        return Response(filtered_menu)
+        formatted_data = self.format_and_remove_hidden_menu(request, base_menu, HIDE_RESTRICTED_UI)
+        return Response(formatted_data)
 
 
 class GetObjectCountsView(NautobotAPIVersionMixin, APIView):

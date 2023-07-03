@@ -32,7 +32,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         ct_label = f"{content_type.app_label}.{content_type.model}"
 
         # Navigate to the DynamicGroups list view
-        self.browser.links.find_by_partial_text("Inventory").click()
+        self.browser.links.find_by_partial_text("Organization").click()
         self.browser.links.find_by_partial_text("Dynamic Groups").click()
 
         # Click add button

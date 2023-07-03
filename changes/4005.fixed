@@ -1,0 +1,3 @@
+Added logic to catch and report errors when registering a Job to the database.
+Added logic to Job class `@classproperty` methods to enforce correct data types.
+Fixed incorrect documentation about how to register Jobs from an app.

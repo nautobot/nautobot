@@ -6,6 +6,7 @@ from django.db.models import F, ProtectedError, Q
 from django.db.models.functions import Length
 
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.models.utils import deconstruct_composite_key
 from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 
 
@@ -260,10 +261,17 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             kwargs["broadcast"] = last_ip
         return super().get(*args, **kwargs)
 
-    def filter(self, *args, prefix=None, **kwargs):
+    def filter(self, *args, **kwargs):
         """
         Provide a convenience for `.filter(prefix=<prefix>)`
         """
+        # Copied from RestrictedQuerySet.filter() because this needs to happen *before* we deconstruct 'prefix'
+        composite_key = kwargs.pop("composite_key", None)
+        if composite_key:
+            values = deconstruct_composite_key(composite_key)
+            kwargs.update(self.model.natural_key_args_to_kwargs(values))
+
+        prefix = kwargs.pop("prefix", None)
         if prefix:
             _prefix = netaddr.IPNetwork(prefix)
             last_ip = self._get_last_ip(_prefix)

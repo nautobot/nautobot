@@ -564,6 +564,7 @@ By default, for each app, Nautobot looks for an iterable named `jobs` within a `
 
 ```python
 # jobs.py
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
 
 
@@ -580,10 +581,11 @@ class DeviceIPsReport(Job):
 
 
 jobs = [CreateDevices, DeviceConnectionsReport, DeviceIPsReport]
+register_jobs(*jobs)
 ```
 
 +/- 2.0.0
-    See [Migrating Jobs From Nautobot v1](../apps/migrating-jobs-from-nautobot-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
+    Because Jobs are now proper Celery tasks, you now must call `register_jobs()` from within your `jobs.py` file when it is imported; any jobs not included in this call will not be available for Celery to schedule and execute. See [Migrating Jobs From Nautobot v1](../apps/migrating-jobs-from-nautobot-v1.md) for more information on how to migrate jobs to work with Nautobot v2.
 
 ### Implementing Custom Validators
 

@@ -7,6 +7,7 @@ import logging
 import os
 import tempfile
 from textwrap import dedent
+from typing import final
 import warnings
 
 from billiard.einfo import ExceptionInfo
@@ -377,12 +378,14 @@ class BaseJob(Task):
         state = states.SUCCESS if ret.info is None else ret.info.state
         return EagerResult(task_id, retval, state, traceback=tb)
 
+    @final
     @classproperty
-    def file_path(cls):  # pylint: disable=no-self-argument
+    def file_path(cls) -> str:  # pylint: disable=no-self-argument
         return inspect.getfile(cls)
 
+    @final
     @classproperty
-    def class_path(cls):  # pylint: disable=no-self-argument
+    def class_path(cls) -> str:  # pylint: disable=no-self-argument
         """
         Unique identifier of a specific Job class, in the form <module_name>.<ClassName>.
 
@@ -394,8 +397,9 @@ class BaseJob(Task):
         """
         return f"{cls.__module__}.{cls.__name__}"
 
+    @final
     @classproperty
-    def class_path_dotted(cls):  # pylint: disable=no-self-argument
+    def class_path_dotted(cls) -> str:  # pylint: disable=no-self-argument
         """
         Dotted class_path, suitable for use in things like Python logger names.
 
@@ -403,74 +407,98 @@ class BaseJob(Task):
         """
         return cls.class_path
 
+    @final
     @classproperty
-    def class_path_js_escaped(cls):  # pylint: disable=no-self-argument
+    def class_path_js_escaped(cls) -> str:  # pylint: disable=no-self-argument
         """
         Escape various characters so that the class_path can be used as a jQuery selector.
         """
         return cls.class_path.replace(".", r"\.")
 
+    @final
     @classproperty
-    def grouping(cls):  # pylint: disable=no-self-argument
+    def grouping(cls) -> str:  # pylint: disable=no-self-argument
         module = inspect.getmodule(cls)
         return getattr(module, "name", module.__name__)
 
-    @classproperty
-    def name(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "name", cls.__name__)
+    @final
+    @classmethod
+    def _get_meta_attr_and_assert_type(cls, attr_name, default, expected_type):
+        result = getattr(cls.Meta, attr_name, default)
+        if not isinstance(result, expected_type):
+            raise TypeError(f"Meta.{attr_name} should be {expected_type}, not {type(result)}")
+        return result
 
+    @final
     @classproperty
-    def description(cls):  # pylint: disable=no-self-argument
-        return dedent(getattr(cls.Meta, "description", "")).strip()
+    def name(cls) -> str:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)
 
+    @final
     @classproperty
-    def description_first_line(cls):  # pylint: disable=no-self-argument
+    def description(cls) -> str:  # pylint: disable=no-self-argument
+        return dedent(cls._get_meta_attr_and_assert_type("description", "", expected_type=str)).strip()
+
+    @final
+    @classproperty
+    def description_first_line(cls) -> str:  # pylint: disable=no-self-argument
         if cls.description:  # pylint: disable=using-constant-test
             return cls.description.splitlines()[0]
         return ""
 
+    @final
     @classproperty
-    def dryrun_default(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "dryrun_default", False)
+    def dryrun_default(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("dryrun_default", False, expected_type=bool)
 
+    @final
     @classproperty
-    def hidden(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "hidden", False)
+    def hidden(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("hidden", False, expected_type=bool)
 
+    @final
     @classproperty
     def field_order(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "field_order", None)
+        return cls._get_meta_attr_and_assert_type("field_order", [], expected_type=(list, tuple))
 
+    @final
     @classproperty
-    def read_only(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "read_only", False)
+    def read_only(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("read_only", False, expected_type=bool)
 
+    @final
     @classproperty
-    def approval_required(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "approval_required", False)
+    def approval_required(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("approval_required", False, expected_type=bool)
 
+    @final
     @classproperty
-    def soft_time_limit(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "soft_time_limit", 0)
+    def soft_time_limit(cls) -> int:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("soft_time_limit", 0, expected_type=int)
 
+    @final
     @classproperty
-    def time_limit(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "time_limit", 0)
+    def time_limit(cls) -> int:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("time_limit", 0, expected_type=int)
 
+    @final
     @classproperty
-    def has_sensitive_variables(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "has_sensitive_variables", True)
+    def has_sensitive_variables(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("has_sensitive_variables", True, expected_type=bool)
 
+    @final
     @classproperty
-    def supports_dryrun(cls):  # pylint: disable=no-self-argument
+    def supports_dryrun(cls) -> bool:  # pylint: disable=no-self-argument
         return isinstance(getattr(cls, "dryrun", None), DryRunVar)
 
+    @final
     @classproperty
-    def task_queues(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "task_queues", [])
+    def task_queues(cls) -> list:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("task_queues", [], expected_type=(list, tuple))
 
+    @final
     @classproperty
-    def properties_dict(cls):  # pylint: disable=no-self-argument
+    def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
 
@@ -488,8 +516,9 @@ class BaseJob(Task):
             "task_queues": cls.task_queues,
         }
 
+    @final
     @classproperty
-    def registered_name(cls):  # pylint: disable=no-self-argument
+    def registered_name(cls) -> str:  # pylint: disable=no-self-argument
         return f"{cls.__module__}.{cls.__name__}"
 
     @classmethod

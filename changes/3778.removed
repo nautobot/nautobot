@@ -1,0 +1,1 @@
+Removed currently unused `app_full_width_fragment`, `detail-view-config`, `form-fields`, and `table-fields` REST API endpoints.
