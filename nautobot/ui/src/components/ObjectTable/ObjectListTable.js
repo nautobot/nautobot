@@ -131,7 +131,7 @@ export default function ObjectListTable({
     });
 
     return (
-        <Box background="white-0" borderRadius="md" padding="md" ref={topRef}>
+        <Box borderRadius="md" ref={topRef}>
             {!include_button ? null : (
                 <Box display="flex" justifyContent="space-between" mb="sm">
                     <Heading
