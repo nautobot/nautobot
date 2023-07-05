@@ -1,0 +1,1 @@
+Restructured non-production dependencies in `pyproject.toml` to comply with latest Poetry expectations.

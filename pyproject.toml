@@ -154,55 +154,65 @@ remote_storage = ["django-storages"]
 # saml = ["social-auth-core[saml]"]
 sso = ["social-auth-core"]
 
-[tool.poetry.dev-dependencies]
-# Code style enforcement
-black = "~22.8.0"
-# Test code coverage measurement
-coverage = "~6.5.0"
+[tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
 django-debug-toolbar = "~3.7.0"
-# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
-django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
 example-plugin-with-view-override = { path = "examples/example_plugin_with_view_override", develop = true }
 # Random data generation
 factory-boy = "~3.2.1"
-# Code style checking and limited static analysis
-# NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
-flake8 = "~3.9.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~1.7.1"
+# Colorization and autoformatting of CLI output, used for Invoke tasks
+rich = "~12.5.1"
+# Change log management and generation
+towncrier = "~22.8.0"
+# Watch files for celery and mkdocs reload
+watchdog = "~2.1.9"
+
+[tool.poetry.group.docs.dependencies]
+# Helper for parsing docstrings
+# 1.6/2.0 TODO: griffe 0.31 and later drop support for python 3.7
+griffe = "~0.30.1"
 # Rendering docs to HTML
 mkdocs = "~1.4.3"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.4.0"
 # Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~3.6.0"
+mkdocs-include-markdown-plugin = "~3.6.1"
 # Material for mkdocs theme
 mkdocs-material = "~8.5.8"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "0.19"
-mkdocstrings-python = "0.7.1"
+mkdocstrings = "~0.22.0"
+# Python-specific extension to mkdocstrings
+mkdocstrings-python = "~1.1.2"
+
+[tool.poetry.group.linting.dependencies]
+# Code style enforcement
+black = "~22.8.0"
+# Code style checking and limited static analysis
+# NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
+flake8 = "~3.9.1"
 # Code static analysis
 pylint = {version = "~2.14.5", python = "^3.7.2"}
 # Pylint extensions for Django
 pylint-django = {version = "~2.5.3", python = "^3.7.2"}
+
+[tool.poetry.group.testing.dependencies]
+# Test code coverage measurement
+coverage = "~6.5.0"
+# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
+django-slowtests = "^1.1.1"
 # Integration Tests
 requests = ">=2.27.1,<2.32.0"
-# Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~12.5.1"
 # Selenium web drivers for live integration testing
 selenium = "~4.3.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.0"
-# Change log management and generation
-towncrier = "~22.8.0"
-# Watch files for celery and mkdocs reload
-watchdog = "~2.1.9"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

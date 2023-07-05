@@ -1,0 +1,1 @@
+Fixed erroneous warning banner on list views when `MAX_PAGE_SIZE` is set to zero.
