@@ -10,7 +10,6 @@ After upgrading to Nautobot v2.0 and running the data migrations necessary, dupl
     One of the possible reasons to maintain duplicate `IPAddress` objects can be the following:
     1. You have use cases for duplicate `IPAddress` objects with different `nat_inside` attributes. Only one `nat_inside` IP address can be assigned per object.
 
-
 ## How to access this tool
 
 To use this tool:
