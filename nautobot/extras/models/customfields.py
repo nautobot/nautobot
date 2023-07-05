@@ -22,12 +22,14 @@ from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.forms import (
+    CommentField,
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
     JSONField,
     LaxURLField,
     NullableDateField,
+    SmallTextarea,
     StaticSelect2,
     StaticSelect2Multiple,
     add_blank_choice,
@@ -544,6 +546,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                         message=mark_safe(f"Values must match this regex: <code>{self.validation_regex}</code>"),
                     )
                 ]
+
+        # Markdown
+        elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
+            field = CommentField(widget=SmallTextarea, label=None)
 
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
