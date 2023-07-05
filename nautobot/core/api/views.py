@@ -80,7 +80,7 @@ class BulkUpdateModelMixin:
     or more JSON objects, each specifying the UUID of an object to be updated as well as the attributes to be set.
     For example:
 
-    PATCH /api/dcim/sites/
+    PATCH /api/dcim/locations/
     [
         {
             "id": "1f554d07-d099-437d-8d48-7d6e35ec8fa3",
@@ -132,7 +132,7 @@ class BulkDestroyModelMixin:
     Support bulk deletion of objects using the list endpoint for a model. Accepts a DELETE action with a list of one
     or more JSON objects, each specifying the UUID of an object to be deleted. For example:
 
-    DELETE /api/dcim/sites/
+    DELETE /api/dcim/locations/
     [
         {"id": "3f01f169-49b9-42d5-a526-df9118635d62"},
         {"id": "c27d6c5b-7ea8-41e7-b9dd-c065efd5d9cd"}
@@ -345,7 +345,7 @@ class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyM
 
 class APIRootView(NautobotAPIVersionMixin, APIView):
     """
-    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
+    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
     """
 
     _ignore_model_permissions = True

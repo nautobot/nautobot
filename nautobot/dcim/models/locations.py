@@ -120,27 +120,23 @@ class Location(TreeModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
 
-    As presently implemented, Location is an intermediary model between Site and RackGroup - more specific than a Site,
-    less specific (and more broadly applicable) than a RackGroup:
+    As presently implemented, Location is a model more generic RackGroup - less specific (and more broadly applicable) than a RackGroup:
 
-    Region
-      Region
-        Site
-          Location (location_type="Building")
-            Location (location_type="Room")
-              RackGroup
-                Rack
-                  Device
-              Device
-            Prefix
-            etc.
-          VLANGroup
-          Prefix
-          etc.
+    Location (location_type="Building")
+    Location (location_type="Room")
+        RackGroup
+        Rack
+            Device
+        Device
+    Prefix
+    etc.
+    VLANGroup
+    Prefix
+    etc.
 
-    As such, as presently implemented, every Location either has a parent Location or a "parent" Site.
+    As such, as presently implemented, every Location, depends on its LocationType, do/don't have a parent Location.
 
-    In the future, we plan to collapse Region and Site (and likely RackGroup as well) into the Location model.
+    In the future, we plan to collapse RackGroup into the Location model.
     """
 
     # A Location's name is unique within context of its parent, not globally unique.

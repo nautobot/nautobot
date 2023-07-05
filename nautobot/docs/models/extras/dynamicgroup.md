@@ -2,7 +2,7 @@
 
 +++ 1.3.0
 
-Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific site location or set of locations. As indicated by the name, Dynamic Groups update in real time as potential member objects are created, updated, or deleted.
+Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific location or set of locations. As indicated by the name, Dynamic Groups update in real time as potential member objects are created, updated, or deleted.
 
 When creating a Dynamic Group, one must select a Content Type to which it is associated, for example `dcim.device`. The filtering parameters saved to the group behave as a bi-directional search query that is used to identify members of that group, and can also be used to determine from an individual object the list of Dynamic Groups to which an individual object belongs.
 
@@ -14,7 +14,7 @@ Once created the Content Type for a Dynamic Group may not be modified as this re
 
 Dynamic Groups can be created through the UI under _Organization > Dynamic Groups_ and clicking the "Add" button, or through the REST API.
 
-Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-site-ams01`. You must select a **Content Type** for the group that determines the kind of objects that can be members of the group and the corresponding filtering parameters available. Finally, you may also assign an optional human-friendly **Description** (e.g. "Devices in site AMS01").
+Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-location-ams01`. You must select a **Content Type** for the group that determines the kind of objects that can be members of the group and the corresponding filtering parameters available. Finally, you may also assign an optional human-friendly **Description** (e.g. "Devices in location AMS01").
 
 Once a new Dynamic Group is created, the group can be configured by clicking the "Edit" button to specify **Filter Fields** or **Child Groups** to use to narrow down the group's member objects. More on this below.
 
@@ -64,9 +64,9 @@ Dynamic Groups are a complex topic and are perhaps best understood through a ser
 
 ### Basic Filtering with a single Dynamic Group
 
-Let's say you want to create a Dynamic Group that contains all production Devices at your first two Sites. You can create a Dynamic Group called "Devices at Sites A and B" for Content Type `dcim | device`, then edit it and set the **Filter Fields** to match:
+Let's say you want to create a Dynamic Group that contains all production Devices at your first two Locations. You can create a Dynamic Group called "Devices at Locations A and B" for Content Type `dcim | device`, then edit it and set the **Filter Fields** to match:
 
-1. a Site of either "AMS01" or "BKK01"
+1. a Location of either "AMS01" or "BKK01"
 2. a Status of "Active" or "Offline"
 
 ![Setting Filter Fields for a Basic Dynamic Group](../../media/models/dynamicgroup_workflow_basic_01.png)
@@ -77,7 +77,7 @@ After clicking "Update", you will be returned to the detail view for this Dynami
 
 ![Basic Group Members](../../media/models/dynamicgroup_workflow_basic_03.png)
 
-A key to understand here is that generally, within a single Dynamic Group, additional values specified for the _same_ filter field (here, "Site") will _broaden_ the group to _include_ additional objects that match those additional values, while specifying values for _additional filter fields_ (here, "Status") will _narrow_ the group to match only the objects that match this additional filter. This is expressed in the "Filter Query Logic" panel by the use of `OR` and `AND` operators - the logic for this Dynamic Group is:
+A key to understand here is that generally, within a single Dynamic Group, additional values specified for the _same_ filter field (here, "Location") will _broaden_ the group to _include_ additional objects that match those additional values, while specifying values for _additional filter fields_ (here, "Status") will _narrow_ the group to match only the objects that match this additional filter. This is expressed in the "Filter Query Logic" panel by the use of `OR` and `AND` operators - the logic for this Dynamic Group is:
 
 ```no-highlight
 (
@@ -93,7 +93,7 @@ A key to understand here is that generally, within a single Dynamic Group, addit
 
 +++ 1.4.0
 
-Now, let's say that you add a third site to your network. This site is currently being built out, and you don't care about Devices from this site that are Offline status at present. What you want for your "Devices of Interest" Dynamic Group is logic similar to:
+Now, let's say that you add a third location to your network. This location is currently being built out, and you don't care about Devices from this location that are Offline status at present. What you want for your "Devices of Interest" Dynamic Group is logic similar to:
 
 ```no-highlight
 (
@@ -111,19 +111,19 @@ Now, let's say that you add a third site to your network. This site is currently
 
 This logic is too complex to express directly via a single Dynamic Group, but fear not! This is what combining Dynamic Groups allows you to do.
 
-First, you can create a new "Devices of Interest" group. Edit this group, and instead of specifying **Filter Fields**, switch to the **Child Groups** tab of the editor, select the operator "Include (OR)" and the group "Devices at Sites A and B", and update the group.
+First, you can create a new "Devices of Interest" group. Edit this group, and instead of specifying **Filter Fields**, switch to the **Child Groups** tab of the editor, select the operator "Include (OR)" and the group "Devices at Locations A and B", and update the group.
 
 ![Creating a Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_01.png)
 
-In the new group's detail view, you can see that it now contains one child group, "Devices at Sites A and B", and its members are exactly the same as those of that group. But we're not done yet!
+In the new group's detail view, you can see that it now contains one child group, "Devices at Locations A and B", and its members are exactly the same as those of that group. But we're not done yet!
 
 ![Resulting Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_02.png)
 
-Next, you'll create another group to represent the other part of your desired logic. Call this group "Site C So Far", and set its **Filter Fields** to match Site "CAN01" and Status "Active". Verify that it contains the expected set of Devices from Site C.
+Next, you'll create another group to represent the other part of your desired logic. Call this group "Location C So Far", and set its **Filter Fields** to match Location "CAN01" and Status "Active". Verify that it contains the expected set of Devices from Location C.
 
 ![Another Child Group](../../media/models/dynamicgroup_workflow_advanced_1_03.png)
 
-Now, we'll add this group into the "Devices of Interest" parent group. Navigate back to the **Dynamic Groups** list view, and edit this group. Under the **Child Groups** tab, add another "Include (OR)" operator and select group "Site C So Far":
+Now, we'll add this group into the "Devices of Interest" parent group. Navigate back to the **Dynamic Groups** list view, and edit this group. Under the **Child Groups** tab, add another "Include (OR)" operator and select group "Location C So Far":
 
 ![Adding Another Child Group to Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_04.png)
 
@@ -151,20 +151,20 @@ The "Devices of Interest" Dynamic Group now contains the filtered Devices from b
 
 +++ 1.4.0
 
-Next, let's say you add a fourth site to your network. This site is in bad shape, and has Devices in a wide range of statuses. You want your "Devices of Interest" group to include all Devices from this site, _except for those in Decommissioning status_. To express this logic and add these devices to our parent group, we will need to use a combination of groups and the "Exclude (NOT)" operator.
+Next, let's say you add a fourth location to your network. This location is in bad shape, and has Devices in a wide range of statuses. You want your "Devices of Interest" group to include all Devices from this location, _except for those in Decommissioning status_. To express this logic and add these devices to our parent group, we will need to use a combination of groups and the "Exclude (NOT)" operator.
 
-First, you will create an "Site D All Devices" group. This will simply match Devices at Site "DEL01", regardless of their status.
+First, you will create an "Location D All Devices" group. This will simply match Devices at Location "DEL01", regardless of their status.
 
 ![Another Child Group](../../media/models/dynamicgroup_workflow_advanced_2_01.png)
 
-Then create a "Site D Decommissioning Devices" group, which matches Site "DEL01" and Status "Decommissioning".
+Then create a "Location D Decommissioning Devices" group, which matches Location "DEL01" and Status "Decommissioning".
 
 ![A Child Group To Negate](../../media/models/dynamicgroup_workflow_advanced_2_02.png)
 
-Next create a "Site D Devices of Interest" group, and set its **Child Groups** to:
+Next create a "Location D Devices of Interest" group, and set its **Child Groups** to:
 
-1. Operator "Include (OR)", group "Site D All Devices"
-2. Operator "Exclude (NOT)", group "Site D Decommissioning Devices"
+1. Operator "Include (OR)", group "Location D All Devices"
+2. Operator "Exclude (NOT)", group "Location D Decommissioning Devices"
 
 ![Defining a Group With Negation](../../media/models/dynamicgroup_workflow_advanced_2_03.png)
 
@@ -175,7 +175,7 @@ You can check this group and confirm that it contains the expected restricted su
 
 ![The Resulting Group](../../media/models/dynamicgroup_workflow_advanced_2_04.png)
 
-Finally, you can edit the parent "Devices of Interest" group and add a third **Child Groups** entry, "Include (OR)" on "Site D Devices of Interest". The final result is a Dynamic Group that contains the desired set of Devices across all four of your Sites.
+Finally, you can edit the parent "Devices of Interest" group and add a third **Child Groups** entry, "Include (OR)" on "Location D Devices of Interest". The final result is a Dynamic Group that contains the desired set of Devices across all four of your Locations.
 
 ![The Final Combined Group](../../media/models/dynamicgroup_workflow_advanced_2_05.png)
 
@@ -275,8 +275,8 @@ Using the example group hierarchy from above, let's apply operators and explain 
 
 ```no-highlight
 parent {filter: None}
-- first-child {weight: 10, operator: intersection (AND), filter: site=ams01}
-- second-child {weight: 20, operator: union (OR), filter: site=ang01}
+- first-child {weight: 10, operator: intersection (AND), filter: location=ams01}
+- second-child {weight: 20, operator: union (OR), filter: location=ang01}
 - third-child {weight: 30, operator: difference (NOT), filter: None}
   - nested-child {weight: 10, operator: intersectio (AND), filter: status=active}
 ```
@@ -290,7 +290,7 @@ Logically, the filter will be expressed like so using the hierarchy above:
 Which in turn would map to the object filter:
 
 ```no-highlight
-((site=ams01 OR site=ang01) AND (NOT status=active))
+((location=ams01 OR location=ang01) AND (NOT status=active))
 ```
 
 #### How does this work?
@@ -345,7 +345,7 @@ Most fields within the `filter` accept multiple values and must be represented a
 
 ```json
 {
-    "site": ["ams01", "ang01"]
+    "location": ["ams01", "ang01"]
 }
 ```
 

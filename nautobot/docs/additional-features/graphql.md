@@ -71,7 +71,7 @@ GraphQL custom fields data data is provided in two formats, a "greedy" and a "pr
 
 ```graphql
 query {
-  sites {
+  locations {
     name
     custom_field_data
   }
@@ -83,17 +83,17 @@ Result
 ```json
 {
   "data": {
-    "sites": [
+    "locations": [
       {
-        "name": "nyc-site-01",
+        "name": "nyc-location-01",
         "custom_field_data": {
-          "site_type": "large"
+          "location_size": "large"
         }
       },
       {
-        "name": "nyc-site-02",
+        "name": "nyc-location-02",
         "custom_field_data": {
-          "site_type": "small"
+          "location_size": "small"
         }
       }
     ]
@@ -101,13 +101,13 @@ Result
 }
 ```
 
-Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field name `site_type` will appear in GraphQL as `cf_site_type` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../configuration/optional-settings.md#graphql_custom_field_prefix).
+Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field name `location_size` will appear in GraphQL as `cf_location_size` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../configuration/optional-settings.md#graphql_custom_field_prefix).
 
 ```graphql
 query {
-  sites {
+  locations {
     name
-    cf_site_type
+    cf_location_size
   }
 }
 ```
@@ -117,14 +117,14 @@ Result
 ```json
 {
   "data": {
-    "sites": [
+    "locations": [
       {
-        "name": "nyc-site-01",
-        "cf_site_type": "large"
+        "name": "nyc-location-01",
+        "cf_location_size": "large"
       },
       {
-        "name": "nyc-site-02",
-        "cf_site_type": "small"
+        "name": "nyc-location-02",
+        "cf_location_size": "small"
       }
     ]
   }

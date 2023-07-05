@@ -74,7 +74,7 @@ Create a new Device with these attributes:
 * **Name** = `edge2.van1`
 * **Device role** select `Customer Edge`
 * **Device type** select `Juniper MX240-edge` (this will show up as a fusion of the **Manufacturer** (`Juniper`) for the Device Type and the Device Type (`MX240-edge`) Names)
-* **Site** select `Vancouver 1`
+* **Location** select `Vancouver 1`
 
 On the main screen for the new *Device*, you will see an **Interfaces** tab with the expected Interfaces from the *Device Type* template:
 

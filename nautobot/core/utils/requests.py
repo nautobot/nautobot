@@ -20,7 +20,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         filterset_class: Filterset class
 
     Examples:
-        >>> convert_querydict_to_factory_formset_acceptable_querydict({"status": ["active", "decommissioning"], "name__ic": ["site"]},)
+        >>> convert_querydict_to_factory_formset_acceptable_querydict({"status": ["active", "decommissioning"], "name__ic": ["location"]},)
         >>> {
         ...     'form-TOTAL_FORMS': [3],
         ...     'form-INITIAL_FORMS': ['0'],
@@ -31,7 +31,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
         ...     'form-0-value': ['active', 'decommissioning'],
         ...     'form-1-lookup_field': ['name'],
         ...     'form-1-lookup_type': ['name__ic'],
-        ...     'form-1-value': ['site']
+        ...     'form-1-value': ['location']
         ... }
     """
     query_dict = QueryDict(mutable=True)

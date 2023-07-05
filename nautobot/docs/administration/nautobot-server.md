@@ -225,7 +225,6 @@ Example output:
 
 ```no-highlight
 Processing ContentType dcim | device
-Processing ContentType dcim | site
 Processing ContentType dcim | rack
 Processing ContentType dcim | cable
 Processing ContentType dcim | power feed
@@ -396,7 +395,6 @@ from nautobot.dcim.models.devices import Device, DeviceRedundancyGroup, DeviceTy
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.dcim.models.power import PowerFeed, PowerPanel
 from nautobot.dcim.models.racks import Rack, RackGroup, RackReservation
-from nautobot.dcim.models.sites import Region, Site
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.models.customfields import ComputedField, CustomField, CustomFieldChoice
 from nautobot.extras.models.datasources import GitRepository
@@ -547,7 +545,6 @@ dcim.FrontPortTemplate.name (_name)... 0
 dcim.RearPortTemplate.name (_name)... 0
 dcim.DeviceBayTemplate.name (_name)... 0
 dcim.Rack.name (_name)... 156
-dcim.Site.name (_name)... 22
 virtualization.VMInterface.name (_name)... 0
 Done.
 ```

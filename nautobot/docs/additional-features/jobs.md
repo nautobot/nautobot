@@ -2,7 +2,7 @@
 
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks, such as:
 
-* Automatically populate new devices and cables in preparation for a new site deployment
+* Automatically populate new devices and cables in preparation for a new location deployment
 * Create a range of new reserved prefixes or IP addresses
 * Fetch data from an external source and import it to Nautobot
 * Check and report whether all top-of-rack switches have a console connection

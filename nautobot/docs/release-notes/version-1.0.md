@@ -15,13 +15,13 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 #### Custom Fields on All Models
 
-[Custom fields](../models/extras/customfield.md) allow user-defined fields, or attributes, on specific data models such as sites or devices. Historically, custom fields have been supported only on “primary” models (Site, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Region, Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
+[Custom fields](../models/extras/customfield.md) allow user-defined fields, or attributes, on specific data models such as locations or devices. Historically, custom fields have been supported only on “primary” models (Location, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Region, Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
 
 Once created the name or data type of the custom field cannot be modified. Choices for custom fields are now stored as discrete database objects. Choices that are in active use cannot be deleted.
 
 #### Customizable Statuses
 
-A new ["Status" model](../models/extras/status.md) has been added, allowing users to define additional permitted values for the "status" field on any or all of the models that have such a field (Cable, Circuit, Device, IPAddress, PowerFeed, Prefix, Rack, Site, VirtualMachine, VLAN). The default sets of statuses permitted for each model remain the same as in NetBox 2.10, but you are now free to define additional status values as suit your needs and workflows.
+A new ["Status" model](../models/extras/status.md) has been added, allowing users to define additional permitted values for the "status" field on any or all of the models that have such a field (Cable, Circuit, Device, IPAddress, PowerFeed, Prefix, Rack, Location, VirtualMachine, VLAN). The default sets of statuses permitted for each model remain the same as in NetBox 2.10, but you are now free to define additional status values as suit your needs and workflows.
 
 One example application for custom statuses would be in defining additional values to apply to a Device as part of an automation workflow, with statuses such as `upgrading` or `rebooting` to reflect the progress of each device through the workflow, allowing automation to identify the appropriate next action to take for each status.
 
@@ -82,7 +82,7 @@ Nautobot now supports single sign on as an authentication option using OAuth2, O
 
 User-Defined, or "custom", [relationships](../models/extras/relationship.md) allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design.
 
-For example, a VLAN is mapped to a Site by default.  After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Site.  However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span sites. Relationships allow you to express these additional requirements and relationships without requiring code changes to Nautobot itself. Other use cases include circuits, ASNs, or IP addressing -- just to name a few -- allowing users to define the exact relationships required for their network.
+For example, a VLAN is mapped to a Location by default.  After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Location.  However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span locations. Relationships allow you to express these additional requirements and relationships without requiring code changes to Nautobot itself. Other use cases include circuits, ASNs, or IP addressing -- just to name a few -- allowing users to define the exact relationships required for their network.
 
 ### Changed
 

@@ -1,6 +1,6 @@
 # Creating Devices in Nautobot
 
-Every piece of hardware which is installed within a site or rack exists in Nautobot as a device.
+Every piece of hardware which is installed within a location or rack exists in Nautobot as a device.
 
 More information on Devices can be found in the [Devices](../../core-functionality/devices.md#devices) section of the Nautobot documentation.
 
@@ -9,7 +9,7 @@ A network Device in Nautobot has a few required attributes:
 * A Device Role
 * A Device Type
     * A Device Type requires a Manufacturer
-* A Site
+* A Location
 
 Looking at the list above, there are four objects in Nautobot that must be present prior to creating a related Device.
 The following sections will guide you through how to create each object type.
@@ -73,25 +73,26 @@ To create a new Device Type:
 
 ![Create a device type](../images/getting-started-nautobot-ui/4-create-device-type.png)
 
-## Creating a Site
+## Creating a Location
 
-How you choose to employ sites when modeling your network may vary depending on the nature of your organization, but generally a site will equate to a building or campus.
-For example, a chain of banks might create a site to represent each of its branches, a site for its corporate headquarters, and two additional sites for its presence in two co-location facilities.
+How you choose to employ locations when modeling your network may vary depending on the nature of your organization, but generally a location will equate to a building or campus.
+For example, a chain of banks might create a location to represent each of its branches, a location for its corporate headquarters, and two additional locations for its presence in two co-location facilities.
 
-More information on Sites is found in the [Sites](../../core-functionality/sites-and-racks.md#sites) section of the Nautobot documentation.
+More information on Locations is found in the [Locations](../../core-functionality/locations-and-racks.md#locations) section of the Nautobot documentation.
 
-To create a new Device, you will need an existing Site or need to create a new Site instance.
+To create a new Device, you will need an existing Location or need to create a new Location instance.
 
-To create a new Site:
+To create a new Location:
 
 1. Click on **Organization** in the top navigation menu
-2. Find **Sites**
-3. Select **+** to go to the `Add a new site` form
-4. Populate the Site's `Name`
-5. Set the `Status` to `Active` in the drop-down selector
-6. Click on `Create` at the bottom of the form (not shown)
+2. Find **Locations**
+3. Select **+** to go to the `Add a new location` form
+4. Populate the Location's `Name`
+5. Select a valid `Location Type`
+6. Set the `Status` to `Active` in the drop-down selector
+7. Click on `Create` at the bottom of the form (not shown)
 
-![Create a site](../images/getting-started-nautobot-ui/1-create-site.png)
+![Create a location](../images/getting-started-nautobot-ui/1-create-location.png)
 
 ## Creating a Device
 
@@ -103,7 +104,7 @@ To create a new Device:
 4. Populate the `Name`
 5. Select the `Device Role` from the drop-down selector
 6. Select the `Device Type` from the down-down selector
-7. Select the `Site` from the drop-down selector
+7. Select the `Location` from the drop-down selector
 8. Set the `Status` to the appropriate value in the drop-down selector
 9. Click on `Create` at the bottom of the form (not shown)
 

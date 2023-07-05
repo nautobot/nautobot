@@ -471,15 +471,15 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
     For example, if we have:
 
-        Region "Earth"
-          Region "USA"
-            Region "GA" <- Site "Athens"
-            Region "NC" <- Site "Durham"
+        Location "Earth"
+          Location "USA"
+            Location "GA" <- Location "Athens"
+            Location "NC" <- Location "Durham"
 
-    a NaturalKeyOrPKMultipleChoiceFilter on Site for {"region": "USA"} would have no matches,
-    since there are no Sites whose immediate Region is "USA",
-    but a TreeNodeMultipleChoiceFilter on Site for {"region": "USA"} or {"region": "Earth"}
-    would match both "Athens" and "Durham".
+    a NaturalKeyOrPKMultipleChoiceFilter on Location for {"parent": "USA"} would only return "GA" and "NC"
+    since that is the only two locations that have an immediate parent "USA"
+    but a TreeNodeMultipleChoiceFilter on Location for {"parent": "USA"}
+    would match both "Athens" and "Durham" in addition to "GA" and "NC".
     """
 
     def __init__(self, *args, **kwargs):

@@ -262,10 +262,10 @@ from nautobot.apps.ui import TemplateExtension
 from .models import Animal
 
 
-class SiteAnimalCount(TemplateExtension):
+class LocationAnimalCount(TemplateExtension):
     """Template extension to display animal count on the right side of the page."""
 
-    model = 'dcim.site'
+    model = 'dcim.location'
 
     def right_page(self):
         return self.render('nautobot_animal_sounds/inc/animal_count.html', extra_context={
@@ -303,7 +303,7 @@ class DeviceExtraTabs(TemplateExtension):
             },
         ]
 
-template_extensions = [DeviceExtraTabs, SiteAnimalCount]
+template_extensions = [DeviceExtraTabs, LocationAnimalCount]
 ```
 
 #### Adding Extra Tabs
@@ -602,20 +602,20 @@ Declared subclasses should be gathered into a list or tuple for integration with
 from nautobot.apps.models import CustomValidator
 
 
-class SiteValidator(CustomValidator):
-    """Custom validator for Sites to enforce that they must have a Region."""
+class LocationValidator(CustomValidator):
+    """Custom validator for Locations to enforce that they must have a Tenant."""
 
-    model = 'dcim.site'
+    model = 'dcim.location'
 
     def clean(self):
-        if self.context['object'].region is None:
-            # Enforce that all sites must be assigned to a region
+        if self.context['object'].tenant is None:
+            # Enforce that all locations must have a tenant
             self.validation_error({
-                "region": "All sites must be assigned to a region"
+                "tenant": "All locations must have a tenant"
             })
 
 
-custom_validators = [SiteValidator]
+custom_validators = [LocationValidator]
 ```
 
 ### Loading Data from a Git Repository
@@ -689,31 +689,31 @@ In many cases, an app may wish to make use of Nautobot's various extensibility f
 
 To make this possible, Nautobot provides a custom [signal](https://docs.djangoproject.com/en/stable/topics/signals/), `nautobot_database_ready`, that apps can register to listen for. This signal is triggered when `nautobot-server migrate` or `nautobot-server post_upgrade` is run after installing an app, and provides an opportunity for the app to make any desired additions to the database at this time.
 
-For example, maybe we want our app to make use of a Relationship allowing each Site to be linked to our Animal model. We would define our callback function that makes sure this Relationship exists, by convention in a `signals.py` file:
+For example, maybe we want our app to make use of a Relationship allowing each Location to be linked to our Animal model. We would define our callback function that makes sure this Relationship exists, by convention in a `signals.py` file:
 
 ```python
 # signals.py
 
 from nautobot.extras.choices import RelationshipTypeChoices
 
-def create_site_to_animal_relationship(sender, apps, **kwargs):
-    """Create a Site-to-Animal Relationship if it doesn't already exist."""
+def create_location_to_animal_relationship(sender, apps, **kwargs):
+    """Create a Location-to-Animal Relationship if it doesn't already exist."""
     # Use apps.get_model to look up Nautobot core models
     ContentType = apps.get_model("contenttypes", "ContentType")
     Relationship = apps.get_model("extras", "Relationship")
-    Site = apps.get_model("dcim", "Site")
+    Location = apps.get_model("dcim", "Location")
     # Use sender.get_model to look up models from this app
     Animal = sender.get_model("Animal")
 
     # Ensure that the Relationship exists
     Relationship.objects.update_or_create(
-        key="site_favorite_animal",
+        key="location_favorite_animal",
         defaults={
-            "label": "Site's Favorite Animal",
+            "label": "Location's Favorite Animal",
             "type": RelationshipTypeChoices.TYPE_ONE_TO_MANY,
             "source_type": ContentType.objects.get_for_model(Animal),
-            "source_label": "Sites that love this Animal",
-            "destination_type": ContentType.objects.get_for_model(Site),
+            "source_label": "Locations that love this Animal",
+            "destination_type": ContentType.objects.get_for_model(Location),
             "destination_label": "Favorite Animal",
         },
     )
@@ -726,14 +726,14 @@ Then, in the `NautobotAppConfig` `ready()` function, we connect this callback fu
 
 from nautobot.apps import nautobot_database_ready, NautobotAppConfig
 
-from .signals import create_site_to_animal_relationship
+from .signals import create_location_to_animal_relationship
 
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
 
     def ready(self):
         super().ready()
-        nautobot_database_ready.connect(create_site_to_animal_relationship, sender=self)
+        nautobot_database_ready.connect(create_location_to_animal_relationship, sender=self)
 
 config = AnimalSoundsConfig
 ```
@@ -1136,7 +1136,7 @@ An example from editing a Provider object:
 ```python
 {
     'content_type': <ContentType: circuits | provider>,
-    'filter_form': <ProviderFilterForm bound=True, valid=Unknown, fields=(region;site;location;q;asn;tag)>,
+    'filter_form': <ProviderFilterForm bound=True, valid=Unknown, fields=(location;q;asn;tag)>,
     'form': <ProviderForm bound=False, valid=Unknown, fields=(name;asn;account;portal_url;noc_contact;admin_contact;comments;tags;object_note)>,
     'object': <Provider: NautobotProvider>,
     'permissions': {'add': True, 'change': True, 'delete': True, 'view': True},

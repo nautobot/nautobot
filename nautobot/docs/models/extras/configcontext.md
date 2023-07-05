@@ -2,8 +2,8 @@
 
 Sometimes it is desirable to associate additional data with a group of devices or virtual machines to aid in automated configuration. For example, you might want to associate a set of syslog servers for all devices within a particular region. Context data enables the association of extra user-defined data with devices and virtual machines grouped by one or more of the following assignments:
 
-* Region
-* Site
+* Location
+* LocationType
 * Role
 * Device type
 * Platform
@@ -42,7 +42,7 @@ For example, suppose we want to specify a set of syslog and NTP servers for all 
 }
 ```
 
-But suppose there's a problem at one particular site within this region preventing traffic from reaching the regional syslog server. Devices there need to use a local syslog server instead of the two defined above. We'll create a second config context assigned only to that site with a weight of 2000 and the following data:
+But suppose there's a problem at one particular location preventing traffic from reaching the regional syslog server. Devices there need to use a local syslog server instead of the two defined above. We'll create a second config context assigned only to that location with a weight of 2000 and the following data:
 
 ```json
 {
@@ -52,7 +52,7 @@ But suppose there's a problem at one particular site within this region preventi
 }
 ```
 
-When the context data for a device at this site is rendered, the second, higher-weight data overwrite the first, resulting in the following:
+When the context data for a device at this location is rendered, the second, higher-weight data overwrite the first, resulting in the following:
 
 ```json
 {

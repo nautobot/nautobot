@@ -339,8 +339,8 @@ List models in the form `<app>.<model>`. For example:
 
 ```python
 EXEMPT_VIEW_PERMISSIONS = [
-    'dcim.site',
-    'dcim.region',
+    'dcim.location',
+    'dcim.location_type',
     'ipam.prefix',
 ]
 ```
@@ -376,23 +376,23 @@ A mapping of permissions to assign a new user account when created using SSO aut
 |---|---|
 | `{'dcim.view_device': {}}` or `{'dcim.view_device': None}` | Users can view all devices |
 | `{'dcim.add_device': {}}` | Users can add devices, see note below |
-| `{'dcim.view_device': {"site__name__in":  ["HQ"]}}` | Users can view all devices in the HQ site |
+| `{'dcim.view_device': {"location__name__in":  ["HQ"], "location__location_type__name__in": ["Building"]}}` | Users can view all devices in the Building HQ |
 
 !!! warning
     Permissions can be complicated! Be careful when restricting permissions to also add any required prerequisite permissions.
 
-    For example, when adding Devices the Device Role, Device Type, Site, and Status fields are all required fields in order for the UI to function properly. Users will also need view permissions for those fields or the corresponding field selections in the UI will be unavailable and potentially prevent objects from being able to be created or edited.
+    For example, when adding Devices the Device Role, Device Type, Location, and Status fields are all required fields in order for the UI to function properly. Users will also need view permissions for those fields or the corresponding field selections in the UI will be unavailable and potentially prevent objects from being able to be created or edited.
 
-The following example gives a user a reasonable amount of access to add devices to a single site (HQ in this case):
+The following example gives a user a reasonable amount of access to add devices to a single location (Building HQ in this case):
 
 ```python
 {
-    'dcim.add_device': {"site__name__in":  ["HQ"]},
-    'dcim.view_device': {"site__name__in":  ["HQ"]},
+    'dcim.add_device': {"location__name__in":  ["HQ"], "location__location_type__name__in": ["Building"]},
+    'dcim.view_device': {"location__name__in":  ["HQ"], "location__location_type__name__in": ["Building"]},
     'dcim.view_devicerole': None,
     'dcim.view_devicetype': None,
     'extras.view_status': None,
-    'dcim.view_site': {"name__in":  ["HQ"]},
+    'dcim.view_location': {"name__in":  ["HQ"], "location_type__name__in": ["Building"]},
     'dcim.view_manufacturer': None,
     'dcim.view_region': None,
     'dcim.view_rack': None,
@@ -770,7 +770,7 @@ Default: `True`
 
 Environment Variable: `NAUTOBOT_STRICT_FILTERING`
 
-If set to `True` (default), UI and REST API filtering of object lists will fail if an unknown/unrecognized filter parameter is provided as a URL parameter. (For example, `/dcim/devices/?ice_cream_flavor=chocolate` or `/api/dcim/sites/?ice_cream_flavor=chocolate`). UI list (table) views will report an error message in this case and display no filtered objects; REST API list endpoints will return a 400 Bad Request response with an explanatory error message.
+If set to `True` (default), UI and REST API filtering of object lists will fail if an unknown/unrecognized filter parameter is provided as a URL parameter. (For example, `/dcim/devices/?ice_cream_flavor=chocolate` or `/api/dcim/locations/?ice_cream_flavor=chocolate`). UI list (table) views will report an error message in this case and display no filtered objects; REST API list endpoints will return a 400 Bad Request response with an explanatory error message.
 
 If set to `False`, unknown/unrecognized filter parameters will be discarded and ignored, although Nautobot will log a warning message.
 
