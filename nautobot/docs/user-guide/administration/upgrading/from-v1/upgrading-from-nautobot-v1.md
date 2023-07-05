@@ -407,3 +407,32 @@ The `commit_default` job field has been renamed to `dryrun_default` and the defa
 ### Request Property
 
 The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
+
+## Settings Changes
+
+### Added Settings
+
+These settings are new in Nautobot 2.0 and can be changed in your `nautobot_config.py` file or via environment variables if desired:
+
+- [`CELERY_WORKER_REDIRECT_STDOUTS` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS`)](../configuration/optional-settings.md#celery_worker_redirect_stdouts)
+- [`CELERY_WORKER_REDIRECT_STDOUTS_LEVEL` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL`)](../configuration/optional-settings.md#celery_worker_redirect_stdouts_level)
+
+### Removed Settings
+
+These settings are no longer in use and should be removed from your `nautobot_config.py` file and environment variables if present:
+
+- `CACHEOPS_DEFAULTS` (env: `NAUTOBOT_CACHEOPS_TIMEOUT`)
+- `CACHEOPS_ENABLED` (env: `NAUTOBOT_CACHEOPS_ENABLED`)
+- `CACHEOPS_HEALTH_CHECK_ENABLED`
+- `CACHEOPS_REDIS` (env: `NAUTOBOT_CACHEOPS_REDIS`)
+- `CACHEOPS_SENTINEL`
+- `DISABLE_PREFIX_LIST_HIERARCHY`
+- `ENFORCE_GLOBAL_UNIQUE` (env: `NAUTOBOT_ENFORCE_GLOBAL_UNIQUE`)
+- `RQ_QUEUES`
+
+### Changed Settings
+
+These settings are no longer user servicable and should be removed from your `nautobot_config.py` file and environment variables if present:
+
+- `CELERY_RESULT_BACKEND` (env: `NAUTOBOT_CELERY_RESULT_BACKEND`)
+- `CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`
