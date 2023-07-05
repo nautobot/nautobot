@@ -727,17 +727,13 @@ class IPAddressEditView(generic.ObjectEditView):
                     ),
                 )
             else:
-                if obj.parent.parent.type == choices.PrefixTypeChoices.TYPE_NETWORK:
-                    suggested_type = "Pool"
-                else:
-                    suggested_type = "Network"
                 messages.warning(
                     request,
                     mark_safe(
                         f"IP address {obj} currently has prefix {parent_link} as its parent, which is a Container. "
                         f'{warning_msg} Consider <a href="'
                         + reverse("ipam:prefix_edit", kwargs={"pk": obj.parent.pk})
-                        + f'">changing the prefix</a> to type {suggested_type} to resolve this issue.'
+                        + '">changing the prefix</a> to type Network or Pool to resolve this issue.'
                     ),
                 )
 

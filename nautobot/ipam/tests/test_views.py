@@ -455,7 +455,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertIn(
                 "IP address 192.0.2.2/25 currently has prefix 192.0.2.0/25 as its parent, which is a Container. "
                 "This will be considered invalid data in a future release. "
-                "Consider changing the prefix to type Pool to resolve this issue.",
+                "Consider changing the prefix to type Network or Pool to resolve this issue.",
                 strip_tags(content),
             )
 
