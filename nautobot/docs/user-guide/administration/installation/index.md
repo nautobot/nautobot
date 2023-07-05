@@ -1,6 +1,6 @@
 # Installation
 
-This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](../docker/index.md).
+This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](../../../docker/index.md).
 
 ## About Dependencies
 
@@ -72,8 +72,8 @@ For production deployment we recommend the following:
 
 For additional features:
 
-- [NAPALM support](../additional-features/napalm.md) for retrieving operational data from network devices
-- [Prometheus metrics](../additional-features/prometheus-metrics.md) for exporting application performance and telemetry data
+- [NAPALM support](../../platform-functionality/napalm.md) for retrieving operational data from network devices
+- [Prometheus metrics](../guides/prometheus-metrics.md) for exporting application performance and telemetry data
 
 ## Installing Nautobot Dependencies
 
@@ -101,8 +101,8 @@ Nautobot should work on any POSIX-compliant system including practically any fla
 
 ### Running Nautobot in Docker
 
-Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](../docker/index.md) for more information.
+Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](../../../docker/index.md) for more information.
 
 ## Upgrading
 
-If you are upgrading from an existing installation, please consult the [upgrading guide](upgrading.md).
+If you are upgrading from an existing installation, please consult the [upgrading guide](../upgrading/upgrading.md).

@@ -224,7 +224,7 @@ All Python packages required by Nautobot will be installed automatically when ru
 
 Nautobot also supports the ability to install optional Python packages. If desired, these packages should be listed in `local_requirements.txt` within the `NAUTOBOT_ROOT` directory, such as `/opt/nautobot/local_requirements.txt`.
 
-If you decide to use any [Nautobot plugins](../plugins/index.md), they should be listed in this file.
+If you decide to use any [Nautobot plugins](../../../apps/index.md), they should be listed in this file.
 
 We will cover two examples of common optional settings below.
 
@@ -248,7 +248,7 @@ To use remote file storage, add `nautobot[remote_storage]` to your `local_requir
 echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
 ```
 
-An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../user-guides/s3-django-storage.md) user-guide.
+An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
 ## Prepare the Database
 
@@ -270,8 +270,8 @@ nautobot-server createsuperuser
 
 Nautobot relies upon many static files including:
 
-* `git` - For storing [Git repositories](../models/extras/gitrepository.md)
-* `jobs` - For storing [custom Jobs](../additional-features/jobs.md)
+* `git` - For storing [Git repositories](../../platform-functionality/gitrepository.md)
+* `jobs` - For storing [custom Jobs](../../platform-functionality/jobs/index.md)
 * `media` - For storing [uploaded images and attachments](../configuration/optional-settings.md#media_root) (such as device type images)
 * `static` - The home for [CSS, JavaScript, and images](../configuration/optional-settings.md#static_root) used to serve the web interface
 
@@ -329,10 +329,10 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 
 Note that the initial user interface will be locked down for non-authenticated users.
 
-![Nautobot UI as seen by a non-authenticated user](../media/installation/nautobot_ui_guest.png)
+![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_guest.png)
 
 Try logging in using the superuser account we just created. Once authenticated, you'll be able to access all areas of the UI:
 
-![Nautobot UI as seen by an administrator](../media/installation/nautobot_ui_admin.png)
+![Nautobot UI as seen by an administrator](../../../media/installation/nautobot_ui_admin.png)
 
 Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).

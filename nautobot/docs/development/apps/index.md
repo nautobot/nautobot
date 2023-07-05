@@ -34,8 +34,8 @@ The Nautobot plugin architecture allows for plugins to do any or all of the foll
 ### Extend and customize existing Nautobot functionality
 
 * **Add custom validation logic to existing data models.** A plugin can provide additional logic to customize the rules for validating created/updated data records.
-* **Provide Jobs.** A plugin can serve as a convenient way to package and install [Jobs](../additional-features/jobs.md).
-* **Add additional Git data types.** A plugin can add support for processing additional types of data stored in a [Git repository](../models/extras/gitrepository.md).
+* **Provide Jobs.** A plugin can serve as a convenient way to package and install [Jobs](../../user-guide/platform-functionality/jobs/index.md).
+* **Add additional Git data types.** A plugin can add support for processing additional types of data stored in a [Git repository](../../user-guide/platform-functionality/gitrepository.md).
 
 +++ 1.1.0
     * **Register additional Jinja2 filters.** A plugin can define custom Jinja2 filters to be used in computed fields, webhooks, custom links, and export templates.
@@ -43,7 +43,7 @@ The Nautobot plugin architecture allows for plugins to do any or all of the foll
 +++ 1.2.0
     * **Populate extensibility features in the database.** A plugin can add content to the Nautobot database when installed, such as automatically creating new custom fields, relationships, and so forth.
 
-    * **Add additional secrets providers.** A plugin can add support for retrieving [Secret](../models/extras/secret.md) values from additional sources or external systems.
+    * **Add additional secrets providers.** A plugin can add support for retrieving [Secret](../../user-guide/platform-functionality/secret.md) values from additional sources or external systems.
 
 +++ 1.4.0
     * **Override already-defined views.** A plugin can define a view which can be set to override a view from the core set of views or another plugin's view.
@@ -60,11 +60,9 @@ The Nautobot plugin architecture allows for plugins to do any or all of the foll
 
 ### Declare dependencies and requirements
 
-* **Declare configuration parameters.** A plugin can define required, optional, and default configuration parameters within its unique namespace. Plugin configuration parameters are configurable under [`PLUGINS_CONFIG`](../configuration/optional-settings.md#plugins_config) in `nautobot_config.py`.
+* **Declare configuration parameters.** A plugin can define required, optional, and default configuration parameters within its unique namespace. Plugin configuration parameters are configurable under [`PLUGINS_CONFIG`](../../user-guide/administration/configuration/optional-settings.md#plugins_config) in `nautobot_config.py`.
 * **Limit installation by Nautobot version.** A plugin can specify a minimum and/or maximum Nautobot version with which it is compatible.
 * **Add additional Django dependencies.** A plugin can define additional Django application dependencies to require when the plugin is enabled.
-
-Details on how to implement any of these features are described in the plugin [development](./development.md) documentation.
 
 ## Limitations
 

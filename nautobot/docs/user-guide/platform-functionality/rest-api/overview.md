@@ -147,7 +147,7 @@ Breaking (non-backward-compatible) REST API changes also may be introduced in ma
 * Changed field types (for example, changing a single value to a list of values)
 * Redesigned API (for example, listing and accessing Job instances by UUID primary-key instead of by class-path string)
 
-Per Nautobot's [feature-deprecation policy](../development/index.md#deprecation-policy), the previous REST API version(s) will continue to be supported until the next major release. Upon the next major release, previously deprecated API versions will be removed and the newest behavior will become the default. You will no longer be able to request API versions from the previous major version.
+Per Nautobot's [feature-deprecation policy](../../../development/core/index.md#deprecation-policy), the previous REST API version(s) will continue to be supported until the next major release. Upon the next major release, previously deprecated API versions will be removed and the newest behavior will become the default. You will no longer be able to request API versions from the previous major version.
 
 !!! important
     Again, REST API clients are strongly encouraged to always specify the REST API version they are expecting, as otherwise unexpected breaking changes may be encountered when Nautobot is upgraded to a new major or minor release.
@@ -332,7 +332,7 @@ Vary: Accept
 }
 ```
 
-The default page is determined by the [`PAGINATE_COUNT`](../configuration/optional-settings.md#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
+The default page is determined by the [`PAGINATE_COUNT`](../../administration/configuration/optional-settings.md#paginate_count) configuration parameter, which defaults to 50. However, this can be overridden per request by specifying the desired `offset` and `limit` query parameters. For example, if you wish to retrieve a hundred devices at a time, you would make a request for:
 
 ```no-highlight
 http://nautobot/api/dcim/devices/?limit=100
@@ -349,7 +349,7 @@ The response will return devices 1 through 100. The URL provided in the `next` a
 }
 ```
 
-The maximum number of objects that can be returned is limited by the [`MAX_PAGE_SIZE`](../configuration/optional-settings.md#max_page_size) configuration parameter, which is 1000 by default. Setting this to `0` or `None` will remove the maximum limit. An API consumer can then pass `?limit=0` to retrieve _all_ matching objects with a single request.
+The maximum number of objects that can be returned is limited by the [`MAX_PAGE_SIZE`](../../administration/configuration/optional-settings.md#max_page_size) configuration parameter, which is 1000 by default. Setting this to `0` or `None` will remove the maximum limit. An API consumer can then pass `?limit=0` to retrieve _all_ matching objects with a single request.
 
 !!! warning
     Disabling the page size limit introduces a potential for very resource-intensive requests, since one API request can effectively retrieve an entire table from the database.
@@ -721,7 +721,7 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
 
 +++ 1.4.0
 
-Objects that are associated with another object by a custom [Relationship](../models/extras/relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
+Objects that are associated with another object by a custom [Relationship](../relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
 
 ```no-highlight
 GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
@@ -779,7 +779,7 @@ In the example above we can see that a single VRF, `green`, is a destination for
 
 ### Including Config Contexts
 
-When retrieving Devices and Virtual Machines via the REST API, it is possible to also retrive the rendered [configuration context data](../models/extras/configcontext.md) for each such object if desired. Because rendering this data can be time consuming, it is _not_ included in the REST API responses by default. If you wish to include config context data in the response, you must opt in by specifying the query parameter `include=config_context` as a part of your request.
+When retrieving Devices and Virtual Machines via the REST API, it is possible to also retrive the rendered [configuration context data](../../core-data-model/extras/configcontext.md) for each such object if desired. Because rendering this data can be time consuming, it is _not_ included in the REST API responses by default. If you wish to include config context data in the response, you must opt in by specifying the query parameter `include=config_context` as a part of your request.
 
 +/- 2.0.0
     In Nautobot 1.x, the rendered configuration context was included by default in the REST API response unless specifically excluded with the query parameter `exclude=config_context`. This behavior has been reversed in Nautobot 2.0 and the `exclude` query parameter is no longer supported.

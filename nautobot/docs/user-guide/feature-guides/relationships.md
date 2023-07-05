@@ -2,7 +2,7 @@
 
 Relationships are defined between one (or more) objects in your source of truth to reflect business logic or other relationships that may be useful to you but that haven't been defined. Relationships define specific links between objects that might be specific to your network or data.
 
-For more technical details on how to use this feature, please see the documentation on [Relationships](../models/extras/relationship.md).
+For more technical details on how to use this feature, please see the documentation on [Relationships](../platform-functionality/relationship.md).
 
 ## Relationship details
 
@@ -13,7 +13,7 @@ This table defines repository parameters that are required to establish a relati
 |Label|Label of the relationship as displayed to users.|
 |Key|Internal relationship key. Please use underscores rather than dashes.|
 |Description|(Optional) Meaningful description to provide additional relationship details.|
-|[Type](../models/extras/relationship.md#relationship-types)|Cardinality of this relationship.|
+|[Type](../platform-functionality/relationship.md#relationship-types)|Cardinality of this relationship.|
 |Source type|The source object type to which this relationship applies.|
 |Source Label|(Optional) Label for related destination objects, as displayed on the source object.|
 |Source filter|(Optional) Filterset filter matching the applicable source objects of the selected type.|
@@ -74,7 +74,7 @@ Another visibility option is the `Hide on Source Object` and `Hide on Destinatio
 !!! info
     If the `Move to Advanced tab` and the `Hide on Object` are both enabled, the `Hide on Object` takes precedence and the relationship is not shown on the advanced tab.
 
-The two options above add flexibility to how the data is visualized within the Nautobot UI, the final option to enhance the relationship feature is the ability to match source or destination objects by providing a [filterset](../models/extras/relationship.md#relationship-filters).
+The two options above add flexibility to how the data is visualized within the Nautobot UI, the final option to enhance the relationship feature is the ability to match source or destination objects by providing a [filterset](../platform-functionality/relationship.md#relationship-filters).
 
 To continue on this example say we want to limit the relationship on the device to be able to only relate VLANs that have specific attributes. Perhaps only VLANs with the role of server and ID of 1000.
 

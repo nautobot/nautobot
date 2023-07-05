@@ -58,7 +58,7 @@ If you have invalid filters in your `DynamicGroup` instances, the following outp
     DynamicGroup instance with name `Test DP 4` and content type `example_plugin | another example model` has an invalid filter `site`
 
 >>> Please fix the broken filters stated above according to the documentation available at:
-<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes
+<nautobot-home>/static/docs/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes
 ```
 
 If your filter data is valid, you should see a success message at the end of the output:
@@ -209,7 +209,7 @@ nautobot-server dumpdata \
 
 Use this command to generate a JSON dump of the database contents.
 
-One example of using this command would be to [`export data from PostgreSQL`](../installation/migrating-from-postgresql.md#export-data-from-postgresql).
+One example of using this command would be to [`export data from PostgreSQL`](../migration/migrating-from-postgresql.md#export-data-from-postgresql).
 
 ### `fix_custom_fields`
 
@@ -306,7 +306,7 @@ DefaultFileStorageHealthCheck ... working
 RedisBackend             ... working
 ```
 
-Please see the [healthcheck documentation](../additional-features/healthcheck.md) for more information.
+Please see the [healthcheck documentation](../guides/healthcheck.md) for more information.
 
 ### `init`
 
@@ -334,8 +334,8 @@ For more information on configuring Nautobot for the first time or on more advan
 
 To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
 
-- [`Remove the auto-populated Status records from the database`](../installation/migrating-from-postgresql.md#remove-the-auto-populated-status-records-from-the-mysql-database)
-- [`Import the database dump`](../installation/migrating-from-postgresql.md#import-the-database-dump-into-mysql)
+- [`Remove the auto-populated Status records from the database`](../migration/migrating-from-postgresql.md#remove-the-auto-populated-status-records-from-the-mysql-database)
+- [`Import the database dump`](../migration/migrating-from-postgresql.md#import-the-database-dump-into-mysql)
 
 ### `migrate`
 
@@ -584,7 +584,7 @@ nautobot-server runjob --commit --username someuser local/example/MyJobWithNoVar
 
 Note that there is presently no option to provide input parameters (`data`) for jobs via the CLI.
 
-Please see the [guide on Jobs](../additional-features/jobs.md) for more information on working with and running jobs.
+Please see the [guide on Jobs](../../platform-functionality/jobs/index.md) for more information on working with and running jobs.
 
 ### `start`
 
@@ -713,4 +713,4 @@ Example output:
 Listening on port http://localhost:9000. Stop with CONTROL-C.
 ```
 
-Please see the guide on [Troubleshooting Webhooks](../models/extras/webhook.md#troubleshooting) for more information.
+Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting) for more information.

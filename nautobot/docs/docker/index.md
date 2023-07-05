@@ -210,7 +210,7 @@ COPY nautobot_config.py /opt/nautobot/nautobot_config.py
 
 ## Building the Image
 
-If you have a [development environment](../development/getting-started.md#setting-up-your-development-environment) you can use `invoke` to build the Docker image. By default `invoke build` will build the `dev` image:
+If you have a [development environment](../development/core/getting-started.md#setting-up-your-development-environment) you can use `invoke` to build the Docker image. By default `invoke build` will build the `dev` image:
 
 ```no-highlight
 invoke build

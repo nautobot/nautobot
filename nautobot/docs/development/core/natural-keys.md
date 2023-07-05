@@ -125,7 +125,7 @@ class FileProxy(BaseModel):
 
 #### Remove the Natural Key
 
-If the model simply lacks any conceivable combination of fields that could uniquely identify a specific model instance, you'll need to explicitly remove the `natural_key` method from your model so that Django doesn't attempt to automatically call it at various points (notably, when running [`nautobot-server dumpdata --natural-primary`](../administration/nautobot-server.md#dumpdata)) and error out. This can be accomplished as follows:
+If the model simply lacks any conceivable combination of fields that could uniquely identify a specific model instance, you'll need to explicitly remove the `natural_key` method from your model so that Django doesn't attempt to automatically call it at various points (notably, when running [`nautobot-server dumpdata --natural-primary`](../../user-guide/administration/tools/nautobot-server.md#dumpdata)) and error out. This can be accomplished as follows:
 
 ```python
 class MyUnnaturalModel(BaseModel):

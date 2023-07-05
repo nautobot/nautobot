@@ -9,4 +9,4 @@ Each power panel must be assigned to a site, and may optionally be assigned to a
 
 ## Example Power Topology
 
-![Power distribution model](../media/power_distribution.png)
+![Power distribution model](../../../media/power_distribution.png)

@@ -7,7 +7,7 @@ Using a key and weight system, a developer can integrate the app's menu addition
 --- 2.0.0
     As part of the Nautobot 2.0 UI redesign, the option for apps to add entirely new top-level menu "tabs" has been removed. Additionally, buttons can no longer be added to menu items.
 
-More documentation and examples can be found in the [Navigation Menu](../development/navigation-menu.md) guide.
+More documentation and examples can be found in the [Navigation Menu](../../../core/navigation-menu.md) guide.
 
 !!! tip
     To reduce the amount of clutter in the navigation menu, if your app provides an "app configuration" view, we recommend [linking it from the main "Installed Plugins" page](#adding-links-to-the-installed-apps-view) rather than adding it as a separate item in the navigation menu.

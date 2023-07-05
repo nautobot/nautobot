@@ -125,7 +125,7 @@ To get object relationships and associations from the REST API, you can query an
 
 Similarly, you can update the relationship associations for a given object via an HTTP `POST` or `PATCH` request, generally by including the nested key `["relationships"][<relationship_key>]["source"|"destination"|"peer"]["objects"]` with a list of objects to associate.
 
-For more details on this feature, refer to the [REST API documentation](../../rest-api/overview.md).
+For more details on this feature, refer to the [REST API documentation](./rest-api/overview.md).
 
 #### Via Relationship-Associations Endpoint
 

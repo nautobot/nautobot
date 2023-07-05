@@ -19,7 +19,7 @@ The registry can be inspected by importing `registry` from `nautobot.extras.regi
 
 ### `datasource_contents`
 
-Definition of data types that can be provided by data source models (such as [Git repositories](../models/extras/gitrepository.md)). Implemented as a dictionary mapping the data source model name to a list of the types of data that it may contain and callback functions associated with those data types. The default mapping in Nautobot is currently:
+Definition of data types that can be provided by data source models (such as [Git repositories](../../user-guide/platform-functionality/gitrepository.md)). Implemented as a dictionary mapping the data source model name to a list of the types of data that it may contain and callback functions associated with those data types. The default mapping in Nautobot is currently:
 
 ```python
 {
@@ -178,7 +178,7 @@ Example:
 
 ### `plugin_custom_validators`
 
-Plugin [custom validator classes](../plugins/development.md#implementing-custom-validators) that provide additional data model validation logic. Implemented as a dictionary mapping data model names to a list of `CustomValidator` subclasses, for example:
+Plugin [custom validator classes](../apps/api/platform-features/custom-validators.md) that provide additional data model validation logic. Implemented as a dictionary mapping data model names to a list of `CustomValidator` subclasses, for example:
 
 ```python
 {
@@ -198,7 +198,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 ```
 
 --- 2.0.0
-    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../additional-features/jobs.md#writing-jobs) which should be called at import time by any plugin that provides jobs.
+    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../../user-guide/platform-functionality/jobs/index.md#writing-jobs) which should be called at import time by any plugin that provides jobs.
 
 ### `plugin_template_extensions`
 

@@ -2,7 +2,7 @@
 
 The "Git™ as a Data Source" feature was developed to provide the ability to populate existing data, templates, scripts, and much more into Nautobot; while leveraging the benefits that tools such as GitHub and GitLab already provide, including issue tracking, discussions, pipelines, and approvals.  For example having the ability to have users approve the YAML data that is used for Nautobot  `config context` along with running tests on that data, or having the users approve Jinja2 templates that are used for Nautobot `export templates`.  These examples and more can be accomplished by used Git as a Data Source.
 
-For more technical details on how to use this feature, please see the documentation on [Git Repositories](../models/extras/gitrepository.md).
+For more technical details on how to use this feature, please see the documentation on [Git Repositories](../platform-functionality/gitrepository.md).
 
 ## Supported Providers
 
@@ -12,10 +12,10 @@ The feature uses the concept of a `provides` field to map a repository to a use 
 
 |Name|Summary|
 |:--|:--|
-|[Export Templates](../models/extras/exporttemplate.md)|Nautobot allows users to define custom templates that can be used when exporting objects.|
-|[Jobs](../additional-features/jobs.md)|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|
-|[Config Contexts](../models/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
-|[Config Context Schemas](../models/extras/configcontextschema.md)|Schemas enforce data validation on config contexts.|
+|[Export Templates](../platform-functionality/exporttemplate.md)|Nautobot allows users to define custom templates that can be used when exporting objects.|
+|[Jobs](../platform-functionality/jobs/index.md)|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|
+|[Config Contexts](../core-data-model/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
+|[Config Context Schemas](../core-data-model/extras/configcontextschema.md)|Schemas enforce data validation on config contexts.|
 
 ### Examples of Plugins Defining Additional Providers
 
@@ -53,7 +53,7 @@ This section will focus on examples and use the `user-guide` branch on the `demo
 
 ### Export Templates
 
-[Export Templates](../models/extras/exporttemplate.md) allow a user to export Nautobot objects based on a custom template.  Export templates can change over time depending on the needs of a user.  Allowing export templates to reference a Git repo makes managing templates easier.
+[Export Templates](../platform-functionality/exporttemplate.md) allow a user to export Nautobot objects based on a custom template.  Export templates can change over time depending on the needs of a user.  Allowing export templates to reference a Git repo makes managing templates easier.
 
 A template can be used to put objects into a specific format for ingestion into another system, tool, or report.  It is possible that different templates are needed depending on specific users or teams.  This can lead to sprawl of export templates.  To keep accurate templates synced with Nautobot the Git Data Sources extensibility feature can be used.
 
@@ -81,7 +81,7 @@ Fill out the details for the Git repository. More information on the inputs can 
 As soon as you click on **Create & Sync**, Nautobot will clone and sync the repository and provide status of the job.
 
 !!! note
-    If you are using a self-signed Git repository, the Server Administrator will need to ensure the [`GIT_SSL_NO_VERIFY`](../configuration/optional-settings.md#git_ssl_no_verify) environment variable is set to permit this.
+    If you are using a self-signed Git repository, the Server Administrator will need to ensure the [`GIT_SSL_NO_VERIFY`](../administration/configuration/optional-settings.md#git_ssl_no_verify) environment variable is set to permit this.
 
 ![View of Synchronization Status](./images/git-as-data-source/04-git-data-source.png)
 ![Status of Export-Templates](./images/git-as-data-source/06-git-data-source.png)
@@ -164,7 +164,7 @@ Now that the Git repository is linked for export templates it can be controlled 
 
 Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.
 
-For technical details on jobs, please see the [documentation on jobs](../additional-features/jobs.md#jobs).
+For technical details on jobs, please see the [documentation on jobs](../platform-functionality/jobs/index.md#jobs).
 
 Jobs allow a user to write scripts in Python.  By integrating the scripts with Git, a user can utilize Git workflows to manage source control, versioning, and pipelines.
 
@@ -204,7 +204,7 @@ At this point all changes, and history can be kept using Git.  A simple `sync` o
 
 ### Config Contexts
 
-Detailed information on [config contexts](../models/extras/gitrepository.md#configuration-contexts) in Git Repositories.
+Detailed information on [config contexts](../platform-functionality/gitrepository.md#configuration-contexts) in Git Repositories.
 
 Config contexts may be provided as JSON or YAML files located in the `/config_contexts/` folder, which must be in the root of the Git repository.
 
@@ -264,9 +264,9 @@ There is a huge benefit to having `config contexts` managed by a Git workflow.  
 
 ### Config Context Schemas
 
-Detailed information on [config context schemas](../models/extras/gitrepository.md#configuration-context-schemas) in Git Repositories.
+Detailed information on [config context schemas](../platform-functionality/gitrepository.md#configuration-context-schemas) in Git Repositories.
 
-Config context schemas are used to enforce data validation on config contexts. These schema are managed via the [config context schema model](../models/extras/configcontextschema.md) and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data.
+Config context schemas are used to enforce data validation on config contexts. These schema are managed via the [config context schema model](../core-data-model/extras/configcontextschema.md) and are optionally linked to config context instances, in addition to devices and virtual machines for the purpose of validating their local context data.
 
 ```no-highlight
 ▶ tree config_contexts

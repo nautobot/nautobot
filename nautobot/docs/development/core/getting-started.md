@@ -280,8 +280,8 @@ This workflow uses Python and Poetry to work with your development environment l
 There are a few things you'll need:
 
 * A Linux system or environment
-* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../installation/index.md#installing-nautobot-dependencies)
-* A Redis server, which can also be [installed locally](../installation/index.md#installing-nautobot-dependencies)
+* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/index.md#installing-nautobot-dependencies)
+* A Redis server, which can also be [installed locally](../../user-guide/administration/installation/index.md#installing-nautobot-dependencies)
 * A supported version of Python
 * A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
@@ -452,7 +452,7 @@ Example output:
 Configuration file created at '/home/example/.nautobot/nautobot_config.py'
 ```
 
-You may also specify alternate file locations. Please refer to [Configuring Nautobot](../configuration/index.md) for how to do that.
+You may also specify alternate file locations. Please refer to [Configuring Nautobot](../../user-guide/administration/configuration/index.md) for how to do that.
 
 ##### Using the Development Config
 
@@ -468,11 +468,11 @@ cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
 
 A newly created configuration includes sane defaults. If you need to customize them, edit your `nautobot_config.py` and update the following settings as required:
 
-* [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
-* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
+* [`ALLOWED_HOSTS`](../../user-guide/administration/configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
+* [`DATABASES`](../../user-guide/administration/configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
 * **Redis settings**: Redis configuration requires multiple settings. The defaults should be fine for development.
-* [`DEBUG`](../configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
-* [`EXTRA_INSTALLED_APPS`](../configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
+* [`DEBUG`](../../user-guide/administration/configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
+* [`EXTRA_INSTALLED_APPS`](../../user-guide/administration/configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
 
 ## Working in your Development Environment
 
@@ -568,7 +568,7 @@ The worker is started in Docker Workflow with [watchdog](https://pythonhosted.or
 
 ### Starting the Interactive Shell
 
-Nautobot provides an [interactive Python shell](../administration/nautobot-shell.md) that sets up the server environment and gives you direct access to the database models for debugging. Nautobot extends this slightly to automatically import models and other utilities.
+Nautobot provides an [interactive Python shell](../../user-guide/administration/tools/nautobot-shell.md) that sets up the server environment and gives you direct access to the database models for debugging. Nautobot extends this slightly to automatically import models and other utilities.
 
 Run the Nautobot interactive shell with `invoke nbshell` (Docker) or the `nautobot-server nbshell` management command:
 
@@ -609,7 +609,7 @@ Get into the habit of running `nautobot-server post_upgrade` (or `invoke post-up
 | ----------------------- | ------------------------------ |
 | `invoke post-upgrade`   | `nautobot-server post_upgrade` |
 
-Please see the [documentation on the `nautobot-server post_upgrade` command](../administration/nautobot-server.md#post_upgrade) for more information.
+Please see the [documentation on the `nautobot-server post_upgrade` command](../../user-guide/administration/tools/nautobot-server.md#post_upgrade) for more information.
 
 ### Reinstalling Nautobot
 

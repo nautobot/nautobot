@@ -21,11 +21,11 @@ Django includes its own [cache framework](https://docs.djangoproject.com/en/stab
 
 ### `CACHES` and `django-redis`
 
-The [`CACHES`](../configuration/required-settings.md#caches) setting is used to, among other things, configure Django's built-in caching. *This is a required setting*. Here's why:
+The [`CACHES`](../administration/configuration/required-settings.md#caches) setting is used to, among other things, configure Django's built-in caching. *This is a required setting*. Here's why:
 
 Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Django plugin which allows it to use Redis as a backend for caching and session storage. This is used to provide a concurrent write lock for preventing race conditions when allocating IP address objects.
 
-`django-redis` *also* uses the [`CACHES`](../configuration/required-settings.md#caches) setting, in its case to simplify the configuration for establishing concurrent write locks.
+`django-redis` *also* uses the [`CACHES`](../administration/configuration/required-settings.md#caches) setting, in its case to simplify the configuration for establishing concurrent write locks.
 
 ## High Availability Caching
 
@@ -33,7 +33,7 @@ Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Dja
 
 ### Using Redis Sentinel
 
-The installation/configuration of the [Redis Sentinel](https://redis.io/topics/sentinel) cluster itself is outside the scope of this document, this section is intended to provide the steps necessary to configure Nautobot to connect to a Sentinel cluster.
+The installationadministration/configuration of the [Redis Sentinel](https://redis.io/topics/sentinel) cluster itself is outside the scope of this document, this section is intended to provide the steps necessary to configure Nautobot to connect to a Sentinel cluster.
 
 We need to configure `django-redis` and `celery` to use Sentinel. Each library is configured differently, so please pay close attention to the details.
 
@@ -81,10 +81,10 @@ For more details on configuring django-redis with Redis Sentinel, please see the
 
 Celery Sentinel configuration is controlled by four settings within your `nautobot_config.py`:
 
-* [`CELERY_BROKER_URL`](../configuration/optional-settings.md#celery_broker_url)
-* [`CELERY_BROKER_TRANSPORT_OPTIONS`](../configuration/optional-settings.md#celery_broker_transport_options)
-* [`CELERY_RESULT_BACKEND`](../configuration/optional-settings.md#celery_result_backend)
-* [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../configuration/optional-settings.md#celery_result_backend_transport_options)
+* [`CELERY_BROKER_URL`](../administration/configuration/optional-settings.md#celery_broker_url)
+* [`CELERY_BROKER_TRANSPORT_OPTIONS`](../administration/configuration/optional-settings.md#celery_broker_transport_options)
+* [`CELERY_RESULT_BACKEND`](../administration/configuration/optional-settings.md#celery_result_backend)
+* [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../administration/configuration/optional-settings.md#celery_result_backend_transport_options)
 
 By default Nautobot configures the celery broker and results backend with the same settings, so this pattern is mirrored here.
 
@@ -109,4 +109,4 @@ CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 
 Please see the official Celery documentation for more information on how to [configure Celery to use Redis Sentinel](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html?highlight=sentinel#configuration).
 
-Please also see the [Nautobot documentation on required settings for Celery](../configuration/required-settings.md#task-queuing-with-celery) for additional information.
+Please also see the [Nautobot documentation on required settings for Celery](../administration/configuration/required-settings.md#task-queuing-with-celery) for additional information.

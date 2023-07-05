@@ -77,7 +77,7 @@ This setting is also used in the [Nautobot deployment guide](../installation/nau
 
 ## File Storage
 
-Nautobot is capable of storing various types of files. This includes [Jobs](../additional-features/jobs.md), [Git repositories](../models/extras/gitrepository.md), [image attachments](../models/extras/imageattachment.md), and [static files](optional-settings.md#static_root) (CSS, JavaScript, etc.).
+Nautobot is capable of storing various types of files. This includes [Jobs](../../platform-functionality/jobs/index.md), [Git repositories](../../platform-functionality/gitrepository.md), [image attachments](../../platform-functionality/imageattachment.md), and [static files](optional-settings.md#static_root) (CSS, JavaScript, etc.).
 
 Each of the features requiring use of file storage default to being stored in `NAUTOBOT_ROOT`. If desired, you may customize each one individually. Please see each feature's respective documentation linked above for how to do that.
 
@@ -187,4 +187,4 @@ EXTRA_INSTALLED_APPS = [
 
 For more information on installing extra applications, please see the documentation on [Extra Applications](optional-settings.md#extra-applications).
 
-For more information on installing or developing Nautobot plugins, please see the [documentation on Plugins](../plugins/index.md).
+For more information on installing or developing Nautobot plugins, please see the [documentation on Plugins](../../../apps/index.md).

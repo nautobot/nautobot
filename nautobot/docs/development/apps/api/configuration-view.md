@@ -13,7 +13,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("configuration/", views.AnimalSoundsConfigView.as_view(), name="config"),
+    path("../../../user-guide/administration/configuration/", views.AnimalSoundsConfigView.as_view(), name="config"),
 ]
 ```
 

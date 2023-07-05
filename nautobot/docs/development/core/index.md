@@ -90,7 +90,7 @@ We estimate non-patch releases will be released quarterly but dates are not set 
 
 An example of the release timeline for the `2.0` release cycle:
 
-![Visual diagram of Nautobot release cadence.](../media/development/index_release_cadence.jpg)
+![Visual diagram of Nautobot release cadence.](../../media/development/index_release_cadence.jpg)
 
 #### Patch Releases
 
@@ -158,7 +158,7 @@ Functionality, features, or Python primitives that have been deprecated will be 
 To provide assistance for knowing what features and functionality have been deprecated, additional transition features are as follows:
 
 * Python primitives that have been deprecated will emit a `DeprecationWarning`, along with a message to which objects will be replacing them. The new objects may not be a direct replacement so please check the release notes and documentation for more migration information.
-* Nautobot 1.2 introduced REST APIs versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions will be removed. For more information, see the [Versioning section of our REST API documentation](../rest-api/overview.md#versioning).
+* Nautobot 1.2 introduced REST APIs versioning. Newer versions of the API become the default behavior on a major release (`x.0.0`) and older versions will be removed. For more information, see the [Versioning section of our REST API documentation](../../user-guide/platform-functionality/rest-api/overview.md#versioning).
 * We will drop support for Python versions on a case-by-case basis: A patch release may drop support for a Python version if a security update of a critical dependency would require split or conditional support. For example, if the dependency has not published a vulnerability fix for an older Python version, we will drop support at that time. All other cases will be documented and will tend to occur on minor release boundaries.
 * Any deprecation notice (announcement or removal) will be available in our release notes.
 
@@ -230,7 +230,7 @@ Please also take a chance to look at our [Wiki on GitHub](https://github.com/nau
 
 Bugs will follow our published workflow from inbound triage to ultimate terminal state, whether accepted or closed:
 
-![Bug Workflow State Diagram](../media/development/index_bug_wf.jpg)
+![Bug Workflow State Diagram](../../media/development/index_bug_wf.jpg)
 
 ### Opening Feature Requests
 
@@ -267,7 +267,7 @@ labels will be applied for categorization.
 
 Feature requests will follow our published workflow from inbound triage to ultimate terminal state, whether accepted or closed:
 
-![Feature Request Workflow State Diagram](../media/development/index_feature_request_wf.jpg)
+![Feature Request Workflow State Diagram](../../media/development/index_feature_request_wf.jpg)
 
 ### Submitting Pull Requests
 

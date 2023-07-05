@@ -13,7 +13,7 @@ Each cable must have two endpoints defined. These endpoints are sometimes refere
 * Power outlets
 * Power ports
 
-Each cable may be assigned a type, label, length, and color. Each cable must also assigned to an operational [`status`](../../models/extras/status.md). The following statuses are available by default:
+Each cable may be assigned a type, label, length, and color. Each cable must also assigned to an operational [`status`](../../platform-functionality/status.md). The following statuses are available by default:
 
 * Active
 * Planned
@@ -25,7 +25,7 @@ A cable may be traced from either of its endpoints by clicking the "trace" butto
 
 In the example below, three individual cables comprise a path between devices A and D:
 
-![Cable path](../../media/models/dcim_cable_trace.png)
+![Cable path](../../../media/models/dcim_cable_trace.png)
 
 Traced from Interface 1 on Device A, Nautobot will show the following path:
 
@@ -35,7 +35,7 @@ Traced from Interface 1 on Device A, Nautobot will show the following path:
 
 A cable can also be traced through a circuit.
 
-![Cable path circuit](../../media/models/dcim_cable_trace_circuit.png)
+![Cable path circuit](../../../media/models/dcim_cable_trace_circuit.png)
 
 Traced from Interface 1 on Device A, Nautobot will show the following path:
 

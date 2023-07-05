@@ -1,6 +1,6 @@
 # Loading Data from a Git Repository
 
-It's possible for an app to register additional types of data that can be provided by a [Git repository](../models/extras/gitrepository.md) and be automatically notified when such a repository is refreshed with new data. By default, Nautobot looks for an iterable named `datasource_contents` within a `datasources.py` file. (This can be overridden by setting `datasource_contents` to a custom value on the app's `NautobotAppConfig`.) An example is below.
+It's possible for an app to register additional types of data that can be provided by a [Git repository](../../../../user-guide/platform-functionality/gitrepository.md) and be automatically notified when such a repository is refreshed with new data. By default, Nautobot looks for an iterable named `datasource_contents` within a `datasources.py` file. (This can be overridden by setting `datasource_contents` to a custom value on the app's `NautobotAppConfig`.) An example is below.
 
 ```python
 # datasources.py

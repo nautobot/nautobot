@@ -26,13 +26,13 @@ Records of this type store the following data as read-only (not modifiable via t
 
     An administrator or sufficiently privileged user can manually delete uninstalled Job records if desired, though this will result in the foreign-key from the corresponding `JobResult` and `ScheduledJob` records (if any exist) becoming null. In any case, for tracking and auditing purposes, deleting a Job does **not** automatically delete its related `JobResult` and `ScheduledJob` records.
 
-For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](../../additional-features/jobs.md#enabling-jobs-for-running) for more details.
+For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./index.md#enabling-jobs-for-running) for more details.
 
 # Job Log Entry
 
 +++ 1.2.0
 
-Log messages from [Jobs](../../additional-features/jobs.md) are stored in as `JobLogEntry` objects. This allows more performant querying of log messages and even allows viewing of logs while the job is still running.
+Log messages from [Jobs](./index.md) are stored in as `JobLogEntry` objects. This allows more performant querying of log messages and even allows viewing of logs while the job is still running.
 
 Records of this type store the following data:
 
@@ -60,4 +60,4 @@ Records of this type store the following data:
 - A block of structured data representing the return value from the `.run()` method (often rendered as JSON).
 
 +/- 1.2.0
-    Note that prior to Nautobot 1.2, job log records were stored in the `data` field; they are now stored as distinct [`JobLogEntry`](joblogentry.md) records instead.
+    Note that prior to Nautobot 1.2, job log records were stored in the `data` field; they are now stored as distinct [`JobLogEntry`](#job-log-entry) records instead.

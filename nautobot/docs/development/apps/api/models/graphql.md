@@ -8,9 +8,9 @@ Apps can optionally expose their models via the GraphQL interface to allow the m
 All GraphQL model types defined by your app, regardless of which method is chosen, will automatically support some built-in Nautobot features:
 
 * Support for object permissions based on their associated `Model` class
-* Include any [custom fields](../models/extras/customfield.md) defined for their `Model`
-* Include any [relationships](../models/extras/relationship.md) defined for their `Model`
-* Include [tags](../models/extras/tag.md), if the `Model` supports them
+* Include any [custom fields](../../../../user-guide/platform-functionality/customfield.md) defined for their `Model`
+* Include any [relationships](../../../../user-guide/platform-functionality/relationship.md) defined for their `Model`
+* Include [tags](../../../../user-guide/platform-functionality/tag.md), if the `Model` supports them
 
 ## Using the `@extras_features` Decorator for GraphQL
 

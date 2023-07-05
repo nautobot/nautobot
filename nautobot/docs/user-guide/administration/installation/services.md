@@ -34,7 +34,7 @@ nautobot-server celery --help
 
 #### Advanced Task Queue Configuration
 
-You may want to deploy multiple workers and/or multiple queues. For more information see the [task queues](../administration/celery-queues.md) documentation.
+You may want to deploy multiple workers and/or multiple queues. For more information see the [task queues](../guides/celery-queues.md) documentation.
 
 ## Configuration
 
@@ -157,8 +157,8 @@ Next, we will setup the `systemd` units for the Celery worker and Celery Beat sc
 +++ 1.1.0
 
 The Celery worker service consumes tasks from background task queues and is required for taking advantage of advanced
-Nautobot features including [Jobs](../additional-features/jobs.md), [Custom
-Fields](../models/extras/customfield.md), and [Git Repositories](../models/extras/gitrepository.md), among others.
+Nautobot features including [Jobs](../../platform-functionality/jobs/index.md), [Custom
+Fields](../../platform-functionality/customfield.md), and [Git Repositories](../../platform-functionality/gitrepository.md), among others.
 
 To establish the `systemd` unit file for the Celery worker, copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
 
@@ -193,7 +193,7 @@ WantedBy=multi-user.target
 +++ 1.2.0
 
 The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take
-advantage of the [job scheduling and approval](../additional-features/job-scheduling-and-approvals.md) features.
+advantage of the [job scheduling and approval](../../platform-functionality/jobs/job-scheduling-and-approvals.md) features.
 
 To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into `/etc/systemd/system/nautobot-scheduler.service`:
 

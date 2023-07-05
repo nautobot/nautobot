@@ -2,10 +2,7 @@
 
 The Nautobot REST API primarily employs token-based authentication. For convenience, cookie-based authentication can also be used when navigating the browseable API.
 
-{%
-    include-markdown "../models/users/token.md"
-    heading-offset=1
-%}
+See the documentation on the [token model](../users/token.md).
 
 ## Authenticating to the API
 
@@ -26,7 +23,7 @@ http://nautobot/api/dcim/sites/
 }
 ```
 
-A token is not required for read-only operations which have been exempted from permissions enforcement (using the [`EXEMPT_VIEW_PERMISSIONS`](../configuration/optional-settings.md#exempt_view_permissions) configuration parameter). However, if a token _is_ required but not present in a request, the API will return a 403 (Forbidden) response:
+A token is not required for read-only operations which have been exempted from permissions enforcement (using the [`EXEMPT_VIEW_PERMISSIONS`](../../administration/configuration/optional-settings.md#exempt_view_permissions) configuration parameter). However, if a token _is_ required but not present in a request, the API will return a 403 (Forbidden) response:
 
 ```bash
 curl http://nautobot/api/dcim/sites/

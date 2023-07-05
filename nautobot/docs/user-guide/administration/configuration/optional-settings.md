@@ -157,7 +157,7 @@ If a custom URL is not provided for any of the links, the default link within th
 
 Default: `{}`
 
-A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../additional-features/caching.md#celery-sentinel-configuration).
+A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../platform-functionality/caching.md#celery-sentinel-configuration).
 
 ---
 
@@ -368,7 +368,7 @@ The list of group names to assign a new user account when created using 3rd-part
 
 Default: `{}` (Empty dictionary)
 
-A mapping of permissions to assign a new user account when created using SSO authentication. Each key in the dictionary will be the permission name specified as `<app_label>.<action>_<model>`, and the value should be set to the permission [constraints](../administration/permissions.md#constraints), or `None` to allow all objects.
+A mapping of permissions to assign a new user account when created using SSO authentication. Each key in the dictionary will be the permission name specified as `<app_label>.<action>_<model>`, and the value should be set to the permission [constraints](../guides/permissions.md#constraints), or `None` to allow all objects.
 
 ### Example Permissions
 
@@ -405,7 +405,7 @@ The following example gives a user a reasonable amount of access to add devices 
 }
 ```
 
-Please see [the object permissions page](../administration/permissions.md) for more information.
+Please see [the object permissions page](../guides/permissions.md) for more information.
 
 ---
 
@@ -415,7 +415,7 @@ Default: `os.path.join(NAUTOBOT_ROOT, "git")`
 
 Environment Variable: `NAUTOBOT_GIT_ROOT`
 
-The file path to a directory where cloned [Git repositories](../models/extras/gitrepository.md) will be located.
+The file path to a directory where cloned [Git repositories](../../platform-functionality/gitrepository.md) will be located.
 
 The value of this variable can also be customized by setting the environment variable `NAUTOBOT_GIT_ROOT` to a directory path of your choosing.
 
@@ -488,7 +488,7 @@ Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
 
 Environment Variable: `NAUTOBOT_JOBS_ROOT`
 
-The file path to a directory where [Jobs](../additional-features/jobs.md) can be discovered.
+The file path to a directory where [Jobs](../../platform-functionality/jobs/index.md) can be discovered.
 
 !!! caution
     This directory **must** contain an `__init__.py` file.
@@ -514,7 +514,7 @@ Setting this to `True` will display a "maintenance mode" banner at the top of ev
     The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
 
 !!! note
-    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../docker/index.md#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
+    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../../../docker/index.md#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
 
 !!! note
     If you are using `django-auth-ldap` for LDAP authentication, `django-auth-ldap` by default will try to update a user object on every log in.  If the database is in a read-only state `django-auth-ldap` will fail.  You will also need to set `AUTH_LDAP_ALWAYS_UPDATE_USER=False` and `AUTH_LDAP_NO_NEW_USERS=True` to avoid this, please see the [`django-auth-ldap` documentation](https://django-auth-ldap.readthedocs.io/en/stable/reference.html) for more information.
@@ -538,7 +538,7 @@ Default: `False`
 
 Environment Variable: `NAUTOBOT_METRICS_ENABLED`
 
-Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../additional-features/prometheus-metrics.md) documentation for more details.
+Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
 
 ---
 
@@ -556,7 +556,7 @@ Nautobot will use these credentials when authenticating to remote devices via th
     If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.
 
 !!! note
-    If a given device has an appropriately populated [secrets group](../models/extras/secretsgroup.md) assigned to it, the [secrets](../models/extras/secret.md) defined in that group will take precedence over these default values.
+    If a given device has an appropriately populated [secrets group](../../platform-functionality/secret.md#secretsgroup) assigned to it, the [secrets]((../../platform-functionality/secrets.md) defined in that group will take precedence over these default values.
 
 ---
 
@@ -586,7 +586,7 @@ NAPALM_ARGS = {
 ```
 
 !!! note
-    If a given device has an appropriately populated [secrets group](../models/extras/secretsgroup.md) assigned to it, a [secret](../models/extras/secret.md) defined in that group can override the `NAPALM_ARGS["secret"]` or `NAPALM_ARGS["enable_password"]` default value defined here.
+    If a given device has an appropriately populated [secrets group](../../platform-functionality/secret.md#secrets-groups) assigned to it, a [secret](../../platform-functionality/secret.md) defined in that group can override the `NAPALM_ARGS["secret"]` or `NAPALM_ARGS["enable_password"]` default value defined here.
 
 ---
 
@@ -623,7 +623,7 @@ The options displayed in the web interface dropdown to limit the number of objec
 
 Default: `[]` (Empty list)
 
-A list of installed [Nautobot plugins](../plugins/index.md) to enable. Plugins will not take effect unless they are listed here.
+A list of installed [Nautobot plugins](../../../apps/index.md) to enable. Plugins will not take effect unless they are listed here.
 
 !!! warning
     Plugins extend Nautobot by allowing external code to run with the same access and privileges as Nautobot itself. Only install plugins from trusted sources. The Nautobot maintainers make absolutely no guarantees about the integrity or security of your installation with plugins enabled.
@@ -746,7 +746,7 @@ Default: `None` (local storage)
 
 The backend storage engine for handling uploaded files (e.g. image attachments). Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) package, which provides backends for several popular file storage services. If not configured, local filesystem storage will be used.
 
-An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../user-guides/s3-django-storage.md) user-guide.
+An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
 The configuration parameters for the specified storage backend are defined under the [`STORAGE_CONFIG`](#storage_config) setting.
 
@@ -1078,7 +1078,7 @@ Additional examples are available in the [`/examples/logging`](https://github.co
 * `nautobot.<app>.<module>` - Generic form for model- or module-specific log messages
 * `nautobot.auth.*` - Authentication events
 * `nautobot.extras.jobs.*` - Job execution (`* = JobClassName`)
-* `nautobot.core.graphql.*` - [GraphQL](../additional-features/graphql.md) initialization and operation.
+* `nautobot.core.graphql.*` - [GraphQL](../../platform-functionality/graphql.md) initialization and operation.
 * `nautobot.extras.plugins.*` - Plugin loading and activity
 * `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
 
@@ -1088,7 +1088,7 @@ Additional examples are available in the [`/examples/logging`](https://github.co
 
 Default: `os.path.join(NAUTOBOT_ROOT, "media")`
 
-The file path to the location where media files (such as [image attachments](../models/extras/imageattachment.md)) are stored.
+The file path to the location where media files (such as [image attachments](../../platform-functionality/imageattachment.md)) are stored.
 
 Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#media-root) for more information.
 

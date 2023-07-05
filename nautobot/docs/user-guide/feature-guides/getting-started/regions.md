@@ -3,7 +3,7 @@
 Regions are administrative domains, used to organize Sites and other Regions. They can be nested recursively.
 A Region might represent a continent, country, city, campus, or other area. A Region can contain Sites and other Regions.
 
-Additional information on Regions is in the [Regions section of the Nautobot documentation](../../models/dcim/region.md).
+Additional information on Regions is in the [Regions section of the Nautobot documentation](../../core-data-model/dcim/region.md).
 
 In the following exercise, we will create three Regions:
 

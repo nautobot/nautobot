@@ -7,8 +7,8 @@ hide:
 
 Welcome to the Nautobot Core Documentation! Use the top navigation bar to read about:
 
-- [Installing Nautobot](installation/index.md), [Configuring Nautobot](configuration/index.md), [Getting Started with the Web Interface](user-guides/getting-started/index.md), [REST](rest-api/overview.md) and [GraphQL](additional-features/graphql.md) APIs, [Plugins](plugins/index.md), additional features and much more can be found under the **Documentation** section.
-- Learn about how to [Develop and Contribute to Nautobot](development/index.md), [Set up your Development Environment](development/getting-started.md), and more under the **Development Guide** section.
+- [Installing Nautobot](user-guide/administration/installation/index.md), [Configuring Nautobot](user-guide/administration/configuration/index.md), [Getting Started with the Web Interface](user-guide/feature-guides/getting-started/index.md), [REST](user-guide/platform-functionality/rest-api/overview.md) and [GraphQL](user-guide/platform-functionality/graphql.md) APIs, [Apps](apps/index.md), additional features and much more can be found under the **Documentation** section.
+- Learn about how to [Develop and Contribute to Nautobot](development/index.md), [Set up your Development Environment](development/core/getting-started.md), and more under the **Development Guide** section.
 - Nautobot has a thriving ecosystem of **Apps** (also known as Plugins), developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
 
 ## What is Nautobot?
@@ -102,4 +102,4 @@ Nautobot supports Python 3.8, 3.9, and 3.10.
 
 ## Getting Started
 
-See the [installation guide](installation/index.md) for help getting Nautobot up and running quickly.
+See the [installation guide](user-guide/administration/installation/index.md) for help getting Nautobot up and running quickly.

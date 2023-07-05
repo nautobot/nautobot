@@ -6,4 +6,4 @@ Apps can add content to the Nautobot home page. By default, Nautobot looks for a
 
 Using a key and weight system, a developer can integrate the app content amongst existing panels, groups, and items and/or create entirely new panels as desired.
 
-More documentation and examples can be found in the guide on [Home Page Panels](../development/homepage.md).
+More documentation and examples can be found in the guide on [Home Page Panels](../../../core/homepage.md).

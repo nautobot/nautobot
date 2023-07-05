@@ -1,6 +1,6 @@
 # Adding Database Models
 
-If your app introduces a new type of object in Nautobot, you'll probably want to create a [Django model](https://docs.djangoproject.com/en/stable/topics/db/models/) for it. A model is essentially a Python representation of a database table, with attributes that represent individual columns. Model instances can be created, manipulated, and deleted using [queries](https://docs.djangoproject.com/en/stable/topics/db/queries/). Models must be defined within a file named `models.py`.
+If your app introduces a new type of object in Nautobot, you'll probably want to create a [Django model](https://docs.djangoproject.com/en/stable/topics/db/core-data-model/) for it. A model is essentially a Python representation of a database table, with attributes that represent individual columns. Model instances can be created, manipulated, and deleted using [queries](https://docs.djangoproject.com/en/stable/topics/db/queries/). Models must be defined within a file named `models.py`.
 
 It is highly recommended to have app models inherit from at least `nautobot.apps.models.BaseModel` which provides base functionality and convenience methods common to all models.
 
@@ -9,14 +9,14 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | Feature | `django.db.models.Model` | `BaseModel` | `OrganizationalModel` | `PrimaryModel` |
 | ------- | --------------------- | ----------- | --------------------- | -------------- |
 | UUID primary key | ❌ | ✅ | ✅ | ✅ |
-| [Natural keys](../development/natural-keys.md) | ❌ | ✅ | ✅ | ✅ |
-| [Object permissions](../administration/permissions.md) | ❌ | ✅ | ✅ | ✅ |
-| [`validated_save()`](../development/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
-| [Change logging](../additional-features/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
-| [Custom fields](../models/extras/customfield.md) | ❌ | ❌ | ✅ | ✅ |
-| [Relationships](../models/extras/relationship.md) | ❌ | ❌ | ✅ | ✅ |
-| [Note](../models/extras/note.md) | ❌ | ❌ | ✅ | ✅ |
-| [Tags](../models/extras/tag.md) | ❌ | ❌ | ❌ | ✅ |
+| [Natural keys](../../../core/natural-keys.md) | ❌ | ✅ | ✅ | ✅ |
+| [Object permissions](../../../../user-guide/administration/guides/permissions.md) | ❌ | ✅ | ✅ | ✅ |
+| [`validated_save()`](../../../core/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
+| [Change logging](../../../../user-guide/platform-functionality/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
+| [Custom fields](../../../../user-guide/platform-functionality/customfield.md) | ❌ | ❌ | ✅ | ✅ |
+| [Relationships](../../../../user-guide/platform-functionality/relationship.md) | ❌ | ❌ | ✅ | ✅ |
+| [Note](../../../../user-guide/platform-functionality/note.md) | ❌ | ❌ | ✅ | ✅ |
+| [Tags](../../../../user-guide/platform-functionality/tag.md) | ❌ | ❌ | ❌ | ✅ |
 
 Below is an example `models.py` file containing a basic model with two character fields:
 

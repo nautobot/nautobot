@@ -44,7 +44,7 @@ PLUGINS_CONFIG = {
 
 ## Run `nautobot-server post_upgrade`
 
-After installing or upgrading a app, you should always run [`nautobot-server post_upgrade`](../administration/nautobot-server.md#post_upgrade). This command will ensure that any necessary post-installation tasks are run, for example:
+After installing or upgrading a app, you should always run [`nautobot-server post_upgrade`](../tools/nautobot-server.md#post_upgrade). This command will ensure that any necessary post-installation tasks are run, for example:
 
 * Migrating the database to include any new or updated data models from the app
 * Collecting any static files provided by the app

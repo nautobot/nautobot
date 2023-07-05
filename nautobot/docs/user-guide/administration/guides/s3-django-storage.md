@@ -74,11 +74,11 @@ The `STORAGE_CONFIG` has some valuable pieces of information.
 By using the the settings listed above, the static files will be stored in the S3 bucket instead of on the Nautobot server's filesystem. Once the `nautobot-server collectstatic` is executed you will see the files.
 
 Here's a snippet from the S3 bucket in use.
-![initial s3](./images/s3-storage/user-guide-s3-1.png)
+![initial s3](../../../media/user-guide/administration/guides/s3-django-storage/user-guide-s3-1.png)
 
 Now when an image is added to one of the core supported models like the `dcim.device-type`, a new directory will be created in the S3 bucket based on the `upload_to` attribute from the originating model. As an example we now see a new directory called `devicetype-images/`.
 
-![s3 with device types](./images/s3-storage/user-guide-s3-2.png)
+![s3 with device types](../../../media/user-guide/administration/guides/s3-django-storage/user-guide-s3-2.png)
 
 The directory is defined in the `Devicetype` model on the front/rear images attributes. Source code snippet below:
 

@@ -101,7 +101,7 @@ Result
 }
 ```
 
-Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field name `site_type` will appear in GraphQL as `cf_site_type` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../configuration/optional-settings.md#graphql_custom_field_prefix).
+Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field name `site_type` will appear in GraphQL as `cf_site_type` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../administration/configuration/optional-settings.md#graphql_custom_field_prefix).
 
 ```graphql
 query {
@@ -136,7 +136,7 @@ Result
 
 ## Working with Relationships
 
-Defined [relationships](../models/extras/relationship.md) are available in GraphQL as well. In most cases, the associated objects for a given relationship will be available under the key `rel_<relationship_key>`. The one exception is for relationships between objects of the same type that are not defined as symmetric; for these relationships it's important to be able to distinguish between the two "sides" of the relationship, and so the associated objects will be available under `rel_<relationship_key>_source` and/or `rel_<relationship_key>_destination` as appropriate.
+Defined [relationships](./relationship.md) are available in GraphQL as well. In most cases, the associated objects for a given relationship will be available under the key `rel_<relationship_key>`. The one exception is for relationships between objects of the same type that are not defined as symmetric; for these relationships it's important to be able to distinguish between the two "sides" of the relationship, and so the associated objects will be available under `rel_<relationship_key>_source` and/or `rel_<relationship_key>_destination` as appropriate.
 
 !!! important
     Relationships are only available in GraphQL **after** the relationship is created **and** the web service is restarted.
@@ -210,7 +210,7 @@ Result
 
 ## Working with Computed Fields
 
-By default, all custom fields in GraphQL will be prefixed with `cpf_`. A computed field name `ip_ptr_record` will appear in GraphQL as `cpf_ip_ptr_record` as an example. The prefix can be changed by setting the value of [`GRAPHQL_COMPUTED_FIELD_PREFIX`](../configuration/optional-settings.md#graphql_computed_field_prefix).
+By default, all custom fields in GraphQL will be prefixed with `cpf_`. A computed field name `ip_ptr_record` will appear in GraphQL as `cpf_ip_ptr_record` as an example. The prefix can be changed by setting the value of [`GRAPHQL_COMPUTED_FIELD_PREFIX`](../administration/configuration/optional-settings.md#graphql_computed_field_prefix).
 
 ```graphql
 {

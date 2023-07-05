@@ -88,6 +88,6 @@ Be diligent to ensure all of the relevant test suites are adapted or extended as
 
 ## Update the model's documentation
 
-Each model has a dedicated page in the documentation, at `models/<app>/<model>.md`. Update this file to include any relevant information about the new field.
+Each model has a dedicated page in the documentation, at `core-data-model/<app>/<model>.md`. Update this file to include any relevant information about the new field.
 
 Note that this documentation page will be accessible through the web UI via a "question mark" icon on the corresponding model create/edit page.

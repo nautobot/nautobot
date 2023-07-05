@@ -2,7 +2,7 @@
 
 ## Review the Release Notes
 
-Prior to upgrading your Nautobot instance, be sure to carefully review all [release notes](../release-notes/index.md) that
+Prior to upgrading your Nautobot instance, be sure to carefully review all [release notes](../../../release-notes/index.md) that
 have been published since your current version was released. Although the upgrade process typically does not involve
 additional work, certain releases may introduce breaking or backward-incompatible changes. These are called out in the
 release notes under the release in which the change went into effect.
@@ -17,13 +17,13 @@ Prior to version 1.1.0, Nautobot utilized RQ as the primary background task work
 
 RQ support for custom tasks was not removed in order to give plugin authors time to migrate, however, to continue to utilize advanced Nautobot features such as Git repository synchronization, webhooks, jobs, etc. you must migrate your `nautobot-worker` deployment from RQ to Celery.
 
-Please see the section on [migrating to Celery from RQ](./services.md#migrating-to-celery-from-rq) for more information on how to easily migrate your deployment.
+Please see the section on [migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for more information on how to easily migrate your deployment.
 
 ### Updating from Nautobot 1.1.x to 1.2.x
 
 #### Introduction of Celery Beat Scheduler
 
-As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facilitate this, a new service called `celery-scheduler` is now required. Please review the [service installation documentation](./services.md#celery-beat-scheduler) to find out how to set it up.
+As of Nautobot v1.2.0, Nautobot supports deferring ("scheduling") Jobs. To facilitate this, a new service called `celery-scheduler` is now required. Please review the [service installation documentation](../installation/services.md#celery-beat-scheduler) to find out how to set it up.
 
 ### Updating from Nautobot 1.2.x to 1.3.x
 
@@ -73,7 +73,7 @@ Nautobot v1.1.0 and later can optionally support the following:
 | MySQL      | 8.0             |
 
 !!! tip
-    If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](./migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.
+    If you wish to migrate from PostgreSQL to MySQL, we recommend creating a new Nautobot installation based on MySQL and then [migrating the database contents to the new installation](../migration/migrating-from-postgresql.md), rather than attempting an in-place upgrade or migration.
 
 ## Install the Latest Release
 

@@ -52,7 +52,7 @@ Computed field templates can also utilize built-in Jinja2 filters or custom ones
 {{ obj.site.name | leet_speak }}
 ```
 
-See the documentation on [built-in filters](../../additional-features/template-filters.md) or [registering custom Jinja2 filters](../../plugins/development.md#including-jinja2-filters) in plugins.
+See the documentation on [built-in filters](./template-filters.md) or [registering custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md) in plugins.
 
 ## Computed Fields and the REST API
 

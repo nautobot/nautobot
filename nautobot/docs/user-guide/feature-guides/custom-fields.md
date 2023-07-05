@@ -1,10 +1,10 @@
 # Custom Fields
 
-Custom fields are a convenient method of adding new fields to existing Nautobot models without needing to modify the underlying source code or database schema. For more general information on how custom fields work, refer to the [custom fields model documentation](../models/extras/customfield.md).
+Custom fields are a convenient method of adding new fields to existing Nautobot models without needing to modify the underlying source code or database schema. For more general information on how custom fields work, refer to the [custom fields model documentation](../platform-functionality/customfield.md).
 
 ## When to use Custom Fields
 
-Custom fields are commonly used for fields that need different values across individual objects. For example, a custom field on devices to reference an internal ticket number that inventories each device in Nautobot. If you need a solution for marking multiple objects with a common flag, [tags](../models/extras/tag.md) may be a better fit.
+Custom fields are commonly used for fields that need different values across individual objects. For example, a custom field on devices to reference an internal ticket number that inventories each device in Nautobot. If you need a solution for marking multiple objects with a common flag, [tags](../platform-functionality/tag.md) may be a better fit.
 
 ## Create a Custom Field
 
@@ -30,7 +30,7 @@ The key is used as the key in the underlying custom field data dictionary. This 
 
 #### Type
 
-The type of data that the custom field will store. Valid choices are documented in the [custom field model documentation](../models/extras/customfield.md#creating-custom-fields).
+The type of data that the custom field will store. Valid choices are documented in the [custom field model documentation](../platform-functionality/customfield.md#creating-custom-fields).
 
 #### Weight
 
@@ -59,7 +59,7 @@ The default value for the custom field. This form field only accepts JSON data s
 #### Filter Logic
 
 +/- 1.4.0
-    Custom field [extended filtering](../rest-api/filtering.md#lookup-expressions) introduced extended lookup expression filters for `exact` and `icontains`, duplicating the functionality of both the `Strict` and `Loose` settings.
+    Custom field [extended filtering](../platform-functionality/rest-api/filtering.md#lookup-expressions) introduced extended lookup expression filters for `exact` and `icontains`, duplicating the functionality of both the `Strict` and `Loose` settings.
 
 The filter logic setting applies to filtering on custom fields in the UI and API. For example, when filtering in the API to find a device with the custom field `cf1` set to `"abc"` you would query `/api/dcim/devices/?cf_cf1=abc`. If the filter logic setting is set to `Loose` this would match on `"ABC"` and `"abcdef"`. If the filter logic setting is set to `Strict` only devices with the custom field set to exactly "abc" (case sensitive) would be returned. If the filter logic setting is set to `disabled`, no filters will be available for this custom field, including extended lookup filters. The `Loose` and `Strict` settings only change the behavior of the default filter (`cf_customfieldname`) on `text`, `url` and `json` custom fields.
 
@@ -74,7 +74,7 @@ When selected, the custom field will appear in the "Advanced" tab of the object 
 The list of content types to add this custom field to. Only models that inherit from the `nautobot.extras.models.customfields.CustomFieldModel` model class can be selected.
 
 !!! note
-    When a custom field is created or associated to a new content type (model), all affected existing objects will be updated to add the custom field. The initial value will be set to the `default` value of the custom field. This update runs as a background task via [Celery](../installation/services.md#worker-service), so it may take a few seconds or more before all objects reflect the new custom field, depending on the size of your database.
+    When a custom field is created or associated to a new content type (model), all affected existing objects will be updated to add the custom field. The initial value will be set to the `default` value of the custom field. This update runs as a background task via [Celery](../administration/installation/services.md#worker-service), so it may take a few seconds or more before all objects reflect the new custom field, depending on the size of your database.
 
 ### Validation Rules
 
@@ -146,7 +146,7 @@ If a custom field's `default` value is changed, newly created objects will use t
 
 ## Deleting Custom Fields
 
-Custom fields are removed from associated objects when a content type is removed from the custom field, including when the custom field is deleted. This update runs as a background task via [Celery](../installation/services.md#worker-service), so it may take a few seconds or more before the custom field data is removed from all objects, depending on the size of your database.
+Custom fields are removed from associated objects when a content type is removed from the custom field, including when the custom field is deleted. This update runs as a background task via [Celery](../administration/installation/services.md#worker-service), so it may take a few seconds or more before the custom field data is removed from all objects, depending on the size of your database.
 
 ## Retrieving Custom Field Data
 

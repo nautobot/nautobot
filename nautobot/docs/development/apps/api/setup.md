@@ -1,7 +1,7 @@
 # Initial Setup
 
 !!! important "Use a Development Environment, Not Production For App Development"
-    You should not use your production environment for app development. For information on getting started with a development environment, check out [Nautobot development guide](../development/getting-started.md).
+    You should not use your production environment for app development. For information on getting started with a development environment, check out [Nautobot development guide](../../core/getting-started.md).
 
 ## App Structure
 
@@ -55,7 +55,7 @@ The app source directory contains all of the actual Python code and other resour
 !!! note
     Nautobot includes a command to help create the app directory:
     `nautobot-server startplugin [app_name]`
-    Please see the [Nautobot Server Guide](../administration/nautobot-server.md#startplugin) for more information.
+    Please see the [Nautobot Server Guide](../../../user-guide/administration/tools/nautobot-server.md#startplugin) for more information.
 
 ## Create pyproject.toml
 
@@ -115,7 +115,7 @@ To install the app for development the following steps should be taken:
     Poetry installs the current project and its dependencies in editable mode (aka ["development mode"](https://setuptools.readthedocs.io/en/latest/userguide/development_mode.html)).
 
 !!! important "This should be done in development environment"
-    You should not use your production environment for app development. For information on getting started with a development environment, check out [Nautobot development guide](../development/getting-started.md).
+    You should not use your production environment for app development. For information on getting started with a development environment, check out [Nautobot development guide](../../core/getting-started.md).
 
 ```no-highlight
 poetry install

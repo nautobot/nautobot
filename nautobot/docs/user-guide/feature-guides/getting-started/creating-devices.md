@@ -2,7 +2,7 @@
 
 Every piece of hardware which is installed within a site or rack exists in Nautobot as a device.
 
-More information on Devices can be found in the [Devices](../../core-functionality/devices.md#devices) section of the Nautobot documentation.
+More information on Devices can be found in the [Devices](../../core-data-model/dcim/device.md#devices) section of the Nautobot documentation.
 
 A network Device in Nautobot has a few required attributes:
 
@@ -18,7 +18,7 @@ The following sections will guide you through how to create each object type.
 
 Devices can be organized by functional roles, which are fully customizable by the user.
 
-More information on Device Roles can be found in the [Device Roles](../../core-functionality/devices.md#device-roles) section of the Nautobot documentation.
+More information on Device Roles can be found in the [Device Roles](../../core-data-model/dcim/device.md#device-roles) section of the Nautobot documentation.
 
 To create a new Device, you will need an existing Device Role or need to create a new Device Role instance.
 
@@ -39,7 +39,7 @@ To create a new Device Role:
 
 A Manufacturer represents the "make" of a device; e.g. Cisco or Dell. Each device type must be assigned to a manufacturer.
 
-More information on Manufacturers is in the [Manufacturers](../../core-functionality/device-types.md#manufacturers) section of the Nautobot documentation.
+More information on Manufacturers is in the [Manufacturers](../../core-data-model/dcim/devicetype.md#manufacturers) section of the Nautobot documentation.
 
 To create a new Device Type, you will need an existing Manufacturer or need to create a new Manufacturer instance.
 
@@ -58,7 +58,7 @@ To create a new Manufacturer:
 A device type represents a particular make and model of hardware that exists in the real world.
 Device types define the physical attributes of a device (rack height and depth) and its individual components (console, power, network interfaces, and so on).
 
-More information on Device Types is in the [Device Types](../../core-functionality/device-types.md#device-types_1) section of the Nautobot documentation.
+More information on Device Types is in the [Device Types](../../core-data-model/dcim/devicetype.md#device-types_1) section of the Nautobot documentation.
 
 To create a new Device, you will need an existing Device Type or need to create a new Device Type instance.
 
@@ -78,7 +78,7 @@ To create a new Device Type:
 How you choose to employ sites when modeling your network may vary depending on the nature of your organization, but generally a site will equate to a building or campus.
 For example, a chain of banks might create a site to represent each of its branches, a site for its corporate headquarters, and two additional sites for its presence in two co-location facilities.
 
-More information on Sites is found in the [Sites](../../core-functionality/sites-and-racks.md#sites) section of the Nautobot documentation.
+More information on Sites is found in the [Sites](../../core-data-model/dcim/site.md#sites) section of the Nautobot documentation.
 
 To create a new Device, you will need an existing Site or need to create a new Site instance.
 

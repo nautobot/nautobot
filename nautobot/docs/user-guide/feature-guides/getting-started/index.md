@@ -26,4 +26,4 @@ This guide does not cover every possible operation in Nautobot's Web UI. However
 
 ## Requirements
 
-1. A functional Nautobot [installation](../../installation/index.md)
+1. A functional Nautobot [installation](../../administration/installation/index.md)

@@ -42,7 +42,7 @@ Marking a field as required will force the user to provide a value for the field
 The filter logic controls how values are matched when filtering objects by the custom field. Loose filtering (the default) matches on a partial value, whereas exact matching requires a complete match of the given string to a field's value. For example, exact filtering with the string "red" will only match the exact value "red", whereas loose filtering will match on the values "red", "red-orange", or "bored". Setting the filter logic to "disabled" disables filtering by the field entirely.
 
 +/- 1.4.0
-    Custom field [extended filtering](../../rest-api/filtering.md#lookup-expressions) introduced extended lookup expression filters for `exact` and `icontains`, duplicating the functionality of both the `Strict` and `Loose` settings.
+    Custom field [extended filtering](./rest-api/filtering.md#lookup-expressions) introduced extended lookup expression filters for `exact` and `icontains`, duplicating the functionality of both the `Strict` and `Loose` settings.
 
 A custom field must be assigned to one or more object types, or models, in Nautobot. Once created, custom fields will automatically appear as part of these models in the web UI and REST API.
 
@@ -73,7 +73,7 @@ The value of a multiple selection field will always return a list, even if only 
 
 There are a number of available built-in filters for custom fields.
 
-Filtering on an object's list view follows the same pattern as [custom field filtering on the API](../../rest-api/filtering.md#filtering-by-custom-field).
+Filtering on an object's list view follows the same pattern as [custom field filtering on the API](./rest-api/filtering.md#filtering-by-custom-field).
 
 When using the ORM, you can filter on custom fields using `_custom_field_data__<field name>` (note the underscore before `custom_field_data` and the double-underscore before the field name). For example, if a custom field of string type with a `name` of  `"location_code"` was created for Location objects, you could filter as follows:
 
@@ -118,4 +118,4 @@ To set or change custom field values, simply include nested JSON data in your RE
 
 ## Custom Fields User Guide
 
-More in depth documentation on how to use custom fields can be found in the [custom fields user guide](../../user-guides/custom-fields.md).
+More in depth documentation on how to use custom fields can be found in the [custom fields user guide](../feature-guides/custom-fields.md).

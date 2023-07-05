@@ -2,7 +2,7 @@
 
 A power feed represents the distribution of power from a power panel to a particular device, typically a power distribution unit (PDU). The power pot (inlet) on a device can be connected via a cable to a power feed. A power feed may optionally be assigned to a rack to allow more easily tracking the distribution of power among racks.
 
-Each power feed is assigned an operational type (primary or redundant) and a [`status`](../../models/extras/status.md). The following statuses are available by default:
+Each power feed is assigned an operational type (primary or redundant) and a [`status`](../../platform-functionality/status.md). The following statuses are available by default:
 
 * Offline
 * Active
@@ -22,4 +22,4 @@ Each power feed also defines the electrical characteristics of the circuit which
 
 ## Example Power Topology
 
-![Power distribution model](../media/power_distribution.png)
+![Power distribution model](../../../media/power_distribution.png)

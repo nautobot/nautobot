@@ -124,7 +124,7 @@ to different Redis instances/databases per feature.
 
 ### Caching
 
-For more details on Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../additional-features/caching.md).
+For more details on Nautobot's caching, including TLS and HA configuration, see the guide on [Caching](../../platform-functionality/caching.md).
 
 ### Task Queuing
 
@@ -203,7 +203,7 @@ Please see the celery [documentation](https://docs.celeryq.dev/en/stable/usergui
 
 #### Configuring Celery for High Availability
 
-High availability clustering of Redis for use with Celery can be performed using Redis Sentinel. Please see documentation section on configuring [Celery for Redis Sentinel](../additional-features/caching.md#celery-sentinel-configuration) for more information.
+High availability clustering of Redis for use with Celery can be performed using Redis Sentinel. Please see documentation section on configuring [Celery for Redis Sentinel](../../platform-functionality/caching.md#celery-sentinel-configuration) for more information.
 
 ---
 

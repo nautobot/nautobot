@@ -10,11 +10,11 @@ Each panel on the home page is defined by a `HomePagePanel` object. A `HomePageP
 
 Some examples:
 
-![DCIM Panel](../media/development/homepage_dcim_panel.png "DCIM Panel")
+![DCIM Panel](../../media/development/homepage_dcim_panel.png "DCIM Panel")
 
 This is a single `HomePagePanel` (defined in `nautobot/dcim/homepage.py`) containing four `HomePageItem` and one `HomePageGroup` (the `Connections` group, which in turn contains four more `HomePageItem`). Using these objects together allows you to create panels that match the visual style of most other panels on the Nautobot home page.
 
-![Changelog Panel](../media/development/homepage_changelog_panel.png "Changelog Panel")
+![Changelog Panel](../../media/development/homepage_changelog_panel.png "Changelog Panel")
 
 This is a `HomePagePanel` (defined in `nautobot/extras/homepage.py`) that uses a custom template to render content that doesn't fit into the `HomePageGroup`/`HomePageItem` pattern.
 

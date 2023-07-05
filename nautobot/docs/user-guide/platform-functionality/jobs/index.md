@@ -81,7 +81,7 @@ An administrator or user with `extras.delete_job` permissions *may* delete such 
 
     Similarly, to [approve a job request by another user](./job-scheduling-and-approvals.md), a user must be assigned the `extras.approve_job` permission via the same process. Job approvers also need the `extras.change_scheduledjob` and/or `extras.delete_scheduledjob` permissions as job approvals are implemented via the `ScheduledJob` data model.
 
-    ![Adding the run action to a permission](../media/admin_ui_run_permission.png)
+    ![Adding the run action to a permission](../../../media/admin_ui_run_permission.png)
 
 ### Jobs and `class_path`
 
@@ -105,7 +105,7 @@ The `class_path` is often represented as a string in the format of `<module_name
 
 Jobs can be run via the web UI by navigating to the job, completing any required form data (if any), and clicking the "Run Job" button.
 
-Once a job has been run, the latest [`JobResult`](../models/extras/jobresult.md) for that job will be summarized in the job list view.
+Once a job has been run, the latest [`JobResult`](./models.md#job-results) for that job will be summarized in the job list view.
 
 ### Via the API
 

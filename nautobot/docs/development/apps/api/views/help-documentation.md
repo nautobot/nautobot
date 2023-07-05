@@ -8,6 +8,6 @@ app_name/                   # "nautobot_animal_sounds"
     - app_name/             # "nautobot_animal_sounds"
       - docs/
         - index.html
-        - models/
+        - core-data-model/
           - object_model.html  # "animal.html"
 ```

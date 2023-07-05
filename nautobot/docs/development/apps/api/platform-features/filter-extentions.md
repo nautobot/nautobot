@@ -12,7 +12,7 @@ The requirements to extend a filter set or a filter form (or both) are:
 
 Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with _not_ `icontains` using the `ic` and `nic` expressions respectively.
 
-The dynamically-added lookup expressions can be found in the source code at [nautobot/core/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/constants.py) and the mapping logic can be found in [nautobot/core/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/filters.py). Please see the documentation on [filtering](../rest-api/filtering.md#lookup-expressions) for more information.
+The dynamically-added lookup expressions can be found in the source code at [nautobot/core/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/constants.py) and the mapping logic can be found in [nautobot/core/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/filters.py). Please see the documentation on [filtering](../../../../user-guide/platform-functionality/rest-api/filtering.md##lookup-expressions) for more information.
 
 !!! tip
     For developers of apps that define their own model filters, note that the above are added dynamically, as long as the class inherits from `nautobot.apps.filters.BaseFilterSet`.
@@ -46,4 +46,4 @@ There are several conditions that must be met in order to extend a filter:
 You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_plugin/example_plugin/filter_extensions.py) with the Example Plugin.
 
 !!! tip
-    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../models/extras/dynamicgroup.md).
+    The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../../../../user-guide/platform-functionality/dynamicgroup.md).

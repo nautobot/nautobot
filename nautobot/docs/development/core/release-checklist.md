@@ -59,7 +59,7 @@ Add the release notes (`docs/release-notes/X.Y.md`) to the table of contents wit
 
 ### Verify and Revise the Install Documentation
 
-Follow the [install instructions](../installation/nautobot.md) to perform a new production installation of Nautobot.
+Follow the [install instructions](../../user-guide/administration/installation/nautobot.md) to perform a new production installation of Nautobot.
 
 The goal of this step is to walk through the entire install process *as documented* to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
 

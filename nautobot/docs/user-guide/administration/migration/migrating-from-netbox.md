@@ -2,7 +2,7 @@
 
 ## Review the Release Notes
 
-Be sure to carefully review all [release notes](../release-notes/index.md) that have been published. In particular, the [Nautobot 1.0 release notes](../release-notes/version-1.0.md) include an overview of key changes between NetBox 2.10 and Nautobot 1.0, while later release notes highlight incremental changes between Nautobot versions.
+Be sure to carefully review all [release notes](../../../release-notes/index.md) that have been published. In particular, the [Nautobot 1.0 release notes](../../../release-notes/version-1.0.md) include an overview of key changes between NetBox 2.10 and Nautobot 1.0, while later release notes highlight incremental changes between Nautobot versions.
 
 ## Install Nautobot
 
@@ -69,7 +69,7 @@ The following backwards-incompatible changes have been made to the data model in
 
 ### Status Fields
 
-A new [`Status`](../models/extras/status.md) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), a `color`, a `description`, and a set of `content_types` that it can be applied to (for example, `Device` and `Location`).
+A new [`Status`](../../platform-functionality/status.md) model has been added to represent the `status` field for many models. Each status has a human-readable `name` field (e.g. `Active`), a `color`, a `description`, and a set of `content_types` that it can be applied to (for example, `Device` and `Location`).
 
 ### Display name
 
@@ -125,7 +125,7 @@ Custom Fields have been overhauled for asserting data integrity and improving us
 ### IPAM Network Field Types
 
 !!! tip
-    Nautobot 1.2 and later supports most of the same filter-based network membership queries as NetBox. See [below](#membership-lookups) and the [filtering documentation](../rest-api/filtering.md#network-and-host-fields) for more details. (Prior to Nautobot 1.2, IPAM network objects only supported model-manager-based methods for network membership filtering.)
+    Nautobot 1.2 and later supports most of the same filter-based network membership queries as NetBox. See [below](#membership-lookups) and the [filtering documentation](../../platform-functionality/rest-api/filtering.md#network-and-host-fields) for more details. (Prior to Nautobot 1.2, IPAM network objects only supported model-manager-based methods for network membership filtering.)
 
 All IPAM objects with network field types (`ipam.IPAddress`, and `ipam.Prefix`) are no longer hard-coded to use PostgreSQL-only `inet` or `cidr` field types and are now using a custom implementation leveraging SQL-standard `varbinary` field types.
 

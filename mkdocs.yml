@@ -111,13 +111,14 @@ nav:
         - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
         - Installing and Using Plugins: "user-guide/administration/installation/app-install.md"
         - Nautobot Docker Images: "docker/index.md"
-      - Migration:
-        - Upgrading Nautobot: "user-guide/administration/installation/migration/upgrading.md"
+      - Upgrading:
+        - Upgrading Nautobot: "user-guide/administration/upgrading/upgrading.md"
         - Upgrading Nautobot from v1.X to v2.0:
-          - Overview: "user-guide/administration/installation/migration/upgrading-from-nautobot-v1.md"
-          - Migrating from Region and Site to Location: "user-guide/administration/installation/migration/region-and-site-data-migration-guide.md"
-        - Migrating from NetBox: "user-guide/administration/installation/migration/migrating-from-netbox.md"
-        - Migrating from PostgreSQL to MySQL: "user-guide/administration/installation/migration/migrating-from-postgresql.md"
+          - Overview: "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
+          - Migrating from Region and Site to Location: "user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md"
+      - Migration:
+        - Migrating from NetBox: "user-guide/administration/migration/migrating-from-netbox.md"
+        - Migrating from PostgreSQL to MySQL: "user-guide/administration/migration/migrating-from-postgresql.md"
       - Configuration:
         - Configuring Nautobot: "user-guide/administration/configuration/index.md"
         - Required Settings: "user-guide/administration/configuration/required-settings.md"
@@ -126,12 +127,15 @@ nav:
           - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
           - SSO: "user-guide/administration/configuration/authentication/sso.md"
           - Remote Header: "user-guide/administration/configuration/authentication/remote.md"
-        - Permissions: "user-guide/administration/permissions.md"
-        - Replicating Nautobot: "user-guide/administration/replicating-nautobot.md"
       - Tools:
-        - Nautobot Server: "user-guide/administration/nautobot-server.md"
-        - Nautobot Shell: "user-guide/administration/nautobot-shell.md"
-      - Task Queues: "user-guide/administration/celery-queues.md"
+        - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
+        - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
+      - Guides:
+        - Permissions: "user-guide/administration/guides/permissions.md"
+        - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
+        - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
+        - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
+        - Task Queues: "user-guide/administration/guides/celery-queues.md"
     - Feature Guides:
       - Creating Devices: "user-guide/feature-guides/getting-started/creating-devices.md"
       - Custom Fields: "user-guide/feature-guides/custom-fields.md"
@@ -147,7 +151,6 @@ nav:
       - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
       - GraphQL: "user-guide/feature-guides/graphql.md"
       - Relationships: "user-guide/feature-guides/relationships.md"
-      - Django Storages with S3: "user-guide/feature-guides/s3-django-storage.md"
       - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
     - Core Data Model:
       - Circuits:
@@ -203,9 +206,6 @@ nav:
       - Tenancy:
         - Tenant: "user-guide/core-data-model/tenancy/tenant.md"
         - Tenant Group: "user-guide/core-data-model/tenancy/tenantgroup.md"
-      - Users:
-        - Object Permission: "user-guide/core-data-model/users/objectpermission.md"
-        - Token: "user-guide/core-data-model/users/token.md"
       - Virtualization:
         - Cluster: "user-guide/core-data-model/virtualization/cluster.md"
         - Cluster Group: "user-guide/core-data-model/virtualization/clustergroup.md"
@@ -224,7 +224,6 @@ nav:
       - GraphQL:
         - Overview: "user-guide/platform-functionality/graphql.md"
         - GraphQL Queries: "user-guide/platform-functionality/graphqlquery.md"
-      - Health Checks: "user-guide/platform-functionality/healthcheck.md"
       - Image Attachments: "user-guide/platform-functionality/imageattachment.md"
       - Jobs:
         - Overview: "user-guide/platform-functionality/jobs/index.md"
@@ -234,7 +233,6 @@ nav:
         - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
       - NAPALM: "user-guide/platform-functionality/napalm.md"
       - Notes: "user-guide/platform-functionality/note.md"
-      - Prometheus Metrics: "user-guide/platform-functionality/prometheus-metrics.md"
       - Relationships: "user-guide/platform-functionality/relationship.md"
       - REST API:
         - Overview: "user-guide/platform-functionality/rest-api/overview.md"
@@ -246,6 +244,9 @@ nav:
       - Statuses: "user-guide/platform-functionality/status.md"
       - Tags: "user-guide/platform-functionality/tag.md"
       - Template Filters: "user-guide/platform-functionality/template-filters.md"
+      - Users:
+        - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
+        - Token: "user-guide/platform-functionality/users/token.md"
       - Webhooks: "user-guide/platform-functionality/webhook.md"
   - Developer Guide:
     - Overview: "development/index.md"
@@ -271,7 +272,7 @@ nav:
           - Django Generic Views: "development/apps/api/views/django-generic-views.md"
           - Notes: "development/apps/api/views/notes.md"
           - View Overrides: "development/apps/api/views/view-overrides.md"
-          - Legacy View Overrides: "development/apps/api/views/override-views.md"
+          - Legacy View Overrides: "development/apps/api/views/core-view-overrides.md"
       - Platform Features:
         - Overview: "development/apps/api/platform-features/index.md"
         - Custom Validators: "development/apps/api/platform-features/custom-validators.md"
