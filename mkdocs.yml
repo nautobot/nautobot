@@ -88,6 +88,7 @@ plugins:
         - docs/generate_code_reference_pages.py
   - "include-markdown"
   - "mkdocs-version-annotations"
+  - "section-index"
   - "mkdocstrings":
       default_handler: "python"
       handlers:
@@ -101,10 +102,10 @@ plugins:
 nav:
   - Overview: "index.md"
   - User Guide:
-    - Overview: "user-guide/index.md"
+    - "user-guide/index.md"
     - Administration:
       - Installation:
-        - Installing Prerequisites: "user-guide/administration/installation/index.md"
+        - "user-guide/administration/installation/index.md"
         - Installing Nautobot: "user-guide/administration/installation/nautobot.md"
         - Deploying Nautobot Services: "user-guide/administration/installation/services.md"
         - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
@@ -114,13 +115,13 @@ nav:
       - Upgrading:
         - Upgrading Nautobot: "user-guide/administration/upgrading/upgrading.md"
         - Upgrading Nautobot from v1.X to v2.0:
-          - Overview: "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
+          - "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
           - Migrating from Region and Site to Location: "user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md"
       - Migration:
         - Migrating from NetBox: "user-guide/administration/migration/migrating-from-netbox.md"
         - Migrating from PostgreSQL to MySQL: "user-guide/administration/migration/migrating-from-postgresql.md"
       - Configuration:
-        - Configuring Nautobot: "user-guide/administration/configuration/index.md"
+        - "user-guide/administration/configuration/index.md"
         - Required Settings: "user-guide/administration/configuration/required-settings.md"
         - Optional Settings: "user-guide/administration/configuration/optional-settings.md"
         - External Authentication:
@@ -222,11 +223,11 @@ nav:
       - Export Templates: "user-guide/platform-functionality/exporttemplate.md"
       - Git Repositories: "user-guide/platform-functionality/gitrepository.md"
       - GraphQL:
-        - Overview: "user-guide/platform-functionality/graphql.md"
+        - "user-guide/platform-functionality/graphql.md"
         - GraphQL Queries: "user-guide/platform-functionality/graphqlquery.md"
       - Image Attachments: "user-guide/platform-functionality/imageattachment.md"
       - Jobs:
-        - Overview: "user-guide/platform-functionality/jobs/index.md"
+        - "user-guide/platform-functionality/jobs/index.md"
         - Job Buttons: "user-guide/platform-functionality/jobs/jobbutton.md"
         - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
         - Job Models: "user-guide/platform-functionality/jobs/models.md"
@@ -235,7 +236,7 @@ nav:
       - Notes: "user-guide/platform-functionality/note.md"
       - Relationships: "user-guide/platform-functionality/relationship.md"
       - REST API:
-        - Overview: "user-guide/platform-functionality/rest-api/overview.md"
+        - "user-guide/platform-functionality/rest-api/overview.md"
         - Filtering: "user-guide/platform-functionality/rest-api/filtering.md"
         - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
         - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
@@ -249,18 +250,18 @@ nav:
         - Token: "user-guide/platform-functionality/users/token.md"
       - Webhooks: "user-guide/platform-functionality/webhook.md"
   - Developer Guide:
-    - Overview: "development/index.md"
-    - Jobs Developer Guide: "user-guide/platform-functionality/jobs/index.md"
+    - "development/index.md"
+    - Jobs Developer Guide: "development/jobs.md"
     - App Developer Guide:
-      - Overview: "development/apps/index.md"
+      - "development/apps/index.md"
       - Setup: "development/apps/api/setup.md"
       - Models:
-        - Adding New Models: "development/apps/api/models/index.md"
+        - "development/apps/api/models/index.md"
         - Global Search: "development/apps/api/models/global-search.md"
         - GraphQL: "development/apps/api/models/graphql.md"
         - Django Admin: "development/apps/api/models/django-admin.md"
       - Views:
-        - Overview: "development/apps/api/views/index.md"
+        - "development/apps/api/views/index.md"
         - NautobotUIViewSet: "development/apps/api/views/nautobotuiviewset.md"
         - NautobotUIViewSetRouter: "development/apps/api/views/nautobotuiviewsetrouter.md"
         - Nautobot Generic Views: "development/apps/api/views/nautobot-generic-views.md"
@@ -274,7 +275,7 @@ nav:
           - View Overrides: "development/apps/api/views/view-overrides.md"
           - Legacy View Overrides: "development/apps/api/views/core-view-overrides.md"
       - Platform Features:
-        - Overview: "development/apps/api/platform-features/index.md"
+        - "development/apps/api/platform-features/index.md"
         - Custom Validators: "development/apps/api/platform-features/custom-validators.md"
         - Filter Extentions: "development/apps/api/platform-features/filter-extentions.md"
         - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
@@ -283,7 +284,7 @@ nav:
         - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
         - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
       - UI Extentions:
-        - Overview: "development/apps/api/ui-extentions/index.md"
+        - "development/apps/api/ui-extentions/index.md"
         - Banners: "development/apps/api/ui-extentions/banners.md"
         - Home Page: "development/apps/api/ui-extentions/home-page.md"
         - Navigation: "development/apps/api/ui-extentions/navigation.md"
@@ -307,7 +308,7 @@ nav:
       - Advanced:
         - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
     - Core Developer Guide:
-      - Introduction: "development/core/index.md"
+      - "development/core/index.md"
       - Getting Started: "development/core/getting-started.md"
       - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
       - Best Practices: "development/core/best-practices.md"
@@ -324,7 +325,7 @@ nav:
       - User Preferences: "development/core/user-preferences.md"
       - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
-    - Overview: "release-notes/index.md"
+    - "release-notes/index.md"
     - Version 2.0: "release-notes/version-2.0.md"
     - Version 1.5: "release-notes/version-1.5.md"
     - Version 1.4: "release-notes/version-1.4.md"
@@ -333,7 +334,7 @@ nav:
     - Version 1.1: "release-notes/version-1.1.md"
     - Version 1.0: "release-notes/version-1.0.md"
   - Nautobot Apps:
-    - Overview: "apps/index.md"
+    - "apps/index.md"
     - Network to Code App Docs:
       - Nautobot ChatOps: "https://docs.nautobot.com/projects/chatops/en/latest/"
       - Nautobot Circuit Maintenance: "https://docs.nautobot.com/projects/circuit-maintenance/en/latest/"
