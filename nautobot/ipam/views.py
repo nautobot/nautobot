@@ -9,9 +9,8 @@ from django.db.models import Prefetch, ProtectedError, Q
 from django.forms.models import model_to_dict
 from django.templatetags.static import static
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
 from django.urls import reverse
+from django.utils.html import escape
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.views.generic import View
