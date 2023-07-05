@@ -51,6 +51,8 @@ On the `Add a new VLAN` form:
 4. Select `Vancouver 1` from the `Location` selector drop-down
 5. Click on the `Create and Add Another` button
 
+On the `Add a new VLAN` form:
+
 1. Populate `ID` with `100`
 2. Populate `Name` with `vlan 100`
 3. Select `Status` as `Active`
