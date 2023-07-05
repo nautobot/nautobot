@@ -1,6 +1,6 @@
 # Installation
 
-This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](../../../docker/index.md).
+This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](./docker.md).
 
 ## About Dependencies
 
@@ -101,7 +101,7 @@ Nautobot should work on any POSIX-compliant system including practically any fla
 
 ### Running Nautobot in Docker
 
-Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](../../../docker/index.md) for more information.
+Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](./docker.md) for more information.
 
 ## Upgrading
 

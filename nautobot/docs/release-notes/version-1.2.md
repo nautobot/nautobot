@@ -117,7 +117,7 @@ For more details, please refer to the [Secrets](../user-guide/platform-functiona
 
 #### Software-Defined Home Page ([#674](https://github.com/nautobot/nautobot/pull/674), [#716](https://github.com/nautobot/nautobot/pull/716))
 
-Nautobot core applications and plugins can now both define panels, groups, and items to populate the Nautobot home page. The home page now dynamically reflows to accommodate available content. Plugin developers can add to existing panels or groups or define entirely new panels as needed. For more details, see [Populating the Home Page](../development/apps/api/ui-extentions/home-page.md).
+Nautobot core applications and plugins can now both define panels, groups, and items to populate the Nautobot home page. The home page now dynamically reflows to accommodate available content. Plugin developers can add to existing panels or groups or define entirely new panels as needed. For more details, see [Populating the Home Page](../development/apps/api/ui-extensions/home-page.md).
 
 ### Changed
 
@@ -281,7 +281,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
-- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../user-guide/platform-functionality/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
+- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../user-guide/administration/guides/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
 - [#1251](https://github.com/nautobot/nautobot/pull/1251) - Added `workflow_call` to the GitHub Actions CI workflow so that it may be called by other GHA workflows.
 
 ### Changed

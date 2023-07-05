@@ -157,7 +157,7 @@ If a custom URL is not provided for any of the links, the default link within th
 
 Default: `{}`
 
-A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../platform-functionality/caching.md#celery-sentinel-configuration).
+A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../administration/guides/caching.md#celery-sentinel-configuration).
 
 ---
 
@@ -514,7 +514,7 @@ Setting this to `True` will display a "maintenance mode" banner at the top of ev
     The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
 
 !!! note
-    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../../../docker/index.md#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
+    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../installation/docker.md#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
 
 !!! note
     If you are using `django-auth-ldap` for LDAP authentication, `django-auth-ldap` by default will try to update a user object on every log in.  If the database is in a read-only state `django-auth-ldap` will fail.  You will also need to set `AUTH_LDAP_ALWAYS_UPDATE_USER=False` and `AUTH_LDAP_NO_NEW_USERS=True` to avoid this, please see the [`django-auth-ldap` documentation](https://django-auth-ldap.readthedocs.io/en/stable/reference.html) for more information.

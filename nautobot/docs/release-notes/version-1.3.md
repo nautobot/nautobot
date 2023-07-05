@@ -19,7 +19,7 @@ For the initial release only dynamic groups of `Device` and `VirtualMachine` obj
 
 Plugins can now extend existing FilterSets and Filter Forms. This allows plugins to provide alternative lookup methods or custom queries in the UI or API that may not already exist today.
 
-You can refer to the [plugin development guide](../development/apps/api/platform-features/filter-extentions.md) on how to create new filters and fields.
+You can refer to the [plugin development guide](../development/apps/api/platform-features/filter-extensions.md) on how to create new filters and fields.
 
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 

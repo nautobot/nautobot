@@ -111,7 +111,7 @@ nav:
         - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
         - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
         - Installing and Using Plugins: "user-guide/administration/installation/app-install.md"
-        - Nautobot Docker Images: "docker/index.md"
+        - Nautobot Docker Images: "user-guide/administration/installation/docker.md"
       - Upgrading:
         - Upgrading Nautobot: "user-guide/administration/upgrading/upgrading.md"
         - Upgrading Nautobot from v1.X to v2.0:
@@ -132,6 +132,7 @@ nav:
         - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
         - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
       - Guides:
+        - Caching: "user-guide/administration/guides/caching.md"
         - Permissions: "user-guide/administration/guides/permissions.md"
         - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
         - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
@@ -198,7 +199,7 @@ nav:
       - IPAM:
         - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
         - Prefix: "user-guide/core-data-model/ipam/prefix.md"
-        - Rir: "user-guide/core-data-model/ipam/rir.md"
+        - RIR: "user-guide/core-data-model/ipam/rir.md"
         - Route Target: "user-guide/core-data-model/ipam/routetarget.md"
         - Service: "user-guide/core-data-model/ipam/service.md"
         - VLAN: "user-guide/core-data-model/ipam/vlan.md"
@@ -214,7 +215,6 @@ nav:
         - Virtual Machine: "user-guide/core-data-model/virtualization/virtualmachine.md"
         - VM Interface: "user-guide/core-data-model/virtualization/vminterface.md"
     - Platform Functionality:
-      - Caching: "user-guide/platform-functionality/caching.md"
       - Change Logging: "user-guide/platform-functionality/change-logging.md"
       - Computed Fields: "user-guide/platform-functionality/computedfield.md"
       - Custom Fields: "user-guide/platform-functionality/customfield.md"
@@ -277,19 +277,19 @@ nav:
       - Platform Features:
         - "development/apps/api/platform-features/index.md"
         - Custom Validators: "development/apps/api/platform-features/custom-validators.md"
-        - Filter Extentions: "development/apps/api/platform-features/filter-extentions.md"
+        - Filter Extentions: "development/apps/api/platform-features/filter-extensions.md"
         - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
         - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
         - Jobs: "development/apps/api/platform-features/jobs.md"
         - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
         - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
-      - UI Extentions:
-        - "development/apps/api/ui-extentions/index.md"
-        - Banners: "development/apps/api/ui-extentions/banners.md"
-        - Home Page: "development/apps/api/ui-extentions/home-page.md"
-        - Navigation: "development/apps/api/ui-extentions/navigation.md"
-        - Object Detail Views: "development/apps/api/ui-extentions/object-detail-views.md"
-        - Tabs: "development/apps/api/ui-extentions/tabs.md"
+      - UI Extensions:
+        - "development/apps/api/ui-extensions/index.md"
+        - Banners: "development/apps/api/ui-extensions/banners.md"
+        - Home Page: "development/apps/api/ui-extensions/home-page.md"
+        - Navigation: "development/apps/api/ui-extensions/navigation.md"
+        - Object Detail Views: "development/apps/api/ui-extensions/object-detail-views.md"
+        - Tabs: "development/apps/api/ui-extensions/tabs.md"
       - Code Reference:
         - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
         - nautobot.apps.admin: "code-reference/nautobot/apps/admin.md"
