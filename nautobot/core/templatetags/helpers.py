@@ -698,8 +698,6 @@ def hyperlinked_object_with_color(obj):
 @register.filter()
 def queryset_to_pks(obj):
     """Return all object UUIDs as a string separated by `,`"""
-    result = []
-    if obj:
-        for pk in obj.values_list("pk", flat=True):
-            result.append(str(pk))
+    result = list(obj.values_list("pk", flat=True)) if obj else []
+    result = [str(entry) for entry in result]
     return ",".join(result)

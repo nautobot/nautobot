@@ -86,7 +86,7 @@ Once on the `Editing IP address` page:
 
 +++ 2.0.0
 
-After upgrading to Nautobot v2.0 and its data migrations, you may end up with some duplicate `IP Addresses` across different `Namespaces`. Check out this [IP Address Merge tool](../ip-address-merge-tool.md) to collapse unnecessarily duplicated `IP Addresses`.
+After upgrading to Nautobot v2.0, in order to satisfy new uniqueness constraints, the data migrations may duplicate `IP Addresses` across different `Namespaces`. Check out this [IP Address Merge tool](../ip-address-merge-tool.md) to collapse unnecessarily duplicated `IP Addresses`.
 
 ## Finding an IP Address for an Interface
 
