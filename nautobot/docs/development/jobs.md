@@ -2,6 +2,11 @@
 
 TODO: Jobs authorship introduction
 
+## Migrating Jobs from v1 to v2
+
++/- 2.0.0
+    See [Migrating Jobs From Nautobot v1](../user-guide/administration/upgrading/from-v1/migrating-jobs-from-nautobot-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
+
 ## Writing Jobs
 
 Jobs may be installed in one of three ways:
@@ -493,7 +498,7 @@ class MyJob(Job):
 ### Accessing User and Job Result
 
 +/- 2.0.0
-    The web request is no longer accessible to running jobs.
+    The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
 
 The user that initiated the job and the job result associated to the job can be accessed through properties on the job class:
 
@@ -758,7 +763,7 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         # Run Device Job function
 
     def receive_job_button(self, obj):
-        user = self.request.user
+        user = self.user
         if isinstance(obj, Location):
             if not user.has_perm("dcim.add_location"):
                 self.logger.error("User '%s' does not have permission to add a Location.", user, extra={"object": obj})
