@@ -2,9 +2,7 @@
 
 +++ 2.0.0
 
-Apps can define settings that will be stored in the Database Backend through [Django Constance](https://django-constance.readthedocs.io/en/latest/#). All of the standard Django Constance types are supported. A
-Constance Fieldset will automatically be created for your plugin. We have added the `ConstanceConfigItem`
-namedtuple to assist in the configurations.
+Apps can define settings that will be stored in the Database Backend through [Django Constance](https://django-constance.readthedocs.io/en/latest/#). All of the standard Django Constance types are supported. A Constance Fieldset will automatically be created for your plugin. We have added the `ConstanceConfigItem` `namedtuple` to assist in the configurations.
 
 ```python
 # __init__.py
@@ -13,9 +11,9 @@ from nautobot.apps import ConstanceConfigItem, NautobotAppConfig
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
     constance_config = {
-        'DOG': ConstanceConfigItem(default='woof', help_text='Dog sound'),
-        'CAT': ConstanceConfigItem(default='meow', help_text='Cat sound'),
-        'FOX': ConstanceConfigItem(default=123, help_text='Fox sound', field_type=int),
+        'DOG_SOUND': ConstanceConfigItem(default='woof', help_text='Dog sound'),
+        'CAT_SOUND': ConstanceConfigItem(default='meow', help_text='Cat sound'),
+        'FOX_SOUND': ConstanceConfigItem(default=123, help_text='Fox sound', field_type=int),
     }
 ```
 
