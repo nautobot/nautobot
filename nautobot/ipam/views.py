@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.html import escape
 from django.utils.http import urlencode
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
