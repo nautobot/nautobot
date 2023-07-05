@@ -26,3 +26,6 @@
 - Model: "Device"
   Filter: "rear_ports"
   Correction: "Split into `has_rear_ports` and `rear_ports` filters"
+- Model: "IPAddress"
+  Filter: "parent"
+  Correction: "The `parent` filter now checks for an exact match of the parent Prefix; for legacy `net_host_contained` behavior now use the new `prefix` filter instead"
