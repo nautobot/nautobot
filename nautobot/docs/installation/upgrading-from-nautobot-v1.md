@@ -146,7 +146,7 @@ The following guidance has been added to the `IPAddress` model:
 
 - An `IPAddress` should have a parent `Prefix` of type `Network`
 - An `IPAddress` should not be created if a suitable parent `Prefix` of type `Network` does not exist
-- An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network`.
+- An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network`
 
 As with the [`Prefix` parenting guidance](#prefix-parenting-guidance) above, violating this guidance in Nautobot 2.0 will result in a warning; in a future Nautobot release this will be changed to an enforced data constraint.
 
