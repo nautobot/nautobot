@@ -121,14 +121,16 @@ The following changes have been made to the `Prefix` model.
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
 
-#### Prefix Parenting Constraints
+#### Prefix Parenting Guidance
 
-The following constraints have been added to the `Prefix` model in order to ensure more accurate network modeling:
+The following guidance has been added for the `Prefix` model in order to ensure more accurate network modeling:
 
-- A `Prefix` of type `Container` can only have a parent of type `Container`
-- A `Prefix` of type `Network` can only have a parent of type `Container`
-- A `Prefix` of type `Pool` can only have a parent of type `Network`
+- A `Prefix` of type `Container` should only have a parent (if any) of type `Container`
+- A `Prefix` of type `Network` should only have a parent (if any) of type `Container`
+- A `Prefix` of type `Pool` should only have a parent (if any) of type `Network`
 - Any `Prefix` can be a root prefix (i.e. have no parent)
+
+In Nautobot 2.0, creating or updating prefixes that violate this guidance will result in a warning; in a future Nautobot release this will be changed to an enforced data constraint.
 
 ### IPAddress Parenting Concrete Relationship
 
@@ -138,13 +140,15 @@ The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Pref
 |------------------------|-----------------|
 | `get_child_prefixes()` | `descendants()` |
 
-#### IPAddress Parenting Constraints
+#### IPAddress Parenting Guidance
 
-The following constraints have been added to the `IPAddress` model:
+The following guidance has been added to the `IPAddress` model:
 
-- An `IPAddress` must have a parent `Prefix` of type `Network`
-- An `IPAddress` cannot be created if a suitable parent `Prefix` of type `Network` does not exist
-- An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network`. This is because the `IPAddress` must have a concrete relationship to a `Network` and the `Pool` membership is derived from the IP address being within the `Pool`'s range.
+- An `IPAddress` should have a parent `Prefix` of type `Network`
+- An `IPAddress` should not be created if a suitable parent `Prefix` of type `Network` does not exist
+- An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network`
+
+As with the [`Prefix` parenting guidance](#prefix-parenting-guidance) above, violating this guidance in Nautobot 2.0 will result in a warning; in a future Nautobot release this will be changed to an enforced data constraint.
 
 ### Prefix get_utilization Method
 
@@ -345,6 +349,11 @@ Therefore all code that is calling `JobResult.set_status()` (which has been remo
 
 ## Job Changes
 
+### Migrating Jobs From v1 to v2
+
++/- 2.0.0
+    See [Migrating Jobs From Nautobot v1](../apps/migrating-jobs-from-nautobot-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
+
 ### Fundamental Changes
 
 The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental changes to the job's methods and signatures were required to support this change:
@@ -394,3 +403,7 @@ The `commit_default` job field has been renamed to `dryrun_default` and the defa
 
 !!! important
     Nautobot no longer enforces any job behavior when dryrun is set. It is now the job author's responsibility to define and enforce the execution of a "dry run".
+
+### Request Property
+
+The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.

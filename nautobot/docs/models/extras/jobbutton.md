@@ -128,7 +128,7 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         # Run Device Job function
 
     def receive_job_button(self, obj):
-        user = self.request.user
+        user = self.user
         if isinstance(obj, Location):
             if not user.has_perm("dcim.add_location"):
                 self.logger.error("User '%s' does not have permission to add a Location.", user, extra={"object": obj})
