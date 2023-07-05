@@ -51,9 +51,12 @@ The `get_utilization` method on the `ipam.Prefix` model has been updated in 2.0 
 
 +++ 2.0.0
 
-Prefixes and IP addresses within a namespace are organized into a hierarchy using the `parent` field. There are limitations on the types of prefixes that can be assigned as parents:
+Prefixes and IP addresses within a namespace are organized into a hierarchy using the `parent` field. There is guidance for the types of prefixes that can be assigned as parents:
 
-* A `Prefix` of type `Container` can only have a parent of type `Container`
-* A `Prefix` of type `Network` can only have a parent of type `Container`
-* A `Prefix` of type `Pool` can only have a parent of type `Network`
+* A `Prefix` of type `Container` should only have a parent (if any) of type `Container`
+* A `Prefix` of type `Network` should only have a parent (if any) of type `Container`
+* A `Prefix` of type `Pool` should only have a parent (if any) of type `Network`
 * Any `Prefix` can be a root prefix (i.e. have no parent)
+
+!!! warning
+    In a future release of Nautobot, this guidance will become an enforced data constraint.

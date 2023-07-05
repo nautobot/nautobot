@@ -1,0 +1,4 @@
+Added `--save` option to `nautobot-server validate_models` command.
+Added `successful_post` callback function to `ObjectEditView`.
+Added `parent` filter for `Prefix` objects.
+Added warning messages when creating or editing a `Prefix` or `IPAddress` that does not follow prefix `type` guidance.
