@@ -11,3 +11,6 @@ app_name/                   # "nautobot_animal_sounds"
         - core-data-model/
           - object_model.html  # "animal.html"
 ```
+
++/- 2.0.0
+    If you have a need to deviate from this structure, your model can define as a class attribute a `documentation_static_path` string to provide a different location within the `static/` subdirectory.

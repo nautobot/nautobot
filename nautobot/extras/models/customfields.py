@@ -664,6 +664,8 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     value = models.CharField(max_length=100)
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
+    documentation_static_path = "docs/user-guide/platform-functionality/customfield.html"
+
     class Meta:
         ordering = ["custom_field", "weight", "value"]
         unique_together = ["custom_field", "value"]

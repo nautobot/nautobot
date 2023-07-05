@@ -1,8 +1,11 @@
 # Prefixes
 
-A prefix is an IPv4 or IPv6 network and mask expressed in CIDR notation (e.g. 192.0.2.0/24). A prefix entails only the "network portion" of an IP address: All bits in the address not covered by the mask must be zero. (In other words, a prefix cannot be a specific IP address.)
+A prefix is an IPv4 or IPv6 network and mask expressed in CIDR notation (e.g. 192.0.2.0/24). A prefix entails only the "network portion" of an IP address: All bits in the address not covered by the mask must be zero. (In other words, a prefix cannot be a specific IP address, except in the case of /32 IPv4 prefixes and /128 IPv6 prefixes.)
 
-Each prefix can be assigned to a particular site (optionally also to a location within the site) and a virtual routing and forwarding instance (VRF). Each VRF represents a separate IP space or routing table. All prefixes not assigned to a VRF are considered to be in the "global" table.
+Each prefix belongs to a specific namespace, and is unique within that namespace. Each prefix can also optionally be assigned to a particular location, as well as to zero or more a virtual routing and forwarding (VRF) instances. All prefixes not assigned to a VRF are considered to be in the "global" VRF within their namespace.
+
++/- 2.0.0
+    In Nautobot 1.x, prior to the introduction of the namespace data model, a prefix might or might not be unique within its assigned VRF. In Nautobot 2.0, prefixes are always unique within their namespace. You may need to do some cleanup of your data after migrating from Nautobot 1.x to suit the new data requirements.
 
 Each prefix must be assigned a [`status`](../../platform-functionality/status.md) and can optionally be assigned a role. These terms are often used interchangeably so it's important to recognize the difference between them. The **status** defines a prefix's operational state. The following statuses are provided by default:
 

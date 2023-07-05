@@ -2,7 +2,10 @@
 
 An IP address comprises a single host address (either IPv4 or IPv6) and its subnet mask. Its mask should match exactly how the IP address is configured on an interface in the real world.
 
-Like a prefix, an IP address can optionally be assigned to a VRF (otherwise, it will appear in the "global" table). IP addresses are automatically arranged under parent prefixes within their respective VRFs according to the IP hierarchy.
+IP addresses are automatically arranged under parent prefixes according to the IP hierarchy. IP addresses are not directly assigned to namespaces or VRFs on an individual basis, but instead derive their namespace and VRF(s) from their parent prefix.
+
++/- 2.0.0
+    In Nautobot 1.x, IP addresses were only loosely associated to prefixes, and it was possible to create "orphan" IP addresses that had no corresponding prefix record. In Nautobot 2.0 this is no longer the case; each IP address has a parent prefix, and you can no longer create IP addresses that do not belong to a defined prefix and namespace. When migrating existing data from Nautobot 1.x, parent prefixes will be automatically created where needed, but you may need to do some additional cleanup of your IPAM data after the migration in order to ensure its accuracy and correctness.
 
 Each IP address can also be assigned an operational [`status`](../../platform-functionality/status.md) and a functional role.  The following statuses are available by default:
 

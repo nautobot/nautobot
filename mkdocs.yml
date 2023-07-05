@@ -198,6 +198,7 @@ nav:
         - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
       - IPAM:
         - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
+        - Namespace: "user-guide/core-data-model/ipam/namespace.md"
         - Prefix: "user-guide/core-data-model/ipam/prefix.md"
         - RIR: "user-guide/core-data-model/ipam/rir.md"
         - Route Target: "user-guide/core-data-model/ipam/routetarget.md"
