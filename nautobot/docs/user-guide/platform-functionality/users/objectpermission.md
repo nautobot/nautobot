@@ -27,16 +27,17 @@ In addition to these, permissions can also grant custom actions that may be requ
 
 Constraints are expressed as a JSON object or list representing a [Django query filter](https://docs.djangoproject.com/en/stable/ref/models/querysets/#field-lookups). This is the same syntax that you would pass to the QuerySet `filter()` method when performing a query using the Django ORM. As with query filters, double underscores can be used to traverse related objects or invoke lookup expressions. Some example queries and their corresponding definitions are shown below.
 
-All attributes defined within a single JSON object are applied with a logical AND. For example, suppose you assign a permission for the site model with the following constraints.
+All attributes defined within a single JSON object are applied with a logical AND. For example, suppose you assign a permission for the location model with the following constraints.
 
 ```json
 {
   "status__name": "Active",
-  "region__name": "Americas"
+  "parent__location_type__name": "Continent",
+  "parent__name": "Americas"
 }
 ```
 
-The permission will grant access only to sites which have a status of "Active" **and** which are assigned to the "Americas" region.
+The permission will grant access only to location which have a status of "Active" **and** which are assigned to the "Americas" continent.
 
 To achieve a logical OR with a different set of constraints, define multiple objects within a list. For example, if you want to constrain the permission to VLANs with an ID between 100 and 199 _or_ a status of "reserved," do the following:
 

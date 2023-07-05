@@ -11,7 +11,7 @@ The list of objects returned from the database when rendering an export template
 ```jinja2
 {% for rack in queryset %}
 Rack: {{ rack.name }}
-Site: {{ rack.site.name }}
+Location: {{ rack.location.name }}
 Height: {{ rack.u_height }}U
 {% endfor %}
 ```

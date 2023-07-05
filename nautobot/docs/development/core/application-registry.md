@@ -95,7 +95,7 @@ A dictionary of particular features (e.g. custom fields) mapped to the Nautobot 
 {
     'custom_fields': {
         'circuits': ['provider', 'circuit'],
-        'dcim': ['site', 'rack', 'devicetype', ...],
+        'dcim': ['location', 'rack', 'devicetype', ...],
         ...
     },
     'webhooks': {
@@ -183,7 +183,7 @@ Plugin [custom validator classes](../apps/api/platform-features/custom-validator
 ```python
 {
     'circuits.circuit': [CircuitMustHaveDescriptionValidator],
-    'dcim.site': [SiteMustHaveRegionValidator, SiteNameMustIncludeCountryCodeValidator],
+    'dcim.location': [LocationMustHaveRegionValidator, LocationNameMustIncludeCountryCodeValidator],
 }
 ```
 
@@ -206,7 +206,7 @@ Plugin content that gets embedded into core Nautobot templates. The store compri
 
 ```python
 {
-    'dcim.site': [
+    'dcim.location': [
         <TemplateExtension>, <TemplateExtension>, <TemplateExtension>,
     ],
     'dcim.rack': [

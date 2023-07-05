@@ -2,11 +2,11 @@
 
 ## Filtering Objects
 
-The objects returned by an API list endpoint can be filtered by attaching one or more query parameters to the request URL. For example, `GET /api/dcim/sites/?status=active` will return only sites with a status of "active."
+The objects returned by an API list endpoint can be filtered by attaching one or more query parameters to the request URL. For example, `GET /api/dcim/locations/?status=active` will return only locations with a status of "active."
 
-Multiple parameters can be joined to further narrow results. For example, `GET /api/dcim/sites/?status=active&region=europe` will return only active sites within the Europe region.
+Multiple parameters can be joined to further narrow results. For example, `GET /api/dcim/locations/?status=active&parent=europe&location_type=country` will return only active "country" type locations in Europe.
 
-Generally, passing multiple values for a single parameter will result in a logical OR operation. For example, `GET /api/dcim/sites/?region=north-america&region=south-america` will return sites in North America _or_ South America. However, a logical AND operation will be used in instances where a field may have multiple values, such as tags. For example, `GET /api/dcim/sites/?tag=foo&tag=bar` will return only sites which have both the "foo" _and_ "bar" tags applied.
+Generally, passing multiple values for a single parameter will result in a logical OR operation. For example, `GET /api/dcim/locations/?parent=north-america&parent=south-america&location_type=country` will return "country" type locations in North America _or_ South America. However, a logical AND operation will be used in instances where a field may have multiple values, such as tags. For example, `GET /api/dcim/locations/?tag=foo&tag=bar` will return only locations which have both the "foo" _and_ "bar" tags applied.
 
 +/- 1.4.0
     If [STRICT_FILTERING](../../administration/configuration/optional-settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
@@ -54,14 +54,14 @@ Example output:
 
 ### Filtering by Custom Field
 
-To filter results by a custom field value, prepend `cf_` to the custom field name. For example, the following query will return only sites where a custom field named `foo` is equal to 123:
+To filter results by a custom field value, prepend `cf_` to the custom field name. For example, the following query will return only locations where a custom field named `foo` is equal to 123:
 
 ```no-highlight
-GET /api/dcim/sites/?cf_foo=123
+GET /api/dcim/locations/?cf_foo=123
 ```
 
 !!! note
-    For custom field filters, due to historical details of implementation, only a single filter value can be specified when matching a given field. In other words, in the above example, you could _not_ add `&cf_foo=456` to the query in order to get all sites where custom field `foo` is 123 _or_ 456; instead you would need to run two separate queries. This restriction does not apply to custom field filters using lookup expressions (next section) and will likely be changed in a future major version of Nautobot.
+    For custom field filters, due to historical details of implementation, only a single filter value can be specified when matching a given field. In other words, in the above example, you could _not_ add `&cf_foo=456` to the query in order to get all locations where custom field `foo` is 123 _or_ 456; instead you would need to run two separate queries. This restriction does not apply to custom field filters using lookup expressions (next section) and will likely be changed in a future major version of Nautobot.
 
 Custom fields can be mixed with built-in fields to further narrow results. When creating a custom string field, the type of filtering selected (loose versus exact) determines whether partial or full matching is used.
 

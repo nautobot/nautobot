@@ -8,7 +8,7 @@
 
 ### How GraphQL simplifies API Interactions
 
-When interacting with APIs, It's often necessary to build relationships between multiple models to achieve the result that is desired. Doing this typically requires multiple API calls to create the relationships. For example, lets assume that there are two devices in Nautobot. Each are assigned a site, region, roles, interfaces, and IP Addresses.
+When interacting with APIs, It's often necessary to build relationships between multiple models to achieve the result that is desired. Doing this typically requires multiple API calls to create the relationships. For example, lets assume that there are two devices in Nautobot. Each are assigned a location, region, roles, interfaces, and IP Addresses.
 
 Simply querying the `/api/dcim/devices/` API route provides:
 
@@ -182,9 +182,9 @@ The results of the query look like:
 
 ### Filtering Queries
 
-These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Nautobot allows users to filter queries at any level as desired to narrow the scope of the returned data. As an example, we can filter the queried devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
+These queries are great, but they are displaying the interface attributes and device names for every device in the Nautobot inventory. Nautobot allows users to filter queries at any level as desired to narrow the scope of the returned data. As an example, we can filter the queried devices by their location. This is done by adding `(location: "<location name>")` after `devices`. For example: `query { devices(location: "ams") { name }}` will display all devices in the `ams` location.
 
-As an example. We can query devices by their site location. This is done by adding `(site: "<site name>")` after `devices`. For example: `query { devices(site: "ams") { name }}` will display all devices in the `ams` site.
+As an example. We can query devices by their location. This is done by adding `(location: "<location name>")` after `devices`. For example: `query { devices(location: "ams") { name }}` will display all devices in the `ams` location.
 
 ??? info "View GraphQL Query Results"
     <!-- markdownlint-disable-next-line MD033 -->
@@ -192,11 +192,11 @@ As an example. We can query devices by their site location. This is done by addi
 
 <!-- markdownlint-disable-next-line MD033 -->
 <br />
-GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `site`.
+GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `location`.
 
 ```graphql
 query {
-  devices(site: "ams", role: "edge") {
+  devices(location: "ams", role: "edge") {
     name
   }
 }
@@ -212,7 +212,7 @@ You can also filter at deeper levels of the query. On many to one relationships 
 
 ```graphql
 query {
-  devices(site: "ams", role: "edge") {
+  devices(location: "ams", role: "edge") {
     name
     interfaces(name: "Ethernet1/1") {
       name
@@ -223,7 +223,7 @@ query {
 
 ```graphql
 query {
-  sites(name: "ams") {
+  locations(name: "ams") {
     devices(role: "edge") {
       name
       interfaces(name: "Ethernet1/1") {
@@ -243,7 +243,7 @@ query {
 
     ```graphql
     query {
-      devices(site: "ams01", , limit: 1, offset: 1) {
+      devices(location: "ams01", , limit: 1, offset: 1) {
         name
       }
     }
@@ -291,7 +291,7 @@ gql = nb.graphql.query(query=query)
 print(json.dumps(gql.json, indent=2))
 ```
 
-The contents of the `query` variable was taken directly from the example above where we grabbed all device interfaces and associated attributes. We then take the output and print the contents as a JSON object. Now, let's iterate on the script to filter the contents with the `variable` flag. Just as we did above, we'll filter by `site`.
+The contents of the `query` variable was taken directly from the example above where we grabbed all device interfaces and associated attributes. We then take the output and print the contents as a JSON object. Now, let's iterate on the script to filter the contents with the `variable` flag. Just as we did above, we'll filter by `location`.
 
 ```python
 #!/usr/bin/env python3
@@ -299,10 +299,10 @@ The contents of the `query` variable was taken directly from the example above w
 import pynautobot
 import json
 
-variables = {"site_name": "ams"}
+variables = {"location_name": "ams"}
 query = """
-query ($site_name: String!) {
-  devices (site: $site_name) {
+query ($location_name: String!) {
+  devices (location: $location_name) {
     name
     interfaces {
       name
@@ -323,7 +323,7 @@ gql = nb.graphql.query(query=query, variables=variables)
 print(json.dumps(gql.json, indent=2))
 ```
 
-In the updated script, we add the `variables = {"site_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `site`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` site. The PyNautobot SDK has some [excellent GraphQL examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
+In the updated script, we add the `variables = {"location_name": "ams"}` variable. We then update the query to let GraphQL know that we will be sending parameters to to filter by `location`. The updated output is still a JSON object. Instead of fetching all devices, we are filtering by devices in the `ams` location. The PyNautobot SDK has some [excellent GraphQL examples](https://pynautobot.readthedocs.io/en/latest/api/core/graphql.html). Be sure to check out the documentation.
 
 ### Saving Queries
 

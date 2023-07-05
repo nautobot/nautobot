@@ -79,9 +79,9 @@ Nautobot's entire REST API is housed under the API root at `https://<hostname>/a
 * `/api/circuits/providers/`
 * `/api/circuits/circuits/`
 
-Likewise, the site, rack, and device objects are located under the "DCIM" application:
+Likewise, the location, rack, and device objects are located under the "DCIM" application:
 
-* `/api/dcim/sites/`
+* `/api/dcim/locations/`
 * `/api/dcim/racks/`
 * `/api/dcim/devices/`
 
@@ -724,14 +724,14 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
 Objects that are associated with another object by a custom [Relationship](../relationship.md) are also retrievable and modifiable via the REST API. Due to the additional processing overhead involved in retrieving and representing these relationships, they are _not_ included in default REST API `GET` responses. To include relationships data, pass `include=relationships` as a query parameter; in this case an additional key, `"relationships"`, will be included in the API response, as seen below:
 
 ```no-highlight
-GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
+GET /api/dcim/locations/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
 ```
 
 ```json
 {
     "id": "f472bb77-7f56-4e79-ac25-2dc73eb63924",
     "display": "alpha",
-    "url": "http://nautobot/api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/",
+    "url": "http://nautobot/api/dcim/locations/f472bb77-7f56-4e79-ac25-2dc73eb63924/",
 ...
     "relationships": {
         "site-to-vrf": {
@@ -753,7 +753,7 @@ GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
                 ]
             }
         },
-        "vrfs-to-sites": {
+        "vrfs-to-locations": {
             "id": "e39c53e4-78cf-4572-b116-1d8830b81b2e",
             "url": "/api/extras/relationships/e39c53e4-78cf-4572-b116-1d8830b81b2e/",
             "name": "VRFs to Sites",
@@ -775,7 +775,7 @@ GET /api/dcim/sites/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationships
             * `"object_type"` - the content-type of the related objects
             * `"objects"` - a list of all related objects, each represented in nested-serializer form as described under [Related Objects](#related-objects) above.
 
-In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-sites` Relationship to this Site.
+In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-locations` Relationship to this Site.
 
 ### Including Config Contexts
 
@@ -846,17 +846,17 @@ http://nautobot/api/ipam/prefixes/ \
 
 ### Creating Multiple Objects
 
-To create multiple instances of a model using a single request, make a `POST` request to the model's _list_ endpoint with a list of JSON objects representing each instance to be created. If successful, the response will contain a list of the newly created instances. The example below illustrates the creation of three new sites.
+To create multiple instances of a model using a single request, make a `POST` request to the model's _list_ endpoint with a list of JSON objects representing each instance to be created. If successful, the response will contain a list of the newly created instances. The example below illustrates the creation of three new locations.
 
 ```no-highlight
 curl -X POST -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.0; indent=4" \
-http://nautobot/api/dcim/sites/ \
+http://nautobot/api/dcim/locations/ \
 --data '[
-{"name": "Site 1", "region": {"name": "United States"}},
-{"name": "Site 2", "region": {"name": "United States"}},
-{"name": "Site 3", "region": {"name": "United States"}}
+{"name": "Location 1", "parent": {"name": "United States"}, "location_type": {"name": "City"}},
+{"name": "Location 2", "parent": {"name": "United States"}, "location_type": {"name": "City"}},
+{"name": "Location 3", "parent": {"name": "United States"}, "location_type": {"name": "City"}},
 ]'
 ```
 
@@ -864,19 +864,19 @@ http://nautobot/api/dcim/sites/ \
 [
     {
         "id": "0238a4e3-66f2-455a-831f-5f177215de0f",
-        "url": "http://nautobot/api/dcim/sites/0238a4e3-66f2-455a-831f-5f177215de0f/",
+        "url": "http://nautobot/api/dcim/locations/0238a4e3-66f2-455a-831f-5f177215de0f/",
         "name": "Site 1",
         ...
     },
     {
         "id": "33ac3a3b-0ee7-49b7-bf2a-244096051dc0",
-        "url": "http://nautobot/api/dcim/sites/33ac3a3b-0ee7-49b7-bf2a-244096051dc0/",
+        "url": "http://nautobot/api/dcim/locations/33ac3a3b-0ee7-49b7-bf2a-244096051dc0/",
         "name": "Site 2",
         ...
     },
     {
         "id": "10b3134d-960b-4794-ad18-0e73edd357c4",
-        "url": "http://nautobot/api/dcim/sites/10b3134d-960b-4794-ad18-0e73edd357c4/",
+        "url": "http://nautobot/api/dcim/locations/10b3134d-960b-4794-ad18-0e73edd357c4/",
         "name": "Site 3",
         ...
     }
@@ -905,7 +905,7 @@ http://nautobot/api/ipam/prefixes/b484b0ac-12e3-484a-84c0-aa17955eaedc/ \
     "label": "IPv4"
   },
   "prefix": "192.0.2.0/24",
-  "site": "http://nautobot/api/dcim/sites/8df9e629-4338-438b-8ea9-06114f7be08e/",
+  "site": "http://nautobot/api/dcim/locations/8df9e629-4338-438b-8ea9-06114f7be08e/",
   "vrf": null,
   "tenant": null,
   "vlan": null,
@@ -939,7 +939,7 @@ It is possible to modify the objects associated via Relationship with an object 
                 ]
             }
         },
-        "vrfs_to_sites": {
+        "vrfs_to_locations": {
             "source": {
                 "objects": [
                     {"name": "green"},
@@ -964,18 +964,18 @@ It is possible to modify the objects associated via Relationship with an object 
 ```
 
 !!! Note
-    Relationship keys can be omitted from the `"relationships"` dictionary, in which case the associations for that Relationship will be left unmodified. In the second example above, the existing association for the `"site_to_vrf"` Relationship would be replaced, but the `"vrfs_to_sites"` Relationship's associations would remain as-is.
+    Relationship keys can be omitted from the `"relationships"` dictionary, in which case the associations for that Relationship will be left unmodified. In the second example above, the existing association for the `"site_to_vrf"` Relationship would be replaced, but the `"vrfs_to_locations"` Relationship's associations would remain as-is.
 
 ### Updating Multiple Objects
 
-Multiple objects can be updated simultaneously by issuing a `PUT` or `PATCH` request to a model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted and the attributes to be updated. For example, to update sites with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589 and 1a414273-3d68-4586-ba22-6ae0a5702b8f to a status of "Active", issue the following request:
+Multiple objects can be updated simultaneously by issuing a `PUT` or `PATCH` request to a model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted and the attributes to be updated. For example, to update locations with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589 and 1a414273-3d68-4586-ba22-6ae0a5702b8f to a status of "Active", issue the following request:
 
 ```no-highlight
 curl -s -X PATCH \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.0" \
-http://nautobot/api/dcim/sites/ \
+http://nautobot/api/dcim/locations/ \
 --data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589", "status": {"name": "Active"}}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f", "status": {"name": "Active"}}]'
 ```
 
@@ -1002,14 +1002,14 @@ Note that `DELETE` requests do not return any data: If successful, the API will 
 
 ### Deleting Multiple Objects
 
-Nautobot supports the simultaneous deletion of multiple objects of the same type by issuing a `DELETE` request to the model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted. For example, to delete sites with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589, 1a414273-3d68-4586-ba22-6ae0a5702b8f, and c2516019-caf6-41f0-98a6-4276c1a73fa3, issue the following request:
+Nautobot supports the simultaneous deletion of multiple objects of the same type by issuing a `DELETE` request to the model's list endpoint with a list of dictionaries specifying the UUID of each object to be deleted. For example, to delete locations with UUIDs 18de055e-3ea9-4cc3-ba78-b7eef6f0d589, 1a414273-3d68-4586-ba22-6ae0a5702b8f, and c2516019-caf6-41f0-98a6-4276c1a73fa3, issue the following request:
 
 ```no-highlight
 curl -s -X DELETE \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.0" \
-http://nautobot/api/dcim/sites/ \
+http://nautobot/api/dcim/locations/ \
 --data '[{"id": "18de055e-3ea9-4cc3-ba78-b7eef6f0d589"}, {"id": "1a414273-3d68-4586-ba22-6ae0a5702b8f"}, {"id": "c2516019-caf6-41f0-98a6-4276c1a73fa3"}]'
 ```
 

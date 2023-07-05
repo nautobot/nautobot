@@ -34,7 +34,7 @@ class PrimaryModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipM
 
     A primary model is one which is materialistically relevant to the network datamodel.
     Such models form the basis of major elements of the data model, like Device,
-    IP Address, Site, VLAN, Virtual Machine, etc. Primary models usually represent
+    IP Address, Location, VLAN, Virtual Machine, etc. Primary models usually represent
     tangible or logical resources on the network, or within the organization.
     """
 

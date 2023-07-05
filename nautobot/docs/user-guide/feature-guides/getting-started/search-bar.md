@@ -28,11 +28,11 @@ Example two shows a Device-specific search:
 3. Search results for Devices with `edge` in the name
 4. *Tenants* for each Device (if applicable)
 5. *Device Type* for each Device
-6. *Site* for each Device
+6. *Location* for each Device
 
 Clicking on an of the links for the results takes you to the main page for that object. For example:
 
-* Clicking on the `Vancouver 1` Site takes you to the main page for the Site.
+* Clicking on the `Vancouver 1` Location takes you to the main page for the Location.
 * Clicking on the `edge2.van1` Device takes you to the main page for the Device
 
 ![Device search results](../images/getting-started-nautobot-ui/41-device-search-results.png)

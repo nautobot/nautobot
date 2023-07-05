@@ -1,6 +1,6 @@
 # Permissions
 
-Nautobot provides an object-based permissions framework, which replace's Django's built-in permissions model. Object-based permissions enable an administrator to grant users or groups the ability to perform an action on arbitrary subsets of objects in Nautobot, rather than all objects of a certain type. For example, it is possible to grant a user permission to view only sites within a particular region, or to modify only VLANs with a numeric ID within a certain range.
+Nautobot provides an object-based permissions framework, which replace's Django's built-in permissions model. Object-based permissions enable an administrator to grant users or groups the ability to perform an action on arbitrary subsets of objects in Nautobot, rather than all objects of a certain type. For example, it is possible to grant a user permission to view only locations within a particular location type, or to modify only VLANs with a numeric ID within a certain range.
 
 See the documentation on [user permissions](../../platform-functionality/users/objectpermission.md).
 
@@ -26,16 +26,18 @@ If the permission _has_ been granted, Nautobot will compile any specified constr
 
 ```json
 [
-    {"site__name__in":  ["NYC1", "NYC2"]},
+    {"location__name__in":  ["NYC1", "NYC2"]},
+    {"location__location_type__name__in":  ["City"]},
     {"status__name":  "Offline", "tenant__isnull":  true}
 ]
 ```
 
-This grants the user access to view any device that is assigned to a site named NYC1 or NYC2, **or** which has a status name of "Offline" and has no tenant assigned. These constraints are equivalent to the following ORM query:
+This grants the user access to view any device that is assigned to a location named NYC1 or NYC2 with location type `City`, **or** which has a status name of "Offline" and has no tenant assigned. These constraints are equivalent to the following ORM query:
 
 ```no-highlight
-Site.objects.filter(
-    Q(site__name__in=['NYC1', 'NYC2']),
+Location.objects.filter(
+    Q(location__name__in=['NYC1', 'NYC2']),
+    Q(location__location_type__name__in=['City']),
     Q(status__name='Active', tenant__isnull=True)
 )
 ```

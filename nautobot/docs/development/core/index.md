@@ -13,7 +13,7 @@ The Nautobot Core Team is responsible for the direction and execution of the cod
 Nautobot components are arranged into functional subsections called _apps_ (a carryover from Django vernacular). Each app holds the models, views, and templates relevant to a particular function:
 
 * `circuits`: Communications circuits and providers (not to be confused with power circuits)
-* `dcim`: Datacenter infrastructure management (sites, racks, and devices)
+* `dcim`: Datacenter infrastructure management (locations, racks, and devices)
 * `extras`: Additional features not considered part of the core data model
 * `ipam`: IP address management (VRFs, prefixes, IP addresses, and VLANs)
 * `tenancy`: Tenants (such as customers) to which Nautobot objects may be assigned

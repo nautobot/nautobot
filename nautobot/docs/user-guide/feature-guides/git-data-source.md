@@ -131,7 +131,7 @@ Current contents:
 ...
 ```
 
-The template needs to be modified to provide more information than just a list of hostnames.  The site needs to be added.
+The template needs to be modified to provide more information than just a list of hostnames. The location needs to be added.
 
 The updated template is now:
 
@@ -140,7 +140,7 @@ The updated template is now:
 {% for device in queryset %}
 {% if device.status %}
 - {{ device.name }}:
-  site: {{ device.site }}
+  location: {{ device.location }}
 {% endif %}
 {% endfor %}
 ...
@@ -231,18 +231,18 @@ The repository structure is:
 ▶ tree config_contexts
 config_contexts
 ├── devices
-│   ├── site-a-bb-01.yml
-│   ├── site-a-rtr-01.yml
-│   ├── site-a-rtr-02.yml
-│   ├── site-a-spine-01.yml
-│   ├── site-a-spine-02.yml
-│   ├── site-b-bb-01.yml
-│   ├── site-b-leaf-01.yml
-│   ├── site-b-leaf-02.yml
-│   ├── site-b-rtr-01.yml
-│   ├── site-b-rtr-02.yml
-│   ├── site-b-spine-01.yml
-│   └── site-b-spine-02.yml
+│   ├── location-a-bb-01.yml
+│   ├── location-a-rtr-01.yml
+│   ├── location-a-rtr-02.yml
+│   ├── location-a-spine-01.yml
+│   ├── location-a-spine-02.yml
+│   ├── location-b-bb-01.yml
+│   ├── location-b-leaf-01.yml
+│   ├── location-b-leaf-02.yml
+│   ├── location-b-rtr-01.yml
+│   ├── location-b-rtr-02.yml
+│   ├── location-b-spine-01.yml
+│   └── location-b-spine-02.yml
 ├── platform_eos.yml
 ├── platform_junos.yml
 ├── platform_nxos.yml

@@ -22,7 +22,7 @@ class LimitQuerysetChoicesSerializerMixin:
     def get_queryset(self):
         """Only emit options for this model/field combination."""
         queryset = super().get_queryset()
-        # Get objects model e.g Site, Device... etc.
+        # Get objects model e.g Location, Device... etc.
         # Tags model can be gotten using self.parent.parent, while others uses self.parent
         try:
             model = self.parent.Meta.model

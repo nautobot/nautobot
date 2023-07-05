@@ -29,11 +29,10 @@ from nautobot.apps.ui import TemplateExtension
 from .models import Animal
 
 
-class SiteAnimalCount(TemplateExtension):
+class LocationAnimalCount(TemplateExtension):
     """Template extension to display animal count on the right side of the page."""
 
-    model = 'dcim.site'
-
+    model = 'dcim.location'
     def right_page(self):
         return self.render('nautobot_animal_sounds/inc/animal_count.html', extra_context={
             'animal_count': Animal.objects.count(),
@@ -70,5 +69,5 @@ class DeviceExtraTabs(TemplateExtension):
             },
         ]
 
-template_extensions = [DeviceExtraTabs, SiteAnimalCount]
+template_extensions = [DeviceExtraTabs, LocationAnimalCount]
 ```

@@ -6,31 +6,31 @@ In many cases, an app may wish to make use of Nautobot's various extensibility f
 
 To make this possible, Nautobot provides a custom [signal](https://docs.djangoproject.com/en/stable/topics/signals/), `nautobot_database_ready`, that apps can register to listen for. This signal is triggered when `nautobot-server migrate` or `nautobot-server post_upgrade` is run after installing an app, and provides an opportunity for the app to make any desired additions to the database at this time.
 
-For example, maybe we want our app to make use of a Relationship allowing each Site to be linked to our Animal model. We would define our callback function that makes sure this Relationship exists, by convention in a `signals.py` file:
+For example, maybe we want our app to make use of a Relationship allowing each Location to be linked to our Animal model. We would define our callback function that makes sure this Relationship exists, by convention in a `signals.py` file:
 
 ```python
 # signals.py
 
 from nautobot.extras.choices import RelationshipTypeChoices
 
-def create_site_to_animal_relationship(sender, apps, **kwargs):
-    """Create a Site-to-Animal Relationship if it doesn't already exist."""
+def create_location_to_animal_relationship(sender, apps, **kwargs):
+    """Create a Location-to-Animal Relationship if it doesn't already exist."""
     # Use apps.get_model to look up Nautobot core models
     ContentType = apps.get_model("contenttypes", "ContentType")
     Relationship = apps.get_model("extras", "Relationship")
-    Site = apps.get_model("dcim", "Site")
+    Location = apps.get_model("dcim", "Location")
     # Use sender.get_model to look up models from this app
     Animal = sender.get_model("Animal")
 
     # Ensure that the Relationship exists
     Relationship.objects.update_or_create(
-        key="site_favorite_animal",
+        key="location_favorite_animal",
         defaults={
-            "label": "Site's Favorite Animal",
+            "label": "Location's Favorite Animal",
             "type": RelationshipTypeChoices.TYPE_ONE_TO_MANY,
             "source_type": ContentType.objects.get_for_model(Animal),
-            "source_label": "Sites that love this Animal",
-            "destination_type": ContentType.objects.get_for_model(Site),
+            "source_label": "Locations that love this Animal",
+            "destination_type": ContentType.objects.get_for_model(Location),
             "destination_label": "Favorite Animal",
         },
     )
@@ -43,14 +43,14 @@ Then, in the `NautobotAppConfig` `ready()` function, we connect this callback fu
 
 from nautobot.apps import nautobot_database_ready, NautobotAppConfig
 
-from .signals import create_site_to_animal_relationship
+from .signals import create_location_to_animal_relationship
 
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
 
     def ready(self):
         super().ready()
-        nautobot_database_ready.connect(create_site_to_animal_relationship, sender=self)
+        nautobot_database_ready.connect(create_location_to_animal_relationship, sender=self)
 
 config = AnimalSoundsConfig
 ```

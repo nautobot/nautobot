@@ -385,7 +385,7 @@ def get_docs_url(model):
 
     Example:
         >>> get_docs_url(obj)
-        "static/docs/models/dcim/site.html"
+        "static/docs/models/dcim/location.html"
     """
     path = f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
     if model._meta.app_label in settings.PLUGINS:

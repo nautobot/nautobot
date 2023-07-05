@@ -229,7 +229,7 @@ config_contexts/
 ```
 
 !!! note
-    While virtual machines are always uniquely identified by their name, it is possible for devices associated with different sites and/or tenants to share an identical name. Currently, Nautobot is unable to automatically apply local config context via Git to devices that have a non-globally-unique name (or no name at all).
+    While virtual machines are always uniquely identified by their name, it is possible for devices associated with different locations and/or tenants to share an identical name. Currently, Nautobot is unable to automatically apply local config context via Git to devices that have a non-globally-unique name (or no name at all).
 
 ### Configuration Context Schemas
 
