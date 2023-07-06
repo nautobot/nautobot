@@ -6,7 +6,7 @@ A namespace groups together a set of related but distinct [VRFs](vrf.md), [prefi
 
 Each namespace has a name and a description, and can optionally be associated to a location for informational purposes.
 
-Within a given namespace, only a single record may exist for each distinct VRF, prefix, or IP address. Although such a record may be used in multiple locations within your network, such as a VRF being configured on multiple devices, or a virtual IP address being assigned to multiple interfaces or devices, it is fundamentally a single network object in these cases, and Nautobot models the data.
+Within a given namespace, only a single record may exist for each distinct VRF, prefix, or IP address. Although such a record may be used in multiple locations within your network, such as a VRF being configured on multiple devices, or a virtual IP address being assigned to multiple interfaces or devices, it is fundamentally a single network object in these cases, and Nautobot models this data accordingly.
 
 +/- 2.0.0
     This is a change from the Nautobot 1.x data model, in which, for example, each instance of a virtual IP address would typically need to be stored as a distinct database record. On migrating existing data from Nautobot 1.x you may need to do some cleanup of your IPAM data to fit the new models.
