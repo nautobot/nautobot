@@ -168,7 +168,8 @@ nav:
         - Rack: "user-guide/core-data-model/dcim/rack.md"
         - Manufacturer: "user-guide/core-data-model/dcim/manufacturer.md"
         - Platform: "user-guide/core-data-model/dcim/platform.md"
-        - Device Type: "user-guide/core-data-model/dcim/devicetype.md"
+        - Device Type:
+          - "user-guide/core-data-model/dcim/devicetype.md"
           - Console Port Template: "user-guide/core-data-model/dcim/consoleporttemplate.md"
           - Console Server Port Template: "user-guide/core-data-model/dcim/consoleserverporttemplate.md"
           - Device Bay Template: "user-guide/core-data-model/dcim/devicebaytemplate.md"
@@ -177,7 +178,8 @@ nav:
           - Power Outlet Template: "user-guide/core-data-model/dcim/poweroutlettemplate.md"
           - Power Port Template: "user-guide/core-data-model/dcim/powerporttemplate.md"
           - Rear Port Template: "user-guide/core-data-model/dcim/rearporttemplate.md"
-        - Device: "user-guide/core-data-model/dcim/device.md"
+        - Device:
+          - "user-guide/core-data-model/dcim/device.md"
           - Console Port: "user-guide/core-data-model/dcim/consoleport.md"
           - Console Server Port: "user-guide/core-data-model/dcim/consoleserverport.md"
           - Device Bay: "user-guide/core-data-model/dcim/devicebay.md"
