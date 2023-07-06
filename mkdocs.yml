@@ -136,6 +136,7 @@ nav:
           - GraphQL: "user-guides/graphql.md"
           - Interfaces: "user-guides/getting-started/interfaces.md"
           - IP Address Management: "user-guides/getting-started/ipam.md"
+          - IP Address Merge Tool: "user-guides/ip-address-merge-tool.md"
           - Platforms: "user-guides/getting-started/platforms.md"
           - Regions: "user-guides/getting-started/regions.md"
           - Tenants: "user-guides/getting-started/tenants.md"

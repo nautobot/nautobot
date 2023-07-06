@@ -82,12 +82,6 @@ Once on the `Editing IP address` page:
 
 ![Assign IP address 3](../images/getting-started-nautobot-ui/35-assign-address-3.png)
 
-## De-duplicating IPAddresses
-
-+++ 2.0.0
-
-After upgrading to Nautobot v2.0, in order to satisfy new uniqueness constraints, the data migrations may duplicate `IP Addresses` across different `Namespaces`. Check out this [IP Address Merge tool](../ip-address-merge-tool.md) to collapse unnecessarily duplicated `IP Addresses`.
-
 ## Finding an IP Address for an Interface
 
 1. Click on **Devices** on the top-level navigation menu

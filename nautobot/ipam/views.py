@@ -856,7 +856,7 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
             )
         else:
             msg = "No additional duplicate IPs found."
-            messages.warning(request, msg)
+            messages.info(request, msg)
             return redirect(self.get_return_url(request))
 
     def get(self, request):
@@ -955,6 +955,7 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} "
                         f'into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
                     )
+                    logger_msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} into {merged_ip}"
                     merged_ip.validated_save()
                     # After some testing
                     # We have to update the ForeignKey fields after merged_ip is saved to make the operation valid
@@ -967,7 +968,7 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
                     for service in services:
                         Service.objects.get(pk=service).ip_addresses.add(merged_ip)
-                    logger.info(msg)
+                    logger.info(logger_msg)
                     messages.success(request, mark_safe(msg))
         return self.find_duplicate_ips(request, merged_attributes)
 

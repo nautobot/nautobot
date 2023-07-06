@@ -19,9 +19,9 @@
     <div class="row">
         <div class="col-md-10 col-md-offset-1">
             <div class="panel panel-info">
-                <div class="panel-heading"><strong>Confirm Merging These Duplicate IP Addresses</strong></div>
+                <div class="panel-heading"><strong>Confirm Merging IP Addresses</strong></div>
                 <div class="panel-body">
-                    <p><strong>Warning:</strong> The following operation will merge these {{ queryset.count }} IP Addresses. Please select the attributes you want to keep in the merged IP Address.</p>
+                    <p><strong>Warning:</strong> The following operation will merge some or all of these {{ queryset.count }} IP Address records. Please select the record(s) you wish to merge and the attribute values you want to carry forward to the merged record.</p>
                     {% block message_extra %}{% endblock %}
                 </div>
             </div>
@@ -29,7 +29,7 @@
     </div>
     <div class="row">
         <div class="col-md-10 col-md-offset-1">
-                <table class="table table-hover table-headings">
+                <table class="table table-hover table-headings w-auto">
                 <thead>
                     <th>
                         Merging IP Addresses
@@ -211,8 +211,8 @@
 <div class="row">
     <div class="col-md-5 col-md-offset-7">
         {% block buttons %}
-            <button type="submit" name="_merge" class="btn btn-primary"><i class="mdi mdi-arrow-down-bold"></i> Merge and Go to the Next Duplicate</button>
-            <button type="submit" name="_skip" class="btn btn-warning"><i class="mdi mdi-arrow-right-bold"></i> Skip and Go to the Next Duplicate</button>
+            <button type="submit" name="_merge" class="btn btn-primary"><i class="mdi mdi-set-merge"></i> Merge and Go to the Next Duplicate</button>
+            <button type="submit" name="_skip" class="btn btn-warning"><i class="mdi mdi-debug-step-over"></i> Skip and Go to the Next Duplicate</button>
             <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
         {% endblock %}
     </div>
