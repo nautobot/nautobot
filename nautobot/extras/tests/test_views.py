@@ -52,8 +52,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-from nautobot.ipam.factory import VLANFactory
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 
 
@@ -2048,12 +2047,25 @@ class RelationshipTestCase(
         4. Test bulk edit
         """
 
+        # Delete existing factory generated objects that may interfere with this test
+        IPAddress.objects.all().delete()
+        Prefix.objects.all().delete()
+        VLAN.objects.all().delete()
+
         # Parameterized tests (for creating and updating single objects):
         self.required_relationships_test(interact_with="ui")
 
         # 4. Bulk create/edit tests:
 
-        vlans = VLANFactory.create_batch(6)
+        vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlans = (
+            VLAN.objects.create(name="test_required_relationships1", vid=1, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships2", vid=2, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships3", vid=3, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships4", vid=4, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships5", vid=5, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships6", vid=6, status=vlan_status),
+        )
 
         # Try deleting all devices and then editing the 6 VLANs (fails):
         Device.objects.all().delete()
