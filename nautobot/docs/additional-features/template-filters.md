@@ -87,6 +87,15 @@ Access a specific item/key in a dictionary.
 {{ labels|get_item(key) }}
 ```
 
+### queryset_to_pks
+
+Return all object's in a queryset UUIDs/pks as a string separated by a comma.
+
+```django
+# Django Template
+{{ ip.tags.all | queryset_to_pks }}
+```
+
 ### has_one_or_more_perms
 
 Return True if the user has *at least one* of the permissions in the list.

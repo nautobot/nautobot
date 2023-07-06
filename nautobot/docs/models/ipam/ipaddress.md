@@ -55,3 +55,9 @@ The following guidance has been added for the `IPAddress.parent` field:
 
 !!! warning
     In a future Nautobot release, this guidance will become an enforced constraint on `IPAddress` creation and modification.
+
+## De-duplicating IPAddresses
+
++++ 2.0.0
+
+After upgrading to Nautobot v2.0, in order to satisfy new uniqueness constraints, the data migrations may duplicate `IP Addresses` across different `Namespaces`. Check out this [IP Address Merge tool](../../user-guides/ip-address-merge-tool.md) to collapse unnecessarily duplicated `IP Addresses`.

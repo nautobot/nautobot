@@ -693,3 +693,11 @@ def hyperlinked_object_with_color(obj):
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
     return "—"
+
+
+@register.filter()
+def queryset_to_pks(obj):
+    """Return all object UUIDs as a string separated by `,`"""
+    result = list(obj.values_list("pk", flat=True)) if obj else []
+    result = [str(entry) for entry in result]
+    return ",".join(result)

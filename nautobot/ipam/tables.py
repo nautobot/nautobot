@@ -452,6 +452,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "mask_length")
     )
     tenant = TenantColumn()
+    parent__namespace = tables.Column(linkify=True)
     # TODO: add interface M2M
 
     class Meta(BaseTable.Meta):
@@ -465,6 +466,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "tenant",
             "dns_name",
             "description",
+            "parent__namespace",
         )
         row_attrs = {
             "class": lambda record: "success" if not isinstance(record, IPAddress) else "",
