@@ -22,6 +22,11 @@ const theme = {
                 height: "full",
                 width: "full",
             },
+            // Adding zIndex to Modal has no effect, since it is a child of div with this class,
+            // Hence styling the class directly.
+            ".chakra-modal__content-container": {
+                zIndex: "6",
+            },
         },
     },
 };
