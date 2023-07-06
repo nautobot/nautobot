@@ -421,7 +421,7 @@ class Device(PrimaryModel, ConfigContextModel):
     )
     # todoindex:
     face = models.CharField(max_length=50, blank=True, choices=DeviceFaceChoices, verbose_name="Rack face")
-    primary_ip4 = models.OneToOneField(
+    primary_ip4 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
         related_name="primary_ip4_for",
@@ -429,7 +429,7 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
         verbose_name="Primary IPv4",
     )
-    primary_ip6 = models.OneToOneField(
+    primary_ip6 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
         related_name="primary_ip6_for",

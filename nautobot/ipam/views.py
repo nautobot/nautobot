@@ -1,23 +1,36 @@
-from django.contrib import messages
-from django.db.models import Prefetch, Q
-from django.shortcuts import get_object_or_404, redirect, render
-from django.templatetags.static import static
-from django.urls import reverse
-from django.utils.http import urlencode
-from django.utils.safestring import mark_safe
-from django_tables2 import RequestConfig
+import logging
 import netaddr
 
+from django.conf import settings
+from django.contrib import messages
+from django.core.cache import cache
+from django.db import models, transaction
+from django.db.models import Prefetch, ProtectedError, Q
+from django.forms.models import model_to_dict
+from django.templatetags.static import static
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.html import escape
+from django.utils.http import urlencode
+from django.utils.safestring import mark_safe
+from django.views.generic import View
+from django_tables2 import RequestConfig
+
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import handle_protectederror
 from nautobot.dcim.models import Device, Interface
+from nautobot.extras.models import Role, Status, Tag
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from . import filters, forms, tables
 from nautobot.ipam.api import serializers
 from nautobot.ipam import choices, constants
 from .models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -31,6 +44,7 @@ from .utils import (
     add_available_ipaddresses,
     add_available_prefixes,
     add_available_vlans,
+    handle_relationship_changes_when_merging_ips,
 )
 
 
@@ -489,7 +503,7 @@ class PrefixIPAddressesView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
         ipaddresses = (
-            instance.get_child_ips()
+            instance.ip_addresses.all()
             .restrict(request.user, "view")
             .select_related("status")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")
@@ -662,6 +676,7 @@ class IPAddressListView(generic.ObjectListView):
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
+    template_name = "ipam/ipaddress_list.html"
 
 
 class IPAddressView(generic.ObjectView):
@@ -802,6 +817,160 @@ class IPAddressAssignView(generic.ObjectView):
                 "return_url": request.GET.get("return_url"),
             },
         )
+
+
+class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermissionRequiredMixin, View):
+    queryset = IPAddress.objects.all()
+    template_name = "ipam/ipaddress_merge.html"
+
+    def get_required_permission(self):
+        return get_permission_for_model(self.queryset.model, "change")
+
+    def find_duplicate_ips(self, request, merged_attributes=None):
+        """
+        Present IP Addresses with the same host values.
+        If not found, return to IPAddressListView with a helpful message.
+        """
+        if merged_attributes:
+            host_values = (
+                self.queryset.filter(host__gt=merged_attributes.get("host"))
+                .values("host")
+                .order_by("host")
+                .annotate(count=models.Count("host"))
+                .filter(count__gt=1)
+            )
+        else:
+            host_values = (
+                self.queryset.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
+            )
+        if host_values:
+            item = host_values[0]
+            queryset = self.queryset.filter(host__in=[item["host"]])
+            return render(
+                request=request,
+                template_name=self.template_name,
+                context={
+                    "queryset": queryset,
+                    "return_url": self.get_return_url(request),
+                },
+            )
+        else:
+            msg = "No additional duplicate IPs found."
+            messages.info(request, msg)
+            return redirect(self.get_return_url(request))
+
+    def get(self, request):
+        return self.find_duplicate_ips(request)
+
+    def post(self, request):
+        logger = logging.getLogger(__name__)
+        collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
+        merged_attributes = request.POST
+        operation_invalid = len(collapsed_ips) < 2
+        # Check if there are at least two IP addresses for us to merge
+        # and if the skip button is pressed instead.
+        if "_skip" not in request.POST and not operation_invalid:
+            with cache.lock("ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT):
+                with transaction.atomic():
+                    namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
+                    status = Status.objects.get(pk=merged_attributes.get("status"))
+                    # Retrieve all attributes from the request.
+                    if merged_attributes.get("tenant"):
+                        tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
+                    else:
+                        tenant = None
+                    if merged_attributes.get("role"):
+                        role = Role.objects.get(pk=merged_attributes.get("role"))
+                    else:
+                        role = None
+                    if merged_attributes.get("tags"):
+                        tag_pk_list = merged_attributes.get("tags").split(",")
+                        tags = Tag.objects.filter(pk__in=tag_pk_list)
+                    else:
+                        tags = []
+                    if merged_attributes.get("nat_inside"):
+                        nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
+                    else:
+                        nat_inside = None
+                    # use IP in the same namespace as a reference.
+                    ip_in_the_same_namespace = collapsed_ips.filter(parent__namespace=namespace).first()
+                    merged_ip = IPAddress(
+                        host=merged_attributes.get("host"),
+                        ip_version=ip_in_the_same_namespace.ip_version,
+                        parent=ip_in_the_same_namespace.parent,
+                        type=merged_attributes.get("type"),
+                        status=status,
+                        role=role,
+                        dns_name=merged_attributes.get("dns_name", ""),
+                        description=merged_attributes.get("description"),
+                        mask_length=merged_attributes.get("mask_length"),
+                        tenant=tenant,
+                        nat_inside=nat_inside,
+                        _custom_field_data=ip_in_the_same_namespace._custom_field_data,
+                    )
+                    merged_ip.tags.set(tags)
+                    # Update custom_field_data
+                    for key in merged_ip._custom_field_data.keys():
+                        ip_pk = merged_attributes.get("cf_" + key)
+                        merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
+                    # Update relationship data
+                    handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
+                    # Capture relevant device pk_list before updating IPAddress to Interface Assignments.
+                    # since the update will unset the primary_ip[4/6] field on the device.
+                    # Collapsed_ips can only be one of the two families v4/v6
+                    # One of the querysets here is bound to be emtpy and one of the updates to Device's primary_ip field
+                    # is going to be a no-op
+                    device_ip4 = list(Device.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True))
+                    device_ip6 = list(Device.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True))
+                    vm_ip4 = list(
+                        VirtualMachine.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True)
+                    )
+                    vm_ip6 = list(
+                        VirtualMachine.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True)
+                    )
+
+                    ip_to_interface_assignments = []
+                    # Update IPAddress to Interface Assignments
+                    for assignment in IPAddressToInterface.objects.filter(ip_address__in=collapsed_ips):
+                        updated_attributes = model_to_dict(assignment)
+                        updated_attributes["ip_address"] = merged_ip
+                        updated_attributes["interface"] = Interface.objects.filter(
+                            pk=updated_attributes["interface"]
+                        ).first()
+                        updated_attributes["vm_interface"] = VMInterface.objects.filter(
+                            pk=updated_attributes["vm_interface"]
+                        ).first()
+                        ip_to_interface_assignments.append(updated_attributes)
+                    # Update Service m2m field with IPAddresses
+                    services = list(Service.objects.filter(ip_addresses__in=collapsed_ips).values_list("pk", flat=True))
+                    # Delete Collapsed IPs
+                    try:
+                        _, deleted_info = collapsed_ips.delete()
+                        deleted_count = deleted_info[IPAddress._meta.label]
+                    except ProtectedError as e:
+                        logger.info("Caught ProtectedError while attempting to delete objects")
+                        handle_protectederror(collapsed_ips, request, e)
+                        return redirect(self.get_return_url(request))
+                    msg = (
+                        f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} "
+                        f'into <a href="{merged_ip.get_absolute_url()}">{escape(merged_ip)}</a>'
+                    )
+                    logger_msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} into {merged_ip}"
+                    merged_ip.validated_save()
+                    # After some testing
+                    # We have to update the ForeignKey fields after merged_ip is saved to make the operation valid
+                    for assignment in ip_to_interface_assignments:
+                        IPAddressToInterface.objects.create(**assignment)
+                    # Update Device primary_ip fields of the Collapsed IPs
+                    Device.objects.filter(pk__in=device_ip4).update(primary_ip4=merged_ip)
+                    Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
+                    VirtualMachine.objects.filter(pk__in=vm_ip4).update(primary_ip4=merged_ip)
+                    VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
+                    for service in services:
+                        Service.objects.get(pk=service).ip_addresses.add(merged_ip)
+                    logger.info(logger_msg)
+                    messages.success(request, mark_safe(msg))
+        return self.find_duplicate_ips(request, merged_attributes)
 
 
 class IPAddressDeleteView(generic.ObjectDeleteView):
