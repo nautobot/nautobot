@@ -124,6 +124,8 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
 
     objects = BaseManager.from_queryset(ConfigContextQuerySet)()
 
+    documentation_static_path = "docs/user-guide/core-data-model/extras/configcontext.html"
+
     class Meta:
         ordering = ["weight", "name"]
 
@@ -257,6 +259,8 @@ class ConfigContextSchema(OrganizationalModel):
         ct_field="owner_content_type",
         fk_field="owner_object_id",
     )
+
+    documentation_static_path = "docs/user-guide/core-data-model/extras/configcontextschema.html"
 
     def __str__(self):
         if self.owner:

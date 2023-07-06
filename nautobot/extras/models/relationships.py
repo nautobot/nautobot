@@ -697,6 +697,8 @@ class RelationshipAssociation(BaseModel):
     destination_id = models.UUIDField(db_index=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
 
+    documentation_static_path = "docs/user-guide/platform-functionality/relationship.html"
+
     class Meta:
         unique_together = (
             "relationship",

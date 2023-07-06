@@ -10,6 +10,10 @@ If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading 
 
 ### Added
 
+#### IPAM Namespaces
+
+The new Namespace model expands on the functionality previously provided by `VRF.enforce_unique` and the `ENFORCE_GLOBAL_UNIQUE` settings flag, both of which have now been removed. Within a namespace, all VRFs, prefixes, and IP addresses must be unique and non-duplicated. For more details please refer to the [documentation](../user-guide/core-data-model/ipam/namespace.md).
+
 #### Generic Role Model ([#1063](https://github.com/nautobot/nautobot/issues/1063))
 
 DeviceRole, RackRole, IPAM Role, and IPAddressRoleChoices have all been merged into a single generic Role model. A role can now be created and associated to one or more of the content-types that previously implemented role as a field. These model content-types include dcim.device, dcim.rack, virtualization.virtualmachine, ipam.ipaddress, ipam.prefix, and ipam.vlan.

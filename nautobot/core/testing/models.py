@@ -1,5 +1,7 @@
 from django.test import tag, TestCase
 
+from nautobot.core.templatetags.helpers import get_docs_url
+
 
 @tag("unit")
 class ModelTestCases:
@@ -25,3 +27,7 @@ class ModelTestCases:
                 self.skipTest("No composite_key on this model.")
             self.assertIsNotNone(instance.composite_key)
             self.assertEqual(self.model.objects.get(composite_key=instance.composite_key), instance)
+
+        def test_get_docs_url(self):
+            """Check that `get_docs_url()` returns a valid static file path for this model."""
+            self.assertIsNotNone(get_docs_url(self.model))
