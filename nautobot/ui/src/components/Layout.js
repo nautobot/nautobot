@@ -63,19 +63,17 @@ export default function Layout({ children }) {
             ...feedbackFormState,
         };
         const url = "https://nautobot.cloud/api/nautobot/feature-request/";
-        // axios
-        //     .post(url, formData)
-        //     .then((response) => {
-        //         onClose()
-        //         feedbackToast({"title": "Feedback sent!", status: "success"})
-        //     })
-        //     .catch((err) => {
-        //         console.log(err);
-        //         onClose()
-        //         feedbackToast({"title": "Feedback not sent!", status: "error"})
-        //     });
-        onClose()
-        feedbackToast({"title": "Feedback not sent!", status: "error"})
+        axios
+            .post(url, formData)
+            .then((response) => {
+                onClose()
+                feedbackToast({"title": "Feedback sent!", status: "success"})
+            })
+            .catch((err) => {
+                console.log(err);
+                onClose()
+                feedbackToast({"title": "Feedback not sent!", status: "error"})
+            });
             
     }
 
