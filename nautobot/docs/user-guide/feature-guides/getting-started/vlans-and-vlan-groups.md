@@ -11,7 +11,7 @@ Each VLAN must be assigned a status. The following statuses are available by def
 In general, VLANs can have overlapping names and IDs. The exception to this is VLANs within a VLAN Group: each VLAN within a group must have a unique ID and name.  
 A VLAN Group may be assigned to a specific location, but a Group cannot belong to multiple locations. VLANs may be assigned to a specific location as well.
 
-The Nautobot documentation has more info about [VLANs and VLAN Groups](../../core-functionality/vlans.md#vlan-management).
+The Nautobot documentation has more info about [VLANs](../../core-data-model/ipam/vlan.md) and [VLAN Groups](../../core-data-model/ipam/vlangroup.md).
 
 ## VLAN Example
 

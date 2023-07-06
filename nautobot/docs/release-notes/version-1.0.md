@@ -15,13 +15,13 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 #### Custom Fields on All Models
 
-[Custom fields](../models/extras/customfield.md) allow user-defined fields, or attributes, on specific data models such as locations or devices. Historically, custom fields have been supported only on “primary” models (Location, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
+[Custom fields](../user-guide/platform-functionality/customfield.md) allow user-defined fields, or attributes, on specific data models such as locations or devices. Historically, custom fields have been supported only on “primary” models (Location, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
 
 Once created the name or data type of the custom field cannot be modified. Choices for custom fields are now stored as discrete database objects. Choices that are in active use cannot be deleted.
 
 #### Customizable Statuses
 
-A new ["Status" model](../models/extras/status.md) has been added, allowing users to define additional permitted values for the "status" field on any or all of the models that have such a field (Cable, Circuit, Device, IPAddress, PowerFeed, Prefix, Rack, Location, VirtualMachine, VLAN). The default sets of statuses permitted for each model remain the same as in NetBox 2.10, but you are now free to define additional status values as suit your needs and workflows.
+A new ["Status" model](../user-guide/platform-functionality/status.md) has been added, allowing users to define additional permitted values for the "status" field on any or all of the models that have such a field (Cable, Circuit, Device, IPAddress, PowerFeed, Prefix, Rack, Location, VirtualMachine, VLAN). The default sets of statuses permitted for each model remain the same as in NetBox 2.10, but you are now free to define additional status values as suit your needs and workflows.
 
 One example application for custom statuses would be in defining additional values to apply to a Device as part of an automation workflow, with statuses such as `upgrading` or `rebooting` to reflect the progress of each device through the workflow, allowing automation to identify the appropriate next action to take for each status.
 

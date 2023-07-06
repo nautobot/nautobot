@@ -112,7 +112,7 @@ To create a new Location:
 7. Set the `Status` to `Active` in the drop-down selector
 8. Click on `Create` at the bottom of the form (not shown)
 
-![Create a location](../images/getting-started-nautobot-ui/45-create-location.png)
+![Create a location](../images/getting-started-nautobot-ui/6-create-location.png)
 
 ## Creating a Device
 
