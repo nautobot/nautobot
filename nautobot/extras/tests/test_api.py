@@ -72,8 +72,7 @@ from nautobot.extras.models.jobs import JobHook, JobButton
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
 
-from nautobot.ipam.factory import VLANFactory
-from nautobot.ipam.models import VLANGroup, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLANGroup, VLAN
 from nautobot.users.models import ObjectPermission
 
 
@@ -2680,6 +2679,11 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         4. Test various bulk create/edit scenarios
         """
 
+        # Delete existing factory generated objects that may interfere with this test
+        IPAddress.objects.all().delete()
+        Prefix.objects.all().delete()
+        VLAN.objects.all().delete()
+
         # Parameterized tests (for creating and updating single objects):
         self.required_relationships_test(interact_with="api")
 
@@ -2749,7 +2753,8 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
                     "vlan_group": vlan_groups[1].pk,
                 }
             else:
-                vlan1, vlan2 = VLANFactory.create_batch(2)
+                vlan1 = VLAN.objects.create(name="test_required_relationships1", vid=1, status=device_status)
+                vlan2 = VLAN.objects.create(name="test_required_relationships2", vid=2, status=device_status)
                 vlan1_json_data = {"status": device_status.pk, "id": str(vlan1.id)}
                 # Add required fields for PUT method:
                 if method == "put":
