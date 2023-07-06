@@ -98,7 +98,7 @@ export default function Layout({ children }) {
                 <Box flex="1">{isLoggedIn && <SidebarNav />}</Box>
                 <Box borderTop="2px" borderColor="#6a6969">
                     <Button onClick={onOpen} variant="link" color="gray-1">
-                        Leave a Feedback
+                        Submit Feedback
                     </Button>
                     <Button onClick={legacyUI} variant="link" color="gray-1">
                         Return to Legacy UI
@@ -119,7 +119,7 @@ export default function Layout({ children }) {
                 <ModalContent>
                     <form method="post" onSubmit={handleLeaveFeedbackSubmit}>
                         <ModalHeader marginTop="5" marginLeft="5">
-                            Leave a Feedback
+                            Submit Feedback
                         </ModalHeader>
                         <ModalCloseButton />
                         <ModalBody pb={6}>
