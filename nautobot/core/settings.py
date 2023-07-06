@@ -825,3 +825,6 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     "TimeZoneSerializerField": {"type": "string"},
     "UUIDField": {"type": "string", "format": "uuid"},
 }
+
+
+FEEDBACK_BUTTON_ENABLED = True

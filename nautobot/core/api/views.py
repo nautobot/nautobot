@@ -1,4 +1,6 @@
+import contextlib
 import itertools
+import json
 import logging
 import platform
 from collections import OrderedDict
@@ -857,6 +859,49 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
             entry.update(data)
 
         return Response(object_counts)
+
+
+class GetSettingsView(NautobotAPIVersionMixin, APIView):
+    """
+    This view exposes Nautobot settings.
+
+    By default, it returns all serializable settings available in the system.
+    You can filter the settings by providing one or more `name` query parameters.
+
+    Example:
+
+    - /api/settings/            # Returns all serializable settings
+    - /api/settings/?name=FOO   # Returns the serializable setting with name 'FOO'
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def is_serializable(self, value):
+        with contextlib.suppress(TypeError):
+            json.dumps(value)
+            return True
+        return False
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        filter_params = request.GET.getlist("name")
+
+        # As of now, we just have serializable settings.  Because the purpose of this API is limited for the time being,
+        # we may need more access to serializable and non-serializable settings data as the new UI expands. As a result,
+        # serializing currently non-serializable data would be desirable in the future.
+        serializable_settings = {}
+        if filter_params:
+            for settings_name in filter_params:
+                # Not using `getattr(settings, settings_name, None)` directly as `settings_name` might exists in `settings` with its value as None
+                if hasattr(settings, settings_name):
+                    value = getattr(settings, settings_name)
+                    if self.is_serializable(value):
+                        serializable_settings[settings_name] = value
+        else:
+            for name, value in settings.__dict__.items():
+                if self.is_serializable(value):
+                    serializable_settings[name] = value
+        return Response(serializable_settings)
 
 
 #

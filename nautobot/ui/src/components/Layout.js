@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Box,
     Flex,
@@ -33,12 +33,20 @@ export default function Layout({ children }) {
     const isLoggedIn = useSelector(isLoggedInSelector);
     const [feedbackFormState, setFeedbackFormState] = useState({});
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const [showFeedback, setShowFeedback] = useState(false);
+
+    useEffect(() => {
+        axios
+            .get("/api/ui/get-settings/?name=FEEDBACK_BUTTON_ENABLED")
+            .then((res) => setShowFeedback(res.data.FEEDBACK_BUTTON_ENABLED))
+            .catch((err) => console.error(err));
+    }, []);
 
     const feedbackToast = useToast({
         duration: 5000,
         isClosable: true,
         position: "top-right",
-    })
+    });
 
     /** Invalidate the newui cookie and reload the page in order to return to the legacy UI. */
     function legacyUI() {
@@ -66,15 +74,14 @@ export default function Layout({ children }) {
         axios
             .post(url, formData)
             .then((response) => {
-                onClose()
-                feedbackToast({"title": "Feedback sent!", status: "success"})
+                onClose();
+                feedbackToast({ title: "Feedback sent!", status: "success" });
             })
             .catch((err) => {
                 console.log(err);
-                onClose()
-                feedbackToast({"title": "Feedback not sent!", status: "error"})
+                onClose();
+                feedbackToast({ title: "Feedback not sent!", status: "error" });
             });
-            
     }
 
     return (
@@ -94,10 +101,12 @@ export default function Layout({ children }) {
                     />
                 </Heading>
                 <Box flex="1">{isLoggedIn && <SidebarNav />}</Box>
-                <Box borderTop="2px" borderColor="#6a6969">
-                    <Button onClick={onOpen} variant="link" color="gray-1">
-                        Submit Feedback
-                    </Button>
+                <Box borderTop="2px" borderColor="gray.500">
+                    {showFeedback && (
+                        <Button onClick={onOpen} variant="link" color="gray-1">
+                            Submit Feedback
+                        </Button>
+                    )}
                     <Button onClick={legacyUI} variant="link" color="gray-1">
                         Return to Legacy UI
                     </Button>
@@ -130,7 +139,7 @@ export default function Layout({ children }) {
                                 />
                             </FormControl>
 
-                            <FormControl mt={4}>
+                            <FormControl mt={4} isRequired>
                                 <FormLabel>Description</FormLabel>
                                 <Textarea
                                     border="1px"
