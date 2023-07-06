@@ -42,7 +42,7 @@ class Animal(BaseModel):
 
 Once you have defined the model(s) for your app, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.
 
-Creating migrations can be done automatically using the `nautobot-server makemigrations <app_name>` management command, where `<app_name>` is the name of the Python package for your app (e.g. `animal_sounds`):
+Creating migrations can be done automatically using the `nautobot-server makemigrations <app_name>` management command, where `<app_name>` is the name of the Python package for your app (e.g. `nautobot_animal_sounds`):
 
 ```no-highlight
 nautobot-server makemigrations nautobot_animal_sounds

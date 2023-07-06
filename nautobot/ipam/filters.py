@@ -176,6 +176,10 @@ class PrefixFilterSet(
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
+    # Prefix doesn't have an appropriate single natural-key field for a NaturalKeyOrPKMultipleChoiceFilter
+    parent = django_filters.ModelMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+    )
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -322,9 +326,13 @@ class IPAddressFilterSet(
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
-    parent = django_filters.CharFilter(
-        method="search_by_parent",
+    parent = django_filters.ModelMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
         label="Parent prefix",
+    )
+    prefix = django_filters.CharFilter(
+        method="search_by_prefix",
+        label="Contained in prefix",
     )
     address = MultiValueCharFilter(
         method="filter_address",
@@ -409,7 +417,7 @@ class IPAddressFilterSet(
         params = self.generate_query__has_interface_assignments(value)
         return queryset.filter(params)
 
-    def search_by_parent(self, queryset, name, value):
+    def search_by_prefix(self, queryset, name, value):
         value = value.strip()
         if not value:
             return queryset

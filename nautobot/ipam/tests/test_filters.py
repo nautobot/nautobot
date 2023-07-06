@@ -288,6 +288,18 @@ class PrefixFilterCustomDataTestCase(TestCase):
             count = self.queryset.string_search(value).count()
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), count)
 
+    def test_parent(self):
+        parent4 = Prefix.objects.get(prefix="10.0.0.0/16", namespace=self.namespace)
+        params = {"parent": [str(parent4.pk)]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent4)
+        )
+        parent6 = Prefix.objects.get(prefix="2001:db8::/32", namespace=self.namespace)
+        params = {"parent": [str(parent6.pk)]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent6)
+        )
+
     def test_ip_version(self):
         params = {"ip_version": "6"}
         ipv6_prefixes = self.queryset.filter(ip_version=6)
@@ -665,13 +677,23 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
     def test_parent(self):
+        params = {"parent": [str(self.prefix4.pk)]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent=self.prefix4)
+        )
+        params = {"parent": [str(self.prefix6.pk)]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent=self.prefix6)
+        )
+
+    def test_prefix(self):
         ipv4_parent = self.queryset.filter(ip_version=4).first().address.supernet()[-1]
-        params = {"parent": str(ipv4_parent)}
+        params = {"prefix": str(ipv4_parent)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent)
         )
         ipv6_parent = self.queryset.filter(ip_version=6).first().address.supernet()[-1]
-        params = {"parent": str(ipv6_parent)}
+        params = {"prefix": str(ipv6_parent)}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv6_parent)
         )

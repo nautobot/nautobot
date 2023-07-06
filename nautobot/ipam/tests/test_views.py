@@ -3,6 +3,7 @@ import datetime
 from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
+from django.utils.html import strip_tags
 from django.utils.timezone import make_aware
 
 from nautobot.core.testing import post_data, ViewTestCases
@@ -10,7 +11,7 @@ from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, Status, Tag
-from nautobot.ipam.choices import IPAddressTypeChoices, ServiceProtocolChoices
+from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
     Namespace,
@@ -114,24 +115,24 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @classmethod
     def setUpTestData(cls):
         rir = RIR.objects.first()
-        namespace = Namespace.objects.create(name="ipam_test_views_prefix_test")
+        cls.namespace = Namespace.objects.create(name="ipam_test_views_prefix_test")
 
-        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         vrfs = VRF.objects.all()[:2]
 
-        roles = Role.objects.get_for_model(Prefix)[:2]
+        cls.roles = Role.objects.get_for_model(Prefix)[:2]
 
-        statuses = Status.objects.get_for_model(Prefix)
+        cls.statuses = Status.objects.get_for_model(Prefix)
 
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
-            "namespace": namespace.pk,
-            "location": locations[1].pk,
+            "namespace": cls.namespace.pk,
+            "location": cls.locations[1].pk,
             "vrf": vrfs[1].pk,
             "tenant": None,
             "vlan": None,
-            "status": statuses[1].pk,
-            "role": roles[1].pk,
+            "status": cls.statuses[1].pk,
+            "role": cls.roles[1].pk,
             "type": "pool",
             "rir": rir.pk,
             "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
@@ -141,17 +142,17 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.csv_data = (
             "vrf,prefix,status,rir,namespace",
-            f"{vrfs[0].name},10.4.0.0/16,{statuses[0].name},{rir.name},{namespace.name}",
-            f"{vrfs[0].name},10.5.0.0/16,{statuses[0].name},{rir.name},{namespace.name}",
-            f"{vrfs[0].name},10.6.0.0/16,{statuses[1].name},{rir.name},{namespace.name}",
+            f"{vrfs[0].name},10.4.0.0/16,{cls.statuses[0].name},{rir.name},{cls.namespace.name}",
+            f"{vrfs[0].name},10.5.0.0/16,{cls.statuses[0].name},{rir.name},{cls.namespace.name}",
+            f"{vrfs[0].name},10.6.0.0/16,{cls.statuses[1].name},{rir.name},{cls.namespace.name}",
         )
 
         cls.bulk_edit_data = {
             "location": None,
             "vrf": vrfs[1].pk,
             "tenant": None,
-            "status": statuses[1].pk,
-            "role": roles[1].pk,
+            "status": cls.statuses[1].pk,
+            "role": cls.roles[1].pk,
             "rir": RIR.objects.last().pk,
             "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
             "description": "New description",
@@ -160,8 +161,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
         """
-        Testing filtering items for non-existent Status actually returns 0 results. For issue #1312 in which the filter
-        view expected to return 0 results was instead returning items in list. Used the Status of "deprecated" in this test,
+        Testing that filtering items for a non-existent Status actually returns 0 results.
+
+        For issue #1312 in which the filter view expected to return 0 results was instead returning items in list.
+        Used the Status of "deprecated" in this test,
         but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
@@ -177,6 +180,133 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertNotIn("Invalid filters were specified", content)
         for prefix in prefixes:
             self.assertNotIn(prefix.get_absolute_url(), content, msg=content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_object_warnings(self):
+        """Test various object creation scenarios that should result in a warning to the user."""
+        Prefix.objects.create(
+            prefix="10.0.0.0/8",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+            status=self.statuses[1],
+        )
+        Prefix.objects.create(
+            prefix="10.0.0.0/16",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_POOL,
+            status=self.statuses[1],
+        )
+        IPAddress.objects.create(
+            address="10.0.0.1/32",
+            status=Status.objects.get_for_model(IPAddress).first(),
+            namespace=self.namespace,
+        )
+        self.add_permissions("ipam.add_prefix")
+
+        common_data = {"namespace": self.namespace.pk, "status": self.statuses[0].pk}
+
+        with self.subTest("Creating a Pool as child of a Container raises a warning"):
+            data = {
+                "prefix": "10.1.0.0/16",
+                "type": PrefixTypeChoices.TYPE_POOL,
+            }
+            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "10.1.0.0/16 is a Pool prefix but its parent 10.0.0.0/8 is a Container. "
+                "This will be considered invalid data in a future release. "
+                "Consider changing the type of 10.1.0.0/16 and/or 10.0.0.0/8 to resolve this issue.",
+                strip_tags(content),
+            )
+
+        # We could test for Pool-in-Pool, Container-in-Network, Network-in-Network, Container-in-Pool, and
+        # Network-in-Pool, but they all use the same code path and similar message
+
+        with self.subTest("Creating a Container that will have a Pool as its child raises a warning"):
+            data = {
+                "prefix": "10.0.0.0/20",
+                "type": PrefixTypeChoices.TYPE_CONTAINER,
+            }
+            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "10.0.0.0/20 is a Container prefix and should not contain child prefixes of type Pool. "
+                "This will be considered invalid data in a future release. "
+                "Consider creating an intermediary Network prefix, or changing the type of its children to Network, "
+                "to resolve this issue.",
+                strip_tags(content),
+            )
+
+        with self.subTest("Creating a Network that will have another Network as its child raises a warning"):
+            data = {
+                "prefix": "10.0.0.0/12",
+                "type": PrefixTypeChoices.TYPE_NETWORK,
+            }
+            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "10.0.0.0/12 is a Network prefix and should not contain child prefixes of types Container or Network. "
+                "This will be considered invalid data in a future release. "
+                "Consider changing the type of 10.0.0.0/12 to Container, or changing the type of its children to Pool, "
+                "to resolve this issue.",
+                strip_tags(content),
+            )
+
+        with self.subTest("Creating a Pool that will have any other Prefix as its child raises a warning"):
+            data = {
+                "prefix": "0.0.0.0/0",
+                "type": PrefixTypeChoices.TYPE_POOL,
+            }
+            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "0.0.0.0/0 is a Pool prefix and should not contain other prefixes. "
+                "This will be considered invalid data in a future release. "
+                "Consider either changing the type of 0.0.0.0/0 to Container or Network, or deleting its children, "
+                "to resolve this issue.",
+                strip_tags(content),
+            )
+
+        with self.subTest("Creating a large Container that will contain IPs raises a warning"):
+            data = {
+                "prefix": "10.0.0.0/28",
+                "type": PrefixTypeChoices.TYPE_CONTAINER,
+            }
+            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "10.0.0.0/28 is a Container prefix and should not directly contain IP addresses. "
+                "This will be considered invalid data in a future release. "
+                "Consider either changing the type of 10.0.0.0/28 to Network, or creating one or more child "
+                "prefix(es) of type Network to contain these IP addresses, to resolve this issue.",
+                strip_tags(content),
+            )
+
+        with self.subTest("Creating a small Container that will contain IPs raises a different warning"):
+            data = {
+                "prefix": "10.0.0.1/32",
+                "type": PrefixTypeChoices.TYPE_CONTAINER,
+            }
+            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "10.0.0.1/32 is a Container prefix and should not directly contain IP addresses. "
+                "This will be considered invalid data in a future release. "
+                "Consider changing the type of 10.0.0.1/32 to Network to resolve this issue.",
+                strip_tags(content),
+            )
 
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -293,6 +423,41 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(302, response.status_code)
         created_ip = IPAddress.objects.get(parent__namespace=new_namespace, address=instance.address)
         self.assertEqual(created_ip.parent, new_parent)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_object_warnings(self):
+        self.add_permissions("ipam.add_ipaddress")
+
+        Prefix.objects.create(
+            prefix="192.0.2.0/25",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+            status=self.prefix_status,
+        )
+
+        with self.subTest("Creating an IPAddress as a child of a larger Container prefix raises a warning"):
+            self.form_data["address"] = "192.0.2.98/28"
+            response = self.client.post(self._get_url("add"), data=post_data(self.form_data), follow=True)
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "IP address 192.0.2.98/28 currently has prefix 192.0.2.0/25 as its parent, which is a Container. "
+                "This will be considered invalid data in a future release. "
+                "Consider creating an intermediate /28 prefix of type Network to resolve this issue.",
+                strip_tags(content),
+            )
+
+        with self.subTest("Creating an IP as a child of a same-size Container prefix raises a different warning"):
+            self.form_data["address"] = "192.0.2.2/25"
+            response = self.client.post(self._get_url("add"), data=post_data(self.form_data), follow=True)
+            self.assertHttpStatus(response, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(
+                "IP address 192.0.2.2/25 currently has prefix 192.0.2.0/25 as its parent, which is a Container. "
+                "This will be considered invalid data in a future release. "
+                "Consider changing the prefix to type Network or Pool to resolve this issue.",
+                strip_tags(content),
+            )
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

@@ -391,6 +391,17 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             },
         )
 
+    def successful_post(self, request, obj, created, logger):
+        """Callback after the form is successfully saved but before redirecting the user."""
+        verb = "Created" if created else "Modified"
+        msg = f"{verb} {self.queryset.model._meta.verbose_name}"
+        logger.info(f"{msg} {obj} (PK: {obj.pk})")
+        if hasattr(obj, "get_absolute_url"):
+            msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+        else:
+            msg = f"{msg} {escape(obj)}"
+        messages.success(request, mark_safe(msg))
+
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
@@ -410,14 +421,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 if hasattr(form, "save_note") and callable(form.save_note):
                     form.save_note(instance=obj, user=request.user)
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+
+                self.successful_post(request, obj, object_created, logger)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
