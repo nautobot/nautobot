@@ -218,6 +218,8 @@ class Job(PrimaryModel):
 
     objects = BaseManager.from_queryset(JobQuerySet)()
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+
     class Meta:
         managed = True
         ordering = ["grouping", "name"]
@@ -335,6 +337,8 @@ class JobHook(OrganizationalModel):
     type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
     type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobhook.html"
+
     class Meta:
         ordering = ("name",)
 
@@ -418,6 +422,8 @@ class JobLogEntry(BaseModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+
     def __str__(self):
         return self.message
 
@@ -495,6 +501,8 @@ class JobResult(BaseModel, CustomFieldModel):
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
     objects = JobResultManager()
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -778,6 +786,8 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         default=True,
     )
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobbutton.html"
+
     class Meta:
         ordering = ["group_name", "weight", "name"]
 
@@ -927,6 +937,8 @@ class ScheduledJob(BaseModel):
 
     objects = BaseManager.from_queryset(ScheduledJobExtendedQuerySet)()
     no_changes = False
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
 
     def __str__(self):
         return f"{self.name}: {self.interval}"

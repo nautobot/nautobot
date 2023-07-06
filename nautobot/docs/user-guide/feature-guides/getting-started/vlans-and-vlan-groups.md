@@ -38,7 +38,7 @@ The following example will show:
 !!! note
     The required parameters to create a new VLAN are bolded in the `Add a new VLAN` form: **ID**, **Name**, and **Status**
 
-![Create vlans 1](../images/getting-started-nautobot-ui/22-create-vlans.png)
+![Create VLANs 1](../images/getting-started-nautobot-ui/22-create-vlans.png)
 
 Now we'll create two instances of VLANs, each with **ID** = `100` and **Name** = `vlan 100` and an `Active` **Status**.
 The differentiator will be that one instance will be assigned to the `Vancouver 1` Site and the other to the `Ottawa 1` Site.
@@ -59,13 +59,13 @@ On the `Add a new VLAN` form:
 4. Select `Ottawa 1` from the `Location` selector drop-down
 5. Click on the `Create` button when complete with the second instance
 
-![Create vlans 2](../images/getting-started-nautobot-ui/23-create-vlans-2.png)
+![Create VLANs 2](../images/getting-started-nautobot-ui/23-create-vlans-2.png)
 
 Once you've created the three VLANs and then hit the `Create` button, you will be taken to the **VLANs** main page. On that page,
 you'll see the three VLANs and the Location assignment for each one. Each `vlan 100` instance will have a Location assignment, while
 `vlan 200` will not:
 
-![Vlan main page](../images/getting-started-nautobot-ui/24-vlan-main-page.png)
+![VLAN main page](../images/getting-started-nautobot-ui/24-vlan-main-page.png)
 
 ### Assigning VLANs to an Interface
 
@@ -79,9 +79,9 @@ To assign a VLAN to an Interface:
     * One choice is the `vlan 100` instance specifically assigned to the `Vancouver 1` Location
     * The other choice is `vlan 200`, which was not assigned to a Location, and thus has a global scope
 
-![Add vlan to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
+![Add VLAN to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
 
 !!! note
     The `vlan 100` instance that is assigned to the `Ottawa 1` Location does not show up as an option for the `Vancouver1` Location
 
-![Add vlan to interface 2](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)
+![Add VLAN to interface 2](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)

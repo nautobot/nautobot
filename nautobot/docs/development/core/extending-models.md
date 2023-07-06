@@ -88,6 +88,6 @@ Be diligent to ensure all of the relevant test suites are adapted or extended as
 
 ## Update the model's documentation
 
-Each model has a dedicated page in the documentation, at `core-data-model/<app>/<model>.md`. Update this file to include any relevant information about the new field.
+Each model has a dedicated page in the documentation, typically either at `docs/user-guide/core-data-model/<app>/<model>.md`, or in the case of the `extras` app, at `docs/user-guide/platform-functionality/<model>.md`. Some models are exceptions to this pattern; if so, they should declare the path as a `documentation_static_path` attribute on the model class definition.
 
-Note that this documentation page will be accessible through the web UI via a "question mark" icon on the corresponding model create/edit page.
+Update this file to include any relevant information about the new field. Note that this documentation page should automatically be accessible through the web UI via a "question mark" icon on the corresponding model create/edit page.

@@ -1,6 +1,6 @@
 import os
 import tempfile
-from unittest import mock
+from unittest import mock, expectedFailure
 import uuid
 import warnings
 
@@ -716,6 +716,11 @@ class FileProxyTest(ModelTestCases.BaseModelTestCase):
     def setUp(self):
         self.test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
         self.fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
+
+    @expectedFailure
+    def test_get_docs_url(self):
+        """Not a user-facing model, so no get_docs_url() return value is expected."""
+        super().test_get_docs_url()
 
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""

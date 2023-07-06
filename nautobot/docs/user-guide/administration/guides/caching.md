@@ -33,7 +33,7 @@ Nautobot uses the [`django-redis`](https://github.com/jazzband/django-redis) Dja
 
 ### Using Redis Sentinel
 
-The installationadministration/configuration of the [Redis Sentinel](https://redis.io/topics/sentinel) cluster itself is outside the scope of this document, this section is intended to provide the steps necessary to configure Nautobot to connect to a Sentinel cluster.
+The installation/configuration of the [Redis Sentinel](https://redis.io/topics/sentinel) cluster itself is outside the scope of this document, this section is intended to provide the steps necessary to configure Nautobot to connect to a Sentinel cluster.
 
 We need to configure `django-redis` and `celery` to use Sentinel. Each library is configured differently, so please pay close attention to the details.
 

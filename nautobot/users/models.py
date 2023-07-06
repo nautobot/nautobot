@@ -178,6 +178,8 @@ class Token(BaseModel):
     write_enabled = models.BooleanField(default=True, help_text="Permit create/update/delete operations using this key")
     description = models.CharField(max_length=200, blank=True)
 
+    documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
+
     class Meta:
         ordering = ["created"]
 
@@ -250,6 +252,8 @@ class ObjectPermission(BaseModel):
         null=True,
         help_text="Queryset filter matching the applicable objects of the selected type(s)",
     )
+
+    documentation_static_path = "docs/user-guide/platform-functionality/users/objectpermission.html"
 
     class Meta:
         ordering = ["name"]
