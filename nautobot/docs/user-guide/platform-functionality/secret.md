@@ -23,7 +23,6 @@ When creating or editing a Secrets Group, you can assign any number of defined S
 
 A Secrets Group is not limited to containing secrets of a single *access type* either - for example, a plugin that supports both NETCONF and gNMI protocols to interact with a device could be able to make use of a Secrets Group containing distinct secrets for each protocol.
 
-
 ## Secrets Providers
 
 Each Secret is associated with a secrets provider (not to be confused with a circuit provider), which provides the functionality needed to retrieve a specific value from a particular source of secrets. Each secrets provider also defines the set of parameters that a given Secret must specify in order to retrieve a secret value from this provider. Nautobot includes the following built-in secrets providers:

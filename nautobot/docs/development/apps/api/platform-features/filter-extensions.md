@@ -1,4 +1,4 @@
-### Extending Filters
+# Extending Filters
 
 +++ 1.3.0
 

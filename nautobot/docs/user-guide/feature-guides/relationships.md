@@ -31,7 +31,7 @@ This section will focus on examples relationships.
 
 To create a relationship, navigate to **Extensibility > Data Management > Relationships**
 
-A simple relationship between `Device to Vlan` which is a `many-to-many` relationship. This relationship is `many-to-many` because more than one Devices can be assigned more than one Vlans. This relationship object is shown below.
+A simple relationship between `Device to VLAN` which is a `many-to-many` relationship. This relationship is `many-to-many` because more than one Devices can be assigned more than one VLANs. This relationship object is shown below.
 
 ![many-to-many example](./images/relationships/01-relationships.png)
 
@@ -52,7 +52,7 @@ You can see now the relationship name is `VIDs` instead of `VLANs`.
 
 Business requirements are one concept to take into account when making `labels`, but making the relationship data more meaningful is an option worth exploring.
 
-In the snippet below the source label was updated to `Configured VLANs`. The result on the device detail view is evident and provides additional context that is otherwise missing. `VLANs: 3 Vlans` doesn't give the same context as `Configured VLANs: 3 Vlans`.
+In the snippet below the source label was updated to `Configured VLANs`. The result on the device detail view is evident and provides additional context that is otherwise missing. `VLANs: 3 VLANs` doesn't give the same context as `Configured VLANs: 3 VLANs`.
 
 ![updated-source-label-expanded](./images/relationships/10-relationships.png)
 

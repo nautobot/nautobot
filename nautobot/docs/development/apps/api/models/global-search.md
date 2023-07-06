@@ -1,4 +1,4 @@
-### Including Models in the Global Search
+# Including Models in the Global Search
 
 +++ 2.0.0
 

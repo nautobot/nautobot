@@ -860,6 +860,8 @@ class DynamicGroupMembership(BaseModel):
 
     objects = BaseManager.from_queryset(DynamicGroupMembershipQuerySet)()
 
+    documentation_static_path = "docs/user-guide/platform-functionality/dynamicgroup.html"
+
     class Meta:
         unique_together = ["group", "parent_group", "operator", "weight"]
         ordering = ["parent_group", "weight", "group"]
