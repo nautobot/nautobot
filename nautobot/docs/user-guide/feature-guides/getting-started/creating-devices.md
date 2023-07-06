@@ -73,6 +73,25 @@ To create a new Device Type:
 
 ![Create a device type](../images/getting-started-nautobot-ui/4-create-device-type.png)
 
+## Creating a Location Type
+
+To create a location, you need to specify a Location Type for the location.
+
+More information on Location Type is found in the [Locations](../../core-data-model/dcim/locationtype.md#location-types) section of the Nautobot documentation.
+
+To create a new Location, you will need an existing Location Type or need to create a new Location Type instance.
+
+To create a new Location Type:
+
+1. Click on **Organization** in the top navigation menu
+2. Find **LocationTypes**
+3. Select **+** to go to the `Add a new location type` form
+4. Select a `Parent` LocationType if needed
+5. Populate the LocationType's `Name`
+6. Click on `Create` at the bottom of the form
+
+![Create a location type](../images/getting-started-nautobot-ui/1-create-location-type.png)
+
 ## Creating a Location
 
 How you choose to employ locations when modeling your network may vary depending on the nature of your organization, but generally a location will equate to a building or campus.
@@ -93,7 +112,7 @@ To create a new Location:
 7. Set the `Status` to `Active` in the drop-down selector
 8. Click on `Create` at the bottom of the form (not shown)
 
-![Create a location](../images/getting-started-nautobot-ui/1-create-location.png)
+![Create a location](../images/getting-started-nautobot-ui/45-create-location.png)
 
 ## Creating a Device
 
@@ -103,7 +122,7 @@ To create a new Device:
 2. Find **Devices**
 3. Select **+** to go to the `Add a new device` form
 4. Populate the `Name`
-5. Select the `Device Role` from the drop-down selector
+5. Select the `Role` from the drop-down selector
 6. Select the `Device Type` from the down-down selector
 7. Select the `Location` from the drop-down selector
 8. Set the `Status` to the appropriate value in the drop-down selector
