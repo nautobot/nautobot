@@ -76,17 +76,16 @@ For more details on configuring django-redis with Redis Sentinel, please see the
 
 #### `celery` Sentinel Configuration
 
-!!! note
-    Celery is not directly related caching but it does utilize Redis, therefore in more advanced deployments if Redis Sentinel is required for caching, Celery must also be configured to use Redis Sentinel to high availability.
++/- 2.0.0
+    Celery now stores results in the Nautobot database. The `CELERY_RESULT_BACKEND` and `CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS` should not be changed from their default values.
 
-Celery Sentinel configuration is controlled by four settings within your `nautobot_config.py`:
+!!! note
+    Celery is not directly related to caching but it does utilize Redis, therefore in more advanced deployments if Redis Sentinel is required for caching, Celery must also be configured to use Redis Sentinel to high availability.
+
+Celery Sentinel configuration is controlled by two settings within your `nautobot_config.py`:
 
 * [`CELERY_BROKER_URL`](../configuration/optional-settings.md#celery_broker_url)
 * [`CELERY_BROKER_TRANSPORT_OPTIONS`](../configuration/optional-settings.md#celery_broker_transport_options)
-* [`CELERY_RESULT_BACKEND`](../configuration/optional-settings.md#celery_result_backend)
-* [`CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS`](../configuration/optional-settings.md#celery_result_backend_transport_options)
-
-By default Nautobot configures the celery broker and results backend with the same settings, so this pattern is mirrored here.
 
 ```python
 redis_password = ""
@@ -102,9 +101,6 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "master_name": "nautobot",
     "sentinel_kwargs": {"password": sentinel_password},
 }
-
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = CELERY_BROKER_TRANSPORT_OPTIONS
 ```
 
 Please see the official Celery documentation for more information on how to [configure Celery to use Redis Sentinel](https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html?highlight=sentinel#configuration).
