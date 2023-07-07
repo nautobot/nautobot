@@ -146,6 +146,7 @@ nav:
       - GraphQL: "user-guide/feature-guides/graphql.md"
       - Interfaces: "user-guide/feature-guides/getting-started/interfaces.md"
       - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
+      - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
       - Platforms: "user-guide/feature-guides/getting-started/platforms.md"
       - Tenants: "user-guide/feature-guides/getting-started/tenants.md"
       - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
