@@ -1,7 +1,7 @@
 # Location Types and Locations
 
 Location Types describe the hierarchical nature of your organization's infrastructure and is used to organize Locations. They can be nested recursively.
-A Location Type might represent a continent, country, city, campus, or other area. 
+A Location Type might represent a continent, country, city, campus, or other area.
 
 Locations retain hierarchical nature of Location Types but are more specific. For example, a Location of Location Type continent could be Asia, Europe, Americas and etc. or a Location of Location type city could be London, Tokyo, Manhattan and etc.
 
