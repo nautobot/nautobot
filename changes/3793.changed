@@ -1,2 +1,0 @@
-Renamed Natural-key slug to Composite key throughout the code base, UI, REST API, and documentation.
-Changed url separator character for Composite keys from `&` to `;`.
