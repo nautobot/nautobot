@@ -414,8 +414,8 @@ The `request` property has been changed to a Celery request instead of a Django 
 
 These settings are new in Nautobot 2.0 and can be changed in your `nautobot_config.py` file or via environment variables if desired:
 
-- [`CELERY_WORKER_REDIRECT_STDOUTS` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS`)](../configuration/optional-settings.md#celery_worker_redirect_stdouts)
-- [`CELERY_WORKER_REDIRECT_STDOUTS_LEVEL` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL`)](../configuration/optional-settings.md#celery_worker_redirect_stdouts_level)
+- [`CELERY_WORKER_REDIRECT_STDOUTS` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS`)](../../configuration/optional-settings.md#celery_worker_redirect_stdouts)
+- [`CELERY_WORKER_REDIRECT_STDOUTS_LEVEL` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL`)](../../configuration/optional-settings.md#celery_worker_redirect_stdouts_level)
 
 ### Removed Settings
 
