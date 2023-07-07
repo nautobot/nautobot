@@ -1,1 +1,0 @@
-Removed leftover `interface` and `vminterface` fields from `IPAddress` GraphQL representation.

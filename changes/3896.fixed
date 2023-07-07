@@ -1,1 +1,0 @@
-Fixed a `KeyError` when accessing `ObjectChange` records for a `ConfigContext` via the REST API.
