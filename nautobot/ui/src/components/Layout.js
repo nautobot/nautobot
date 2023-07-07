@@ -66,11 +66,12 @@ export default function Layout({ children }) {
         e.preventDefault();
         const formData = {
             user_agent: navigator.userAgent,
-            view_name: "home",
+            view_name: window.location.pathname,
             nautobot_version: packageJson.version,
             ...feedbackFormState,
         };
         const url = "https://nautobot.cloud/api/nautobot/feature-request/";
+        console.log(formData);
         axios
             .post(url, formData)
             .then((response) => {
