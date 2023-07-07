@@ -376,7 +376,7 @@ A mapping of permissions to assign a new user account when created using SSO aut
 |---|---|
 | `{'dcim.view_device': {}}` or `{'dcim.view_device': None}` | Users can view all devices |
 | `{'dcim.add_device': {}}` | Users can add devices, see note below |
-| `{'dcim.view_device': {"location__name__in": ["HQ"], "location__location_type__name__in": ["Building"]}}` | Users can view all devices in the Building HQ |
+| `{'dcim.view_device': {"location__name__in": ["HQ"], "location__location_type__name__in": ["Building"]}}` | Users can view all devices in the HQ Building |
 
 !!! warning
     Permissions can be complicated! Be careful when restricting permissions to also add any required prerequisite permissions.

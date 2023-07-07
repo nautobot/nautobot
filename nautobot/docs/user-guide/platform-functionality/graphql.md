@@ -101,7 +101,7 @@ Result
 }
 ```
 
-Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field name `location_size` will appear in GraphQL as `cf_location_size` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../administration/configuration/optional-settings.md#graphql_custom_field_prefix).
+Additionally, by default, all custom fields in GraphQL will be prefixed with `cf_`. A custom field with a `key` of `location_size` will appear in GraphQL as `cf_location_size` as an example. The prefix can be changed by setting the value of [`GRAPHQL_CUSTOM_FIELD_PREFIX`](../administration/configuration/optional-settings.md#graphql_custom_field_prefix).
 
 ```graphql
 query {

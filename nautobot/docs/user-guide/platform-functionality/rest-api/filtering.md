@@ -54,7 +54,7 @@ Example output:
 
 ### Filtering by Custom Field
 
-To filter results by a custom field value, prepend `cf_` to the custom field name. For example, the following query will return only locations where a custom field named `foo` is equal to 123:
+To filter results by a custom field value, prepend `cf_` to the custom field key. For example, the following query will return only locations where a custom field with key `foo` is equal to 123:
 
 ```no-highlight
 GET /api/dcim/locations/?cf_foo=123

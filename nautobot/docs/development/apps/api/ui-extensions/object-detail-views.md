@@ -33,6 +33,7 @@ class LocationAnimalCount(TemplateExtension):
     """Template extension to display animal count on the right side of the page."""
 
     model = 'dcim.location'
+
     def right_page(self):
         return self.render('nautobot_animal_sounds/inc/animal_count.html', extra_context={
             'animal_count': Animal.objects.count(),

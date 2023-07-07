@@ -39,7 +39,7 @@ The GraphQL API now supports query filter parameters at any level of a query. Fo
 
 ```graphql
 query {
-  locations(name: "ams") {
+  sites(name: "ams") {
     devices(role: "edge") {
       name
       interfaces(type: "virtual") {

@@ -255,7 +255,8 @@ Note that Nautobot's change logging and webhook processing features operate unde
 >>> user = User.objects.get(username="admin")
 >>> with web_request_context(user):
 ...     location_type = LocationType.objects.get(name="Airport")
-...     lax = Location(name="LAX", location_type=location_type)
+...     status = Status.objects.get_for_model(Location).first()
+...     lax = Location(name="LAX", location_type=location_type, status=status)
 ...     lax.validated_save()
 ```
 

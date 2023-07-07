@@ -10,8 +10,9 @@ A network Device in Nautobot has a few required attributes:
 * A Device Type
     * A Device Type requires a Manufacturer
 * A Location
+    * A Location requires a Location Type
 
-Looking at the list above, there are four objects in Nautobot that must be present prior to creating a related Device.
+Looking at the list above, there are five objects in Nautobot that must be present prior to creating a related Device.
 The following sections will guide you through how to create each object type.
 
 ## Creating a Device Role
@@ -75,11 +76,9 @@ To create a new Device Type:
 
 ## Creating a Location Type
 
-To create a location, you need to specify a Location Type for the location.
+To create a location, you need to specify a Location Type for the location. The Location Type(s) that you define for your network may vary depending on the nature of your organization and its needs, but might include for example "region", "city", "site", "building" and/or "room". Take some time to think about this before you begin entering data as it will be a fundamental aspect of how you record your network in Nautobot.
 
 More information on Location Type is found in the [Locations](../../core-data-model/dcim/locationtype.md#location-types) section of the Nautobot documentation.
-
-To create a new Location, you will need an existing Location Type or need to create a new Location Type instance.
 
 To create a new Location Type:
 
@@ -88,14 +87,14 @@ To create a new Location Type:
 3. Select **+** to go to the `Add a new location type` form
 4. Select a `Parent` LocationType if needed
 5. Populate the LocationType's `Name`
-6. Click on `Create` at the bottom of the form
+6. Select the desired `ContentTypes` for this LocationType (in this case `dcim.device`).
+7. Click on `Create` at the bottom of the form
 
 ![Create a location type](../images/getting-started-nautobot-ui/1-create-location-type.png)
 
 ## Creating a Location
 
-How you choose to employ locations when modeling your network may vary depending on the nature of your organization, but generally a location will equate to a building or campus.
-For example, a chain of banks might create a location to represent each of its branches, a location for its corporate headquarters, and two additional locations for its presence in two co-location facilities.
+Once you've established your hierarchy of Location Types, you can begin to create the actual Locations of these types. You generally will start with the most general Locations (for example, if your base Location Type is "Region", you might create an "Americas" location of this type) and work your way down to the most specific Locations (for example, "Room 100 in the Headquarters building").
 
 More information on Locations is found in the [Locations](../../core-data-model/dcim/location.md#locations) section of the Nautobot documentation.
 

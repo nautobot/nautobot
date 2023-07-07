@@ -183,7 +183,7 @@ Plugin [custom validator classes](../apps/api/platform-features/custom-validator
 ```python
 {
     'circuits.circuit': [CircuitMustHaveDescriptionValidator],
-    'dcim.location': [LocationMustHaveRegionValidator, LocationNameMustIncludeCountryCodeValidator],
+    'dcim.location': [LocationMustHaveTenantValidator, LocationNameMustIncludeCountryCodeValidator],
 }
 ```
 

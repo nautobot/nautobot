@@ -756,7 +756,7 @@ GET /api/dcim/locations/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationsh
         "vrfs-to-locations": {
             "id": "e39c53e4-78cf-4572-b116-1d8830b81b2e",
             "url": "/api/extras/relationships/e39c53e4-78cf-4572-b116-1d8830b81b2e/",
-            "name": "VRFs to Sites",
+            "name": "VRFs to Locations",
             "type": "many-to-many",
             "source": {
                 "label": "VRFs",
@@ -865,19 +865,19 @@ http://nautobot/api/dcim/locations/ \
     {
         "id": "0238a4e3-66f2-455a-831f-5f177215de0f",
         "url": "http://nautobot/api/dcim/locations/0238a4e3-66f2-455a-831f-5f177215de0f/",
-        "name": "Site 1",
+        "name": "Location 1",
         ...
     },
     {
         "id": "33ac3a3b-0ee7-49b7-bf2a-244096051dc0",
         "url": "http://nautobot/api/dcim/locations/33ac3a3b-0ee7-49b7-bf2a-244096051dc0/",
-        "name": "Site 2",
+        "name": "Location 2",
         ...
     },
     {
         "id": "10b3134d-960b-4794-ad18-0e73edd357c4",
         "url": "http://nautobot/api/dcim/locations/10b3134d-960b-4794-ad18-0e73edd357c4/",
-        "name": "Site 3",
+        "name": "Location 3",
         ...
     }
 ]
