@@ -14,6 +14,7 @@ import sys
 from django.core import management
 
 from nautobot import __version__
+from nautobot.core.settings_funcs import is_truthy
 from . import importer
 from .settings import create_default_settings
 
@@ -238,9 +239,22 @@ def run_app(**kwargs):
             )
             return
 
+        # Prompt user to enable installation metrics
+        installation_metrics_enabled = None
+        while installation_metrics_enabled is None:
+            installation_metrics_prompt = input(
+                """Would you like to allow Nautobot to send anonymous Nautobot version and plugin version metrics? [y/n]: """
+            )
+            try:
+                installation_metrics_enabled = is_truthy(installation_metrics_prompt)
+            except ValueError:
+                print("Please enter 'y' or 'n'.")
+
         # Create the config
         try:
-            create_default_settings(config_path, settings_initializer)
+            create_default_settings(
+                config_path, settings_initializer, installation_metrics_enabled=installation_metrics_enabled
+            )
         except OSError as e:
             raise e.__class__(f"Unable to write default settings file to {config_path}")
 

@@ -15,6 +15,7 @@ This will run the following management commands with default settings, in order:
 - remove_stale_contenttypes
 - clearsessions
 - invalidate all
+- send_installation_metrics
 """
 
 
@@ -70,6 +71,13 @@ class Command(BaseCommand):
             default=True,
             help="Do not automatically generate missing cable paths.",
         )
+        parser.add_argument(
+            "--no-send-installation-metrics",
+            action="store_false",
+            dest="send_installation_metrics",
+            default=True,
+            help="Do not automatically send installation metrics.",
+        )
 
     def handle(self, *args, **options):
         # Run migrate
@@ -111,4 +119,10 @@ class Command(BaseCommand):
         if options.get("invalidate_all"):
             print("Invalidating cache...")
             call_command("invalidate", "all")
+            print()
+
+        # Send installation metrics
+        if options.get("send_installation_metrics"):
+            print("Sending installation metrics...")
+            call_command("send_installation_metrics")
             print()
