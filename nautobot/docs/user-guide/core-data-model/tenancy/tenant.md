@@ -2,7 +2,7 @@
 
 A tenant represents a discrete grouping of resources used for administrative purposes. Typically, tenants are used to represent individual customers or internal departments within an organization. The following objects can be assigned to tenants:
 
-* Sites
+* Locations
 * Racks
 * Rack reservations
 * Devices

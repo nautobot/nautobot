@@ -62,10 +62,10 @@ def get_route_for_model(model, action, api=False):
         "dcim:device_list"
         >>> get_route_for_model(Device, "list", api=True)
         "dcim-api:device-list"
-        >>> get_route_for_model("dcim.site", "list")
-        "dcim:site_list"
-        >>> get_route_for_model("dcim.site", "list", api=True)
-        "dcim-api:site-list"
+        >>> get_route_for_model("dcim.location", "list")
+        "dcim:location_list"
+        >>> get_route_for_model("dcim.location", "list", api=True)
+        "dcim-api:location-list"
         >>> get_route_for_model(ExampleModel, "list")
         "plugins:example_plugin:examplemodel_list"
         >>> get_route_for_model(ExampleModel, "list", api=True)

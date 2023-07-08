@@ -23,7 +23,7 @@ With Status as a model, statuses can be customized. This can be as simple as rem
 
 The real benefit of custom status is adding your own organization status and process names directly to Nautobot. An example of custom statuses would be including End of Life information for your devices. A simple End of Life status could be EOx for a device hitting any end of life milestone; more specific statuses like EOSS (End of Software Support), EOS (End of Sale), and Pre-EOS (for 1 year prior to EOS) to be more specific. Once the end of life information is tracked as a status, developing a report for Devices that have reached EOSS is trivial.
 
-Another example for sites is tracking the nature of a specific site's installation status. A site that is under construction could received a status like 'Pre Production'.
+Another example for locations is tracking the nature of a specific location's installation status. A location that is under construction could receive a status like 'Pre Production'.
 
 For Virtual Machines, if utilizing OpenStack, statuses in Nautobot could be customized to reflect the specific [Nova virtual machine states](https://docs.openstack.org/nova/latest/reference/vm-states.html).
 

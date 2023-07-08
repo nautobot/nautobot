@@ -216,7 +216,7 @@ class JobButtonFormTestCase(TestCase):
 
         Example:
             Job button 1: dcim | device, Job(job_class_name="TestJobButtonReceiverComplex")
-            Job button 2: dcim | site, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 2: dcim | location, Job(job_class_name="TestJobButtonReceiverComplex")
         """
         form = JobButtonForm(data=self.job_buttons_data[1])
 

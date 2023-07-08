@@ -13,18 +13,18 @@ Declared subclasses should be gathered into a list or tuple for integration with
 from nautobot.apps.models import CustomValidator
 
 
-class SiteValidator(CustomValidator):
-    """Custom validator for Sites to enforce that they must have a Region."""
+class LocationValidator(CustomValidator):
+    """Custom validator for Locations to enforce that they must have a Tenant."""
 
-    model = 'dcim.site'
+    model = 'dcim.location'
 
     def clean(self):
-        if self.context['object'].region is None:
-            # Enforce that all sites must be assigned to a region
+        if self.context['object'].tenant is None:
+            # Enforce that all locations must have a tenant
             self.validation_error({
-                "region": "All sites must be assigned to a region"
+                "tenant": "All locations must have a tenant"
             })
 
 
-custom_validators = [SiteValidator]
+custom_validators = [LocationValidator]
 ```

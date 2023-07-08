@@ -32,7 +32,6 @@ from nautobot.dcim.models.devices import Device, DeviceRedundancyGroup, DeviceTy
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.dcim.models.power import PowerFeed, PowerPanel
 from nautobot.dcim.models.racks import Rack, RackGroup, RackReservation
-from nautobot.dcim.models.sites import Region, Site
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.models.customfields import ComputedField, CustomField, CustomFieldChoice
 from nautobot.extras.models.datasources import GitRepository
@@ -107,8 +106,8 @@ To count all objects matching the query, replace `all()` with `count()`:
 To retrieve a particular object (typically by its primary key or other unique field), use `get()`:
 
 ```python
->>> Site.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")
-<Site: Test Lab>
+>>> Location.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")
+<Location: Test Lab>
 ```
 
 ### Filtering Querysets
@@ -190,18 +189,18 @@ To return the inverse of a filtered queryset, use `exclude()` instead of `filter
 
 ## Creating and Updating Objects
 
-New objects can be created by instantiating the desired model, defining values for all required attributes, and calling `validated_save()` on the instance. For example, we can create a new VLAN by specifying its numeric ID, name, and assigned site:
+New objects can be created by instantiating the desired model, defining values for all required attributes, and calling `validated_save()` on the instance. For example, we can create a new VLAN by specifying its numeric ID, name, and assigned location:
 
 ```python
->>> lab1 = Site.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")
->>> myvlan = VLAN(vid=123, name="MyNewVLAN", site=lab1)
+>>> lab1 = Location.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")
+>>> myvlan = VLAN(vid=123, name="MyNewVLAN", location=lab1)
 >>> myvlan.validated_save()
 ```
 
 Alternatively, the above can be performed as a single operation. (Note, however, that `validated_save()` does _not_ return the new instance for reuse.)
 
 ```python
->>> VLAN(vid=123, name="MyNewVLAN", site=Site.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")).validated_save()
+>>> VLAN(vid=123, name="MyNewVLAN", location=Location.objects.get(pk="8a2c9c3b-076e-4688-8a0b-89362f343a26")).validated_save()
 ```
 
 To modify an existing object, we retrieve it, update the desired field(s), and call `validated_save()` again.
@@ -255,7 +254,9 @@ Note that Nautobot's change logging and webhook processing features operate unde
 >>> from nautobot.extras.context_managers import web_request_context
 >>> user = User.objects.get(username="admin")
 >>> with web_request_context(user):
-...     lax = Site(name="LAX")
+...     location_type = LocationType.objects.get(name="Airport")
+...     status = Status.objects.get_for_model(Location).first()
+...     lax = Location(name="LAX", location_type=location_type, status=status)
 ...     lax.validated_save()
 ```
 

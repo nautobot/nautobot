@@ -148,7 +148,6 @@ nav:
       - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
       - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
       - Platforms: "user-guide/feature-guides/getting-started/platforms.md"
-      - Regions: "user-guide/feature-guides/getting-started/regions.md"
       - Tenants: "user-guide/feature-guides/getting-started/tenants.md"
       - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
       - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"

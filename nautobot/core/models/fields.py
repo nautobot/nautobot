@@ -176,11 +176,11 @@ class ForeignKeyLimitedByContentTypes(ForeignKeyWithAutoRelatedName):
     An abstract model field that automatically restricts ForeignKey options based on content_types.
 
     For instance, if the model "Role" contains two records: role_1 and role_2, role_1's content_types
-    are set to "dcim.site" and "dcim.device" while the role_2's content_types are set to
-    "circuit.circuit" and "dcim.site."
+    are set to "dcim.location" and "dcim.device" while the role_2's content_types are set to
+    "circuit.circuit" and "dcim.location."
 
     Then, for the field `role` on the Device model, role_1 is the only Role that is available,
-    while role_1 & role_2 are both available for the Site model.
+    while role_1 & role_2 are both available for the Location model.
 
     The limit_choices_to for the field are automatically derived from:
         - the content-type to which the field is attached (e.g. `dcim.device`)

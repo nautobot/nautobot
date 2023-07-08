@@ -4,10 +4,10 @@
 
 Computed fields are very similar in design and implementation to custom fields. See the overview of [Custom Fields](./customfield.md). As the name suggests, computed fields serve the need for a custom field where the value is generated using data that Nautobot stores in its database and merging it into a Jinja2 template and associated filters.
 
-As an example, within your automation system, you may want to be able to have an automatically generated field on the Device model that combines the name of the device and the site name in uppercase. To do that, you would define a Jinja2 template for this field that looks like such:
+As an example, within your automation system, you may want to be able to have an automatically generated field on the Device model that combines the name of the device and the location name in uppercase. To do that, you would define a Jinja2 template for this field that looks like such:
 
 ```jinja2
-{{ obj.name }}_{{ obj.site.name | upper }}
+{{ obj.name }}_{{ obj.location.name | upper }}
 ```
 
 !!! important
@@ -19,8 +19,8 @@ Computed fields can be created through the Nautobot UI under **Extensibility > C
 
 Each computed field must have a key and a label.
 
-- Key must be a simple, database-friendly string, e.g. `device_with_site`
-- Label is used as the human-friendly display name for this field in the UI, for example, `Device With Site`.
+- Key must be a simple, database-friendly string, e.g. `device_with_location`
+- Label is used as the human-friendly display name for this field in the UI, for example, `Device With Location`.
 
 !!! tip
     Because computed field data can be included in the REST API and in GraphQL, we strongly recommend that when defining a computed field, you provide a key that contains underscores rather than dashes (`my_field_key`, not `my-field-key`), as some features may not work optimally if dashes are included in the key.
@@ -35,10 +35,10 @@ When creating a computed field, if "Move to Advanced tab" is checked, this compu
 
 ## Computed Field Template Context
 
-Computed field templates can utilize the context of the object the field is being rendered on. This context is available for use in templates via the `obj` keyword. As an example, for a computed field being rendered on a Device object, the name of the site that this Device belongs to can be accessed like this:
+Computed field templates can utilize the context of the object the field is being rendered on. This context is available for use in templates via the `obj` keyword. As an example, for a computed field being rendered on a Device object, the name of the location that this Device belongs to can be accessed like this:
 
 ```jinja2
-{{ obj.site.name }}
+{{ obj.location.name }}
 ```
 
 !!! note
@@ -49,7 +49,7 @@ Computed field templates can utilize the context of the object the field is bein
 Computed field templates can also utilize built-in Jinja2 filters or custom ones that have been registered via plugins. These filters can be used by providing the name of the filter function. As an example:
 
 ```jinja2
-{{ obj.site.name | leet_speak }}
+{{ obj.location.name | leet_speak }}
 ```
 
 See the documentation on [built-in filters](./template-filters.md) or [registering custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md) in plugins.
@@ -61,19 +61,19 @@ When retrieving an object via the REST API, computed field data is not included 
 Take a look at an example URL that includes computed field data:
 
 ```no-highlight
-http://localhost:8080/api/dcim/sites?include=computed_fields
+http://localhost:8080/api/dcim/locations?include=computed_fields
 ```
 
-When explicitly requested as such, computed field data will be included in the `computed_fields` attribute. For example, below is the partial output of a site with one computed field defined:
+When explicitly requested as such, computed field data will be included in the `computed_fields` attribute. For example, below is the partial output of a location with one computed field defined:
 
 ```json
 {
     "id": 123,
-    "url": "http://localhost:8080/api/dcim/sites/123/",
+    "url": "http://localhost:8080/api/dcim/locations/123/",
     "name": "Raleigh 42",
     ...
     "computed_fields": {
-        "site_name_uppercase": "RALEIGH"
+        "location_name_uppercase": "RALEIGH"
     },
     ...
 ```

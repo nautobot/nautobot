@@ -1,6 +1,6 @@
 # VLANS and VLAN Groups
 
-Each VLAN may be assigned to a site, tenant, and/or VLAN group.
+Each VLAN may be assigned to a location, tenant, and/or VLAN group.
 
 Each VLAN must be assigned a status. The following statuses are available by default:
 
@@ -9,22 +9,22 @@ Each VLAN must be assigned a status. The following statuses are available by def
 * Deprecated
 
 In general, VLANs can have overlapping names and IDs. The exception to this is VLANs within a VLAN Group: each VLAN within a group must have a unique ID and name.  
-A VLAN Group may be assigned to a specific site, but a Group cannot belong to multiple sites. VLANs may be assigned to a specific site as well.
+A VLAN Group may be assigned to a specific location, but a Group cannot belong to multiple locations. VLANs may be assigned to a specific location as well.
 
-The Nautobot documentation has more info about [VLANs and VLAN Groups](../../core-data-model/ipam/vlan.md#vlans).
+The Nautobot documentation has more info about [VLANs](../../core-data-model/ipam/vlan.md) and [VLAN Groups](../../core-data-model/ipam/vlangroup.md).
 
 ## VLAN Example
 
 The following example will show:
 
-* Creating a `vlan 200` without a site assignment (*global* scope)
+* Creating a `vlan 200` without a location assignment (*global* scope)
 * Creating two VLANs, each with overlapping Names and IDs: ID = `100` and Name = `vlan 100`
-    * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different site (*site-specific* scope)
-* How the *site-specific* and *global* scopes affect which VLANs can be assigned on which Devices
+    * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different location (*location-specific* scope)
+* How the *location-specific* and *global* scopes affect which VLANs can be assigned on which Devices
 
 !!! note
-    This example will require a Site (`Ottawa 1`) within a Region (`Ottawa`) in the `North America` Region in addition to the `Vancouver 1` Site and `Vancouver` Region created prior.
-    Refer back to the [Create a Site](creating-devices.md#create-a-site) and [Create a Region](regions.md#creating-regions) sections to do so.
+    This example will require a Location (`Ottawa 1`) within a Parent Location (`Ottawa`) in the `North America` Parent Location in addition to the `Vancouver 1` Location and `Vancouver` Parent Location created prior.
+    Refer back to the [Create a Loaction](creating-devices.md#create-a-location) sections to do so.
 
 ### Creating the VLANs
 
@@ -48,25 +48,21 @@ On the `Add a new VLAN` form:
 1. Populate `ID` with `100`
 2. Populate `Name` with `vlan 100`
 3. Select `Status` as `Active`
-4. Select `Vancouver` from the `Region` selector drop-down
-5. Select `Vancouver 1` from the `Site` selector drop-down
-6. Click on the `Create and Add Another` button
+4. Select `Vancouver 1` from the `Location` selector drop-down
+5. Click on the `Create and Add Another` button
 
-!!! note
-    The `Region` drop-down selection in step 4 is optional and only meant to narrow down the options presented in the **Site** drop-down selector in Step 5.
-    A VLAN cannot be assigned to a Region.
+On the `Add a new VLAN` form:
 
 1. Populate `ID` with `100`
 2. Populate `Name` with `vlan 100`
 3. Select `Status` as `Active`
-4. Select `Ottawa` from the `Region` selector drop-down
-5. Select `Ottawa 1` from the `Site` selector drop-down
-6. Click on the `Create` button when complete with the second instance
+4. Select `Ottawa 1` from the `Location` selector drop-down
+5. Click on the `Create` button when complete with the second instance
 
 ![Create VLANs 2](../images/getting-started-nautobot-ui/23-create-vlans-2.png)
 
 Once you've created the three VLANs and then hit the `Create` button, you will be taken to the **VLANs** main page. On that page,
-you'll see the three VLANs and the Site assignment for each one. Each `vlan 100` instance will have a Site assignment, while
+you'll see the three VLANs and the Location assignment for each one. Each `vlan 100` instance will have a Location assignment, while
 `vlan 200` will not:
 
 ![VLAN main page](../images/getting-started-nautobot-ui/24-vlan-main-page.png)
@@ -80,12 +76,12 @@ To assign a VLAN to an Interface:
 3. Click on the name of the Device you wish to add a VLAN to (`edge2.van1`) in this example
 4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
 5. On the `Editing interface xe-0/0/0` page, set `802.1Q` Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
-    * One choice is the `vlan 100` instance specifically assigned to the `Vancouver 1` Site
-    * The other choice is `vlan 200`, which was not assigned to a Site, and thus has a global scope
+    * One choice is the `vlan 100` instance specifically assigned to the `Vancouver 1` Location
+    * The other choice is `vlan 200`, which was not assigned to a Location, and thus has a global scope
 
 ![Add VLAN to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
 
 !!! note
-    The `vlan 100` instance that is assigned to the `Ottawa 1` Site does not show up as an option for the `Vancouver1` Site
+    The `vlan 100` instance that is assigned to the `Ottawa 1` Location does not show up as an option for the `Vancouver1` Location
 
 ![Add VLAN to interface 2](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)
