@@ -7,7 +7,7 @@ on:
 jobs:
   # Ensure CI has passed
   ci:
-    uses: nautobot/nautobot/.github/workflows/ci_integration.yml@main
+    uses: ./.github/workflows/ci_integration.yml
 
   # Publish to GitHub followed by pypi
   publish_python:

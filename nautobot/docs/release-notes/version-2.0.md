@@ -399,6 +399,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#4005](https://github.com/nautobot/nautobot/issues/4005) - Added logic to Job class `@classproperty` methods to enforce correct data types.
 - [#4005](https://github.com/nautobot/nautobot/issues/4005) - Fixed incorrect documentation about how to register Jobs from an app.
 - [#4071](https://github.com/nautobot/nautobot/issues/4071) - Fixed Docker tag syntax for pre-release workflow.
+- [#4078](https://github.com/nautobot/nautobot/issues/4078) - Fixed prerelease workflow referenced `ci_integration.yml` file.
 
 ### Removed
 
