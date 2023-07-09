@@ -5,6 +5,7 @@ from collections import OrderedDict
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
@@ -462,7 +463,7 @@ class APIVersioningGetSchemaURLMixin:
         )
 
 
-class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, SpectacularSwaggerView):
+class NautobotSpectacularSwaggerView(LoginRequiredMixin, APIVersioningGetSchemaURLMixin, SpectacularSwaggerView):
     """
     Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter and page styling.
     """

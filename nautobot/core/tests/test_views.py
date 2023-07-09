@@ -255,6 +255,25 @@ class NavRestrictedUI(TestCase):
 
 
 class LoginUI(TestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.footer_links = """
+            <p class="text-muted">
+                <i class="mdi mdi-new-box text-primary"></i> <a href="#" onclick="viewNewUI();">View in New UI</a> ·
+                <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> ·
+                <i class="mdi mdi-book-open-page-variant text-primary"></i>
+                
+                    <a href="/static/docs/index.html">Docs</a>
+                
+                ·
+                <i class="mdi mdi-cloud-braces text-primary"></i> <a href="/api/docs/">API</a> ·
+                <i class="mdi mdi-graphql text-primary"></i> <a href="/graphql/">GraphQL</a> ·
+                <i class="mdi mdi-xml text-primary"></i> <a href="https://github.com/nautobot/nautobot">Code</a> ·
+                <i class="mdi mdi-lifebuoy text-primary"></i> <a href="https://github.com/nautobot/nautobot/wiki">Help</a>
+            </p>
+            """
+
     def make_request(self):
         response = self.client.get(reverse("login"))
         sso_login_pattern = re.compile('<a href=".*">Continue with SSO</a>')
@@ -277,6 +296,31 @@ class LoginUI(TestCase):
         self.client.logout()
         sso_login_search_result = self.make_request()
         self.assertIsNotNone(sso_login_search_result)
+
+    @override_settings(HIDE_RESTRICTED_UI=True)
+    def test_routes_redirect_back_to_login_if_hide_restricted_ui_true(self):
+        """Assert that api docs and graphql redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=True."""
+        self.client.logout()
+        url = "/api/docs/"
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 302)
+        self.assertEqual(response.url, f"/login/?next={url}")
+        response_content = response.content.decode(response.charset).replace("\n", "")
+        # Assert `self.footer_links` not found in `response_content`
+        # Since self.assertNotInHTML is not available, Hence the workaround
+        with self.assertRaises(AssertionError):
+            self.assertInHTML(self.footer_links, response_content)
+
+    @override_settings(HIDE_RESTRICTED_UI=False)
+    def test_routes_no_redirect_back_to_login_if_hide_restricted_ui_false(self):
+        """Assert that api docs and graphql do not redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=False."""
+        self.client.logout()
+        url = "/api/docs/"
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response.request["PATH_INFO"], url)
+        response_content = response.content.decode(response.charset).replace("\n", "")
+        self.assertInHTML(self.footer_links, response_content)
 
 
 class MetricsViewTestCase(TestCase):

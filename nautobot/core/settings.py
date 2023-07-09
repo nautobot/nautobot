@@ -833,3 +833,5 @@ def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
     :type: str
     """
     return str(device_display_name).split(".")[0]
+
+HIDE_RESTRICTED_UI = True
