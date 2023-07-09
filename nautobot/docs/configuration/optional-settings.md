@@ -1151,9 +1151,8 @@ The time zone Nautobot will use when dealing with dates and times. It is recomme
 
 Please see the [official Django documentation on `TIME_ZONE`](https://docs.djangoproject.com/en/stable/ref/settings/#time-zone) for more information.
 
-
 ### FEEDBACK_BUTTON_ENABLED
 
 Default: `True`
 
-If True, a "Submit Feedback" button is added to the New UI sidebar secondary menu, which is used to collect user feedback.
+If set to `True`, a "Submit Feedback" button is added to the New UI sidebar secondary menu, which is used to collect user feedback.

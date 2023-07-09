@@ -71,7 +71,6 @@ export default function Layout({ children }) {
             ...feedbackFormState,
         };
         const url = "https://nautobot.cloud/api/nautobot/feature-request/";
-        console.log(formData);
         axios
             .post(url, formData)
             .then((response) => {
