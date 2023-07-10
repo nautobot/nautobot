@@ -575,7 +575,6 @@ The following is an example of the data that is sent:
 }
 ```
 
-
 ### `start`
 
 `nautobot-server start`

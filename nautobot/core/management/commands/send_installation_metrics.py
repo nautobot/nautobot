@@ -67,3 +67,4 @@ class Command(BaseCommand):
             print(
                 f"Failed to send metrics to '{metrics_endpoint}'; response status {response.status_code}: {response.content}"
             )
+            print("To disable installation metrics, set INSTALLATION_METRICS_ENABLED to False in your Nautobot config.")
