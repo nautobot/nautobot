@@ -82,47 +82,49 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Run migrate
         if options.get("migrate"):
-            print("Performing database migrations...")
+            self.stdout.write("Performing database migrations...")
             call_command(
                 "migrate",
                 interactive=False,
                 traceback=options["traceback"],
                 verbosity=options["verbosity"],
             )
-            print()
+            self.stdout.write()
 
         # Run trace_paths
         if options.get("trace_paths"):
-            print("Generating cable paths...")
+            self.stdout.write("Generating cable paths...")
             call_command("trace_paths", no_input=True)
-            print()
+            self.stdout.write()
 
         # Run collectstatic
         if options.get("collectstatic"):
-            print("Collecting static files...")
+            self.stdout.write("Collecting static files...")
             call_command("collectstatic", interactive=False)
-            print()
+            self.stdout.write()
 
         # Run remove_stale_contenttypes
         if options.get("remove_stale_contenttypes"):
-            print("Removing stale content types...")
+            self.stdout.write("Removing stale content types...")
             call_command("remove_stale_contenttypes", interactive=False)
-            print()
+            self.stdout.write()
 
         # Run clearsessions
         if options.get("clearsessions"):
-            print("Removing expired sessions...")
+            self.stdout.write("Removing expired sessions...")
             call_command("clearsessions")
-            print()
+            self.stdout.write()
 
         # Run invalidate all
         if options.get("invalidate_all"):
-            print("Invalidating cache...")
+            self.stdout.write("Invalidating cache...")
             call_command("invalidate", "all")
-            print()
+            self.stdout.write()
 
         # Send installation metrics
         if options.get("send_installation_metrics"):
-            print("Sending installation metrics...")
+            self.stdout.write("Sending installation metrics...")
             call_command("send_installation_metrics")
-            print()
+            self.stdout.write()
+        else:
+            self.stdout.write("--no-send-installation-metrics was specified; skipping installation metrics.")

@@ -11,6 +11,9 @@ from django.core.management.base import BaseCommand
 from nautobot.utilities.config import get_settings_or_config
 
 
+METRICS_ENDPOINT = "https://nautobot.cloud/api/nautobot/installation-metric/"
+
+
 class Command(BaseCommand):
     help = "Send installation metrics for this Nautobot installation."
 
@@ -30,7 +33,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # skip if metrics are disabled
         if settings.INSTALLATION_METRICS_ENABLED is not True:
-            return
+            self.stdout.write("Installation metrics are disabled by INSTALLATION_METRICS_ENABLED setting, skipping.")
 
         # get the deployment id for this install from constance or settings
         # if one is not already set, generate a random uuid and set it in constance
@@ -49,22 +52,16 @@ class Command(BaseCommand):
         }
 
         # send the payload to the metrics endpoint
-        metrics_endpoint = "https://nautobot.cloud/api/nautobot/installation-metric/"
-
-        try:
-            prepared_request = requests.Request("POST", metrics_endpoint, json=payload).prepare()
-        except requests.exceptions.RequestException as e:
-            print(f"Error forming HTTP request: {e}")
-            return
-
-        # Send the request
+        prepared_request = requests.Request("POST", METRICS_ENDPOINT, json=payload).prepare()
         with requests.Session() as session:
             response = session.send(prepared_request, proxies=settings.HTTP_PROXIES)
 
         if response.ok:
-            print(f"Metrics successfully sent to '{metrics_endpoint}'")
+            self.stdout.write(f"Metrics successfully sent to '{METRICS_ENDPOINT}'")
         else:
-            print(
-                f"Failed to send metrics to '{metrics_endpoint}'; response status {response.status_code}: {response.content}"
+            self.stderr.write(
+                f"Failed to send metrics to '{METRICS_ENDPOINT}'; response status {response.status_code}: {response.content}"
             )
-            print("To disable installation metrics, set INSTALLATION_METRICS_ENABLED to False in your Nautobot config.")
+            self.stderr.write(
+                "To disable installation metrics, set INSTALLATION_METRICS_ENABLED to False in your Nautobot config."
+            )
