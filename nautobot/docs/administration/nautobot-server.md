@@ -365,6 +365,8 @@ Please see the dedicated guide on the [Nautobot Shell](nautobot-shell.md) for mo
 
 ### `pre_migrate`
 
++++ 1.5.23
+
 `nautobot-server pre_migrate`
 
 Performs pre-migration validation checks for Nautobot 2.0.
