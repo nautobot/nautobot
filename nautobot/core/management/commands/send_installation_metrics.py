@@ -14,8 +14,8 @@ from nautobot.utilities.config import get_settings_or_config
 class Command(BaseCommand):
     help = "Send installation metrics for this Nautobot installation."
 
-    def _hash(self, key):
-        return hashlib.sha256(key.encode("utf8")).hexdigest()
+    def _hash(self, plaintext):
+        return hashlib.sha256(plaintext.encode("utf8")).hexdigest()
 
     def get_hashed_plugins_with_version(self):
         plugins = {}
