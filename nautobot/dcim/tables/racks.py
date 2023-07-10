@@ -31,7 +31,7 @@ __all__ = (
 
 class RackGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=MPTT_LINK, attrs={"td": {"class": "text-nowrap"}})
     site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack_count = tables.Column(verbose_name="Racks")

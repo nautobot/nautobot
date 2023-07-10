@@ -151,21 +151,24 @@ nautobot=> \q
     - `extras.job` should now be included in the dump (removed `--exclude extras.job` from the example usage)
     - `django_rq` should now be excluded from the dump (added `--exclude django_rq` to the example usage)
 
++/- 1.5.23
+    - We do not recommend at this time using `--natural-primary` as this can result in inconsistent or incorrect data for data models that use GenericForeignKeys, such as `Cable`, `Note`, `ObjectChange`, and `Tag`.
+    - We also do not recommend at this time using `--natural-foreign` as it can potentially result in errors if any data models incorrectly implement their `natural_key()` and/or `get_by_natural_key()` API methods.
+    - `contenttypes` must not be excluded from the dump (it could be excluded previously due to the use of `--natural-foreign`).
+
 ```no-highlight
 nautobot-server dumpdata \
-  --natural-foreign \
-  --natural-primary \
-  --exclude contenttypes \
   --exclude auth.permission \
   --exclude django_rq \
   --format json \
   --indent 2 \
-  --traceback  > nautobot_dump.json
+  --traceback \
+  > nautobot_dump.json
 ```
 
 Use this command to generate a JSON dump of the database contents.
 
-One example of using this command would be to [`export data from PostgreSQL`](../installation/migrating-from-postgresql.md#export-data-from-postgresql).
+One example of using this command would be to [export data from PostgreSQL](../installation/migrating-from-postgresql.md#export-data-from-postgresql) and then [import the data dump into MySQL](../installation/migrating-from-postgresql.md#import-the-database-dump-into-mysql).
 
 ### `fix_custom_fields`
 
@@ -306,8 +309,9 @@ There are a number of other options not covered here.
 
 To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
 
-- [`Remove the auto-populated Status records from the database`](../installation/migrating-from-postgresql.md#remove-the-auto-populated-status-records-from-the-mysql-database)
-- [`Import the database dump`](../installation/migrating-from-postgresql.md#import-the-database-dump-into-mysql)
+- [Remove auto-populated records from the database](../installation/migrating-from-postgresql.md#remove-auto-populated-records-from-the-mysql-database)
+- [Import the database dump](../installation/migrating-from-postgresql.md#import-the-database-dump-into-mysql)
+- [Rebuild cached cable path traces](../installation/migrating-from-postgresql.md#rebuild-cached-cable-path-traces)
 
 ### `migrate`
 
@@ -360,6 +364,8 @@ Prompt provided:
 Please see the dedicated guide on the [Nautobot Shell](nautobot-shell.md) for more information.
 
 ### `pre_migrate`
+
++++ 1.5.23
 
 `nautobot-server pre_migrate`
 

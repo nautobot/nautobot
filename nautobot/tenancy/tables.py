@@ -51,7 +51,7 @@ class TenantColumn(tables.TemplateColumn):
 
 class TenantGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=MPTT_LINK, attrs={"td": {"class": "text-nowrap"}})
     tenant_count = LinkedCountColumn(
         viewname="tenancy:tenant_list",
         url_params={"group": "slug"},
