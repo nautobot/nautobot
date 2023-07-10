@@ -1,2 +1,0 @@
-When sorting tables for MPTT models, nesting/indentation of the model name display is disabled as it was misleading.
-Disabled sorting on TreeNode model tables as TreeNode do not support sorting.
