@@ -148,6 +148,41 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.23 (2023-07-10)
+
+### Added
+
+- [#3235](https://github.com/nautobot/nautobot/issues/3235) - Added a warning notifying users when the requested `per_page` on a list page exceeds the `MAX_PAGE_SIZE` set.
+- [#3937](https://github.com/nautobot/nautobot/issues/3937) - Added a Nautobot 2.0 pre-migration management command aptly named `pre_migrate`.
+
+### Changed
+
+- [#1854](https://github.com/nautobot/nautobot/issues/1854) - When sorting tables for MPTT models, nesting/indentation of the model name display is disabled as it was misleading.
+- [#1854](https://github.com/nautobot/nautobot/issues/1854) - Disabled sorting on TreeNode model tables as TreeNode do not support sorting.
+- [#4049](https://github.com/nautobot/nautobot/issues/4049) - Restructured non-production dependencies in `pyproject.toml` to comply with latest Poetry expectations.
+- [#4050](https://github.com/nautobot/nautobot/issues/4050) - Added `develop-1.6` to list of target branches to run changelog step in pull request CI workflow.
+
+### Dependencies
+
+- [#4049](https://github.com/nautobot/nautobot/issues/4049) - Updated development-only dependencies for documentation rendering: `mkdocstrings` 0.22.0, `mkdocstrings-python` 1.1.2, and `griffe` 0.30.1.
+- [#4064](https://github.com/nautobot/nautobot/issues/4064) - Updated `Django` to `3.2.20` to address `CVE-2023-36053`.
+
+### Fixed
+
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Revised documentation for recommended parameters to use when running `nautobot-server dumpdata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Revised documentation around preparing to run `nautobot-server loaddata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Added documentation to run `nautobot-server trace_paths` after `nautobot-server loaddata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Fixed a signal handler that could cause `nautobot-server loaddata` to abort if certain data is present.
+- [#3109](https://github.com/nautobot/nautobot/issues/3109) - Fixed missing trailing slash in NautobotUIViewSet urls.
+- [#3422](https://github.com/nautobot/nautobot/issues/3422) - Fixed postgres database healthcheck error message in development environment.
+- [#3524](https://github.com/nautobot/nautobot/issues/3524) - Fixed the unhandled exception brought on by updating Rack to a new site with a similar device sharing the same name and tenant by catching error in 'RackForm.clean`.
+- [#4021](https://github.com/nautobot/nautobot/issues/4021) - Fixed erroneous warning banner on list views when `MAX_PAGE_SIZE` is set to zero.
+- [#4048](https://github.com/nautobot/nautobot/issues/4048) - Fixed broken tab navigation in secrets.
+
+### Security
+
+- [#4064](https://github.com/nautobot/nautobot/issues/4064) - Updated `Django` to `3.2.20` to address `CVE-2023-36053`.
+
 ## v1.5.22 (2023-06-26)
 
 ### Added

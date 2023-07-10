@@ -1,1 +1,0 @@
-Fixed the unhandled exception brought on by updating Rack to a new site with a similar device sharing the same name and tenant by catching error in 'RackForm.clean`.
