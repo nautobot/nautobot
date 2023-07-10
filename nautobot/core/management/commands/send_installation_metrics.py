@@ -29,7 +29,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # skip if metrics are disabled
-        if not get_settings_or_config("INSTALLATION_METRICS_ENABLED"):
+        if settings.INSTALLATION_METRICS_ENABLED is not True:
             return
 
         # get the deployment id for this install from constance or settings
