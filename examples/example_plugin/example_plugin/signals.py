@@ -20,7 +20,7 @@ def nautobot_database_ready_callback(sender, *, apps, **kwargs):
         apps (django.apps.apps.Apps): Use this to look up model classes as needed
         **kwargs: See https://docs.djangoproject.com/en/3.1/ref/signals/#post-migrate for additional args
     """
-    # Ensure that a desired custom field exists on the Site model
+    # Ensure that a desired custom field exists on the Location model
     ContentType = apps.get_model("contenttypes", "ContentType")
     Location = apps.get_model("dcim", "Location")
     CustomField = apps.get_model("extras", "CustomField")

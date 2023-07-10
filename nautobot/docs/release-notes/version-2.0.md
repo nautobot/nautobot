@@ -4,11 +4,15 @@
 
 This document describes all new features and changes in Nautobot 2.0.
 
-If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading from Nautobot v1.X"](../installation/upgrading-from-nautobot-v1.md) documentation.
+If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) documentation.
 
 ## Release Overview
 
 ### Added
+
+#### IPAM Namespaces
+
+The new Namespace model expands on the functionality previously provided by `VRF.enforce_unique` and the `ENFORCE_GLOBAL_UNIQUE` settings flag, both of which have now been removed. Within a namespace, all VRFs, prefixes, and IP addresses must be unique and non-duplicated. For more details please refer to the [documentation](../user-guide/core-data-model/ipam/namespace.md).
 
 #### Generic Role Model ([#1063](https://github.com/nautobot/nautobot/issues/1063))
 
@@ -20,7 +24,7 @@ Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `
 
 #### Added Depth REST API Query Parameter
 
-Added the `?depth` query parameter in Nautobot v2.X to replace the `?brief` parameter in the REST API. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It allows users greater control of the API response data and it is available for both retrieving a single object and a list of objects. This parameter is a positive integer value that can range from 0 to 10. To learn more more, check out the [documentation on the `?depth` query parameter](../rest-api/overview.md/#depth-query-parameter).
+Added the `?depth` query parameter in Nautobot v2.X to replace the `?brief` parameter in the REST API. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It allows users greater control of the API response data and it is available for both retrieving a single object and a list of objects. This parameter is a positive integer value that can range from 0 to 10. To learn more more, check out the [documentation on the `?depth` query parameter](../user-guide/platform-functionality/rest-api/overview.md/#depth-query-parameter).
 
 #### Natural Key Support Across Nautobot Models ([#2900](https://github.com/nautobot/nautobot/issues/2900))
 
@@ -40,7 +44,7 @@ Nautobot's `BaseModel` base class and related classes now implement automatic su
 <DeviceType: Model 9000>
 ```
 
-Developers can refer to the [documentation on natural keys](../development/natural-keys.md) for details on how to support and use this feature.
+Developers can refer to the [documentation on natural keys](../development/core/natural-keys.md) for details on how to support and use this feature.
 
 ### Changed
 
@@ -48,7 +52,7 @@ Developers can refer to the [documentation on natural keys](../development/natur
 
 The `ipam.Aggregate` model has been removed and all existing aggregates will be migrated to `ipam.Prefix` with `type` set to "Container". The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a Date field to a DateTime field with the time set to `00:00`. `Aggregate.tenant`, `Aggregate.rir` and `Aggregate.description` will be migrated over to the same fields on `Prefix`.
 
-See the [upgrade guide](../installation/upgrading-from-nautobot-v1.md#aggregate-migrated-to-prefix) for more details on the data migration.
+See the [upgrade guide](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#aggregate-migrated-to-prefix) for more details on the data migration.
 
 #### Collapse Region and Site Models into Location ([#2517](https://github.com/nautobot/nautobot/issues/2517))
 
@@ -120,13 +124,13 @@ The `ContentType` for `Region` and `Site` are being replaced with `Location` on 
 
 The `region` and `site` fields are being removed in the `filter` data of `DynamicGroup` objects. The previously associated values are being added to the existing `location` field and its associated list of filter values or to a new `location` key with an empty list if one does not exist.
 
-Check out the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../installation/upgrading-from-nautobot-v1.md) guide.
+Check out the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) guide.
 
-Check out the [Region and Site Related Data Model Migration Guide](../installation/region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide-for-existing-nautobot-app-installations) to learn how to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
+Check out the [Region and Site Related Data Model Migration Guide](../user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide-for-existing-nautobot-app-installations) to learn how to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
 
 #### Collapsed `nautobot.utilities` into `nautobot.core` ([#2721](https://github.com/nautobot/nautobot/issues/2721))
 
-`nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../installation/upgrading-from-nautobot-v1.md#python-code-location-changes).
+`nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#python-code-location-changes).
 
 #### REST API Versioning Behavior ([#2799](https://github.com/nautobot/nautobot/issues/2799))
 
@@ -176,7 +180,7 @@ Circuit.objects.create(
 Circuit.objects.filter(circuit_type="circuit-type-2")
 ```
 
-Check out more Foreign Key related changes documented in the table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
+Check out more Foreign Key related changes documented in the table [Renamed Database Fields](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields)
 
 In addition to the changes made to Foreign Key fields' own names, some of their `related_names` are also renamed:
 
@@ -192,7 +196,7 @@ Now in v2.x, we have renamed the Foreign Key field `circuit`'s `related_name` at
 Circuit.objects.filter(circuit_terminations__site__in=["ams01", "ams02", "atl03"])
 ```
 
-Check out more `related-name` changes documented in the table [Renamed Database Fields](../installation/upgrading-from-nautobot-v1.md#renamed-database-fields)
+Check out more `related-name` changes documented in the table [Renamed Database Fields](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields)
 
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
@@ -206,7 +210,7 @@ Now in v2.x, you would instead use the `has_cable` filter which has a more user-
 
 `/dcim/front-ports/?has_cable=True`
 
-Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#renamed-filter-fields)
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-filter-fields)
 
 #### Enhanced Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
@@ -220,7 +224,7 @@ Now in v2.x, you are able to filter those `RackGroups` by their parent(s) names 
 
 `/dcim/rack-groups/?parent=<name>` or `/dcim/rack-groups/?parent=<uuid>`
 
-Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#enhanced-filter-fields)
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#enhanced-filter-fields)
 
 #### Corrected Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
@@ -234,7 +238,7 @@ This has been addressed in v2.x as follows:
 
 `console_ports` and similar filters are taking foreign key UUIDs as input values and can be used in this format: `/dcim/devices/?console_ports=<uuid>` whereas `has_console_ports` and similar filters remain the same.
 
-Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#corrected-filter-fields)
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#corrected-filter-fields)
 
 #### Generic Role Model ([#1063](https://github.com/nautobot/nautobot/issues/1063))
 
@@ -254,7 +258,7 @@ The "Container" status will be removed and all prefixes will be migrated to the 
 
 #### Removed Brief REST API Query Parameter
 
-Support for `?brief` REST API query parameter and `Nested*Serializers` have been removed in Nautobot v2.X. They are replaced by the new [`?depth` query parameter](../rest-api/overview.md/#depth-query-parameter).
+Support for `?brief` REST API query parameter and `Nested*Serializers` have been removed in Nautobot v2.X. They are replaced by the new [`?depth` query parameter](../user-guide/platform-functionality/rest-api/overview.md/#depth-query-parameter).
 
 #### Removed `django-cacheops` ([#1721](https://github.com/nautobot/nautobot/issues/1721))
 
@@ -280,7 +284,7 @@ Now in v2.x, that format is no longer supported. Instead, you would use:
 
 `/circuits/circuits/?provider=<uuid>`
 
-Check out the specific changes documented in the table at [UI and REST API Filter Changes](../installation/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields)
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields)
 
 #### Removed RQ support ([#2523](https://github.com/nautobot/nautobot/issue/2523))
 
@@ -700,7 +704,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 
 - [#824](https://github.com/nautobot/nautobot/issues/824) - Removed `name` field from CustomField model class.
 - [#1634](https://github.com/nautobot/nautobot/issues/1634) - Removed unnecessary legacy `manage.py` file from Nautobot repository.
-- [#2521](https://github.com/nautobot/nautobot/issues/2521) - Removed support for storing Git repository credentials (username/token) in the Nautobot database. Use [Secrets](../models/extras/secret.md) instead.
+- [#2521](https://github.com/nautobot/nautobot/issues/2521) - Removed support for storing Git repository credentials (username/token) in the Nautobot database. Use [Secrets](../user-guide/platform-functionality/secret.md) instead.
 - [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed Site constraints for model classes (CircuitTermination, Device, Location, PowerPanel, PowerFeed, RackGroup, Rack, Prefix, VLAN, VLANGroup, Cluster).
 - [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed `regions` and `sites` attributes from ConfigContext model class.
 - [#2957](https://github.com/nautobot/nautobot/issues/2957) - Removed `region` and `site` related fields from Serializers for aforementioned model classes.

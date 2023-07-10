@@ -72,6 +72,8 @@ class Tag(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, Not
 class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
     tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)
 
+    documentation_static_path = "docs/user-guide/platform-functionality/tag.html"
+
     class Meta:
         index_together = ("content_type", "object_id")
         unique_together = [["content_type", "object_id", "tag"]]

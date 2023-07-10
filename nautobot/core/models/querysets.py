@@ -23,7 +23,7 @@ class RestrictedQuerySet(QuerySet):
         permission.
 
         :param user: User instance
-        :param action: The action which must be permitted (e.g. "view" for "dcim.view_site"); default is 'view'
+        :param action: The action which must be permitted (e.g. "view" for "dcim.view_location"); default is 'view'
         """
         # Resolve the full name of the required permission
         app_label = self.model._meta.app_label
@@ -65,7 +65,7 @@ class RestrictedQuerySet(QuerySet):
           user (User): User instance
           instance (self.model): Instance of this queryset's model to check, if pk is not provided
           pk (uuid): Primary key of the desired instance to check for, if instance is not provided
-          action (str): The action which must be permitted (e.g. "view" for "dcim.view_site"); default is 'view'
+          action (str): The action which must be permitted (e.g. "view" for "dcim.view_location"); default is 'view'
 
         Returns:
           bool: Whether the action is permitted or not

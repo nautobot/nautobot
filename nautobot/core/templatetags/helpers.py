@@ -369,27 +369,35 @@ def percentage(x, y):
 @library.filter()
 @register.filter()
 def get_docs_url(model):
-    """Return the documentation URL for the specified model.
+    """Return the likely static documentation path for the specified model, if it can be found/predicted.
 
-    Nautobot Core models have a path like docs/models/{app_label}/{model_name}
-    while plugins will have {app_label}/docs/models/{model_name}. If the html file
-    does not exist, this function will return None.
+    - Core models, as of 2.0, are usually at `docs/user-guide/core-data-model/{app_label}/{model_name}.html`.
+        - Models in the `extras` app are usually at `docs/user-guide/platform-functionality/{model_name}.html`.
+    - Apps (plugins) are generally expected to be documented at `{app_label}/docs/models/{model_name}.html`.
+
+    Any model can define a `documentation_static_path` class attribute if it needs to override the above expectations.
+
+    If a file doesn't exist at the expected static path, this will return None.
 
     Args:
         model (models.Model): Instance of a Django model
 
     Returns:
         str: static URL for the documentation of the object.
-        or
-        None
+        None: if not found.
 
     Example:
-        >>> get_docs_url(obj)
-        "static/docs/models/dcim/site.html"
+        >>> get_docs_url(location_instance)
+        "static/docs/models/dcim/location.html"
     """
-    path = f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
-    if model._meta.app_label in settings.PLUGINS:
+    if hasattr(model, "documentation_static_path"):
+        path = model.documentation_static_path
+    elif model._meta.app_label in settings.PLUGINS:
         path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
+    elif model._meta.app_label == "extras":
+        path = f"docs/user-guide/platform-functionality/{model._meta.model_name}.html"
+    else:
+        path = f"docs/user-guide/core-data-model/{model._meta.app_label}/{model._meta.model_name}.html"
 
     # Check to see if documentation exists in any of the static paths.
     if find(path):

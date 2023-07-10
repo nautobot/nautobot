@@ -483,7 +483,7 @@ class ChangeLogAPITest(APITestCase):
         )
         vlan_statuses = Status.objects.get_for_model(VLAN)
         tagged_vlan = VLAN.objects.create(
-            vid=100, name="Vlan100", status=vlan_statuses[0], vlan_group=VLANGroup.objects.first()
+            vid=100, name="VLAN100", status=vlan_statuses[0], vlan_group=VLANGroup.objects.first()
         )
 
         payload = {"tagged_vlans": [str(tagged_vlan.pk)], "description": "test vm interface m2m change"}

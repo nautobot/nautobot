@@ -38,10 +38,6 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
-# Celery results backend URL to tell workers where to publish task results
-#
-# CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
-
 # Database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 #
@@ -248,10 +244,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # CELERY_BROKER_TRANSPORT_OPTIONS = {}
 
-# Options to pass to the Celery result backend transport, for example when using Celery with Redis Sentinel.
-#
-# CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {}
-
 # Default celery queue name that will be used by workers and tasks if no queue is specified
 # CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")
 
@@ -309,8 +301,7 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Defaults to [].
 #
 # EXEMPT_VIEW_PERMISSIONS = [
-#     'dcim.site',
-#     'dcim.region',
+#     'dcim.location',
 #     'ipam.prefix',
 # ]
 
