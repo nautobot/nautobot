@@ -6,8 +6,8 @@ from nautobot.dcim.tables import DeviceTypeTable, LocationTable, LocationTypeTab
 class TableTestCase(TestCase):
     def test_model_table_orderable(self):
         """Assert TreeNode model table orderable is set to False, and non tree model table is True by default"""
-        tree_node_model_tables = (LocationTypeTable, LocationTable)
-        non_tree_node_model_tables = (DeviceTypeTable,)
+        tree_node_model_tables = (LocationTypeTable, LocationTable, RackGroupTable)
+        non_tree_node_model_tables = DeviceTypeTable
 
         for table in tree_node_model_tables:
             queryset = table.Meta.model.objects.all()

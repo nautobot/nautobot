@@ -80,9 +80,6 @@ INTERFACE_TAGGED_VLANS = """
 """
 
 
-MPTT_LINK_WITHOUT_NESTING = """<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>"""
-
-
 TREE_LINK = """
 {% load helpers %}
 {% for i in record.tree_depth|as_range %}
