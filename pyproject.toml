@@ -183,7 +183,6 @@ mkdocstrings-python = "~1.1.2"
 # Code style enforcement
 black = "~23.3.0"
 # Code style checking and limited static analysis
-# NOTE: flake8 4.x pins importlib-metadata<4.3; see https://github.com/PyCQA/flake8/pull/1438
 flake8 = {version = "~6.0.0", python = ">=3.8.1"}
 # Code style checking for python import statements
 isort = "~5.12.0"

@@ -100,9 +100,9 @@ class PaginatorTestCase(testing.TestCase):
     @override_settings(MAX_PAGE_SIZE=0)
     def test_error_warning_not_shown_when_max_page_size_is_0(self):
         """Assert max page size warning is not shown when max page size is 0"""
-        providers = (circuits_models.Provider(name=f"p-{x}", slug=f"p-{x}") for x in range(20))
+        providers = (circuits_models.Provider(name=f"p-{x}") for x in range(20))
         circuits_models.Provider.objects.bulk_create(providers)
-        manufacturers = (dcim_models.Manufacturer(name=f"p-{x}", slug=f"p-{x}") for x in range(20))
+        manufacturers = (dcim_models.Manufacturer(name=f"p-{x}") for x in range(20))
         dcim_models.Manufacturer.objects.bulk_create(manufacturers)
         self.add_permissions("circuits.view_provider")
         self.add_permissions("dcim.view_manufacturer")
