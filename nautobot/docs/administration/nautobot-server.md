@@ -560,7 +560,7 @@ Please see the [guide on Jobs](../additional-features/jobs.md) for more informat
 
 Send installation metrics to the Nautobot maintainers. This management command is called by [`post_upgrade`](#post_upgrade) and is not intended to be run manually.
 
-If the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [plugins](../plugins/index.md) and their versions, as well as the currently installed Nautobot version to the Nautobot maintainers. A randomized uuid will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/optional-settings.md#deployment_id) setting to anonymously and uniquely identify each installation. The plugin names will be one-way hashed with SHA256 to further anonymize the data sent.
+If the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [plugins](../plugins/index.md) and their versions, as well as the currently installed Nautobot version to the Nautobot maintainers. A randomized UUID will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/optional-settings.md#deployment_id) setting to anonymously but uniquely identify this installation. The plugin names will be one-way hashed with SHA256 to further anonymize the data sent.
 
 The following is an example of the data that is sent:
 
