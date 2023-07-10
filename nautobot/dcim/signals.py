@@ -6,6 +6,7 @@ from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.db import transaction
 from django.dispatch import receiver
 
+from nautobot.core.signals import disable_for_loaddata
 from .models import (
     Cable,
     CablePath,
@@ -261,6 +262,7 @@ def nullify_connected_endpoints(instance, **kwargs):
 
 
 @receiver(m2m_changed, sender=Interface.tagged_vlans.through)
+@disable_for_loaddata
 def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, action, **kwargs):
     if action != "pre_add":
         return

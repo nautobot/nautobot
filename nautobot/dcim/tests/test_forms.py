@@ -1,7 +1,7 @@
 from django.test import TestCase
 
-from nautobot.dcim.forms import DeviceForm, InterfaceCreateForm
-from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices
+from nautobot.dcim.forms import DeviceForm, InterfaceCreateForm, RackForm
+from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices, RackWidthChoices
 
 from nautobot.dcim.models import (
     Device,
@@ -9,9 +9,11 @@ from nautobot.dcim.models import (
     Interface,
     Location,
     LocationType,
+    Manufacturer,
     Platform,
     Rack,
 )
+from nautobot.tenancy.models import Tenant
 from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
@@ -189,3 +191,51 @@ class LabelTestCase(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("label_pattern", form.errors)
+
+
+class RackTestCase(TestCase):
+    def test_update_rack_site(self):
+        """Asset updating duplicate device caused by update to rack site is caught by rack clean"""
+        # Rack post save signal tries updating rack devices if site is changed, which may result in an Exception
+        # Asset this error is caught by RackForm.clean
+        tenant = Tenant.objects.first()
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer)
+        devicerole = Role.objects.get_for_model(Device).first()
+        status = Status.objects.get(name="Active")
+        racks = (
+            Rack.objects.create(name="Rack 1", site=locations[0], status=status),
+            Rack.objects.create(name="Rack 2", site=locations[1], status=status),
+        )
+
+        Device.objects.create(
+            name="device1",
+            device_role=devicerole,
+            device_type=devicetype,
+            site=racks[0].site,
+            rack=racks[0],
+            tenant=tenant,
+            status=status,
+        )
+        Device.objects.create(
+            name="device1",
+            device_role=devicerole,
+            device_type=devicetype,
+            site=racks[1].site,
+            rack=racks[1],
+            tenant=tenant,
+            status=status,
+        )
+        data = {
+            "name": racks[0].name,
+            "site": racks[1].site.pk,
+            "status": racks[0].status.pk,
+            "u_height": 48,
+            "width": RackWidthChoices.WIDTH_19IN,
+        }
+        form = RackForm(data=data, instance=racks[0])
+        self.assertEqual(
+            str(form.errors.as_data()["site"][0]),
+            str(["Device with `name` in ['device1'] and site=Site-2 already exists."]),
+        )

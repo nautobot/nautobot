@@ -2,7 +2,10 @@ import re
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.core.exceptions import ValidationError
+
+from django.db.models import Count, Q
+
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
@@ -429,6 +432,28 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "width": StaticSelect2(),
             "outer_unit": StaticSelect2(),
         }
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        site = cleaned_data.get("site")
+
+        if self.instance:
+            # If the site is changed, the rack post save signal attempts to update the rack devices,
+            # which may result in an Exception.
+            # To avoid an unhandled exception in signal, catch this error here.
+            duplicate_devices_names = (
+                Device.objects.values_list("name", flat=True)
+                .annotate(name_count=Count("name"))
+                .filter(name_count__gt=1)
+            )
+            duplicate_devices = Device.objects.filter(site=site, name__in=list(duplicate_devices_names)).values_list(
+                "name", flat=True
+            )
+            if duplicate_devices:
+                raise ValidationError(
+                    {"site": f"Device with `name` in {list(duplicate_devices)} and site={site} already exists."}
+                )
+        return cleaned_data
 
 
 class RackBulkEditForm(

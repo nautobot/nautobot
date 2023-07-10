@@ -20,7 +20,7 @@ CommandError: One or more pre-migration checks failed:
      - [{'name': 'vc1', 'count': 2}]
 ```
 
-Otherwise, a clean exit displays "All pre-migration checks passed." incidating that your Nautobot instance is ready to be upgraded to Nautobot 2.0:
+Otherwise, a clean exit displays "All pre-migration checks passed." indicating that your Nautobot instance is ready to be upgraded to Nautobot 2.0:
 
 ```no-highlight
 $ nautobot-server pre_migrate
