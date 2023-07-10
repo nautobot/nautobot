@@ -1,4 +1,6 @@
 """Custom signals and handlers for the core Nautobot application."""
+from functools import wraps
+import inspect
 import logging
 
 from django.contrib.auth.signals import user_logged_in, user_logged_out
@@ -33,3 +35,24 @@ def user_logged_out_signal(sender, request, user, **kwargs):
     """Generate a log message when a user logs out from the web ui"""
     logger = logging.getLogger("nautobot.auth.logout")
     logger.info(f"User {user} has logged out")
+
+
+def disable_for_loaddata(signal_handler):
+    """
+    Return early from the given signal handler if triggered during a `nautobot-server loaddata` call.
+
+    Necessary because for whatever reason, Django's `m2m_changed` signal lacks a `raw` flag and so there's no easy way
+    to tell whether any given m2m_changed signal handler is being called from loaddata otherwise.
+
+    Copied shamelessly from https://code.djangoproject.com/ticket/8399#comment:7
+    """
+
+    @wraps(signal_handler)
+    def wrapper(*args, **kwargs):
+        """Return early if loaddata is part of the stack."""
+        for fr in inspect.stack():
+            if inspect.getmodulename(fr[1]) == "loaddata":
+                return
+        signal_handler(*args, **kwargs)
+
+    return wrapper
