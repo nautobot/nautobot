@@ -9,6 +9,7 @@ services:
     volumes:
       - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
       - ../:/source
+      - node_modules:/opt/nautobot/ui/node_modules
   celery_worker:
     volumes:
       - ./nautobot_config.py:/opt/nautobot/nautobot_config.py

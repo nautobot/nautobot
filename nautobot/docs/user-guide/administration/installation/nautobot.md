@@ -266,6 +266,45 @@ Nautobot does not come with any predefined user accounts. You'll need to create 
 nautobot-server createsuperuser
 ```
 
+## Build Nautobot 2.0 UI
+
+Nautobot 2.0 introduces a new user interface. This interface is built using [React](https://react.dev/) and requires Node.js version 18 or higher to build the UI. 
+
+### Install Node.js
+
+Node.js version 18 is only listed on package manager repositories for Debian 12 Bookworm, Ubuntu 22.10 kinetic and RHEL 8.
+
+Debian Bookworm or Ubuntu kinetic or higher:
+
+```no-highlight
+sudo apt-get -y install npm
+```
+
+RHEL 8/9:
+
+```no-highlight
+sudo dnf module install nodejs:18/common
+```
+
+Older versions of Debian and Ubuntu must install Node.js from source or the [NodeSource](https://github.com/nodesource/distributions#deb) repositories:
+
+```no-highlight
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y npm
+```
+
+See the [nodejs documentation](https://github.com/nodejs/node/blob/main/BUILDING.md#building-nodejs-on-supported-platforms) for instructions to install from source on older versions of RHEL and other supported distributions.
+
+### Build the UI
+
+Nautobot provides a management command to install the required Node.js packages and build the UI:
+
+```no-highlight
+nautobot-server build_ui --npm-install
+```
+
+This only needs to be performed manually the first time Nautobot v2 is installed. The [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) command that must be ran after any Nautobot upgrade will automatically run this command.
+
 ## Create Static Directories
 
 Nautobot relies upon many static files including:
