@@ -153,7 +153,7 @@ factory-boy = "~3.2.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.0.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~12.5.1"
+rich = "~13.3.3"
 # Change log management and generation
 towncrier = "~22.12.0"
 # Watch files for celery and mkdocs reload
