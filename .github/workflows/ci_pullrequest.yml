@@ -525,12 +525,8 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.8 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=test-py${{ matrix.python-version }}
+            type=raw,value=test-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build"
@@ -557,12 +553,8 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.8 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=test-py${{ matrix.python-version }}
+            type=raw,value=test-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build Dev Containers"
