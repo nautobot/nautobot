@@ -858,30 +858,18 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
 
 class GetSettingsAPIViewTestCase(testing.APITestCase):
     def test_get_settings(self):
-        """Assert API response returns nautobot serializable settings as JSON"""
+        """Assert get settings value"""
         url = reverse("ui-api:get-settings")
-        # As nautobot settings is too large; we would only test for these settings only
-        # DEBUG: bool, CSRF_COOKIE_NAME: str, AUTHENTICATION_BACKENDS: list, _wrapped: Non-serializable
 
-        # Assert `_wrapped` exists in settings
-        self.assertTrue(hasattr(settings, "_wrapped"))
-
-        with self.subTest("Test without filtering"):
-            response = self.client.get(url, **self.header)
-
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data["DEBUG"], False)
-            self.assertEqual(response.data["CSRF_COOKIE_NAME"], "csrftoken")
-            self.assertEqual(
-                response.data["AUTHENTICATION_BACKENDS"], ["nautobot.core.authentication.ObjectPermissionBackend"]
-            )
-            # Assert that _wrapped is not found; as this API should only return serializable settings
-            self.assertNotIn("_wrapped", response.data)
-
-        with self.subTest("Test with filtering"):
-            url_with_filters = f"{url}?name=CSRF_COOKIE_NAME&name=_wrapped"
+        with self.subTest("Test get allowed settings"):
+            url_with_filters = f"{url}?name=FEEDBACK_BUTTON_ENABLED"
             response = self.client.get(url_with_filters, **self.header)
             self.assertEqual(response.status_code, 200)
-            # Non serializable data should not be included i.e _wrapped
-            expected_response = {"CSRF_COOKIE_NAME": "csrftoken"}
+            expected_response = {"FEEDBACK_BUTTON_ENABLED": True}
+            self.assertEqual(response.data, expected_response)
+        with self.subTest("Test get not-allowed settings"):
+            url_with_filters = f"{url}?name=NAPALM_PASSWORD"
+            response = self.client.get(url_with_filters, **self.header)
+            self.assertEqual(response.status_code, 200)
+            expected_response = {}
             self.assertEqual(response.data, expected_response)

@@ -131,7 +131,7 @@ export default function Layout({ children }) {
                         <ModalCloseButton />
                         <ModalBody pb={6}>
                             <FormControl>
-                                <FormLabel>Email</FormLabel>
+                                <FormLabel>Your email address (optional)</FormLabel>
                                 <Input
                                     type="email"
                                     name="email"
