@@ -1,1 +1,0 @@
-Changed `VirtualChassis.name` to be globally unique and to serve as the natural key for this model.

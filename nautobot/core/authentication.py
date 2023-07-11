@@ -153,7 +153,7 @@ def assign_permissions_to_user(user, permissions=None):
         except ValueError:
             logging.error(
                 f"Invalid permission name: '{permission_name}'. Permissions must be in the form "
-                "<app>.<action>_<model>. (Example: dcim.add_site)"
+                "<app>.<action>_<model>. (Example: dcim.add_location)"
             )
     if permissions_list:
         logger.debug(f"Assigned permissions to remotely-authenticated user {user}: {permissions_list}")

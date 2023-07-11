@@ -1,1 +1,0 @@
-Removed `ScheduledJob.job_class` field as redundant.

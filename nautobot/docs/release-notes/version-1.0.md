@@ -3,7 +3,7 @@
 
 This document describes all new features and changes in Nautobot 1.0, a divergent fork of NetBox 2.10.  For the launch of Nautobot 1.0 and for the purpose of this document,  all “new” features or “changes” are referring to the features and changes comparing Nautobot 1.0 coming from NetBox 2.10.  All future release notes will only refer to features and changes relative to prior releases of Nautobot.
 
-Users migrating from NetBox to Nautobot should also refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation as well.
+Users migrating from NetBox to Nautobot should also refer to the ["Migrating from NetBox"](../user-guide/administration/migration/migrating-from-netbox.md) documentation as well.
 
 ## Release Overview
 
@@ -11,23 +11,23 @@ Users migrating from NetBox to Nautobot should also refer to the ["Migrating fro
 
 #### Configuration Context Association to Device Types
 
-[Config contexts](../models/extras/configcontext.md) can now be associated to (filtered by) Device Types, in addition to all other previously supported associations.
+[Config contexts](../user-guide/core-data-model/extras/configcontext.md) can now be associated to (filtered by) Device Types, in addition to all other previously supported associations.
 
 #### Custom Fields on All Models
 
-[Custom fields](../models/extras/customfield.md) allow user-defined fields, or attributes, on specific data models such as sites or devices. Historically, custom fields have been supported only on “primary” models (Site, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Region, Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
+[Custom fields](../user-guide/platform-functionality/customfield.md) allow user-defined fields, or attributes, on specific data models such as sites or devices. Historically, custom fields have been supported only on “primary” models (Site, Device, Rack, Virtual Machine, etc.) but not on “organizational” models (Region, Device Platform, Rack Group, etc.) or on “device component” models like interfaces. As of Nautobot 1.0, custom fields are now supported on every model, including interfaces.
 
 Once created the name or data type of the custom field cannot be modified. Choices for custom fields are now stored as discrete database objects. Choices that are in active use cannot be deleted.
 
 #### Customizable Statuses
 
-A new ["Status" model](../models/extras/status.md) has been added, allowing users to define additional permitted values for the "status" field on any or all of the models that have such a field (Cable, Circuit, Device, IPAddress, PowerFeed, Prefix, Rack, Site, VirtualMachine, VLAN). The default sets of statuses permitted for each model remain the same as in NetBox 2.10, but you are now free to define additional status values as suit your needs and workflows.
+A new ["Status" model](../user-guide/platform-functionality/status.md) has been added, allowing users to define additional permitted values for the "status" field on any or all of the models that have such a field (Cable, Circuit, Device, IPAddress, PowerFeed, Prefix, Rack, Site, VirtualMachine, VLAN). The default sets of statuses permitted for each model remain the same as in NetBox 2.10, but you are now free to define additional status values as suit your needs and workflows.
 
 One example application for custom statuses would be in defining additional values to apply to a Device as part of an automation workflow, with statuses such as `upgrading` or `rebooting` to reflect the progress of each device through the workflow, allowing automation to identify the appropriate next action to take for each status.
 
 #### Data Validation Plugin API
 
-Data quality assurance in Nautobot becomes easier with the new [data validation plugin API](../plugins/development.md#implementing-custom-validators). This makes it possible to codify organizational standards.  Using a data validation [plugin](../plugins/index.md), an organization can ensure all data stored in Nautobot meets its specific standards, such as enforcing device naming standards, ensuring certain prefixes are never used, asserting that VLANs always have a name, requiring interfaces to always have a description, etc. The ability to ensure a high quality of data becomes much more streamlined; error-prone, manual process becomes automated; and there is no more need to actively run reports to check data quality.
+Data quality assurance in Nautobot becomes easier with the new [data validation plugin API](../development/apps/api/platform-features/custom-validators.md). This makes it possible to codify organizational standards.  Using a data validation [plugin](../apps/index.md), an organization can ensure all data stored in Nautobot meets its specific standards, such as enforcing device naming standards, ensuring certain prefixes are never used, asserting that VLANs always have a name, requiring interfaces to always have a description, etc. The ability to ensure a high quality of data becomes much more streamlined; error-prone, manual process becomes automated; and there is no more need to actively run reports to check data quality.
 
 #### Detail Views for more Models
 
@@ -35,11 +35,11 @@ Detailed view pages are now provided for models including ClusterGroup, ClusterT
 
 #### Docker-Based Development Environment
 
-In addition to the previously available virtual-environment-based developer workflow, Nautobot now additionally supports a [development environment based around Docker](../development/getting-started.md#docker-compose-workflow) as an alternative.
+In addition to the previously available virtual-environment-based developer workflow, Nautobot now additionally supports a [development environment based around Docker](../development/core/getting-started.md#docker-compose-workflow) as an alternative.
 
 #### Git Integration as a Data Source
 
-[Git integration](../user-guides/git-data-source.md) offers users an option to integrate into a more traditional NetDevOps pipeline for managing Python modules, Jinja templates, and YAML/JSON data.  There are several use cases that have historically required users to either manage Python modules on the filesystem or use Jinja2 templates within the GUI. With this new feature, users can add a Git repository from the UI or REST API, the contents of which will be synchronized into Nautobot immediately and can be later refreshed on-demand. This allows users to more easily update and manage:
+[Git integration](../user-guide/feature-guides/git-data-source.md) offers users an option to integrate into a more traditional NetDevOps pipeline for managing Python modules, Jinja templates, and YAML/JSON data.  There are several use cases that have historically required users to either manage Python modules on the filesystem or use Jinja2 templates within the GUI. With this new feature, users can add a Git repository from the UI or REST API, the contents of which will be synchronized into Nautobot immediately and can be later refreshed on-demand. This allows users to more easily update and manage:
 
 - *Jobs* - store your Python modules that define Jobs (formerly known as Custom Scripts and/or Reports) in a Git repository
 - *Export Templates* - store your Jinja templates used to create an export template in a Git repository
@@ -52,7 +52,7 @@ Not only does this integration and feature simplify management of these features
 
 Nautobot now provides an HTTP API endpoint supporting [GraphQL](https://graphql.org/). This feature adds a tremendous amount of flexibility in querying data from Nautobot. It offers the ability to query for specific datasets across multiple models in a single query.  Historically, if you wanted to retrieve the list of devices, all of their interfaces, and all of their neighbors, this would require numerous REST API calls.  GraphQL gives the flexibility to get all the data desired and nothing unnecessary, all in a single API call.
 
-For more details, please refer to the GraphQL website, as well as to the [Nautobot GraphQL](../user-guides/graphql.md) documentation.
+For more details, please refer to the GraphQL website, as well as to the [Nautobot GraphQL](../user-guide/feature-guides/graphql.md) documentation.
 
 #### Installable Python Package
 
@@ -60,15 +60,15 @@ Nautobot is now installable as a self-contained Python package via `pip install 
 
 #### `nautobot-server` command
 
-Nautobot now includes a dedicated administrative CLI command, [`nautobot-server`](../administration/nautobot-server.md).
+Nautobot now includes a dedicated administrative CLI command, [`nautobot-server`](../user-guide/administration/tools/nautobot-server.md).
 
 #### Plugin API Enhancements
 
 Plugins can now provide custom [data validation](#data-validation-plugin-api) logic.
 
-Plugins can now include executable [Jobs](../additional-features/jobs.md) (formerly known as Custom Scripts and Reports) that will automatically be added to the list of available Jobs for a user to execute.
+Plugins can now include executable [Jobs](../user-guide/platform-functionality/jobs/index.md) (formerly known as Custom Scripts and Reports) that will automatically be added to the list of available Jobs for a user to execute.
 
-Additional data models defined by a plugin are automatically made available in [GraphQL](../user-guides/graphql.md).
+Additional data models defined by a plugin are automatically made available in [GraphQL](../user-guide/feature-guides/graphql.md).
 
 Plugins can now define additional Django apps that they require and these dependencies will be automatically enabled when the plugin is activated.
 
@@ -76,13 +76,13 @@ Nautobot now allows and encourages plugins to make use of the generic view class
 
 #### Single Sign-On / Social Authentication Support
 
-Nautobot now supports single sign on as an authentication option using OAuth2, OpenID, SAML, and others, using the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/) module. For more details please refer to the guide on [SSO authentication](../configuration/authentication/sso.md).
+Nautobot now supports single sign on as an authentication option using OAuth2, OpenID, SAML, and others, using the [social-auth-app-django](https://python-social-auth.readthedocs.io/en/latest/) module. For more details please refer to the guide on [SSO authentication](../user-guide/administration/configuration/authentication/sso.md).
 
 #### User-Defined Relationships
 
-User-Defined, or "custom", [relationships](../models/extras/relationship.md) allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design.
+User-Defined, or "custom", [relationships](../user-guide/platform-functionality/relationship.md) allow users to create their own relationships between models in Nautobot to best suit the needs of their specific network design.
 
-For example, a VLAN is mapped to a Site by default.  After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Site.  However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span sites. Relationships allow you to express these additional requirements and relationships without requiring code changes to Nautobot itself. Other use cases include circuits, ASNs, or IP addressing -- just to name a few -- allowing users to define the exact relationships required for their network.
+For example, a VLAN is mapped to a Site by default. After a VLAN is created today, you then assign that VLAN to an Interface on a Device. This Device should be within the initial mapped Site. However, many networks today have different requirements and relationships for VLANs (and many other models): VLANs may be limited to racks in Layer 3 DC fabrics; VLANs may be mapped to multiple buildings in a campus; they may span sites. Relationships allow you to express these additional requirements and relationships without requiring code changes to Nautobot itself. Other use cases include circuits, ASNs, or IP addressing -- just to name a few -- allowing users to define the exact relationships required for their network.
 
 ### Changed
 
@@ -108,13 +108,13 @@ To make things a little easier, you may generate a new configuration with sane d
 
 You may also defined a `NAUTOBOT_CONFIG` variable to tell Nautobot where to find the file so that you don't need to always pass the `--config` argument.
 
-For details see [Configuring Nautobot](../configuration/index.md).
+For details see [Configuring Nautobot](../user-guide/administration/configuration/index.md).
 
 #### Consolidating Custom Scripts and Reports into Jobs
 
-Nautobot has consolidated NetBox's "custom scripts" and "reports" into what is now called [Jobs](../additional-features/jobs.md).
+Nautobot has consolidated NetBox's "custom scripts" and "reports" into what is now called [Jobs](../user-guide/platform-functionality/jobs/index.md).
 
-The job history ([results](../models/extras/jobresult.md)) table on the home page now shows metadata on each job such as the timestamp and the user that executed the job. Additionally, jobs can be defined and executed by the system and by plugins, and when they are, users can see their results in the history too. UI views have been added for viewing the details of a given job result, and the [JobResult](../models/extras/jobresult.md) model now provides standard APIs for Jobs to log their status and results in a consistent way.
+The job history ([results](../user-guide/platform-functionality/jobs/models.md#job-results)) table on the home page now shows metadata on each job such as the timestamp and the user that executed the job. Additionally, jobs can be defined and executed by the system and by plugins, and when they are, users can see their results in the history too. UI views have been added for viewing the details of a given job result, and the [JobResult](../user-guide/platform-functionality/jobs/models.md#job-results) model now provides standard APIs for Jobs to log their status and results in a consistent way.
 
 Job result history is now retained indefinitely unless intentionally deleted. Historically only the most recent result for each custom script or report was retained and all older records were deleted.
 
@@ -130,19 +130,19 @@ This has also meant `UserConfig` no longer exists as a separate model. `UserConf
 
 Historically, a user viewing the home page and navigation menu would see a list of all model types and menu items in the system, with a “lock” icon on items that they were not granted access to view in detail.
 
-As an [option](../configuration/optional-settings.md#hide_restricted_ui), administrators can now choose to instead hide un-permitted items altogether from the home page and the navigation menu, providing a simpler interface for limited-access users. The prior behavior remains as the default.
+As an [option](../user-guide/administration/configuration/optional-settings.md#hide_restricted_ui), administrators can now choose to instead hide un-permitted items altogether from the home page and the navigation menu, providing a simpler interface for limited-access users. The prior behavior remains as the default.
 
 #### IPAM Network Fields to VARBINARY
 
 To enable future support of databases other than PostgreSQL, the network fields inside of IPAM needed to be changed. `cidr` and `inet` field types have been replaced with a database agnostic field type. For this purpose `varbinary` was chosen because it can safely and efficiently store packed binary integers.
 
-More details about the impact of this and other changes can be found in the [Migration documentation](../installation/migrating-from-netbox.md#ipam-network-field-types).
+More details about the impact of this and other changes can be found in the [Migration documentation](../user-guide/administration/migration/migrating-from-netbox.md#ipam-network-field-types).
 
 #### Navigation Menu Changes
 
 The "Other" menu has been renamed to "Extensibility" and many new items have been added to this menu.
 
-[Status](../models/extras/status.md) records have been added to the "Organization" menu.
+[Status](../user-guide/platform-functionality/status.md) records have been added to the "Organization" menu.
 
 #### New Name and Logo
 
@@ -150,15 +150,15 @@ The "Other" menu has been renamed to "Extensibility" and many new items have bee
 
 #### User-Defined Custom Links
 
-Historically the [custom links](../models/extras/customlink.md) feature was restricted so that only administrators could define and manage custom links to add to various built-in data views. In Nautobot the management of custom links has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+Historically the [custom links](../user-guide/platform-functionality/customlink.md) feature was restricted so that only administrators could define and manage custom links to add to various built-in data views. In Nautobot the management of custom links has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
 
 #### User-Defined Export Templates
 
-Historically the [custom data export templates](../models/extras/exporttemplate.md) feature was restricted such that only administrators could define and edit these templates. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+Historically the [custom data export templates](../user-guide/platform-functionality/exporttemplate.md) feature was restricted such that only administrators could define and edit these templates. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
 
 #### User-Defined Webhooks
 
-Historically the [webhooks](../models/extras/webhook.md) feature was restricted such that only administrators could define and manage webhooks, HTTP callbacks that are triggered automatically when a specified data model(s) are created, updated, and/or deleted. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
+Historically the [webhooks](../user-guide/platform-functionality/webhook.md) feature was restricted such that only administrators could define and manage webhooks, HTTP callbacks that are triggered automatically when a specified data model(s) are created, updated, and/or deleted. In Nautobot this has been moved into the main user interface, accessible to any user who has been granted appropriate access permissions.
 
 #### UUID Primary Database Keys
 

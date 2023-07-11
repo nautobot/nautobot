@@ -230,7 +230,7 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
             raise ValidationError("A circuit termination must attach to either a location or a provider network.")
         if self.location and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
-        # If and only if a site is defined, a location *may* also be defined.
+        # A valid location for contenttype CircuitTermination must be assigned.
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(

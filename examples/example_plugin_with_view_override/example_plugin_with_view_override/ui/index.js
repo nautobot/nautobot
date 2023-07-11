@@ -4,7 +4,7 @@ export { default as ExamplePluginNonModelView } from "./NonModelView"
 
 const app_config = {
     full_width_components: {
-        "dcim:sites": ["PluginFullWidthPageComponent"]
+        "dcim:locations": ["PluginFullWidthPageComponent"]
     },
     view_overrides: {
         // TODO: this will still cause test failures since the tests run with this plugin included.

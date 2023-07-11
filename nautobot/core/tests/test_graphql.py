@@ -237,10 +237,10 @@ class GraphQLExtendSchemaRelationship(TestCase):
         vlan_ct = ContentType.objects.get_for_model(VLAN)
 
         self.m2m_1 = Relationship(
-            label="Vlan to Rack",
+            label="VLAN to Rack",
             key="vlan_rack",
             source_type=rack_ct,
-            source_label="My Vlans",
+            source_label="My VLANs",
             destination_type=vlan_ct,
             destination_label="My Racks",
             type="many-to-many",
@@ -248,7 +248,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         self.m2m_1.validated_save()
 
         self.m2m_2 = Relationship(
-            label="Another Vlan to Rack",
+            label="Another VLAN to Rack",
             key="vlan_rack_2",
             source_type=rack_ct,
             destination_type=vlan_ct,
@@ -257,7 +257,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
         self.m2m_2.validated_save()
 
         self.o2m_1 = Relationship(
-            label="generic location to vlan",
+            label="generic Location to VLAN",
             key="location_vlan",
             source_type=location_ct,
             destination_type=vlan_ct,
@@ -2133,5 +2133,5 @@ query {
         self.device1.save()
         result = self.execute_query(query, variables={"device_id": str(self.device1.id)})
         self.assertNotIn("error", str(result))
-        expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": {"id": str(self.device1.id)}}]}
+        expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": [{"id": str(self.device1.id)}]}]}
         self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)

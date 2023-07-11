@@ -17,8 +17,8 @@ def get_permission_for_model(model, action):
 
 def resolve_permission(name):
     """
-    Given a permission name, return the app_label, action, and model_name components. For example, "dcim.view_site"
-    returns ("dcim", "view", "site").
+    Given a permission name, return the app_label, action, and model_name components. For example, "dcim.view_location"
+    returns ("dcim", "view", "location").
 
     :param name: Permission name in the format <app_label>.<action>_<model>
     """
@@ -33,8 +33,8 @@ def resolve_permission(name):
 
 def resolve_permission_ct(name):
     """
-    Given a permission name, return the relevant ContentType and action. For example, "dcim.view_site" returns
-    (Site, "view").
+    Given a permission name, return the relevant ContentType and action. For example, "dcim.view_location" returns
+    (Location, "view").
 
     :param name: Permission name in the format <app_label>.<action>_<model>
     """
