@@ -16,13 +16,20 @@ from django_prometheus.models import model_deletes, model_inserts, model_updates
 
 from nautobot.core.celery import app, import_jobs_as_celery_tasks
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
+from nautobot.extras.models import (
+    CustomField,
+    DynamicGroup,
+    DynamicGroupMembership,
+    GitRepository,
+    JobResult,
+    ObjectChange,
+)
+from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-from .choices import JobResultStatusChoices, ObjectChangeActionChoices
-from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
-from .querysets import NotesQuerySet
-from .webhooks import enqueue_webhooks
+from nautobot.extras.webhooks import enqueue_webhooks
 
 
 # thread safe change context state variable
@@ -31,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 #
-# Change logging/webhooks
+# Change logging
 #
 
 
@@ -55,7 +62,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
-    from .jobs import enqueue_job_hooks  # avoid circular import
 
     if raw:
         return
@@ -113,12 +119,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
         # restore field cache
         instance._state.fields_cache = original_cache
-
-        # Enqueue job hooks
-        enqueue_job_hooks(objectchange)
-
-    # Enqueue webhooks
-    enqueue_webhooks(instance, change_context_state.get().get_user(), change_context_state.get().change_id, action)
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
