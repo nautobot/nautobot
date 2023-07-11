@@ -88,7 +88,7 @@ class ObjectChangeMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        from nautobot.extras.jobs import enqueue_job_hooks # avoid circular import
+        from nautobot.extras.jobs import enqueue_job_hooks  # avoid circular import
         from nautobot.extras.models import ObjectChange
 
         # Determine the resolved path of the request that initiated the change

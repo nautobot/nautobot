@@ -55,7 +55,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
-    from .jobs import enqueue_job_hooks  # avoid circular import
 
     if raw:
         return
