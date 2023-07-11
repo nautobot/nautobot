@@ -10,18 +10,21 @@ ARG PYTHON_VER
 #    - installs Python package dependencies (including dev dependencies) to a virtualenv in /opt/nautobot/
 #    - installs Node module dependencies (including dev dependencies) to /opt/nautobot/ui/node_modules/
 #    - installs Nautobot itself (and example apps) from /source/ in editable mode (to be overwritten by a volume mount)
+#    - pre-renders the 2.0 UI
 #    - runs Nautobot dev server as "nautobot" user using the "development/nautobot_config.py" file.
 # 2. "final-dev"
 #    - base image for Nautobot apps development
 #    - installs Python package dependencies (including dev dependencies) to a virtualenv in /opt/nautobot/
 #    - installs Node module dependencies (including dev dependencies) to /opt/nautobot/ui/node_modules/
 #    - installs Nautobot itself as a built wheel
+#    - pre-renders the 2.0 UI
 #    - runs Nautobot dev server as "nautobot" user using a freshly generated "nautobot_config.py" file.
 # 3. "final"
 #    - production-ready Nautobot environment
 #    - installs Python package dependencies to a virtualenv in /opt/nautobot/
 #    - installs Node module dependencies to /opt/nautobot/ui/node_modules/
 #    - installs Nautobot itself as a built wheel
+#    - pre-renders the 2.0 UI
 #    - runs Nautobot uwsgi server as "nautobot" user using the same "nautobot_config.py" file as in final-dev.
 #
 # To create the above targets, we use the following intermediate stages to allow for parallelization and caching:
@@ -34,7 +37,6 @@ ARG PYTHON_VER
 #           - "build-nautobot" - Compilation of Nautobot static documentation as well as the Nautobot sdist and wheel
 #     - "node-dependencies" - NodeJS production dependencies
 #       - "node-dev-dependencies" - NodeJS development dependencies (linters, etc.)
-#         - "build-ui" - Compilation of the Nautobot 2.0 UI
 #
 # (*) NodeJS is a prod dependency because, even though we ship a pre-compiled Nautobot 2.0 UI in the 'final' image,
 #     there's a need to be able to re-build the UI after adding/removing/upgrading Nautobot Apps.
@@ -53,9 +55,7 @@ ENV PYTHONUNBUFFERED=1 \
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
 # DL4006 - Set the SHELL option -o pipefail before RUN with a pipe in
 # hadolint ignore=DL3008,DL3009,DL3013,DL3042,DL4006
-RUN --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
-    --mount=type=cache,target="/var/cache/apt",sharing=locked \
-    --mount=type=cache,target="/root/.cache/pip",sharing=locked \
+RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
     apt-get update && \
     apt-get upgrade -y && \
     apt-get install --no-install-recommends -y curl && \
@@ -63,6 +63,7 @@ RUN --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y && \
     apt-get clean all && \
+    rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip wheel && \
     rm -rf /tmp/tmp*
 
@@ -84,12 +85,11 @@ FROM system-dependencies AS system-dev-dependencies
 
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
-RUN --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
-    --mount=type=cache,target="/var/cache/apt",sharing=locked \
-    apt-get update && \
+RUN apt-get update && \
     apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev && \
     apt-get autoremove -y && \
-    apt-get clean all
+    apt-get clean all && \
+    rm -rf /var/lib/apt/lists/*
 
 ################################ Stage: system-dev-dependencies-$ARCH (intermediate build target)
 
@@ -124,14 +124,6 @@ FROM node-dependencies AS node-dev-dependencies
 # Install development Node dependencies of Nautobot UI
 RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
     npm install --include=dev
-
-################################ Stage: build-ui (intermediate build target)
-
-FROM node-dev-dependencies AS build-ui
-
-COPY --chown=nautobot:nautobot nautobot/ui /opt/nautobot/ui
-RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
-    npm run build
 
 ################################ Stage: python-dependencies (intermediate build target)
 
@@ -205,7 +197,6 @@ FROM python-dev-dependencies AS dev
 
 COPY --chown=nautobot:nautobot nautobot/ui /opt/nautobot/ui
 COPY --from=node-dev-dependencies --chown=nautobot:nautobot /opt/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
-COPY --from=build-ui --chown=nautobot:nautobot /opt/nautobot/ui/build /opt/nautobot/ui/build
 
 COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
@@ -213,10 +204,11 @@ COPY --from=build-nautobot --chown=nautobot:nautobot /source/nautobot/project-st
 
 RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
     poetry install --no-ansi --extras all && \
-    rm -rf /tmp/tmp* && \
-    rm -rf /source/*
+    rm -rf /tmp/tmp*
 
 COPY --chown=nautobot:nautobot development/nautobot_config.py /opt/nautobot/nautobot_config.py
+
+RUN nautobot-server build_ui && rm -rf /source/*
 
 # Run Nautobot development server by default
 EXPOSE 8080
@@ -228,19 +220,21 @@ FROM python-dev-dependencies AS final-dev
 
 COPY --chown=nautobot:nautobot nautobot/ui /opt/nautobot/ui
 COPY --from=node-dev-dependencies --chown=nautobot:nautobot /opt/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
-COPY --from=build-ui --chown=nautobot:nautobot /opt/nautobot/ui/build /opt/nautobot/ui/build
 
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 
 # Install Nautobot wheel, and uninstall example apps as they're not included in the final-dev image
+# DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
+# hadolint ignore=DL3042
 RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
-    pip install --no-deps --no-cache-dir /source/dist/*.whl && \
+    pip install --no-deps /source/dist/*.whl && \
     pip uninstall -y example-plugin example-plugin-with-view-override && \
     rm -rf /source/*
 
 WORKDIR /opt/nautobot
 
-RUN nautobot-server init
+RUN nautobot-server init && \
+    nautobot-server build_ui
 
 # Run Nautobot development server by default
 EXPOSE 8080
@@ -259,13 +253,16 @@ COPY --from=python-dependencies --chown=nautobot:nautobot /opt/nautobot/include 
 COPY --from=python-dependencies --chown=nautobot:nautobot /opt/nautobot/lib /opt/nautobot/lib
 COPY --from=python-dependencies --chown=nautobot:nautobot /opt/nautobot/lib64 /opt/nautobot/lib64
 COPY --from=python-dependencies --chown=nautobot:nautobot /opt/nautobot/pyvenv.cfg /opt/nautobot/pyvenv.cfg
-COPY --from=node-dependencies --chown=nautobot:nautobot /opt/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
-COPY --from=build-ui --chown=nautobot:nautobot /opt/nautobot/ui/build /opt/nautobot/ui/build
 
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 
+COPY --from=final-dev --chown=nautobot:nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
+COPY --from=final-dev --chown=nautobot:nautobot /opt/nautobot/ui /opt/nautobot/ui
+
+# DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
+# hadolint ignore=DL3042
 RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
-    pip install --no-deps --no-cache-dir /source/dist/*.whl && \
+    pip install --no-deps /source/dist/*.whl && \
     rm -rf /source/*
 
 # Generate self-signed SSL certs
@@ -275,8 +272,6 @@ RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
 
 # Set up Nautobot to run in production
 WORKDIR /opt/nautobot
-
-COPY --from=final-dev --chown=nautobot:nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 # Run Nautobot server under uwsgi by default
 COPY --chown=nautobot:nautobot docker/uwsgi.ini /opt/nautobot
