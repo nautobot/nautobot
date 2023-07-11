@@ -268,32 +268,7 @@ nautobot-server createsuperuser
 
 ## Build Nautobot 2.0 UI
 
-Nautobot 2.0 introduces a new user interface. This interface is built using [React](https://react.dev/) and requires Node.js version 18 or higher to build the UI. 
-
-### Install Node.js
-
-Node.js version 18 is only listed on package manager repositories for Debian 12 Bookworm, Ubuntu 22.10 kinetic and RHEL 8.
-
-Debian Bookworm or Ubuntu kinetic or higher:
-
-```no-highlight
-sudo apt-get -y install npm
-```
-
-RHEL 8/9:
-
-```no-highlight
-sudo dnf module install nodejs:18/common
-```
-
-Older versions of Debian and Ubuntu must install Node.js from source or the [NodeSource](https://github.com/nodesource/distributions#deb) repositories:
-
-```no-highlight
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y npm
-```
-
-See the [nodejs documentation](https://github.com/nodejs/node/blob/main/BUILDING.md#building-nodejs-on-supported-platforms) for instructions to install from source on older versions of RHEL and other supported distributions.
+Nautobot 2.0 introduces a new user interface. This interface is built using [React](https://react.dev/) and requires Node.js version 18 or higher to build the UI.
 
 ### Build the UI
 
