@@ -104,10 +104,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # restore field cache
         instance._state.fields_cache = original_cache
 
-        # Enqueue job hooks
-        if objectchange is not None:
-            enqueue_job_hooks(objectchange)
-
     # Enqueue webhooks
     enqueue_webhooks(instance, change_context_state.get().get_user(), change_context_state.get().change_id, action)
 
