@@ -221,8 +221,6 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
-# LoginRequiredMixin cannot be added here as this is both available to the UI and API
-# if added on UI a redirect tot login occurs which is good but on API it also redirects to Login page which is bad
 class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
         # TODO(timizuo): Add `get_settings_or_config("HIDE_RESTRICTED_UI")` to check logic if desired
