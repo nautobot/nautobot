@@ -227,7 +227,7 @@ class CustomGraphQLView(GraphQLView):
             graphql_url = reverse("graphql")
             login_url = reverse(settings.LOGIN_URL)
             return redirect(f"{login_url}?next={graphql_url}")
-        
+
         query_slug = request.GET.get("slug")
         if query_slug:
             data["obj"] = GraphQLQuery.objects.get(slug=query_slug)
