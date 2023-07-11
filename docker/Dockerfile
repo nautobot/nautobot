@@ -53,9 +53,9 @@ ENV PYTHONUNBUFFERED=1 \
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
 # DL4006 - Set the SHELL option -o pipefail before RUN with a pipe in
 # hadolint ignore=DL3008,DL3009,DL3013,DL3042,DL4006
-RUN --mount=type=cache,target="/var/lib/apt/lists" \
-    --mount=type=cache,target="/var/cache/apt" \
-    --mount=type=cache,target="/root/.cache/pip" \
+RUN --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
+    --mount=type=cache,target="/var/cache/apt",sharing=locked \
+    --mount=type=cache,target="/root/.cache/pip",sharing=locked \
     apt-get update && \
     apt-get upgrade -y && \
     apt-get install --no-install-recommends -y curl && \
@@ -84,8 +84,8 @@ FROM system-dependencies AS system-dev-dependencies
 
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
-RUN --mount=type=cache,target="/var/lib/apt/lists" \
-    --mount=type=cache,target="/var/cache/apt" \
+RUN --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
+    --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get update && \
     apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev && \
     apt-get autoremove -y && \
@@ -114,7 +114,7 @@ COPY --chown=nautobot:nautobot nautobot/ui/package.json nautobot/ui/package-lock
 WORKDIR /opt/nautobot/ui
 
 # Install (non-development) Node dependencies of Nautobot UI
-RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
     npm install --omit=dev
 
 ################################ Stage: node-dev-dependencies (intermediate build target)
@@ -122,7 +122,7 @@ RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999 \
 FROM node-dependencies AS node-dev-dependencies
 
 # Install development Node dependencies of Nautobot UI
-RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
     npm install --include=dev
 
 ################################ Stage: build-ui (intermediate build target)
@@ -130,7 +130,7 @@ RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999 \
 FROM node-dev-dependencies AS build-ui
 
 COPY --chown=nautobot:nautobot nautobot/ui /opt/nautobot/ui
-RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
     npm run build
 
 ################################ Stage: python-dependencies (intermediate build target)
@@ -144,7 +144,7 @@ USER nautobot
 # if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
 # https://python-poetry.org/docs/master/#installing-with-the-official-installer
 # This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
-RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
     curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
     python /tmp/install-poetry.py --version 1.5.1 && \
     rm -f /tmp/install-poetry.py
@@ -152,7 +152,7 @@ RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
 # Add poetry install location to the $PATH
 ENV PATH="${PATH}:/opt/nautobot/.local/bin"
 
-RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
     python -m venv /opt/nautobot
 
 ENV PATH="/opt/nautobot/bin:${PATH}"
@@ -174,7 +174,7 @@ COPY --chown=nautobot:nautobot examples /source/examples
 WORKDIR /source
 
 # Install (non-development) Python dependencies of Nautobot
-RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
@@ -183,7 +183,7 @@ RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
 FROM python-dependencies AS python-dev-dependencies
 
 # Add development-specific dependencies of Nautobot to the installation
-RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
     poetry install --no-root --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
@@ -211,7 +211,7 @@ COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/nautobot/project-static/docs /source/nautobot/project-static/docs
 
-RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
     poetry install --no-ansi --extras all && \
     rm -rf /tmp/tmp* && \
     rm -rf /source/*
@@ -233,7 +233,7 @@ COPY --from=build-ui --chown=nautobot:nautobot /opt/nautobot/ui/build /opt/nauto
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 
 # Install Nautobot wheel, and uninstall example apps as they're not included in the final-dev image
-RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
     pip install --no-deps --no-cache-dir /source/dist/*.whl && \
     pip uninstall -y example-plugin example-plugin-with-view-override && \
     rm -rf /source/*
@@ -264,7 +264,7 @@ COPY --from=build-ui --chown=nautobot:nautobot /opt/nautobot/ui/build /opt/nauto
 
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 
-RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999 \
+RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
     pip install --no-deps --no-cache-dir /source/dist/*.whl && \
     rm -rf /source/*
 
