@@ -7,7 +7,7 @@ import prometheus_client
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
@@ -225,6 +225,11 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
 # if added on UI a redirect tot login occurs which is good but on API it also redirects to Login page which is bad
 class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
+        # TODO(timizuo): Add `get_settings_or_config("HIDE_RESTRICTED_UI")` to check logic if desired
+        if not request.user.is_authenticated:
+            graphql_url = reverse("graphql")
+            login_url = reverse(settings.LOGIN_URL)
+            return redirect(f"{login_url}?next={graphql_url}")
         query_slug = request.GET.get("slug")
         if query_slug:
             data["obj"] = GraphQLQuery.objects.get(slug=query_slug)
