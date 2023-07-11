@@ -223,11 +223,11 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
 
 class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
-        # TODO(timizuo): Add `get_settings_or_config("HIDE_RESTRICTED_UI")` to check logic if desired
-        if not request.user.is_authenticated:
+        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
             graphql_url = reverse("graphql")
             login_url = reverse(settings.LOGIN_URL)
             return redirect(f"{login_url}?next={graphql_url}")
+        
         query_slug = request.GET.get("slug")
         if query_slug:
             data["obj"] = GraphQLQuery.objects.get(slug=query_slug)

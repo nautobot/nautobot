@@ -37,6 +37,7 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import (
     get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
@@ -463,7 +464,7 @@ class APIVersioningGetSchemaURLMixin:
         )
 
 
-class NautobotSpectacularSwaggerView(LoginRequiredMixin, APIVersioningGetSchemaURLMixin, SpectacularSwaggerView):
+class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, SpectacularSwaggerView):
     """
     Extend SpectacularSwaggerView to support Nautobot's ?api_version=<version> query parameter and page styling.
     """
@@ -480,6 +481,11 @@ class NautobotSpectacularSwaggerView(LoginRequiredMixin, APIVersioningGetSchemaU
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
+        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+            doc_url = reverse("api_docs")
+            login_url = reverse(settings.LOGIN_URL)
+            return redirect(f"{login_url}?next={doc_url}")
+
         # For backward compatibility wtih drf-yasg, `/api/docs/?format=openapi` is a redirect to the JSON schema.
         if request.GET.get("format") == "openapi":
             return redirect("schema_json", permanent=True)

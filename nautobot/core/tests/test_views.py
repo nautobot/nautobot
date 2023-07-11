@@ -294,27 +294,30 @@ class LoginUI(TestCase):
     def test_routes_redirect_back_to_login_if_hide_restricted_ui_true(self):
         """Assert that api docs and graphql redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=True."""
         self.client.logout()
-        url = "/api/docs/"
-        response = self.client.get(url, follow=True)
-        self.assertHttpStatus(response, 200)
-        redirect_chain = [(f"/login/?next={url}", 302)]
-        self.assertEqual(response.redirect_chain, redirect_chain)
-        response_content = response.content.decode(response.charset).replace("\n", "")
-        for footer_text in self.footer_elements:
-            self.assertNotIn(footer_text, response_content)
+        headers = {"HTTP_ACCEPT": "text/html"}
+        urls = [reverse("api_docs"), reverse("graphql")]
+        for url in urls:
+            response = self.client.get(url, follow=True, **headers)
+            self.assertHttpStatus(response, 200)
+            redirect_chain = [(f"/login/?next={url}", 302)]
+            self.assertEqual(response.redirect_chain, redirect_chain)
+            response_content = response.content.decode(response.charset).replace("\n", "")
+            for footer_text in self.footer_elements:
+                self.assertNotIn(footer_text, response_content)
 
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_routes_no_redirect_back_to_login_if_hide_restricted_ui_false(self):
         """Assert that api docs and graphql do not redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=False."""
         self.client.logout()
-        url = "/api/docs/"
-        response = self.client.get(url, follow=True)
-        self.assertHttpStatus(response, 200)
-        redirect_chain = [(f"/login/?next={url}", 302)]
-        self.assertEqual(response.redirect_chain, redirect_chain)
-        response_content = response.content.decode(response.charset).replace("\n", "")
-        for footer_text in self.footer_elements:
-            self.assertInHTML(footer_text, response_content)
+        headers = {"HTTP_ACCEPT": "text/html"}
+        urls = [reverse("api_docs"), reverse("graphql")]
+        for url in urls:
+            response = self.client.get(url, **headers)
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(response.request["PATH_INFO"], url)
+            response_content = response.content.decode(response.charset).replace("\n", "")
+            for footer_text in self.footer_elements:
+                self.assertInHTML(footer_text, response_content)
 
 
 class MetricsViewTestCase(TestCase):
