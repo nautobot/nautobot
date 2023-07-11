@@ -469,6 +469,12 @@ Removing expired sessions...
 Invalidating cache...
 ```
 
+### `refresh_dynamic_group_member_caches`
+
+`nautobot-server refresh_dynamic_group_member_caches`
+
+Refresh the cached members of all dynamic groups. This is useful to periodically update the cached list of members of a dynamic group without having to wait for caches to expire, which defaults to one hour.
+
 ### `remove_stale_scheduled_jobs`
 
 +++ 1.3.10

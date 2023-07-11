@@ -14,19 +14,101 @@ from nautobot.utilities.utils import get_route_for_model
 
 class DynamicGroupMixin:
     """
-    Adds a `dynamic_groups` property that returns a queryset of `DynamicGroup` membership.
+    Adds properties to a model to facilitate reversing DynamicGroup membership:
+
+    - `dynamic_groups` - Full reverse membership of instance to `DynamicGroup` objects, performs the most database queries.
+    - `dynamic_groups_cached` - Full reverse membership of instance to `DynamicGroup` objects, uses cached member list if available. Ideal for most use cases.
+    - `dynamic_groups_list` - List of membership of instance to `DynamicGroup` objects, performs one less database query than `dynamic_groups`.
+    - `dynamic_groups_list_cached` - List of membership of instance to `DynamicGroup` objects, uses cached member list if available. Performs no database queries in optimal conditions.
     """
 
     @property
     def dynamic_groups(self):
-        """Return a `DynamicGroup` queryset for this instance."""
+        """
+        Return a queryset of `DynamicGroup` objects this instance is a member of.
+
+        This will NOT use a cached member list of the dynamic groups and will always query the database for each DynamicGroup.
+
+        Additionally, this performs a final database query to turn the internal list into a queryset.
+        """
         from nautobot.extras.models.groups import DynamicGroup
 
-        if not hasattr(self, "_dynamic_group_queryset"):
-            queryset = DynamicGroup.objects.get_for_object(self)
-            self._dynamic_group_queryset = queryset
+        if not hasattr(self, "_dynamic_group_uncached_queryset"):
+            queryset = DynamicGroup.objects.get_for_object(self, skip_cache=True)
+            self._dynamic_group_uncached_queryset = queryset
 
-        return self._dynamic_group_queryset
+        return DynamicGroup.objects.get_for_object(self, skip_cache=True)
+
+    @property
+    def dynamic_groups_cached(self):
+        """
+        Return a queryset of `DynamicGroup` objects this instance is a member of.
+
+        This will use a cached member list of the dynamic groups if available.
+
+        In optimal conditions this will incur a single database query to convert internal list into a queryset which is reasonably performant.
+        """
+        from nautobot.extras.models.groups import DynamicGroup
+
+        if not hasattr(self, "_dynamic_group_cached_queryset"):
+            queryset = DynamicGroup.objects.get_for_object(self)
+            self._dynamic_group_cached_queryset = queryset
+
+        return self._dynamic_group_cached_queryset
+
+    @property
+    def dynamic_groups_list(self):
+        """
+        Return a list of `DynamicGroup` objects this instance is a member of.
+
+        This will NOT use a cached member list of the dynamic groups and will always query the database for each DynamicGroup.
+
+        This saves a final query to turn the list into a queryset.
+        """
+        from nautobot.extras.models.groups import DynamicGroup
+
+        if not hasattr(self, "_dynamic_group_uncached_list"):
+            dg_list = DynamicGroup.objects.get_list_for_object(self, skip_cache=True)
+            self._dynamic_group_uncached_list = dg_list
+
+        return self._dynamic_group_uncached_list
+
+    @property
+    def dynamic_groups_list_cached(self):
+        """
+        Return a list of `DynamicGroup` objects this instance is a member of.
+
+        This will use a cached member list of the dynamic groups if available.
+
+        In optimal conditions this will incur no database queries.
+        """
+
+        from nautobot.extras.models.groups import DynamicGroup
+
+        if not hasattr(self, "_dynamic_group_cached_list"):
+            dg_list = DynamicGroup.objects.get_list_for_object(self)
+            self._dynamic_group_cached_list = dg_list
+
+        return self._dynamic_group_cached_list
+
+    def get_dynamic_groups(self, as_queryset=False, skip_cache=False):
+        """
+        Return a list or queryset of `DynamicGroup` objects this instance is a member of.
+
+        Args:
+            as_queryset (bool): Return a queryset instead of a list. Optional, defaults to False.
+            skip_cache (bool): Skip the cache and query the database directly. Optional, defaults to False.
+        """
+        if as_queryset:
+            if skip_cache:
+                return self.dynamic_groups
+            else:
+                return self.dynamic_groups_cached
+        else:
+            if skip_cache:
+                return self.dynamic_groups_list
+            else:
+                return self.dynamic_groups_list_cached
 
     def get_dynamic_groups_url(self):
         """Return the dynamic groups URL for a given instance."""

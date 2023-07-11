@@ -8,9 +8,10 @@ from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save
+from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
@@ -284,6 +285,53 @@ def dynamic_group_membership_created(sender, instance, raw=False, **kwargs):
 
 m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children.through)
 pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
+
+
+def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
+    """
+    When a DynamicGroup is created or deleted the cache of eligible groups for the associated ContentType.
+
+    Can't change content_type_id on an existing instance, so no need to check for that.
+    """
+    if kwargs.get("created", None) is False:  # Using the same handler for post_save and post_delete
+        return
+    content_type = instance.content_type
+    cache_key = f"{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
+    cache.set(
+        cache_key,
+        DynamicGroup.objects.filter(content_type_id=instance.content_type_id),
+        get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"),
+    )
+
+
+post_save.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
+post_delete.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
+
+
+def dynamic_group_cache_members(sender, instance, **kwargs):
+    """
+    When a DynamicGroup is updated, update the cache of members.
+    """
+    instance.get_members(skip_cache=False, force_update_cache=True)
+
+
+post_save.connect(dynamic_group_cache_members, sender=DynamicGroup)
+
+
+def dynamic_group_membership_cache_members(sender, instance, **kwargs):
+    """
+    When a DynamicGroup membership is updated, update the parent group(s) cache of members.
+    """
+
+    def _update_parent_cache(parent_group):
+        parent_group.get_members(skip_cache=False, force_update_cache=True)
+        for ancestor in list(parent_group.parents.all()):
+            _update_parent_cache(ancestor)
+
+    _update_parent_cache(instance.parent_group)
+
+
+post_save.connect(dynamic_group_membership_cache_members, sender=DynamicGroupMembership)
 
 
 #

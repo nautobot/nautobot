@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, OuterRef, Subquery, Q, F
@@ -5,6 +6,7 @@ from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
 
 from nautobot.extras.models.tags import TaggedItem
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.query_functions import EmptyGroupByJSONBAgg
 from nautobot.utilities.querysets import RestrictedQuerySet
 
@@ -163,33 +165,70 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 class DynamicGroupQuerySet(RestrictedQuerySet):
     """Queryset for `DynamicGroup` objects that provides a `get_for_object` method."""
 
-    # FIXME(jathan): Ideally replace this iteration with a reversible Q object
-    # of some sort.
-    def get_for_object(self, obj):
-        """Return all `DynamicGroup` assigned to the given object."""
+    def get_list_for_object(self, obj, skip_cache=False):
+        """
+        Return a list of `DynamicGroup` assigned to the given object. As opposed to `get_for_object`
+        which will return a queryset but that is an additional query to the DB when you may just
+        want a list.
+
+        Args:
+            obj: The object to seek dynamic groups membership by.
+            skip_cache: If True, skip the cache and query the database directly.
+        """
         if not isinstance(obj, Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
 
         # Get dynamic groups for this content_type using the discrete content_type fields to
         # optimize the query.
-        # FIXME(jathan): Try to get the number of queries down. This will scale poorly.
-        # TODO(jathan): 1 query
-        eligible_groups = self.filter(
-            content_type__app_label=obj._meta.app_label, content_type__model=obj._meta.model_name
-        ).select_related("content_type")
+        eligible_groups = self._get_eligible_dynamic_groups(obj, skip_cache=skip_cache)
 
         # Filter down to matching groups.
         my_groups = []
-        # TODO(jathan): 3 queries per DynamicGroup instance
-        for dynamic_group in eligible_groups.iterator():
-            if dynamic_group.members.filter(pk=obj.pk).values_list("pk", flat=True).exists():
-                my_groups.append(dynamic_group.pk)
+        for dynamic_group in list(eligible_groups):
+            if dynamic_group.am_i_a_member(obj, skip_cache=skip_cache):
+                my_groups.append(dynamic_group)
 
-        # TODO(jathan): 1 query
-        return self.filter(pk__in=my_groups)
+        return my_groups
+
+    def get_for_object(self, obj, skip_cache=False):
+        """
+        Return a queryset of `DynamicGroup` objects that are assigned to the given object.
+
+        Args:
+            obj: The object to seek dynamic groups membership by.
+            skip_cache: If True, skip the cache and query the database directly.
+        """
+        return self.filter(pk__in=[dg.pk for dg in self.get_list_for_object(obj, skip_cache=skip_cache)])
 
     def get_by_natural_key(self, slug):
         return self.get(slug=slug)
+
+    def _get_eligible_dynamic_groups(self, obj, skip_cache=False):
+        """
+        Return a queryset of `DynamicGroup` objects that are eligible to filter the given object.
+        """
+        cache_key = f"{obj._meta.label_lower}._get_eligible_dynamic_groups"
+
+        def _query_eligible_dynamic_groups():
+            """
+            A callable to be used as the default value for the cache of which dynamic groups are
+            eligible for a given object.
+            """
+            # Save a DB query if we can by using the _content_type field on the model which is a cached instance of the ContentType
+            if not skip_cache and hasattr(type(obj), "_content_type"):
+                return self.filter(content_type_id=type(obj)._content_type.id)
+            return self.filter(
+                content_type__app_label=obj._meta.app_label, content_type__model=obj._meta.model_name
+            ).select_related("content_type")
+
+        if skip_cache:
+            eligible_dynamic_groups = _query_eligible_dynamic_groups()
+            cache.set(cache_key, eligible_dynamic_groups, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"))
+            return eligible_dynamic_groups
+
+        return cache.get_or_set(
+            cache_key, _query_eligible_dynamic_groups, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT")
+        )
 
 
 class DynamicGroupMembershipQuerySet(RestrictedQuerySet):

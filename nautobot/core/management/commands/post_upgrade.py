@@ -70,6 +70,20 @@ class Command(BaseCommand):
             default=True,
             help="Do not automatically generate missing cable paths.",
         )
+        parser.add_argument(
+            "--no-refresh-dynamic-group-member-caches",
+            action="store_false",
+            dest="refresh_dynamic_group_member_caches",
+            default=True,
+            help="Do not automatically refresh dynamic group member caches.",
+        )
+        parser.add_argument(
+            "--no-refresh-content-type-cache",
+            action="store_false",
+            dest="refresh_content_type_cache",
+            default=True,
+            help="Do not automatically refresh content type cache.",
+        )
 
     def handle(self, *args, **options):
         # Run migrate
@@ -99,6 +113,11 @@ class Command(BaseCommand):
         if options.get("remove_stale_contenttypes"):
             print("Removing stale content types...")
             call_command("remove_stale_contenttypes", interactive=False)
+
+        # Run refresh_content_type_cache
+        if options.get("remove_stale_contenttypes") or options.get("refresh_content_type_cache"):
+            print("Refreshing _content_type cache")
+            call_command("refresh_content_type_cache")
             print()
 
         # Run clearsessions
@@ -111,4 +130,10 @@ class Command(BaseCommand):
         if options.get("invalidate_all"):
             print("Invalidating cache...")
             call_command("invalidate", "all")
+            print()
+
+        # Run refresh_dynamic_group_member_caches
+        if options.get("refresh_dynamic_group_member_caches"):
+            print("Refreshing dynamic group member caches...")
+            call_command("refresh_dynamic_group_member_caches")
             print()

@@ -376,6 +376,11 @@ class ConfigContextTest(TestCase):
             device_role=self.devicerole,
             device_type=self.devicetype,
         )
+
+        # Ensure group membership cache is up to date
+        self.dynamic_groups.get_members(skip_cache=False, force_update_cache=True)
+        self.dynamic_group_2.get_members(skip_cache=False, force_update_cache=True)
+
         dynamic_group_context = ConfigContext.objects.create(
             name="dynamic context 1", weight=100, data={"dynamic_group": "dynamic context 1"}
         )
