@@ -859,7 +859,7 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
 class GetSettingsAPIViewTestCase(testing.APITestCase):
     def test_get_settings(self):
         """Assert get settings value"""
-        url = reverse("ui-api:get-settings")
+        url = reverse("ui-api:settings")
 
         with self.subTest("Test get allowed settings"):
             url_with_filters = f"{url}?name=FEEDBACK_BUTTON_ENABLED"
@@ -870,6 +870,6 @@ class GetSettingsAPIViewTestCase(testing.APITestCase):
         with self.subTest("Test get not-allowed settings"):
             url_with_filters = f"{url}?name=NAPALM_PASSWORD"
             response = self.client.get(url_with_filters, **self.header)
-            self.assertEqual(response.status_code, 200)
-            expected_response = {}
+            self.assertEqual(response.status_code, 400)
+            expected_response = {"error": "Invalid settings names specified: NAPALM_PASSWORD."}
             self.assertEqual(response.data, expected_response)
