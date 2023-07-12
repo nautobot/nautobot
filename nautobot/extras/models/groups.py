@@ -348,8 +348,8 @@ class DynamicGroup(OrganizationalModel):
         Return the member objects for this group.
 
         Args:
-            skip_cache (bool): Whether to skip the cache and run the query directly. Optional. Default: False.
-            force_update_cache (bool): Whether to force an update of the cache. Optional. Default: False. Ignored if `skip_cache` is True.
+            skip_cache (bool, optional): Whether to skip the cache and run the query directly. Defaults to False.
+            force_update_cache (bool, optional): Whether to force an update of the cache. Ignored if `skip_cache` is True. Defaults to False. 
         """
 
         if skip_cache:
@@ -369,7 +369,7 @@ class DynamicGroup(OrganizationalModel):
 
         Args:
             obj (django.db.models.Model): The object to check for membership.
-            skip_cache (bool): Whether to skip the cache and run the query directly. Optional. Default: False.
+            skip_cache (bool, optional): Whether to skip the cache and run the query directly. Defaults to False.
 
         Returns:
             bool: True if the object is a member of this group, otherwise False.

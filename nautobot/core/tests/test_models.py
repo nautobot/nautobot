@@ -52,7 +52,7 @@ class BaseModelTest(TestCase):
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=0)
     def test__content_type_caching_disabled(self):
         """
-        Verify that the ContentType of the object is cached.
+        Verify that the ContentType of the object is not cached.
         """
 
         # Ensure the cache is empty from previous tests

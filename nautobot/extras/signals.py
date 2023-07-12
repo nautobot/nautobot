@@ -289,7 +289,7 @@ pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership
 
 def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
     """
-    When a DynamicGroup is created or deleted the cache of eligible groups for the associated ContentType.
+    When a DynamicGroup is created or deleted, refresh the cache of eligible groups for the associated ContentType.
 
     Can't change content_type_id on an existing instance, so no need to check for that.
     """
