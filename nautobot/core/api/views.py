@@ -899,8 +899,8 @@ class GetSettingsView(NautobotAPIVersionMixin, APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        settings = {settings_name: get_settings_or_config(settings_name) for settings_name in valid_settings}
-        return Response(settings)
+        res = {settings_name: get_settings_or_config(settings_name) for settings_name in valid_settings}
+        return Response(res)
 
 
 #
