@@ -327,6 +327,8 @@ nav:
       - Home Page Panels: "development/core/homepage.md"
       - User Preferences: "development/core/user-preferences.md"
       - Release Checklist: "development/core/release-checklist.md"
+    - Migration Guides:
+      - "development/migration/index.md"
   - Release Notes:
     - "release-notes/index.md"
     - Version 2.0: "release-notes/version-2.0.md"
