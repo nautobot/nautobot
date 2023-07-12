@@ -607,6 +607,11 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         field_type="release_check_url_field",
     ),
+    "FEEDBACK_BUTTON_ENABLED": ConstanceConfigItem(
+        default=True,
+        help_text="Whether to show the Feedback button in the new UI sidebar.",
+        field_type=bool,
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -616,7 +621,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["HIDE_RESTRICTED_UI"],
+    "User Interface": ["HIDE_RESTRICTED_UI", "FEEDBACK_BUTTON_ENABLED"],
 }
 
 #
