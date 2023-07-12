@@ -1,6 +1,4 @@
-import contextlib
 import itertools
-import json
 import logging
 import platform
 from collections import OrderedDict
@@ -874,12 +872,6 @@ class GetSettingsView(NautobotAPIVersionMixin, APIView):
     """
 
     permission_classes = [IsAuthenticated]
-
-    def is_serializable(self, value):
-        with contextlib.suppress(TypeError):
-            json.dumps(value)
-            return True
-        return False
 
     @extend_schema(exclude=True)
     def get(self, request):
