@@ -1150,3 +1150,9 @@ Environment Variable: `NAUTOBOT_TIME_ZONE`
 The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 Please see the [official Django documentation on `TIME_ZONE`](https://docs.djangoproject.com/en/stable/ref/settings/#time-zone) for more information.
+
+### FEEDBACK_BUTTON_ENABLED
+
+Default: `True`
+
+If set to `True`, a "Submit Feedback" button is added to the New UI sidebar secondary menu, which is used to collect user feedback.
