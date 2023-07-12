@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django import forms
 
 from nautobot.core.forms import (
@@ -273,6 +274,17 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "date_allocated": DateTimePicker(),
         }
 
+    def _get_validation_exclusions(self):
+        """
+        By default Django excludes "network"/"prefix_length" from model validation because they are not form fields.
+
+        This is wrong since we need those fields to be included in the validate_unique() calculation!
+        """
+        exclude = super()._get_validation_exclusions()
+        exclude.remove("network")
+        exclude.remove("prefix_length")
+        return exclude
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance is not None:
@@ -470,6 +482,20 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         """
         namespace = self.cleaned_data.pop("namespace")
         setattr(self.instance, "_namespace", namespace)
+
+    def clean(self):
+        super().clean()
+        # If user input was bad, might not even *have* an identifiable host
+        if self.instance.host and self.instance._namespace:
+            try:
+                (
+                    Prefix.objects.filter(namespace=self.instance._namespace)
+                    # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick TYPE_NETWORK
+                    # .exclude(type=PrefixTypeChoices.TYPE_POOL)
+                    .get_closest_parent(self.instance.host, include_self=True)
+                )
+            except Prefix.DoesNotExist:
+                raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"})
 
     def __init__(self, *args, **kwargs):
         # Initialize helper selectors
