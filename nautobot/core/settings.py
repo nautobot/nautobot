@@ -609,7 +609,7 @@ CONSTANCE_CONFIG = {
     ),
     "FEEDBACK_BUTTON_ENABLED": ConstanceConfigItem(
         default=True,
-        help_text="Show or Hide Feedback button on NewUI sidebar menu.",
+        help_text="Whether to show the Feedback button in the new UI sidebar.",
         field_type=bool,
     ),
 }
