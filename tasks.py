@@ -14,8 +14,11 @@ limitations under the License.
 
 import os
 import re
+import subprocess
+from multiprocessing import Pool
 
-from invoke import Collection, task as invoke_task
+from invoke import Collection
+from invoke import task as invoke_task
 from invoke.exceptions import Exit
 
 try:
@@ -29,6 +32,9 @@ try:
     HAS_RICH = True
 except ModuleNotFoundError:
     HAS_RICH = False
+
+
+_TEST_RESULTS_DOCKER_DIR = "/source/test-results"
 
 
 def is_truthy(arg):
@@ -172,23 +178,28 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, **kwargs):
+def run_command(context, command, default_exec=None, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
+    env = kwargs.pop("env", {})
     if is_truthy(context.nautobot.local):
-        env = kwargs.pop("env", {})
         if "hide" not in kwargs:
             print_command(command, env=env)
         context.run(command, pty=True, env=env, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
-        docker_compose_status = "ps --services --filter status=running"
-        results = docker_compose(context, docker_compose_status, hide="out")
-        if "nautobot" in results.stdout:
-            compose_command = f"exec nautobot {command}"
+        env_args = " ".join(f"-e {key}" for key in env)
+        if default_exec is None:
+            docker_compose_status = "ps --services --filter status=running"
+            results = docker_compose(context, docker_compose_status, hide="out", env=env)
+            default_exec = "exec" if "nautobot" in results.stdout else "run"
+        if default_exec == "exec":
+            compose_command = f"exec {env_args} -- nautobot {command}"
+        elif default_exec == "run":
+            compose_command = f"run {env_args} --rm --entrypoint '{command}' -- nautobot"
         else:
-            compose_command = f"run --rm --entrypoint '{command}' nautobot"
+            raise ValueError(f"Invalid value for default_exec: {default_exec}, can be None, 'exec', or 'run'")
 
-        docker_compose(context, compose_command, pty=True)
+        docker_compose(context, compose_command, pty=True, env=env)
 
 
 # ------------------------------------------------------------------------------
@@ -407,7 +418,7 @@ def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
     if not service:
-        docker_compose(context, "down")
+        docker_compose(context, "down --remove-orphans")
     else:
         docker_compose(context, "stop", service=service)
 
@@ -416,7 +427,7 @@ def stop(context, service=None):
 def destroy(context):
     """Destroy all containers and volumes."""
     print("Destroying Nautobot...")
-    docker_compose(context, "down --volumes")
+    docker_compose(context, "down --remove-orphans --volumes")
 
 
 @task
@@ -666,6 +677,9 @@ def check_schema(context, api_version=None):
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
+        "test_db_name": "Specify a name for the test database.",
+        "xml_output": "Output test results to XML file.",
+        "default_exec": "Specify, whether to use docker compose `exec` or `run` command. Defaults to None (autodetect).",
     },
     iterable=["tag", "exclude_tag"],
 )
@@ -683,6 +697,9 @@ def unittest(
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
+    test_db_name="",
+    xml_output="",
+    default_exec=None,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -718,7 +735,11 @@ def unittest(
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
 
-    run_command(context, command)
+    env = {"NAUTOBOT_TEST_DB_NAME": test_db_name}
+    if xml_output:
+        env["NAUTOBOT_TEST_OUTPUT_DIR"] = _TEST_RESULTS_DOCKER_DIR
+        env["NAUTOBOT_TEST_OUTPUT_FILE_NAME"] = xml_output
+    run_command(context, command, env=env, default_exec=default_exec)
 
 
 @task
@@ -856,3 +877,111 @@ def tests(context, lint_only=False, keepdb=False):
     build_and_check_docs(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)
+
+
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def remove_ansi_escapes(text: str) -> str:
+    return _ANSI_ESCAPE_RE.sub("", text)
+
+
+def invoke_forked_unittest(app):
+    command = [
+        "invoke",
+        "unittest",
+        # "--failfast",
+        "--skip-docs-build",
+        "--cache-test-fixtures",
+        "--keepdb",
+        "--no-buffer",
+        "--default-exec=exec",
+        f"--label=nautobot.{app}",
+        f"--test-db-name=test_nautobot_{app}",
+        f"--xml-output={app}.xml",
+    ]
+
+    with subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    ) as process:
+        for line in iter(process.stdout.readline, ""):
+            print(f"{app}: {remove_ansi_escapes(line)}", end="")
+
+        for line in iter(process.stderr.readline, ""):
+            print(f"{app} STDERR: {remove_ansi_escapes(line)}", end="")
+
+        # Wait for the process to finish and get the exit code
+        process.communicate()
+        success = process.returncode == 0
+
+        return app, success
+
+
+@task(help={"workers": "Number of parallel workers to use (default: 3)"})
+def unittest_parallel(context, workers=3):
+    docker_compose(context, "up --detach -- nautobot")
+
+    # Cleanup test-results
+    run_command(context, f"rm -rf {_TEST_RESULTS_DOCKER_DIR}", default_exec="exec")
+
+    # Sorted with the slowest tests first.
+    # 3 workers seems to be the sweet spot for parallelization as extras and dcim are the slowest.
+    # Previous assumptions, can change in time.
+    apps = [
+        "extras",
+        "dcim",
+        "ipam",
+        "virtualization",
+        "core",
+        "tenancy",
+        "users",
+    ]
+
+    with Pool(workers or len(apps)) as p:
+        results = p.map(invoke_forked_unittest, apps)
+
+    for app, success in results:
+        if success:
+            print(f"Tests for {app} succeeded")
+        else:
+            print(f"Tests for {app} failed")
+
+
+@task(
+    help={
+        "service": "If specified, only display logs for this service (default: all)",
+        "follow": "Flag to follow logs (default: False)",
+        "tail": "Tail N number of lines (default: all)",
+    }
+)
+def logs(context, service="", follow=False, tail=0):
+    """View the logs of a docker compose service."""
+    command = "logs "
+
+    if follow:
+        command += "--follow "
+    if tail:
+        command += f"--tail={tail} "
+
+    docker_compose(context, command, service=service)
+
+
+@task
+def export(context):
+    """Export docker compose configuration to `compose.yaml` file.
+
+    Useful to:
+
+    - Debug docker compose configuration.
+    - Allow using `docker compose` command directly without invoke.
+    """
+    docker_compose(context, "convert > compose.yaml")
+
+
+@task(name="ps", help={"all": "Show all, including stopped containers"})
+def ps_task(context, _all=False):
+    """List containers."""
+    docker_compose(context, f"ps {'--all' if _all else ''}")

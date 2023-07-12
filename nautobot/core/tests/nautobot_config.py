@@ -49,3 +49,12 @@ TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
 
 # Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
 METRICS_ENABLED = True
+
+_TEST_DB_NAME = os.getenv("NAUTOBOT_TEST_DB_NAME", "")
+if _TEST_DB_NAME:
+    DATABASES["default"]["TEST"] = {  # noqa: F405
+        "NAME": _TEST_DB_NAME,
+    }
+
+TEST_OUTPUT_DIR = os.getenv("NAUTOBOT_TEST_OUTPUT_DIR")
+TEST_OUTPUT_FILE_NAME = os.getenv("NAUTOBOT_TEST_OUTPUT_FILE_NAME")

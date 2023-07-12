@@ -171,6 +171,7 @@ rich = "~12.5.1"
 towncrier = "~22.8.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~2.1.9"
+unittest-xml-reporting = "~3.2.0"
 
 [tool.poetry.group.docs.dependencies]
 # Helper for parsing docstrings
