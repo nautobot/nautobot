@@ -278,7 +278,7 @@ Nautobot provides a management command to install the required Node.js packages 
 nautobot-server build_ui --npm-install
 ```
 
-This only needs to be performed manually the first time Nautobot v2 is installed. The [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) command that must be ran after any Nautobot upgrade will automatically run this command.
+This only needs to be performed manually the first time Nautobot v2 is installed. The [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) command that must be ran after any Nautobot upgrade will automatically re-run this command.
 
 ## Create Static Directories
 
