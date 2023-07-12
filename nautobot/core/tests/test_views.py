@@ -305,8 +305,10 @@ class LoginUI(TestCase):
             # Assert Footer items(`self.footer_elements`), Banner and Banner Top is hidden
             for footer_text in self.footer_elements:
                 self.assertNotIn(footer_text, response_content)
-            self.assertNotIn("Hello, Banner Top", response_content)
-            self.assertNotIn("Hello, Banner Bottom", response_content)
+            # Only API Docs implements BANNERS
+            if url == urls[0]:
+                self.assertNotIn("Hello, Banner Top", response_content)
+                self.assertNotIn("Hello, Banner Bottom", response_content)
 
     @override_settings(HIDE_RESTRICTED_UI=False, BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
     def test_routes_no_redirect_back_to_login_if_hide_restricted_ui_false(self):
@@ -322,8 +324,11 @@ class LoginUI(TestCase):
             # Assert Footer items(`self.footer_elements`), Banner and Banner Top is not hidden
             for footer_text in self.footer_elements:
                 self.assertInHTML(footer_text, response_content)
-            self.assertInHTML("Hello, Banner Top", response_content)
-            self.assertInHTML("Hello, Banner Bottom", response_content)
+
+            # Only API Docs implements BANNERS
+            if url == urls[0]:
+                self.assertInHTML("Hello, Banner Top", response_content)
+                self.assertInHTML("Hello, Banner Bottom", response_content)
 
 
 class MetricsViewTestCase(TestCase):
