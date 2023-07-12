@@ -472,6 +472,17 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "tags",
         ]
 
+    def _get_validation_exclusions(self):
+        """
+        By default Django excludes "host" and "parent" from model validation because they are not form fields.
+
+        This is wrong since we need those fields to be included in the validate_unique() calculation!
+        """
+        exclude = super()._get_validation_exclusions()
+        exclude.remove("host")
+        exclude.remove("parent")
+        return exclude
+
     def clean_namespace(self):
         """
         Explicitly set the Namespace on the instance so it will be used on save.
@@ -488,7 +499,7 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         # If user input was bad, might not even *have* an identifiable host
         if self.instance.host and self.instance._namespace:
             try:
-                (
+                self.instance.parent = (
                     Prefix.objects.filter(namespace=self.instance._namespace)
                     # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick TYPE_NETWORK
                     # .exclude(type=PrefixTypeChoices.TYPE_POOL)
