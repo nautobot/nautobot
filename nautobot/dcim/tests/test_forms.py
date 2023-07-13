@@ -194,9 +194,9 @@ class LabelTestCase(TestCase):
 
 
 class RackTestCase(TestCase):
-    def test_update_rack_site(self):
-        """Asset updating duplicate device caused by update to rack site is caught by rack clean"""
-        # Rack post save signal tries updating rack devices if site is changed, which may result in an Exception
+    def test_update_rack_location(self):
+        """Asset updating duplicate device caused by update to rack location is caught by rack clean"""
+        # Rack post save signal tries updating rack devices if location is changed, which may result in an Exception
         # Asset this error is caught by RackForm.clean
         tenant = Tenant.objects.first()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
@@ -205,15 +205,15 @@ class RackTestCase(TestCase):
         devicerole = Role.objects.get_for_model(Device).first()
         status = Status.objects.get(name="Active")
         racks = (
-            Rack.objects.create(name="Rack 1", site=locations[0], status=status),
-            Rack.objects.create(name="Rack 2", site=locations[1], status=status),
+            Rack.objects.create(name="Rack 1", location=locations[0], status=status),
+            Rack.objects.create(name="Rack 2", location=locations[1], status=status),
         )
 
         Device.objects.create(
             name="device1",
             device_role=devicerole,
             device_type=devicetype,
-            site=racks[0].site,
+            location=racks[0].location,
             rack=racks[0],
             tenant=tenant,
             status=status,
@@ -222,20 +222,20 @@ class RackTestCase(TestCase):
             name="device1",
             device_role=devicerole,
             device_type=devicetype,
-            site=racks[1].site,
+            location=racks[1].location,
             rack=racks[1],
             tenant=tenant,
             status=status,
         )
         data = {
             "name": racks[0].name,
-            "site": racks[1].site.pk,
+            "location": racks[1].location.pk,
             "status": racks[0].status.pk,
             "u_height": 48,
             "width": RackWidthChoices.WIDTH_19IN,
         }
         form = RackForm(data=data, instance=racks[0])
         self.assertEqual(
-            str(form.errors.as_data()["site"][0]),
-            str(["Device with `name` in ['device1'] and site=Site-2 already exists."]),
+            str(form.errors.as_data()["location"][0]),
+            str([f"Device with `name` in ['device1'] and location={locations[1]} already exists."]),
         )

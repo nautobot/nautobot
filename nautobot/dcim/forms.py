@@ -435,10 +435,10 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
 
     def clean(self):
         cleaned_data = self.cleaned_data
-        site = cleaned_data.get("site")
+        location = cleaned_data.get("location")
 
         if self.instance:
-            # If the site is changed, the rack post save signal attempts to update the rack devices,
+            # If the location is changed, the rack post save signal attempts to update the rack devices,
             # which may result in an Exception.
             # To avoid an unhandled exception in signal, catch this error here.
             duplicate_devices_names = (
@@ -446,12 +446,12 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                 .annotate(name_count=Count("name"))
                 .filter(name_count__gt=1)
             )
-            duplicate_devices = Device.objects.filter(site=site, name__in=list(duplicate_devices_names)).values_list(
+            duplicate_devices = Device.objects.filter(location=location, name__in=list(duplicate_devices_names)).values_list(
                 "name", flat=True
             )
             if duplicate_devices:
                 raise ValidationError(
-                    {"site": f"Device with `name` in {list(duplicate_devices)} and site={site} already exists."}
+                    {"location": f"Device with `name` in {list(duplicate_devices)} and location={location} already exists."}
                 )
         return cleaned_data
 
