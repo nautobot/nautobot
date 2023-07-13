@@ -1146,6 +1146,45 @@ urlpatterns += router.urls
 +++ 1.5.1
     Changelog and Notes views and URLs are now provided in the NautobotUIViewSet and NautobotUIViewSetRouter.
 
+### Adding Custom Views To NautobotUIViewSet & NautobotUIViewSetRouter
+
++++ 1.6.0
+    Via [PR #4045](https://github.com/nautobot/nautobot/pull/4045), notes and changelog views provided by mixins have now been moved to this pattern.
+
+DjangoRestFramework provides the ability to decorate a method on a ViewSet with `@action(detail=True)` to add the method as a view to the ViewSetRouter. This method must return a fully rendered HTML view.
+
+Below is an example of adding a custom view to the plugin ViewSet, a few considerations to keep in mind is the method name is the `action` and will be used for [template lookup](#template-naming-for-nautobotuiviewset) and URL naming. The expected template must be named `yourapp/yourappmodel_customview.html` and the reversible URL name will be `plugins:yourapp:yourappmodel_customview`.
+
+```python
+from nautobot.apps.views import NautobotUIViewSet
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from yourapp import filters, forms, models, tables
+from yourapp.api import serializers
+
+class YourAppModelUIViewSet(NautobotUIViewSet):
+    bulk_create_form_class = forms.YourAppModelCSVForm
+    bulk_update_form_class = forms.YourAppModelBulkEditForm
+    filterset_class = filters.YourAppModelFilterSet
+    filterset_form_class = forms.YourAppModelFilterForm
+    form_class = forms.YourAppModelForm
+    queryset = models.YourAppModel.objects.all()
+    serializer_class = serializers.YourAppModelSerializer
+    table_class = tables.YourAppModelTable
+
+    @action(detail=True)
+    def customview(self, request, *args, **kwargs):
+        """Context passed to template for rendering.
+        
+        Expected URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/customview/`
+        """
+        context = {
+            "some_key": "some value",
+        }
+        return Response(context)
+```
+
 ### Utilizing Generic Django Views
 
 The use of `generic` Django views can aid in app development. As an example, let's write a view which displays a random animal and the sound it makes. First, create the view in `views.py`:
