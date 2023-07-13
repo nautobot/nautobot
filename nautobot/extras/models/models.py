@@ -624,7 +624,6 @@ class ImageAttachment(BaseModel):
         return filename.split("_", 2)[2]
 
     def delete(self, *args, **kwargs):
-
         _name = self.image.name
 
         super().delete(*args, **kwargs)

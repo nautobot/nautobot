@@ -9,7 +9,6 @@ class Command(_Command):
     """
 
     def handle(self, *args, **options):
-
         # If no queues have been specified on the command line, listen on all configured queues.
         if len(args) < 1:
             args = settings.RQ_QUEUES

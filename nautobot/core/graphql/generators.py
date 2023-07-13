@@ -276,7 +276,6 @@ def generate_single_item_resolver(schema_type, resolver_name):
     model = schema_type._meta.model
 
     def single_resolver(self, info, **kwargs):
-
         obj_id = kwargs.get("id", None)
         if obj_id:
             return gql_optimizer.query(

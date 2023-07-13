@@ -40,7 +40,6 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Provider.objects.create(name="Provider 1", slug="provider-1")
         Provider.objects.create(name="Provider 2", slug="provider-2")
         Provider.objects.create(name="Provider 3", slug="provider-3")
@@ -114,7 +113,6 @@ class CircuitTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
         CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
         CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
@@ -130,7 +128,6 @@ class CircuitTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         providers = (
             Provider.objects.create(name="Provider 1", slug="provider-1"),
             Provider.objects.create(name="Provider 2", slug="provider-2"),

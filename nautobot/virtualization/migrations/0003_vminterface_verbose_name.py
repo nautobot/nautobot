@@ -5,7 +5,6 @@ import nautobot.utilities.query_functions
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0002_virtualmachine_local_context_schema"),
     ]

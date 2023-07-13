@@ -28,7 +28,6 @@ class BannerClassChoices(ChoiceSet):
 
 
 class CustomFieldFilterLogicChoices(ChoiceSet):
-
     FILTER_DISABLED = "disabled"
     FILTER_LOOSE = "loose"
     FILTER_EXACT = "exact"
@@ -41,7 +40,6 @@ class CustomFieldFilterLogicChoices(ChoiceSet):
 
 
 class CustomFieldTypeChoices(ChoiceSet):
-
     TYPE_TEXT = "text"
     TYPE_INTEGER = "integer"
     TYPE_BOOLEAN = "boolean"
@@ -78,7 +76,6 @@ class CustomFieldTypeChoices(ChoiceSet):
 
 
 class ButtonClassChoices(ChoiceSet):
-
     CLASS_DEFAULT = "default"
     CLASS_PRIMARY = "primary"
     CLASS_SUCCESS = "success"
@@ -131,7 +128,6 @@ class DynamicGroupOperatorChoices(ChoiceSet):
 
 
 class JobSourceChoices(ChoiceSet):
-
     SOURCE_LOCAL = "local"
     SOURCE_GIT = "git"
     SOURCE_PLUGIN = "plugins"
@@ -144,7 +140,6 @@ class JobSourceChoices(ChoiceSet):
 
 
 class JobExecutionType(ChoiceSet):
-
     TYPE_IMMEDIATELY = "immediately"
     TYPE_FUTURE = "future"
     TYPE_HOURLY = "hourly"
@@ -189,7 +184,6 @@ class JobExecutionType(ChoiceSet):
 
 
 class JobResultStatusChoices(ChoiceSet):
-
     STATUS_PENDING = "pending"
     STATUS_RUNNING = "running"
     STATUS_COMPLETED = "completed"
@@ -217,7 +211,6 @@ class JobResultStatusChoices(ChoiceSet):
 
 
 class LogLevelChoices(ChoiceSet):
-
     LOG_DEFAULT = "default"
     LOG_SUCCESS = "success"
     LOG_INFO = "info"
@@ -247,7 +240,6 @@ class LogLevelChoices(ChoiceSet):
 
 
 class ObjectChangeActionChoices(ChoiceSet):
-
     ACTION_CREATE = "create"
     ACTION_UPDATE = "update"
     ACTION_DELETE = "delete"
@@ -266,7 +258,6 @@ class ObjectChangeActionChoices(ChoiceSet):
 
 
 class ObjectChangeEventContextChoices(ChoiceSet):
-
     CONTEXT_WEB = "web"
     CONTEXT_JOB = "job"
     CONTEXT_JOB_HOOK = "job-hook"
@@ -300,7 +291,6 @@ class RelationshipRequiredSideChoices(ChoiceSet):
 
 
 class RelationshipSideChoices(ChoiceSet):
-
     SIDE_SOURCE = "source"
     SIDE_DESTINATION = "destination"
     SIDE_PEER = "peer"  # for symmetric / non-directional relationships
@@ -319,7 +309,6 @@ class RelationshipSideChoices(ChoiceSet):
 
 
 class RelationshipTypeChoices(ChoiceSet):
-
     TYPE_ONE_TO_ONE = "one-to-one"
     TYPE_ONE_TO_ONE_SYMMETRIC = "symmetric-one-to-one"
     TYPE_ONE_TO_MANY = "one-to-many"
@@ -341,7 +330,6 @@ class RelationshipTypeChoices(ChoiceSet):
 
 
 class SecretsGroupAccessTypeChoices(ChoiceSet):
-
     TYPE_GENERIC = "Generic"
 
     TYPE_CONSOLE = "Console"
@@ -367,7 +355,6 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
 
 
 class SecretsGroupSecretTypeChoices(ChoiceSet):
-
     TYPE_KEY = "key"
     TYPE_PASSWORD = "password"
     TYPE_SECRET = "secret"
@@ -389,7 +376,6 @@ class SecretsGroupSecretTypeChoices(ChoiceSet):
 
 
 class WebhookHttpMethodChoices(ChoiceSet):
-
     METHOD_GET = "GET"
     METHOD_POST = "POST"
     METHOD_PUT = "PUT"

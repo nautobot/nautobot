@@ -95,7 +95,6 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
         return get_permission_for_model(self.queryset.model, "change")
 
     def post(self, request):
-
         selected_objects = []
         return_url = self.get_return_url(request)
 
@@ -103,9 +102,7 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
             form = self.form(request.POST)
 
             if form.is_valid():
-
                 with transaction.atomic():
-
                     count = 0
                     for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
                         if obj.cable is None:
@@ -160,7 +157,6 @@ class RegionView(generic.ObjectView):
     queryset = Region.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Sites
         sites = (
             Site.objects.restrict(request.user, "view")
@@ -451,7 +447,6 @@ class RackGroupView(generic.ObjectView):
     queryset = RackGroup.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Racks
         racks = (
             Rack.objects.restrict(request.user, "view")
@@ -511,7 +506,6 @@ class RackRoleView(generic.ObjectView):
     queryset = RackRole.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Racks
         racks = (
             Rack.objects.restrict(request.user, "view").filter(role=instance).select_related("group", "site", "tenant")
@@ -764,7 +758,6 @@ class ManufacturerView(generic.ObjectView):
     queryset = Manufacturer.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
@@ -1242,7 +1235,6 @@ class DeviceRoleView(generic.ObjectView):
     queryset = DeviceRole.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
@@ -1302,7 +1294,6 @@ class PlatformView(generic.ObjectView):
     queryset = Platform.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
@@ -1657,7 +1648,6 @@ class ChildDeviceBulkImportView(generic.BulkImportView):
     template_name = "dcim/device_import_child.html"
 
     def _save_obj(self, obj_form, request):
-
         obj = obj_form.save()
 
         # Save the reverse relation to the parent device bay
@@ -2218,7 +2208,6 @@ class DeviceBayPopulateView(generic.ObjectEditView):
         form = forms.PopulateDeviceBayForm(device_bay, request.POST)
 
         if form.is_valid():
-
             device_bay.installed_device = form.cleaned_data["installed_device"]
             device_bay.save()
             messages.success(
@@ -2261,7 +2250,6 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
         form = ConfirmationForm(request.POST)
 
         if form.is_valid():
-
             removed_device = device_bay.installed_device
             device_bay.installed_device = None
             device_bay.save()
@@ -2537,7 +2525,6 @@ class CableCreateView(generic.ObjectEditView):
     template_name = "dcim/cable_connect.html"
 
     def dispatch(self, request, *args, **kwargs):
-
         # Set the model_form class based on the type of component being connected
         self.model_form = {
             "console-port": forms.ConnectCableToConsolePortForm,
@@ -2647,7 +2634,6 @@ class CableBulkDeleteView(generic.BulkDeleteView):
 
 
 class ConnectionsListView(generic.ObjectListView):
-
     CSVRow = namedtuple("CSVRow", ["device", "name", "dest_device", "dest_name", "reachable"])
 
     def queryset_to_csv_body_data(self):
@@ -2835,7 +2821,6 @@ class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, V
         return "dcim.change_virtualchassis"
 
     def get(self, request, pk):
-
         virtual_chassis = get_object_or_404(self.queryset, pk=pk)
         VCMemberFormSet = modelformset_factory(
             model=Device,
@@ -2860,7 +2845,6 @@ class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, V
         )
 
     def post(self, request, pk):
-
         virtual_chassis = get_object_or_404(self.queryset, pk=pk)
         VCMemberFormSet = modelformset_factory(
             model=Device,
@@ -2875,9 +2859,7 @@ class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, V
         formset = VCMemberFormSet(request.POST, queryset=members_queryset)
 
         if vc_form.is_valid() and formset.is_valid():
-
             with transaction.atomic():
-
                 # Save the VirtualChassis
                 vc_form.save()
 
@@ -2915,7 +2897,6 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
         return "dcim.change_virtualchassis"
 
     def get(self, request, pk):
-
         virtual_chassis = get_object_or_404(self.queryset, pk=pk)
 
         initial_data = {k: request.GET[k] for k in request.GET}
@@ -2934,20 +2915,17 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
         )
 
     def post(self, request, pk):
-
         virtual_chassis = get_object_or_404(self.queryset, pk=pk)
 
         member_select_form = forms.VCMemberSelectForm(request.POST)
 
         if member_select_form.is_valid():
-
             device = member_select_form.cleaned_data["device"]
             device.virtual_chassis = virtual_chassis
             data = {k: request.POST[k] for k in ["vc_position", "vc_priority"]}
             membership_form = forms.DeviceVCMembershipForm(data=data, validate_vc_position=True, instance=device)
 
             if membership_form.is_valid():
-
                 membership_form.save()
                 msg = f'Added member <a href="{device.get_absolute_url()}">{escape(device)}</a>'
                 messages.success(request, mark_safe(msg))
@@ -2958,7 +2936,6 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
                 return redirect(self.get_return_url(request, device))
 
         else:
-
             membership_form = forms.DeviceVCMembershipForm(data=request.POST)
 
         return render(
@@ -2980,7 +2957,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         return "dcim.change_device"
 
     def get(self, request, pk):
-
         device = get_object_or_404(self.queryset, pk=pk, virtual_chassis__isnull=False)
         form = ConfirmationForm(initial=request.GET)
 
@@ -2995,7 +2971,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         )
 
     def post(self, request, pk):
-
         device = get_object_or_404(self.queryset, pk=pk, virtual_chassis__isnull=False)
         form = ConfirmationForm(request.POST)
 
@@ -3007,7 +2982,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
             return redirect(device.get_absolute_url())
 
         if form.is_valid():
-
             devices = Device.objects.filter(pk=device.pk)
             for device in devices:
                 device.virtual_chassis = None

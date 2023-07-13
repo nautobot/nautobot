@@ -18,7 +18,6 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001)
         Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002)
         Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003)
@@ -62,7 +61,6 @@ class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
         CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
         CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
@@ -91,7 +89,6 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         providers = (
             Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001),
             Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002),
@@ -159,7 +156,6 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         providers = (
             Provider(name="Provider 1", slug="provider-1"),
             Provider(name="Provider 2", slug="provider-2"),

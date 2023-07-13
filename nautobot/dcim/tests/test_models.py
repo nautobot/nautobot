@@ -333,7 +333,6 @@ class RackGroupTestCase(TestCase):
 
 class RackTestCase(TestCase):
     def setUp(self):
-
         self.status = Status.objects.get_for_model(Rack).first()
         self.location_type_a = LocationType.objects.create(name="Location Type A")
         self.location_type_a.content_types.add(
@@ -393,7 +392,6 @@ class RackTestCase(TestCase):
         }
 
     def test_rack_device_outside_height(self):
-
         rack1 = Rack(
             name="TestRack2",
             facility_id="A102",
@@ -418,7 +416,6 @@ class RackTestCase(TestCase):
             rack1.clean()
 
     def test_rack_group_site(self):
-
         rack_invalid_group = Rack(
             name="TestRack2",
             facility_id="A102",
@@ -433,7 +430,6 @@ class RackTestCase(TestCase):
             rack_invalid_group.clean()
 
     def test_mount_single_device(self):
-
         device1 = Device(
             name="TestSwitch1",
             device_type=DeviceType.objects.get(manufacturer__slug="acme", slug="ff2048"),
@@ -753,7 +749,6 @@ class LocationTestCase(TestCase):
 
 class DeviceTestCase(TestCase):
     def setUp(self):
-
         self.site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         self.device_type = DeviceType.objects.create(
@@ -866,7 +861,6 @@ class DeviceTestCase(TestCase):
         DeviceBay.objects.get(device=d, name="Device Bay 1")
 
     def test_multiple_unnamed_devices(self):
-
         device1 = Device(
             site=self.site,
             device_type=self.device_type,
@@ -889,7 +883,6 @@ class DeviceTestCase(TestCase):
         self.assertEqual(Device.objects.filter(name="").count(), 2)
 
     def test_device_duplicate_names(self):
-
         device1 = Device(
             site=self.site,
             device_type=self.device_type,
@@ -1004,7 +997,6 @@ class DeviceTestCase(TestCase):
 
 class CableTestCase(TestCase):
     def setUp(self):
-
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
         devicetype = DeviceType.objects.create(

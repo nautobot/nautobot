@@ -231,8 +231,7 @@ class NoteModelFormTestCase(TestCase):
         }
 
     def test_note_object_edit_form(self):
-
-        form = SiteForm(data=dict(**self.site_form_base_data, **{"object_note": "This is a test."}))
+        form = SiteForm(data={**self.site_form_base_data, "object_note": "This is a test."})
         self.assertTrue(form.is_valid())
         obj = form.save()
         form.save_note(
@@ -374,14 +373,12 @@ class RelationshipModelFormTestCase(TestCase):
         It can also create ONE_TO_ONE_SYMMETRIC associations where it is a "peer" object.
         """
         form = DeviceForm(
-            data=dict(
+            data={
                 **self.device_form_base_data,
-                **{
-                    f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk,
-                    f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk],
-                    f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,
-                },
-            )
+                f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk,
+                f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk],
+                f"cr_{self.relationship_3.slug}__peer": self.device_1.pk,
+            }
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
@@ -409,12 +406,10 @@ class RelationshipModelFormTestCase(TestCase):
         A new record can create ONE_TO_ONE associations where it is the "destination" object.
         """
         form = IPAddressForm(
-            data=dict(
+            data={
                 **self.ipaddress_form_base_data,
-                **{
-                    f"cr_{self.relationship_1.slug}__source": self.device_1.pk,
-                },
-            )
+                f"cr_{self.relationship_1.slug}__source": self.device_1.pk,
+            }
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
@@ -428,12 +423,10 @@ class RelationshipModelFormTestCase(TestCase):
         A new record can create ONE_TO_MANY associations where it is the "destination" object.
         """
         form = VLANGroupForm(
-            data=dict(
+            data={
                 **self.vlangroup_form_base_data,
-                **{
-                    f"cr_{self.relationship_2.slug}__source": self.device_1.pk,
-                },
-            )
+                f"cr_{self.relationship_2.slug}__source": self.device_1.pk,
+            }
         )
         self.assertTrue(form.is_valid())
         self.assertTrue(form.save())
@@ -457,9 +450,7 @@ class RelationshipModelFormTestCase(TestCase):
 
         # Can't associate New Device with IP Address 1 (already associated to Device 1)
         form = DeviceForm(
-            data=dict(
-                **self.device_form_base_data, **{f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk}
-            )
+            data={**self.device_form_base_data, f"cr_{self.relationship_1.slug}__destination": self.ipaddress_1.pk}
         )
         self.assertFalse(form.is_valid())
         self.assertEqual(
@@ -469,7 +460,7 @@ class RelationshipModelFormTestCase(TestCase):
 
         # Can't associate new IP address with Device 1 (already associated with IP Address 1)
         form = IPAddressForm(
-            data=dict(**self.ipaddress_form_base_data, **{f"cr_{self.relationship_1.slug}__source": self.device_1.pk})
+            data={**self.ipaddress_form_base_data, f"cr_{self.relationship_1.slug}__source": self.device_1.pk}
         )
         self.assertFalse(form.is_valid())
         self.assertEqual(
@@ -492,10 +483,10 @@ class RelationshipModelFormTestCase(TestCase):
 
         # Can't associate New Device with VLAN Group 1 (already associated to Device 1)
         form = DeviceForm(
-            data=dict(
+            data={
                 **self.device_form_base_data,
-                **{f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk]},
-            )
+                f"cr_{self.relationship_2.slug}__destination": [self.vlangroup_1.pk, self.vlangroup_2.pk],
+            }
         )
         self.assertFalse(form.is_valid())
         self.assertEqual(
@@ -517,9 +508,7 @@ class RelationshipModelFormTestCase(TestCase):
         ).validated_save()
 
         # Peer is already a source for this relationship
-        form = DeviceForm(
-            data=dict(**self.device_form_base_data, **{f"cr_{self.relationship_3.slug}__peer": self.device_1.pk})
-        )
+        form = DeviceForm(data={**self.device_form_base_data, f"cr_{self.relationship_3.slug}__peer": self.device_1.pk})
         self.assertFalse(form.is_valid())
         self.assertEqual(
             "Device 1 is already involved in a HA Device Peer relationship",
@@ -527,9 +516,7 @@ class RelationshipModelFormTestCase(TestCase):
         )
 
         # Peer is already a destination for this relationship
-        form = DeviceForm(
-            data=dict(**self.device_form_base_data, **{f"cr_{self.relationship_3.slug}__peer": self.device_2.pk})
-        )
+        form = DeviceForm(data={**self.device_form_base_data, f"cr_{self.relationship_3.slug}__peer": self.device_2.pk})
         self.assertFalse(form.is_valid())
         self.assertEqual(
             "Device 2 is already involved in a HA Device Peer relationship",

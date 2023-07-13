@@ -148,7 +148,6 @@ def _configure_settings(config):
 
         # django-storages
         if settings.STORAGE_BACKEND.startswith("storages."):
-
             try:
                 import storages.utils
             except ModuleNotFoundError as e:

@@ -35,7 +35,6 @@ def populate_device_component_timestamps(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0015_device_components__changeloggedmodel"),
     ]

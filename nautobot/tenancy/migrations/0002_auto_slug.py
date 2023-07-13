@@ -5,7 +5,6 @@ import nautobot.core.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tenancy", "0001_initial"),
     ]

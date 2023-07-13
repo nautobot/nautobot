@@ -482,7 +482,6 @@ def generate_query_mixin():
     registered_models = registry.get("model_features", {}).get("graphql", {})
     for app_name, models in registered_models.items():
         for model_name in models:
-
             try:
                 # Find the model class based on the content type
                 ct = ContentType.objects.get(app_label=app_name, model=model_name)
@@ -524,7 +523,6 @@ def generate_query_mixin():
 
     logger.debug("Extending all registered schema types with dynamic attributes")
     for schema_type in registry["graphql_types"].values():
-
         if already_present(schema_type._meta.model):
             continue
 

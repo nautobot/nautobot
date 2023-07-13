@@ -235,7 +235,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         return valid_actions
 
     def get(self, request):
-
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
@@ -468,7 +467,6 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 messages.success(request, mark_safe(msg))
 
                 if "_addanother" in request.POST:
-
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(obj)}"
@@ -635,10 +633,8 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             try:
                 with transaction.atomic():
-
                     # Create objects from the expanded. Abort the transaction on the first validation error.
                     for value in pattern:
-
                         # Reinstantiate the model form each time to avoid overwriting the same instance. Use a mutable
                         # copy of the POST QueryDict so that we can update the target field value.
                         model_form = self.model_form(request.POST.copy())
@@ -745,10 +741,8 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     model_form.data[field_name] = field.initial
 
             if model_form.is_valid():
-
                 try:
                     with transaction.atomic():
-
                         # Save the primary object
                         obj = model_form.save()
 
@@ -766,7 +760,6 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             related_obj_pks = []
                             for i, rel_obj_data in enumerate(data.get(field_name, [])):
-
                                 f = related_object_form(obj, rel_obj_data)
 
                                 for subfield_name, field in f.fields.items():
@@ -872,7 +865,6 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-
         return render(
             request,
             self.template_name,
@@ -1018,17 +1010,13 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 form_cf_to_key = {f"cf_{cf.slug}": cf.name for cf in CustomField.objects.get_for_model(model)}
 
                 try:
-
                     with transaction.atomic():
-
                         updated_objects = []
                         for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
-
                             obj = self.alter_obj(obj, request, [], kwargs)
 
                             # Update standard fields. If a field is listed in _nullify, delete its value.
                             for name in standard_fields:
-
                                 try:
                                     model_field = model._meta.get_field(name)
                                 except FieldDoesNotExist:
@@ -1342,6 +1330,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 # Device/VirtualMachine components
 #
 
+
 # TODO: Replace with BulkCreateView
 class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
@@ -1357,7 +1346,6 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-
         form = self.form(initial=request.GET)
         model_form = self.model_form(request.GET)
 
@@ -1378,7 +1366,6 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         model_form = self.model_form(request.POST)
 
         if form.is_valid():
-
             new_components = []
             data = deepcopy(request.POST)
 
@@ -1407,11 +1394,8 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                             form.add_error(field, f"{name}: {err_str}")
 
             if not form.errors:
-
                 try:
-
                     with transaction.atomic():
-
                         # Create the new components
                         new_objs = []
                         for component_form in new_components:
@@ -1497,9 +1481,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
 
                 try:
                     with transaction.atomic():
-
                         for obj in data["pk"]:
-
                             names = data["name_pattern"]
                             labels = data["label_pattern"] if "label_pattern" in data else None
                             for i, name in enumerate(names):

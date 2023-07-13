@@ -351,7 +351,6 @@ class VirtualMachine(PrimaryModel, ConfigContextModel, StatusModel):
         return reverse("virtualization:virtualmachine", args=[self.pk])
 
     def validate_unique(self, exclude=None):
-
         # Check for a duplicate name on a VM assigned to the same Cluster and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
@@ -510,7 +509,6 @@ class VMInterface(BaseModel, BaseInterface, CustomFieldModel, NotesMixin):
         )
 
     def to_objectchange(self, action):
-
         # Annotate the parent VirtualMachine
         return ObjectChange(
             changed_object=self,

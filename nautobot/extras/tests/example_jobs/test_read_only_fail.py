@@ -20,4 +20,4 @@ class TestReadOnlyFail(Job):
         site = Site.objects.create(name="Site", slug="site")
 
         self.log_success(obj=site)
-        raise Exception("Test failure")
+        raise Exception("Test failure")  # pylint: disable=broad-exception-raised

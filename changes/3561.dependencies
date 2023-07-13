@@ -1,0 +1,16 @@
+Added support for Python 3.11.
+Dropped support for Python 3.7. Python 3.8 is now the minimum version required by Nautobot.
+Updated `django-auth-ldap` optional dependency to `~4.3.0`.
+Updated `django-cors-headers` dependency to `~4.2.0`.
+Updated `django-filter` dependency to `~23.1`.
+Updated `django-health-check` dependency to `~3.17.0`
+Updated `django-storages` optional dependency to `~1.13.2`.
+Updated `django-tables2` dependency to `~2.6.0`.
+Updated `django-tree-queries` dependency to `~0.15.0`.
+Updated `drf-spectacular` dependency to `~0.26.3`.
+Removed direct dependency on `importlib-metadata`.
+Updated `Pillow` dependency to `~10.0.0`.
+Updated `prometheus-client` dependency to `~0.17.1`.
+Updated `social-auth-core` optional dependency to `~4.4.2`.
+Updated `social-auth-app-django` dependency to `~5.2.0`.
+Updated various development-only dependencies to the latest available versions.

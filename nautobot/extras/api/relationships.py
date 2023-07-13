@@ -302,7 +302,6 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
         # relationships has already passed RelationshipsDataField.to_internal_value(), so we can skip some try/excepts
         logger.debug("_save_relationships: %s : %s", instance, relationships)
         for relationship, relationship_data in relationships.items():
-
             for other_side in ["source", "destination", "peer"]:
                 if other_side not in relationship_data:
                     continue
