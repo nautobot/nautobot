@@ -71,7 +71,9 @@ Nautobot requires a MySQL or PostgreSQL database and Redis instance before it wi
 Most configuration parameters are available via environment variables which can be passed to the container. If you desire you can inject your own `nautobot_config.py` by overriding `/opt/nautobot/nautobot_config.py` using [docker volumes](https://docs.docker.com/storage/volumes/) by adding `-v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py` to your docker run command, for example:
 
 ```no-highlight
-docker run --name nautobot -v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py networktocode/nautobot
+docker run \
+    -v /local/path/to/custom/nautobot_config.py:/opt/nautobot/nautobot_config.py \
+    --name nautobot networktocode/nautobot
 ```
 
 Or if you are using docker-compose:
@@ -182,7 +184,10 @@ Please see the [official uWSGI documentation on `processes`](https://uwsgi-docs.
 Self signed SSL certificates are included by default with the container. For a production deployment you should utilize your own signed certificates, these can be injected into the container at runtime using [docker volumes](https://docs.docker.com/storage/volumes/). The public certificate should be placed at `/opt/nautobot/nautobot.crt` and the private key should be at `/opt/nautobot/nautobot.key`. Using a `docker run` these can be injected using the `-v` parameter:
 
 ```no-highlight
-docker run --name nautobot -v /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt -v /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key networktocode/nautobot
+docker run \
+    -v /local/path/to/custom/nautobot.crt:/opt/nautobot/nautobot.crt \
+    -v /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key \
+    --name nautobot networktocode/nautobot
 ```
 
 Or if you are using `docker-compose`:

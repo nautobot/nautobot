@@ -269,6 +269,25 @@ Example output:
 PONG
 ```
 
+## Install Node.js
+
+Nautobot 2.0+ requires Node.js version 18 or higher to build the new UI. Node.js version 18 is only listed on package repositories for RHEL 8/9 and derivatives.
+
+You may need to reset your Node.js module before you can switch to the Node.js 18 stream:
+
+```no-highlight
+sudo dnf module reset -y nodejs
+sudo dnf module enable -y nodejs:18
+```
+
+Install the Node.js 18 stream:
+
+```no-highlight
+sudo dnf module install -y nodejs:18/common
+```
+
+See the [Node.js documentation](https://github.com/nodejs/node/blob/main/BUILDING.md#building-nodejs-on-supported-platforms) for instructions to install Node.js from source on older versions of RHEL and derivatives.
+
 ## Deploy Nautobot
 
 Now that Nautobot dependencies are installed and configured, you're ready to [Install Nautobot](nautobot.md)!

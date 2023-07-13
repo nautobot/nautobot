@@ -211,6 +211,25 @@ Example output:
 PONG
 ```
 
+### Install Node.js
+
+Nautobot 2.0+ requires Node.js version 18 or higher to build the new UI. Node.js version 18 is only listed on package repositories for Debian 12 Bookworm and Ubuntu 22.10 Kinetic Kudu.
+
+Debian 12/Ubuntu 22.10 or higher:
+
+```no-highlight
+sudo apt-get -y install npm
+```
+
+Older versions of Debian and Ubuntu must install Node.js from source or the [NodeSource](https://github.com/nodesource/distributions#deb) repositories:
+
+```no-highlight
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y npm
+```
+
+See the [Node.js documentation](https://github.com/nodejs/node/blob/main/BUILDING.md#building-nodejs-on-supported-platforms) for instructions to install Node.js from source on older versions of Debian or Ubuntu.
+
 ## Deploy Nautobot
 
 Now that Nautobot dependencies are installed and configured, you're ready to [Install Nautobot](nautobot.md)!
