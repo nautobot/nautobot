@@ -212,7 +212,7 @@ nautobot-server dumpdata \
 
 Use this command to generate a JSON dump of the database contents.
 
-One example of using this command would be to [export data from PostgreSQL](../installation/migrating-from-postgresql.md#export-data-from-postgresql) and then [import the data dump into MySQL](../installation/migrating-from-postgresql.md#import-the-database-dump-into-mysql).
+One example of using this command would be to [export data from PostgreSQL](../migration/migrating-from-postgresql.md#export-data-from-postgresql) and then [import the data dump into MySQL](../migration/migrating-from-postgresql.md#import-the-database-dump-into-mysql).
 
 ### `fix_custom_fields`
 
@@ -337,9 +337,9 @@ For more information on configuring Nautobot for the first time or on more advan
 
 To import the data that was exported with `nautobot-server dumpdata ...` see the following documentation:
 
-- [Remove auto-populated records from the database](../installation/migrating-from-postgresql.md#remove-auto-populated-records-from-the-mysql-database)
-- [Import the database dump](../installation/migrating-from-postgresql.md#import-the-database-dump-into-mysql)
-- [Rebuild cached cable path traces](../installation/migrating-from-postgresql.md#rebuild-cached-cable-path-traces)
+- [Remove auto-populated records from the database](../migration/migrating-from-postgresql.md#remove-auto-populated-records-from-the-mysql-database)
+- [Import the database dump](../migration/migrating-from-postgresql.md#import-the-database-dump-into-mysql)
+- [Rebuild cached cable path traces](../migration/migrating-from-postgresql.md#rebuild-cached-cable-path-traces)
 
 ### `migrate`
 

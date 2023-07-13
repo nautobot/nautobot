@@ -112,7 +112,7 @@ Assuming that the command ran to completion with no errors, you should now have 
 
 ## Rebuild cached cable path traces
 
-Because cable path traces contain cached data which includes denormalized references to other database objects, it's possible that this cached data will be inaccurate after doing a `loaddata`. Fortunately there is [a `nautobot-server` command](../administration/nautobot-server.md#trace_paths) to force rebuilding of these caches, and we recommend doing so after the import is completed:
+Because cable path traces contain cached data which includes denormalized references to other database objects, it's possible that this cached data will be inaccurate after doing a `loaddata`. Fortunately there is [a `nautobot-server` command](../tools/nautobot-server.md#trace_paths) to force rebuilding of these caches, and we recommend doing so after the import is completed:
 
 ```no-highlight
 nautobot-server trace_paths --force --no-input

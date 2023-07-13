@@ -2,7 +2,7 @@ from django.urls import reverse
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.extras.models import Status
-from nautobot.utilities.testing import TestCase
+from nautobot.core.testing.views import TestCase
 
 
 class URLTestCase(TestCase):
@@ -14,7 +14,7 @@ class URLTestCase(TestCase):
         circuit = Circuit.objects.create(
             cid="Circuit",
             provider=provider,
-            type=circuit_type,
+            circuit_type=circuit_type,
             status=status,
         )
         url = f"/circuits/circuits/{circuit.pk}"

@@ -200,8 +200,8 @@ class RackTestCase(TestCase):
         # Asset this error is caught by RackForm.clean
         tenant = Tenant.objects.first()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        devicetype = DeviceType.objects.create(model="Device Type 1", slug="device-type-1", manufacturer=manufacturer)
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
         devicerole = Role.objects.get_for_model(Device).first()
         status = Status.objects.get(name="Active")
         racks = (
@@ -211,7 +211,7 @@ class RackTestCase(TestCase):
 
         Device.objects.create(
             name="device1",
-            device_role=devicerole,
+            role=devicerole,
             device_type=devicetype,
             location=racks[0].location,
             rack=racks[0],
@@ -220,7 +220,7 @@ class RackTestCase(TestCase):
         )
         Device.objects.create(
             name="device1",
-            device_role=devicerole,
+            role=devicerole,
             device_type=devicetype,
             location=racks[1].location,
             rack=racks[1],

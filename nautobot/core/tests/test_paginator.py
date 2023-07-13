@@ -10,7 +10,6 @@ from nautobot.circuits import models as circuits_models
 from nautobot.dcim import models as dcim_models
 from nautobot.core import testing
 from nautobot.core.views import paginator
-from nautobot.dcim import models
 from nautobot.extras import models as extras_models
 
 
@@ -54,10 +53,13 @@ class PaginatorTestCase(testing.TestCase):
     @override_settings(PAGINATE_COUNT=50)
     def test_enforce_max_page_size(self):
         """Request an object list view and assert that the MAX_PAGE_SIZE setting is enforced"""
-        location_type = models.LocationType.objects.get(name="Campus")
-        status = extras_models.Status.objects.get_for_model(models.Location).first()
-        models.Location.objects.bulk_create(
-            [models.Location(name=f"TestLocation{x}", location_type=location_type, status=status) for x in range(20)]
+        location_type = dcim_models.LocationType.objects.get(name="Campus")
+        status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
+        dcim_models.Location.objects.bulk_create(
+            [
+                dcim_models.Location(name=f"TestLocation{x}", location_type=location_type, status=status)
+                for x in range(20)
+            ]
         )
         url = reverse("dcim:location_list")
         self.add_permissions("dcim.view_location")
