@@ -1,11 +1,11 @@
 import { render } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import PaginatorForm from "../paginator_form";
+import { PageSizeForm } from "@components/Pagination";
 
-it("PaginatorForm", () => {
+it("PageSizeForm", () => {
     render(
         <BrowserRouter>
-            <PaginatorForm start={0} end={50} total_count={100} />
+            <PageSizeForm start={0} end={50} total_count={100} />
         </BrowserRouter>
     );
     // TODO(timizuo): Can test for more things

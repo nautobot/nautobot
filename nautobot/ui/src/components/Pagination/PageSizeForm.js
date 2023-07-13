@@ -1,25 +1,41 @@
 import React from "react";
-import { Box, Text, Select } from "@nautobot/nautobot-ui";
+import { Flex, Text, Select } from "@nautobot/nautobot-ui";
 import { useSearchParams } from "react-router-dom";
 
-export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
+export default function PageSizeForm({ scroll_ref }) {
     let [searchParams, setSearchParams] = useSearchParams();
-    let paginator_string = `Showing ${start} - ${end} of ${total_count}`;
     function onPageSizeChange(event) {
-        let offset = searchParams.get("offset");
+        let initialOffset = parseInt(searchParams.get("offset"));
+
+        let newLimit = event.target.value;
+        let newOffset;
+
+        let offsetModulo = initialOffset % newLimit;
+
+        // Properly sets the new offset based on the new limit and old offset
+        if (offsetModulo !== 0) {
+            newOffset = initialOffset - offsetModulo;
+        } else {
+            newOffset = initialOffset;
+        }
+
         // Scroll to the top of the ObjectListTable Container on table reload
         scroll_ref.current.scrollIntoView({
             alignToTop: true,
             behavior: "smooth",
         });
+
         setSearchParams({
-            limit: event.target.value,
-            offset: offset ? offset : 0,
+            limit: newLimit,
+            offset: newOffset ? newOffset : 0,
         });
     }
 
     return (
-        <Box width="200px">
+        <Flex align="center">
+            <Text color="gray-3" pr="sm">
+                Show
+            </Text>
             <Select
                 value={
                     searchParams.get("limit") ? searchParams.get("limit") : "50"
@@ -37,7 +53,9 @@ export default function PaginatorForm({ start, end, total_count, scroll_ref }) {
                 <option value="200">200</option>
                 <option value="500">500</option>
             </Select>
-            <Text>{paginator_string}</Text>
-        </Box>
+            <Text color="gray-3" pl="sm" whiteSpace="nowrap">
+                rows per page
+            </Text>
+        </Flex>
     );
 }

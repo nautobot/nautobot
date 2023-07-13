@@ -20,7 +20,7 @@ import { useCallback, useMemo } from "react";
 
 import LoadingWidget from "../LoadingWidget";
 import ObjectTableItem from "./ObjectTableItem";
-import Paginator from "../paginator";
+import { Pagination } from "@components/Pagination";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
@@ -203,13 +203,13 @@ export default function ObjectListTable({
                     containerProps={{ overflow: "auto" }}
                 />
             </SkeletonText>
-            <Paginator
+            <Pagination
                 url={location.pathname}
                 data_count={totalCount}
                 page_size={page_size}
                 active_page={active_page_number}
                 scroll_ref={topRef}
-            ></Paginator>
+            ></Pagination>
         </Box>
     );
 }
