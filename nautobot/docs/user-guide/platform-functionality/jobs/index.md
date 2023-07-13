@@ -15,7 +15,7 @@ Jobs are a way for users to execute custom logic on demand from within the Nauto
     Backwards compatibility with NetBox scripts and reports has been removed. This includes removal of automatic calls to the `post_run()` and `test_*()` methods.
 
 !!! note
-    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". User input is supported via [job variables](#variables).
+    Jobs unify and supersede the functionality previously provided in NetBox by "custom scripts" and "reports". User input is supported via [job variables](../../../development/jobs.md#variables).
 
 ## Managing Jobs
 

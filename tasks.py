@@ -207,10 +207,9 @@ def run_command(context, command, service="nautobot", **kwargs):
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
         "pull": "Whether to pull Docker images when building the image. (Default: disabled)",
-        "skip_docs_build": "Skip (re)build of documentation after building the image.",
     }
 )
-def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False, skip_docs_build=False):
+def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False):
     """Build Nautobot docker image."""
     command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
 
@@ -226,10 +225,6 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
 
     docker_compose(context, command, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
-
-    if not skip_docs_build:
-        # Build the docs so they are available. Skip if you're using a `final-dev` or `final` image instead of `dev`.
-        build_nautobot_docs(context)
 
 
 @task(
@@ -635,8 +630,23 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = "npm exec -- markdownlint --ignore nautobot/project-static --ignore nautobot/ui/node_modules --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
-    run_command(context, command)
+    if is_truthy(context.nautobot.local):
+        command = (
+            "cd nautobot/ui && npx -- markdownlint-cli "
+            "--ignore ../../nautobot/project-static --ignore ../../nautobot/ui/node_modules "
+            "--config ../../.markdownlint.yml --rules ../../scripts/use-relative-md-links.js "
+            "../../nautobot ../../examples ../../*.md"
+        )
+        run_command(context, command)
+    else:
+        command = (
+            "npx -- markdownlint-cli "
+            "--ignore /source/nautobot/project-static --ignore /source/nautobot/ui/node_modules "
+            "--config /source/.markdownlint.yml --rules /source/scripts/use-relative-md-links.js "
+            "/source/nautobot /source/examples /source/*.md"
+        )
+        docker_command = f"run --workdir='/opt/nautobot/ui' --entrypoint '{command}' nautobot"
+        docker_compose(context, docker_command, pty=True)
 
 
 @task
@@ -926,12 +936,12 @@ def prettier(context, autoformat=False):
         arg = "--check"
 
     if is_truthy(context.nautobot.local):
-        path = NAUTOBOT_UI_DIR
+        run_command(context, f"cd nautobot/ui && {prettier_command} {arg} .")
     else:
-        path = "."
-
-    command = f"{prettier_command} {arg} {path}"
-    run_command(context, command, service="nodejs")
+        docker_compose(
+            context,
+            f"run --workdir='/opt/nautobot/ui' --entrypoint '{prettier_command} {arg} /source/nautobot/ui' nautobot",
+        )
 
 
 @task(
@@ -947,12 +957,16 @@ def eslint(context, autoformat=False):
         eslint_command += " --fix"
 
     if is_truthy(context.nautobot.local):
-        path = NAUTOBOT_UI_DIR
+        run_command(context, f"cd nautobot/ui && {eslint_command} .")
     else:
-        path = "."
-
-    command = f"{eslint_command} {path}"
-    run_command(context, command, service="nodejs")
+        # TODO: we should really run against /source/nautobot/ui, not /opt/nautobot/ui, but eslint aborts if we do:
+        #   ESLint couldn't find the config "@react-app" to extend from.
+        #   Please check that the name of the config is correct.
+        # Probably this is because we don't install node_modules under /source/nautobot/ui normally...?
+        docker_compose(
+            context,
+            f"run --workdir='/opt/nautobot/ui' --entrypoint '{eslint_command} /opt/nautobot/ui' nautobot",
+        )
 
 
 @task(

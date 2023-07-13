@@ -39,17 +39,17 @@ Nautobot looks for the `config` variable within an app's `__init__.py` to load i
 | Name | Default | Description |
 | ---- | ------- | ----------- |
 | `base_url` | Same as specified `name` | Base path to use for app URLs |
-| `config_view_name` | `None` | [URL name](#adding-links-to-the-installed-apps-view) for a "configuration" view defined by this app |
+| `config_view_name` | `None` | [URL name](configuration-view.md) for a "configuration" view defined by this app |
 | `default_settings` | `{}` | A dictionary of configuration parameters and their default values |
-| `home_view_name` | `None` | [URL name](#adding-links-to-the-installed-apps-view) for a "home" or "dashboard" view defined by this app |
-| `docs_view_name` | `None` | [URL name](#adding-links-to-the-installed-apps-view) for a "documentation" view defined by this app |
+| `home_view_name` | `None` | [URL name](configuration-view.md) for a "home" or "dashboard" view defined by this app |
+| `docs_view_name` | `None` | [URL name](configuration-view.md) for a "documentation" view defined by this app |
 | `installed_apps` | `[]` | A list of additional Django application dependencies to automatically enable when the app is activated (you must still make sure these underlying dependent libraries are installed) |
 | `max_version` | `None` | Maximum version of Nautobot with which the app is compatible |
 | `middleware` | `[]` | A list of middleware classes to append after Nautobot's built-in middleware |
 | `min_version` | `None` | Minimum version of Nautobot with which the app is compatible |
 | `required_settings` | `[]` | A list of any configuration parameters that **must** be defined by the user |
 | `searchable_models` | `[]` | A list of model names to include in the global Nautobot search |
-| `constance_config` | `{}` | [Django Constance](#adding-database-backed-config) configuration parameters for settings. |
+| `constance_config` | `{}` | [Django Constance](database-backend-config.md) configuration parameters for settings. |
 
 +++ 2.0.0
     Support for the `searchable_models` and `constance_config` attributes were added.
@@ -72,13 +72,13 @@ The following `NautobotAppConfig` attributes can be configured to customize wher
 
 | Name | Default | Description |
 | ---- | ------- | ----------- |
-| `banner_function` | `"banner.banner"` | Dotted path to a function that can render a custom [banner](#adding-a-banner) |
-| `custom_validators` | `"custom_validators.custom_validators"` | Dotted path to a list of [custom validator classes](#implementing-custom-validators) |
-| `datasource_contents` | `"datasources.datasource_contents"` | Dotted path to a list of [datasource (Git, etc.) content types](#loading-data-from-a-git-repository) to register |
-| `graphql_types` | `graphql.types.graphql_types` | Dotted path to a list of [GraphQL type classes](#creating-your-own-graphql-type-object) |
-| `homepage_layout` | `"homepage.layout"` | Dotted path to a list of [home page items](#adding-home-page-content) provided by the app |
-| `jinja_filters` | `"jinja_filters"` | Path to a module that contains [Jinja2 filters](#adding-jinja2-filters) to be registered |
-| `jobs` | `"jobs.jobs"` | Dotted path to a list of [Job classes](#including-jobs) |
-| `menu_items` | `"navigation.menu_items"` | Dotted path to a list of [navigation menu items](#adding-navigation-menu-items) provided by the app |
-| `secrets_providers` | `"secrets.secrets_providers"` | Dotted path to a list of [secrets providers](#implementing-secrets-providers) in the app |
-| `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](#extending-object-detail-views) |
+| `banner_function` | `"banner.banner"` | Dotted path to a function that can render a custom [banner](ui-extensions/banners.md) |
+| `custom_validators` | `"custom_validators.custom_validators"` | Dotted path to a list of [custom validator classes](platform-features/custom-validators.md) |
+| `datasource_contents` | `"datasources.datasource_contents"` | Dotted path to a list of [datasource (Git, etc.) content types](platform-features/git-repository-content.md) to register |
+| `graphql_types` | `graphql.types.graphql_types` | Dotted path to a list of [GraphQL type classes](models/graphql.md#creating-your-own-graphql-type-object) |
+| `homepage_layout` | `"homepage.layout"` | Dotted path to a list of [home page items](ui-extensions/home-page.md) provided by the app |
+| `jinja_filters` | `"jinja_filters"` | Path to a module that contains [Jinja2 filters](platform-features/jinja2-filters.md) to be registered |
+| `jobs` | `"jobs.jobs"` | Dotted path to a list of [Job classes](platform-features/jobs.md) |
+| `menu_items` | `"navigation.menu_items"` | Dotted path to a list of [navigation menu items](ui-extensions/navigation.md) provided by the app |
+| `secrets_providers` | `"secrets.secrets_providers"` | Dotted path to a list of [secrets providers](platform-features/secrets-providers.md) in the app |
+| `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](ui-extensions/object-detail-views.md) |
