@@ -53,7 +53,7 @@ class NautobotUIViewSetRouter(SimpleRouter):
             initkwargs={"suffix": "Bulk Delete"},
         ),
         Route(
-            url=r"^{prefix}/{lookup}$",
+            url=r"^{prefix}/{lookup}/$",
             mapping={"get": "retrieve"},
             name="{basename}",
             detail=True,

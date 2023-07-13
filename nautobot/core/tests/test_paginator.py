@@ -7,9 +7,9 @@ from django.test import RequestFactory, override_settings
 from django.urls import reverse
 
 from nautobot.circuits import models as circuits_models
+from nautobot.dcim import models as dcim_models
 from nautobot.core import testing
 from nautobot.core.views import paginator
-from nautobot.dcim import models
 from nautobot.extras import models as extras_models
 
 
@@ -53,10 +53,13 @@ class PaginatorTestCase(testing.TestCase):
     @override_settings(PAGINATE_COUNT=50)
     def test_enforce_max_page_size(self):
         """Request an object list view and assert that the MAX_PAGE_SIZE setting is enforced"""
-        location_type = models.LocationType.objects.get(name="Campus")
-        status = extras_models.Status.objects.get_for_model(models.Location).first()
-        models.Location.objects.bulk_create(
-            [models.Location(name=f"TestLocation{x}", location_type=location_type, status=status) for x in range(20)]
+        location_type = dcim_models.LocationType.objects.get(name="Campus")
+        status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
+        dcim_models.Location.objects.bulk_create(
+            [
+                dcim_models.Location(name=f"TestLocation{x}", location_type=location_type, status=status)
+                for x in range(20)
+            ]
         )
         url = reverse("dcim:location_list")
         self.add_permissions("dcim.view_location")
@@ -95,3 +98,24 @@ class PaginatorTestCase(testing.TestCase):
                 "Requested &quot;per_page&quot; is too large. No more than 10 items may be displayed at a time."
             )
             self.assertIn(warning_message, response.content.decode(response.charset).replace("\n", ""))
+
+    @override_settings(MAX_PAGE_SIZE=0)
+    def test_error_warning_not_shown_when_max_page_size_is_0(self):
+        """Assert max page size warning is not shown when max page size is 0"""
+        providers = (circuits_models.Provider(name=f"p-{x}") for x in range(20))
+        circuits_models.Provider.objects.bulk_create(providers)
+        manufacturers = (dcim_models.Manufacturer(name=f"p-{x}") for x in range(20))
+        dcim_models.Manufacturer.objects.bulk_create(manufacturers)
+        self.add_permissions("circuits.view_provider")
+        self.add_permissions("dcim.view_manufacturer")
+        self.client.force_login(self.user)
+
+        # Test on both default views and NautobotUIViewset views
+        urls = [reverse("dcim:manufacturer_list"), reverse("circuits:provider_list")]
+        for url in urls:
+            response = self.client.get(url, {"per_page": 20})
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(response.context["paginator"].per_page, 20)
+            self.assertEqual(len(response.context["table"].page), 20)
+            warning_message = "Requested &quot;per_page&quot; is too large."
+            self.assertNotIn(warning_message, response.content.decode(response.charset))
