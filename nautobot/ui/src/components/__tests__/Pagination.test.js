@@ -1,9 +1,9 @@
 import { render } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import Paginator from "../paginator";
+import { Pagination } from "@components/Pagination";
 
-describe("Paginator", () => {
-    it("renders the paginator form with correct start and end range", () => {
+describe("Pagination", () => {
+    it("renders the pagination form with correct start and end range", () => {
         const data_count = 30;
         const page_size = 10;
         const active_page = 1;
@@ -11,7 +11,7 @@ describe("Paginator", () => {
 
         render(
             <BrowserRouter>
-                <Paginator
+                <Pagination
                     url={url}
                     data_count={data_count}
                     page_size={page_size}

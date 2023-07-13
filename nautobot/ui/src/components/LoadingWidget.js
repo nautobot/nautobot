@@ -10,7 +10,6 @@ export function LoadingWidget({ name = "" }) {
                 textAlign: "center",
                 width: "100%",
                 position: "relative",
-                top: "40%",
                 gridColumn: "2 / span 2",
             }}
         >
