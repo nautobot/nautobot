@@ -312,7 +312,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         if self.table:
             # Construct the objects table
-            table = self.table(self.queryset, user=request.user)
+            # Order By is needed in the table `__init__` method
+            order_by = self.request.GET.getlist("sort")
+            table = self.table(self.queryset, user=request.user, order_by=order_by)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
@@ -324,7 +326,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
-            if paginate["per_page"] > max_page_size:
+            if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
                     f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
