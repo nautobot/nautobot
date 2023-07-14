@@ -203,9 +203,11 @@ django-slowtests = "^1.1.1"
 # Integration Tests
 requests = ">=2.27.1,<2.32.0"
 # Selenium web drivers for live integration testing
-selenium = "~4.10.0"
+# Selenium 4.10 is available but splinter is not yet compatible with it
+# https://github.com/cobrateam/splinter/issues/1173
+selenium = "~4.9.1"
 # Abstraction layer for working with Selenium
-splinter = "~0.18.0"
+splinter = "~0.18.1"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
