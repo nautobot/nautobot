@@ -29,6 +29,25 @@ class CustomFieldTest(TestCase):
         Site.objects.create(name="Site B", slug="site-b", status=active_status)
         Site.objects.create(name="Site C", slug="site-c", status=active_status)
 
+    def test_custom_field_dict_population(self):
+        """Test that custom_field_data is properly populated when no data is passed in."""
+        name = "Custom Field"
+        custom_field = CustomField.objects.create(
+            # 2.0 TODO: #824 remove name field
+            name=name,
+            slug="custom_field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Site)])
+
+        site = Site.objects.create(name="Test", status=Status.objects.get(name="Active"))
+        site.validated_save()
+
+        self.assertIn(
+            name, site.custom_field_data.keys(), "Custom fields aren't being set properly on a model on save."
+        )
+
     def test_immutable_fields(self):
         """Some fields may not be changed once set, due to the potential for complex downstream effects."""
         instance = CustomField.objects.create(
