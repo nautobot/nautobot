@@ -72,9 +72,9 @@ If your filter data is valid, you should see a success message at the end of the
 
 ### `build_ui`
 
-`nautobot-serve build_ui`
+`nautobot-server build_ui`
 
-Build the UI for the Nautobot server environment and installed Nautobot Apps.
+Build or rebuild the UI for the Nautobot server environment and installed Nautobot Apps. This command is normally run as part of [`nautobot-server post_upgrade`](#post_upgrade) rather than being invoked directly by an administrator.
 
 Here are some commonly used flags:
 
@@ -470,8 +470,11 @@ This will run the following management commands with default settings, in order:
 --- 2.0.0
     With the removal of `django-cacheops` from Nautobot, this command no longer runs `invalidate all`.
 
++++ 2.0.0
+    Added [`build_ui`](#build_ui) to this command's default behavior.
+
 `--no-build-ui`
-Do not automatically build the new ui.
+Do not automatically rebuild the new UI.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
