@@ -4,7 +4,10 @@ This document provides instructions on how to configure Node.js for builds and r
 
 ## Adding an Alternate `npm` registry
 
-By configuring `npm` with an alternate registry, you can have more control over where `npm` looks for packages and how it resolves dependencies.
+By configuring `npm` with an alternate registry, you can have more control over where `npm` looks for packages and how it resolves dependencies. There are several reasons why you might want to add an alternate npm registry such as:
+
+1. **Network Restrictions**: In certain network environments, such as corporate networks or restricted networks, access to the default [npm registry](https://registry.npmjs.org) might be blocked. This can prevent you from installing or updating packages. By adding an alternate registry, which is accessible from your network, you can bypass these restrictions and ensure seamless package installations.
+2. **Package Management Control**: Hosting your own npm registry gives you greater control over the packages used in your project. You can curate a set of packages that are tailored to your organization's needs, ensuring consistency and stability across your projects. Additionally, by hosting your own registry, you can enforce stricter version controls and ensure that only approved packages are used.
 
 To add an alternate `npm` registry to your Nautobot installation, follow these steps:
 
