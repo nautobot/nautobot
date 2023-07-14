@@ -2,7 +2,7 @@
 
 Nautobot is packaged as a Docker image for use in a production environment. The published image is based on the `python:3.8-slim` image to maintain the most compatibility with Nautobot deployments. The Docker image and deployment strategies are being actively developed, check back here or join the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/) for the most up to date information.
 
-+/- 2.0.0
++/- 1.6.0
     The base image was changed from `python:3.7-slim` to `python:3.8-slim` due to the end-of-life of Python 3.7.
 
 ## Platforms
@@ -58,6 +58,7 @@ Currently images are pushed for the following python versions:
 * 3.8
 * 3.9
 * 3.10
+* 3.11
 
 !!! info
     Developer images `networktocode/nautobot-dev:${TAG}` and `ghcr.io/nautobot/nautobot-dev:${TAG}` are also provided with the same tags as above. These images provide the development dependencies needed to build Nautobot; they can be used as a base for development to develop your own Nautobot apps but should **NOT** be used in production.

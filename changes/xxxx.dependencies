@@ -1,0 +1,12 @@
+Added support for Python 3.11.
+Updated `django-auth-ldap` optional dependency to `~4.3.0`.
+Updated `django-cors-headers` dependency to `~4.2.0`.
+Updated `django-storages` optional dependency to `~1.13.2`.
+Updated `django-tables2` dependency to `~2.6.0`.
+Updated `django-tree-queries` dependency to `~0.15.0`.
+Updated `drf-spectacular` dependency to `~0.26.3`.
+Updated `napalm` optional dependency to `~4.1.0`.
+Updated `Pillow` dependency to `~10.0.0`.
+Updated `prometheus-client` dependency to `~0.17.1`.
+Updated `social-auth-core` optional dependency to `~4.4.2`.
+Updated various development-only dependencies to the latest available versions.

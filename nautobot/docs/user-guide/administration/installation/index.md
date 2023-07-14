@@ -33,8 +33,8 @@ The following minimum versions are required for Nautobot to operate:
 --- 1.3.0
     Python 3.6 support was removed.
 
---- 2.0.0
-    Python 3.7 support was removed.
++/- 1.6.0
+    Python 3.11 support was added and Python 3.7 support was removed.
 
 Nautobot will not work without these dependencies.
 
