@@ -70,6 +70,18 @@ If your filter data is valid, you should see a success message at the end of the
 >>> All DynamicGroup filters are validated successfully!
 ```
 
+### `build_ui`
+
+`nautobot-serve build_ui`
+
+Build the UI for the Nautobot server environment and installed Nautobot Apps.
+
+Here are some commonly used flags:
+
+1. `--npm-install` - Install UI packages.
+2. `--no-render-apps` - Do not render Nautobot App imports.
+3. `--no-npm-build` - Do not compile UI.
+
 ### `celery`
 
 `nautobot-server celery`
@@ -447,6 +459,7 @@ This will run the following management commands with default settings, in order:
 
 - `migrate`
 - `trace_paths`
+- `build_ui`
 - `collectstatic`
 - `remove_stale_contenttypes`
 - `clearsessions`
@@ -456,6 +469,9 @@ This will run the following management commands with default settings, in order:
 
 --- 2.0.0
     With the removal of `django-cacheops` from Nautobot, this command no longer runs `invalidate all`.
+
+`--no-build-ui`
+Do not automatically build the new ui.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
