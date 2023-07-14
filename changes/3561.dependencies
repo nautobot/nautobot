@@ -9,6 +9,7 @@ Updated `django-tables2` dependency to `~2.6.0`.
 Updated `django-tree-queries` dependency to `~0.15.0`.
 Updated `drf-spectacular` dependency to `~0.26.3`.
 Removed direct dependency on `importlib-metadata`.
+Updated `napalm` optional dependency to `~4.1.0`. Note that as a result of this update, the following indirect package dependencies are no longer included by default when installing Nautobot with NAPALM: `ciscoconfparse`, `dnspython`, `loguru`, `passlib`, `tenacity`, `toml`, `win32-setctime`.
 Updated `Pillow` dependency to `~10.0.0`.
 Updated `prometheus-client` dependency to `~0.17.1`.
 Updated `social-auth-core` optional dependency to `~4.4.2`.
