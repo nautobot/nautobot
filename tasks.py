@@ -12,10 +12,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import json
 import os
 import re
 import subprocess
+import time
+import xml.etree.ElementTree as ET
 from multiprocessing import Pool
+from pathlib import Path
+from typing import List
 
 from invoke import Collection
 from invoke import task as invoke_task
@@ -34,6 +39,8 @@ except ModuleNotFoundError:
     HAS_RICH = False
 
 
+_ROOT_PATH = Path(__file__).parent.absolute().resolve()
+_TESTS_TIMES_PATH = _ROOT_PATH / "tests-times.json"
 _TEST_RESULTS_DOCKER_DIR = "/source/test-results"
 
 
@@ -242,7 +249,6 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     }
 )
 def build_dependencies(context, poetry_parallel=True):
-
     # Determine preferred/default target architecture
     output = context.run("docker buildx inspect default", env={"PYTHON_VER": context.nautobot.python_ver}, hide=True)
     result = re.search(r"Platforms: ([^,\n]+)", output.stdout)
@@ -678,16 +684,16 @@ def check_schema(context, api_version=None):
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "test_db_name": "Specify a name for the test database.",
-        "xml_output": "Output test results to XML file.",
+        "xml_output": "Store tests results into XML.",
         "default_exec": "Specify, whether to use docker compose `exec` or `run` command. Defaults to None (autodetect).",
     },
-    iterable=["tag", "exclude_tag"],
+    iterable=["tag", "exclude_tag", "label"],
 )
 def unittest(
     context,
     cache_test_fixtures=False,
     keepdb=False,
-    label="nautobot",
+    label=None,
     failfast=False,
     buffer=True,
     exclude_tag=None,
@@ -698,7 +704,7 @@ def unittest(
     performance_report=False,
     performance_snapshot=False,
     test_db_name="",
-    xml_output="",
+    xml_output=False,
     default_exec=None,
 ):
     """Run Nautobot unit tests."""
@@ -706,8 +712,10 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
+    if label is None:
+        label = ["nautobot"]
     append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
+    command = f"coverage run{append_arg} --module nautobot.core.cli test {' '.join(label)}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
@@ -738,7 +746,7 @@ def unittest(
     env = {"NAUTOBOT_TEST_DB_NAME": test_db_name}
     if xml_output:
         env["NAUTOBOT_TEST_OUTPUT_DIR"] = _TEST_RESULTS_DOCKER_DIR
-        env["NAUTOBOT_TEST_OUTPUT_FILE_NAME"] = xml_output
+
     run_command(context, command, env=env, default_exec=default_exec)
 
 
@@ -886,7 +894,8 @@ def remove_ansi_escapes(text: str) -> str:
     return _ANSI_ESCAPE_RE.sub("", text)
 
 
-def invoke_forked_unittest(app):
+def _invoke_unittest_worker(args):
+    index, labels = args
     command = [
         "invoke",
         "unittest",
@@ -896,9 +905,9 @@ def invoke_forked_unittest(app):
         "--keepdb",
         "--no-buffer",
         "--default-exec=exec",
-        f"--label=nautobot.{app}",
-        f"--test-db-name=test_nautobot_{app}",
-        f"--xml-output={app}.xml",
+        "--xml-output",
+        f"--test-db-name=test_nautobot_{index}",
+        *(f"--label={label}" for label in labels),
     ]
 
     with subprocess.Popen(
@@ -908,46 +917,147 @@ def invoke_forked_unittest(app):
         text=True,
     ) as process:
         for line in iter(process.stdout.readline, ""):
-            print(f"{app}: {remove_ansi_escapes(line)}", end="")
+            print(f"worker {index}: {remove_ansi_escapes(line)}", end="")
 
         for line in iter(process.stderr.readline, ""):
-            print(f"{app} STDERR: {remove_ansi_escapes(line)}", end="")
+            print(f"worker {index} STDERR: {remove_ansi_escapes(line)}", end="")
 
         # Wait for the process to finish and get the exit code
         process.communicate()
         success = process.returncode == 0
 
-        return app, success
+        return success
 
 
-@task(help={"workers": "Number of parallel workers to use (default: 3)"})
-def unittest_parallel(context, workers=3):
+def _sum_tests_results(path: Path) -> dict:
+    summary = {
+        "total_tests": 0,
+        "total_errors": 0,
+        "total_failures": 0,
+        "total_time": 0.0,
+    }
+
+    for file in path.glob("*.xml"):
+        try:
+            tree = ET.parse(file)
+        except ET.ParseError:
+            print(50 * "=")
+            print(f"ERROR: Failed to parse {file}")
+            print(50 * "=")
+            continue
+        root = tree.getroot()
+        summary["total_tests"] += int(root.attrib.get("tests", 0))
+        summary["total_errors"] += int(root.attrib.get("errors", 0))
+        summary["total_failures"] += int(root.attrib.get("failures", 0))
+        summary["total_time"] += float(root.attrib.get("time", 0.0))
+
+    print("Test Results Summary:")
+    print("---------------------")
+    print(f"Total tests: {summary['total_tests']}")
+    print(f"Total errors: {summary['total_errors']}")
+    print(f"Total failures: {summary['total_failures']}")
+    print(f"Total time: {round(summary['total_time'])} seconds")
+
+    return summary
+
+
+def _sum_tests_times(path: Path) -> List[dict]:
+    files = []
+
+    for file in path.glob("*.xml"):
+        try:
+            tree = ET.parse(file)
+        except ET.ParseError:
+            print(50 * "=")
+            print(f"ERROR: Failed to parse {file}")
+            print(50 * "=")
+            continue
+        root = tree.getroot()
+        try:
+            file = next(item for item in files if item["file"] == root.attrib.get("file"))
+        except StopIteration:
+            file = {"file": root.attrib.get("file"), "time": 0.0}
+            files.append(file)
+        file["time"] += float(root.attrib.get("time", 0.0))
+
+    files.sort(key=lambda x: x["time"], reverse=True)
+    (_TESTS_TIMES_PATH).write_text(json.dumps(files, indent=4), encoding="utf-8")
+    return files
+
+
+def _split_tests(workers: int) -> List[List[str]]:
+    """Split tests into groups for parallelization based on stored times."""
+    nautobot_path = _ROOT_PATH / "nautobot"
+    root_dir = f"{str(_ROOT_PATH)}/"
+    all_tests_files = [str(path).replace(root_dir, "") for path in nautobot_path.rglob("test_*.py")]
+    tests_times = json.loads(_TESTS_TIMES_PATH.read_text(encoding="utf-8"))
+
+    results = [[] for _ in range(workers)]
+    times = [0.0 for _ in range(workers)]
+
+    def add_file(name: str, time: float) -> None:
+        index = times.index(min(times))
+        results[index].append(name[:-3].replace("/", "."))
+        times[index] += time
+
+    for file in tests_times:
+        # tests_times are sorted with the slowest tests First
+        # Add the next slowest test to the worker with the lowest total times
+        add_file(file["file"], file["time"])
+        try:
+            all_tests_files.remove(file["file"])
+        except ValueError:
+            print(f"WARNING: {file['file']} was not found in all_tests_files")
+
+    avg = sum(times) / len(tests_times)
+
+    # Add tests that were not in measured file times
+    for name in all_tests_files:
+        print(f"WARNING: Test not found in tests_times, adding: {name}")
+        add_file(name, avg)
+
+    return results
+
+
+@task(help={"workers": "Number of parallel workers to use (default: 4)"})
+def unittest_parallel(context, workers=4):
+    if workers < 1:
+        raise ValueError("--workers must be greater than 0")
+    start_time = time.time()
+
     docker_compose(context, "up --detach -- nautobot")
 
     # Cleanup test-results
     run_command(context, f"rm -rf {_TEST_RESULTS_DOCKER_DIR}", default_exec="exec")
 
-    # Sorted with the slowest tests first.
-    # 3 workers seems to be the sweet spot for parallelization as extras and dcim are the slowest.
-    # Previous assumptions, can change in time.
-    apps = [
-        "extras",
-        "dcim",
-        "ipam",
-        "virtualization",
-        "core",
-        "tenancy",
-        "users",
-    ]
+    tests = _split_tests(workers)
+    with Pool(workers) as pool:
+        results = pool.map(_invoke_unittest_worker, enumerate(tests))
 
-    with Pool(workers or len(apps)) as p:
-        results = p.map(invoke_forked_unittest, apps)
+    if not all(results):
+        print(50 * "=")
+        print("ERROR: Some workers failed")
+        print(50 * "=")
 
-    for app, success in results:
-        if success:
-            print(f"Tests for {app} succeeded")
-        else:
-            print(f"Tests for {app} failed")
+    _sum_tests_results(Path(__file__).parent / "test-results")
+
+    print(f"Execution time: {round(time.time() - start_time)} seconds")
+
+
+@task(help={"workers": "Number of parallel workers to use (default: 4)"})
+def summ(context, workers=4):
+    _sum_tests_results(Path(__file__).parent / "test-results")
+
+    files = _sum_tests_times(Path(__file__).parent / "test-results")
+    for file in files:
+        print(f"{file['file']}: {round(file['time'])} seconds")
+
+    split_tests = _split_tests(workers)
+    for index, tests in enumerate(split_tests):
+        print(50 * "=")
+        print(f"Worker {index}: {len(tests)} tests")
+        for test in tests:
+            print(f"  {test}")
 
 
 @task(
