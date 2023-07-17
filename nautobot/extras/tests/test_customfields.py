@@ -1341,7 +1341,7 @@ class CustomFieldModelTest(TestCase):
 
         provider = Provider.objects.create(name="Test", _custom_field_data={name: "Value"})
         provider.validated_save()
-        provider.custom_field_data.pop(name)
+        provider._custom_field_data.pop(name)
         with self.assertRaises(ValidationError):
             provider.validated_save()
 
