@@ -10,7 +10,7 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 
@@ -28,12 +28,21 @@ __all__ = (
 #
 
 
-class UserManager(BaseManager, UserManager_):
+class UserQuerySet(CompositeKeyQuerySetMixin, models.QuerySet):
     """
-    Natural-key subclass of Django's UserManager.
+    Add support for composite-keys to the User queryset.
 
     Note that this is *NOT* based around RestrictedQuerySet.
     """
+
+
+class UserManager(BaseManager, UserManager_):
+    """
+    Natural-key subclass of Django's UserManager.
+    """
+
+    def get_queryset(self):
+        return UserQuerySet(self.model, using=self._db)
 
 
 class User(BaseModel, AbstractUser):
@@ -45,6 +54,8 @@ class User(BaseModel, AbstractUser):
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
+    # TODO: we don't currently have a general "Users" guide.
+    documentation_static_path = "docs/development/core/user-preferences.html"
     objects = UserManager()
 
     class Meta:
@@ -179,6 +190,7 @@ class Token(BaseModel):
     description = models.CharField(max_length=200, blank=True)
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
+    natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
 
     class Meta:
         ordering = ["created"]

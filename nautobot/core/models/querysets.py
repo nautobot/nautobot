@@ -16,7 +16,25 @@ def count_related(model, field):
     return Coalesce(subquery, 0)
 
 
-class RestrictedQuerySet(QuerySet):
+class CompositeKeyQuerySetMixin:
+    """
+    Mixin to extend a base queryset class with support for filtering by `composite_key=...`.
+    """
+
+    def filter(self, *args, **kwargs):
+        """
+        This is an enhanced version of natural-key slug support from django-natural-keys.
+        Counterpart to BaseModel.composite_key property.
+        """
+        composite_key = kwargs.pop("composite_key", None)
+        if composite_key and isinstance(composite_key, str):
+            values = deconstruct_composite_key(composite_key)
+            kwargs.update(self.model.natural_key_args_to_kwargs(values))
+
+        return super().filter(*args, **kwargs)
+
+
+class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
     def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
@@ -99,17 +117,3 @@ class RestrictedQuerySet(QuerySet):
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
-
-    def filter(self, *args, **kwargs):
-        """
-        Extend base queryset with support for filtering by `composite_key=...`.
-
-        This is an enhanced version of natural-key slug support from django-natural-keys.
-        Counterpart to BaseModel.composite_key property.
-        """
-        composite_key = kwargs.pop("composite_key", None)
-        if composite_key and isinstance(composite_key, str):
-            values = deconstruct_composite_key(composite_key)
-            kwargs.update(self.model.natural_key_args_to_kwargs(values))
-
-        return super().filter(*args, **kwargs)
