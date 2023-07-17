@@ -18,7 +18,6 @@ from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Device, Platform, Rack, Location, LocationType
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
