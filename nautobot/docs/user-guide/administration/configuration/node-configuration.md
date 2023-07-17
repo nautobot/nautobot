@@ -29,4 +29,3 @@ To add an alternate `npm` registry to your Nautobot installation, follow these s
 
     ```shell
     npm config list
-    ```

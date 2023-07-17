@@ -153,8 +153,8 @@ v2.0.1
 
 The `invoke version [<version>]` command internally runs `poetry version` and `npm version` commands to handle the versioning process. However, there might be cases where you need to manually configure the version. Here's how you can do that:
 
-- **Poetry Version**: If you want to manually set the version for the Python dependencies managed by Poetry, you can refer to the [Poetry documentation](https://python-poetry.org/docs/cli/#version) on version for detailed instructions. It provides information on how to set the version directly in the `pyproject.toml` file or update it using the `poetry version` command.
-- **npm Version**: To manually configure the version for the Node.js packages managed by npm, you can refer to the official [npm documentation](https://docs.npmjs.com/cli/v9/commands/npm-version) on npm version for more information. It explains how to set the version directly in the `package.json` file or update it using the npm version command.
+* **Poetry Version**: If you want to manually set the version for the Python dependencies managed by Poetry, you can refer to the [Poetry documentation](https://python-poetry.org/docs/cli/#version) on version for detailed instructions. It provides information on how to set the version directly in the `pyproject.toml` file or update it using the `poetry version` command.
+* **npm Version**: To manually configure the version for the Node.js packages managed by npm, you can refer to the official [npm documentation](https://docs.npmjs.com/cli/v9/commands/npm-version) on npm version for more information. It explains how to set the version directly in the `package.json` file or update it using the npm version command.
 
 ### Update the Changelog
 
