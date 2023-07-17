@@ -18,8 +18,5 @@
 # Add specific exclusions
 **/__pycache__
 nautobot/ui/build
+nautobot/ui/generated
 nautobot/ui/node_modules
-# Rendered files
-nautobot/ui/src/app_imports.js
-nautobot/ui/src/app_routes.json
-nautobot/ui/jsconfig.paths.json

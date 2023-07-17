@@ -1,10 +1,7 @@
-node_modules
 build
-
 # These files get rendered by `nautobot-server build_ui`
-app_imports.js
-jsconfig.paths.json
-app_routes.json
+generated
+node_modules
 
 # The output of `npm run analyze`
 analyze_report.html

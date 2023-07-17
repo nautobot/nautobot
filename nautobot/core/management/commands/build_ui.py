@@ -30,7 +30,7 @@ class Command(BaseCommand):
             action="store_false",
             dest="render_apps",
             default=True,
-            help="Do not render Nautobot App imports.",
+            help="Do not (re)render Nautobot App imports.",
         )
         parser.add_argument(
             "--no-npm-build",
@@ -127,59 +127,86 @@ class Command(BaseCommand):
             # If an app does not include its url.py file or urls.py does not include a urlpatterns, skip.
             return data
 
-    def render_app_imports(self):
-        """Render `app_imports.js`, update `jsconfig.json` to map to the path for each and render `app_routes.json` to register all app routes."""
-        self.stdout.write(self.style.WARNING(">>> Rendering Nautobot App imports..."))
+    def render_app_imports(self, render_apps=False):
+        """
+        Render dynamically constructed app-related files - `app_imports.js`, `app_routes.json`, `jsconfig.paths.json`.
+
+        - If `render_apps` is True, these files will be regenerated according to the apps included in settings.PLUGINS.
+        - If `render_apps` is False but the files do not yet exist, they will be created but will not include any apps.
+        - If `render_apps` is False and the files already exist, they will be left untouched.
+        """
 
         ui_dir = settings.NAUTOBOT_UI_DIR
 
+        # Input files
         router_file_path = Path(ui_dir, "src", "router.js")
-        app_routes_file_path = Path(ui_dir, "src", "app_routes.json")
-        jsconfig_file_path = Path(ui_dir, "jsconfig.paths.json")
-        jsconfig_base_file_path = Path(ui_dir, "jsconfig-base.json")
-        app_routes = {}
+        jsconfig_base_file_path = Path(ui_dir, "src", "file_templates", "jsconfig-base.json")
+        environment = jinja2.sandbox.SandboxedEnvironment(
+            loader=jinja2.FileSystemLoader(Path(ui_dir, "src", "file_templates"))
+        )
+        template = environment.get_template("app_imports.js.j2")
 
+        # Output files
+        output_dir = Path(ui_dir, "generated")
+        os.makedirs(output_dir, exist_ok=True)
+        jsconfig_file_path = Path(output_dir, "jsconfig.paths.json")
+        app_routes_file_path = Path(output_dir, "app_routes.json")
+        app_imports_final_file_path = Path(output_dir, "app_imports.js")
+
+        app_routes = {}
         with open(jsconfig_base_file_path, "r", encoding="utf-8") as base_config_file:
             jsconfig = json.load(base_config_file)
 
-        # We're going to modify this list if apps don't have a `ui` directory.
-        enabled_apps = copy.copy(settings.PLUGINS)
+        if render_apps:
+            self.stdout.write(self.style.WARNING(">>> Rendering Nautobot App imports..."))
+            # We're going to modify this list if apps don't have a `ui` directory.
+            enabled_apps = copy.copy(settings.PLUGINS)
 
-        for app_class_path in settings.PLUGINS:
-            app_name = app_class_path.split(".")[-1]
-            app_config = apps.get_app_config(app_name)
-            abs_app_path = Path(app_config.path).resolve()
-            abs_app_ui_path = abs_app_path / "ui"
-            app_path = Path(os.path.relpath(abs_app_path, ui_dir))
-            app_ui_path = app_path / "ui"
-            if app_routes_imports := self.render_routes_imports(abs_app_path, app_name, app_config):
-                app_routes[app_name] = app_routes_imports
+            for app_class_path in settings.PLUGINS:
+                app_name = app_class_path.split(".")[-1]
+                app_config = apps.get_app_config(app_name)
+                abs_app_path = Path(app_config.path).resolve()
+                abs_app_ui_path = abs_app_path / "ui"
+                app_path = Path(os.path.relpath(abs_app_path, ui_dir))
+                app_ui_path = app_path / "ui"
+                if app_routes_imports := self.render_routes_imports(abs_app_path, app_name, app_config):
+                    app_routes[app_name] = app_routes_imports
 
-            # Assert that an App has a UI folder.
-            if not abs_app_ui_path.exists():
-                self.stdout.write(self.style.ERROR(f"- App {app_name!r} does not publish a UI; Skipping..."))
-                enabled_apps.remove(app_class_path)
-                continue
-            self.stdout.write(self.style.SUCCESS(f"- App {app_name!r} imported"))
+                # Assert that an App has a UI folder.
+                if not abs_app_ui_path.exists():
+                    self.stdout.write(self.style.ERROR(f"    - App {app_name!r} does not publish a UI; Skipping..."))
+                    enabled_apps.remove(app_class_path)
+                    continue
+                self.stdout.write(self.style.SUCCESS(f"    - App {app_name!r} imported"))
 
-            jsconfig["compilerOptions"]["paths"][f"@{app_name}/*"] = [f"{app_ui_path}/*"]
+                jsconfig["compilerOptions"]["paths"][f"@{app_name}/*"] = [f"{app_ui_path}/*"]
+        else:
+            enabled_apps = []
 
-        with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
-            json.dump(jsconfig, generated_config_file, indent=4)
+        files_generated = False
 
-        with open(app_routes_file_path, "w", encoding="utf-8") as app_routes_file:
-            json.dump(app_routes, app_routes_file, indent=4)
+        if render_apps or not os.path.exists(jsconfig_file_path):
+            with open(jsconfig_file_path, "w", encoding="utf-8") as generated_config_file:
+                json.dump(jsconfig, generated_config_file, indent=4)
+            self.stdout.write(self.style.SUCCESS(f"    - Rendered {jsconfig_file_path}"))
+            files_generated = True
 
-        app_imports_final_file_path = Path(ui_dir, "src", "app_imports.js")
-        environment = jinja2.sandbox.SandboxedEnvironment(loader=jinja2.FileSystemLoader(ui_dir))
-        template = environment.get_template("app_imports.js.j2")
-        content = template.render(apps=enabled_apps)
+        if render_apps or not os.path.exists(app_routes_file_path):
+            with open(app_routes_file_path, "w", encoding="utf-8") as app_routes_file:
+                json.dump(app_routes, app_routes_file, indent=4)
+            self.stdout.write(self.style.SUCCESS(f"    - Rendered {app_routes_file_path}"))
+            files_generated = True
 
-        with open(app_imports_final_file_path, "w", encoding="utf-8") as generated_import_file:
-            generated_import_file.write(content)
+        if render_apps or not os.path.exists(app_imports_final_file_path):
+            content = template.render(apps=enabled_apps)
+            with open(app_imports_final_file_path, "w", encoding="utf-8") as generated_import_file:
+                generated_import_file.write(content)
+            self.stdout.write(self.style.SUCCESS(f"    - Rendered {app_imports_final_file_path}"))
+            files_generated = True
 
-        # Touch the router to attempt to trigger a server reload.
-        Path(router_file_path).touch()
+        if files_generated:
+            # Touch the router to attempt to trigger a server reload.
+            Path(router_file_path).touch()
 
     def run_command(self, command, message, cwd=settings.NAUTOBOT_UI_DIR):
         """
@@ -233,9 +260,8 @@ class Command(BaseCommand):
             ">>> Copying UI source files...",
         )
 
-        # Generate `app_imports.js`
-        if options["render_apps"]:
-            self.render_app_imports()
+        # Generate `app_imports.js`, `app_routes.json`, and `jsconfig.paths.json` if necessary or if requested.
+        self.render_app_imports(options["render_apps"])
 
         # Run `npm install` and keep it silent by default.
         if options["npm_install"]:
