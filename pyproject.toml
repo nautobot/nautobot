@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
 packages = [
     {include = "nautobot"}
@@ -32,7 +33,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.8,<3.12"
 # Background task processing
 celery = "~5.2.7"
 # Fundamental web framework for Nautobot
@@ -40,7 +41,7 @@ Django = "~3.2.20"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~4.2.0", optional = true}
+django-auth-ldap = {version = "~4.3.0", optional = true}
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.2.1"
 # Provides a database backend & models for Celery task results
@@ -48,7 +49,7 @@ django-celery-results = "~2.4.0"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.9.0", extras = ["database"]}
 # Permit cross-domain API requests
-django-cors-headers = "~3.14.0"
+django-cors-headers = "~4.2.0"
 # Store files in the database for background tasks
 django-db-file-storage = "~0.5.5"
 # AutoSlugField and shell_plus
@@ -64,16 +65,16 @@ django-prometheus = "~2.2.0"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.2.0"
 # External Storage support (i.e. S3)
-django-storages = {version = "~1.13.0", optional = true}
+django-storages = {version = "~1.13.2", optional = true}
 # Advanced HTML tables
-django-tables2 = "~2.5.3"
+django-tables2 = "~2.6.0"
 # Tags
 django-taggit = "~3.1.0"
 # Represent time zones in Django
 # NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
 django-timezone-field = "~4.1.2"
 # Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.14.0"
+django-tree-queries = "~0.15.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
@@ -81,7 +82,7 @@ djangorestframework = "~3.14.0"
 # Adds JSON schema support to API endpoints for rendering JSON schema forms.
 drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.26.0", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.26.3", extras = ["sidecar"]}
 # Git integrations for Python
 GitPython = "~3.1.31"
 # GraphQL support
@@ -100,7 +101,7 @@ MarkupSafe = "~2.1.1"
 # MySQL database adapter
 mysqlclient = {version = "~2.1.0", optional = true}
 # NAPALM automation library
-napalm = {version = "~4.0.0", optional = true}
+napalm = {version = "~4.1.0", optional = true}
 # IP prefix and address handling
 netaddr = "~0.8.0"
 # Library of network related Jinja Filters
@@ -110,9 +111,9 @@ netutils = "^1.4.1"
 # Handling of version numbers
 packaging = "~23.0"
 # Image processing library
-Pillow = "~9.5.0"
+Pillow = "~10.0.0"
 # Custom prometheus metrics
-prometheus-client = "~0.16.0"
+prometheus-client = "~0.17.1"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.5"
@@ -121,7 +122,7 @@ pyuwsgi = "~2.0.21"
 # YAML parsing and rendering
 PyYAML = "~6.0"
 # Social authentication core
-social-auth-core = {version = "~4.4.1", optional = true, extras = ["openidconnect", "saml"]}
+social-auth-core = {version = "~4.4.2", optional = true, extras = ["openidconnect", "saml"]}
 # Social authentication/registration with support for many auth providers
 social-auth-app-django = "~5.2.0"
 # Rendering of SVG images (for rack elevations, etc.)
@@ -141,7 +142,7 @@ sso = ["social-auth-core"]
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~4.0.0"
+django-debug-toolbar = "~4.1.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
@@ -151,17 +152,17 @@ example-plugin-with-view-override = { path = "examples/example_plugin_with_view_
 # Random data generation
 factory-boy = "~3.2.1"
 # Alternative to Make, CLI based on `tasks.py`
-invoke = "~2.0.0"
+invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~13.3.3"
+rich = "~13.4.2"
 # Change log management and generation
-towncrier = "~22.12.0"
+towncrier = "~23.6.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~3.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.4.2"
+mkdocs = "~1.4.3"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
@@ -169,7 +170,7 @@ mkdocs-gen-files = "~0.4.0"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~4.0.4"
 # Material for mkdocs theme
-mkdocs-material = "~9.1.6"
+mkdocs-material = "~9.1.18"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.5"
 # Render custom markdown for version added/changed/remove notes
@@ -181,13 +182,13 @@ mkdocstrings-python = "~1.1.2"
 
 [tool.poetry.group.linting.dependencies]
 # Code style enforcement
-black = "~23.3.0"
+black = "~23.7.0"
 # Code style checking and limited static analysis
 flake8 = {version = "~6.0.0", python = ">=3.8.1"}
 # Code style checking for python import statements
 isort = "~5.12.0"
 # Code static analysis
-pylint = "~2.17.2"
+pylint = "~2.17.4"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # YAML linting
@@ -195,15 +196,15 @@ yamllint = "~1.30.0"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
-coverage = "~7.2.3"
+coverage = "~7.2.7"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Integration Tests
 requests = ">=2.28.0,<2.32.0"
 # Selenium web drivers for live integration testing
-selenium = "~4.7.0"
+selenium = "~4.9.1"
 # Abstraction layer for working with Selenium
-splinter = "~0.18.0"
+splinter = "~0.18.1"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -214,7 +215,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-target-version = ['py38', 'py39', 'py310']
+target-version = ['py38', 'py39', 'py310', 'py311']
 include = '\.pyi?$'
 exclude = '''
 (
