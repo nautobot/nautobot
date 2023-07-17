@@ -23,6 +23,7 @@ from .devices import (
     DeviceTable,
     FrontPortTable,
     InterfaceTable,
+    InterfaceRedundancyGroupTable,
     InventoryItemTable,
     PlatformTable,
     PowerOutletTable,
