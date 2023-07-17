@@ -36,6 +36,8 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
     Location,
@@ -104,6 +106,8 @@ __all__ = (
     "FrontPortTemplateFilterSet",
     "InterfaceConnectionFilterSet",
     "InterfaceFilterSet",
+    "InterfaceRedundancyGroupFilterSet",
+    "InterfaceRedundancyGroupAssociationFilterSet",
     "InterfaceTemplateFilterSet",
     "InventoryItemFilterSet",
     "LocationFilterSet",
@@ -1767,3 +1771,25 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
     class Meta:
         model = DeviceRedundancyGroup
         fields = ["id", "name", "slug", "failover_strategy"]
+
+
+class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+    """Filter for InterfaceRedundancyGroup."""
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = InterfaceRedundancyGroup
+
+        fields = ["id", "name", "slug", "description", "members", "subscribers"]
+
+
+class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+    """Filter for InterfaceRedundancyGroupAssociation."""
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = InterfaceRedundancyGroupAssociation
+
+        fields = ["id", "group", "interface", "primary_ip", "virtual_ip", "priority"]

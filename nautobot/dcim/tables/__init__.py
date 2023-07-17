@@ -80,6 +80,7 @@ __all__ = (
     "FrontPortTemplateTable",
     "InterfaceConnectionTable",
     "InterfaceTable",
+    "InterfaceRedundancyGroupTable",
     "InterfaceTemplateTable",
     "InventoryItemTable",
     "LocationTable",

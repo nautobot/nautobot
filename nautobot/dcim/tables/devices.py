@@ -10,6 +10,7 @@ from nautobot.dcim.models import (
     DeviceRole,
     FrontPort,
     Interface,
+    InterfaceRedundancyGroup,
     InventoryItem,
     Platform,
     PowerOutlet,
@@ -66,6 +67,7 @@ __all__ = (
     "DeviceTable",
     "FrontPortTable",
     "InterfaceTable",
+    "InterfaceRedundancyGroupTable",
     "InventoryItemTable",
     "PlatformTable",
     "PowerOutletTable",
@@ -975,3 +977,27 @@ class DeviceRedundancyGroupTable(BaseTable):
         model = DeviceRedundancyGroup
         fields = ("pk", "name", "slug", "status", "failover_strategy", "member_count", "secrets_group", "tags")
         default_columns = ("pk", "name", "status", "failover_strategy", "member_count")
+
+
+#
+# Interface Redundancy Group
+#
+
+
+class InterfaceRedundancyGroupTable(BaseTable):
+    # pylint: disable=R0903
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(InterfaceRedundancyGroup)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = (
+            "pk",
+            "name",
+            "description",
+        )

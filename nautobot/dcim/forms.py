@@ -108,6 +108,8 @@ from .models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -741,7 +743,6 @@ class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
@@ -932,7 +933,6 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit rack_group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -1304,7 +1304,6 @@ class PowerOutletTemplateForm(NautobotModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         # Limit power_port choices to current DeviceType
@@ -1440,7 +1439,6 @@ class FrontPortTemplateForm(NautobotModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         # Limit rear_port choices to current DeviceType
@@ -1507,7 +1505,6 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
             )
 
     def get_iterative_data(self, iteration):
-
         # Assign rear port and position from selected set
         rear_port, position = self.cleaned_data["rear_port_set"][iteration].split(":")
 
@@ -1624,7 +1621,6 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
 
 class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
     def __init__(self, device_type, data=None, *args, **kwargs):
-
         # Must pass the parent DeviceType on form initialization
         data.update(
             {
@@ -1635,7 +1631,6 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
     def clean_device_type(self):
-
         data = self.cleaned_data["device_type"]
 
         # Limit fields referencing other components to the parent DeviceType
@@ -1918,7 +1913,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         super().__init__(*args, **kwargs)
 
         if self.instance.present_in_database:
-
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for family in [4, 6]:
                 ip_choices = [(None, "---------")]
@@ -1972,7 +1966,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
         else:
-
             # An object that doesn't exist yet can't have any IPs assigned to it
             self.fields["primary_ip4"].choices = []
             self.fields["primary_ip4"].widget.attrs["readonly"] = True
@@ -2034,7 +2027,6 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit device type queryset by manufacturer
             params = {f"manufacturer__{self.fields['manufacturer'].to_field_name}": data.get("manufacturer")}
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
@@ -2088,7 +2080,6 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit rack_group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -2132,7 +2123,6 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit device bay queryset by parent device
             params = {f"device__{self.fields['parent'].to_field_name}": data.get("parent")}
             self.fields["device_bay"].queryset = self.fields["device_bay"].queryset.filter(**params)
@@ -3208,7 +3198,6 @@ class FrontPortCreateForm(ComponentCreateForm):
             )
 
     def get_iterative_data(self, iteration):
-
         # Assign rear port and position from selected set
         rear_port, position = self.cleaned_data["rear_port_set"][iteration].split(":")
 
@@ -3397,7 +3386,6 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
     )
 
     def __init__(self, device_bay, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self.fields["installed_device"].queryset = Device.objects.filter(
@@ -4298,7 +4286,6 @@ class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -4415,7 +4402,6 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit power_panel queryset by site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["power_panel"].queryset = self.fields["power_panel"].queryset.filter(**params)
@@ -4573,3 +4559,97 @@ class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVF
     class Meta:
         model = DeviceRedundancyGroup
         fields = DeviceRedundancyGroup.csv_headers
+
+
+#
+# Interface Redundancy Groups
+#
+
+
+class InterfaceRedundancyGroupForm(NautobotModelForm):
+    """InterfaceRedundancyGroup creation/edit form."""
+
+    model = InterfaceRedundancyGroup
+    slug = SlugField()
+    subscribers = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        help_text="Subscribers are Devices that have a dependency on the Redundancy group.",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = ["name", "slug", "description", "subscribers"]
+
+
+class InterfaceRedundancyGroupAssociationFormSetForm(forms.ModelForm):
+    """InterfaceRedundancyGroupAssociation model form for use inline on InterfaceRedundancyGroupAssociationFormSet."""
+
+    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
+    interface = DynamicModelChoiceField(queryset=Interface.objects.all(), query_params={"device_id": "$device"})
+    primary_ip = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(), query_params={"interface_id": "$interface"}, required=False
+    )
+    virtual_ip = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(), query_params={"interface_id": "$interface"}, required=False
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = ("device", "interface", "primary_ip", "virtual_ip", "priority")
+
+
+# Inline formset for use with providing dynamic rows when creating/editing assignments of Interface to RedundancyGroup.
+InterfaceRedundancyGroupAssociationFormSet = forms.inlineformset_factory(
+    parent_model=InterfaceRedundancyGroup,
+    model=InterfaceRedundancyGroupAssociation,
+    form=InterfaceRedundancyGroupAssociationFormSetForm,
+    fk_name="group",
+    extra=3,
+)
+
+
+class InterfaceRedundancyGroupBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
+):
+    """InterfaceRedundancyGroup bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=InterfaceRedundancyGroup.objects.all(), widget=forms.MultipleHiddenInput
+    )
+    description = forms.CharField(required=False)
+
+    class Meta:
+        """Meta attributes."""
+
+        nullable_fields = [
+            "description",
+        ]
+
+
+class InterfaceRedundancyGroupFilterForm(BootstrapMixin, forms.ModelForm):
+    """Filter form to filter searches."""
+
+    q = forms.CharField(
+        required=False,
+        label="Search",
+        help_text="Search within Name or Slug.",
+    )
+    name = forms.CharField(required=False, label="Name")
+    slug = forms.CharField(required=False, label="Slug")
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        # Define the fields above for ordering and widget purposes
+        fields = [
+            "q",
+            "name",
+            "slug",
+            "description",
+        ]
