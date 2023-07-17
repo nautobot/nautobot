@@ -199,6 +199,11 @@ def run_app(**kwargs):
         help="Initialize a new configuration",
     )
     init_parser.add_argument(
+        "--disable-installation-metrics",
+        action="store_true",
+        help="Disable sending of anonymized installation metrics for this configuration.",
+    )
+    init_parser.add_argument(
         "config_path",
         default=default_config_path,
         nargs="?",
@@ -239,16 +244,33 @@ def run_app(**kwargs):
             )
             return
 
-        # Prompt user to enable installation metrics
-        installation_metrics_enabled = None
-        while installation_metrics_enabled is None:
-            installation_metrics_prompt = input(
-                """Would you like to allow Nautobot to send anonymous Nautobot version and plugin version metrics? [y/n]: """
-            )
-            try:
-                installation_metrics_enabled = is_truthy(installation_metrics_prompt)
-            except ValueError:
-                print("Please enter 'y' or 'n'.")
+        if not sys.__stdin__.isatty():
+            print("A")
+            # Non-interactive invocation, maybe during a build?
+            installation_metrics_enabled = not args.disable_installation_metrics
+        elif args.disable_installation_metrics is True:
+            print("B")
+            # already explicitly specified
+            installation_metrics_enabled = False
+        else:
+            # Prompt user to enable installation metrics
+            installation_metrics_enabled = None
+            while installation_metrics_enabled is None:
+                installation_metrics_prompt = input(
+                    "Nautobot would like to send anonymized installation metrics to the project's maintainers.\n"
+                    "These metrics include the installed Nautobot version, the Python version in use, an anonymous "
+                    '"deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.\n'
+                    "Allow Nautobot to send these metrics? [y/n]: "
+                )
+                try:
+                    installation_metrics_enabled = is_truthy(installation_metrics_prompt)
+                except ValueError:
+                    print("Please enter 'y' or 'n'.")
+
+        if installation_metrics_enabled:
+            print("Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!")
+        else:
+            print("Installation metrics will not be sent by default.")
 
         # Create the config
         try:

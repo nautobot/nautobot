@@ -33,7 +33,12 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # skip if metrics are disabled
         if settings.INSTALLATION_METRICS_ENABLED is not True:
-            self.stdout.write("Installation metrics are disabled by INSTALLATION_METRICS_ENABLED setting, skipping.")
+            self.stdout.write(
+                self.style.WARNING(
+                    "Installation metrics are disabled by INSTALLATION_METRICS_ENABLED setting, skipping."
+                )
+            )
+            return
 
         # get the deployment id for this install from constance or settings
         # if one is not already set, generate a random uuid and set it in constance
@@ -57,11 +62,14 @@ class Command(BaseCommand):
             response = session.send(prepared_request, proxies=settings.HTTP_PROXIES)
 
         if response.ok:
-            self.stdout.write(f"Metrics successfully sent to '{METRICS_ENDPOINT}'")
+            self.stdout.write(self.style.SUCCESS(f"Metrics successfully sent to '{METRICS_ENDPOINT}'"))
         else:
             self.stderr.write(
-                f"Failed to send metrics to '{METRICS_ENDPOINT}'; response status {response.status_code}: {response.content}"
+                self.style.ERROR(
+                    f"Failed to send metrics to '{METRICS_ENDPOINT}'; "
+                    f"response status {response.status_code}: {response.content}"
+                )
             )
-            self.stderr.write(
-                "To disable installation metrics, set INSTALLATION_METRICS_ENABLED to False in your Nautobot config."
-            )
+        self.stderr.write(
+            "To disable installation metrics, you can set INSTALLATION_METRICS_ENABLED = False in your Nautobot config."
+        )

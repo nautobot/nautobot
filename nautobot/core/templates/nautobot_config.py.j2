@@ -382,10 +382,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 
 # Send anonymized installation metrics when `nautobot-server post_upgrade` command is run.
 #
-{% if installation_metrics_enabled is defined and installation_metrics_enabled is not true %}
-INSTALLATION_METRICS_ENABLED = False
+{% if installation_metrics_enabled %}
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "True"))
 {% else %}
-# INSTALLATION_METRICS_ENABLED = True
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "False"))
 {% endif %}
 
 # Directory where Jobs can be discovered.

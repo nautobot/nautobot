@@ -364,9 +364,9 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 +++ 1.6.0
 
-Default: `""`
+Default: a random UUID generated at install time.
 
-A randomly generated uuid is set as the value for this setting to uniquely identify Nautobot deployments when sending installation metrics. This setting is not intended to be user-serviceable. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
+This setting is used to uniquely but anonymously identify Nautobot deployments when sending installation metrics. This setting is not generally intended to be user-serviceable. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
 
 ## DISABLE_PREFIX_LIST_HIERARCHY
 
@@ -545,11 +545,11 @@ git config --global https.proxy http://192.0.2.1:3128
 
 +++ 1.6.0
 
-Default: `True`
+Default: `True` for existing Nautobot deployments, user-specified when running `nautobot-server init` for a new deployment.
 
 Environment Variable: `NAUTOBOT_INSTALLATION_METRICS_ENABLED`
 
-When set to `True`, Nautobot will send anonymous installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../administration/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
+When set to `True`, Nautobot will send anonymized installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../administration/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
 
 ## JOBS_ROOT
 

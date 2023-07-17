@@ -579,7 +579,8 @@ CONSTANCE_CONFIG = {
     ],
     "DEPLOYMENT_ID": [
         "",
-        "Randomly generated UUID used to identify this installation.\nUsed for sending anonymous installation metrics.",
+        "Randomly generated UUID used to identify this installation.\n"
+        "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
     ],
     "DISABLE_PREFIX_LIST_HIERARCHY": [
         False,
