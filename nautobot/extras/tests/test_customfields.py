@@ -1306,7 +1306,7 @@ class CustomFieldModelTest(TestCase):
         provider.validated_save()
 
         self.assertIn(
-            name, provider.custom_field_data.keys(), "Custom fields aren't being set properly on a model on save."
+            name, provider._custom_field_data.keys(), "Custom fields aren't being set properly on a model on save."
         )
 
     def test_custom_field_required(self):
