@@ -1361,12 +1361,12 @@ class CustomFieldModelTest(TestCase):
         provider = Provider.objects.create(name="Test")
 
         self.assertEqual(
-            {}, provider.custom_field_data, "Custom field data was not empty despite clean not being called."
+            {}, provider._custom_field_data, "Custom field data was not empty despite clean not being called."
         )
 
         provider.validated_save()
 
-        self.assertIn(name, provider.custom_field_data.keys())
+        self.assertIn(name, provider._custom_field_data.keys())
 
     def test_cf_data(self):
         """
