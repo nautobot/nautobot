@@ -42,6 +42,7 @@ jobs:
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Install NPM Dependencies"
+        working-directory: "./nautobot/ui"
         run: "npm install"
       - name: "Linting: prettier"
         run: "poetry run invoke prettier"
@@ -55,6 +56,7 @@ jobs:
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Install NPM Dependencies"
+        working-directory: "./nautobot/ui"
         run: "npm install"
       - name: "Linting: eslint"
         run: "poetry run invoke eslint"
@@ -76,13 +78,13 @@ jobs:
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+      - name: "Install NPM Dependencies"
+        working-directory: "./nautobot/ui"
+        run: "npm install"
       - name: "Linting: markdownlint"
-        uses: "nosborn/github-action-markdown-cli@v3.0.1"
-        with:
-          config_file: ".markdownlint.yml"
-          files: "nautobot examples *.md"
-          ignore_files: "nautobot/project-static"
-          rules: "scripts/use-relative-md-links.js"
+        run: "poetry run invoke markdownlint"
   hadolint:
     runs-on: "ubuntu-20.04"
     env:

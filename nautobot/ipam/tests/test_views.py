@@ -423,7 +423,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         response = self.client.post(**request)
         self.assertEqual(200, response.status_code)
-        self.assertIn(f"Could not determine parent Prefix for {instance}! Does it exist?", str(response.content))
+        self.assertIn("No suitable parent Prefix exists in this Namespace", str(response.content))
         # Create an exact copy of the parent prefix but in a different namespace. See if the re-parenting is successful
         new_parent = Prefix.objects.create(
             prefix=instance.parent.prefix,

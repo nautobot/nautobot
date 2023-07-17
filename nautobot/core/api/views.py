@@ -859,6 +859,42 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
         return Response(object_counts)
 
 
+class GetSettingsView(NautobotAPIVersionMixin, APIView):
+    """
+    This view exposes Nautobot settings.
+
+    Get settings by providing one or more `name` in the query parameters.
+
+    Example:
+
+    - /api/settings/?name=FOO            # Returns the setting with name 'FOO'
+    - /api/settings/?name=FOO&name=BAR   # Returns the setting with these names 'FOO' and 'BAR
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        # As of now, we just have `allowed_settings` settings. Because the purpose of this API is limited for the time being,
+        # we may need more access to serializable and non-serializable settings data as the new UI expands. As a result,
+        # exposing all settings data would be desirable in the future.
+        # NOTE: When exposing all settings, include a way to limit settings which can be exposed for security concerns
+        # e.g `SECRET_KEY`, `NAPALM_PASSWORD` e.t.c. also `allowed_settings` can be moved into settings.py
+        allowed_settings = ["FEEDBACK_BUTTON_ENABLED"]
+        # Filter out settings_names not allowed to be exposed to the API
+        valid_settings = [name for name in request.GET.getlist("name") if name in allowed_settings]
+
+        invalid_settings = [name for name in request.GET.getlist("name") if name not in allowed_settings]
+        if invalid_settings:
+            return Response(
+                {"error": f"Invalid settings names specified: {', '.join(invalid_settings)}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        res = {settings_name: get_settings_or_config(settings_name) for settings_name in valid_settings}
+        return Response(res)
+
+
 #
 # Lookup Expr
 #

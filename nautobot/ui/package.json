@@ -1,9 +1,10 @@
 {
     "name": "nautobot",
-    "version": "2.0.0-alpha.1",
+    "version": "2.0.0-beta.2",
     "private": true,
     "proxy": "http://nautobot:8080",
     "dependencies": {
+        "@chakra-ui/icons": "^2.0.0",
         "@chakra-ui/react": "^2.5.1",
         "@emotion/react": "^11.10.5",
         "@emotion/styled": "^11.10.5",
@@ -62,7 +63,10 @@
     "devDependencies": {
         "@chakra-ui/cli": "^2.3.0",
         "@craco/craco": "^7.1.0",
-        "prettier": "^2.8.7",
+        "eslint": "^8.44.0",
+        "eslint-config-react-app": "^7.0.1",
+        "markdownlint-cli": "^0.35.0",
+        "prettier": "^2.8.8",
         "react-app-alias": "^2.2.2",
         "react-app-alias-ex": "^2.1.0",
         "source-map-explorer": "^2.5.3"

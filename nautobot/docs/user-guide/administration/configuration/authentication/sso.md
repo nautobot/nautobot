@@ -353,8 +353,8 @@ Before you begin you will need the following:
 
 * The fully-qualified domain name (FQDN) of your Nautobot host must be registered in DNS. For this example we will be using `nautobot.example.com`.
 * A valid publicly trusted SSL certificate matching the FQDN of your host. You *cannot* use a self-signed certificate. Google validates this certificate to assert authenticity of SAML authentication requests.
-* The name and email address for a technical point of contact. For this example we will use "Bob Jones, bob@example.com".
-* The name and email address for a support point of contact. For this example we will use "Alice Jenkins, alice@example.com."
+* The name and email address for a technical point of contact. For this example we will use `Bob Jones, bob@example.com`.
+* The name and email address for a support point of contact. For this example we will use `Alice Jenkins, alice@example.com.`
 
 #### Setup SAML in Google
 

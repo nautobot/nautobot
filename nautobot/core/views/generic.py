@@ -266,7 +266,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         if self.table:
             # Construct the objects table
-            table = self.table(self.queryset, user=request.user)
+            # Order By is needed in the table `__init__` method
+            order_by = self.request.GET.getlist("sort")
+            table = self.table(self.queryset, user=request.user, order_by=order_by)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
@@ -278,7 +280,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
-            if paginate["per_page"] > max_page_size:
+            if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
                     f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
@@ -438,58 +440,10 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 else:
                     return redirect(self.get_return_url(request, obj))
 
-            # TODO(jathan): This is a temporary workaround for legacy generic views in support of
-            # PrefixEditView/PrefixForm where `unique_together` constraint raises an IntegrityError
-            # because `network` & `prefix_length` are excluded from the form and are therefore not
-            # passed to `full_clean()`. This results in `form.is_valid()` always returning `True`,
-            # and any exceptions end up getting bubbled up when `form.save()` is called. Therefore
-            # the error(s) have to be handled here.
-            #
-            # The problem is that the error from `IntegrityError` is hideous, and looks like this:
-            #
-            # IntegrityError: duplicate key value violates unique constraint "ipam_prefix_namespace_id_network_prefix_length_b2dd8b57_uniq"
-            # DETAIL:  Key (namespace_id, network, prefix_length)=(e0b0aa8d-d24d-4312-a2e5-f185c41281e6, \x0a000000, 8) already exists.
-            #
-            # So, there is a `pre_save` signal handler to forcibly call `Prefix.full_clean` without
-            # field exclusions which results in a `ValidationError` that looks pretty, like so:
-            #
-            # ValidationError: {'__all__': ['Prefix with this Namespace, Network and Prefix length already exists.']}
-            #
-            # No extra work shall be spent on this as the form validation is being replaced with
-            # JSON schema forms in the v2 UI and all of this should go away because validation will
-            # be performed by serializers instead. When `serializer.is_valid()` is called, it
-            # actually returns `False` and properly shows the errors:
-            #
-            # >>> serializer.is_valid()
-            # False
-            #
-            # >>> serializer.errors
-            # {'__all__': [ErrorDetail(string='Prefix with this Namespace, Network and Prefix length already exists.', code='unique_together')]}
-            except ValidationError as err:
-                logger.exception(err)
-                for field, errors in err.message_dict.items():
-                    if field == "__all__":
-                        field = None
-                    for error in errors:
-                        form.add_error(field, error)
-            # This is necessary due to the uniqueness constraint from the database for `ipam.Prefix`
-            # bubbling up. Just a quick fix for the time being without debugging too hard, to know
-            # that this at least surfaces the (ugly) error in the UI.
-            except IntegrityError as err:
-                logger.exception(err)
-                models = ", ".join(o.replace("_", " ").title() for o in obj._meta.unique_together[0])
-                model_name = obj._meta.verbose_name.title()
-                msg = f"{model_name} with this {models} already exists."
-                form.add_error(None, msg)
-            except ObjectDoesNotExist as err:
-                if self.queryset.model._meta.model_name == "ipaddress":
-                    msg = str(err) + "! Does it exist?"
-                    field = "address"
-                else:
-                    msg = "Object save failed due to object-level permissions violation"
-                    field = None
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
                 logger.debug(msg)
-                form.add_error(field, msg)
+                form.add_error(None, msg)
 
         else:
             logger.debug("Form validation failed")

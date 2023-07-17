@@ -10,6 +10,7 @@ from django.utils.text import Truncator
 import django_tables2
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
+from tree_queries.models import TreeNode
 
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils import lookup
@@ -55,6 +56,11 @@ class BaseTable(django_tables2.Table):
                     relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
                 )
             # symmetric relationships are already handled above in the source_type case
+
+        model = getattr(self.Meta, "model", None)
+        # Disable ordering on these TreeNode Models Table because TreeNode do not support sorting
+        if model and issubclass(model, TreeNode):
+            kwargs["orderable"] = False
 
         # Init table
         super().__init__(*args, **kwargs)
