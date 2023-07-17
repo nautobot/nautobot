@@ -428,7 +428,7 @@ class NestedInterfaceRedundancyGroupSerializer(WritableNestedSerializer):
         """Meta attributes."""
 
         model = models.InterfaceRedundancyGroup
-        fields = ["id", "url", "name", "slug", "status"]
+        fields = ["id", "url", "name", "slug"]
 
 
 #
