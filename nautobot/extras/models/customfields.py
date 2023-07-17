@@ -88,6 +88,7 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
     objects = ComputedFieldManager()
 
     clone_fields = ["content_type", "description", "template", "fallback_value", "weight"]
+    natural_key_field_names = ["key"]
 
     class Meta:
         ordering = ["weight", "key"]
@@ -395,6 +396,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         "validation_maximum",
         "validation_regex",
     ]
+    natural_key_field_names = ["key"]
 
     class Meta:
         ordering = ["weight", "label"]
