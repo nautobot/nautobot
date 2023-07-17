@@ -290,7 +290,7 @@ jobs:
         run: "npm install"
       - name: "Setup base aliases for tests"
         working-directory: ./nautobot/ui
-        run: "cp src/file_templates/jsconfig-base.json generated/jsconfig.paths.json"
+        run: "mkdir generated && cp src/file_templates/jsconfig-base.json generated/jsconfig.paths.json"
       - name: "Setup base app_imports for mock"
         working-directory: ./nautobot/ui
         run: "echo 'export const NautobotApps = {}; export default NautobotApps;' > generated/app_imports.js"
