@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils.html import escape
 from rest_framework import status
 
-from example_plugin.signals import EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME, EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT
+from example_plugin.signals import EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT, EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME
 from nautobot.core.graphql import execute_query
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Site
