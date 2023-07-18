@@ -742,6 +742,14 @@ class FileProxyTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(FileProxy.objects.count(), 0)
         self.assertEqual(FileAttachment.objects.count(), 0)
 
+    def test_natural_key_symmetry(self):
+        """Test FileAttachment as well as FileProxy."""
+        super().test_natural_key_symmetry()
+        instance = FileAttachment.objects.first()
+        self.assertIsNotNone(instance)
+        self.assertIsNotNone(instance.natural_key())
+        self.assertEqual(FileAttachment.objects.get_by_natural_key(*instance.natural_key()), instance)
+
 
 class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
     """

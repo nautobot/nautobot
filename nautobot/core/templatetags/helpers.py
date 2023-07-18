@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import re
 
 from django import template
@@ -22,6 +23,9 @@ HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No
 HTML_NONE = '<span class="text-muted">&mdash;</span>'
 
 register = template.Library()
+
+
+logger = logging.getLogger(__name__)
 
 
 #
@@ -402,6 +406,7 @@ def get_docs_url(model):
     # Check to see if documentation exists in any of the static paths.
     if find(path):
         return static(path)
+    logger.debug("No documentation found for %s (expected to find it at %s)", model, path)
     return None
 
 

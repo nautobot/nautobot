@@ -432,6 +432,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         'It will appear in the "Advanced" tab instead.',
     )
 
+    natural_key_field_names = ["key"]
     objects = RelationshipManager()
 
     class Meta:
@@ -698,6 +699,7 @@ class RelationshipAssociation(BaseModel):
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
 
     documentation_static_path = "docs/user-guide/platform-functionality/relationship.html"
+    natural_key_field_names = ["relationship", "source_id", "destination_id"]
 
     class Meta:
         unique_together = (
