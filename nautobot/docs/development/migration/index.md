@@ -9,7 +9,7 @@ This document provides guidance on migrating code from version 1.x to version 2.
     - [Enhanced Filter Fields](../../release-notes/version-2.0.md#enhanced-filter-fields-2804)
 - Changes to Nautobot in v2.0.0
     - [Generic Role Model](../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#generic-role-model)
-    - [Collapse Site, Region to Location](../../release-notes/version-2.0.md#collapse-region-and-site-models-into-location-2517)
+    - [Collapse Site and Region into Location](./migrate-region-and-site-into-location.md)
     - [Aggregate model Migrated to Prefix](../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#aggregate-migrated-to-prefix)
     - [Renamed Database Foreign Keys and Related Names](../../release-notes/version-2.0.md#renamed-database-foreign-keys-and-related-names-2520)
     - [Renamed Filter Fields](../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-filter-fields)
