@@ -82,71 +82,79 @@ Ensure that continuous integration testing on the `develop` branch is completing
 
 ### Bump the Version
 
-Update the package version using `poetry version`. This command shows the current version of the project or bumps the version of the project and writes the new version back to `pyproject.toml` if a valid bump rule is provided.
+Update the package version using `invoke version`. This command shows the current version of the project or bumps the version of the project and writes the new version back to `pyproject.toml` (for the Nautobot Python package) and `package.json` (for the Nautobot UI) if a valid bump rule is provided.
 
 The new version should ideally be a valid semver string or a valid bump rule: `patch`, `minor`, `major`, `prepatch`, `preminor`, `premajor`, `prerelease`. Always try to use a bump rule when you can.
 
 Display the current version with no arguments:
 
 ```no-highlight
-poetry version
+invoke version
 ```
 
 Example output:
 
 ```no-highlight
-nautobot 1.0.0-beta.2
+{
+  nautobot: '2.0.0-beta.2',
+  npm: '9.5.1',
+  node: '18.16.1',
+  ...
+}
 ```
 
 Bump pre-release versions using `prerelease`:
 
 ```no-highlight
-poetry version prerelease
+invoke version -v prerelease
 ```
 
 Example output:
 
 ```no-highlight
-Bumping version from 1.0.0-beta.2 to 1.0.0-beta.3
+v2.0.0-beta.3
 ```
 
 For major versions, use `major`:
 
 ```no-highlight
-poetry version major
+invoke version -v major
 ```
 
 Example output:
 
 ```no-highlight
-Bumping version from 1.0.0-beta.2 to 1.0.0
+v3.0.0
 ```
 
 For patch versions, use `minor`:
 
 ```no-highlight
-poetry version minor
+invoke version minor
 ```
 
 Example output:
 
 ```no-highlight
-Bumping version from 1.0.0 to 1.1.0
+v2.1.0
 ```
 
 And lastly, for patch versions, you guessed it, use `patch`:
 
 ```no-highlight
-poetry version patch
+invoke version patch
 ```
 
 Example output:
 
 ```no-highlight
-Bumping version from 1.1.0 to 1.1.1
+v2.0.1
 ```
 
-Please see the [official Poetry documentation on `version`](https://python-poetry.org/docs/cli/#version) for more information.
+The `invoke version [<version>]` command internally runs `poetry version` and `npm version` commands to handle the versioning process. However, there might be cases where you need to manually configure the version. Here's how you can do that:
+
+* **Poetry Version**: If you want to manually set the version for the Python dependencies managed by Poetry, you can refer to the [Poetry documentation](https://python-poetry.org/docs/cli/#version) on version for detailed instructions. It provides information on how to set the version directly in the `pyproject.toml` file or update it using the `poetry version` command.
+* **npm Version**: To manually configure the version for the Node.js packages managed by npm, you can refer to the official [npm documentation](https://docs.npmjs.com/cli/v9/commands/npm-version) on `npm version` for more information. It explains how to set the version directly in the `package.json` file or update it using the `npm version` command.
 
 ### Update the Changelog
 
