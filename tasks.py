@@ -955,13 +955,11 @@ def _invoke_unittest_group(default_exec: str, args):
         text=True,
     ) as process:
         for line in iter(process.stdout.readline, ""):
-            print(f"group\t{index}:\t{remove_ansi_escapes(line)}", end="")
-
+            print(f"group {index:2}: {remove_ansi_escapes(line)}", end="")
         for line in iter(process.stderr.readline, ""):
-            print(f"group\t{index}:\tSTDERR: {remove_ansi_escapes(line)}", end="")
+            print(f"group {index:2}: STDERR: {remove_ansi_escapes(line)}", end="")
 
         process.communicate()
-
         if process.returncode != 0:
             print(50 * "=")
             print(f"ERROR: group {index} failed with return code {process.returncode}")
@@ -1125,7 +1123,7 @@ def unittest_parallel(context, workers=3, default_exec=None, distribution="names
     groups, estimations = _distribute_tests(DistributionType[distribution.upper()], workers)
     print(f"Tests distribution by {distribution} with {workers} workers:")
     for index, labels in enumerate(groups):
-        print(f"group\t{index}:\texpected time: {round(estimations[index])} seconds, tests:")
+        print(f"group {index:2}: expected time: {round(estimations[index])} seconds, tests:")
         print("\n".join(f"  {label}" for label in labels))
 
     if workers > len(groups):
@@ -1137,9 +1135,9 @@ def unittest_parallel(context, workers=3, default_exec=None, distribution="names
     print(50 * "=")
     for result in results:
         index, returncode, total_time = result
-        print(f"group\t{index}\t{'SUCCESS' if returncode == 0 else 'FAILURE'}")
-        print(f"group\t{index}\tworker time (s)\t{round(total_time)}")
-        print(f"group\t{index}\texpected time (s)\t{round(estimations[index])}")
+        print(f"group {index:2}: {'SUCCESS' if returncode == 0 else 'FAILURE'}")
+        print(f"group {index:2}: worker time (s):   {round(total_time)}")
+        print(f"group {index:2}: expected time (s): {round(estimations[index])}")
 
     print(50 * "=")
     _print_tests_results(_ROOT_PATH / _TEST_RESULTS_DIR)
