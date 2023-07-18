@@ -84,7 +84,7 @@ From the Devices/Circuits example above, you might label the relationship so tha
 
 ## Relationship Keys
 
-Relationship model's `key` attribute is derived from its `label` attribute (unique for all Relationship instances). The key of a Relationship instance contains a graphql-safe string used as the key in the underlying relationship data dictionary and it can be used to retrieve data from the API and GraphQL.
+Relationship model's `key` attribute is derived from its `label` attribute (unique for all Relationship instances). The key of a Relationship instance contains a GraphQL-safe string used as the key in the underlying relationship data dictionary and it can be used to retrieve data from the API and GraphQL.
 
 ### Options
 
