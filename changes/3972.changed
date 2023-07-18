@@ -1,0 +1,6 @@
+Refine natural keys for various DCIM models
+1. Reorder PowerOutlet and PowerPanel natural-key fields
+2. Change Cable, CablePath and TaggedItem natural-key fields to only `pk`.
+3. Change RackReservation natual-key to `[units, racks]`
+4. Change VirtualChassis natural-key to `name`
+

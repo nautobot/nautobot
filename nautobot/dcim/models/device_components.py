@@ -400,6 +400,8 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
         help_text="Phase (for three-phase feeds)",
     )
 
+    natural_key_field_names = ["name", "device"]
+
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")

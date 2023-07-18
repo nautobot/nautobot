@@ -825,6 +825,8 @@ class VirtualChassis(PrimaryModel):
     name = models.CharField(max_length=64, unique=True)
     domain = models.CharField(max_length=30, blank=True)
 
+    natural_key_field_names = ["name"]
+
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "virtual chassis"
