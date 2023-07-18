@@ -4,5 +4,4 @@
 - Added `invoke ps` to display docker compose services.
 - Added `invoke export-docker-compose` to export docker compose configuration to `compose.yaml` file.
 - Added `invoke logs` to display docker compose logs.
-- Splited extras test_jobs to allow better parallelization.
 - Fixed `api-status` API call when using higher Redis DB index.
