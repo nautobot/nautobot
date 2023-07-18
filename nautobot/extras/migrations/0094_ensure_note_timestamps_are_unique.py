@@ -19,7 +19,7 @@ def ensure_note_created_timestamps_are_unique(apps, schema_editor):
     )
     # Extract ObjectChange timestamps when the duplicate Note objects are created
     # And set it equal to the Note's created timestamp respectively
-    if duplicate_records.exists():
+    if duplicate_records:
         for duplicate_record in duplicate_records:
             # Should only be one created changelog object available.
             duplicate_record.pop("count")
@@ -36,7 +36,7 @@ def ensure_note_created_timestamps_are_unique(apps, schema_editor):
         .annotate(count=models.Count(natural_key_fields))
         .filter(count__gt=1)
     )
-    if duplicate_records.exists():
+    if duplicate_records:
         for duplicate_record in duplicate_records:
             duplicate_record.pop("count")
             duplicate_notes = Note.objects.filter(**duplicate_record)
