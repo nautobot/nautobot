@@ -26,9 +26,19 @@ SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 # Redis variables
 
+_GROUP_INDEX = os.getenv("NAUTOBOT_TEST_GROUP_INDEX", "")
+if _GROUP_INDEX:
+    _redis_index = int((int(_GROUP_INDEX) + 2) * 2)
+    DATABASES["default"]["TEST"] = {  # noqa: F405
+        "NAME": f"nautobot_test{_GROUP_INDEX}",
+    }
+else:
+    _redis_index = 2
+
+
 # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
-CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
-CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
+CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=_redis_index)  # noqa: F405
+CACHEOPS_REDIS = parse_redis_connection(redis_database=_redis_index + 1)
 CACHEOPS_ENABLED = False  # 2.0 TODO(jathan): Remove me.
 
 # Testing storages within cli.py
@@ -50,11 +60,4 @@ TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
 # Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
 METRICS_ENABLED = True
 
-_TEST_DB_NAME = os.getenv("NAUTOBOT_TEST_DB_NAME", "")
-if _TEST_DB_NAME:
-    DATABASES["default"]["TEST"] = {  # noqa: F405
-        "NAME": _TEST_DB_NAME,
-    }
-
 TEST_OUTPUT_DIR = os.getenv("NAUTOBOT_TEST_OUTPUT_DIR")
-TEST_OUTPUT_FILE_NAME = os.getenv("NAUTOBOT_TEST_OUTPUT_FILE_NAME")

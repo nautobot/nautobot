@@ -1,0 +1,8 @@
+- Added `invoke unittest-parallel`.
+    - Test outputs are stored in `.test-results` directory.
+    - There is a `tests-times.json` file used for distributing tests. Use `invoke sum-tests-times` to update it.
+- Added `invoke ps` to display docker compose services.
+- Added `invoke export-docker-compose` to export docker compose configuration to `compose.yaml` file.
+- Added `invoke logs` to display docker compose logs.
+- Splited extras test_jobs to allow better parallelization.
+- Fixed `api-status` API call when using higher Redis DB index.
