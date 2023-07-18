@@ -19,15 +19,14 @@ def ensure_note_created_timestamps_are_unique(apps, schema_editor):
     )
     # Extract ObjectChange timestamps when the duplicate Note objects are created
     # And set it equal to the Note's created timestamp respectively
-    if duplicate_records:
-        for duplicate_record in duplicate_records:
-            # Should only be one created changelog object available.
-            duplicate_record.pop("count")
-            duplicate_notes = Note.objects.filter(**duplicate_record)
-            for note in duplicate_notes:
-                note_change_log = ObjectChange.objects.get(changed_object_id=note.pk, action="create")
-                note.created = note_change_log.time
-                note.save()
+    for duplicate_record in duplicate_records:
+        # Should only be one created changelog object available.
+        duplicate_record.pop("count")
+        duplicate_notes = Note.objects.filter(**duplicate_record)
+        for note in duplicate_notes:
+            note_change_log = ObjectChange.objects.get(changed_object_id=note.pk, action="create")
+            note.created = note_change_log.time
+            note.save()
 
     # If there are still duplicate Note objects exist, we append some random milliseconds of time.
     duplicate_records = (
@@ -36,14 +35,13 @@ def ensure_note_created_timestamps_are_unique(apps, schema_editor):
         .annotate(count=models.Count(natural_key_fields))
         .filter(count__gt=1)
     )
-    if duplicate_records:
-        for duplicate_record in duplicate_records:
-            duplicate_record.pop("count")
-            duplicate_notes = Note.objects.filter(**duplicate_record)
-            for note in duplicate_notes:
-                random_milliseconds = random.randint(1, 1000)
-                note.created += timedelta(milliseconds=random_milliseconds)
-                note.save()
+    for duplicate_record in duplicate_records:
+        duplicate_record.pop("count")
+        duplicate_notes = Note.objects.filter(**duplicate_record)
+        for note in duplicate_notes:
+            random_milliseconds = random.randint(1, 1000)
+            note.created += timedelta(milliseconds=random_milliseconds)
+            note.save()
 
 
 class Migration(migrations.Migration):
