@@ -6,7 +6,7 @@ from django.db.models import F, ProtectedError, Q
 from django.db.models.functions import Length
 
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.models.utils import deconstruct_composite_key
+from nautobot.core.utils.data import merge_dicts_without_collision
 from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 
 
@@ -247,38 +247,61 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             broadcast__gte=last_ip,
         )
 
-    def get(self, *args, prefix=None, **kwargs):
+    def get(self, *args, **kwargs):
         """
         Provide a convenience for `.get(prefix=<prefix>)`
+
+        Only needed here (normally `get()` just redirects to `filter()` under the hood) because we specifically want
+        in the `get()` case (only) to *not* automatically convert `get(prefix="10.1.1.1/8")` to
+        `get(network="10.0.0.0", prefix_length=8)', i.e. discard the host bits.
+
+        TODO: why *shouldn't* we have similar enforcement on `filter()` and `exclude()`?
         """
+        kwargs = self.split_composite_key_into_kwargs(**kwargs)
+
+        prefix = kwargs.pop("prefix", None)
         if prefix:
             _prefix = netaddr.IPNetwork(prefix)
             if str(_prefix) != str(prefix):
                 raise self.model.DoesNotExist()
             last_ip = self._get_last_ip(_prefix)
-            kwargs["prefix_length"] = _prefix.prefixlen
-            kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
-            kwargs["broadcast"] = last_ip
+            kwargs = merge_dicts_without_collision(
+                kwargs, {"prefix_length": _prefix.prefixlen, "network": _prefix.ip, "broadcast": last_ip}
+            )
         return super().get(*args, **kwargs)
 
     def filter(self, *args, **kwargs):
         """
         Provide a convenience for `.filter(prefix=<prefix>)`
         """
-        # Copied from RestrictedQuerySet.filter() because this needs to happen *before* we deconstruct 'prefix'
-        composite_key = kwargs.pop("composite_key", None)
-        if composite_key:
-            values = deconstruct_composite_key(composite_key)
-            kwargs.update(self.model.natural_key_args_to_kwargs(values))
+        # This needs to happen *before* we deconstruct 'prefix' since the composite-key includes prefix
+        kwargs = self.split_composite_key_into_kwargs(**kwargs)
 
         prefix = kwargs.pop("prefix", None)
         if prefix:
             _prefix = netaddr.IPNetwork(prefix)
             last_ip = self._get_last_ip(_prefix)
-            kwargs["prefix_length"] = _prefix.prefixlen
-            kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
-            kwargs["broadcast"] = last_ip
+            kwargs = merge_dicts_without_collision(
+                kwargs, {"prefix_length": _prefix.prefixlen, "network": _prefix.ip, "broadcast": last_ip}
+            )
         return super().filter(*args, **kwargs)
+
+    def exclude(self, *args, **kwargs):
+        """
+        Provide a convenience for `.exclude(prefix=<prefix>)`
+        """
+        # This needs to happen *before* we deconstruct 'prefix' since the composite-key includes prefix
+        kwargs = self.split_composite_key_into_kwargs(**kwargs)
+
+        prefix = kwargs.pop("prefix", None)
+        if prefix:
+            _prefix = netaddr.IPNetwork(prefix)
+            last_ip = self._get_last_ip(_prefix)
+            kwargs = merge_dicts_without_collision(
+                kwargs, {"prefix_length": _prefix.prefixlen, "network": _prefix.ip, "broadcast": last_ip}
+            )
+
+        return super().exclude(*args, **kwargs)
 
     # TODO(jathan): This was copied from `Prefix.delete()` but this won't work in the same way.
     # Currently the issue is with `queryset.delete()` on bulk delete view from list view, how do we
@@ -440,25 +463,23 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         unmasked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if "/" not in val]
         return self.filter(Q(host__in=masked_hosts, mask_length__in=masked_prefixes) | Q(host__in=unmasked_hosts))
 
-    def get(self, *args, address=None, **kwargs):
-        """
-        Provide a convenience for `.get(address=<address>)`
-        """
-        if address:
-            address = netaddr.IPNetwork(address)
-            kwargs["mask_length"] = address.prefixlen
-            kwargs["host"] = address.ip
-        return super().get(*args, **kwargs)
-
     def filter(self, *args, address=None, **kwargs):
         """
         Provide a convenience for `.filter(address=<address>)`
         """
         if address:
             address = netaddr.IPNetwork(address)
-            kwargs["mask_length"] = address.prefixlen
-            kwargs["host"] = address.ip
+            kwargs = merge_dicts_without_collision(kwargs, {"host": address.ip, "mask_length": address.prefixlen})
         return super().filter(*args, **kwargs)
+
+    def exclude(self, *args, address=None, **kwargs):
+        """
+        Provide a convenience for `.exclude(address=<address>)`
+        """
+        if address:
+            address = netaddr.IPNetwork(address)
+            kwargs = merge_dicts_without_collision(kwargs, {"host": address.ip, "mask_length": address.prefixlen})
+        return super().exclude(*args, **kwargs)
 
     def filter_address_or_pk_in(self, addresses, pk_values=None):
         """
