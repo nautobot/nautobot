@@ -220,17 +220,18 @@ def docker_compose(context, command, **kwargs):
 
 def run_command(context, command, default_exec=None, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
-    env = kwargs.pop("env", {})
     if is_truthy(context.nautobot.local):
+        env = kwargs.pop("env", {})
         if "hide" not in kwargs:
             print_command(command, env=env)
         context.run(command, pty=True, env=env, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
-        env_args = " ".join(f"-e {key}" for key in env)
+        docker_env = kwargs.pop("docker_env", {})
+        env_args = " ".join(f"-e {key}" for key in docker_env)
         if default_exec is None:
             docker_compose_status = "ps --services --filter status=running"
-            results = docker_compose(context, docker_compose_status, hide="out", env=env)
+            results = docker_compose(context, docker_compose_status, hide="out")
             default_exec = "exec" if "nautobot" in results.stdout else "run"
         if default_exec == "exec":
             compose_command = f"exec {env_args} -- nautobot {command}"
@@ -239,7 +240,7 @@ def run_command(context, command, default_exec=None, **kwargs):
         else:
             raise ValueError(f"Invalid value for default_exec: {default_exec}, can be None, 'exec', or 'run'")
 
-        docker_compose(context, compose_command, pty=True, env=env)
+        docker_compose(context, compose_command, pty=True, env=docker_env)
 
 
 # ------------------------------------------------------------------------------
@@ -783,7 +784,7 @@ def unittest(
     if group_index is not None:
         env["NAUTOBOT_TEST_GROUP_INDEX"] = str(group_index)
 
-    run_command(context, command, env=env, default_exec=default_exec)
+    run_command(context, command, docker_env=env, default_exec=default_exec)
 
 
 @task
