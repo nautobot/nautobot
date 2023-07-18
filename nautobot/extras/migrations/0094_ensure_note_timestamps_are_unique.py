@@ -7,7 +7,7 @@ from django.db import migrations
 from django.db import models
 
 
-def ensure_note_created_time_stamps_are_unique(apps, schema_editor):
+def ensure_note_created_timestamps_are_unique(apps, schema_editor):
     Note = apps.get_model("extras", "Note")
     ObjectChange = apps.get_model("extras", "ObjectChange")
     natural_key_fields = ["assigned_object_type", "assigned_object_id", "user_name", "created"]
@@ -52,5 +52,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(ensure_note_created_time_stamps_are_unique, migrations.RunPython.noop),
+        migrations.RunPython(ensure_note_created_timestamps_are_unique, migrations.RunPython.noop),
     ]
