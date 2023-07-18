@@ -747,7 +747,7 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    if label is None:
+    if not label:
         label = ["nautobot"]
     append_arg = " --append" if append else ""
     command = f"coverage run{append_arg} --module nautobot.core.cli test {' '.join(label)}"
@@ -813,13 +813,13 @@ def unittest_coverage(context):
         "performance_report": "Generate Performance Testing report in the terminal. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
     },
-    iterable=["tag", "exclude_tag"],
+    iterable=["tag", "exclude_tag", "label"],
 )
 def integration_test(
     context,
     cache_test_fixtures=False,
     keepdb=False,
-    label="nautobot",
+    label=None,
     failfast=False,
     buffer=True,
     tag=None,
@@ -866,13 +866,13 @@ def integration_test(
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_snapshot": "Generate a new performance testing report to report.json. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
     },
-    iterable=["tag", "exclude_tag"],
+    iterable=["tag", "exclude_tag", "label"],
 )
 def performance_test(
     context,
     cache_test_fixtures=False,
     keepdb=False,
-    label="nautobot",
+    label=None,
     failfast=False,
     buffer=True,
     tag=None,
