@@ -4,7 +4,7 @@ In Nautobot 2.0.0, all the `Region` and `Site` related data models are being mig
 
 We will be using `ExampleModel` as a relatively simple and hands-on example throughout this guide to better your understanding of the migration process.
 
-### Before you Begin
+## Before you Begin
 
 !!! warning
     You **must** perform these steps before proceeding. Failing to follow them properly could result in data loss. **Always** backup your database before performing any migration steps.  
@@ -22,7 +22,7 @@ After you complete those operations, follow the guide below for each of your ins
 2. Run `nautobot-server migrate [app_name]` to apply those migration files to each app.  
 3. Finally, Start Nautobot Server after **all** the migration files are applied and **all** your affected apps are updated.  
 
-### Add Location Fields to Site and Region Related Data Models
+## Add Location Fields to Site and Region Related Data Models
 
 If the `ExampleModel` currently has a `site` ForeignKey field but it does not have a `location` ForeignKey field, you will need to add the `location` field before any other migrations in this guide.
 
@@ -71,7 +71,7 @@ Make the migration file by running `nautobot-server makemigrations [app_name] -n
 nautobot-server makemigrations example_app -n add_location_field_to_example_model
 ```
 
-### Create an Empty Migration File and Write the Data Migration
+## Create an Empty Migration File and Write the Data Migration
 
 After you make sure that all `Site`/`Region` related models have `location` fields on them, it is time to migrate `Site`/`Region` references in your data to `Location`.
 
@@ -194,7 +194,7 @@ class Migration(migrations.Migration):
     ]
 ```
 
-### Remove Site/Region Related Fields from Migrated Data Models
+## Remove Site/Region Related Fields from Migrated Data Models
 
 After the data migration is successful, we need to remove the `site`/`region` fields from your data model so that Nautobot will be able to remove the `Site` and `Region` models. Note that we need to remove those attributes in a separate migration file from the previous one, as it's never a good practice to combine data migrations and schema migrations in the same file. You can do this by simply removing the `site`/`region` attributes from your model class:
 
