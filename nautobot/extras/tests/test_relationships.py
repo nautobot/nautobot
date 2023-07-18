@@ -1054,7 +1054,9 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
                 self.assertIn(value, rendered_value)
 
 
-class RequiredRelationshipTestMixin(TestCase):
+class RequiredRelationshipTestMixin:
+    """Common test mixin for both view and API tests dealing with required relationships."""
+
     def send_data(self, model_class, data, interact_with, action="add", url_kwargs=None):
         # Helper to post data to a URL
 
@@ -1143,6 +1145,7 @@ class RequiredRelationshipTestMixin(TestCase):
             required_on="source",
         )
         relationship_o2o.validated_save()
+        vlan_group = VLANGroup.objects.first()
 
         tests_params = [
             # Required many-to-many:
@@ -1151,7 +1154,7 @@ class RequiredRelationshipTestMixin(TestCase):
                     "vid": "1",
                     "name": "New VLAN",
                     "status": str(Status.objects.get_for_model(VLAN).first().pk),
-                    "vlan_group": str(self.vlan_group.pk),
+                    "vlan_group": str(vlan_group.pk),
                 },
                 "relationship": relationship_m2m,
                 "required_objects_generator": [
