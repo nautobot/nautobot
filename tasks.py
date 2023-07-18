@@ -220,15 +220,18 @@ def docker_compose(context, command, **kwargs):
 
 def run_command(context, command, default_exec=None, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
-    if is_truthy(context.nautobot.local):
+    task_env = kwargs.pop("task_env", {})
+    if default_exec is None and is_truthy(context.nautobot.local):
+        default_exec = "local"
+    if default_exec == "local":
         env = kwargs.pop("env", {})
+        env.update(task_env)
         if "hide" not in kwargs:
             print_command(command, env=env)
         context.run(command, pty=True, env=env, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
-        docker_env = kwargs.pop("docker_env", {})
-        env_args = " ".join(f"-e {key}" for key in docker_env)
+        env_args = " ".join(f"-e {key}" for key in task_env)
         if default_exec is None:
             docker_compose_status = "ps --services --filter status=running"
             results = docker_compose(context, docker_compose_status, hide="out")
@@ -238,9 +241,9 @@ def run_command(context, command, default_exec=None, **kwargs):
         elif default_exec == "run":
             compose_command = f"run {env_args} --rm --entrypoint '{command}' -- nautobot"
         else:
-            raise ValueError(f"Invalid value for default_exec: {default_exec}, can be None, 'exec', or 'run'")
+            raise ValueError(f"Invalid value for default_exec: {default_exec}, can be None, 'local', 'exec', or 'run'")
 
-        docker_compose(context, compose_command, pty=True, env=docker_env)
+        docker_compose(context, compose_command, pty=True, env=task_env)
 
 
 # ------------------------------------------------------------------------------
@@ -784,7 +787,7 @@ def unittest(
     if group_index is not None:
         env["NAUTOBOT_TEST_GROUP_INDEX"] = str(group_index)
 
-    run_command(context, command, docker_env=env, default_exec=default_exec)
+    run_command(context, command, task_env=env, default_exec=default_exec)
 
 
 @task
@@ -1097,21 +1100,24 @@ def _distribute_tests(distribution: DistributionType, workers) -> Tuple[List[Lis
     name="unittest-parallel",
     help={
         "workers": "Number of parallel workers to use (default: 3)",
-        "default-exec": "Default docker compose execution method `exec` or `run` (default: `exec`)",
+        "default-exec": "Default docker compose execution method 'local', 'exec' or 'run' (default: 'exec')",
         "distribution": "Distribution method `names` or `times` (default: `names`)",
     },
 )
-def unittest_parallel(context, workers=3, default_exec="exec", distribution="names"):
+def unittest_parallel(context, workers=3, default_exec=None, distribution="names"):
     """Parallelize unit tests."""
     start_time = time.time()
 
-    stop(context)
-    if default_exec == "exec":
-        docker_compose(context, "up --detach -- nautobot")
-    elif default_exec == "run":
-        docker_compose(context, "up --detach -- db redis selenium")
-    else:
-        raise ValueError(f"Invalid --default-exec: {default_exec}")
+    if default_exec is None:
+        default_exec = "local" if is_truthy(context.nautobot.local) else "exec"
+    if default_exec != "local":
+        stop(context)
+        if default_exec == "exec":
+            docker_compose(context, "up --detach -- nautobot")
+        elif default_exec == "run":
+            docker_compose(context, "up --detach -- db redis selenium")
+        else:
+            raise ValueError(f"Invalid --default-exec: {default_exec}")
 
     # Cleanup test-results
     run_command(context, f"rm -rf /source/{_TEST_RESULTS_DIR}", default_exec=default_exec)
