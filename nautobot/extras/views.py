@@ -800,9 +800,7 @@ class GitRepositoryListView(generic.ObjectListView):
                 task_name__startswith="nautobot.core.jobs.GitRepository",
                 task_kwargs__repository__isnull=False,
                 status__in=JobResultStatusChoices.READY_STATES,
-            )
-            .order_by("date_done")
-            .defer("data")
+            ).order_by("date_done")
         }
         return {
             "job_results": results,
@@ -1463,7 +1461,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("data").select_related("job_model", "user").prefetch_related("logs")
+    queryset = JobResult.objects.select_related("job_model", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1475,7 +1473,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("data").all()
+    queryset = JobResult.objects.all()
     table = tables.JobResultTable
 
 
