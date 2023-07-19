@@ -9,11 +9,11 @@
     },
     {
         "file": "nautobot/circuits/tests/test_models.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/circuits/tests/test_urls.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/circuits/tests/test_views.py",
@@ -25,7 +25,7 @@
     },
     {
         "file": "nautobot/core/tests/test_authentication.py",
-        "time": 1
+        "time": 2
     },
     {
         "file": "nautobot/core/tests/test_celery.py",
@@ -33,15 +33,15 @@
     },
     {
         "file": "nautobot/core/tests/test_checks.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/core/tests/test_commands.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/core/tests/test_forms.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/core/tests/test_graphql.py",
@@ -49,39 +49,39 @@
     },
     {
         "file": "nautobot/core/tests/test_models.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/core/tests/test_releases.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/core/tests/test_tables.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/core/tests/test_utilities.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/core/tests/test_views.py",
-        "time": 6
+        "time": 3
     },
     {
         "file": "nautobot/dcim/tests/test_api.py",
-        "time": 40
+        "time": 41
     },
     {
         "file": "nautobot/dcim/tests/test_cablepaths.py",
-        "time": 2
+        "time": 3
     },
     {
         "file": "nautobot/dcim/tests/test_filters.py",
-        "time": 15
+        "time": 16
     },
     {
         "file": "nautobot/dcim/tests/test_forms.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/dcim/tests/test_graphql.py",
@@ -93,15 +93,15 @@
     },
     {
         "file": "nautobot/dcim/tests/test_natural_ordering.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/dcim/tests/test_signals.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/dcim/tests/test_views.py",
-        "time": 119
+        "time": 122
     },
     {
         "file": "nautobot/extras/tests/test_api.py",
@@ -109,7 +109,7 @@
     },
     {
         "file": "nautobot/extras/tests/test_changelog.py",
-        "time": 1
+        "time": 4
     },
     {
         "file": "nautobot/extras/tests/test_context_managers.py",
@@ -117,19 +117,19 @@
     },
     {
         "file": "nautobot/extras/tests/test_customfields.py",
-        "time": 13
-    },
-    {
-        "file": "nautobot/extras/tests/test_datasources.py",
         "time": 14
     },
     {
+        "file": "nautobot/extras/tests/test_datasources.py",
+        "time": 15
+    },
+    {
         "file": "nautobot/extras/tests/test_dynamicgroups.py",
-        "time": 4
+        "time": 5
     },
     {
         "file": "nautobot/extras/tests/test_filters.py",
-        "time": 2
+        "time": 3
     },
     {
         "file": "nautobot/extras/tests/test_forms.py",
@@ -137,23 +137,23 @@
     },
     {
         "file": "nautobot/extras/tests/test_git.py",
-        "time": 0
-    },
-    {
-        "file": "nautobot/extras/tests/test_jobs.py",
-        "time": 57
-    },
-    {
-        "file": "nautobot/extras/tests/test_management.py",
-        "time": 0
-    },
-    {
-        "file": "nautobot/extras/tests/test_models.py",
         "time": 1
     },
     {
+        "file": "nautobot/extras/tests/test_jobs.py",
+        "time": 60
+    },
+    {
+        "file": "nautobot/extras/tests/test_management.py",
+        "time": 1
+    },
+    {
+        "file": "nautobot/extras/tests/test_models.py",
+        "time": 2
+    },
+    {
         "file": "nautobot/extras/tests/test_notes.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/extras/tests/test_plugins.py",
@@ -161,15 +161,15 @@
     },
     {
         "file": "nautobot/extras/tests/test_registry.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/extras/tests/test_relationships.py",
-        "time": 2
+        "time": 3
     },
     {
         "file": "nautobot/extras/tests/test_scripts.py",
-        "time": 27
+        "time": 28
     },
     {
         "file": "nautobot/extras/tests/test_tags.py",
@@ -177,15 +177,15 @@
     },
     {
         "file": "nautobot/extras/tests/test_utils.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/extras/tests/test_views.py",
-        "time": 111
+        "time": 113
     },
     {
         "file": "nautobot/extras/tests/test_webhooks.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/ipam/tests/test_api.py",
@@ -193,11 +193,11 @@
     },
     {
         "file": "nautobot/ipam/tests/test_filters.py",
-        "time": 6
+        "time": 8
     },
     {
         "file": "nautobot/ipam/tests/test_forms.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/ipam/tests/test_graphql.py",
@@ -205,15 +205,15 @@
     },
     {
         "file": "nautobot/ipam/tests/test_models.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/ipam/tests/test_ordering.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/ipam/tests/test_querysets.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/ipam/tests/test_views.py",
@@ -225,7 +225,7 @@
     },
     {
         "file": "nautobot/tenancy/tests/test_filters.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/tenancy/tests/test_views.py",
@@ -237,27 +237,27 @@
     },
     {
         "file": "nautobot/users/tests/test_filters.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/users/tests/test_models.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/users/tests/test_password_ui.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_api.py",
-        "time": 11
+        "time": 12
     },
     {
         "file": "nautobot/utilities/tests/test_choices.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_config.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_filters.py",
@@ -265,23 +265,23 @@
     },
     {
         "file": "nautobot/utilities/tests/test_forms.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_jinja_filters.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_logging.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_managers.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_ordering.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_paginator.py",
@@ -289,15 +289,15 @@
     },
     {
         "file": "nautobot/utilities/tests/test_templatetags_helpers.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/utilities/tests/test_templatetags_netutils.py",
-        "time": 3
+        "time": 4
     },
     {
         "file": "nautobot/utilities/tests/test_utils.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/virtualization/tests/test_api.py",
@@ -305,14 +305,14 @@
     },
     {
         "file": "nautobot/virtualization/tests/test_filters.py",
-        "time": 2
+        "time": 3
     },
     {
         "file": "nautobot/virtualization/tests/test_models.py",
-        "time": 0
+        "time": 1
     },
     {
         "file": "nautobot/virtualization/tests/test_views.py",
-        "time": 18
+        "time": 19
     }
 ]

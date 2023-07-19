@@ -68,11 +68,16 @@ class NautobotTestRunner(XMLTestRunner):
                         print(f'Flushing test database "{db_name}"...')
                         call_command("flush", "--no-input", "--database", db_name)
                         break
-                    except CommandError as e:
+                    except CommandError as exception:
                         retry_count -= 1
+                        print(
+                            f"Flush command failed with error: {exception}, "
+                            "will retry {retry_count} more times after {retry_wait} seconds ..."
+                        )
                         sleep(retry_wait)
                         retry_wait *= 2
-                        print(f"Flush command failed with error: {e}, will retry {retry_count} more times.")
+                else:
+                    raise CommandError(f"Failed to flush test database '{db_name}' after multiple attempts.")
 
             command = ["generate_test_data", "--no-input"]
             if settings.TEST_FACTORY_SEED is not None:

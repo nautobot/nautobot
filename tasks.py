@@ -41,11 +41,16 @@ except ModuleNotFoundError:
     HAS_RICH = False
 
 
+# Regex to match ANSI escape sequences, to be able to remove them from the output
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+# Repository root path
 _ROOT_PATH = Path(__file__).parent.absolute().resolve()
-_TESTS_TIMES_PATH = _ROOT_PATH / "tests-times.json"
-_TEST_RESULTS_DIR = ".test-results"
-
+# Path to the file containing tests modules with their execution times
+_TESTS_TIMES_PATH = _ROOT_PATH / "nautobot/core/tests/tests-times.json"
+# Name of the directory containing test results
+_TESTS_RESULTS_DIR_NAME = ".test-results"
+# List of names used for NAMES Distribution
+# One test group will be created for each item
 _NAMES_DISTRIBUTION = [
     "circuits",
     "core",
@@ -62,7 +67,10 @@ _NAMES_DISTRIBUTION = [
     "utilities",
     "virtualization",
 ]
-
+# List of patterns to match tests files to skip, these are not used in parallelized unittests.
+# Django test discovery will skip these tests for `invoke unittests` without tags.
+# Unable to use Django discovery for parallelized tests, so we need to skip them manually.
+#     (First we need to distribute tests and then run them)
 _SKIP_TESTS_NAMES = [
     "/example_jobs/",
     "/integration/",
@@ -97,6 +105,36 @@ def is_truthy(arg):
         return False
     else:
         raise ValueError(f"Invalid truthy value: `{arg}`")
+
+
+def _resolve_default_exec(context, default_exec=None) -> str:
+    """Resolve the default execution method.
+
+    Possible return values are "local", "exec", or "run".
+    "exec" and "run" are executed using docker compose.
+    """
+    if default_exec is None:
+        if is_truthy(context.nautobot.local):
+            result = "local"
+        else:
+            docker_compose_status = "ps --services --filter status=running"
+            ps_result = docker_compose(context, docker_compose_status, hide="out")
+            result = "exec" if "nautobot" in ps_result.stdout else "run"
+    else:
+        result = default_exec
+
+    if result in ("local", "exec", "run"):
+        return result
+
+    raise ValueError(f"Invalid --default-exec: {default_exec}")
+
+
+def _get_tests_results_path(context, default_exec: str) -> Path:
+    """Return the directory to store tests results in, different for docker and local runs."""
+    if _resolve_default_exec(context, default_exec) == "local":
+        return _ROOT_PATH / _TESTS_RESULTS_DIR_NAME
+    else:
+        return Path("/source") / _TESTS_RESULTS_DIR_NAME
 
 
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
@@ -219,8 +257,7 @@ def docker_compose(context, command, **kwargs):
 def run_command(context, command, default_exec=None, **kwargs):
     """Wrapper to run a command locally or inside the nautobot container."""
     task_env = kwargs.pop("task_env", {})
-    if default_exec is None and is_truthy(context.nautobot.local):
-        default_exec = "local"
+    default_exec = _resolve_default_exec(context, default_exec)
     if default_exec == "local":
         env = kwargs.pop("env", {})
         env.update(task_env)
@@ -230,16 +267,10 @@ def run_command(context, command, default_exec=None, **kwargs):
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         env_args = " ".join(f"-e {key}" for key in task_env)
-        if default_exec is None:
-            docker_compose_status = "ps --services --filter status=running"
-            results = docker_compose(context, docker_compose_status, hide="out")
-            default_exec = "exec" if "nautobot" in results.stdout else "run"
         if default_exec == "exec":
             compose_command = f"exec {env_args} -- nautobot {command}"
         elif default_exec == "run":
             compose_command = f"run {env_args} --rm --entrypoint '{command}' -- nautobot"
-        else:
-            raise ValueError(f"Invalid value for default_exec: {default_exec}, can be None, 'local', 'exec', or 'run'")
 
         docker_compose(context, compose_command, pty=True, env=task_env)
 
@@ -284,7 +315,7 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     }
 )
 def build_dependencies(context, poetry_parallel=True):
-    # Determine preferred/default target architecture
+    """Determine preferred/default target architecture"""
     output = context.run("docker buildx inspect default", env={"PYTHON_VER": context.nautobot.python_ver}, hide=True)
     result = re.search(r"Platforms: ([^,\n]+)", output.stdout)
 
@@ -718,8 +749,8 @@ def check_schema(context, api_version=None):
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
-        "default_exec": "Specify, whether to use docker compose `exec` or `run` command. Defaults to None (autodetect).",
-        "group_index": "Parallel test group index. Used by CI to split tests across parallel jobs.",
+        "default_exec": "Specify, whether to use `local` or docker compose `exec` or `run` command. Defaults to None (autodetect).",
+        "group_index": "Parallel tests group index.",
     },
     iterable=["tag", "exclude_tag", "label"],
 )
@@ -776,11 +807,8 @@ def unittest(
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
 
-    env = {
-        "NAUTOBOT_TEST_OUTPUT_DIR": str(_ROOT_PATH / _TEST_RESULTS_DIR)
-        if is_truthy(context.nautobot.local)
-        else f"/source/{_TEST_RESULTS_DIR}",
-    }
+    default_exec = _resolve_default_exec(context, default_exec)
+    env = {"NAUTOBOT_TEST_OUTPUT_DIR": str(_get_tests_results_path(context, default_exec))}
 
     if group_index is not None:
         env["NAUTOBOT_TEST_GROUP_INDEX"] = str(group_index)
@@ -925,11 +953,13 @@ def tests(context, lint_only=False, keepdb=False):
         unittest(context, keepdb=keepdb)
 
 
-def remove_ansi_escapes(text: str) -> str:
+def _remove_ansi_escapes(text: str) -> str:
+    """Remove ANSI escape sequences from text."""
     return _ANSI_ESCAPE_RE.sub("", text)
 
 
 def _invoke_unittest_group(default_exec: str, args):
+    """Run `invoke unittest` in a subprocess for specified group index."""
     start_time = time.time()
 
     index, labels = args
@@ -953,9 +983,9 @@ def _invoke_unittest_group(default_exec: str, args):
         text=True,
     ) as process:
         for line in iter(process.stdout.readline, ""):
-            print(f"group {index:2}: {remove_ansi_escapes(line)}", end="")
+            print(f"group {index:2}: {_remove_ansi_escapes(line)}", end="")
         for line in iter(process.stderr.readline, ""):
-            print(f"group {index:2}: STDERR: {remove_ansi_escapes(line)}", end="")
+            print(f"group {index:2}: STDERR: {_remove_ansi_escapes(line)}", end="")
 
         process.communicate()
         if process.returncode != 0:
@@ -966,15 +996,27 @@ def _invoke_unittest_group(default_exec: str, args):
         return index, process.returncode, time.time() - start_time
 
 
-def _print_tests_results(path: Path) -> dict:
+def _print_tests_results(context, estimations, results, real_time):
+    """Print tests results summary."""
+
+    print()
+    print(50 * "=")
+    for result in results:
+        index, returncode, group_time = result
+        print(f"group {index:2}: {'SUCCESS' if returncode == 0 else 'FAILURE'}")
+        print(f"group {index:2}: expected time (s): {round(estimations[index])}")
+        print(f"group {index:2}: real time (s):     {round(group_time)}")
+
+    print(50 * "=")
+
     summary = {
-        "total_tests": 0,
-        "total_errors": 0,
-        "total_failures": 0,
-        "total_time": 0.0,
+        "tests": 0,
+        "errors": 0,
+        "failures": 0,
+        "time": 0.0,
     }
 
-    for file in path.glob("*.xml"):
+    for file in _get_tests_results_path(context, "local").glob("*.xml"):
         try:
             tree = ElementTree.parse(file)
         except ElementTree.ParseError:
@@ -983,25 +1025,45 @@ def _print_tests_results(path: Path) -> dict:
             print(50 * "=")
             continue
         root = tree.getroot()
-        summary["total_tests"] += int(root.attrib.get("tests", 0))
-        summary["total_errors"] += int(root.attrib.get("errors", 0))
-        summary["total_failures"] += int(root.attrib.get("failures", 0))
-        summary["total_time"] += float(root.attrib.get("time", 0.0))
+        summary["tests"] += int(root.attrib.get("tests", 0))
+        summary["errors"] += int(root.attrib.get("errors", 0))
+        summary["failures"] += int(root.attrib.get("failures", 0))
+        summary["time"] += float(root.attrib.get("time", 0.0))
 
-    print("Test Results Summary:")
+    print("Tests Results Summary:")
     print("---------------------")
-    print(f"Total tests:\t{summary['total_tests']}")
-    print(f"Total errors:\t{summary['total_errors']}")
-    print(f"Total failures:\t{summary['total_failures']}")
-    print(f"Total time (s):\t{round(summary['total_time'])}")
+    print(f"Tests:    {summary['tests']}")
+    print(f"Errors:   {summary['errors']}")
+    print(f"Failures: {summary['failures']}")
+    print(f"Tests time (s): {round(summary['time'])}")
+    print(f"Real time (s):  {round(real_time)}")
+    print(50 * "=")
 
     return summary
 
 
 def _distribute_tests(distribution: DistributionType, workers) -> Tuple[List[List[str]], List[float]]:
-    """Split tests into groups for parallelization based on stored times.
+    """Split tests into groups for parallelization.
 
-    TIMES distribution is better, however tests are failing sometimes, so we are not using it for now.
+    Returns a list of groups of tests modules and a list of estimated times for each group.
+    Groups are sorted by the estimated times from the slowest to the fastest to start the slowest group first.
+
+    There are two ways to distribute tests:
+
+    `NAMES`:
+
+    - Uses `_NAMES_DISTRIBUTION` to group tests by module names.
+    - Each item in `_NAMES_DISTRIBUTION` results in one group of tests.
+    - `_TESTS_TIMES_PATH` is used just for estimations of the tests times and doesn't affect the distribution.
+
+    `TIMES`:
+
+    - Uses `_TESTS_TIMES_PATH` to group tests by their times.
+    - `workers` define the number of groups to create.
+    - `_NAMES_DISTRIBUTION` is not used.
+    - modules in each group are sorted by their times from the fastest to the slowest to fail fast.
+
+    `TIMES` distribution is better, however randomly distributed tests can fail sometimes.
     """
 
     nautobot_path = _ROOT_PATH / "nautobot"
@@ -1026,6 +1088,10 @@ def _distribute_tests(distribution: DistributionType, workers) -> Tuple[List[Lis
     obsoleted = []
 
     def add_file(filename: str, estimation: float, group_index=None) -> None:
+        """Add file to the group and remove it from all_tests_files.
+
+        If group_index is not specified, add to the group with the lowest estimation.
+        """
         if group_index is None:
             group_index = estimations.index(min(estimations))
         try:
@@ -1059,7 +1125,7 @@ def _distribute_tests(distribution: DistributionType, workers) -> Tuple[List[Lis
                     obsoleted.append(filename)
                     add_file(filename, avg, index)
     elif distribution == DistributionType.TIMES:
-        # Sort tests by time from slowest to fastest
+        # Sort stored tests by time from slowest to fastest
         tests_times.sort(key=lambda item: item["time"], reverse=True)
         for file in tests_times:
             # Add the next slowest test to the group with the lowest total times
@@ -1104,19 +1170,18 @@ def unittest_parallel(context, workers=3, default_exec=None, distribution="names
     """Parallelize unit tests."""
     start_time = time.time()
 
-    if default_exec is None:
-        default_exec = "local" if is_truthy(context.nautobot.local) else "exec"
+    default_exec = _resolve_default_exec(context, default_exec)
     if default_exec != "local":
+        # Experienced conflicts with running containers in parallel, stopping them first
         stop(context)
         if default_exec == "exec":
             docker_compose(context, "up --detach -- nautobot")
         elif default_exec == "run":
+            # Only start the required containers, nautobot does not need to be running
             docker_compose(context, "up --detach -- db redis selenium")
-        else:
-            raise ValueError(f"Invalid --default-exec: {default_exec}")
 
-    # Cleanup test-results
-    run_command(context, f"rm -rf /source/{_TEST_RESULTS_DIR}", default_exec=default_exec)
+    # Cleanup tests results
+    run_command(context, f"rm -rf {_get_tests_results_path(context, default_exec)}", default_exec=default_exec)
 
     groups, estimations = _distribute_tests(DistributionType[distribution.upper()], workers)
     print(f"Tests distribution by {distribution} with {workers} workers:")
@@ -1129,31 +1194,21 @@ def unittest_parallel(context, workers=3, default_exec=None, distribution="names
     with Pool(workers) as pool:
         results = pool.map(partial(_invoke_unittest_group, default_exec), enumerate(groups))
 
-    print()
-    print(50 * "=")
-    for result in results:
-        index, returncode, total_time = result
-        print(f"group {index:2}: {'SUCCESS' if returncode == 0 else 'FAILURE'}")
-        print(f"group {index:2}: worker time (s):   {round(total_time)}")
-        print(f"group {index:2}: expected time (s): {round(estimations[index])}")
-
-    print(50 * "=")
-    _print_tests_results(_ROOT_PATH / _TEST_RESULTS_DIR)
-    print(f"Task time (s):\t{round(time.time() - start_time)}")
-    print(50 * "=")
+    _print_tests_results(context, estimations, results, time.time() - start_time)
 
 
 @task
-def sum_tests_times(_context):
+def sum_tests_times(context):
     """Summarize the time it takes to run each test file.
 
     Use this to rebuild the file in `_TESTS_TIMES_PATH` file after successfully running `invoke unittest-parallel`.
     Commit this file for later use.
-    This file is used for DistributionType.TIMES and contains the times for each test file.
+    This file contains tests time summary for each test file rounded to the nearest second to avoid frequent changes.
+    See `_distribute_tests` docstring for more information.
     """
     files = []
 
-    for file in (_ROOT_PATH / _TEST_RESULTS_DIR).glob("*.xml"):
+    for file in _get_tests_results_path(context, "local").glob("*.xml"):
         try:
             tree = ElementTree.parse(file)
         except ElementTree.ParseError:
@@ -1173,11 +1228,12 @@ def sum_tests_times(_context):
         item["time"] += float(root.attrib.get("time", 0.0))
 
     files.sort(key=lambda item: item["file"])
+    # Round to the nearest second to avoid unnecessary changes to the file
     for item in files:
-        item["time"] = round(item["time"])
-    (_TESTS_TIMES_PATH).write_text(json.dumps(files, indent=4), encoding="utf-8")
+        item["time"] = round(item["time"] + 0.5)
+    _TESTS_TIMES_PATH.write_text(json.dumps(files, indent=4), encoding="utf-8")
 
-    print(f"Test times written to `{_TESTS_TIMES_PATH}`. Commit this file for later use.")
+    print(f"Tests times written to `{_TESTS_TIMES_PATH}`. Commit this file for later use.")
 
     print("Top 10 slowest tests:")
     files.sort(key=lambda item: item["time"], reverse=True)

@@ -24,19 +24,23 @@ PLUGINS = [
 # Hard-code the SECRET_KEY for simplicity
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-# Redis variables
-
 _GROUP_INDEX = os.getenv("NAUTOBOT_TEST_GROUP_INDEX", "")
 if _GROUP_INDEX:
+    # For tests parallelization
+    # Group with index "0" will use Redis DB 4 and 5, group with index "1" will use Redis DB 6 and 7, etc.
     _redis_index = int((int(_GROUP_INDEX) + 2) * 2)
+    # Each group will use a separate SQL database
     DATABASES["default"]["TEST"] = {  # noqa: F405
         "NAME": f"nautobot_test{_GROUP_INDEX}",
     }
 else:
+    # No parallelization
+    # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
     _redis_index = 2
 
 
-# Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
+# Redis variables
+
 CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=_redis_index)  # noqa: F405
 CACHEOPS_REDIS = parse_redis_connection(redis_database=_redis_index + 1)
 CACHEOPS_ENABLED = False  # 2.0 TODO(jathan): Remove me.
