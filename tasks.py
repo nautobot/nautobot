@@ -21,8 +21,7 @@ from enum import Enum, auto
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 from xml.etree import ElementTree
 
 from invoke import Collection
