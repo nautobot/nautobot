@@ -36,7 +36,7 @@ def check_for_duplicates(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0090_scheduledjob__data_migration"),
+        ("extras", "0091_scheduledjob__data_migration"),
     ]
 
     operations = [

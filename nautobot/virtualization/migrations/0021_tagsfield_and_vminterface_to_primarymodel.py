@@ -6,7 +6,7 @@ import nautobot.core.models.fields
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0079_tagsfield"),
+        ("extras", "0080_tagsfield"),
         ("virtualization", "0020_remove_clustergroup_clustertype_slug"),
     ]
 

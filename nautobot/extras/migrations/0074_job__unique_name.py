@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0072_job__unique_name_data_migration"),
+        ("extras", "0073_job__unique_name_data_migration"),
     ]
 
     operations = [

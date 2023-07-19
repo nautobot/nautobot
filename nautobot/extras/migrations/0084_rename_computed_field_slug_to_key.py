@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0082_ensure_relationship_keys_are_unique"),
+        ("extras", "0083_ensure_relationship_keys_are_unique"),
     ]
 
     operations = [
