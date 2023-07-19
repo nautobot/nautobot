@@ -17,8 +17,7 @@ import os
 import re
 import subprocess
 import time
-from enum import Enum
-from enum import auto
+from enum import Enum, auto
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
