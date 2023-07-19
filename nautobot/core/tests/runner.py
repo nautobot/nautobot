@@ -2,8 +2,7 @@ from time import sleep
 
 import yaml
 from django.conf import settings
-from django.core.management import CommandError
-from django.core.management import call_command
+from django.core.management import call_command, CommandError
 from xmlrunner.extra.djangotestrunner import XMLTestRunner
 
 
