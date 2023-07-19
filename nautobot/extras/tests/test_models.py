@@ -1486,9 +1486,8 @@ class JobResultTestCase(TestCase):
             self.assertEqual(job_result.result, data)
 
         with self.subTest("Assert Passing Invalid data"):
-            non_serializable_data = lambda: 1
             with self.assertRaises(TypeError) as err:
-                JobResult.objects.create(name="ExampleJob2", user=None, result=non_serializable_data)
+                JobResult.objects.create(name="ExampleJob2", user=None, result=lambda: 1)
             self.assertEqual(str(err.exception), "Object of type function is not JSON serializable")
 
 
