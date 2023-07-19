@@ -32,7 +32,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # skip if metrics are disabled
-        if settings.INSTALLATION_METRICS_ENABLED is not True:
+        if not settings.INSTALLATION_METRICS_ENABLED:
             self.stdout.write(
                 self.style.WARNING(
                     "Installation metrics are disabled by INSTALLATION_METRICS_ENABLED setting, skipping."

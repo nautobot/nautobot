@@ -245,11 +245,9 @@ def run_app(**kwargs):
             return
 
         if not sys.__stdin__.isatty():
-            print("A")
             # Non-interactive invocation, maybe during a build?
             installation_metrics_enabled = not args.disable_installation_metrics
         elif args.disable_installation_metrics is True:
-            print("B")
             # already explicitly specified
             installation_metrics_enabled = False
         else:
