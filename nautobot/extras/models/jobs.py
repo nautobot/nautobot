@@ -480,14 +480,6 @@ class JobResult(BaseModel, CustomFieldModel):
         verbose_name="Result Data",
         help_text="The data returned by the task",
     )
-    """
-    Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
-    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
-    Log Messages now go to their own object, the JobLogEntry.
-    result = {
-        "output": <optional string, such as captured stdout/stderr>,
-    }
-    """
     worker = models.CharField(max_length=100, default=None, null=True)
     task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
