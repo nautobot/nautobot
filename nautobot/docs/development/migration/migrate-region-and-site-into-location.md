@@ -263,8 +263,7 @@ class Migration(migrations.Migration):
     
     # Ensure this migration is run before the migration that removes Region and Site Models
     run_before = [
-        # TODO we need to change the name when PR #3313 is merged and migrations files are reordered.
-        ("dcim", "0034_remove_region_and_site"),
+        ("dcim", "0036_remove_region_and_site"),
     ]
     dependencies = [
         ("example_app", "0008_migrate_example_model_data_from_site_to_location"),
