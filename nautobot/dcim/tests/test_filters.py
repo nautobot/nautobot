@@ -668,7 +668,7 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        cls.parent_regions = list(Region.objects.filter(children__isnull=False)[:3])
+        cls.parent_regions = list(Region.objects.filter(children__isnull=False).distinct()[:3])
         cls.child_regions = list(Region.objects.filter(parent__in=cls.parent_regions)[:3])
 
     def test_description(self):
@@ -698,13 +698,17 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"children": [self.child_regions[0].pk, self.child_regions[1].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[1].pk]).count(),
+                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[1].pk])
+                .distinct()
+                .count(),
             )
         with self.subTest():
             params = {"children": [self.child_regions[0].pk, self.child_regions[2].slug]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[2].pk]).count(),
+                self.queryset.filter(children__in=[self.child_regions[0].pk, self.child_regions[2].pk])
+                .distinct()
+                .count(),
             )
 
     def test_has_children(self):
@@ -712,13 +716,13 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"has_children": True}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=False),
+                self.queryset.filter(children__isnull=False).distinct(),
             )
         with self.subTest():
             params = {"has_children": False}
             self.assertQuerysetEqual(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(children__isnull=True),
+                self.queryset.filter(children__isnull=True).distinct(),
             )
 
     def test_sites(self):
@@ -741,7 +745,7 @@ class RegionTestCase(FilterTestCases.NameSlugFilterTestCase):
             params = {"has_sites": False}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                self.queryset.filter(sites__isnull=True).count(),
+                self.queryset.filter(sites__isnull=True).distinct().count(),
             )
 
 
