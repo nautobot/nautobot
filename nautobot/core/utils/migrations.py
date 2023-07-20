@@ -13,7 +13,7 @@ def check_for_duplicates_with_natural_key_fields_in_migration(model_class, natur
     duplicate_records = (
         model_class.objects.values(*natural_key_fields)
         .order_by()
-        .annotate(count=models.Count(natural_key_fields))
+        .annotate(count=models.Count("pk"))
         .filter(count__gt=1)
     )
     print("\n    Checking for duplicate records ...")
