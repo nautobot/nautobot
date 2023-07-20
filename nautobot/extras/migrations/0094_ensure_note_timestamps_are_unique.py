@@ -9,26 +9,9 @@ from django.db import models
 
 def ensure_note_created_timestamps_are_unique(apps, schema_editor):
     Note = apps.get_model("extras", "Note")
-    ObjectChange = apps.get_model("extras", "ObjectChange")
     natural_key_fields = ["assigned_object_type", "assigned_object_id", "user_name", "created"]
-    duplicate_records = (
-        Note.objects.values(*natural_key_fields)
-        .order_by()
-        .annotate(count=models.Count(natural_key_fields))
-        .filter(count__gt=1)
-    )
-    # Extract ObjectChange timestamps when the duplicate Note objects are created
-    # And set it equal to the Note's created timestamp respectively
-    for duplicate_record in duplicate_records:
-        # Should only be one created changelog object available.
-        duplicate_record.pop("count")
-        duplicate_notes = Note.objects.filter(**duplicate_record)
-        for note in duplicate_notes:
-            note_change_log = ObjectChange.objects.get(changed_object_id=note.pk, action="create")
-            note.created = note_change_log.time
-            note.save()
 
-    # If there are still duplicate Note objects exist, we append some random milliseconds of time.
+    # We append some random milliseconds of time to avoid duplicate timestamps for Note objects' created field.
     duplicate_records = (
         Note.objects.values(*natural_key_fields)
         .order_by()
