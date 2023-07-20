@@ -445,6 +445,8 @@ class FileAttachment(BaseModel):
     filename = models.CharField(max_length=255)
     mimetype = models.CharField(max_length=255)
 
+    natural_key_field_names = ["pk"]
+
     def __str__(self):
         return self.filename
 
@@ -578,6 +580,8 @@ class ImageAttachment(BaseModel):
     image_width = models.PositiveSmallIntegerField()
     name = models.CharField(max_length=50, blank=True, db_index=True)
     created = models.DateTimeField(auto_now_add=True)
+
+    natural_key_field_names = ["pk"]
 
     class Meta:
         ordering = ("name",)  # name may be non-unique

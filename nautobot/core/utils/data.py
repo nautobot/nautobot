@@ -83,6 +83,17 @@ def is_url(value):
         return False
 
 
+def merge_dicts_without_collision(d1, d2):
+    """
+    Merge two dicts into a new dict, but raise a ValueError if any key exists with differing values across both dicts.
+    """
+    intersection = d1.keys() & d2.keys()
+    for k in intersection:
+        if d1[k] != d2[k]:
+            raise ValueError(f'Conflicting values for key "{k}": ({d1[k]!r}, {d2[k]!r})')
+    return {**d1, **d2}
+
+
 def render_jinja2(template_code, context):
     """
     Render a Jinja2 template with the provided context. Return the rendered content.

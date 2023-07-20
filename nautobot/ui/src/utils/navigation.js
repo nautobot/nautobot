@@ -5,7 +5,7 @@ import { LoadingWidget } from "@components/LoadingWidget";
 
 let app_routes = {};
 try {
-    app_routes = require("../app_routes.json");
+    app_routes = require("@generated/app_routes.json");
 } catch {}
 
 export function getPluginRoutes() {

@@ -74,6 +74,8 @@ class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
 
     documentation_static_path = "docs/user-guide/platform-functionality/tag.html"
 
+    natural_key_field_names = ["pk"]
+
     class Meta:
         index_together = ("content_type", "object_id")
         unique_together = [["content_type", "object_id", "tag"]]

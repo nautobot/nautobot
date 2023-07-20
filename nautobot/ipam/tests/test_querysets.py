@@ -91,6 +91,8 @@ class IPAddressQuerySet(TestCase):
     def test_filter_by_address(self):
         address = self.queryset.net_in(["10.0.0.1/24"])[0]
         self.assertEqual(self.queryset.filter(address="10.0.0.1/24")[0], address)
+        self.assertEqual(self.queryset.count() - 1, self.queryset.exclude(address="10.0.0.1/24").count())
+        self.assertNotIn(address, self.queryset.exclude(address="10.0.0.1/24"))
 
     def test__is_ambiguous_network_string(self):
         self.assertTrue(self.queryset._is_ambiguous_network_string("10"))
@@ -544,6 +546,8 @@ class PrefixQuerysetTestCase(TestCase):
     def test_filter_by_prefix(self):
         prefix = self.queryset.net_equals(netaddr.IPNetwork("192.168.0.0/16"))[0]
         self.assertEqual(self.queryset.filter(prefix="192.168.0.0/16")[0], prefix)
+        self.assertEqual(self.queryset.count() - 1, self.queryset.exclude(prefix="192.168.0.0/16").count())
+        self.assertNotIn(prefix, self.queryset.exclude(prefix="192.168.0.0/16"))
 
     def test_string_search(self):
         search_terms = {

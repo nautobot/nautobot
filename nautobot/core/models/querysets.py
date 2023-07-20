@@ -3,6 +3,7 @@ from django.db.models.functions import Coalesce
 
 from nautobot.core.models.utils import deconstruct_composite_key
 from nautobot.core.utils import permissions
+from nautobot.core.utils.data import merge_dicts_without_collision
 
 
 def count_related(model, field):
@@ -16,7 +17,80 @@ def count_related(model, field):
     return Coalesce(subquery, 0)
 
 
-class RestrictedQuerySet(QuerySet):
+class CompositeKeyQuerySetMixin:
+    """
+    Mixin to extend a base queryset class with support for filtering by `composite_key=...` as a virtual parameter.
+
+    Example:
+
+        >>> Location.objects.last().composite_key
+        'Durham;AMER'
+
+    Note that `Location.composite_key` is a `@property`, *not* a database field, and so would not normally be usable in
+    a `QuerySet` query, but because `RestrictedQuerySet` inherits from this mixin, the following "just works":
+
+        >>> Location.objects.get(composite_key="Durham;AMER")
+        <Location: Durham>
+
+    This is a shorthand for what would otherwise be a multi-step process:
+
+        >>> from nautobot.core.models.utils import deconstruct_composite_key
+        >>> deconstruct_composite_key("Durham;AMER")
+        ['Durham', 'AMER']
+        >>> Location.natural_key_args_to_kwargs(['Durham', 'AMER'])
+        {'name': 'Durham', 'parent__name': 'AMER'}
+        >>> Location.objects.get(name="Durham", parent__name="AMER")
+        <Location: Durham>
+
+    This works for QuerySet `filter()` and `exclude()` as well:
+
+        >>> Location.objects.filter(composite_key='Durham;AMER')
+        <LocationQuerySet [<Location: Durham>]>
+        >>> Location.objects.exclude(composite_key='Durham;AMER')
+        <LocationQuerySet [<Location: AMER>]>
+
+    `composite_key` can also be used in combination with other query parameters:
+
+        >>> Location.objects.filter(composite_key='Durham;AMER', status__name='Planned')
+        <LocationQuerySet []>
+
+    It will raise a ValueError if the deconstructed composite key collides with another query parameter:
+
+        >>> Location.objects.filter(composite_key='Durham;AMER', name='Raleigh')
+        ValueError: Conflicting values for key "name": ('Durham', 'Raleigh')
+
+    See also `BaseModel.composite_key` and `utils.construct_composite_key()`/`utils.deconstruct_composite_key()`.
+    """
+
+    def split_composite_key_into_kwargs(self, composite_key=None, **kwargs):
+        """
+        Helper method abstracting a common need from filter() and exclude().
+
+        Subclasses may need to call this directly if they also have special processing of other filter/exclude params.
+        """
+        if composite_key and isinstance(composite_key, str):
+            natural_key_values = deconstruct_composite_key(composite_key)
+            return merge_dicts_without_collision(self.model.natural_key_args_to_kwargs(natural_key_values), kwargs)
+        return kwargs
+
+    def filter(self, *args, composite_key=None, **kwargs):
+        """
+        Explicitly handle `filter(composite_key="...")` by decomposing the composite-key into natural key parameters.
+
+        Counterpart to BaseModel.composite_key property.
+        """
+        return super().filter(*args, **self.split_composite_key_into_kwargs(composite_key, **kwargs))
+
+    def exclude(self, *args, composite_key=None, **kwargs):
+        """
+        Explicitly handle `exclude(composite_key="...")` by decomposing the composite-key into natural key parameters.
+
+        Counterpart to BaseModel.composite_key property.
+        """
+        return super().exclude(*args, **self.split_composite_key_into_kwargs(composite_key, **kwargs))
+
+
+class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
     def restrict(self, user, action="view"):
         """
         Filter the QuerySet to return only objects on which the specified user has been granted the specified
@@ -99,17 +173,3 @@ class RestrictedQuerySet(QuerySet):
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
-
-    def filter(self, *args, **kwargs):
-        """
-        Extend base queryset with support for filtering by `composite_key=...`.
-
-        This is an enhanced version of natural-key slug support from django-natural-keys.
-        Counterpart to BaseModel.composite_key property.
-        """
-        composite_key = kwargs.pop("composite_key", None)
-        if composite_key and isinstance(composite_key, str):
-            values = deconstruct_composite_key(composite_key)
-            kwargs.update(self.model.natural_key_args_to_kwargs(values))
-
-        return super().filter(*args, **kwargs)

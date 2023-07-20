@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@utils/*": [
+                "src/utils/*"
+            ],
+            "@constants/*": [
+                "src/constants/*"
+            ],
+            "@views/*": [
+                "src/views/*"
+            ],
+            "@components/*": [
+                "src/components/*"
+            ],
+            "@example_plugin/*": [
+                "../../examples/example_plugin/example_plugin/ui/*"
+            ]
+        }
+    }
+}
