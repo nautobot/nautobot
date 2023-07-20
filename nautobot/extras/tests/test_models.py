@@ -1480,6 +1480,25 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         self.assertEqual(log_object.grouping, log.grouping)
 
 
+class JobResultTestCase(TestCase):
+    def test_passing_invalid_data_into_job_result(self):
+        """JobResult.result was changed from TextField to JSONField in https://github.com/nautobot/nautobot/pull/4133/files.
+        Assert passing json serializable and non-serializable data into JobResult.result"""
+
+        with self.subTest("Assert Passing Valid data"):
+            data = {
+                "output": "valid data",
+            }
+            job_result = JobResult.objects.create(name="ExampleJob1", user=None, result=data)
+            self.assertTrue(job_result.present_in_database)
+            self.assertEqual(job_result.result, data)
+
+        with self.subTest("Assert Passing Invalid data"):
+            with self.assertRaises(TypeError) as err:
+                JobResult.objects.create(name="ExampleJob2", user=None, result=lambda: 1)
+            self.assertEqual(str(err.exception), "Object of type function is not JSON serializable")
+
+
 class WebhookTest(ModelTestCases.BaseModelTestCase):
     model = Webhook
 
