@@ -12,6 +12,7 @@ def ensure_note_created_timestamps_are_unique(apps, schema_editor):
     natural_key_fields = ["assigned_object_type", "assigned_object_id", "user_name", "created"]
 
     # We append some random milliseconds of time to avoid duplicate timestamps for Note objects' created field.
+
     duplicate_records = (
         Note.objects.values(*natural_key_fields).order_by().annotate(count=models.Count("pk")).filter(count__gt=1)
     )
