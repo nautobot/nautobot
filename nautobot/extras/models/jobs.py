@@ -473,7 +473,7 @@ class JobResult(BaseModel, CustomFieldModel):
         db_index=True,
     )
     result = models.JSONField(
-        encoder=DjangoJSONEncoder,
+        encoder=NautobotKombuJSONEncoder,
         null=True,
         blank=True,
         editable=False,
