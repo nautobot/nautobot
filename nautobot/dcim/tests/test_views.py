@@ -112,7 +112,7 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
 
         # Create three Regions
-        regions = Region.objects.all()[:3]
+        regions = list(Region.objects.filter(parent__isnull=True).distinct())[:3]
 
         cls.form_data = {
             "name": "Region χ",
