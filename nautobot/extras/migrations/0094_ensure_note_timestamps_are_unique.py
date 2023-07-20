@@ -18,7 +18,7 @@ def ensure_note_created_timestamps_are_unique(apps, schema_editor):
         .annotate(count=models.Count(natural_key_fields))
         .filter(count__gt=1)
     )
-    for duplicate_record in duplicate_records:
+    for duplicate_record in duplicate_records.all():
         duplicate_record.pop("count")
         duplicate_notes = Note.objects.filter(**duplicate_record)
         for note in duplicate_notes:
