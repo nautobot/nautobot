@@ -311,9 +311,9 @@ nav:
         - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
         - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
         - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
+      - Migration Guides: "development/apps/migration/from-v1.md"
       - Advanced:
         - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
-      - Migration Guides: "development/migration/index.md"
     - Core Developer Guide:
       - "development/core/index.md"
       - Getting Started: "development/core/getting-started.md"

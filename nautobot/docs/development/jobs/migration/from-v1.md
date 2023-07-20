@@ -149,4 +149,4 @@ The Job's built-in`self.failed` flag, that was used to determine if a Job failed
 
 The `request` property has been changed to a Celery request instead of a Django request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
 
-> *Note:* [Migrating from v1.x to v2.0](../../migration/index.md) provides a general migration guide.
+> *Note:* [Migrating from v1.x to v2.0](../../apps/migration/from-v1.md) provides a general migration guide.
