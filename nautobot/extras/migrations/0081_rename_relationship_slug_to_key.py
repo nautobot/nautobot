@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0079_tagsfield"),
+        ("extras", "0080_tagsfield"),
     ]
 
     operations = [

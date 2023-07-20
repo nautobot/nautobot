@@ -10,7 +10,7 @@ import uuid
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0071_rename_model_fields"),
+        ("extras", "0072_rename_model_fields"),
         ("ipam", "0029_ip_address_to_interface_uniqueness_constraints"),
     ]
 

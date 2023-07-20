@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0091_uniqueness_data_migration"),
+        ("extras", "0092_uniqueness_data_migration"),
     ]
 
     operations = [

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0084_taggeditem_cleanup"),
+        ("extras", "0085_taggeditem_cleanup"),
     ]
 
     operations = [

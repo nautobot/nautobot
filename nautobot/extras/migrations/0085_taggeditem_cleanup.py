@@ -35,7 +35,7 @@ def cleanup_taggeditem_duplicates(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0083_rename_computed_field_slug_to_key"),
+        ("extras", "0084_rename_computed_field_slug_to_key"),
     ]
 
     operations = [

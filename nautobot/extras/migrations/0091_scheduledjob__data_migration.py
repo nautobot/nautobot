@@ -44,7 +44,7 @@ def reverse_migrate_existing_scheduled_jobs(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0089_joblogentry__log_level_data_migration"),
+        ("extras", "0090_joblogentry__log_level_data_migration"),
     ]
 
     operations = [

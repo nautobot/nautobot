@@ -67,7 +67,7 @@ def update_slug_for_git_repository(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0071_rename_model_fields"),
+        ("extras", "0072_rename_model_fields"),
     ]
 
     operations = [
