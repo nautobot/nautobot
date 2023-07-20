@@ -690,7 +690,6 @@ class TestPluginCoreViewOverrides(TestCase):
         self.user.save()
 
     def test_views_are_overridden(self):
-
         response = self.client.get(reverse("plugins:example_plugin:view_to_be_overridden"))
         self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
 

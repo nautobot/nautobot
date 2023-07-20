@@ -15,7 +15,6 @@ def clear_device_redundancy_group_status(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0018_device_redundancy_group"),
     ]

@@ -109,7 +109,6 @@ class HomeView(AccessMixin, TemplateView):
 
 class SearchView(AccessMixin, View):
     def get(self, request):
-
         # if user is not authenticated, redirect to login page
         # when attempting to search
         if not request.user.is_authenticated:
@@ -129,7 +128,6 @@ class SearchView(AccessMixin, View):
         results = []
 
         if form.is_valid():
-
             if form.cleaned_data["obj_type"]:
                 # Searching for a single type of object
                 obj_types = [form.cleaned_data["obj_type"]]
@@ -138,7 +136,6 @@ class SearchView(AccessMixin, View):
                 obj_types = SEARCH_TYPES.keys()
 
             for obj_type in obj_types:
-
                 queryset = SEARCH_TYPES[obj_type]["queryset"].restrict(request.user, "view")
                 filterset = SEARCH_TYPES[obj_type]["filterset"]
                 table = SEARCH_TYPES[obj_type]["table"]

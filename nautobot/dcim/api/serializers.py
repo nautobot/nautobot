@@ -811,7 +811,6 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
         validators = []
 
     def validate(self, data):
-
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
         if data.get("rack") and data.get("position") and data.get("face"):
             validator = UniqueTogetherValidator(
@@ -977,7 +976,6 @@ class PowerPortSerializer(
 
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     def validate(self, data):
-
         # Validate many-to-many VLAN assignments
         mode = data.get("mode", getattr(self.instance, "mode", None))
 
@@ -1047,7 +1045,6 @@ class InterfaceSerializerVersion12(
         ]
 
     def validate(self, data):
-
         # set interface status to active on create (only!) if status was not provided
         if self.instance is None and not data.get("status"):
             # status is currently required in the Interface model but not required in api_version < 1.3 serializers

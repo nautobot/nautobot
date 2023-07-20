@@ -144,7 +144,6 @@ class ConfigContextTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
 
         # Create three ConfigContexts
@@ -266,7 +265,6 @@ class ConfigContextSchemaTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
@@ -480,7 +478,6 @@ class DynamicGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
@@ -643,7 +640,6 @@ class NoteTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Site)
         cls.site = Site.objects.first()
         user = User.objects.first()
@@ -1974,7 +1970,6 @@ class ObjectChangeTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site(name="Site 1", slug="site-1")
         site.save()
 
@@ -1987,7 +1982,6 @@ class ObjectChangeTestCase(TestCase):
             oc.save()
 
     def test_objectchange_list(self):
-
         url = reverse("extras:objectchange_list")
         params = {
             "user": User.objects.first().pk,
@@ -1997,7 +1991,6 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
-
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
@@ -2206,7 +2199,6 @@ class StatusTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
 

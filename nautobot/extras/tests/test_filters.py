@@ -172,7 +172,6 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         regions = Region.objects.all()[:3]
         sites = Site.objects.all()[:3]
 
@@ -477,7 +476,6 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         content_types = ContentType.objects.filter(model__in=["site", "rack", "device"])
 
         ExportTemplate.objects.create(
@@ -719,7 +717,6 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site_ct = ContentType.objects.get(app_label="dcim", model="site")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
@@ -1659,6 +1656,8 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_search(self):
         params = {"q": "active"}
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         q = Q(id__iexact="active") | Q(name__icontains="active") | Q(slug__icontains="active")
         q |= Q(content_types__model__icontains="active")
         self.assertQuerysetEqualAndNotEmpty(

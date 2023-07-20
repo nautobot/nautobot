@@ -265,7 +265,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
-    nestable = factory.LazyAttribute(lambda l: bool(l.name in ["Campus", "Root"]))
+    nestable = factory.LazyAttribute(lambda loc_type: bool(loc_type.name in ["Campus", "Root"]))
 
     @factory.lazy_attribute
     def parent(self):
@@ -336,7 +336,7 @@ class LocationFactory(PrimaryModelFactory):
             "_parent",
         )
 
-    name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
+    name = factory.LazyAttributeSequence(lambda loc, num: f"{loc.location_type.name}-{num:02d}")
     status = random_instance(lambda: Status.objects.get_for_model(Location), allow_null=False)
 
     @factory.iterator
@@ -369,7 +369,7 @@ class LocationFactory(PrimaryModelFactory):
             return factory.random.randgen.choice(parents)
         return None
 
-    has_site = factory.LazyAttribute(lambda l: not bool(l.parent))
+    has_site = factory.LazyAttribute(lambda loc: not bool(loc.parent))
     site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
 
     has_tenant = factory.Faker("pybool")

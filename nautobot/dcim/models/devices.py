@@ -626,7 +626,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         return reverse("dcim:device", args=[self.pk])
 
     def validate_unique(self, exclude=None):
-
         # Check for a duplicate name on a device assigned to the same Site and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
@@ -693,7 +692,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             )
 
         if self.rack:
-
             try:
                 # Child devices cannot be assigned to a rack face/unit
                 if self.device_type.is_child_device and self.face:
@@ -812,7 +810,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
             )
 
     def save(self, *args, **kwargs):
-
         is_new = not self.present_in_database
 
         super().save(*args, **kwargs)
@@ -1017,7 +1014,6 @@ class VirtualChassis(PrimaryModel):
             )
 
     def delete(self, *args, **kwargs):
-
         # Check for LAG interfaces split across member chassis
         interfaces = Interface.objects.filter(device__in=self.members.all(), lag__isnull=False).exclude(
             lag__device=F("device")

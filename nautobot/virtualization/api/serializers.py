@@ -201,7 +201,6 @@ class VMInterfaceSerializerVersion12(InterfaceCommonSerializer):
         ]
 
     def validate(self, data):
-
         # set vminterface status to active if status not provided
         if not data.get("status"):
             # status is currently required in the VMInterface model but not required in api_version < 1.4 serializers

@@ -108,7 +108,6 @@ User = get_user_model()
 
 
 def common_test_data(cls):
-
     tenants = Tenant.objects.filter(group__isnull=False)
     cls.tenants = tenants
 
@@ -4327,7 +4326,6 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Model 1", slug="model-1")
         device_role = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")

@@ -18,4 +18,4 @@ class TestFileUploadFail(Job):
         contents = str(blob.read())
         self.log_warning(message=f"File contents: {contents}")
 
-        raise Exception("Test failure")
+        raise Exception("Test failure")  # pylint: disable=broad-exception-raised

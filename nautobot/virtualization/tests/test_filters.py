@@ -31,7 +31,6 @@ class ClusterTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cluster_types = (
             ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1", description="A"),
             ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2", description="B"),
@@ -66,7 +65,6 @@ class ClusterGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cluster_groups = (
             ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1", description="A"),
             ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-group-2", description="B"),
@@ -107,7 +105,6 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     @classmethod
     def setUpTestData(cls):
-
         cluster_types = (
             ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
             ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
@@ -265,7 +262,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     @classmethod
     def setUpTestData(cls):
-
         cluster_types = (
             ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
             ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
@@ -573,7 +569,6 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cluster_types = (
             ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
             ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
