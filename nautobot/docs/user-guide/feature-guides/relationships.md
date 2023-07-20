@@ -21,6 +21,13 @@ This table defines repository parameters that are required to establish a relati
 |Destination Label|(Optional) Label for related destination objects, as displayed on the destination object.|
 |Destination filter|(Optional) Filterset filter matching the applicable destination objects of the selected type.|
 
++/- 2.0.0
+    Relationship model now uses its `label` attribute (unique for all Relationship instances) exclusively for display purposes in the UI.
+
+    Relationship's `slug` attribute was renamed to `key` (unique for all Relationship instances), which contains a GraphQL-safe string used as the key in the underlying relationship data dictionary.
+
+    These changes do not require users to do any manual work as they are properly handled by data migrations during the upgrade from Nautobot v1.x to v2.0. If you have duplicate Relationship `slug` values in your database pre-migration, some of the Relationship `key` values might altered to ensure that `key` values for all Relationship instances are unique.
+
 As seen in the table above relationships offers many additional optional options for more advanced functionality, those options will be discussed further during this user guide.
 
 ## Using a Relationship
