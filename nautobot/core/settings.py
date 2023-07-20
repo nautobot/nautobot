@@ -76,9 +76,19 @@ EXEMPT_EXCLUDE_MODELS = (
     ("users", "objectpermission"),
 )
 
+# Models to exempt from the enforcement of view permissions
 EXEMPT_VIEW_PERMISSIONS = []
+
+# The file path to a directory where cloned Git repositories will be located
 GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
+
+# HTTP proxies to use for outbound requests originating from Nautobot (e.g. when sending webhook requests)
 HTTP_PROXIES = None
+
+# Send anonymized installation metrics when post_upgrade or send_installation_metrics management commands are run
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "True"))
+
+# The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
@@ -567,6 +577,11 @@ CONSTANCE_CONFIG = {
         90,
         "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
     ],
+    "DEPLOYMENT_ID": [
+        "",
+        "Randomly generated UUID used to identify this installation.\n"
+        "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
+    ],
     "DISABLE_PREFIX_LIST_HIERARCHY": [
         False,
         "Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
@@ -625,6 +640,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["PREFER_IPV4"],
+    "Installation Metrics": ["DEPLOYMENT_ID"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],

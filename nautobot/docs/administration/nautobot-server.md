@@ -270,7 +270,7 @@ Please see the [healthcheck documentation](../additional-features/healthcheck.md
 
 ### `init`
 
-`nautobot-server init [config_path]`
+`nautobot-server init [--disable-installation-metrics] [config_path]`
 
 Generates a new configuration with all of the default settings provided for you, and will also generate a unique[`SECRET_KEY`](../configuration/required-settings.md#secret_key).
 
@@ -283,8 +283,15 @@ nautobot-server init
 Output:
 
 ```no-highlight
-Configuration file created at '/home/example/.nautobot/nautobot_config.py
+Nautobot would like to send anonymized installation metrics to the project's maintainers.
+These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
+Allow Nautobot to send these metrics? [y/n]: y
+Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
+Configuration file created at /home/example/.nautobot/nautobot_config.py
 ```
+
++++ 1.6.0
+    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [send_installation_metrics](#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
@@ -407,12 +414,16 @@ Performs common server post-upgrade operations using a single entrypoint.
 
 This will run the following management commands with default settings, in order:
 
++/- 1.6.0
+    Added the [`send_installation_metrics`](#send_installation_metrics) command to the list of commands run by `post_upgrade`.
+
 - `migrate`
 - `trace_paths`
 - `collectstatic`
 - `remove_stale_contenttypes`
 - `clearsessions`
 - `invalidate all`
+- `send_installation_metrics`
 
 !!! note
     Commands listed here that are not covered in this document here are Django built-in commands.
@@ -550,6 +561,30 @@ nautobot-server runjob --commit --username someuser local/example/MyJobWithNoVar
 Note that there is presently no option to provide input parameters (`data`) for jobs via the CLI.
 
 Please see the [guide on Jobs](../additional-features/jobs.md) for more information on working with and running jobs.
+
+### `send_installation_metrics`
+
++++ 1.6.0
+
+`nautobot-server send_installation_metrics`
+
+Send anonymized installation metrics to the Nautobot maintainers. This management command is called by [`post_upgrade`](#post_upgrade) and is not intended to be run manually.
+
+If the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [plugins](../plugins/index.md) and their versions, as well as the currently installed Nautobot and Python versions, to the Nautobot maintainers. A randomized UUID will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/optional-settings.md#deployment_id) setting to anonymously but uniquely identify this installation. The plugin names will be one-way hashed with SHA256 to further anonymize the data sent. This enables tracking the installation metrics of publicly released plugins without disclosing the names of any private plugins.
+
+The following is an example of the data that is sent:
+
+```py
+{
+    "deployment_id": "1de3dacf-f046-4a98-8d4a-17419080db79",
+    "nautobot_version": "1.6.0b1",
+    "python_version": "3.10.12",
+    "installed_apps": {
+        # "example_plugin" hashed by sha256
+        "3ffee4622af3aad6f78257e3ae12da99ca21d71d099f67f4a2e19e464453bee7": "1.0.0"
+    }
+}
+```
 
 ### `start`
 
