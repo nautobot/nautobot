@@ -13,7 +13,7 @@
 
 ## Overview
 
-Some fundamental changes were made to Jobs in Nautobot v2.0. This document outlines the changes that were made and how to migrate your existing Jobs to work in Nautobot v2.0. For more information about the changes made to the Job class and Job model in Nautobot v2.0 see the [Upgrading From Nautobot v1](./upgrading-from-nautobot-v1.md#job-changes) documentation.
+Some fundamental changes were made to Jobs in Nautobot v2.0. This document outlines the changes that were made and how to migrate your existing Jobs to work in Nautobot v2.0. For more information about the changes made to the Job class and Job model in Nautobot v2.0 see the [Upgrading From Nautobot v1](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#job-changes) documentation.
 
 ### Job Package Names
 
@@ -32,14 +32,14 @@ The package name for Jobs provided by Nautobot Apps has not changed.
 
 #### Git Repository Jobs
 
-The package name for Jobs provided by [Git Repositories](../../../platform-functionality/gitrepository.md) has changed to `<git_repository_slug>.jobs`, where `<git_repository_slug>` is the slug of the Git Repository as provided by the user when creating the Git Repository object in Nautobot. All jobs provided by Git Repositories must use the `.jobs` submodule of the Git Repository.
+The package name for Jobs provided by [Git Repositories](../../../user-guide/platform-functionality/gitrepository.md) has changed to `<git_repository_slug>.jobs`, where `<git_repository_slug>` is the slug of the Git Repository as provided by the user when creating the Git Repository object in Nautobot. All jobs provided by Git Repositories must use the `.jobs` submodule of the Git Repository.
 
 !!! important
     As a result of the changes to the way jobs are imported the top-level directory of any Git Repository that provides Jobs must now contain an `__init__.py` file.
 
 ### Run Method Signature
 
-The signature of the `run()` method for Jobs must now accept keyword arguments for every [Job variable](../../../../development/jobs.md#variables) defined on the Job class. The `run()` method no longer uses the `data` and `commit` arguments used in v1.X.
+The signature of the `run()` method for Jobs must now accept keyword arguments for every [Job variable](../jobs.md#variables) defined on the Job class. The `run()` method no longer uses the `data` and `commit` arguments used in v1.X.
 
 !!! example
     ```py title="v1.X Job"
@@ -137,7 +137,7 @@ Some logging features from v1.X are accessible when passing a `dict` to the `ext
 * `logger.debug("message", extra={"object": obj})` - Replaces the `obj` kwarg in Nautobot v1.X Job logging methods
 * `logger.debug("message", extra={"grouping": "string"})` - Replaces the `active_test` Job property in Nautobot v1.X
 
-For more detailed documentation on Job logging see the [Job Logging](../../../../development/jobs.md#logging) section of the Jobs feature documentation.
+For more detailed documentation on Job logging see the [Job Logging](../jobs.md#logging) section of the Jobs feature documentation.
 
 ### Tracking Job State
 
@@ -148,3 +148,5 @@ The Job's built-in`self.failed` flag, that was used to determine if a Job failed
 ### Request Property
 
 The `request` property has been changed to a Celery request instead of a Django request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
+
+> *Note:* [Migrating from v1.x to v2.0](../../migration/index.md) provides a general migration guide.

@@ -255,8 +255,9 @@ nav:
   - Developer Guide:
     - "development/index.md"
     - Jobs Developer Guide:
-      - "development/jobs.md"
-      - Migration Guides: "development/migration/index.md"
+      - "development/migration/index.md"
+      - Migration Guides:
+        - "development/jobs/migration/from-v1.md"
     - App Developer Guide:
       - "development/apps/index.md"
       - Setup: "development/apps/api/setup.md"
