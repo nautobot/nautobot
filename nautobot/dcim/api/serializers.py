@@ -750,6 +750,7 @@ class PlatformSerializer(NautobotModelSerializer):
             "manufacturer",
             "napalm_driver",
             "napalm_args",
+            "netmiko_driver",
             "description",
             "device_count",
             "virtualmachine_count",

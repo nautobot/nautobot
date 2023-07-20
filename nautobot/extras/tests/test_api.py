@@ -1054,6 +1054,7 @@ query ($device: [String!]) {
         name
       }
       napalm_driver
+      netmiko_driver
     }
     site {
       name

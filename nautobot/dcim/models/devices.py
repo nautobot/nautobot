@@ -406,6 +406,11 @@ class Platform(OrganizationalModel):
         verbose_name="NAPALM arguments",
         help_text="Additional arguments to pass when initiating the NAPALM driver (JSON format)",
     )
+    netmiko_driver = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="The Netmiko driver to use when interacting with devices",
+    )
     description = models.CharField(max_length=200, blank=True)
 
     csv_headers = [
@@ -414,6 +419,7 @@ class Platform(OrganizationalModel):
         "manufacturer",
         "napalm_driver",
         "napalm_args",
+        "netmiko_driver",
         "description",
     ]
 
@@ -433,6 +439,7 @@ class Platform(OrganizationalModel):
             self.manufacturer.name if self.manufacturer else None,
             self.napalm_driver,
             self.napalm_args,
+            self.netmiko_driver,
             self.description,
         )
 

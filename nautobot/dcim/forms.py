@@ -1785,6 +1785,7 @@ class PlatformForm(NautobotModelForm):
             "manufacturer",
             "napalm_driver",
             "napalm_args",
+            "netmiko_driver",
             "description",
         ]
         widgets = {

@@ -1,0 +1,1 @@
+Added `netmiko_driver` field to the `Platform` model.

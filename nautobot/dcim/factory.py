@@ -54,12 +54,21 @@ MANUFACTURER_NAMES = (
     "Palo Alto",
 )
 
-# For `Platform.napalm_driver`, either randomly choose based on Manufacturer slug.
+# For `Platform.napalm_driver` and `Platform.netmiko_driver`, either randomly choose based on Manufacturer slug.
 NAPALM_DRIVERS = {
     "arista": ["eos"],
     "cisco": ["ios", "iosxr", "iosxr_netconf", "nxos", "nxos_ssh"],
     "juniper": ["junos"],
     "palo-alto": ["panos"],
+}
+
+
+NETMIKO_DRIVERS = {
+    "arista": ["arista_eos"],
+    "cisco": ["cisco_ios", "cisco_xr", "cisco_nxos", "cisco_xe"],
+    "fortinet": ["fortinet"],
+    "juniper": ["juniper_junos"],
+    "palo-alto": ["paloalto_panos"],
 }
 
 
@@ -174,6 +183,12 @@ class PlatformFactory(OrganizationalModelFactory):
     has_napalm_args = factory.Faker("pybool")
     napalm_args = factory.Maybe(
         "has_napalm_args", factory.Faker("pydict", nb_elements=2, value_types=[str, bool, int]), None
+    )
+
+    netmiko_driver = factory.Maybe(
+        "has_manufacturer",
+        factory.LazyAttribute(lambda o: random.choice(NETMIKO_DRIVERS.get(o.manufacturer.slug, [""]))),
+        "",
     )
 
     has_description = factory.Faker("pybool")

@@ -30,6 +30,10 @@
                     </td>
                 </tr>
                 <tr>
+                    <td>Netmiko driver</td>
+                    <td>{{ object.netmiko_driver|placeholder }}</td>
+                </tr>
+                <tr>
                     <td>Devices</td>
                     <td>
                         <a href="{% url 'dcim:device_list' %}?platform={{ object.slug }}">{{ device_table.rows|length }}</a>
