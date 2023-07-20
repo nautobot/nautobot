@@ -15,7 +15,11 @@ As an example, within your automation system, you may want to be able to have an
 
 +/- 2.0.0
     Computed field model's `label` attribute will be used exclusively for display purposes in the UI.
+
++/- 2.0.0
     Computed field model's `slug` attribute was renamed to `key` (unique for all Computed Field instances), which contains a GraphQL-safe string to be used in the API and GraphQL.
+
++/- 2.0.0
     These changes do not require users to do any manual work as they are properly handled by data migrations during the upgrade from Nautobot v1.x to v2.0.
 
 ## Creating Computed Fields

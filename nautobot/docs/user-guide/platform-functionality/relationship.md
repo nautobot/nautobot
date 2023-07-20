@@ -5,7 +5,7 @@ Sometimes it is desirable to create a new kind of relationship between one (or m
 To create a relationship, from the top-level navigation menu select **Extensibility > Data Management > Relationships**
 
 !!! tip
-    Because relationship information can be included in the REST API and in GraphQL, when defining a relationship, you must provide a `key` that contains underscores rather than dashes (`my_relationship_key`, not `my-relationship-key`), as some features would not work optimally if dashes are included in the key. The `key` attribute is derived from its `label` attribute (unique for all Relationship instances). The key of a Relationship instance is also used as the key in the underlying relationship data dictionary.
+    Because relationship information can be included in the REST API and in GraphQL, when defining a relationship, you must provide a `key` that contains underscores rather than dashes (`my_relationship_key`, not `my-relationship-key`), as some features would not work optimally if dashes are included in the key. If not explicitly specified, the `key` attribute is derived from the `label` attribute (unique for all Relationship instances).
 
 ## Relationship Types
 
