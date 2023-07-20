@@ -5,7 +5,7 @@ Sometimes it is desirable to create a new kind of relationship between one (or m
 To create a relationship, from the top-level navigation menu select **Extensibility > Data Management > Relationships**
 
 !!! tip
-    Because relationship information can be included in the REST API and in GraphQL, when defining a relationship, you must provide a `key` that contains underscores rather than dashes (`my_relationship_key`, not `my-relationship-key`), as some features would not work optimally if dashes are included in the key.
+    Because relationship information can be included in the REST API and in GraphQL, when defining a relationship, you must provide a `key` that contains underscores rather than dashes (`my_relationship_key`, not `my-relationship-key`), as some features would not work optimally if dashes are included in the key. The `key` attribute is derived from its `label` attribute (unique for all Relationship instances). The key of a Relationship instance is also used as the key in the underlying relationship data dictionary.
 
 ## Relationship Types
 
@@ -81,10 +81,6 @@ The Circuit Relationship field will _not_ show up on a Device with a role `leaf`
 
 Relationship connections can be labeled with a friendly name so that when they are displayed in the GUI, they will have a more descriptive or friendly name.
 From the Devices/Circuits example above, you might label the relationship so that on the Device side the connection appears as 'Terminated Circuits' and on the Circuit side the connection appears as 'Terminating Devices'.
-
-## Relationship Keys
-
-Relationship model's `key` attribute is derived from its `label` attribute (unique for all Relationship instances). The key of a Relationship instance contains a GraphQL-safe string used as the key in the underlying relationship data dictionary and it can be used to retrieve data from the API and GraphQL.
 
 ### Options
 
