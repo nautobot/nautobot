@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.choices import (
@@ -33,6 +34,7 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Platform,
     PowerPort,
     PowerPortTemplate,
     PowerOutlet,
@@ -745,6 +747,56 @@ class LocationTestCase(TestCase):
         with self.assertRaises(ValidationError) as cm:
             location_2.validated_save()
         self.assertIn("must not have an associated Site", str(cm.exception))
+
+
+class PlatformTestCase(TestCase):
+    def setUp(self):
+        self.standard_platform = Platform(name="Cisco IOS", slug="cisco-ios", network_driver="cisco_ios")
+        self.custom_platform = Platform(name="Private Platform", slug="private-platform", network_driver="secret_sauce")
+
+    def test_network_driver_netutils_defaults(self):
+        """Test that a network_driver setting derives related fields from netutils by default."""
+        self.assertEqual(self.standard_platform.ansible_driver, "cisco.ios.ios")
+        # TODO self.assertEqual(self.standard_platform.hier_config_driver, "ios")
+        self.assertEqual(self.standard_platform.netmiko_driver, "cisco_ios")
+        self.assertEqual(self.standard_platform.ntc_templates_driver, "cisco_ios")
+        self.assertEqual(self.standard_platform.pyats_driver, "iosxe")
+        self.assertEqual(self.standard_platform.pyntc_driver, "cisco_ios_ssh")
+        self.assertEqual(self.standard_platform.scrapli_driver, "cisco_iosxe")
+
+    def test_network_driver_unknown_none(self):
+        """Test that properties are None if the network_driver setting is not known by netutils."""
+        self.assertIsNone(self.custom_platform.ansible_driver)
+        # TODO self.assertIsNone(platform.hier_config_driver)
+        self.assertIsNone(self.custom_platform.netmiko_driver)
+        self.assertIsNone(self.custom_platform.ntc_templates_driver)
+        self.assertIsNone(self.custom_platform.pyats_driver)
+        self.assertIsNone(self.custom_platform.pyntc_driver)
+        self.assertIsNone(self.custom_platform.scrapli_driver)
+
+    @override_settings(
+        NETWORK_DRIVERS={
+            "netmiko": {
+                "secret_sauce": "secret_driver",
+                "cisco_ios": "cisco_xe",
+            },
+            "scrapli": {
+                "secret_sauce": "secret_scrapli",
+            },
+        },
+    )
+    def test_network_driver_settings_override(self):
+        """Test that settings.NETWORK_DRIVERS can extend and override the default behavior."""
+        # Not overridden
+        self.assertEqual(self.standard_platform.ansible_driver, "cisco.ios.ios")
+        self.assertEqual(self.standard_platform.pyats_driver, "iosxe")
+        self.assertEqual(self.standard_platform.scrapli_driver, "cisco_iosxe")
+        self.assertIsNone(self.custom_platform.ansible_driver)
+        self.assertIsNone(self.custom_platform.pyats_driver)
+        # Overridden
+        self.assertEqual(self.standard_platform.netmiko_driver, "cisco_xe")
+        self.assertEqual(self.custom_platform.netmiko_driver, "secret_driver")
+        self.assertEqual(self.custom_platform.scrapli_driver, "secret_scrapli")
 
 
 class DeviceTestCase(TestCase):

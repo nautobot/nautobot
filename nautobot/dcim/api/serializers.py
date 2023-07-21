@@ -738,6 +738,13 @@ class DeviceRoleSerializer(NautobotModelSerializer):
 class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
+    ansible_driver = serializers.CharField()
+    # TODO hier_config_driver = serializers.CharField()
+    netmiko_driver = serializers.CharField()
+    ntc_templates_driver = serializers.CharField()
+    pyats_driver = serializers.CharField()
+    pyntc_driver = serializers.CharField()
+    scrapli_driver = serializers.CharField()
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
