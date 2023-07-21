@@ -86,7 +86,13 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
+from nautobot.utilities.testing import (
+    ViewTestCases,
+    extract_page_body,
+    generate_random_device_asset_tag_of_specified_size,
+    ModelViewTestCase,
+    post_data,
+)
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1443,7 +1449,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "platform": platforms[1].pk,
             "name": "Device X",
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
-            "asset_tag": "ABCDEF",
+            "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
             "site": sites[1].pk,
             "rack": racks[1].pk,
             "position": 1,

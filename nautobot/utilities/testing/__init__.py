@@ -1,3 +1,5 @@
+import random
+import string
 import time
 import uuid
 from contextlib import contextmanager
@@ -100,6 +102,14 @@ def run_job_for_testing(job, data=None, commit=True, profile=False, username="te
     with _web_request_context(user=user_instance) as wrapped_request:
         run_job(data=data, request=wrapped_request, commit=commit, job_result_pk=job_result.pk, profile=profile)
     return job_result
+
+
+def generate_random_device_asset_tag_of_specified_size(size):
+    """
+    This function is for testing purposes only and it will return a random string of size 100 consists of letters and numbers.
+    """
+    asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))
+    return asset_tag
 
 
 @tag("unit")
