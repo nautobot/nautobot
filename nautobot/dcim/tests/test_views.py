@@ -86,7 +86,13 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, generate_random_device_asset_tag_of_specified_size, ModelViewTestCase, post_data
+from nautobot.utilities.testing import (
+    ViewTestCases,
+    extract_page_body,
+    generate_random_device_asset_tag_of_specified_size,
+    ModelViewTestCase,
+    post_data,
+)
 
 # Use the proper swappable User model
 User = get_user_model()
