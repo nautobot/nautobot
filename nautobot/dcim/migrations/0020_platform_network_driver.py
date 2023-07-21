@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="platform",
-            name="netmiko_driver",
+            name="network_driver",
             field=models.CharField(blank=True, max_length=100),
         ),
     ]

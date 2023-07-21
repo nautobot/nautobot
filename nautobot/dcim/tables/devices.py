@@ -149,7 +149,7 @@ class PlatformTable(BaseTable):
             "slug",
             "napalm_driver",
             "napalm_args",
-            "netmiko_driver",
+            "network_driver",
             "description",
             "actions",
         )
@@ -159,8 +159,7 @@ class PlatformTable(BaseTable):
             "manufacturer",
             "device_count",
             "vm_count",
-            "napalm_driver",
-            "netmiko_driver",
+            "network_driver",
             "description",
             "actions",
         )

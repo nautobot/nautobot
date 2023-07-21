@@ -923,7 +923,7 @@ class PlatformFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
             "slug",
             "napalm_driver",
             "napalm_args",
-            "netmiko_driver",
+            "network_driver",
             "description",
             "devices",
             "virtual_machines",
