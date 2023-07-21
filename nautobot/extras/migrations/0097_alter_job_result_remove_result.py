@@ -6,7 +6,7 @@ import nautobot.core.celery
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0094_remove_slugs"),
+        ("extras", "0096_remove_slugs"),
     ]
 
     operations = [
