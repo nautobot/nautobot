@@ -12,6 +12,7 @@ from nautobot.dcim.models import (
     Device,
     FrontPort,
     Interface,
+    Platform,
     PowerFeed,
     PowerOutlet,
     PowerPort,
@@ -26,6 +27,7 @@ from nautobot.dcim.filters import (
     DeviceFilterSet,
     FrontPortFilterSet,
     InterfaceFilterSet,
+    PlatformFilterSet,
     PowerFeedFilterSet,
     PowerOutletFilterSet,
     PowerPortFilterSet,
@@ -58,6 +60,22 @@ class DeviceType(gql_optimizer.OptimizedDjangoObjectType):
 
     def resolve_dynamic_groups(self, args):
         return DynamicGroup.objects.get_for_object(self)
+
+
+class PlatformType(gql_optimizer.OptimizedDjangoObjectType):
+    """GraphQL type object for Platform model."""
+
+    ansible_driver = graphene.String()
+    # TODO hier_config_driver = graphene.String()
+    netmiko_driver = graphene.String()
+    ntc_templates_driver = graphene.String()
+    pyats_driver = graphene.String()
+    pyntc_driver = graphene.String()
+    scrapli_driver = graphene.String()
+
+    class Meta:
+        model = Platform
+        filterset_class = PlatformFilterSet
 
 
 class RackType(gql_optimizer.OptimizedDjangoObjectType):

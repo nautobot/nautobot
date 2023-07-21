@@ -4,6 +4,11 @@ A platform defines the type of software running on a device or virtual machine. 
 
 Platforms may optionally be limited by manufacturer: If a platform is assigned to a particular manufacturer, it can only be assigned to devices with a type belonging to that manufacturer.
 
-The platform model is also used to indicate which [NAPALM](https://github.com/napalm-automation/napalm/) driver and any associated arguments Nautobot should use when connecting to a remote device. The name of the driver along with optional parameters are stored with the platform.
+The platform model can be used to indicate which "network driver" Nautobot (and Jobs, Apps, etc.) should use when connecting to a remote device running this platform. This is a generic string corresponding loosely to a [Netmiko](https://github.com/ktbyers/netmiko) driver name. As there are many different libraries and applications for connecting to a device, rather than having a separate model field for each such connection type, Nautobot uses [netutils](https://netutils.readthedocs.io/en/latest/) to translate the generic network driver string into a variety of library-specific driver strings (Ansible "collection name", PyATS "OS" value, Scrapli "platform", etc.) which can be accessed via the UI, REST API, and GraphQL as needed.
+
++++ 1.6.0
+    The `network_driver` database field was added and the `ansible_driver`, `hier_config_driver`, `netmiko_driver`, `ntc_templates_driver`, `pyats_driver`, `pyntc_driver`, and `scrapli_driver` derived properties were added to the Platform data model.
+
+For historical reasons, the [NAPALM](https://github.com/napalm-automation/napalm/) driver and any associated arguments Nautobot should use when connecting to a remote device via NAPALM can (and must) be configured directly rather than being derived from the network driver. The name of the NAPALM driver along with optional parameters are stored with the platform.
 
 The assignment of platforms to devices is an optional feature, and may be disregarded if not desired.

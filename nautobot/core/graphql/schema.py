@@ -32,6 +32,7 @@ from nautobot.dcim.graphql.types import (
     DeviceType,
     FrontPortType,
     InterfaceType,
+    PlatformType,
     PowerFeedType,
     PowerOutletType,
     PowerPortType,
@@ -58,6 +59,7 @@ registry["graphql_types"]["dcim.consoleserverport"] = ConsoleServerPortType
 registry["graphql_types"]["dcim.device"] = DeviceType
 registry["graphql_types"]["dcim.frontport"] = FrontPortType
 registry["graphql_types"]["dcim.interface"] = InterfaceType
+registry["graphql_types"]["dcim.platform"] = PlatformType
 registry["graphql_types"]["dcim.powerfeed"] = PowerFeedType
 registry["graphql_types"]["dcim.poweroutlet"] = PowerOutletType
 registry["graphql_types"]["dcim.powerport"] = PowerPortType

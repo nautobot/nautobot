@@ -16,10 +16,14 @@ To create a Platform:
 3. Provide a `Name` (required)
 4. The `Slug` will auto-populate based on the `Name` field; you may override this if necessary
 5. Select a `Manufacturer` from the drop-down selector (optional)
-6. Provide the name of the `NAPALM driver` (optional) (Note: this must be the exact name of the NAPALM driver)
-7. Provide `NAPALM arguments` (optional)
-8. Provide `Description` (optional)
-9. Click on the `Create` button
+6. Provide the name of the `Network driver` (optional)
+7. Provide the name of the `NAPALM driver` (optional) (Note: this must be the exact name of the NAPALM driver)
+8. Provide `NAPALM arguments` (optional)
+9. Provide `Description` (optional)
+10. Click on the `Create` button
+
+!!! tip
+    The network driver, if specified, is used with the [netutils](https://netutils.readthedocs.io/en/latest/) library to automatically populate a set of derived attributes such as `ansible_driver`, `netmiko_driver`, `pyats_driver`, etc.
 
 !!! tip
     NAPALM Driver Options include:

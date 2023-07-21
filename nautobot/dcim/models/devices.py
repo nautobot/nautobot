@@ -11,6 +11,16 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
+from netutils.lib_mapper import (
+    ANSIBLE_LIB_MAPPER_REVERSE,
+    # HIERCONFIG_LIB_MAPPER_REVERSE, TODO: coming in netutils 1.5
+    NETMIKO_LIB_MAPPER_REVERSE,
+    NTCTEMPLATES_LIB_MAPPER_REVERSE,
+    PYATS_LIB_MAPPER_REVERSE,
+    PYNTC_LIB_MAPPER_REVERSE,
+    SCRAPLI_LIB_MAPPER_REVERSE,
+)
+
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
 
 from nautobot.extras.models import ConfigContextModel, StatusModel
@@ -379,8 +389,9 @@ class DeviceRole(OrganizationalModel):
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
-    Nautobot uses Platforms to determine how to interact with devices when pulling inventory data or other information by
-    specifying a NAPALM driver.
+
+    Nautobot uses Platforms to determine how to interact with devices when pulling inventory data or other information
+    by specifying a network driver; `netutils` is then used to derive library-specific driver information from this.
     """
 
     name = models.CharField(max_length=100, unique=True)
@@ -392,6 +403,15 @@ class Platform(OrganizationalModel):
         blank=True,
         null=True,
         help_text="Optionally limit this platform to devices of a certain manufacturer",
+    )
+    network_driver = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=mark_safe(
+            'The <a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">network driver</a> '
+            "to use when interacting with devices, e.g. <code>cisco_ios</code>, <code>arista_eos</code>, etc.<br>"
+            "Library-specific driver names will be derived from this setting as appropriate"
+        ),
     )
     napalm_driver = models.CharField(
         max_length=50,
@@ -406,12 +426,43 @@ class Platform(OrganizationalModel):
         verbose_name="NAPALM arguments",
         help_text="Additional arguments to pass when initiating the NAPALM driver (JSON format)",
     )
-    network_driver = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="The Netmiko driver to use when interacting with devices",
-    )
     description = models.CharField(max_length=200, blank=True)
+
+    @property
+    def ansible_driver(self):
+        """Collection string for use with Ansible; derived from network_driver by netutils."""
+        return ANSIBLE_LIB_MAPPER_REVERSE.get(self.network_driver, None)
+
+    # TODO, need netutils 1.5.0 release first
+    # @property
+    # def hier_config_driver(self):
+    #     """Style string for use with hier_config library; derived from network_driver by netutils."""
+    #     return HIER_CONFIG_LIB_MAPPER_REVERSE.get(self.network_driver, None)
+
+    @property
+    def netmiko_driver(self):
+        """Driver for use with netmiko library; derived from network_driver by netutils."""
+        return NETMIKO_LIB_MAPPER_REVERSE.get(self.network_driver, None)
+
+    @property
+    def ntc_templates_driver(self):
+        """Platform string for use with ntc-templates parsers; derived from network_driver by netutils."""
+        return NTCTEMPLATES_LIB_MAPPER_REVERSE.get(self.network_driver, None)
+
+    @property
+    def pyats_driver(self):
+        """OS string for use with PyATS library; derived from network_driver by netutils."""
+        return PYATS_LIB_MAPPER_REVERSE.get(self.network_driver, None)
+
+    @property
+    def pyntc_driver(self):
+        """Device type string for use with pyntc library; derived from network_driver by netutils."""
+        return PYNTC_LIB_MAPPER_REVERSE.get(self.network_driver, None)
+
+    @property
+    def scrapli_driver(self):
+        """Platform string for use with scrapli library; derived from network_driver by netutils."""
+        return SCRAPLI_LIB_MAPPER_REVERSE.get(self.network_driver, None)
 
     csv_headers = [
         "name",

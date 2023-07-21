@@ -1210,6 +1210,7 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "Test Platform 4",
             "slug": "test-platform-4",
+            "network_driver": "cisco_ios",
         },
         {
             "name": "Test Platform 5",
@@ -1225,6 +1226,7 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
     ]
     bulk_update_data = {
         "description": "New description",
+        "network_driver": "cisco_xe",
     }
     slug_source = "name"
 

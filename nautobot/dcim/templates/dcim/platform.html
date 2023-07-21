@@ -16,20 +16,6 @@
                     <td>{{ object.manufacturer|hyperlinked_object }}</td>
                 </tr>
                 <tr>
-                    <td>NAPALM driver</td>
-                    <td>{{ object.napalm_driver|placeholder }}</td>
-                </tr>
-                <tr>
-                    <td>NAPALM arguments</td>
-                    <td>
-                        <pre>
-                            {% if object.napalm_args %}
-                                {{ object.napalm_args|render_json }}
-                            {% endif %}
-                        </pre>
-                    </td>
-                </tr>
-                <tr>
                     <td>Network driver</td>
                     <td>{{ object.network_driver|placeholder }}</td>
                 </tr>
@@ -42,6 +28,56 @@
             </table>
         </div>
 {% endblock content_left_page %}
+
+{% block content_right_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Network Drivers</strong>
+    </div>
+    <table class="table table-hover panel-body attr-table">
+        <tr>
+            <td>Ansible</td>
+            <td>{{ object.ansible_driver|placeholder }}</td>
+        </tr>
+        <!-- TODO: enable once netutils 1.5 is available
+        <tr>
+            <td>hier_config</td>
+            <td>{{ object.hier_config_driver|placeholder }}</td>
+        </tr>
+        -->
+        <tr>
+            <td rowspan="2">NAPALM</td>
+            <td>{{ object.napalm_driver|placeholder }}</td>
+        </tr>
+        <tr>
+            <td>
+                Arguments:
+                <pre>{% if object.napalm_args %}{{ object.napalm_args|render_json }}{% endif %}</pre>
+            </td>
+        </tr>
+        <tr>
+            <td>netmiko</td>
+            <td>{{ object.netmiko_driver|placeholder }}</td>
+        </tr>
+        <tr>
+            <td>ntc_templates</td>
+            <td>{{ object.ntc_templates_driver|placeholder }}</td>
+        </tr>
+        <tr>
+            <td>PyATS</td>
+            <td>{{ object.pyats_driver|placeholder }}</td>
+        </tr>
+        <tr>
+            <td>pyntc</td>
+            <td>{{ object.pyntc_driver|placeholder }}</td>
+        </tr>
+        <tr>
+            <td>scrapli</td>
+            <td>{{ object.scrapli_driver|placeholder }}</td>
+        </tr>
+    </table>
+</div>
+{% endblock content_right_page %}
 
 {% block content_full_width_page %}
         <div class="panel panel-default">

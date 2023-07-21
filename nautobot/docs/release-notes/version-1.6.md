@@ -28,6 +28,10 @@ The following is an example of the data that is sent:
 }
 ```
 
+#### `Platform.network_driver` and related fields ([4136](https://github.com/nautobot/nautobot/issues/4136))
+
+The Platform model has been enhanced to include a `network_driver` database field and a set of derived properties based on the [`netutils`](https://netutils.readthedocs.io/en/latest/) library. For example, if you set a Platform to have a `network_driver` value of `"cisco_ios"`, the platform will automatically derive `ansible_driver`, `netmiko_driver`, `ntc_templates_driver`, `pyats_driver`, `pyntc_driver`, and `scrapli_driver` properties corresponding to this entry. These properties can be referenced via the REST API and GraphQL to assist in developing and maintaining Apps, Jobs, or third-party code that interact with devices by using any of these libraries.
+
 ### Changed
 
 <!-- towncrier release notes start -->

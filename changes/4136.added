@@ -1,1 +1,2 @@
 Added `network_driver` database field to the `Platform` model.
+Added `ansible_driver`, `hier_config_driver`, `netmiko_driver`, `ntc_templates_driver`, `pyats_driver`, `pyntc_driver`, and `scrapli_driver` derived attributes on the `Platform` model.
