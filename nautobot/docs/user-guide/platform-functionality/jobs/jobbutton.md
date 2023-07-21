@@ -13,7 +13,7 @@ The buttons appear at the top right corner of an object's individual detail page
 * **Name** - A unique name for the Job Button.
 * **Object type(s)** - The type or types of Nautobot object that the button will be associated to.
 * **Text** - The text that will be displayed on the button.
-* **Job** - The [Job Button Receiver](../../../development/jobs.md#job-button-receivers) that this button will run.
+* **Job** - The [Job Button Receiver](../../../development/jobs/index.md#job-button-receivers) that this button will run.
 * **Weight** - The number used for determining the order the buttons will appear.
 * **Group** - The name of the dropdown group to add this button into (optional).
 * **Button Class** - The button CSS class, which dictates the color.

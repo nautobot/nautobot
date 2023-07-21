@@ -5,19 +5,19 @@ TODO: Jobs authorship introduction
 ## Migrating Jobs from v1 to v2
 
 +/- 2.0.0
-    See [Migrating Jobs From Nautobot v1](../user-guide/administration/upgrading/from-v1/migrating-jobs-from-nautobot-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
+    See [Migrating Jobs From Nautobot v1](migration/from-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
 
 ## Writing Jobs
 
 Jobs may be installed in one of three ways:
 
-* Manually installed as files in the [`JOBS_ROOT`](../user-guide/administration/configuration/optional-settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
+* Manually installed as files in the [`JOBS_ROOT`](../../user-guide/administration/configuration/optional-settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
     * The `JOBS_ROOT` directory *must* contain a file named `__init__.py`. Do not delete this file.
     * Each file created within this path is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
-* Imported from an external [Git repository](../user-guide/platform-functionality/gitrepository.md#jobs).
+* Imported from an external [Git repository](../../user-guide/platform-functionality/gitrepository.md#jobs).
     * The repository's `jobs/` directory *must* contain a file named `__init__.py`.
     * Each Job file in the repository is considered a separate module; there is no support for cross-file dependencies (such as a file acting as a common "library" module of functions shared between jobs) for files installed in this way.
-* Packaged as part of a [plugin](./apps/api/platform-features/jobs.md).
+* Packaged as part of a [plugin](../apps/api/platform-features/jobs.md).
     * Jobs installed this way are part of the plugin module and can import code from elsewhere in the plugin or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
 
 In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
@@ -52,7 +52,7 @@ Each job class will implement some or all of the following components:
 * a set of variables for user input via the Nautobot UI (if your job requires any user inputs)
 * a `run()` method, which is the only required attribute on a Job class and receives the user input values, if any
 
-It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database by updating [`JobResult`](../user-guide/platform-functionality/jobs/models.md#job-results) records and creating [`JobLogEntry`](../user-guide/platform-functionality/jobs/models.md#job-log-entry) records.
+It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database by updating [`JobResult`](../../user-guide/platform-functionality/jobs/models.md#job-results) records and creating [`JobLogEntry`](../../user-guide/platform-functionality/jobs/models.md#job-log-entry) records.
 
 !!! note
     When actively developing a Job utilizing a development environment it's important to understand that the "automatically reload when code changes are detected" debugging functionality provided by `nautobot-server runserver` does **not** automatically restart the Celery `worker` process when code changes are made; therefore, it is required to restart the `worker` after each update to your Job source code or else it will continue to run the version of the Job code that was present when it first started.
@@ -102,7 +102,7 @@ If you code a multi-line description, the first line only will be used in the de
 
 Default: `False`
 
-A boolean that will mark this job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
+A boolean that will mark this job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
 
 #### `dryrun_default`
 
@@ -131,7 +131,7 @@ A list of strings (field names) representing the order your job [variables](#var
 
 Default: `True`
 
-Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job *does* contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../user-guide/platform-functionality/secret.md) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
+Unless set to False, it prevents the job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each job's inputs contain any such variables before setting this to False; if a job *does* contain sensitive inputs, if possible you should consider whether the job could be re-implemented using Nautobot's [`Secrets`](../../user-guide/platform-functionality/secret.md) feature as a way to ensure that the sensitive data is not directly provided as a job variable at all.
 
 Important notes about jobs with sensitive variables:
 
@@ -169,9 +169,9 @@ A boolean that can be set by the job author to indicate that the job does not ma
 
 +++ 1.3.0
 
-An int or float value, in seconds, which can be used to override the default [soft time limit](../user-guide/administration/configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete.
+An int or float value, in seconds, which can be used to override the default [soft time limit](../../user-guide/administration/configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete.
 
-The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the [hard time limit](../user-guide/administration/configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) is reached:
+The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the [hard time limit](../../user-guide/administration/configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) is reached:
 
 ```python
 from celery.exceptions import SoftTimeLimitExceeded
@@ -198,10 +198,10 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 Default: `[]`
 
-A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../user-guide/administration/configuration/optional-settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
+A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../../user-guide/administration/configuration/optional-settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
 
 !!! note
-    A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../user-guide/administration/guides/celery-queues.md) for more information.
+    A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.
 
 #### `template_name`
 
@@ -235,7 +235,7 @@ For another example checkout [the template used in example plugin](https://githu
 +++ 1.3.0
 
 An int or float value, in seconds, which can be used to override the
-default [hard time limit](../user-guide/administration/configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
+default [hard time limit](../../user-guide/administration/configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
 
 Unlike the `soft_time_limit` above, no exceptions are raised when a `time_limit` is exceeded. The task will just terminate silently:
 
@@ -426,7 +426,7 @@ class CreateDevices(Job):
 Again, defining user variables is totally optional; you may create a job with a `run()` method with only the `self` argument if no user input is needed.
 
 !!! warning
-    When writing Jobs that create and manipulate data it is recommended to make use of the `validated_save()` convenience method which exists on all core models. This method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](./core/best-practices.md).
+    When writing Jobs that create and manipulate data it is recommended to make use of the `validated_save()` convenience method which exists on all core models. This method saves the instance data but first enforces model validation logic. Simply calling `save()` on the model instance **does not** enforce validation automatically and may lead to bad data. See the development [best practices](../core/best-practices.md).
 
 !!! warning
     The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
@@ -438,7 +438,7 @@ Again, defining user variables is totally optional; you may create a job with a 
 
 +/- 2.0.0
 
-Messages logged from a job's logger will be stored in [`JobLogEntry`](../user-guide/platform-functionality/jobs/models.md#job-log-entry) records associated with the current [`JobResult`](../user-guide/platform-functionality/jobs/models.md#job-results).
+Messages logged from a job's logger will be stored in [`JobLogEntry`](../../user-guide/platform-functionality/jobs/models.md#job-log-entry) records associated with the current [`JobResult`](../../user-guide/platform-functionality/jobs/models.md#job-results).
 
 The logger can be accessed either by using the `logger` property on the job class or `nautobot.extras.jobs.get_task_logger(__name__)`. Both will return the same logger instance. For more information on the standard Python logging module, see the [Python documentation](https://docs.python.org/3/library/logging.html).
 
@@ -467,7 +467,7 @@ To skip writing a log entry to the database, set the `skip_db_logging` key in th
 Markdown rendering is supported for log messages.
 
 +/- 1.3.4
-    As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../user-guide/administration/configuration/optional-settings.md#sanitizer_patterns).
+    As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../../user-guide/administration/configuration/optional-settings.md#sanitizer_patterns).
 
 +/- 2.0.0
     The Job class logging functions (example: `self.log(message)`, `self.log_success(obj=None, message=message)`, etc) have been removed. Also, the convenience method to mark a job as failed, `log_failure()`, has been removed. To replace the functionality of this method, you can log an error message with `self.logger.error()` and then raise an exception to fail the job. Note that it is no longer possible to manually set the job result status as failed without raising an exception in the job.
@@ -718,7 +718,7 @@ class DeviceConnectionsReport(Job):
 Job Buttons are only able to initiate a specific type of job called a **Job Button Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](#variables). Job Button Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobButtonReceiver` class only implements one method called `receive_job_button`.
 
 !!! note
-    Job Button Receivers still need to be [enabled through the web UI](../user-guide/platform-functionality/jobs/index.md#enabling-jobs-for-running) before they can be used just like other Jobs.
+    Job Button Receivers still need to be [enabled through the web UI](../../user-guide/platform-functionality/jobs/index.md#enabling-jobs-for-running) before they can be used just like other Jobs.
 
 ### The `receive_job_button()` Method
 

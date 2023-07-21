@@ -352,7 +352,7 @@ Therefore all code that is calling `JobResult.set_status()` (which has been remo
 ### Migrating Jobs From v1 to v2
 
 +/- 2.0.0
-    See [Migrating Jobs From Nautobot v1](./migrating-jobs-from-nautobot-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
+    See [Migrating Jobs From Nautobot v1](../../../../development/jobs/migration/from-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
 
 ### Fundamental Changes
 
