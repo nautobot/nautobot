@@ -2161,6 +2161,7 @@ class DeviceBulkEditForm(
         choices=add_blank_choice(DeviceFaceChoices),
         widget=StaticSelect2(),
     )
+    asset_tag = forms.CharField(max_length=100, required=False)
     rack_group = DynamicModelChoiceField(queryset=RackGroup.objects.all(), required=False)
     device_role = DynamicModelChoiceField(queryset=DeviceRole.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -2180,6 +2181,7 @@ class DeviceBulkEditForm(
             "rack",
             "position",
             "face",
+            "asset_tag",
             "rack_group",
             "secrets_group",
             "device_redundancy_group",

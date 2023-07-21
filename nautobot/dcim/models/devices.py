@@ -483,7 +483,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
     serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
-        max_length=50,
+        max_length=100,
         blank=True,
         null=True,
         unique=True,
