@@ -159,7 +159,6 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 
 - [#4126](https://github.com/nautobot/nautobot/issues/4126) - Updated `cryptography` to `41.0.2` due to CVE-2023-38325. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-
 ## v1.5.23 (2023-07-10)
 
 ### Added
