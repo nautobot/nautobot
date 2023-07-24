@@ -6,7 +6,9 @@ import { PageSizeForm, PageNumberForm } from "@components/Pagination";
 
 function Pagination(props) {
     const [page_size, setPageSize] = useState(props.page_size);
-    const [num_pages, setNumPages] = useState(calculateNumPages(props.data_count, props.page_size));
+    const [num_pages, setNumPages] = useState(
+        calculateNumPages(props.data_count, props.page_size)
+    );
 
     useEffect(() => {
         // This effect runs whenever the page_size prop changes
@@ -30,16 +32,16 @@ function Pagination(props) {
 
     function calculateNumPages(data_count, page_size) {
         let num_pages;
-      
+
         if (data_count % page_size === 0) {
             num_pages = data_count / page_size;
         } else {
             num_pages = data_count / page_size + 1;
         }
-      
+
         // Convert float to int
         num_pages = ~~num_pages;
-      
+
         return num_pages;
     }
 
