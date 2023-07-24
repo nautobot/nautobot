@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Box, Flex, FormControl, Input, Text } from "@nautobot/nautobot-ui";
 import { IconButton } from "@chakra-ui/react";
-import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
+import { ArrowLeftIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
 export default function PageNumberForm({
     firstPage,
@@ -131,17 +131,30 @@ export default function PageNumberForm({
                 You are on page
             </Text>
             {trueCurrentPage > firstPage ? (
-                <IconButton
-                    onClick={() => onPageNumberChange("<")}
-                    icon={<ChevronLeftIcon />}
-                    color="gray-4"
-                    variant="ghost"
-                    pl="xs"
-                    _hover={{
-                        transform: "scale(1.2)",
-                        color: "#007DFF",
-                    }}
-                />
+                <Box>
+                    <IconButton
+                        onClick={() => onPageNumberChange(firstPage)}
+                        icon={<ArrowLeftIcon boxSize={3} />}
+                        color="gray-4"
+                        variant="ghost"
+                        pl="sm"
+                        _hover={{
+                            transform: "scale(1.2)",
+                            color: "#007DFF",
+                        }}
+                    />
+                    <IconButton
+                        onClick={() => onPageNumberChange("<")}
+                        icon={<ChevronLeftIcon />}
+                        color="gray-4"
+                        variant="ghost"
+                        pl="xs"
+                        _hover={{
+                            transform: "scale(1.2)",
+                            color: "#007DFF",
+                        }}
+                    />
+                </Box>
             ) : (
                 <Box pl="xs" />
             )}
@@ -161,17 +174,30 @@ export default function PageNumberForm({
                 />
             </FormControl>
             {trueCurrentPage < lastPage ? (
-                <IconButton
-                    onClick={() => onPageNumberChange(">")}
-                    icon={<ChevronRightIcon />}
-                    color="gray-4"
-                    variant="ghost"
-                    pr="xs"
-                    _hover={{
-                        transform: "scale(1.2)",
-                        color: "#007DFF",
-                    }}
-                />
+                <Box>
+                    <IconButton
+                        onClick={() => onPageNumberChange(">")}
+                        icon={<ChevronRightIcon />}
+                        color="gray-4"
+                        variant="ghost"
+                        pr="xs"
+                        _hover={{
+                            transform: "scale(1.2)",
+                            color: "#007DFF",
+                        }}
+                    />
+                    <IconButton
+                        onClick={() => onPageNumberChange(lastPage)}
+                        icon={<ArrowRightIcon boxSize={3} />}
+                        color="gray-4"
+                        variant="ghost"
+                        pr="sm"
+                        _hover={{
+                            transform: "scale(1.2)",
+                            color: "#007DFF",
+                        }}
+                    />
+                </Box>
             ) : (
                 <Box pr="xs" />
             )}
