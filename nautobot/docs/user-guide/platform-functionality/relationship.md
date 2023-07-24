@@ -82,10 +82,6 @@ The Circuit Relationship field will _not_ show up on a Device with a role `leaf`
 Relationship connections can be labeled with a friendly name so that when they are displayed in the GUI, they will have a more descriptive or friendly name.
 From the Devices/Circuits example above, you might label the relationship so that on the Device side the connection appears as 'Terminated Circuits' and on the Circuit side the connection appears as 'Terminating Devices'.
 
-## Relationship Keys
-
-Relationship model's `key` attribute is derived from its `label` attribute (unique for all Relationship instances). The key of a Relationship instance contains a graphql-safe string used as the key in the underlying relationship data dictionary and it can be used to retrieve data from the API and GraphQL.
-
 ### Options
 
 It's also possible to hide the relationship from either side of the connection.
