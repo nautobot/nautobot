@@ -46,6 +46,8 @@ class PowerPanel(PrimaryModel):
     )
     name = models.CharField(max_length=100, db_index=True)
 
+    natural_key_field_names = ["name", "location"]
+
     class Meta:
         ordering = ["location", "name"]
         unique_together = ["location", "name"]

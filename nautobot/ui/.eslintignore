@@ -1,6 +1,3 @@
 build
-
 # These files get rendered by `nautobot-server build_ui`
-app_imports.js
-jsconfig.paths.json
-app_routes.json
+generated

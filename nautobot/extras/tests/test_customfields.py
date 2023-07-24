@@ -24,7 +24,12 @@ from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
 
 
-class CustomFieldTest(TestCase):  # TODO: change to BaseModelTestCase once we have some baseline custom-field records
+# TODO: this needs to be both a BaseModelTestCase (as it tests the model class) and a (views) TestCase,
+#       (due to the test_multi_select_field_value_after_bulk_update() test).
+#       At some point we should probably split this into separate classes.
+class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
+    model = CustomField
+
     def setUp(self):
         super().setUp()
         location_status = Status.objects.get_for_model(Location).first()

@@ -14,7 +14,11 @@ As an example, within your automation system, you may want to be able to have an
     Every time an object with this computed field is loaded, the template gets re-rendered with the currently available data. These rendered values are not stored in the database; only the Jinja2 template is stored.
 
 +/- 2.0.0
-    Computed field model's `label` attribute will be used exclusively for display purposes in the UI. In addition, Computed field model's `slug` attribute was renamed to `key` (unique for all Computed Field instances), which contains a graphql-safe string to be used in the API and GraphQL. Check out these specific changes in the [Renamed Database Field Section](../administration/upgrading/from-v1/upgrading-from-nautobot-v1.md/#renamed-database-fields) in the upgrading from nautobot v1.x guide. These changes do not require users to do any manual work as they are properly handled by data migrations during the upgrade from Nautobot v1.x to v2.0.
+    Computed field model's `label` attribute will be used exclusively for display purposes in the UI.
+
+    Computed field model's `slug` attribute was renamed to `key` (unique for all Computed Field instances), which contains a GraphQL-safe string to be used in the API and GraphQL.
+
+    These changes do not require users to do any manual work as they are properly handled by data migrations during the upgrade from Nautobot v1.x to v2.0.
 
 ## Creating Computed Fields
 

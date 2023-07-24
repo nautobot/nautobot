@@ -26,7 +26,16 @@ class ModelTestCases:
             if not hasattr(instance, "composite_key"):
                 self.skipTest("No composite_key on this model.")
             self.assertIsNotNone(instance.composite_key)
+            # get()
             self.assertEqual(self.model.objects.get(composite_key=instance.composite_key), instance)
+            # filter()
+            match = self.model.objects.filter(composite_key=instance.composite_key)
+            self.assertEqual(1, len(match))
+            self.assertEqual(match[0], instance)
+            # exclude()
+            match = self.model.objects.exclude(composite_key=instance.composite_key)
+            self.assertEqual(self.model.objects.count() - 1, match.count())
+            self.assertNotIn(instance, match)
 
         def test_get_docs_url(self):
             """Check that `get_docs_url()` returns a valid static file path for this model."""

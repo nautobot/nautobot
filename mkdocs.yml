@@ -128,6 +128,7 @@ nav:
           - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
           - SSO: "user-guide/administration/configuration/authentication/sso.md"
           - Remote Header: "user-guide/administration/configuration/authentication/remote.md"
+        - Node.js Configuration: "user-guide/administration/configuration/node-configuration.md"
       - Tools:
         - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
         - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
@@ -254,7 +255,10 @@ nav:
       - Webhooks: "user-guide/platform-functionality/webhook.md"
   - Developer Guide:
     - "development/index.md"
-    - Jobs Developer Guide: "development/jobs.md"
+    - Jobs Developer Guide:
+      - "development/jobs/index.md"
+      - Migration Guides:
+        - "development/jobs/migration/from-v1.md"
     - App Developer Guide:
       - "development/apps/index.md"
       - Setup: "development/apps/api/setup.md"
@@ -308,6 +312,7 @@ nav:
         - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
         - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
         - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
+      - Migration Guides: "development/apps/migration/from-v1.md"
       - Advanced:
         - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
     - Core Developer Guide:

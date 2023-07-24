@@ -8,7 +8,7 @@ import nautobot.extras.models.statuses
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0068_created_datetime"),
+        ("extras", "0069_created_datetime"),
         ("ipam", "0019_created_datetime"),
     ]
 

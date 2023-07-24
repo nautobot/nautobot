@@ -93,6 +93,8 @@ class Cable(PrimaryModel):
         to=Device, on_delete=models.CASCADE, related_name="+", blank=True, null=True
     )
 
+    natural_key_field_names = ["pk"]
+
     class Meta:
         ordering = [
             "termination_a_type",
@@ -311,6 +313,8 @@ class CablePath(BaseModel):
     path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
+
+    natural_key_field_names = ["pk"]
 
     class Meta:
         unique_together = ("origin_type", "origin_id")

@@ -13,7 +13,11 @@ Navigate to the custom fields page by clicking on **Extensibility -> Custom Fiel
 ### Custom Field Attributes
 
 +/- 2.0.0
-    Custom field model no longer has a `name` attribute in v2.0. Instead, its pre-existing `label` attribute (unique for all Custom field instances) replaced `name` to be used exclusively for display purposes in the UI. In addition, Custom field model's `slug` attribute was renamed to `key` (unique for all Custom Field instances), which contains a graphql-safe string used as the key in the underlying custom field data dictionary. Check out these specific changes in the [Renamed Database Field Section](../administration/upgrading/from-v1/upgrading-from-nautobot-v1.md/#renamed-database-fields) and the [Removed Database Field Section](../administration/upgrading/from-v1/upgrading-from-nautobot-v1.md/#removed-database-fields) in the upgrading from Nautobot v1.x guide. These changes do not require users to do any manual work as they are properly handled by data migrations during the upgrade from Nautobot v1.x to v2.0. If you have duplicate Custom field `slug` values in your database pre-migration, some of the Custom field `key` values might be altered to ensure that `key` values for all Custom field instances are unique.
+    CustomField model no longer has a `name` attribute in v2.0. Instead, its pre-existing `label` attribute (unique for all CustomField instances) replaced `name` to be used exclusively for display purposes in the UI.
+
+    CustomField model's `slug` attribute was renamed to `key` (unique for all CustomField instances), which contains a GraphQL-safe string used as the key in the underlying custom field data dictionary.
+
+    These aforementioned changes do not require users to do any manual work as they are properly handled by data migrations during the upgrade from Nautobot v1.x to v2.0. Note that if you have non-GraphQL-safe `slug` values in your database pre-migration, some of the resulting CustomField `key` values might be altered to ensure that `key` values for all CustomField instances are valid and unique.
   
 #### Label
 

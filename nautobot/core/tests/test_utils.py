@@ -678,3 +678,20 @@ class IsFooTest(TestCase):
             self.assertFalse(data_utils.is_uuid(None))
             self.assertFalse(data_utils.is_uuid(1))
             self.assertFalse(data_utils.is_uuid("abc123"))
+
+
+class MergeDictsWithoutCollisionTest(TestCase):
+    """Test the merge_dicts_without_collision() data utility function."""
+
+    def test_no_collisions(self):
+        self.assertEqual({"a": 1, "b": 2}, data_utils.merge_dicts_without_collision({"a": 1}, {"b": 2}))
+
+    def test_collision_but_same_value(self):
+        self.assertEqual(
+            {"a": 1, "b": 2, "c": 3}, data_utils.merge_dicts_without_collision({"a": 1, "c": 3}, {"b": 2, "c": 3})
+        )
+
+    def test_collision_differing_values(self):
+        with self.assertRaises(ValueError) as err:
+            data_utils.merge_dicts_without_collision({"a": 1}, {"a": 2})
+        self.assertEqual(str(err.exception), 'Conflicting values for key "a": (1, 2)')

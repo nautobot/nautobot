@@ -1,6 +1,5 @@
 import logging
 import uuid
-from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -14,24 +13,24 @@ from nautobot.core.forms import (
 )
 from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import TestCase
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Device, Platform, Rack, Location, LocationType
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 
 
-class RelationshipBaseTest(TestCase):
+class RelationshipBaseTest:
     @classmethod
     def setUpTestData(cls):
         cls.location_ct = ContentType.objects.get_for_model(Location)
         cls.rack_ct = ContentType.objects.get_for_model(Rack)
         cls.vlan_ct = ContentType.objects.get_for_model(VLAN)
 
-        cls.locations = Location.objects.all()[:5]
+        cls.locations = Location.objects.get_for_model(Rack).get_for_model(VLAN)[:5]
 
         cls.rack_status = Status.objects.get_for_model(Rack).first()
         cls.racks = [
@@ -41,16 +40,16 @@ class RelationshipBaseTest(TestCase):
         ]
 
         cls.vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_groups = (VLANGroupFactory.create(location=cls.locations[idx]) for idx in range(3))
+        cls.vlan_group = VLANGroup.objects.create(name="Relationship Test VLANGroup")
         cls.vlans = [
             VLAN.objects.create(
-                name="VLAN A", vid=100, location=cls.locations[0], status=cls.vlan_status, vlan_group=vlan_groups[0]
+                name="VLAN A", vid=100, location=cls.locations[0], status=cls.vlan_status, vlan_group=cls.vlan_group
             ),
             VLAN.objects.create(
-                name="VLAN B", vid=100, location=cls.locations[1], status=cls.vlan_status, vlan_group=vlan_groups[0]
+                name="VLAN B", vid=101, location=cls.locations[1], status=cls.vlan_status, vlan_group=cls.vlan_group
             ),
             VLAN.objects.create(
-                name="VLAN C", vid=100, location=cls.locations[2], status=cls.vlan_status, vlan_group=vlan_groups[0]
+                name="VLAN C", vid=102, location=cls.locations[2], status=cls.vlan_status, vlan_group=cls.vlan_group
             ),
         ]
 
@@ -157,8 +156,9 @@ class RelationshipBaseTest(TestCase):
         ]
 
 
-@skip
-class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
+class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
+    model = Relationship
+
     def test_clean_filter_not_dict(self):
         m2m = Relationship(
             label="Another VLAN to Rack",
@@ -429,8 +429,9 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         )
 
 
-@skip
-class RelationshipAssociationTest(RelationshipBaseTest):
+class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
+    model = RelationshipAssociation
+
     def setUp(self):
         super().setUp()
 
@@ -901,8 +902,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         self.assertEqual(1, RelationshipAssociation.objects.filter(destination_dcim_location=self.locations[0]).count())
 
 
-@skip
-class RelationshipTableTest(RelationshipBaseTest):
+class RelationshipTableTest(RelationshipBaseTest, TestCase):
     """
     Test inclusion of relationships in object table views.
     """
@@ -1054,7 +1054,9 @@ class RelationshipTableTest(RelationshipBaseTest):
                 self.assertIn(value, rendered_value)
 
 
-class RequiredRelationshipTestMixin(TestCase):
+class RequiredRelationshipTestMixin:
+    """Common test mixin for both view and API tests dealing with required relationships."""
+
     def send_data(self, model_class, data, interact_with, action="add", url_kwargs=None):
         # Helper to post data to a URL
 
