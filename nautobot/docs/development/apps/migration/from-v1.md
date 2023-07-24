@@ -16,7 +16,7 @@ This document provides guidance on migrating code from version 1.x to version 2.
     - [Corrected Filter Fields](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#corrected-filter-fields)
     - [Jobs](../../jobs/migration/from-v1.md)
 - [Steps to Migrate an App from V1](migrating-an-app-from-v1.md)
-    - Model Updates
+    - [Model Updates](migrating-an-app-from-v1.md/#model-updates)
         - [Core](migrating-an-app-from-v1.md/#core)
             - [Replace the Usage of Slugs with Natural Keys](migrating-an-app-from-v1.md/#replace-the-usage-of-slugs-with-natural-keys)
         - [DCIM](migrating-an-app-from-v1.md/#dcim)
@@ -29,14 +29,14 @@ This document provides guidance on migrating code from version 1.x to version 2.
             - [Replace Aggregate with Prefix](migrating-an-app-from-v1.md/#replace-aggregate-with-prefix)
             - [Update Prefix to specify a namespace Namespace](migrating-an-app-from-v1.md/#update-prefix-to-specify-a-namespace-namespace)
             - [Update IPAddress to specify a parent Prefix](migrating-an-app-from-v1.md/#update-ipaddress-to-specify-a-parent-prefix)
-    - Code Updates
+    - [Code Updates](migrating-an-app-from-v1.md/#code-updates)
         - [Update Code Import Locations](migrating-an-app-from-v1.md/#update-code-import-locations)
         - [Replace PluginMenuItem with NavMenueItem](migrating-an-app-from-v1.md/#replace-pluginmenuitem-with-navmenueitem)
         - [Replace DjangoFilterBackend with NautobotFilterBackend](migrating-an-app-from-v1.md/#replace-djangofilterbackend-with-nautobotfilterbackend)
         - [Remove all CSV Import Forms](migrating-an-app-from-v1.md/#remove-all-csv-import-forms)
         - [Remove all Nested Serializers](migrating-an-app-from-v1.md/#remove-all-nested-serializers)
         - [Update all Serializer Meta Attributes](migrating-an-app-from-v1.md/#update-all-serializer-meta-attributes)
-    - Dependency Updates
+    - [Dependency Updates](migrating-an-app-from-v1.md/#dependency-updates)
         - [Nautobot Version](migrating-an-app-from-v1.md/#nautobot-version)
         - [Python Version](migrating-an-app-from-v1.md/#python-version)
         - [Pylint Version](migrating-an-app-from-v1.md/#pylint-version)
