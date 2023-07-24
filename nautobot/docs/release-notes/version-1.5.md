@@ -148,6 +148,18 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.24 (2023-07-24)
+
+### Fixed
+
+- [#3312](https://github.com/nautobot/nautobot/issues/3312) - Fixed custom fields not auto-populating when creating objects through the ORM.
+- [#4127](https://github.com/nautobot/nautobot/issues/4127) - Fixed JavaScript error with 'Check Secret' button introduced in the previous patch release.
+
+### Security
+
+- [#4126](https://github.com/nautobot/nautobot/issues/4126) - Updated `cryptography` to `41.0.2` due to CVE-2023-38325. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+
 ## v1.5.23 (2023-07-10)
 
 ### Added
