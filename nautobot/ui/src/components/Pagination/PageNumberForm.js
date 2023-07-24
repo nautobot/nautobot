@@ -54,6 +54,39 @@ export default function PageNumberForm({
         }
     }
 
+    function handleOnKeyDown(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+
+            const enteredValue = parseInt(event.target.value);
+            // Checks that the entered value is a number and within the valid page range
+            if (
+                !isNaN(enteredValue) &&
+                enteredValue >= firstPage &&
+                enteredValue <= lastPage
+            ) {
+                setPageNumber(enteredValue);
+                setIsInputInvalid(false);
+
+                // Checks that the entered value is not already the current page
+                if (enteredValue !== trueCurrentPage) {
+                    onPageNumberChange(enteredValue);
+                }
+
+                // Reset input value
+                event.target.value = "";
+            }
+            // Checks if nothing is entered into input and, if so, do nothing
+            else if (event.target.value === "") {
+                setIsInputInvalid(false);
+            }
+            // Otherwise, mark input as invalid
+            else {
+                setIsInputInvalid(true);
+            }
+        }
+    }
+
     function onPageNumberChange(targetPageNumber) {
         let limit = searchParams.get("limit");
         /* TODO: we need a REST API endpoint to query get_settings_or_config("PAGINATE_COUNT") rather than hard-coding this to 50. */
@@ -124,6 +157,7 @@ export default function PageNumberForm({
                     textAlign="center"
                     width="50px"
                     onBlur={handleOnBlur}
+                    onKeyDown={handleOnKeyDown}
                 />
             </FormControl>
             {trueCurrentPage < lastPage ? (
