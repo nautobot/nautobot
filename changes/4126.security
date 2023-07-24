@@ -1,1 +1,0 @@
-Updated `cryptography` to `41.0.2` due to CVE-2023-38325. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
