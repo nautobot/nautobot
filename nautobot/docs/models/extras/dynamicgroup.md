@@ -616,11 +616,13 @@ A Dynamic Group object in the ORM exposes two (2) properties for retrieving the 
 - `members` - The evaluated QuerySet defined by the Dynamic Group and it's potential child groups. This will always perform database queries.
 - `members_cached` - A cached instance of the `members` property. This will only perform database queries if the cache is expired.
 
-Additionally a method is exposed for retrieving the members of a Dynamic Group:
+Additionally methods for working with group membership and caching are:
 
-- `get_members()` - A way of retrieving the members of a Dynamic Group and also forcibly refreshing the cache. The arguments are:
-    - `skip_cache` - A boolean value that will ignore the cache and will always return the `members` QuerySet if `True`, defaults to `False`.
-    - `force_update_cache` - A boolean value that will force the cache to be updated with the current membership of the Dynamic Group if `True`, defaults to `False`.
+- `update_cached_members` - A way of forcing an update to the cached members of a Dynamic Group. This will always perform database queries. It will also return the updated `members_cached` property.
+
+- `am_i_a_member` - A way of checking if an object is a member of a Dynamic Group. The arguments are:
+    - `obj` - An instance of an object to check if it is a member of the given group.
+    - `skip_cache` - A boolean value that will use the preferred method of checking an instances member depending if using the cached list (`obj in list`) or the uncached queryset (`members.filter(pk=obj.pk).exists()`) is desired, defaults to `False`.
 
 An model instance that supports Dynamic Groups will expose the following properties:
 
@@ -628,12 +630,6 @@ An model instance that supports Dynamic Groups will expose the following propert
 - `dynamic_groups_cached` - Full reverse membership of instance to `DynamicGroup` objects, uses cached member list if available. Ideal for most use cases.
 - `dynamic_groups_list` - List of membership of instance to `DynamicGroup` objects, performs one less database query than `dynamic_groups`.
 - `dynamic_groups_list_cached` - List of membership of instance to `DynamicGroup` objects, uses cached member list if available. Performs no database queries in optimal conditions.
-
-The model instance will also expose the following methods:
-
-- `get_dynamic_groups` - A way of retrieving the Dynamic Groups the instance is a member of. The arguments are:
-    - `skip_cache` - A boolean value that will ignore the cache(s) if `True`, defaults to `False`.
-    - `as_queryset` - A boolean value that will return the `dynamic_groups` QuerySet instead of the `dynamic_groups_list` list if `True`, defaults to `False`.
 
 ### Invalidating/Refreshing the Cache
 
@@ -654,5 +650,5 @@ class ExampleDynamicGroupMemberCacheRefresh(Job):
         name = "Update Dynamic Group Member Cache"
 
     def run(self, data, commit):
-        DynamicGroup.objects.get(pk=data['dynamic_group']).get_members(skip_cache=False, force_update_cache=True)
+        DynamicGroup.objects.get(pk=data['dynamic_group']).update_cached_members()
 ```

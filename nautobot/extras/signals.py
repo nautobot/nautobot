@@ -308,30 +308,30 @@ post_save.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
 post_delete.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
 
 
-def dynamic_group_cache_members(sender, instance, **kwargs):
+def dynamic_group_update_cache_members(sender, instance, **kwargs):
     """
-    When a DynamicGroup is updated, update the cache of members.
-    """
-    instance.get_members(skip_cache=False, force_update_cache=True)
-
-
-post_save.connect(dynamic_group_cache_members, sender=DynamicGroup)
-
-
-def dynamic_group_membership_cache_members(sender, instance, **kwargs):
-    """
-    When a DynamicGroup membership is updated, update the parent group(s) cache of members.
+    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members.
     """
 
-    def _update_parent_cache(parent_group):
-        parent_group.get_members(skip_cache=False, force_update_cache=True)
-        for ancestor in list(parent_group.parents.all()):
-            _update_parent_cache(ancestor)
+    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
+        # Caching is disabled, so there's nothing to do
+        return
 
-    _update_parent_cache(instance.parent_group)
+    if type(instance) == DynamicGroupMembership:
+        group = instance.parent_group
+    else:
+        group = instance
+
+    def _update_cache_and_parents(this_instance):
+        this_instance.update_cached_members()
+        for ancestor in list(this_instance.parents.all()):
+            _update_cache_and_parents(ancestor)
+
+    _update_cache_and_parents(group)
 
 
-post_save.connect(dynamic_group_membership_cache_members, sender=DynamicGroupMembership)
+post_save.connect(dynamic_group_update_cache_members, sender=DynamicGroup)
+post_save.connect(dynamic_group_update_cache_members, sender=DynamicGroupMembership)
 
 
 #

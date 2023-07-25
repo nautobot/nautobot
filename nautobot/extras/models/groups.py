@@ -342,21 +342,13 @@ class DynamicGroup(OrganizationalModel):
 
         return unpickled_query
 
-    def get_members(self, skip_cache=False, force_update_cache=False):
+    def update_cached_members(self):
         """
-        Return the member objects for this group.
-
-        Args:
-            skip_cache (bool, optional): Whether to skip the cache and run the query directly. Defaults to False.
-            force_update_cache (bool, optional): Whether to force an update of the cache. Ignored if `skip_cache` is True. Defaults to False.
+        Update the cached members of the groups. Also returns the updated cached members.
         """
 
-        if skip_cache:
-            return self.members
-
-        if force_update_cache:
-            cache_key = f"{self.__class__.__name__}.{self.id}.cached_members"
-            cache.delete(cache_key)
+        cache_key = f"{self.__class__.__name__}.{self.id}.cached_members"
+        cache.delete(cache_key)
 
         return self.members_cached
 
@@ -383,7 +375,7 @@ class DynamicGroup(OrganizationalModel):
                 return False
 
         if skip_cache:
-            return obj in list(self.members.all())
+            return self.members.filter(pk=obj.pk).exists()
         else:
             return obj in list(self.members_cached)
 

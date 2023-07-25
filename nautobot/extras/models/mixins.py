@@ -91,25 +91,6 @@ class DynamicGroupMixin:
 
         return self._dynamic_group_cached_list
 
-    def get_dynamic_groups(self, as_queryset=False, skip_cache=False):
-        """
-        Return a list or queryset of `DynamicGroup` objects this instance is a member of.
-
-        Args:
-            as_queryset (bool): Return a queryset instead of a list. Optional, defaults to False.
-            skip_cache (bool): Skip the cache and query the database directly. Optional, defaults to False.
-        """
-        if as_queryset:
-            if skip_cache:
-                return self.dynamic_groups
-            else:
-                return self.dynamic_groups_cached
-        else:
-            if skip_cache:
-                return self.dynamic_groups_list
-            else:
-                return self.dynamic_groups_list_cached
-
     def get_dynamic_groups_url(self):
         """Return the dynamic groups URL for a given instance."""
         route = get_route_for_model(self, "dynamicgroups")

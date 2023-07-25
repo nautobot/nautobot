@@ -24,7 +24,6 @@ class GraphQLTestCase(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query(self):
         query = "query {devices {name dynamic_groups {name}}}"
-        self.dynamic_group.get_members(skip_cache=False, force_update_cache=True)
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertEqual(resp["data"]["devices"][0]["dynamic_groups"][0]["name"], self.dynamic_group.name)

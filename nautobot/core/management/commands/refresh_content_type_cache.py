@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand
 
 from django.contrib.contenttypes.models import ContentType
 
+
 class Command(BaseCommand):
     help = "Update the cached content type for all model classes."
 
