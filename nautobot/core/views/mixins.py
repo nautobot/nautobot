@@ -76,6 +76,8 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     filterset_class = None
     filterset_form_class = None
     form_class = None
+    create_form_class = None
+    update_form_class = None
     parser_classes = [FormParser, MultiPartParser]
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
@@ -383,7 +385,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
 
         if self.action in ["create", "update"]:
-            form_class = getattr(self, "form_class", None)
+            if getattr(self, f"{self.action}_form_class"):
+                form_class = getattr(self, f"{self.action}_form_class")
+            else:
+                form_class = getattr(self, "form_class", None)
         elif self.action == "bulk_create":
 
             class BulkCreateForm(BootstrapMixin, Form):
