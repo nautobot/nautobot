@@ -577,10 +577,6 @@ CONSTANCE_CONFIG = {
         90,
         "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
     ],
-    "CONTENT_TYPE_CACHE_TIMEOUT": [
-        3600,
-        "Number of seconds to cache ContentType lookups. Set to 0 to disable caching.",
-    ],
     "DEPLOYMENT_ID": [
         "",
         "Randomly generated UUID used to identify this installation.\n"
@@ -591,7 +587,7 @@ CONSTANCE_CONFIG = {
         "Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
     ],
     "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": [
-        3600,
+        0,
         "Dynamic Group member cache timeout in seconds. This is the amount of time that a Dynamic Group's member list "
         "will be cached in Django cache backend. Since retrieving the member list of a Dynamic Group can be a very "
         "expensive operation, especially in reverse, this cache is used to speed up the process of retrieving the "
@@ -656,7 +652,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
-    "Performance": ["CONTENT_TYPE_CACHE_TIMEOUT", "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"],
+    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"],
 }
 
 #
@@ -733,6 +729,9 @@ CACHES = {
         },
     }
 }
+
+# Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
+CONTENT_TYPE_CACHE_TIMEOUT = os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", 0)
 
 #
 # Django RQ (used for legacy background processesing)
