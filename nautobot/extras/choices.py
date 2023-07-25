@@ -50,6 +50,7 @@ class CustomFieldTypeChoices(ChoiceSet):
     TYPE_SELECT = "select"
     TYPE_MULTISELECT = "multi-select"
     TYPE_JSON = "json"
+    TYPE_MARKDOWN = "markdown"
 
     CHOICES = (
         (TYPE_TEXT, "Text"),
@@ -60,6 +61,7 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_SELECT, "Selection"),
         (TYPE_MULTISELECT, "Multiple selection"),
         (TYPE_JSON, "JSON"),
+        (TYPE_MARKDOWN, "Markdown"),
     )
 
     REGEX_TYPES = (
