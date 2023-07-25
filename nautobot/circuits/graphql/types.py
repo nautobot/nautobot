@@ -1,13 +1,13 @@
 from graphene import Field
-import graphene_django_optimizer as gql_optimizer
 
-from nautobot.core.graphql.utils import construct_resolver
-from nautobot.circuits.models import CircuitTermination
 from nautobot.circuits.filters import CircuitTerminationFilterSet
+from nautobot.circuits.models import CircuitTermination
+from nautobot.core.graphql.utils import construct_resolver
 from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
+from nautobot.extras.graphql.types import OptimizedNautobotObjectType
 
 
-class CircuitTerminationType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
+class CircuitTerminationType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for CircuitTermination model."""
 
     class Meta:

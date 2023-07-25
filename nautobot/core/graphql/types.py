@@ -1,9 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 
-import graphene_django_optimizer as gql_optimizer
+from nautobot.extras.graphql.types import OptimizedNautobotObjectType
 
 
-class ContentTypeType(gql_optimizer.OptimizedDjangoObjectType):
+class ContentTypeType(OptimizedNautobotObjectType):
     """
     Graphene-Django object type for ContentType records.
 
