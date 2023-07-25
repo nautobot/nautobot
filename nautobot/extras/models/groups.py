@@ -349,7 +349,7 @@ class DynamicGroup(OrganizationalModel):
 
         Args:
             skip_cache (bool, optional): Whether to skip the cache and run the query directly. Defaults to False.
-            force_update_cache (bool, optional): Whether to force an update of the cache. Ignored if `skip_cache` is True. Defaults to False. 
+            force_update_cache (bool, optional): Whether to force an update of the cache. Ignored if `skip_cache` is True. Defaults to False.
         """
 
         if skip_cache:
