@@ -403,7 +403,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
 
     def test_get_lookup_value_dom_element(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
-        response = self.client.get(url + "?content_type=dcim.location&field_name=name", **self.header)
+        response = self.client.get(f"{url}?content_type=dcim.location&field_name=name", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -412,6 +412,18 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
                 "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
             },
         )
+
+        # Also assert JSON representation
+        response = self.client.get(f"{url}?content_type=dcim.location&field_name=name&as_json", **self.header)
+        self.assertEqual(response.status_code, 200)
+        print(response.data)
+        expected_response = {
+            "field_type": "MultiValueCharField",
+            "attrs": {"class": "form-control nautobot-select2-multi-value-char", "data-multiple": 1},
+            "choices": [],
+            "is_required": False,
+        }
+        self.assertEqual(response.data, expected_response)
 
     def test_get_lookup_value_dom_element_for_configcontext(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
