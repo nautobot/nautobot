@@ -36,6 +36,7 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.utilities.api import get_serializer_for_model
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import (
     get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
@@ -172,7 +173,6 @@ class ModelViewSetMixin:
     brief_prefetch_fields = []
 
     def get_serializer(self, *args, **kwargs):
-
         # If a list of objects has been provided, initialize the serializer with many=True
         if isinstance(kwargs.get("data", {}), list):
             kwargs["many"] = True
@@ -335,7 +335,6 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-
         return Response(
             OrderedDict(
                 (
@@ -479,6 +478,11 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
+        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+            doc_url = reverse("api_docs")
+            login_url = reverse(settings.LOGIN_URL)
+            return redirect(f"{login_url}?next={doc_url}")
+
         # For backward compatibility wtih drf-yasg, `/api/docs/?format=openapi` is a redirect to the JSON schema.
         if request.GET.get("format") == "openapi":
             return redirect("schema_json", permanent=True)

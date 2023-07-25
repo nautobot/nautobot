@@ -32,7 +32,6 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         tenant_groups = TenantGroup.objects.all()[:2]
 
         Tenant.objects.create(name="Tenant 8", group=tenant_groups[0])

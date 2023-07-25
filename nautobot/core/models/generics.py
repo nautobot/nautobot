@@ -1,5 +1,4 @@
 import logging
-import sys
 
 from taggit.managers import TaggableManager, _TaggableManager
 
@@ -65,10 +64,7 @@ class _NautobotTaggableManager(_TaggableManager):
             tags_unpacked = ", ".join([repr(tag) for tag in tags])
             tags_list = list(tags)
             message = "Deprecated `tags.set(%s)` was called, please change to `tags.set(%s)` instead"
-            if sys.version_info >= (3, 8):
-                logger.warning(message, tags_unpacked, tags_list, stacklevel=2)
-            else:  # Python 3.7
-                logger.warning(message, tags_unpacked, tags_list)
+            logger.warning(message, tags_unpacked, tags_list, stacklevel=2)
         return super().set(tags, through_defaults=through_defaults, **kwargs)
 
 

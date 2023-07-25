@@ -741,7 +741,6 @@ class RackCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)
@@ -932,7 +931,6 @@ class RackReservationCSVForm(CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit rack_group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -1304,7 +1302,6 @@ class PowerOutletTemplateForm(NautobotModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         # Limit power_port choices to current DeviceType
@@ -1440,7 +1437,6 @@ class FrontPortTemplateForm(NautobotModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         # Limit rear_port choices to current DeviceType
@@ -1507,7 +1503,6 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
             )
 
     def get_iterative_data(self, iteration):
-
         # Assign rear port and position from selected set
         rear_port, position = self.cleaned_data["rear_port_set"][iteration].split(":")
 
@@ -1624,7 +1619,6 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
 
 class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
     def __init__(self, device_type, data=None, *args, **kwargs):
-
         # Must pass the parent DeviceType on form initialization
         data.update(
             {
@@ -1635,7 +1629,6 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
     def clean_device_type(self):
-
         data = self.cleaned_data["device_type"]
 
         # Limit fields referencing other components to the parent DeviceType
@@ -1918,7 +1911,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         super().__init__(*args, **kwargs)
 
         if self.instance.present_in_database:
-
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for family in [4, 6]:
                 ip_choices = [(None, "---------")]
@@ -1972,7 +1964,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
         else:
-
             # An object that doesn't exist yet can't have any IPs assigned to it
             self.fields["primary_ip4"].choices = []
             self.fields["primary_ip4"].widget.attrs["readonly"] = True
@@ -2034,7 +2025,6 @@ class BaseDeviceCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit device type queryset by manufacturer
             params = {f"manufacturer__{self.fields['manufacturer'].to_field_name}": data.get("manufacturer")}
             self.fields["device_type"].queryset = self.fields["device_type"].queryset.filter(**params)
@@ -2088,7 +2078,6 @@ class DeviceCSVForm(LocatableModelCSVFormMixin, BaseDeviceCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit rack_group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -2132,7 +2121,6 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit device bay queryset by parent device
             params = {f"device__{self.fields['parent'].to_field_name}": data.get("parent")}
             self.fields["device_bay"].queryset = self.fields["device_bay"].queryset.filter(**params)
@@ -3208,7 +3196,6 @@ class FrontPortCreateForm(ComponentCreateForm):
             )
 
     def get_iterative_data(self, iteration):
-
         # Assign rear port and position from selected set
         rear_port, position = self.cleaned_data["rear_port_set"][iteration].split(":")
 
@@ -3397,7 +3384,6 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
     )
 
     def __init__(self, device_bay, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self.fields["installed_device"].queryset = Device.objects.filter(
@@ -4298,7 +4284,6 @@ class PowerPanelCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit group queryset by assigned site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["rack_group"].queryset = self.fields["rack_group"].queryset.filter(**params)
@@ -4415,7 +4400,6 @@ class PowerFeedCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit power_panel queryset by site
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["power_panel"].queryset = self.fields["power_panel"].queryset.filter(**params)

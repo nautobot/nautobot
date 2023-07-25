@@ -200,7 +200,6 @@ class VLANGroupSerializer(NautobotModelSerializer):
         validators = []
 
     def validate(self, data):
-
         # Validate uniqueness of name and slug if a site has been assigned.
         # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
         if data.get("site", None):
@@ -241,7 +240,6 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
         validators = []
 
     def validate(self, data):
-
         # Validate uniqueness of vid and name if a group has been assigned.
         if data.get("group", None):
             for field in ["vid", "name"]:
@@ -290,7 +288,6 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
 
 
 class PrefixLengthSerializer(serializers.Serializer):
-
     prefix_length = serializers.IntegerField()
 
     def to_internal_value(self, data):

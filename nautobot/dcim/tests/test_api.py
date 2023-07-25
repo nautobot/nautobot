@@ -58,7 +58,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import APITestCase, APIViewTestCases
+from nautobot.utilities.testing import APITestCase, APIViewTestCases, generate_random_device_asset_tag_of_specified_size
 from nautobot.virtualization.models import Cluster, ClusterType
 
 
@@ -1309,6 +1309,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 "device_type": device_type.pk,
                 "device_role": device_role.pk,
+                "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
                 "status": "offline",
                 "name": "Test Device 4",
                 "site": sites[1].pk,
@@ -1319,6 +1320,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 "device_type": device_type.pk,
                 "device_role": device_role.pk,
+                "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
                 "status": "offline",
                 "name": "Test Device 5",
                 "site": sites[1].pk,
@@ -1329,6 +1331,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 "device_type": device_type.pk,
                 "device_role": device_role.pk,
+                "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
                 "status": "offline",
                 "name": "Test Device 6",
                 "site": sites[1].pk,

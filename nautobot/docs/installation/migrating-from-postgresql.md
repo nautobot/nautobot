@@ -74,7 +74,7 @@ Example output:
 
 ```no-highlight
 ### Nautobot interactive shell (1f2ecc58cf6b)
-### Python 3.7.13 | Django 3.2.19 | Nautobot 1.5.22b1
+### Python 3.11.4 | Django 3.2.20 | Nautobot 1.6.0
 ### lsmodels() will show available models. Use help(<model>) for more info.
 >>> from django.apps import apps
 >>> for model in apps.get_models():

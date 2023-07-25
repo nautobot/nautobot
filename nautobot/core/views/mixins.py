@@ -20,6 +20,7 @@ from django.utils.safestring import mark_safe
 from django.views.generic.edit import FormView
 
 from rest_framework import mixins, exceptions
+from rest_framework.decorators import action as drf_action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
@@ -957,6 +958,7 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 
     base_template = None
 
+    @drf_action(detail=True)
     def changelog(self, request, *args, **kwargs):
         data = {
             "base_template": self.base_template,
@@ -971,6 +973,7 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
     base_template = None
 
+    @drf_action(detail=True)
     def notes(self, request, *args, **kwargs):
         data = {
             "base_template": self.base_template,

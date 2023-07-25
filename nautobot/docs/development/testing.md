@@ -26,6 +26,12 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 - New unit tests **must always** inherit from `nautobot.utilities.testing.TestCase`. Do not use `django.test.TestCase`.
 - New integration tests **must always** inherit from `nautobot.utilities.testing.integration.SeleniumTestCase`. Do not use any other base class for integration tests.
 
+## Integration Tests
+
+### Troubleshooting Integration Tests
+
+Because integration tests normally involve interacting with Nautobot through a browser via [Selenium](https://www.selenium.dev/selenium/docs/api/py/index.html) and the [Splinter](https://splinter.readthedocs.io/en/latest/) wrapper library, they can be difficult to troubleshoot directly from the Python code when a failure occurs. A common troubleshooting technique is to add a `breakpoint()` at the appropriate place in the Python test code (i.e., immediately prior to the observed failure). When the breakpoint is hit and the test pauses, you can then use a VNC viewer application (such as macOS's "Screen Sharing" app) to connect to the running Selenium instance (`localhost:15900` if using the Docker development environment; the default password if prompted is simply "`secret`"). This will allow you to interact live with the testing web browser in its current state and can often provide invaluable insight into the nature of any test failure.
+
 ## Factories
 
 +++ 1.5.0

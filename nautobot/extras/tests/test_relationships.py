@@ -24,7 +24,6 @@ from nautobot.utilities.utils import get_route_for_model
 
 class RelationshipBaseTest(TestCase):
     def setUp(self):
-
         self.site_ct = ContentType.objects.get_for_model(Site)
         self.rack_ct = ContentType.objects.get_for_model(Rack)
         self.vlan_ct = ContentType.objects.get_for_model(VLAN)
@@ -327,7 +326,6 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertTrue(self.m2ms_1.has_many("peer"))
 
     def test_to_form_field_m2m(self):
-
         field = self.m2m_1.to_form_field("source")
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
@@ -346,7 +344,6 @@ class RelationshipTest(RelationshipBaseTest):
         self.assertEqual(field.query_params, {})
 
     def test_to_form_field_o2m(self):
-
         field = self.o2m_1.to_form_field("source")
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
@@ -991,7 +988,6 @@ class RelationshipTableTest(RelationshipBaseTest):
 
 class RequiredRelationshipTestMixin(TestCase):
     def send_data(self, model_class, data, interact_with, action="add", url_kwargs=None):
-
         # Helper to post data to a URL
 
         if interact_with == "ui":
@@ -1161,7 +1157,6 @@ class RequiredRelationshipTestMixin(TestCase):
             self.client.force_login(self.user)
 
         for params in tests_params:
-
             required_on = params["relationship"].required_on
             target_side = RelationshipSideChoices.OPPOSITE[required_on]
             from_model = getattr(params["relationship"], f"{required_on}_type").model_class()
@@ -1169,7 +1164,6 @@ class RequiredRelationshipTestMixin(TestCase):
 
             test_msg = f"Testing {from_model._meta.verbose_name} relationship '{params['relationship'].slug}'"
             with self.subTest(msg=test_msg):
-
                 # Clear any existing required target model objects that may have been created in previous subTests
                 to_model.objects.all().delete()
 
@@ -1256,7 +1250,6 @@ class RequiredRelationshipTestMixin(TestCase):
                 self.assertEqual(from_model.objects.count(), existing_count + 1)
 
                 if interact_with == "api":
-
                     """
                     - Relationship is marked as being not required
                     - Object is created without the required relationship data (succeeds)

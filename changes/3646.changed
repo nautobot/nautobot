@@ -1,0 +1,2 @@
+Redirect unauthenticated users on all views to login page if `HIDE_RESTRICTED_UI` is True.
+Only time is shown on the footer if a user is unauthenticated and `HIDE_RESTRICTED_UI` is True.

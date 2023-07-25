@@ -1765,7 +1765,6 @@ class JobAPIRunTestMixin:
 
 
 class JobHookTest(APIViewTestCases.APIViewTestCase):
-
     model = JobHook
     brief_fields = ["display", "id", "name", "url"]
     choices_fields = []

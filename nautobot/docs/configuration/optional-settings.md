@@ -10,6 +10,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [BANNER_LOGIN](#banner_login)
 * [BANNER_TOP](#banner_top)
 * [CHANGELOG_RETENTION](#changelog_retention)
+* [DEPLOYMENT_ID](#deployment_id)
 * [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [PAGINATE_COUNT](#paginate_count)
@@ -359,6 +360,14 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 ---
 
+## DEPLOYMENT_ID
+
++++ 1.6.0
+
+Default: a random UUID generated at install time.
+
+This setting is used to uniquely but anonymously identify Nautobot deployments when sending installation metrics. This setting is not generally intended to be user-serviceable. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
+
 ## DISABLE_PREFIX_LIST_HIERARCHY
 
 Default: `False`
@@ -531,6 +540,16 @@ git config --global https.proxy http://192.0.2.1:3128
 ```
 
 ---
+
+## INSTALLATION_METRICS_ENABLED
+
++++ 1.6.0
+
+Default: `True` for existing Nautobot deployments, user-specified when running `nautobot-server init` for a new deployment.
+
+Environment Variable: `NAUTOBOT_INSTALLATION_METRICS_ENABLED`
+
+When set to `True`, Nautobot will send anonymized installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../administration/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
 
 ## JOBS_ROOT
 

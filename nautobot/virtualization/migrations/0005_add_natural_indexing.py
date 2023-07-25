@@ -6,7 +6,6 @@ import nautobot.utilities.ordering
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0004_auto_slug"),
     ]
