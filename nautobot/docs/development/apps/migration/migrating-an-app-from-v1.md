@@ -32,9 +32,15 @@ In accordance with the removal of `slug` field in Nautobot v2.0, `CustomField`, 
 
 `Aggregate` models are removed in v2.0 and all existing `Aggregate` instances are migrated to `Prefix` with type set to "Container". So your models and data that are associated with `Aggregate` via ForeignKey or ManyToMany relationships are now required to be migrated to `Prefix`. Please go [here](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) for this change and its potential impact on other models.
 
-#### Update Prefix to specify a namespace Namespace
+#### Introduction of Namespace
 
-#### Update IPAddress to specify a parent Prefix
+A namespace groups together a set of related but distinct [VRFs](../../../user-guide/core-data-model/ipam/vrf.md), [prefixes](../../../user-guide/core-data-model/ipam/prefix.md), and [IP addresses](../../../user-guide/core-data-model/ipam/ipaddress.md). Within a given namespace, only a single record may exist for each distinct VRF, prefix, or IP address. Although such a record may be used in multiple locations within your network, such as a VRF being configured on multiple devices, or a virtual IP address being assigned to multiple interfaces or devices, it is fundamentally a single network object in these cases, and Nautobot models this data accordingly. Check out the model documentation [here](../../../user-guide/core-data-model/ipam/namespace.md)
+
+#### Concrete Relationship between Prefix and IP Address
+
+#### Concrete Relationship between Prefix and Self
+
+#### Concrete Relationship between Prefix and VRF
 
 ## Code Updates
 
@@ -42,7 +48,73 @@ In accordance with the removal of `slug` field in Nautobot v2.0, `CustomField`, 
 
 ### Replace PluginMenuItem with NavMenueItem
 
+In your app's `navigation.py` file. If you are still using `PluginMenuItem` from `nautobot.extras.plugin`, you should replace those code with `NavMenuGroup`, `NavMenuItem`, and `NavMenuTab` from `nautobot.apps.ui`.
+
+For example:
+
+Before:
+
+```python
+
+    from nautobot.extras.plugins import PluginMenuItem
+
+    menu_items = (
+        PluginMenuItem(
+            link="plugins:your_app:dashboard",
+            link_text="Dashboard",
+            permissions=["your_app.view_sync"],
+        ),
+        PluginMenuItem(
+            link="plugins:your_app:sync_list",
+            link_text="History",
+            permissions=["your_app.view_sync"],
+        ),
+        PluginMenuItem(
+            link="plugins:your_app:synclogentry_list",
+            link_text="Logs",
+            permissions=["your_app.view_synclogentry"],
+        ),
+    )
+
+```
+
+After:
+
+```python
+
+from nautobot.apps.ui import NavMenuGroup, NavMenuItem, NavMenuTab
+
+
+items = [
+    NavMenuItem(
+        link="plugins:your_app:dashboard",
+        name="Dashboard",
+        permissions=["your_app.view_sync"],
+    ),
+    NavMenuItem(
+        link="plugins:your_app:sync_list",
+        name="History",
+        permissions=["your_app.view_sync"],
+    ),
+    NavMenuItem(
+        link="plugins:your_app:synclogentry_list",
+        name="Logs",
+        permissions=["your_app.view_synclogentry"],
+    ),
+]
+
+menu_items = (
+    NavMenuTab(
+        name="Plugins",
+        groups=(NavMenuGroup(name="Your App", weight=1000, items=tuple(items)),),
+    ),
+)
+
+```
+
 ### Replace DjangoFilterBackend with NautobotFilterBackend
+
+If your Custom `FilterBackend` class is derived from `DjangoFilterBackend`, you should replace `DjangoFilterBackend` with `NautobotFilterBackend`.
 
 ### Revamp Rest API Serializers
 
