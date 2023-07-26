@@ -958,17 +958,17 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
             model_form_instance = TempForm(auto_id="id_for_%s")
 
         bound_field = form_field.get_bound_field(model_form_instance, field_name)
-        if "as_json" in request.GET:
+        if request.META.get("HTTP_ACCEPT") == "application/json":
             data = {
                 "field_type": form_field.__class__.__name__,
                 "attrs": bound_field.field.widget.attrs,
-                # The choices attr is present in all field types; choices can be ignored in the UI depending on the `field_type`
-                "choices": list(bound_field.field.widget.choices),
                 # `is_required` is redundant here as it's not used in filterset;
                 # Just leaving it here because this would help when building create/edit form for new UI,
                 # This logic(as_json representation) should be extracted into a helper function at that time
                 "is_required": bound_field.field.widget.is_required,
             }
+            if hasattr(bound_field.field.widget, "choices"):
+                data["choices"] = list(bound_field.field.widget.choices)
         else:
-            data = {"dom_element": bound_field.as_widget()}
+            data = bound_field.as_widget()
         return Response(data)

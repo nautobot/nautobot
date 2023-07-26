@@ -408,15 +408,13 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data,
-            {
-                "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
-            },
+            '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>',
         )
 
         # Also assert JSON representation
+        self.header["HTTP_ACCEPT"] = "application/json"
         response = self.client.get(f"{url}?content_type=dcim.location&field_name=name&as_json", **self.header)
         self.assertEqual(response.status_code, 200)
-        print(response.data)
         expected_response = {
             "field_type": "MultiValueCharField",
             "attrs": {"class": "form-control nautobot-select2-multi-value-char", "data-multiple": 1},
@@ -432,12 +430,12 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data,
-            {
-                "dom_element": '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
+            (
+                '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
                 'display-field="display" value-field="name" data-depth="0" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
-            },
+            ),
         )
 
         with self.subTest("Assert correct lookup field dom element is generated"):
@@ -446,9 +444,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.data,
-                {
-                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
-                },
+                '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>',
             )
 
         with self.subTest("Assert TempFilterForm is used if model filterform raises error at initialization"):
@@ -461,9 +457,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.data,
-                {
-                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
-                },
+                '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>',
             )
 
 
