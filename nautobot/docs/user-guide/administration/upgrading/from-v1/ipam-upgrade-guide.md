@@ -4,31 +4,6 @@
 
 This document aims to answer the question “What do I need to do to my data (or what changes with my data) when migrating to 2.0, specifically IPAM?”
 
-## Why the Changes?
-
-- Data validation, cleanliness, and import/export
-- Performance performance performance, especially at scale
-- Reducing confusion and complexity
-
-Eliminating places where bad data cannot actually be used in practice
-
-- Introduction of Namespaces
-    - Form the boundaries for address space uniqueness
-    - Allows for sane implementation of overlapping space
-    - Associated to Prefixes and VRFs
-    - Optional association to a Location
-- Concrete parent/child relationships
-    - Prefix hierarchy
-    - IP Address to Prefix
-    - Solves performance issues in moderate to large data sets
-- Aggregate model removed
-    - Aggregates become top level Prefixes
-    - Removes ubiquity as to the use of Aggregates
-- Types consolidated
-    - Containers, Networks, Pools
-    - Generic Role model replaces IPAM & DCIM Role models
-    - Simplifies the management of Roles, much like Statues
-
 ## What Changed
 
 This section details the high-level changes as it relates to the data modeling for IPAM objects. Some of the sections are repeating content found in the release notes with detail added for improved readability. Additionally, not all changes described will be distinctly related to IPAM, but if there were changes to relationships to or from IPAM data models, the impact of those changes will be described here.
@@ -41,19 +16,19 @@ For more details please refer to the [documentation](https://docs.nautobot.com/p
 
 ### Default Namespace
 
-A default `Namespace` object named "Global" wil be created for you.
+A default `Namespace` object named "Global" wil be created for you. All objects that did not have duplicates found will be found in this Namespace. All new objects will default to this Namespace unless otherwise specified.
 
 #### Cleanup Namespaces
 
-After upgrading, any duplicate objects that were identified will be moved to one or more "Cleanup" Namespaces. Cleanup Namespaces are named numerically. When duplicate objects are identified that are not associated with a VRF that has `enforce_unique` set to `True`, each Cleanup Namespace will be enumerated until one that does not have conflicting objects can be found. If one cannot be found, a new Cleanup Namespace will be created.
+After upgrading, any duplicate objects that were found in the "Global" Namespace will be moved to one or more "Cleanup" Namespaces. Cleanup Namespaces are named numerically. When duplicate objects are identified that are not associated with a VRF that has `enforce_unique` set to `True`, each Cleanup Namespace will be enumerated until one that does not have conflicting objects can be found. If one cannot be found, a new Cleanup Namespace will be created.
 
 For example, the very first duplicate `Prefix` found will be moved to a Namespace named "Cleanup Namespace 1". For each pass that identifies a duplicate of an object in an existing Namespace, new Namespaces will be created by incrementing the number resulting in "Cleanup Namespace 2", "Cleanup Namespace 3", etc.
 
 #### VRF Namespaces
 
-For VRF objects that had `enforce_unique` enabled with Prefixes assigned to them, any child Prefixes or child IPAddresses of those Prefixes will be moved to a "VRF Namespace" with the name of the VRF included.
+For `VRF` objects that had `enforce_unique` enabled with `Prefixes` assigned to them, any child `Prefixes` or child `IPAddresses` of those `Prefixes` will be moved to a "VRF Namespace" with the name of the `VRF` included.
 
-For example, if the VRF is named "Blue" and has Prefixes assigned to it, the VRF, all Prefixes assigned to it, and any child Prefixes or IPAddresses will be moved to a new Namespaced with the name "VRF Namespace Blue".
+For example, if the `VRF` is named "Blue" and has `Prefixes` assigned to it, the `VRF`, all `Prefixes` assigned to it, and any child `Prefixes` or `IPAddresses` will be moved to a new `Namespace` with the name "VRF Namespace Blue".
 
 ### Aggregate model was merged into Prefix
 
@@ -86,11 +61,11 @@ In Nautobot 2.0, creating or updating prefixes that violate this guidance will r
 
 ### Prefix.is_pool field and "Container" status replaced by new field Prefix.type
 
-A new type field was added to `Prefix` to replace the `is_poo`l boolean field and the "Container" status. The `type` field can be set to "Network", "Pool" or "Container", with "Network" being the default.
+A new type field was added to `Prefix` to replace the `is_pool` boolean field and the "Container" `status`. The `type` field can be set to "Network", "Pool" or "Container", with "Network" being the default.
 
-Existing prefixes with a status of "Container" will be migrated to the "Container" `type`. Existing prefixes with `is_pool` set is migrated to the "Pool" `type`. Prefixes with both `is_pool set` and a status of "Container" are migrated to the "Pool" `type`.
+Existing `Prefixes` with a `status` of "Container" will be migrated to the "Container" `type`. Existing prefixes with `is_pool` set is migrated to the "Pool" `type`. Prefixes with both `is_pool set` and a `status` of "Container" are migrated to the "Pool" `type`.
 
-The "Container" status will be removed and all prefixes will be migrated to the "Active" status if it exists. If the"Active" status was deleted, prefixes will be migrated to the first available prefix status in the database that is not"Container".
+The "Container" `status` will be removed and all `Prefixes` will be migrated to the "Active" `status` if it exists. If the"Active" `status` was deleted, `Prefixes` will be migrated to the first available `Prefix` `status` in the database that is not "Container".
 
 ### Prefix utilization calculations were revamped
 
@@ -138,7 +113,7 @@ As with the [`Prefix` parenting guidance](#prefix-parenting-guidance) above, vio
 
 ### Parenting affinity during the upgrade
 
-A best effort is made to keep `Prefixes` and `IPAddresses` together by shared attributes such as Tenant, but this is not alway possible for various reasons such as numerous duplicate with identical or too-closely-similar criteria.
+A best effort is made to keep `Prefixes` and `IPAddresses` together by shared attributes such as `Tenant`, but this is not alway possible for various reasons such as numerous duplicate with identical or too-closely-similar criteria.
 
 When identifying possible ancestors for child `Prefix` or `IPAddress` objects during the reparenting phase of the upgrade process, the following sets of attributes will be compared in order:
 
@@ -158,8 +133,8 @@ Additionally, some new constraints have been put into place to alleviate issues 
 
 The `Interface`/`VMInterface` assignment constraints are as follows:
 
-- If the VRF has no Prefixes assigned, IPAddresses may freely be assigned to the Interface/VMInterface
-- If the VRF has Prefixes assigned, only child IPAddresses of those Prefixes may be assigned to the Interface/VMInterface
+- If the `VRF` has no `Prefixes` assigned, `IPAddresses` may freely be assigned to the `Interface`/`VMInterface`
+- If the `VRF` has `Prefixes` assigned, only child `IPAddresses` of those `Prefixes` may be assigned to the `Interface`/`VMInterface`
 
 ### IPAddress prefix_length is now mask_length
 
@@ -169,19 +144,17 @@ The `mask_length` field is not used for the parenting algorithm when determining
 
 ### VRF is no longer used for uniqueness
 
-VRFs are no longer uniqueness boundaries and the `enforce_unique` field has been removed. A new uniqueness constraint has been added to the VRF `rd` field, which requires it to be unique for each `Namespace`.
+`VRF` objects can no longer be used for uniqueness boundaries and the `enforce_unique` field has been removed. A new uniqueness constraint has been added to the `VRF` `rd` field, which requires it to be unique for each `Namespace`.
 
 The foreign key relationship from `Prefix` to `VRF` has been inverted and replaced with a many-to-many relationship from `VRF` to `Prefix`. Now each `Prefix` can be assigned to one or more `VRF` object in the same `Namespace`.
 
-Lastly, one or more `Device`/`VirtualMachine` objects can now be assigned to a `VRF`. A `VRF` must be assigned to a `Device`/`VirtualMachine` before it may be assigned to an `Interface`/`VMInterface`. This is the modeling equivalent of creating a VRF in the device configuration before it may be used on an interface.
+Lastly, one or more `Device`/`VirtualMachine` objects can now be assigned to a `VRF`. A `VRF` must be assigned to a `Device`/`VirtualMachine` before it may be assigned to an `Interface`/`VMInterface`. This is the modeling equivalent of creating a `VRF` in the device configuration before it may be used on an interface.
 
 ### IPAddress to Interface relationship was inverted
 
-> This also applies to `VMInterface` objects
+In Nautobot 1.x the relationship from an `IPAddress` to an `Interface`/`VMInterface` was done by way of a foreign key to `Interface`/`VMInterface` on the `IPAddress` object. This implementation was flawed in that if a need arose to assign the same IP address to multiple interfaces, it required the creation of duplicate `IPAddress` objects with the same `host` address in order to assign each one to a different `Interface`/`VMInterface`.
 
-In Nautobot 1.x the relationship from an IPAddress to an Interface was done by way of a foreign key to `Interface` on the `IPAddress` object. This implementation was flawed in that if a need arose to assign the same IP address to multiple Interfaces, it required the creation of duplicate `IPAddress` objects with the same `host` address in order to assign each one to a different `Interface`.
-
-As of Nautobot 2.0, this relationships was inverted. Now an `Interface` has a many-to-many relationship to `IPAddresses`. This allows the same `IPAddress` object to be assigned to multiple `Interface` objects without the need to create duplicate `IPAdress` objects.
+As of Nautobot 2.0, this relationships was inverted. Now an `Interface`/`VMInterface` has a many-to-many relationship to `IPAddresses`. This allows the same `IPAddress` object to be assigned to multiple `Interface`/`VMInterface` objects without the need to create duplicate `IPAdress` objects.
 
 ### VRF is now assigned to Interface/VMInterface, not IPAddress
 
@@ -190,31 +163,33 @@ A new foreign key to `VRF` has been introduced to `Interface/VMInterface`.
 - A `VRF` must be assigned to a `Device` before it may be assigned to an `Interface`
 - A `VRF` must be assigned to a `VirtualMachine` before it may be assigned to an `VMInterface`
 
-This addresses a fundamental flaw in which an Interface could have multiple `IPAddress` objects assigned with conflicting VRFs, which is impossible in practice.
+This addresses a fundamental flaw in which an Interface could have multiple `IPAddress` objects assigned with conflicting `VRFs`, which is impossible in practice when applied to a network device configuration.
 
 ### Primary IPv4/IPv6 no longer unique
 
 On `Device` and `VirtualMachin`e objects, the `primary_ip4` and `primary_ip6` fields were changed from a one-to-one field--which is a foreign key with a uniqueness constraint--to a foreign key, dropping the uniquness constraint.
 
-This was necessary to support the case where the same `IPAddress` object may be assigned to one or more `Interface`/`VMInterface` objects, reducing the need to proliferate duplicate `IPAddress` objects merely for the purpose of facilitating interface assignments.
+This was necessary to support the case where the same `IPAddress` object may be assigned to one or more `Interface`/`VMInterface` objects, reducing the need to proliferate duplicate `IPAddress` objects merely for the purpose of facilitating `Interface`/`VMInterface` assignments.
 
 ## Preparing your IPAM Data for Nautobot 2.0
 
 ### You cannot migrate Interfaces or VMInterfaces that have IPs with differing VRFs
 
-IPaddress VRF assignments must be unique when multiple IPAddress objects are assigned to Interface/VMInterface objects. Make sure for interfaces with multiple IPs that each IP assigned to the same Interface share the same VRF or are not assigned a VRF.
+When assigning a `VRF` to an`IPaddress`, the `VRF` must be the same across each IP when multiple `IPAddress` objects are assigned to `Interface`/`VMInterface` objects.
+
+Make sure for `Interfaces`/`VMInterfaces` with multiple IPs that each `IPAddress`1 assigned to the same `Interface`/`VMInterface` share the same VRF, or are not assigned a VRF.
 
 ### Parent Prefixes, child Prefixes, and child IPAddresses must share the same Namespace
 
 Parent `Prefixes`, child `Prefixes`, and `IPAddresses` must share the same `Namespace` and any case for duplicate `Prefix`/`IPAddress` must involve leveraging distinct `Namespace` objects.
 
-If you need to maintain duplicates for any reason, assert that each set of duplicate objects are assigned to a distinct VRF with `enforce_unique` set to `True`, as during the upgrade process these will each be moved to their own "VRF Namespace" (Please see the section on **VRF Namespaces** above).
+If you need to maintain duplicates for any reason, assert that each set of duplicate objects are assigned to a distinct `VRF` with `enforce_unique` set to `True`, as during the upgrade process these will each be moved to their own "VRF Namespace" (Please see the section on **VRF Namespaces** above).
 
 ### IPAddress objects can no longer be orphaned
 
-The database migration will automatically create a parent `Prefix` for `IPAddresses` that do not have an eligible parent. For example an `IPAddress` with address of  `1.2.3.4/32` will have a parent Prefix created of the same network and prefix_length e.g. 1.2.3.4/32.
+The database migration will automatically create a parent `Prefix` for `IPAddresses` that do not have an eligible parent. For example an `IPAddress` with address of `1.2.3.4/32` will have a parent `Prefix` created of the same `network` and `prefix_length` e.g. `1.2.3.4/32`.
 
-If you do not wish for these single-host Prefixes to be created, create a parent prefix of your desired size to contain any would-be orphaned IPAddresses before upgrading.
+If you do not wish for these single-host `Prefixes` to be created, create a parent `Prefix` of your desired size to contain any would-be orphaned `IPAddresses` before upgrading.
 
 ## After you Upgrade
 
@@ -224,23 +199,34 @@ This section includes various things to consider after you have successfully upg
 
 > This may also apply to any "VRF Namespace" objects that were created, depending on your requirements on maintaining duplicate Prefix/IPAddress objects.
 
-A priority of the upgrade process is to assert that no data will be lost. Due to the introduction of strict uniqueness constraints to disallow duplicate Prefix, IPAddress, and VRF objects within the same Namespace.
+A priority of the upgrade process is to assert that no data will be lost. Due to the introduction of strict uniqueness constraints to disallow duplicate `Prefix`, `IPAddress`, and `VRF` objects within the same `Namespace`.
 
 #### A word on Tenant affinity
 
-A best effort is made to keep Prefixes and IPAddresses together by shared attributes such as tenant, but this is not alway possible for various reasons such as numerous duplicate with identical or too-closely-similar criteria.
+A best effort is made to keep `Prefixes` and `IPAddresses` together in the same `Namespace` by shared attributes such as `Tenant`, but this is not alway possible for various reasons such as numerous duplicate with identical or too-closely-similar criteria.
 
-If you find that you have objects that were moved to the wrong Namespaces, you might try the next section on swapping Namespaces using a temporary interstitial Namespace.
+For more information on how this is done please see the section **Parenting affinity during the upgrade** above.
+
+If you find that you have objects that were moved to the wrong Namespaces, you might try the next section on swapping Namespaces.
 
 #### Swapping Namespaces
 
-If you need to swap an object into another Namespace (say Global and Cleanup Namespace 1)
+If you need to swap a duplicate object into another `Namespace` (say "Global" and "Cleanup Namespace 1") where it conflicts with one in the desired `Namespace`, you can use this basic strategy to facilitate moving duplicate objects between `Namespaces` by using a temporary interstitial `Namespace`.
 
-- Create a third "Temporary" Namespace
-- Move objects from "Global" to "Temporary"
-- Move objects from "Cleanup Namespace 1" to "Global"
-- Move objects from "Temporary" to "Cleanup Namespace 1"
-- Delete "Temporary" when done
+In this example we'll use three `Namespaces`. "Global", the `Namespace` in which you have duplicate objects that are found in "Cleanup Namespace 1", but you would like them to be the "Global" Namespace. We'll create a third Namespace called "Temporary" to act as the go-between to temporarily hold objects from one `Namespace` that we want to swap into another.
+
+- First, Create a new  Namespace named "Temporary"
+- Next, edit any desired objects you want to swap in objects from the "Global" Namespace and update their Namespace to "Temporary"
+    - After performing this step, there should be no duplicates found in the "Global" Namespace
+
+- Next, edit the duplicate objects you want moved in from "Cleanup Namespace 1" and set their Namespace to "Global".
+    - After performing this step there should be no duplicates found in the "Cleanup Namespace 1" Namespace, as they've been moved to "Global"
+
+- Finally, edit the original objects found in the "Temporary" Namespace that were moved from "Global" to "Temporary" and set their Namespace  "Cleanup Namespace 1"
+    - After performing this final step, the duplicate objects that were originally in Global have now been swapped with those that were originally in Cleanup Namespace 1.
+    - There are no no duplicate objects found in the "Temporary" Namespace. This Namespace can safely be deleted.
+
+- Delete the "Temporary" Namespace when done.
 
 ### Delete duplicate objects
 
@@ -248,8 +234,8 @@ Because preventing data loss is prioritized, some objects that may have been req
 
 Some examples include:
 
-- The same IP assigned to multple interfaces. Where possible, a single IPAddress is now assigned leaving duplicate objects across other Namespaces to be potentially no longer necessary.
-- VRFs that were used strictly for custom uniqueness boundaries with `enforce_unique` set to `True` may not necessarily be needed.
+- The same `IPAddress` assigned to multple `Interfaces/VMInterfaces`. Where possible, a single `IPAddress` is now assigned leaving duplicate objects across other Namespaces to be potentially no longer necessary.
+- `VRFs` that were used strictly for custom uniqueness boundaries with `enforce_unique` set to `True` may not necessarily be needed.
 
 ### Cleanup your config
 
@@ -257,3 +243,212 @@ Remove the now-deprecated settings from your `nautobot_config.py`:
 
 - `DISABLE_PREFIX_LIST_HIERARCHY`
 - `ENFORCE_GLOBAL_UNIQUE`
+
+## Database (ORM) Changes
+
+### Database Field Behavior Changes
+
+| Model     | Field           | Changes                                                      |
+| :-------- | :-------------- | :----------------------------------------------------------- |
+| IPAddress | role            | Changed from `CharField` to a `ForeignKey` to the new `Role` model. |
+| IPAddress | primary_ip4_for | Now a list as the reverse relation for the `Device.primary_ip4` foreign key |
+| IPAddress | primary_ip6_for | Now a list as the reverse relation for the `Device.primary_ip6` foreign key |
+| Prefix    | is_pool         | Replaced by new field `type`, valid choices are "Container", "Network" and "Pool" |
+| Prefix    | namespace       | New required foreign key to Namespace, defaulting to 'Global' |
+| Prefix    | status          | "Container" status has been replaced by new field `type`     |
+| VRF       | namespace       | New required foreign key to Namespace, defaulting to 'Global' |
+
+### Renamed Database Fields
+
+Most renamed database fields in Nautobot 2.0 fall into the following general categories:
+
+1. Renaming of foreign keys and reverse relations to more consistently and specifically match the related model name or plural name (for example, `Circuit.terminations` to `Circuit.circuit_terminations`, `Rack.group` to `Rack.rack_group`)
+2. Explicitly for the `IPAddress` and `Prefix` models, `family`, a derived field, was replaced with `ip_version`, a concrete integer field that may be used in query filters.
+
+| Model     | Renamed Field | New Name     |
+| :-------- | :------------ | :----------- |
+| IPAddress | family        | ip_version   |
+| IPAddress | prefix_length | mask_length  |
+| Prefix    | family        | ip_version   |
+| Service   | ipaddresses   | ip_addresses |
+| VLAN      | group         | vlan_group   |
+
+### Removed Database Fields
+
+Most removed database fields in Nautobot 2.0 fall into the following general categories:
+
+1. Removal of references to removed models such as `Site` and `Region`
+2. Removal of `slug` fields in preference to the use of autogenerated composite keys.
+
+| Model       | Removed Field   | Comments                                                     |
+| :---------- | :-------------- | :----------------------------------------------------------- |
+| IPAddress   | assigned_object | Replaced by `interfaces` and `vm_interfaces` many-to-many relations |
+| IPAddress   | broadcast       | Use parent Prefix's broadcast instead                        |
+| IPAddress   | vrf             | VRF is now related to the assigned Interface(s), as well as the parent Prefix |
+| Prefix      | is_pool         | Replaced by new `type` field                                 |
+| Prefix      | site            | Use `location` instead                                       |
+| Prefix      | vrf             | Replaced by `vrf_assignments` many-to-many relation          |
+| RouteTarget | slug            |                                                              |
+| VLAN        | site            | Use `location` instead                                       |
+| VLANGroup   | site            | Use `location` instead                                       |
+| VLANGroup   | slug            |                                                              |
+| VRF         | enforce_unique  | Uniqueness of Prefixes and IPAddresses is now enforced by the database |
+
+### Replaced Models
+
+The `ipam.Role`  model has been removed and replaced by a single `extras.Role` model. This means that any references to the removed models in the code now use the `extras.Role` model instead.
+
+| Removed Model | Replaced With |
+| :------------ | :------------ |
+| `ipam.Role`   | `extras.Role` |
+
+## GraphQL and REST API Changes Changes
+
+### API Behavior changes
+
+Most of the API behavior changes in Nautobot 2.0 fall into the following general categories:
+
+1. The `created` field on most models has changed from a date only ("2023-04-06") to being a date/time ("2023-04-06T19:57:45.320232Z")
+2. The `status` fields on various models has changed from a pseudo-enum value (containing a "value" and a "label") to referencing the related Status object in full, similar to other foreign-key fields.
+3. Various models that had a required `site` field and an optional `location` field now have a required `location` field.
+
+| Model     | Field     | Changes                                                      |
+| :-------- | :-------- | :----------------------------------------------------------- |
+| IPAddress | parent    | A new foreign-key to `Prefix`. Required on creation, if `namespace` isn't provided, to find a correct parent Prefix |
+| IPAddress | role      | Now is a foreign-key to `Role` rather than a string          |
+| IPAddress | status    | Now is a foreign-key rather than a pseudo-enum               |
+| Prefix    | namespace | New required foreign key to Namespace, defaulting to 'Global' |
+| Prefix    | status    | Now is a foreign-key rather than a pseudo-enum               |
+| VLAN      | status    | Now is a foreign-key rather than a pseudo-enum               |
+| VRF       | namespace | New required foreign key to Namespace, defaulting to 'Global' |
+
+### Renamed Serializer Fields
+
+Most renamed API fields in Nautobot 2.0 fall into the following general categories:
+
+1. Renaming of foreign keys and reverse relations to more consistently and specifically match the related model name or plural name (for example, `Circuit.type` to `Circuit.circuit_type`, `Interface.count_ipaddresses` to `Interface.ip_address_count`)
+2. Renaming of tree model fields for consistency and due to the change from `django-mptt` to `django-tree-queries` (for example, `InventoryItem._depth` to `InventoryItem.tree_depth`)
+
+| Model     | Renamed Field | New Name   |
+| :-------- | :------------ | :--------- |
+| IPAddress | family        | ip_version |
+| Prefix    | family        | ip_version |
+| VLAN      | group         | vlan_group |
+
+### Removed Serializer Fields
+
+Most removed database fields in Nautobot 2.0 fall into the following general categories:
+
+1. Removal of references to removed models such as `Site` and `Region`
+2. Removal of `slug` fields in preference to the use of autogenerated composite keys.
+
+| Model/Endpoint | Removed Field   | Comments                                                     |
+| :------------- | :-------------- | :----------------------------------------------------------- |
+| IPAddress      | assigned_object | Use `interfaces` and/or `vm_interfaces` instead.             |
+| IPAddress      | broadcast       | Use parent Prefix's broadcast instead                        |
+| IPAddress      | vrf             | VRF is now related to the assigned Interface(s), as well as the parent Prefix |
+| Prefix         | is_pool         | Use `type` instead                                           |
+| Prefix         | vrf             | Prefixes are now assigned to a VRF in the same Namespace via a many-to-many relationship |
+| Prefix         | site            | Use `location` instead                                       |
+| RouteTarget    | slug            |                                                              |
+| VLAN           | site            | Use `location` instead                                       |
+| VLANGroup      | site            | Use `location` instead                                       |
+| VLANGroup      | slug            |                                                              |
+| VRF            | enforce_unique  | Uniqueness of Prefixes and IPAddresses is now enforced at the database level |
+
+### Replaced Endpoints
+
+The endpoint `/ipam/roles/` is no longer available. Instead, use the `/extras/roles/` endpoint to retrieve and manipulate `role` data.
+
+| Removed Endpoints | Replaced With    |
+| :---------------- | :--------------- |
+| `/ipam/roles/`    | `/extras/roles/` |
+
+## UI, GraphQL, and REST API Filter Changes
+
+### Renamed Filter Fields
+
+Most renamed filter fields in Nautobot 2.0 fall into the following general categories:
+
+1. The `tag` filter is renamed to `tags` on all models supporting Tags.
+2. Renames to match renamed model/serializer fields as described earlier in this document.
+3. Related membership filters are renamed to `has_<related>` throughout, for example `ConsolePort.cabled` is renamed to `ConsolePort.has_cable`.
+4. Most `<related>_id` filters have been merged into the corresponding `<related>` filter (see ["Enhanced Filter Fields"](https://docs.nautobot.com/projects/core/en/next/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1/#enhanced-filter-fields) below).
+
+| Model       | Renamed Filter        | New Name                  | Renamed Field |
+| :---------- | :-------------------- | :------------------------ | :------------ |
+| IPAddress   | assigned_to_interface | has_interface_assignments |               |
+| IPAddress   | family                | ip_version                |               |
+| IPAddress   | parent                | prefix                    |               |
+| IPAddress   | tag                   | tags                      |               |
+| Prefix      | family                | ip_versionip_version      |               |
+| Prefix      | is_pool               | type                      |               |
+| Prefix      | tag                   | tags                      |               |
+| RouteTarget | tag                   | tags                      |               |
+| Service     | tag                   | tags                      |               |
+| VLAN        | group                 | vlan_group                |               |
+| VLAN        | tag                   | tags                      |               |
+| VRF         | tag                   | tags                      |               |
+
+### Enhanced Filter Fields
+
+Below is a table documenting [enhanced filter field changes](https://docs.nautobot.com/projects/core/en/next/release-notes/version-2.0/#enhanced-filter-fields-2804) in Nautobot 2.0. These enhancements mostly fall into the following general categories:
+
+1. Many filters are enhanced to permit filtering by UUID *or* by name.
+2. Filters that previously only supported a single filter value can now filter on multiple values.
+
+| Model       | Filter              | Enhancements                         |
+| :---------- | :------------------ | :----------------------------------- |
+| IPAddress   | mask_length         | Filtering on multiple integer values |
+| IPAddress   | rir                 | Filter by UUID or by name            |
+| IPAddress   | tenant              | Filter by UUID or by name            |
+| IPAddress   | tenant_group        | Filter by UUID or by name            |
+| Prefix      | rir                 | Filter by UUID or by name            |
+| Prefix      | tenant              | Filter by UUID or by name            |
+| Prefix      | tenant_group        | Filter by UUID or by name            |
+| RouteTarget | tenant              | Filter by UUID or by name            |
+| RouteTarget | tenant_group        | Filter by UUID or by name            |
+| VLAN        | available_on_device | Filtering on multiple values         |
+| VLAN        | tenant              | Filter by UUID or by name            |
+| VLAN        | tenant_group        | Filter by UUID or by name            |
+| VLAN        | vlan_group          | Filter by UUID or by name            |
+| VRF         | tenant              | Filter by UUID or by name            |
+| VRF         | tenant_group        | Filter by UUID or by name            |
+
+### Corrected Filter Fields
+
+Below is a table documenting [corrected filter field changes](https://docs.nautobot.com/projects/core/en/next/release-notes/version-2.0/#corrected-filter-fields-2804) in Nautobot 2.0. These corrections mostly involve filters that previously permitted filtering on related membership only (`/api/dcim/devices/?console_ports=True`) and have now been corrected into filters for related membership (`/api/dcim/devices/?has_console_ports=True`) as well as by actual related objects (`/api/dcim/devices/?console_ports=<UUID>`).
+
+| Model     | Filter | Correction                                                   |
+| :-------- | :----- | :----------------------------------------------------------- |
+| IPAddress | parent | The `parent` filter now checks for an exact match of the parent Prefix; for legacy `net_host_contained`behavior now use the new `prefix` filter instead |
+
+### Removed Filter Fields
+
+Below is a table documenting [removed filter field changes](https://docs.nautobot.com/projects/core/en/next/release-notes/version-2.0/#removed-filter-fields-2804) in v2.x. Most removed database fields in Nautobot 2.0 fall into the following general categories:
+
+1. Removal of `*_id=<uuid>` filters as they have have been merged into filters that support both uuid and name/slug (for example, instead of `/api/circuits/circuits/?provider_id=<UUID>`, use `/api/circuits/circuits/?provider=<uuid>`).
+2. Removal of filtering on removed models such as `Region` and `Site`. (Use `location`filters instead.)
+3. Removal of `slug` filters from models that no longer have a `slug` field.
+
+| Model       | Removed Filter  | Comments                |
+| :---------- | :-------------- | :---------------------- |
+| Prefix      | region          |                         |
+| Prefix      | region_id       |                         |
+| Prefix      | site            |                         |
+| Prefix      | site_id         |                         |
+| Prefix      | vrf_id          | Use vrf filter instead  |
+| RouteTarget | slug            |                         |
+| RouteTarget | tenant_group_id |                         |
+| VLAN        | group_id        | Use `vlan_group` filter |
+| VLAN        | region          |                         |
+| VLAN        | region_id       |                         |
+| VLAN        | site            |                         |
+| VLAN        | site_id         |                         |
+| VLAN        | tenant_group_id |                         |
+| VLANGroup   | region          |                         |
+| VLANGroup   | region_id       |                         |
+| VLANGroup   | site            |                         |
+| VLANGroup   | site_id         |                         |
+| VLANGroup   | slug            |                         |
+| VRF         | tenant_group_id |                         |
