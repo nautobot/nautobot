@@ -1,5 +1,3 @@
-import uuid
-
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
 from django.db import ProgrammingError
@@ -88,9 +86,6 @@ class ObjectChangeMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        from nautobot.extras.jobs import enqueue_job_hooks # avoid circular import
-        from nautobot.extras.models import ObjectChange
-
         # Determine the resolved path of the request that initiated the change
         try:
             change_context_detail = resolve(request.path).view_name
@@ -98,14 +93,11 @@ class ObjectChangeMiddleware:
             change_context_detail = ""
 
         # Pass request rather than user here because at this point in the request handling logic, request.user may not have been set yet
-        request_id = uuid.uuid4()
-        change_context = WebChangeContext(request=request, context_detail=change_context_detail, change_id=request_id)
+        change_context = WebChangeContext(request=request, context_detail=change_context_detail)
 
         # Process the request with change logging enabled
         with change_logging(change_context):
             response = self.get_response(request)
-            for oc in ObjectChange.objects.filter(request_id=request_id):
-                enqueue_job_hooks(oc)
 
         return response
 
