@@ -180,7 +180,7 @@ export default function PageNumberForm({
             >
                 <Input
                     type="number"
-                    placeholder={isInputFocused ? "" : pageNumber}
+                    placeholder={isInputFocused ? '' : pageNumber}
                     textAlign="center"
                     width="50px"
                     onFocus={handleOnFocus}
