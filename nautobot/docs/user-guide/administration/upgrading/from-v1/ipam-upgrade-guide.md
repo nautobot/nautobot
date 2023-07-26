@@ -171,6 +171,12 @@ This was necessary to support the case where the same `IPAddress` object may be 
 
 ## Preparing your IPAM Data for Nautobot 2.0
 
+### Run the pre-migration helper before upgrading
+
+A new pre-migration management command was added that will allow you to check your existing data for compatibility with the data model changes introduced in Nautobot 2.0. You are highly encouraged to run this before upgrading!
+
+For more information please see the [documentation on Pre-migration validation](./upgrading-from-nautobot-v1.md##pre-migration-validation).
+
 ### You cannot migrate Interfaces or VMInterfaces that have IPs with differing VRFs
 
 When assigning a `VRF` to an`IPaddress`, the `VRF` must be the same across each IP when multiple `IPAddress` objects are assigned to `Interface`/`VMInterface` objects.
