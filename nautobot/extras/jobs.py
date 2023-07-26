@@ -1348,12 +1348,12 @@ def enqueue_job_hooks(object_change):
         return
 
     # Determine whether this type of object supports job hooks
-    model_type = object_change.changed_object._meta.model
-    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
+    model_type = object_change.changed_object_type
+    if model_type not in ChangeLoggedModelsQuery().as_queryset():
         return
 
     # Retrieve any applicable job hooks
-    content_type = ContentType.objects.get_for_model(object_change.changed_object)
+    content_type = object_change.changed_object_type
     action_flag = {
         ObjectChangeActionChoices.ACTION_CREATE: "type_create",
         ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
