@@ -85,6 +85,8 @@ filtered_locs_1 = Location.objects.filter(_custom_field_data__location_code="US-
 filtered_locs_2 = Location.objects.filter(_custom_field_data__location_code__in=["US-NC-RAL42", "US-NC-CLT22"])  # -> ['Raleigh', 'Charlotte']
 ```
 
+For further ORM interaction with custom fields check out the [custom fields user guide](../../user-guides/custom-fields.md).
+
 ## Custom Fields and the REST API
 
 When retrieving an object via the REST API, all of its custom field data will be included within the `custom_fields` attribute. For example, below is the partial output of a location with two custom fields defined:

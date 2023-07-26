@@ -233,10 +233,13 @@ class CustomFieldModel(models.Model):
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
-        # Check for missing required values
+        # Check for missing values, erroring on required ones and populating non-required ones automatically
         for cf in custom_fields.values():
-            if cf.required and cf.key not in self._custom_field_data:
-                raise ValidationError(f"Missing required custom field '{cf.key}'.")
+            if cf.key not in self._custom_field_data:
+                if cf.required:
+                    raise ValidationError(f"Missing required custom field '{cf.key}'.")
+                else:
+                    self._custom_field_data[cf.key] = cf.default
 
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):
