@@ -222,14 +222,11 @@ In this example we'll use three `Namespaces`. "Global", the `Namespace` in which
 - First, Create a new  Namespace named "Temporary"
 - Next, edit any desired objects you want to swap in objects from the "Global" Namespace and update their Namespace to "Temporary"
     - After performing this step, there should be no duplicates found in the "Global" Namespace
-
 - Next, edit the duplicate objects you want moved in from "Cleanup Namespace 1" and set their Namespace to "Global".
     - After performing this step there should be no duplicates found in the "Cleanup Namespace 1" Namespace, as they've been moved to "Global"
-
-- Finally, edit the original objects found in the "Temporary" Namespace that were moved from "Global" to "Temporary" and set their Namespace  "Cleanup Namespace 1"
-    - After performing this final step, the duplicate objects that were originally in Global have now been swapped with those that were originally in Cleanup Namespace 1.
+- Finally, edit the original objects found in the "Temporary" Namespace that were moved from "Global" to "Temporary" and set their Namespace "Cleanup Namespace 1"
+    - After performing this final step, the duplicate objects that were originally in the "Global" have now been swapped with those that were originally in the "Cleanup Namespace 1" Namespace.
     - There are no no duplicate objects found in the "Temporary" Namespace. This Namespace can safely be deleted.
-
 - Delete the "Temporary" Namespace when done.
 
 ### Delete duplicate objects
