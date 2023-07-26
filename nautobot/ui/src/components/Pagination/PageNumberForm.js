@@ -23,11 +23,18 @@ export default function PageNumberForm({
     const [pageNumber, setPageNumber] = useState(trueCurrentPage);
     // State to track the page number form control input validity
     const [isInputInvalid, setIsInputInvalid] = useState(false);
+    // State to track if the input box is focused
+    const [isInputFocused, setIsInputFocused] = useState(false);
 
     // Keeps the pageNumber var updated to trueCurrentPage (i.e. if trueCurrentPage changes via arrow click)
     useEffect(() => {
         setPageNumber(trueCurrentPage);
     }, [trueCurrentPage]);
+
+    // Sets isInputFocused to true
+    function handleOnFocus() {
+        setIsInputFocused(true);
+    }
 
     // Changes the page number based on the input component after a blur event (i.e. when user clicks out of input box and element loses focus)
     function handleOnBlur(event) {
@@ -57,6 +64,7 @@ export default function PageNumberForm({
         else {
             setIsInputInvalid(true);
         }
+        setIsInputFocused(false);
     }
 
     function handleOnKeyDown(event) {
@@ -89,6 +97,7 @@ export default function PageNumberForm({
             else {
                 setIsInputInvalid(true);
             }
+            setIsInputFocused(false);
         }
     }
 
@@ -171,9 +180,10 @@ export default function PageNumberForm({
             >
                 <Input
                     type="number"
-                    placeholder={pageNumber}
+                    placeholder={isInputFocused ? '' : pageNumber}
                     textAlign="center"
                     width="50px"
+                    onFocus={handleOnFocus}
                     onBlur={handleOnBlur}
                     onKeyDown={handleOnKeyDown}
                 />
