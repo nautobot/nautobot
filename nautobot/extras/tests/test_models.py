@@ -371,7 +371,6 @@ class ConfigContextTest(TestCase):
             device_role=self.devicerole,
             device_type=self.devicetype,
         )
-
         dynamic_group_context = ConfigContext.objects.create(
             name="dynamic context 1", weight=100, data={"dynamic_group": "dynamic context 1"}
         )

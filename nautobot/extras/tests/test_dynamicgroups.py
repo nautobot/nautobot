@@ -953,7 +953,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     @override_settings(DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT=2)
     def test_member_caching_enabled(self):
         """
-        Verify that the members list of the DynamicGroup is cached.
+        Verify that the members list of the DynamicGroup is cached and expires.
         """
         group = self.first_child
 
@@ -981,7 +981,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
     @override_settings(DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT=0)
     def test_member_caching_disabled(self):
         """
-        Verify that the members list of the DynamicGroup is cached.
+        Verify that the members list of the DynamicGroup is not cached.
         """
         group = self.first_child
 
