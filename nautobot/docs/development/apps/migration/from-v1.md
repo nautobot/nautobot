@@ -30,7 +30,7 @@ This document provides guidance on migrating code from version 1.x to version 2.
             - [Introduction of Namespace](migrating-an-app-from-v1.md#introduction-of-namespace)
             - [Concrete Relationship between Prefix and IP Address](migrating-an-app-from-v1.md#concrete-relationship-between-prefix-and-ip-address)
             - [Concrete Relationship between Prefix and Self](migrating-an-app-from-v1.md#concrete-relationship-between-prefix-and-self)
-            - [Concrete Relationship between Prefix and VRF](migrating-an-app-from-v1.md#concrete-relationship-between-prefix-and-vrf)
+            - [Convert Relationship Type between Prefix and VRF to Many to Many](migrating-an-app-from-v1.md#convert-relationship-type-between-prefix-and-vrf-to-many-to-many)
     - [Code Updates](migrating-an-app-from-v1.md#code-updates)
         - [Update Code Import Locations](migrating-an-app-from-v1.md#update-code-import-locations)
         - [Replace PluginMenuItem with NavMenueItem](migrating-an-app-from-v1.md#replace-pluginmenuitem-with-navmenueitem)

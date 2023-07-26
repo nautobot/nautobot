@@ -44,7 +44,7 @@ A namespace groups together a set of related but distinct [VRFs](../../../user-g
 
 [Prefixes](../../../user-guide/core-data-model/ipam/prefix.md) now has a concrete parent/child relationship with itself. `Prefix.parent` refers to its parent prefix and `Prefix.children` refers to all its child prefixes.
 
-#### Convert Relationship between Prefix and VRF to Many to Many
+#### Convert Relationship Type between Prefix and VRF to Many to Many
 
 [Prefixes](../../../user-guide/core-data-model/ipam/prefix.md) now no longer has a ForeignKey to [VRF](../../../user-guide/core-data-model/ipam/vrf.md). Instead, the Many to Many relationship is now defined on the VRF side as `VRF.prefixes`.
 
