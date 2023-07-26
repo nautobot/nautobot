@@ -65,7 +65,7 @@ A new type field was added to `Prefix` to replace the `is_pool` boolean field an
 
 Existing `Prefixes` with a `status` of "Container" will be migrated to the "Container" `type`. Existing prefixes with `is_pool` set is migrated to the "Pool" `type`. Prefixes with both `is_pool set` and a `status` of "Container" are migrated to the "Pool" `type`.
 
-The "Container" `status` will be removed and all `Prefixes` will be migrated to the "Active" `status` if it exists. If the"Active" `status` was deleted, `Prefixes` will be migrated to the first available `Prefix` `status` in the database that is not "Container".
+The "Container" `status` will be removed and all prefixes will be migrated to the "Active" `status` if it exists. If the "Active" `status` does not exist, prefixes will instead be migrated to the first available `Prefix` `status` in the database that is not "Container".
 
 ### Prefix utilization calculations were revamped
 
