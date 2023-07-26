@@ -731,7 +731,7 @@ CACHES = {
 }
 
 # Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
-CONTENT_TYPE_CACHE_TIMEOUT = os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", 0)
+CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
 
 #
 # Django RQ (used for legacy background processesing)

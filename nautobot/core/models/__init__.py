@@ -54,15 +54,6 @@ class BaseModel(models.Model):
 
         return cache.get_or_set(cache_key, cls._content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT)
 
-    @classmethod
-    def _get_content_type(cls, skip_cache=False):
-        """
-        Return the ContentType of the object.
-
-        If `skip_cache` is True, the ContentType will be retrieved directly from the database.
-        """
-        return cls._content_type if skip_cache else cls._content_type_cached
-
     class Meta:
         abstract = True
 

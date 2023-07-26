@@ -367,12 +367,15 @@ class DynamicGroup(OrganizationalModel):
         """
 
         # Object's class may have content type cached, so check that first.
-        if not skip_cache and hasattr(type(obj), "_content_type"):
-            if type(obj)._content_type.id != self.content_type_id:
+        try:
+            if not skip_cache and type(obj)._content_type.id != self.content_type_id:
                 return False
-        else:
-            if ContentType.objects.get_for_model(obj).id != self.content_type_id:
-                return False
+        except AttributeError:
+            # Object did not have `_content_type` even though we wanted to use it.
+            pass
+
+        if skip_cache and ContentType.objects.get_for_model(obj).id != self.content_type_id:
+            return False
 
         if skip_cache:
             return self.members.filter(pk=obj.pk).exists()

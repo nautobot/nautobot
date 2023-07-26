@@ -23,7 +23,6 @@ class BaseModelTest(TestCase):
         """
         Verify that the ContentType of the object is cached.
         """
-        self.assertEqual(self.FakeBaseModel._get_content_type(), self.FakeBaseModel._get_content_type(skip_cache=True))
         self.assertEqual(self.FakeBaseModel._content_type, self.FakeBaseModel._content_type_cached)
 
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=2)

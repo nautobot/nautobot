@@ -1,0 +1,1 @@
+Add ability to cache `DynamicGroup` memberships in Redis to improve reverse lookup performance.

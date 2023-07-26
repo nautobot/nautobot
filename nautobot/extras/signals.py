@@ -293,8 +293,18 @@ def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
 
     Can't change content_type_id on an existing instance, so no need to check for that.
     """
-    if kwargs.get("created", None) is False:  # Using the same handler for post_save and post_delete
+
+    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
+        # Caching is disabled, so there's nothing to do
         return
+
+    if kwargs.get("created", None) is False:
+        # We do not care about updates
+        # "created" is not a kwarg for post_delete signals, so is unset or None
+        # "created" is a kwarg for post_save signals, but you cannot change content types of existing groups
+        #   therefor we can ignore cache updates on DynamicGroups updates
+        return
+
     content_type = instance.content_type
     cache_key = f"{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
     cache.set(
@@ -317,13 +327,16 @@ def dynamic_group_update_cache_members(sender, instance, **kwargs):
         # Caching is disabled, so there's nothing to do
         return
 
-    if type(instance) == DynamicGroupMembership:
-        group = instance.parent_group
+    if isinstance(instance, DynamicGroupMembership):
+        group = instance.group
     else:
         group = instance
 
     def _update_cache_and_parents(this_instance):
         this_instance.update_cached_members()
+
+        # Since a change a group or group of groups does not affect it's children, we only need to go up the tree
+        # A group of groups does not use the cache of it's children due to the complexity of the set operations
         for ancestor in list(this_instance.parents.all()):
             _update_cache_and_parents(ancestor)
 

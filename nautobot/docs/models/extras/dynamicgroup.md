@@ -614,7 +614,7 @@ This greatly speeds up the reverse association of an object to the Dynamic Group
 A Dynamic Group object in the ORM exposes two (2) properties for retrieving the members of that group:
 
 - `members` - The evaluated QuerySet defined by the Dynamic Group and it's potential child groups. This will always perform database queries.
-- `members_cached` - A cached instance of the `members` property. This will only perform database queries if the cache is expired.
+- `members_cached` - A cached instance of `members.all()`. This will only perform database queries if the cache is expired. You can continue to perform `.filter()` and other QuerySet operations but this will incur additional database queries.
 
 Additionally methods for working with group membership and caching are:
 
@@ -626,10 +626,23 @@ Additionally methods for working with group membership and caching are:
 
 An model instance that supports Dynamic Groups will expose the following properties:
 
-- `dynamic_groups` - Full reverse membership of instance to `DynamicGroup` objects, performs the most database queries.
-- `dynamic_groups_cached` - Full reverse membership of instance to `DynamicGroup` objects, uses cached member list if available. Ideal for most use cases.
+- `dynamic_groups` - A QuerySet of `DynamicGroup` objects, performs the most database queries.
+    - Iterates over all Dynamic Groups that are applicable to the instance's content type, resulting in a list (what is available as `dynamic_groups_list`) of applicable Dynamic Groups.
+    - A final query (`DynamicGroup.objects.filter(pk__in=dynamic_groups_list)`) is necessary to retrieve a QuerySet of `DynamicGroup` objects.
+    - Always performs `N+1` queries where `N` is the number of Dynamic Groups that are applicable to the instance's content type
+    - Evaluation of `instance_1.dynamic_groups` add no benefit to `instance_2.dynamic_groups`: each instance will perform `N+1` queries.
+- `dynamic_groups_cached` - A QuerySet of instance to `DynamicGroup` objects, uses cached member list if available. Ideal for most use cases.
+    - Uses cached member lists for each Dynamic Group that is applicable to the instance's content type. Membership check returns a list (what is available as `dynamic_groups_list_cached`) of applicable Dynamic Groups.
+    - A query (`DynamicGroup.objects.filter(pk__in=dynamic_groups_list_cached)`) is necessary to retrieve a QuerySet of `DynamicGroup` objects.
+    - Ideal for most use cases, performing only `1` query if membership lists are cached.
+    - Evaluation of `instance_1.dynamic_groups_cached` benefits `instance_2.dynamic_groups_cached` as all dynamic group membership lists are cached: `instance_1.dynamic_groups_cached` may perform `N+1` queries, but `instance_2.dynamic_groups_cached` will perform `1` query.
 - `dynamic_groups_list` - List of membership of instance to `DynamicGroup` objects, performs one less database query than `dynamic_groups`.
+    - The internal list used by `dynamic_groups` to retrieve a QuerySet of `DynamicGroup` objects, but saves the final query.
+    - Beneficial if you don't need QuerySet instance of `DynamicGroup` objects, but want to use uncached membership lists on a large amount of objects.
+    - Always performs `N` queries where `N` is the number of Dynamic Groups that are applicable to the instance's content type
 - `dynamic_groups_list_cached` - List of membership of instance to `DynamicGroup` objects, uses cached member list if available. Performs no database queries in optimal conditions.
+    - The internal list used by `dynamic_groups_cached` to retrieve a QuerySet of `DynamicGroup` objects, but saves the final query.
+    - The most optimal way to retrieve a list of `DynamicGroup` objects for an instance: Worst case `instance_1.dynamic_groups_list_cached` will perform `N` queries, but `instance_2.dynamic_groups_list_cached` will perform `0` queries.
 
 ### Invalidating/Refreshing the Cache
 
