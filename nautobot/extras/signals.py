@@ -1,3 +1,4 @@
+import contextvars
 import os
 import random
 import shutil
@@ -9,7 +10,7 @@ from cacheops.signals import cache_invalidated, cache_read
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_delete, pre_save
+from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
@@ -23,6 +24,9 @@ from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
 from .webhooks import enqueue_webhooks
 
+
+# thread safe change context state variable
+change_context_state = contextvars.ContextVar("change_context_state", default=None)
 logger = logging.getLogger("nautobot.extras.signals")
 
 
@@ -45,13 +49,18 @@ def _get_user_if_authenticated(user, objectchange):
         return None
 
 
-def _handle_changed_object(change_context, sender, instance, raw=False, **kwargs):
+@receiver(post_save)
+@receiver(m2m_changed)
+def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
     from .jobs import enqueue_job_hooks  # avoid circular import
 
     if raw:
+        return
+
+    if change_context_state.get() is None:
         return
 
     object_m2m_changed = False
@@ -70,29 +79,37 @@ def _handle_changed_object(change_context, sender, instance, raw=False, **kwargs
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        # save a copy of this instance's field cache so it can be restored after serialization
+        # to prevent unexpected behavior when chaining multiple signal handlers
+        original_cache = instance._state.fields_cache.copy()
         if object_m2m_changed:
             related_changes = ObjectChange.objects.filter(
                 changed_object_type=ContentType.objects.get_for_model(instance),
                 changed_object_id=instance.pk,
-                request_id=change_context.change_id,
+                request_id=change_context_state.get().change_id,
             )
             m2m_changes = instance.to_objectchange(action)
             related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
             objectchange = related_changes.first() if related_changes.exists() else None
         else:
             objectchange = instance.to_objectchange(action)
-            objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
-            objectchange.request_id = change_context.change_id
-            objectchange.change_context = change_context.context
-            objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+            objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
+            objectchange.request_id = change_context_state.get().change_id
+            objectchange.change_context = change_context_state.get().context
+            objectchange.change_context_detail = change_context_state.get().context_detail[
+                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+            ]
             objectchange.save()
+
+        # restore field cache
+        instance._state.fields_cache = original_cache
 
         # Enqueue job hooks
         if objectchange is not None:
             enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
-    enqueue_webhooks(instance, change_context.get_user(), change_context.change_id, action)
+    enqueue_webhooks(instance, change_context_state.get().get_user(), change_context_state.get().change_id, action)
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
@@ -107,27 +124,42 @@ def _handle_changed_object(change_context, sender, instance, raw=False, **kwargs
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 
 
-def _handle_deleted_object(change_context, sender, instance, **kwargs):
+@receiver(pre_delete)
+def _handle_deleted_object(sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
     from .jobs import enqueue_job_hooks  # avoid circular import
 
+    if change_context_state.get() is None:
+        return
+
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        # save a copy of this instance's field cache so it can be restored after serialization
+        # to prevent unexpected behavior when chaining multiple signal handlers
+        original_cache = instance._state.fields_cache.copy()
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
-        objectchange.request_id = change_context.change_id
-        objectchange.change_context = change_context.context
-        objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+        objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
+        objectchange.request_id = change_context_state.get().change_id
+        objectchange.change_context = change_context_state.get().context
+        objectchange.change_context_detail = change_context_state.get().context_detail[
+            :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+        ]
         objectchange.save()
+
+        # restore field cache
+        instance._state.fields_cache = original_cache
 
         # Enqueue job hooks
         enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
     enqueue_webhooks(
-        instance, change_context.get_user(), change_context.change_id, ObjectChangeActionChoices.ACTION_DELETE
+        instance,
+        change_context_state.get().get_user(),
+        change_context_state.get().change_id,
+        ObjectChangeActionChoices.ACTION_DELETE,
     )
 
     # Increment metric counters

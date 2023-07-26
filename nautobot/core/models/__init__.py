@@ -37,7 +37,7 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-    def validated_save(self):
+    def validated_save(self, *args, **kwargs):
         """
         Perform model validation during instance save.
 
@@ -45,8 +45,8 @@ class BaseModel(models.Model):
         which in effect enforces model validation prior to saving the instance, without having
         to manually make these calls seperately. This is a slight departure from Django norms,
         but is intended to offer an optional, simplified interface for performing this common
-        workflow. The indended use is for user defined Jobs and scripts run via the `nbshell`
+        workflow. The intended use is for user defined Jobs and scripts run via the `nbshell`
         command.
         """
         self.full_clean()
-        self.save()
+        self.save(*args, **kwargs)

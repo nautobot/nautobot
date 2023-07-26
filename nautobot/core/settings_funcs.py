@@ -1,7 +1,6 @@
 """Helper functions to detect settings after app initialization (AKA 'dynamic settings')."""
 
 from django.conf import settings
-from distutils.util import strtobool
 from functools import lru_cache
 import os
 
@@ -57,7 +56,14 @@ def is_truthy(arg):
     """
     if isinstance(arg, bool):
         return arg
-    return bool(strtobool(str(arg)))
+
+    val = str(arg).lower()
+    if val in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    elif val in ("n", "no", "f", "false", "off", "0"):
+        return False
+    else:
+        raise ValueError(f"Invalid truthy value: `{arg}`")
 
 
 def parse_redis_connection(redis_database):

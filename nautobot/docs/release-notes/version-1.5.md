@@ -148,6 +148,92 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.24 (2023-07-24)
+
+### Fixed
+
+- [#3312](https://github.com/nautobot/nautobot/issues/3312) - Fixed custom fields not auto-populating when creating objects through the ORM.
+- [#4127](https://github.com/nautobot/nautobot/issues/4127) - Fixed JavaScript error with 'Check Secret' button introduced in the previous patch release.
+
+### Security
+
+- [#4126](https://github.com/nautobot/nautobot/issues/4126) - Updated `cryptography` to `41.0.2` due to CVE-2023-38325. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+## v1.5.23 (2023-07-10)
+
+### Added
+
+- [#3235](https://github.com/nautobot/nautobot/issues/3235) - Added a warning notifying users when the requested `per_page` on a list page exceeds the `MAX_PAGE_SIZE` set.
+- [#3937](https://github.com/nautobot/nautobot/issues/3937) - Added a Nautobot 2.0 pre-migration management command aptly named `pre_migrate`.
+
+### Changed
+
+- [#1854](https://github.com/nautobot/nautobot/issues/1854) - When sorting tables for MPTT models, nesting/indentation of the model name display is disabled as it was misleading.
+- [#1854](https://github.com/nautobot/nautobot/issues/1854) - Disabled sorting on TreeNode model tables as TreeNode do not support sorting.
+- [#4049](https://github.com/nautobot/nautobot/issues/4049) - Restructured non-production dependencies in `pyproject.toml` to comply with latest Poetry expectations.
+- [#4050](https://github.com/nautobot/nautobot/issues/4050) - Added `develop-1.6` to list of target branches to run changelog step in pull request CI workflow.
+
+### Dependencies
+
+- [#4049](https://github.com/nautobot/nautobot/issues/4049) - Updated development-only dependencies for documentation rendering: `mkdocstrings` 0.22.0, `mkdocstrings-python` 1.1.2, and `griffe` 0.30.1.
+- [#4064](https://github.com/nautobot/nautobot/issues/4064) - Updated `Django` to `3.2.20` to address `CVE-2023-36053`.
+
+### Fixed
+
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Revised documentation for recommended parameters to use when running `nautobot-server dumpdata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Revised documentation around preparing to run `nautobot-server loaddata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Added documentation to run `nautobot-server trace_paths` after `nautobot-server loaddata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Fixed a signal handler that could cause `nautobot-server loaddata` to abort if certain data is present.
+- [#3109](https://github.com/nautobot/nautobot/issues/3109) - Fixed missing trailing slash in NautobotUIViewSet urls.
+- [#3422](https://github.com/nautobot/nautobot/issues/3422) - Fixed postgres database healthcheck error message in development environment.
+- [#3524](https://github.com/nautobot/nautobot/issues/3524) - Fixed the unhandled exception brought on by updating Rack to a new site with a similar device sharing the same name and tenant by catching error in 'RackForm.clean`.
+- [#4021](https://github.com/nautobot/nautobot/issues/4021) - Fixed erroneous warning banner on list views when `MAX_PAGE_SIZE` is set to zero.
+- [#4048](https://github.com/nautobot/nautobot/issues/4048) - Fixed broken tab navigation in secrets.
+
+### Security
+
+- [#4064](https://github.com/nautobot/nautobot/issues/4064) - Updated `Django` to `3.2.20` to address `CVE-2023-36053`.
+
+## v1.5.22 (2023-06-26)
+
+### Added
+
+- [#3534](https://github.com/nautobot/nautobot/issues/3534) - Added optional args and kwargs to `BaseModel.validated_save()` that pass through to the model's `save` method.
+- [#3946](https://github.com/nautobot/nautobot/issues/3946) - Added warning note to job scheduling documentation for the attributes that can prevent scheduling.
+
+### Fixed
+
+- [#3534](https://github.com/nautobot/nautobot/issues/3534) - Fixed confusing unit test failure message when trying to run a non-existent test.
+- [#3534](https://github.com/nautobot/nautobot/issues/3534) - Fixed unit tests sometimes clearing out the default database.
+- [#3658](https://github.com/nautobot/nautobot/issues/3658) - Fixed a typo in the success message when removing a child Device from a Device Bay.
+- [#3739](https://github.com/nautobot/nautobot/issues/3739) - Fixed change log entries not being created for some long running requests.
+- [#3891](https://github.com/nautobot/nautobot/issues/3891) - Fixed a bug preventing Job buttons from supporting the `FORCE_SCRIPT_NAME` setting due to hard-coded URLs.
+- [#3924](https://github.com/nautobot/nautobot/issues/3924) - Fixed a potential server hang at startup when a misconfigured GitRepository is present.
+- [#3948](https://github.com/nautobot/nautobot/issues/3948) - Fixed device name copy button adding an extra space/return.
+- [#3987](https://github.com/nautobot/nautobot/issues/3987) - Fixed issue where download SVG download did not actually download.
+
+### Security
+
+- [#3796](https://github.com/nautobot/nautobot/issues/3796) - Updated `requests` to 2.31.0 to address CVE-2023-32681. This is a development dependency and will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+- [#3843](https://github.com/nautobot/nautobot/issues/3843) - Updated `cryptography` to 41.0.0 due to a statically linked version of OpenSSL which contained vulnerability CVE-2023-2650. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+## v1.5.21 (2023-06-12)
+
+### Added
+
+- [#3806](https://github.com/nautobot/nautobot/issues/3806) - Added instructions and examples for SAML SSO using Okta as the IdP.
+- [#3811](https://github.com/nautobot/nautobot/issues/3811) - Added a note that addresses UWSGI buffer size concerns with Azure SSO in `nautobot/docs/configuration/authentication/sso.md`.
+- [#3897](https://github.com/nautobot/nautobot/issues/3897) - Adds log message when a secrets group for a git repository doesn't yield a token.
+
+### Changed
+
+- [#3888](https://github.com/nautobot/nautobot/issues/3888) - Changed note for celery concurrency in the docs.
+
+### Fixed
+
+- [#3809](https://github.com/nautobot/nautobot/issues/3809) - Fixed a bug that prevented  `__init__()` function of `bulk_create_form_class` being overridden in NautobotUIViewSet.
+- [#3882](https://github.com/nautobot/nautobot/issues/3882) - Removed deprecated distutils dependency.
+
 ## v1.5.20 (2023-05-30)
 
 ### Added
