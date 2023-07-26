@@ -1,1 +1,1 @@
-Removed `logger` kwarg from `JobResult.log()`.
+Removed `logger` kwarg from `JobResult.log()`. Jobs' `self.logger` logging instance automatically logs to both the console and database and should be used instead of this method.
