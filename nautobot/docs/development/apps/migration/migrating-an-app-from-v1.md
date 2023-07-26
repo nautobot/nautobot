@@ -38,9 +38,15 @@ A namespace groups together a set of related but distinct [VRFs](../../../user-g
 
 #### Concrete Relationship between Prefix and IP Address
 
+[IP addresses](./../../user-guide/core-data-model/ipam/ipaddress.md) now have a concrete relationship with its parent [Prefix](../../../user-guide/core-data-model/ipam/prefix.md). `IPAddress.parent` now refers to the parent prefix and `Prefix.ip_addresses` refers to the child ips.`
+
 #### Concrete Relationship between Prefix and Self
 
-#### Concrete Relationship between Prefix and VRF
+[Prefixes](../../../user-guide/core-data-model/ipam/prefix.md) now has a concrete parent/child relationship with itself. `Prefix.parent` refers to its parent prefix and `Prefix.children` refers to all its child prefixes.
+
+#### Convert Relationship between Prefix and VRF to Many to Many
+
+[Prefixes](../../../user-guide/core-data-model/ipam/prefix.md) now no longer has a ForeignKey to [VRF](../../../user-guide/core-data-model/ipam/vrf.md). Instead, the Many to Many relationship is now defined on the VRF side as `VRF.prefixes`.
 
 ## Code Updates
 
