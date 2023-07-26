@@ -49,7 +49,7 @@ class ExampleModelBulkEditForm(BootstrapMixin, BulkEditForm):
         nullable_fields = []
 
 
-class AnotherExampleCreateModelForm(NautobotModelForm):
+class AnotherExampleModelCreateForm(NautobotModelForm):
     """Create only form for `AnotherExampleModel` objects."""
 
     class Meta:
@@ -57,7 +57,7 @@ class AnotherExampleCreateModelForm(NautobotModelForm):
         fields = ["name", "number"]
 
 
-class AnotherExampleUpdateModelForm(NautobotModelForm):
+class AnotherExampleModelUpdateForm(NautobotModelForm):
     """Update only form for `AnotherExampleModel` objects."""
 
     class Meta:
