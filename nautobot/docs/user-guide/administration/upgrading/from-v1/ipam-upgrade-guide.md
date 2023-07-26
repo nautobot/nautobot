@@ -12,7 +12,7 @@ This section details the high-level changes as it relates to the data modeling f
 
 The new `Namespace` model expands on the functionality previously provided by `VRF.enforce_unique` and the `ENFORCE_GLOBAL_UNIQUE` setting, both of which have now been removed. Within a Namespace, all VRFs, Prefixes, and IP addresses must be unique. This enables greater flexibility in managing discrete duplicate `VRF`, `Prefix` or `IPAddress` objects, asserting that each set of duplicates will be in a distinct `Namespace`.
 
-For more details please refer to the [documentation](https://docs.nautobot.com/projects/core/en/next/user-guide/core-data-model/ipam/namespace/).
+For more details please refer to the [Namespace model documentation](../../../core-data-model/ipam/namespace.md).
 
 ### Default Namespace
 
@@ -34,7 +34,7 @@ For example, if the `VRF` is named "Blue" and has `Prefixes` assigned to it, the
 
 The `Aggregate` model will be removed and all existing aggregates will be migrated to `Prefix` with type set to `Container`. The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a `Date` field to a `DateTime` field with the time set to `00:00`. The fields `Aggregate.tenant`, `Aggregate.rir`, and `Aggregate.description` will be migrated over to the same fields on `Prefix`.
 
-See the [upgrade guide](https://docs.nautobot.com/projects/core/en/next/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1/#aggregate-migrated-to-prefix) for more details on the data migration.
+See the [upgrade guide](./upgrading-from-nautobot-v1.md#aggregate-migrated-to-prefix) for more details on the data migration.
 
 ### Role model is now Generic across Nautobot
 
