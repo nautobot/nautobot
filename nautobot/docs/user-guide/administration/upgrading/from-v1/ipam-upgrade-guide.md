@@ -42,6 +42,8 @@ The `DeviceRole`, `RackRole`, `ipam.Role`, and `IPAddressRoleChoices` have all b
 
 In addition, the `role` field of the `IPAddress` model will be changed from a choice field to a foreign key field related to the `extras.Role` model.
 
+For more details please refer to the [documention on Roles](../../../platform-functionality/role.md).
+
 ### Prefix Parenting Concrete Relationship was added
 
 The `Prefix` model wil be modified to have a self-referencing foreign key as the `parent` field. Parenting of prefixes is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
@@ -94,10 +96,6 @@ The `get_utilization` method on the `ipam.Prefix` model has been updated in 2.0 
 ### IPAddress Parenting Concrete Relationship was added
 
 The `ipam.IPAddress` model has been modified to have a mandatory foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
-
-| Removed                | Replaced With   |
-| ---------------------- | --------------- |
-| `get_child_prefixes()` | `descendants()` |
 
 #### IPAddress Parenting Guidance
 
