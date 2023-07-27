@@ -13,7 +13,6 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0058_jobresult_add_time_status_idxs"),
