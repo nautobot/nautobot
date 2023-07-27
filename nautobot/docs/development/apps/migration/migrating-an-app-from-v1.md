@@ -20,7 +20,19 @@ Slugs were used to identify unique objects in the database for various models in
 
 Narrowly defined role models including `dcim.DeviceRole`, `dcim.RackRole` and `ipam.Role` are replaced by a generic `extras.Role` model. If any of your models are using the replaced role models, it is required for you to remove the `role` field from your model and add either `nautobot.extras.models.roles.RoleModelMixin` or `nautobot.extras.models.roles.RoleRequiredRoleModelMixin` to your model class definition. `RoleModelMixin` adds a nullable `role` field whereas `RoleRequiredRoleModelMixin` adds a required `role` field. Please go [here](../../core/role-internals.md) to check out how the `extras.Role` model works in v2.0.
 
-#### Update Job and Job related models
+#### Updates to Job and Job related models
+
+##### Job Model Changes
+
+See details about the fundamental changes to `Job` Model [here](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#job-database-model-changes)
+
+##### Job Logging Changes
+
+Job logging is now handled by a logger off the Job itself and has a function for each level to send the message (info, warning, debug, etc). There is no longer a `log_success` or `log_failure` function. Checkout the changes in detail [here](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#logging-changes)
+
+##### JobResult Model Changes
+
+`JobResult` no longer needs a `job_id`, `user`, or `obj_type` passed to it. It now needs a `name`, `task_name`, and a `worker`. See [here](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#jobresult-database-model-changes) for details.
 
 #### Update CustomField, ComputedField, and Relationship
 
@@ -46,11 +58,16 @@ A namespace groups together a set of related but distinct [VRFs](../../../user-g
 
 #### Convert Relationship Type between Prefix and VRF to Many to Many
 
-[Prefixes](../../../user-guide/core-data-model/ipam/prefix.md) now no longer has a ForeignKey to [VRF](../../../user-guide/core-data-model/ipam/vrf.md). Instead, the Many to Many relationship is now defined on the VRF side as `VRF.prefixes`.
+[Prefixes](../../../user-guide/core-data-model/ipam/prefix.md) now no longer has a ForeignKey to [VRF](../../../user-guide/core-data-model/ipam/vrf.md). Instead, the Many to Many relationship is now defined on the VRF side as `VRF.prefixes`. VRF is no longer assigned to an IPAddress and is now on the parent Prefix. It is now a M2M relationship between the VRF and Prefix. VRF is also no longer a uniqueness constraint on the Prefix. Namespace is used instead. There is a default `Global` Namespace that all Prefixes are migrated into from 1.x.
 
 ## Code Updates
 
 ### Update Code Import Locations
+
+Most changes in code location arise from the merging of the `nautobot.utilities` module into the `nautobot.core` module.
+
+??? info "Full table of code location changes"
+    {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-location-changes.yaml}
 
 ### Replace PluginMenuItem with NavMenueItem
 
@@ -162,6 +179,8 @@ CSV Import for models are now done automatically via the Rest API. As a result o
 ## Dependency Updates
 
 ### Nautobot Version
+
+Change your Nautobot to the latest/v2.0 release.
 
 ### Python Version
 
