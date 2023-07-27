@@ -2,7 +2,7 @@
 
 ## Goal
 
-This document aims to answer the question “What do I need to do to my data (or what changes with my data) when migrating to 2.0, specifically IPAM?”
+This document aims to answer the question "What do I need to do to my data (or what changes with my data) when migrating to 2.0, specifically IPAM?"
 
 ## What Changed
 
@@ -16,7 +16,7 @@ For more details please refer to the [Namespace model documentation](../../../co
 
 ### Default Namespace
 
-A default `Namespace` object named "Global" wil be created for you. All objects that did not have duplicates found will be found in this Namespace. All new objects will default to this Namespace unless otherwise specified.
+A default `Namespace` object named "Global" will be created for you. All objects that did not have duplicates found will be found in this Namespace. All new objects will default to this Namespace unless otherwise specified.
 
 #### Cleanup Namespaces
 
@@ -32,13 +32,13 @@ For example, if the `VRF` is named "Blue" and has `Prefixes` assigned to it, the
 
 ### Aggregate model was merged into Prefix
 
-The `Aggregate` model will be removed and all existing aggregates will be migrated to `Prefix` with type set to `Container`. The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a `Date` field to a `DateTime` field with the time set to `00:00`. The fields `Aggregate.tenant`, `Aggregate.rir`, and `Aggregate.description` will be migrated over to the same fields on `Prefix`.
+The `Aggregate` model was removed and all existing aggregates will be migrated to `Prefix` with type set to `Container`. The `Aggregate.date_added` field will be migrated to `Prefix.date_allocated` and changed from a `Date` field to a `DateTime` field with the time set to `00:00`. The fields `Aggregate.tenant`, `Aggregate.rir`, and `Aggregate.description` will be migrated over to the same fields on `Prefix`.
 
 See the [upgrade guide](./upgrading-from-nautobot-v1.md#aggregate-migrated-to-prefix) for more details on the data migration.
 
 ### Role model is now Generic across Nautobot
 
-The `DeviceRole`, `RackRole`, `ipam.Role`, and `IPAddressRoleChoices` have all been removed and replaced with a `extras.Role` model, This means that all references to any of the replaced models and choices now points to this generic `Role` model.
+The `DeviceRole`, `RackRole`, `ipam.Role`, and `IPAddressRoleChoices` have all been removed and replaced with an `extras.Role` model. This means that all references to any of the replaced models and choices now points to this generic `Role` model.
 
 In addition, the `role` field of the `IPAddress` model will be changed from a choice field to a foreign key field related to the `extras.Role` model.
 
@@ -46,7 +46,7 @@ For more details please refer to the [documention on Roles](../../../platform-fu
 
 ### Prefix Parenting Concrete Relationship was added
 
-The `Prefix` model wil be modified to have a self-referencing foreign key as the `parent` field. Parenting of prefixes is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
+The `Prefix` model was modified to have a self-referencing foreign key as the `parent` field. Parenting of prefixes is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
 
 As a result of this change, it is no longer necessary nor possible to disable tree hierarchy using `settings.DISABLE_PREFIX_LIST_HIERARCHY` as this setting has been removed. Additionally it is no longer possible to disable global uniqueness using `settings.ENFORCE_GLOBAL_UNIQUE` as this setting has been removed.
 
@@ -65,7 +65,7 @@ In Nautobot 2.0, creating or updating prefixes that violate this guidance will r
 
 A new type field was added to `Prefix` to replace the `is_pool` boolean field and the "Container" `status`. The `type` field can be set to "Network", "Pool" or "Container", with "Network" being the default.
 
-Existing `Prefixes` with a `status` of "Container" will be migrated to the "Container" `type`. Existing prefixes with `is_pool` set is migrated to the "Pool" `type`. Prefixes with both `is_pool set` and a `status` of "Container" are migrated to the "Pool" `type`.
+Existing `Prefixes` with a `status` of "Container" will be migrated to the "Container" `type`. Existing prefixes with `is_pool` set are migrated to the "Pool" `type`. Prefixes with both `is_pool set` and a `status` of "Container" are migrated to the "Pool" `type`.
 
 The "Container" `status` will be removed and all prefixes will be migrated to the "Active" `status` if it exists. If the "Active" `status` does not exist, prefixes will instead be migrated to the first available `Prefix` `status` in the database that is not "Container".
 
@@ -105,13 +105,13 @@ The following guidance has been added to the `IPAddress` model:
 - An `IPAddress` should not be created if a suitable parent `Prefix` of type `Network` does not exist
 - An `IPAddress` can be a member of a `Pool` but only if the `Pool` is a child of a `Network`
 - If an eligible parent `Prefix` cannot be found for an `IPAddress` in a given `Namespace`, creation or update of that `IPAddress` will fail.
-- If deleting a parent `Prefix` would result in any child `IPAddress` objects to become orphaned, the delete opration will fail.
+- If deleting a parent `Prefix` would result in any child `IPAddress` objects to become orphaned, the delete operation will fail.
 
 As with the [`Prefix` parenting guidance](#prefix-parenting-guidance) above, violating this guidance in Nautobot 2.0 will result in a warning; in a future Nautobot release this will be changed to an enforced data constraint.
 
 ### Parenting affinity during the upgrade
 
-A best effort is made to keep `Prefixes` and `IPAddresses` together by shared attributes such as `Tenant`, but this is not alway possible for various reasons such as numerous duplicate with identical or too-closely-similar criteria.
+A best effort is made to keep `Prefixes` and `IPAddresses` together by shared attributes such as `Tenant`, but this is not always possible for various reasons such as numerous duplicates with identical or too-closely-similar criteria.
 
 When identifying possible ancestors for child `Prefix` or `IPAddress` objects during the reparenting phase of the upgrade process, the following sets of attributes will be compared in order:
 
@@ -152,7 +152,7 @@ Lastly, one or more `Device`/`VirtualMachine` objects can now be assigned to a `
 
 In Nautobot 1.x the relationship from an `IPAddress` to an `Interface`/`VMInterface` was done by way of a foreign key to `Interface`/`VMInterface` on the `IPAddress` object. This implementation was flawed in that if a need arose to assign the same IP address to multiple interfaces, it required the creation of duplicate `IPAddress` objects with the same `host` address in order to assign each one to a different `Interface`/`VMInterface`.
 
-As of Nautobot 2.0, this relationships was inverted. Now an `Interface`/`VMInterface` has a many-to-many relationship to `IPAddresses`. This allows the same `IPAddress` object to be assigned to multiple `Interface`/`VMInterface` objects without the need to create duplicate `IPAdress` objects.
+As of Nautobot 2.0, this relationship was inverted. Now an `Interface`/`VMInterface` has a many-to-many relationship to `IPAddresses`. This allows the same `IPAddress` object to be assigned to multiple `Interface`/`VMInterface` objects without the need to create duplicate `IPAddress` objects.
 
 ### VRF is now assigned to Interface/VMInterface, not IPAddress
 
@@ -165,7 +165,7 @@ This addresses a fundamental flaw in which an Interface could have multiple `IPA
 
 ### Primary IPv4/IPv6 no longer unique
 
-On `Device` and `VirtualMachin`e objects, the `primary_ip4` and `primary_ip6` fields were changed from a one-to-one field--which is a foreign key with a uniqueness constraint--to a foreign key, dropping the uniquness constraint.
+On `Device` and `VirtualMachine` objects, the `primary_ip4` and `primary_ip6` fields were changed from a one-to-one field--which is a foreign key with a uniqueness constraint--to a foreign key, dropping the uniqueness constraint.
 
 This was necessary to support the case where the same `IPAddress` object may be assigned to one or more `Interface`/`VMInterface` objects, reducing the need to proliferate duplicate `IPAddress` objects merely for the purpose of facilitating `Interface`/`VMInterface` assignments.
 
@@ -207,7 +207,7 @@ A priority of the upgrade process is to assert that no data will be lost. Due to
 
 #### A word on Tenant affinity
 
-A best effort is made to keep `Prefixes` and `IPAddresses` together in the same `Namespace` by shared attributes such as `Tenant`, but this is not alway possible for various reasons such as numerous duplicate with identical or too-closely-similar criteria.
+A best effort is made to keep `Prefixes` and `IPAddresses` together in the same `Namespace` by shared attributes such as `Tenant`, but this is not always possible for various reasons such as numerous duplicates with identical or too-closely-similar criteria.
 
 For more information on how this is done please see the section **Parenting affinity during the upgrade** above.
 
@@ -226,7 +226,7 @@ In this example we'll use three `Namespaces`. "Global", the `Namespace` in which
     - After performing this step there should be no duplicates found in the "Cleanup Namespace 1" Namespace, as they've been moved to "Global"
 - Finally, edit the original objects found in the "Temporary" Namespace that were moved from "Global" to "Temporary" and set their Namespace "Cleanup Namespace 1"
     - After performing this final step, the duplicate objects that were originally in the "Global" have now been swapped with those that were originally in the "Cleanup Namespace 1" Namespace.
-    - There are no no duplicate objects found in the "Temporary" Namespace. This Namespace can safely be deleted.
+    - There are no duplicate objects found in the "Temporary" Namespace. This Namespace can safely be deleted.
 - Delete the "Temporary" Namespace when done.
 
 ### Delete duplicate objects
@@ -235,7 +235,7 @@ Because preventing data loss is prioritized, some objects that may have been req
 
 Some examples include:
 
-- The same `IPAddress` assigned to multple `Interfaces/VMInterfaces`. Where possible, a single `IPAddress` is now assigned leaving duplicate objects across other Namespaces to be potentially no longer necessary.
+- The same `IPAddress` assigned to multiple `Interfaces/VMInterfaces`. Where possible, a single `IPAddress` is now assigned leaving duplicate objects across other Namespaces to be potentially no longer necessary.
 - `VRFs` that were used strictly for custom uniqueness boundaries with `enforce_unique` set to `True` may not necessarily be needed.
 
 ### Cleanup your config
@@ -422,14 +422,14 @@ Below is a table documenting [corrected filter field changes](https://docs.nauto
 
 | Model     | Filter | Correction                                                   |
 | :-------- | :----- | :----------------------------------------------------------- |
-| IPAddress | parent | The `parent` filter now checks for an exact match of the parent Prefix; for legacy `net_host_contained`behavior now use the new `prefix` filter instead |
+| IPAddress | parent | The `parent` filter now checks for an exact match of the parent Prefix; for legacy `net_host_contained` behavior now use the new `prefix` filter instead |
 
 ### Removed Filter Fields
 
 Below is a table documenting [removed filter field changes](https://docs.nautobot.com/projects/core/en/next/release-notes/version-2.0/#removed-filter-fields-2804) in v2.x. Most removed database fields in Nautobot 2.0 fall into the following general categories:
 
 1. Removal of `*_id=<uuid>` filters as they have have been merged into filters that support both uuid and name/slug (for example, instead of `/api/circuits/circuits/?provider_id=<UUID>`, use `/api/circuits/circuits/?provider=<uuid>`).
-2. Removal of filtering on removed models such as `Region` and `Site`. (Use `location`filters instead.)
+2. Removal of filtering on removed models such as `Region` and `Site`. (Use `location` filters instead.)
 3. Removal of `slug` filters from models that no longer have a `slug` field.
 
 | Model       | Removed Filter  | Comments                |
