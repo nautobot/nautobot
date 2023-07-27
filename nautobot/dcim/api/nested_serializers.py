@@ -3,7 +3,7 @@ from drf_spectacular.utils import extend_schema_field
 
 from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
 from nautobot.dcim import models
-from nautobot.ipam.api.nested_serializers import NestedIPAddressSerializer
+
 
 __all__ = [
     "NestedCableSerializer",

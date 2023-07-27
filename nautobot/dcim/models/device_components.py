@@ -36,7 +36,6 @@ from nautobot.extras.models import (
     StatusModel,
 )
 from nautobot.extras.utils import extras_features
-from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
