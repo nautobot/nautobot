@@ -237,7 +237,6 @@ class RackElevationSVG:
             drawing.add(drawing.text(str(unit), position_coordinates, class_="unit"))
 
         for unit in self.merge_elevations(face):
-
             # Loop through all units in the elevation
             device = unit["device"]
             height = unit.get("height", 1)

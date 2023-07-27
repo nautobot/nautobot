@@ -118,7 +118,7 @@ Output:
 
 ```no-highlight
 ### Nautobot interactive shell (localhost)
-### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0
+### Python 3.11.4 | Django 3.2.20 | Nautobot 1.6.0
 ### lsmodels() will show available models. Use help(<model>) for more info.
 >>> from django.conf import settings
 ```
@@ -151,17 +151,17 @@ If you attempt to modify `INSTALLED_APPS` yourself, you might see an error such 
 Traceback (most recent call last):
   File "/usr/local/bin/nautobot-server", line 8, in <module>
     sys.exit(main())
-  File "/usr/local/lib/python3.7/site-packages/nautobot/core/cli.py", line 53, in main
+  File "/usr/local/lib/python3.8/site-packages/nautobot/core/cli.py", line 53, in main
     initializer=_configure_settings,  # Called after defaults
-  File "/usr/local/lib/python3.7/site-packages/nautobot/core/runner/runner.py", line 193, in run_app
+  File "/usr/local/lib/python3.8/site-packages/nautobot/core/runner/runner.py", line 193, in run_app
     management.execute_from_command_line([runner_name, command] + command_args)
-  File "/usr/local/lib/python3.7/site-packages/django/core/management/__init__.py", line 401, in execute_from_command_line
+  File "/usr/local/lib/python3.8/site-packages/django/core/management/__init__.py", line 401, in execute_from_command_line
     utility.execute()
-  File "/usr/local/lib/python3.7/site-packages/django/core/management/__init__.py", line 377, in execute
+  File "/usr/local/lib/python3.8/site-packages/django/core/management/__init__.py", line 377, in execute
     django.setup()
-  File "/usr/local/lib/python3.7/site-packages/django/__init__.py", line 24, in setup
+  File "/usr/local/lib/python3.8/site-packages/django/__init__.py", line 24, in setup
     apps.populate(settings.INSTALLED_APPS)
-  File "/usr/local/lib/python3.7/site-packages/django/apps/registry.py", line 95, in populate
+  File "/usr/local/lib/python3.8/site-packages/django/apps/registry.py", line 95, in populate
     "duplicates: %s" % app_config.label)
 django.core.exceptions.ImproperlyConfigured: Application labels aren't unique, duplicates: health_check
 ```

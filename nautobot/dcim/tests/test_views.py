@@ -86,7 +86,13 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import VLAN, IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
+from nautobot.utilities.testing import (
+    ViewTestCases,
+    extract_page_body,
+    generate_random_device_asset_tag_of_specified_size,
+    ModelViewTestCase,
+    post_data,
+)
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -110,7 +116,6 @@ class RegionTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # Create three Regions
         regions = list(Region.objects.filter(parent__isnull=True).distinct())[:3]
 
@@ -137,7 +142,6 @@ class SiteTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         regions = Region.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Site)
@@ -345,7 +349,6 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
 
         RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=site)
@@ -376,7 +379,6 @@ class RackRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         RackRole.objects.create(name="Rack Role 1", slug="rack-role-1")
         RackRole.objects.create(name="Rack Role 2", slug="rack-role-2")
         RackRole.objects.create(name="Rack Role 3", slug="rack-role-3")
@@ -405,7 +407,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         user2 = User.objects.create_user(username="testuser2")
         user3 = User.objects.create_user(username="testuser3")
 
@@ -447,7 +448,6 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.sites = Site.objects.all()[:2]
 
         powerpanels = (
@@ -687,7 +687,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         manufacturer = Manufacturer.objects.first()
 
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
@@ -728,7 +727,6 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         manufacturers = (
             Manufacturer.objects.first(),
             Manufacturer.objects.last(),
@@ -923,7 +921,6 @@ device-bays:
         self.assertEqual(db1.name, "Device Bay 1")
 
     def test_devicetype_export(self):
-
         url = reverse("dcim:devicetype_list")
         self.add_permissions("dcim.view_devicetype")
 
@@ -1288,7 +1285,6 @@ class DeviceRoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
         DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
         DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
@@ -1319,7 +1315,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         manufacturer = Manufacturer.objects.first()
         platform = Platform.objects.first()
 
@@ -1349,7 +1344,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         sites = Site.objects.all()[:2]
 
         rack_group = RackGroup.objects.create(site=sites[0], name="Rack Group 1", slug="rack-group-1")
@@ -1455,7 +1449,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "platform": platforms[1].pk,
             "name": "Device X",
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
-            "asset_tag": "ABCDEF",
+            "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
             "site": sites[1].pk,
             "rack": racks[1].pk,
             "position": 1,
@@ -2221,7 +2215,6 @@ class CableTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
@@ -2411,6 +2404,8 @@ class CableTestCase(
         self.assertFalse(Cable.objects.filter(pk=cables[0].pk).exists())
 
         # Assert the wrong CablePath did not get deleted
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         cable_path_1 = CablePath.objects.filter(
             Q(origin_type=termination_ct, origin_id=circuit_terminations[0].pk)
             | Q(origin_type=interface_ct, origin_id=interfaces[0].pk)
@@ -2419,6 +2414,8 @@ class CableTestCase(
         )
         self.assertFalse(cable_path_1.exists())
 
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         cable_path_2 = CablePath.objects.filter(
             Q(origin_type=termination_ct, origin_id=circuit_terminations[1].pk)
             | Q(origin_type=interface_ct, origin_id=interfaces[1].pk)
@@ -2660,7 +2657,6 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
@@ -2808,7 +2804,6 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         sites = Site.objects.all()[:2]
         rackgroups = (
             RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
@@ -2844,7 +2839,6 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
 
         # Assign site generated to the class object for use later.
@@ -2930,7 +2924,7 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             termination_a=powerport, termination_b=powerfeed, status=Status.objects.get(slug="connected")
         )
 
-        url = reverse("dcim:powerfeed", kwargs=dict(pk=powerfeed.pk))
+        url = reverse("dcim:powerfeed", kwargs={"pk": powerfeed.pk})
         self.assertHttpStatus(self.client.get(url), 200)
 
 
@@ -2968,7 +2962,6 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
 
         cls.form_data = {

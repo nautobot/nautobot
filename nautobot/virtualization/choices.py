@@ -7,7 +7,6 @@ from nautobot.utilities.choices import ChoiceSet
 
 
 class VirtualMachineStatusChoices(ChoiceSet):
-
     STATUS_OFFLINE = "offline"
     STATUS_ACTIVE = "active"
     STATUS_PLANNED = "planned"
@@ -36,7 +35,6 @@ class VirtualMachineStatusChoices(ChoiceSet):
 
 
 class VMInterfaceStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_DECOMMISSIONING = "decommissioning"
     STATUS_FAILED = "failed"

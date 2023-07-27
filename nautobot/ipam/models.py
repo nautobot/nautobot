@@ -302,7 +302,6 @@ class Aggregate(PrimaryModel):
         super().clean()
 
         if self.prefix:
-
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
@@ -582,7 +581,6 @@ class Prefix(PrimaryModel, StatusModel):
         super().clean()
 
         if self.prefix:
-
             # /0 masks are not acceptable
             if self.prefix.prefixlen == 0:
                 raise ValidationError({"prefix": "Cannot create prefix with /0 mask."})
@@ -607,9 +605,7 @@ class Prefix(PrimaryModel, StatusModel):
                 )
 
     def save(self, *args, **kwargs):
-
         if isinstance(self.prefix, netaddr.IPNetwork):
-
             # Clear host bits from prefix
             self.prefix = self.prefix.cidr
 
@@ -908,7 +904,6 @@ class IPAddress(PrimaryModel, StatusModel):
             )
 
         if self.address:
-
             # /0 masks are not acceptable
             if self.address.prefixlen == 0:
                 raise ValidationError({"address": "Cannot create IP address with /0 mask."})
@@ -954,7 +949,6 @@ class IPAddress(PrimaryModel, StatusModel):
         return super().to_objectchange(action, related_object=self.assigned_object, **kwargs)
 
     def to_csv(self):
-
         # Determine if this IP is primary for a Device
         is_primary = False
         if self.address.version == 4 and getattr(self, "primary_ip4_for", False):

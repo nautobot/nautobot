@@ -50,7 +50,6 @@ class Command(BaseCommand):
         self.stdout.write(f"\r  [{'#' * bar_size}{' ' * (20-bar_size)}] {int(percentage)}%", ending="")
 
     def handle(self, *model_names, **options):
-
         # If --force was passed, first delete all existing CablePaths
         if options["force"]:
             cable_paths = CablePath.objects.all()

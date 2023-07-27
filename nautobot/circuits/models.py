@@ -353,7 +353,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
                 )
 
     def to_objectchange(self, action, related_object=None, **kwargs):
-
         # Annotate the parent Circuit
         try:
             related_object = self.circuit

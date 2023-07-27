@@ -44,7 +44,6 @@ from nautobot.utilities.testing import TestCase
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
-
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
 
@@ -604,10 +603,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         with self.assertRaises(ValidationError):
             parent.children.add(
                 child,
-                through_defaults=dict(
-                    operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
-                    weight=10,
-                ),
+                through_defaults={"operator": DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE, "weight": 10},
             )
 
     def test_remove_child(self):

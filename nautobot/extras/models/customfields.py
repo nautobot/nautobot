@@ -556,7 +556,6 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
-
             if simple_json_filter:
                 field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
             else:
@@ -603,10 +602,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         Validate a value according to the field's type validation rules.
         """
         if value not in [None, "", []]:
-
             # Validate text field
             if self.type in (CustomFieldTypeChoices.TYPE_TEXT, CustomFieldTypeChoices.TYPE_URL):
-
                 if not isinstance(value, str):
                     raise ValidationError("Value must be a string")
 

@@ -6,7 +6,6 @@ import taggit.managers
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0021_customfield_changelog_data"),
         ("circuits", "0006_cache_circuit_terminations"),

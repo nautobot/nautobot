@@ -170,7 +170,6 @@ class TagFilter(django_filters.ModelMultipleChoiceFilter):
     """
 
     def __init__(self, *args, **kwargs):
-
         kwargs.setdefault("field_name", "tags__slug")
         kwargs.setdefault("to_field_name", "slug")
         kwargs.setdefault("conjoined", True)

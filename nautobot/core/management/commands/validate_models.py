@@ -47,7 +47,6 @@ class Command(BaseCommand):
         return models
 
     def handle(self, *args, **options):
-
         models = self._get_models(args)
 
         if options["verbosity"]:
