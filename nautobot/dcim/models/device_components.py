@@ -6,7 +6,6 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
-from nautobot.core.fields import AutoSlugField
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -30,7 +29,6 @@ from nautobot.dcim.constants import (
 
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
-    ConfigContextModel,
     RelationshipModel,
     Status,
     StatusField,
@@ -795,11 +793,8 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
     """
 
     name = models.CharField(max_length=100, unique=True)
-
     # Preemptively model 2.0 behavior by making `created` a DateTimeField rather than a DateField.
     created = models.DateTimeField(auto_now_add=True)
-    # created = models.DateTimeField(auto_now_add=True, blank=True, null=True)  # nocommit
-
     status = StatusField(
         on_delete=models.PROTECT,
         related_name="dcim_interfaceredundancygroup_related",
