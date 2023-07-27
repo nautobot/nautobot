@@ -603,6 +603,11 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
         ]
 
 
+#
+# Interface Redundancy group
+#
+
+
 class InterfaceRedundancyGroupAssociationSerializer(
     ValidatedModelSerializer, TaggedModelSerializerMixin
 ):  # pylint: disable=too-many-ancestors
@@ -610,15 +615,13 @@ class InterfaceRedundancyGroupAssociationSerializer(
 
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroupassociation-detail")
     interface = NestedInterfaceSerializer()
-    primary_ip = NestedIPAddressSerializer()
-    virtual_ip = NestedIPAddressSerializer()
     group = NestedInterfaceRedundancyGroupSerializer()
 
     class Meta:
         """Meta attributes."""
 
         model = InterfaceRedundancyGroupAssociation
-        fields = ["id", "url", "group", "interface", "primary_ip", "virtual_ip", "priority"]
+        fields = ["id", "url", "group", "interface", "priority"]
 
 
 class InterfaceRedundancyGroupSerializer(
@@ -627,7 +630,10 @@ class InterfaceRedundancyGroupSerializer(
     """InterfaceRedundancyGroup Serializer."""
 
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroup-detail")
-    members = InterfaceRedundancyGroupAssociationSerializer(source="members_set", many=True, read_only=True)
+    interfaces = InterfaceRedundancyGroupAssociationSerializer(
+        source="interfaceredundancygroupassociation_set", many=True, read_only=True
+    )
+    virtual_ip = NestedIPAddressSerializer()
 
     class Meta:
         """Meta attributes."""

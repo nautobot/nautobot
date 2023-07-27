@@ -4567,59 +4567,70 @@ class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVF
 
 
 class InterfaceRedundancyGroupForm(NautobotModelForm):
-    """InterfaceRedundancyGroup creation/edit form."""
+    """InterfaceRedundancyGroup create/edit form."""
 
     model = InterfaceRedundancyGroup
     slug = SlugField()
-    subscribers = DynamicModelMultipleChoiceField(
-        queryset=Device.objects.all(),
+    virtual_ip = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(),
         required=False,
-        help_text="Subscribers are Devices that have a dependency on the Redundancy group.",
     )
 
     class Meta:
         """Meta attributes."""
 
         model = InterfaceRedundancyGroup
-        fields = ["name", "slug", "description", "subscribers"]
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "status",
+            "virtual_ip",
+            "protocol",
+            "group_id",
+            "preempt",
+            "secrets_group",
+        ]
 
 
-class InterfaceRedundancyGroupAssociationFormSetForm(forms.ModelForm):
-    """InterfaceRedundancyGroupAssociation model form for use inline on InterfaceRedundancyGroupAssociationFormSet."""
+class InterfaceRedundancyGroupAssociationForm(NautobotModelForm):
+    """InterfaceRedundancyGroupAssociation create/edit form."""
 
-    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    interface = DynamicModelChoiceField(queryset=Interface.objects.all(), query_params={"device_id": "$device"})
-    primary_ip = DynamicModelChoiceField(
-        queryset=IPAddress.objects.all(), query_params={"interface_id": "$interface"}, required=False
+    model = InterfaceRedundancyGroupAssociation
+    device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        help_text="Choose a device that contains the target interface.",
     )
-    virtual_ip = DynamicModelChoiceField(
-        queryset=IPAddress.objects.all(), query_params={"interface_id": "$interface"}, required=False
+    interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        query_params={"device_id": "$device"},
+        help_text="Choose an interface to add to the Redundancy Group.",
     )
+    priority = forms.IntegerField(min_value=1, required=False)
 
     class Meta:
         """Meta attributes."""
 
         model = InterfaceRedundancyGroupAssociation
-        fields = ("device", "interface", "primary_ip", "virtual_ip", "priority")
-
-
-# Inline formset for use with providing dynamic rows when creating/editing assignments of Interface to RedundancyGroup.
-InterfaceRedundancyGroupAssociationFormSet = forms.inlineformset_factory(
-    parent_model=InterfaceRedundancyGroup,
-    model=InterfaceRedundancyGroupAssociation,
-    form=InterfaceRedundancyGroupAssociationFormSetForm,
-    fk_name="group",
-    extra=3,
-)
+        fields = [
+            "group",
+            "interface",
+            "priority",
+        ]
 
 
 class InterfaceRedundancyGroupBulkEditForm(
-    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm, LocalContextModelBulkEditForm
+    TagsBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+    LocalContextModelBulkEditForm,
 ):
     """InterfaceRedundancyGroup bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
-        queryset=InterfaceRedundancyGroup.objects.all(), widget=forms.MultipleHiddenInput
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        widget=forms.MultipleHiddenInput,
     )
     description = forms.CharField(required=False)
 

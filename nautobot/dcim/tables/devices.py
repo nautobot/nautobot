@@ -11,6 +11,7 @@ from nautobot.dcim.models import (
     FrontPort,
     Interface,
     InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InventoryItem,
     Platform,
     PowerOutlet,
@@ -41,7 +42,12 @@ from .template_code import (
     FRONTPORT_BUTTONS,
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
+    INTERFACE_REDUNDANCY_GROUP_DEVICES,
+    INTERFACE_REDUNDANCY_GROUP_STATUS,
+    INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
+    INTERFACE_REDUNDANCY_INTERFACE_STATUS,
     INTERFACE_TAGGED_VLANS,
+    LINKED_RECORD_COUNT,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -68,6 +74,7 @@ __all__ = (
     "FrontPortTable",
     "InterfaceTable",
     "InterfaceRedundancyGroupTable",
+    "InterfaceRedundancyGroupAssociationTable",
     "InventoryItemTable",
     "PlatformTable",
     "PowerOutletTable",
@@ -967,7 +974,7 @@ class DeviceRedundancyGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     member_count = tables.TemplateColumn(
-        template_code="""<a href="{{ record.get_absolute_url }}">{{ value }}</a>""",
+        template_code=LINKED_RECORD_COUNT,
         verbose_name="Members",
     )
     secrets_group = tables.Column(linkify=True)
@@ -990,6 +997,15 @@ class InterfaceRedundancyGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    interface_count = tables.TemplateColumn(
+        template_code=LINKED_RECORD_COUNT,
+        verbose_name="Interfaces",
+    )
+    devices = tables.TemplateColumn(
+        template_code=INTERFACE_REDUNDANCY_GROUP_DEVICES,
+        orderable=False,
+        verbose_name="Devices",
+    )
     actions = ButtonsColumn(InterfaceRedundancyGroup)
 
     class Meta(BaseTable.Meta):
@@ -1000,4 +1016,62 @@ class InterfaceRedundancyGroupTable(BaseTable):
             "pk",
             "name",
             "description",
+            "interface_count",
+            "protocol",
+            "group_id",
+            "preempt",
+            "devices",
         )
+
+
+class InterfaceRedundancyGroupAssociationTable(BaseTable):
+    # pylint: disable=R0903
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    group = tables.Column(linkify=True, verbose_name="Group Name")
+    group__virtual_ip = tables.Column(linkify=True, verbose_name="Virtual IP")
+    group__group_id = tables.Column(verbose_name="Group ID")
+    priority = tables.TemplateColumn(template_code=INTERFACE_REDUNDANCY_INTERFACE_PRIORITY)
+    interface__device = tables.Column(linkify=True)
+    interface = tables.Column(linkify=True)
+    interface__status = tables.TemplateColumn(template_code=INTERFACE_REDUNDANCY_INTERFACE_STATUS)
+    group__status = tables.TemplateColumn(
+        template_code=INTERFACE_REDUNDANCY_GROUP_STATUS,
+        verbose_name="Group Status",
+    )
+    interface__ip_addresses = tables.TemplateColumn(
+        template_code=INTERFACE_IPADDRESSES,
+        orderable=False,
+        verbose_name="IP Addresses",
+    )
+    actions = ButtonsColumn(
+        model=InterfaceRedundancyGroupAssociation,
+        buttons=("edit", "delete"),
+    )
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = (
+            "pk",
+            "group",
+            "interface",
+            "priority",
+            "group__status",
+            "group__virtual_ip",
+            "group__protocol",
+            "group__group_id",
+            "group__preempt",
+            "interface__device",
+            "interface__name",
+            "interface__status",
+            "interface__label",
+            "interface__enabled",
+            "interface__type",
+            "interface__description",
+            "interface__ip_addresses",
+        )
+
+        default_columns = ("priority", "actions")

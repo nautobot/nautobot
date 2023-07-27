@@ -62,9 +62,51 @@ DEVICEBAY_STATUS = """
 """
 
 INTERFACE_IPADDRESSES = """
-{% for ip in record.ip_addresses.all %}
-    <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
-{% endfor %}
+{% if record.interface.ip_addresses %}
+    {% for ip in record.interface.ip_addresses.all %}
+        <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
+    {% endfor %}
+{% else %}
+    --
+{% endif %}
+"""
+
+INTERFACE_REDUNDANCY_GROUP_DEVICES = """
+{% if record.interfaces %}
+    {% for interface in record.interfaces.all %}
+        <a href="{{ interface.device.get_absolute_url }}">{{ interface.device }}</a><br />
+    {% endfor %}
+{% else %}
+    --
+{% endif %}
+"""
+
+INTERFACE_REDUNDANCY_GROUP_STATUS = """
+{% if record.group.status %}
+    {% load helpers %}
+    <span class="label" style="color: {{ record.group.status.color|fgcolor }}; background-color: #{{ record.group.status.color }}">
+        {{ record.group.get_status_display }}
+    </span>
+{% else %}
+    --
+{% endif %}
+"""
+
+INTERFACE_REDUNDANCY_INTERFACE_PRIORITY = """
+<span class="badge badge-default">
+    {{ record.priority|default:'None' }}
+</span>
+"""
+
+INTERFACE_REDUNDANCY_INTERFACE_STATUS = """
+{% if record.interface.status %}
+    {% load helpers %}
+    <span class="label" style="color: {{ record.interface.status.color|fgcolor }}; background-color: #{{ record.interface.status.color }}">
+        {{ record.interface.get_status_display }}
+    </span>
+{% else %}
+    --
+{% endif %}
 """
 
 INTERFACE_TAGGED_VLANS = """
@@ -77,6 +119,10 @@ INTERFACE_TAGGED_VLANS = """
 {% else %}
   &mdash;
 {% endif %}
+"""
+
+LINKED_RECORD_COUNT = """
+<a href="{{ record.get_absolute_url }}">{{ value }}</a>
 """
 
 MPTT_LINK = """

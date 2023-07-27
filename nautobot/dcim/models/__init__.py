@@ -17,6 +17,8 @@ from .device_components import (
     DeviceBay,
     FrontPort,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InventoryItem,
     PathEndpoint,
     PowerOutlet,
@@ -29,8 +31,6 @@ from .devices import (
     DeviceRole,
     DeviceType,
     Manufacturer,
-    InterfaceRedundancyGroup,
-    InterfaceRedundancyGroupAssociation,
     Platform,
     VirtualChassis,
 )

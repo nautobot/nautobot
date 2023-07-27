@@ -41,8 +41,6 @@ __all__ = (
     "DeviceType",
     "Manufacturer",
     "Platform",
-    "InterfaceRedundancyGroup",
-    "InterfaceRedundancyGroupAssociation",
     "VirtualChassis",
 )
 
@@ -958,70 +956,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel):
         Return the set of child Devices installed in DeviceBays within this Device.
         """
         return Device.objects.filter(parent_bay__device=self.pk)
-
-
-@extras_features(
-    "custom_fields",
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "relationships",
-    "statuses",
-    "webhooks",
-)
-class InterfaceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):  # pylint: disable=too-many-ancestors
-    """
-    A collection of Interfaces that supply a redundancy group for protocols like HSRP/VRRP.
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    description = models.CharField(max_length=200, blank=True)
-    members = models.ManyToManyField(
-        to="dcim.Interface",
-        through="dcim.InterfaceRedundancyGroupAssociation",
-        related_name="groups",
-        blank=True,
-    )
-    subscribers = models.ManyToManyField(to="dcim.Device", related_name="interface_redundancy_group", blank=True)
-
-    class Meta:
-        """Meta class."""
-
-        ordering = ["name"]
-
-    def get_absolute_url(self):
-        """Return detail view for InterfaceRedundancyGroup."""
-        return reverse("dcim:interfaceredundancygroup", args=[self.id])
-
-    def __str__(self):
-        """Stringify instance."""
-        return self.name
-
-
-class InterfaceRedundancyGroupAssociation(BaseModel):
-    """The intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
-
-    group = models.ForeignKey(to="dcim.InterfaceRedundancyGroup", on_delete=models.CASCADE)
-    interface = models.ForeignKey(to="dcim.Interface", on_delete=models.CASCADE)
-    priority = models.PositiveSmallIntegerField()
-    primary_ip = models.ForeignKey(
-        to="ipam.IPAddress", on_delete=models.CASCADE, related_name="interface_redundancy_primary_ip"
-    )
-    virtual_ip = models.ForeignKey(
-        to="ipam.IPAddress", on_delete=models.CASCADE, null=True, related_name="interface_redundancy_virtual_ip"
-    )
-
-    class Meta:
-        """Meta class."""
-
-        unique_together = (("group", "interface"),)
-        ordering = ("group", "-priority")
-
-    def __str__(self):
-        """Stringify instance."""
-        return f"{self.group}: {self.interface.device} {self.interface}: {self.priority}"
 
 
 #

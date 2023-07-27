@@ -6,10 +6,12 @@ from django.db import models
 from django.db.models import Sum
 from django.urls import reverse
 from mptt.models import MPTTModel, TreeForeignKey
+from nautobot.core.fields import AutoSlugField
 
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -28,11 +30,13 @@ from nautobot.dcim.constants import (
 
 from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
+    ConfigContextModel,
     RelationshipModel,
     Status,
     StatusModel,
 )
 from nautobot.extras.utils import extras_features
+from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
@@ -48,6 +52,8 @@ __all__ = (
     "DeviceBay",
     "FrontPort",
     "Interface",
+    "InterfaceRedundancyGroup",
+    "InterfaceRedundancyGroupAssociation",
     "InventoryItem",
     "PathEndpoint",
     "PowerOutlet",
@@ -775,6 +781,88 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     @property
     def parent(self):
         return self.device
+
+
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "statuses",
+    "webhooks",
+)
+class InterfaceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):  # pylint: disable=too-many-ancestors
+    """
+    A collection of Interfaces that supply a redundancy group for protocols like HSRP/VRRP.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = AutoSlugField(populate_from="name")
+    description = models.CharField(max_length=200, blank=True)
+    virtual_ip = models.ForeignKey(
+        to="ipam.IPAddress",
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="interface_redundancy_virtual_ip",
+    )
+    interfaces = models.ManyToManyField(
+        to="dcim.Interface",
+        through="dcim.InterfaceRedundancyGroupAssociation",
+        related_name="redundancy_groups",
+        blank=True,
+    )
+    protocol = models.CharField(
+        max_length=50,
+        blank=True,
+        choices=InterfaceRedundancyGroupProtocolChoices,
+        verbose_name="Redundancy Protocol",
+    )
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+    )
+    group_id = models.CharField(max_length=50, blank=True)
+    preempt = models.CharField(max_length=50, blank=True)
+
+    class Meta:
+        """Meta class."""
+
+        ordering = ["name"]
+
+    def get_absolute_url(self):
+        """Return detail view for InterfaceRedundancyGroup."""
+        return reverse("dcim:interfaceredundancygroup", args=[self.id])
+
+    def __str__(self):
+        """Return a string representation of the instance."""
+        return self.name
+
+
+@extras_features(
+    "relationships",
+    "custom_fields",
+)
+class InterfaceRedundancyGroupAssociation(PrimaryModel):
+    """Intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
+
+    group = models.ForeignKey(to="dcim.InterfaceRedundancyGroup", on_delete=models.CASCADE)
+    interface = models.ForeignKey(to="dcim.Interface", on_delete=models.CASCADE)
+    priority = models.PositiveSmallIntegerField()
+
+    class Meta:
+        """Meta class."""
+
+        unique_together = (("group", "interface"),)
+        ordering = ("group", "-priority")
+
+    def __str__(self):
+        """Return a string representation of the instance."""
+        return f"{self.group}: {self.interface.device} {self.interface}: {self.priority}"
 
 
 #

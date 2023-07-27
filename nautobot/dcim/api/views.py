@@ -817,7 +817,7 @@ class DeviceRedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class InterfaceRedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
-    queryset = InterfaceRedundancyGroup.objects.select_related("status").prefetch_related("members")
+    queryset = InterfaceRedundancyGroup.objects.select_related("status").prefetch_related("interfaces")
     serializer_class = serializers.InterfaceRedundancyGroupSerializer
     filterset_class = filters.InterfaceRedundancyGroupFilterSet
 

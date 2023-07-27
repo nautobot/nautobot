@@ -59,6 +59,7 @@ from .models import (
     FrontPortTemplate,
     Interface,
     InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
     Location,
@@ -1977,12 +1978,38 @@ class InterfaceView(generic.ObjectView):
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
+        redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+
         return {
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
             "breadcrumb_url": "dcim:device_interfaces",
             "child_interfaces_table": child_interfaces_tables,
+            "redundancy_table": redundancy_table,
         }
+
+    def _get_interface_redundancy_groups_table(self, request, instance):
+        """Return a table of assigned Interface Redundancy Groups."""
+        queryset = instance.interfaceredundancygroupassociation_set.restrict(request.user)
+        queryset = queryset.select_related("group")
+        queryset = queryset.order_by("group", "priority")
+        column_sequence = (
+            "group__virtual_ip",
+            "group",
+            "group__status",
+            "group__group_id",
+            "group__protocol",
+            "priority",
+            "group__preempt",
+        )
+        table = tables.InterfaceRedundancyGroupAssociationTable(
+            data=queryset,
+            sequence=column_sequence,
+            orderable=False,
+        )
+        for field in column_sequence:
+            table.columns.show(field)
+        return table
 
 
 class InterfaceCreateView(generic.ComponentCreateView):
@@ -3162,121 +3189,65 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
         return context
 
 
-class InterfaceRedundancyGroupEditView(generic.ObjectEditView):
-    """InterfaceRedundancyGroup create & update views."""
-
-    queryset = InterfaceRedundancyGroup
-    model_form = forms.InterfaceRedundancyGroupForm
-    template_name = "dcim/interfaceredundancygroup_create.html"
-
-    def get_extra_context(self, request, instance):
-        """Populates formset."""
-        ctx = super().get_extra_context(request, instance)
-
-        formset_kwargs = {"instance": instance}
-        if request.POST:
-            formset_kwargs["data"] = request.POST
-
-        ctx["members"] = forms.InterfaceRedundancyGroupAssociationFormSet(**formset_kwargs)
-
-        return ctx
-
-    def post(self, request, *args, **kwargs):  # pylint: disable=too-many-locals,too-many-branches
-        """Overloads post to account for formset."""
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    # Obtain the instance, but do not yet `save()` it to the database.
-                    obj = form.save(commit=False)
-
-                    ctx = self.get_extra_context(request, obj)
-
-                    # After filters have been set, now we save the object to the database.
-                    obj.save()
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                    # Process the formsets for children
-                    members = ctx["members"]
-                    if members.is_valid():
-                        members.save()
-                    else:
-                        raise RuntimeError(members.errors)
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"  # nosec
-                messages.success(request, mark_safe(msg))  # nosec
-
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
-                return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation."
-                form.add_error(None, msg)
-            except RuntimeError:
-                msg = "Errors encountered when saving Dynamic Group associations. See below."
-                form.add_error(None, msg)
-            except ProtectedError as err:
-                # e.g. Trying to delete a something that is in use.
-                err_msg = err.args[0]
-                protected_obj = err.protected_objects[0]
-                msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
-                form.add_error(None, msg)
-
-        else:
-            form.add_error(None, "Form validation failed")
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class InterfaceRedundancyGroupUIViewSet(
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectBulkUpdateViewMixin,
-):
+class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
     """ViewSet for the InterfaceRedundancyGroup model."""
 
     bulk_update_form_class = forms.InterfaceRedundancyGroupBulkEditForm
     filterset_class = filters.InterfaceRedundancyGroupFilterSet
     filterset_form_class = forms.InterfaceRedundancyGroupFilterForm
-    queryset = InterfaceRedundancyGroup.objects.all()
+    form_class = forms.InterfaceRedundancyGroupForm
+    queryset = InterfaceRedundancyGroup.objects.select_related("status")
+    queryset = queryset.prefetch_related("interfaces")
+    queryset = queryset.annotate(
+        interface_count=count_related(Interface, "redundancy_groups"),
+    )
     serializer_class = serializers.InterfaceRedundancyGroupSerializer
     table_class = tables.InterfaceRedundancyGroupTable
-    # action_buttons = ("add",)
-
     lookup_field = "pk"
 
     def _process_bulk_create_form(self, form):
         """Bulk creating (CSV import) is not supported."""
         raise NotImplementedError()
+
+    def get_extra_context(self, request, instance):
+        """Return additional panels for display."""
+        context = super().get_extra_context(request, instance)
+        if instance and self.action == "retrieve":
+            interface_table = self._get_interface_redundancy_groups_table(request, instance)
+            context["interface_table"] = interface_table
+        return context
+
+    def _get_interface_redundancy_groups_table(self, request, instance):
+        """Return a table of assigned Interfaces."""
+        queryset = instance.interfaceredundancygroupassociation_set.restrict(request.user)
+        queryset = queryset.prefetch_related("interface")
+        queryset = queryset.order_by("priority")
+        column_sequence = (
+            "interface__device",
+            "interface",
+            "interface__status",
+            "interface__enabled",
+            "priority",
+            "interface__ip_addresses",
+            "interface__type",
+            "interface__description",
+            "interface__label",
+        )
+        table = tables.InterfaceRedundancyGroupAssociationTable(
+            data=queryset,
+            sequence=column_sequence,
+            orderable=False,
+        )
+        for column_name in column_sequence:
+            table.columns.show(column_name)
+        return table
+
+
+class InterfaceRedundancyGroupAssociationCreateView(generic.ObjectEditView):
+    queryset = InterfaceRedundancyGroupAssociation.objects.all()
+    model_form = forms.InterfaceRedundancyGroupAssociationForm
+    template_name = "dcim/interfaceredundancygroupassociation_create.html"
+
+
+class InterfaceRedundancyGroupAssociationDeleteView(generic.ObjectDeleteView):
+    queryset = InterfaceRedundancyGroupAssociation.objects.all()

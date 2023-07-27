@@ -1427,3 +1427,17 @@ class InterfaceRedundancyGroupStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
         (STATUS_RETIRED, "Retired"),
     )
+
+
+class InterfaceRedundancyGroupProtocolChoices(ChoiceSet):
+    HSRP = "hsrp"
+    VRRP = "vrrp"
+    GLBP = "glbp"
+    CARP = "carp"
+
+    CHOICES = (
+        (HSRP, "HSRP"),
+        (VRRP, "VRRP"),
+        (GLBP, "GLBP"),
+        (CARP, "CARP"),
+    )

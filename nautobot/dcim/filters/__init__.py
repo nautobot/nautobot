@@ -1781,7 +1781,7 @@ class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
 
         model = InterfaceRedundancyGroup
 
-        fields = ["id", "name", "slug", "description", "members", "subscribers"]
+        fields = ["id", "name", "slug", "description", "virtual_ip"]
 
 
 class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
@@ -1792,4 +1792,4 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearch
 
         model = InterfaceRedundancyGroupAssociation
 
-        fields = ["id", "group", "interface", "primary_ip", "virtual_ip", "priority"]
+        fields = ["id", "group", "interface", "priority"]
