@@ -1780,8 +1780,7 @@ class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
         """Meta attributes for filter."""
 
         model = InterfaceRedundancyGroup
-
-        fields = ["id", "name", "slug", "description", "virtual_ip"]
+        fields = "__all__"
 
 
 class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
@@ -1791,5 +1790,4 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearch
         """Meta attributes for filter."""
 
         model = InterfaceRedundancyGroupAssociation
-
-        fields = ["id", "group", "interface", "priority"]
+        fields = "__all__"

@@ -615,13 +615,13 @@ class InterfaceRedundancyGroupAssociationSerializer(
 
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroupassociation-detail")
     interface = NestedInterfaceSerializer()
-    group = NestedInterfaceRedundancyGroupSerializer()
+    interface_redundancy_group = NestedInterfaceRedundancyGroupSerializer()
 
     class Meta:
         """Meta attributes."""
 
         model = InterfaceRedundancyGroupAssociation
-        fields = ["id", "url", "group", "interface", "priority"]
+        fields = ["id", "url", "interface_redundancy_group", "interface", "priority"]
 
 
 class InterfaceRedundancyGroupSerializer(

@@ -4569,7 +4569,6 @@ class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVF
 class InterfaceRedundancyGroupForm(NautobotModelForm):
     """InterfaceRedundancyGroup create/edit form."""
 
-    slug = SlugField()
     virtual_ip = DynamicModelChoiceField(
         queryset=IPAddress.objects.all(),
         required=False,
@@ -4581,12 +4580,11 @@ class InterfaceRedundancyGroupForm(NautobotModelForm):
         model = InterfaceRedundancyGroup
         fields = [
             "name",
-            "slug",
             "description",
             "status",
             "virtual_ip",
             "protocol",
-            "group_id",
+            "protocol_group_id",
             "secrets_group",
         ]
 
@@ -4633,7 +4631,7 @@ class InterfaceRedundancyGroupAssociationForm(NautobotModelForm):
 
         model = InterfaceRedundancyGroupAssociation
         fields = [
-            "group",
+            "interface_redundancy_group",
             "interface",
             "priority",
         ]
@@ -4667,10 +4665,9 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, forms.ModelForm):
     q = forms.CharField(
         required=False,
         label="Search",
-        help_text="Search within Name or Slug.",
+        help_text="Search within Name.",
     )
     name = forms.CharField(required=False, label="Name")
-    slug = forms.CharField(required=False, label="Slug")
 
     class Meta:
         """Meta attributes."""
@@ -4680,6 +4677,5 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, forms.ModelForm):
         fields = [
             "q",
             "name",
-            "slug",
             "description",
         ]

@@ -5,7 +5,7 @@
 {% if perms.dcim.change_interfaceredundancygroup %}
 
 <div class="btn-group">
-    <a href="{% url 'dcim:interfaceredundancygroupassociation_add' %}?group={{ object.pk }}&return_url={% url 'dcim:interfaceredundancygroup' pk=object.pk %}"
+    <a href="{% url 'dcim:interfaceredundancygroupassociation_add' %}?interface_redundancy_group={{ object.pk }}&return_url={% url 'dcim:interfaceredundancygroup' pk=object.pk %}"
         class="btn btn-primary">
         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
         Add Interface
@@ -44,7 +44,7 @@
         </tr>
         <tr>
             <td>Group ID</td>
-            <td>{{ object.group_id | placeholder }}</td>
+            <td>{{ object.protocol_group_id | placeholder }}</td>
         </tr>
         <tr>
             <td>Secrets Group</td>

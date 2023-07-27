@@ -82,10 +82,12 @@ INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
 """
 
 INTERFACE_REDUNDANCY_GROUP_STATUS = """
-{% if record.group.status %}
+{% if record.interface_redundancy_group.status %}
     {% load helpers %}
-    <span class="label" style="color: {{ record.group.status.color|fgcolor }}; background-color: #{{ record.group.status.color }}">
-        {{ record.group.get_status_display }}
+    <span class="label"
+        style="color: {{ record.interface_redundancy_group.status.color|fgcolor }};
+        background-color: #{{ record.interface_redundancy_group.status.color }}">
+        {{ record.interface_redundancy_group.get_status_display }}
     </span>
 {% else %}
     --

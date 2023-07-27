@@ -38,7 +38,6 @@ app_name = "dcim"
 router = NautobotUIViewSetRouter()
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
-# router.register("interface-redundancy-group-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 
 urlpatterns = [
     # Interface Redundancy Group Associations

@@ -1013,7 +1013,7 @@ class InterfaceRedundancyGroupTable(BaseTable):
             "name",
             "description",
             "protocol",
-            "group_id",
+            "protocol_group_id",
             "interfaces",
         )
 
@@ -1023,14 +1023,14 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
-    group = tables.Column(linkify=True, verbose_name="Group Name")
-    group__virtual_ip = tables.Column(linkify=True, verbose_name="Virtual IP")
-    group__group_id = tables.Column(verbose_name="Group ID")
+    interface_redundancy_group = tables.Column(linkify=True, verbose_name="Group Name")
+    interface_redundancy_group__virtual_ip = tables.Column(linkify=True, verbose_name="Virtual IP")
+    interface_redundancy_group__protocol_group_id = tables.Column(verbose_name="Group ID")
     priority = tables.TemplateColumn(template_code=INTERFACE_REDUNDANCY_INTERFACE_PRIORITY)
     interface__device = tables.Column(linkify=True)
     interface = tables.Column(linkify=True)
     interface__status = tables.TemplateColumn(template_code=INTERFACE_REDUNDANCY_INTERFACE_STATUS)
-    group__status = tables.TemplateColumn(
+    interface_redundancy_group__status = tables.TemplateColumn(
         template_code=INTERFACE_REDUNDANCY_GROUP_STATUS,
         verbose_name="Group Status",
     )
@@ -1050,13 +1050,13 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
         model = InterfaceRedundancyGroupAssociation
         fields = (
             "pk",
-            "group",
+            "interface_redundancy_group",
             "interface",
             "priority",
-            "group__status",
-            "group__virtual_ip",
-            "group__protocol",
-            "group__group_id",
+            "interface_redundancy_group__status",
+            "interface_redundancy_group__virtual_ip",
+            "interface_redundancy_group__protocol",
+            "interface_redundancy_group__protocol_group_id",
             "interface__device",
             "interface__name",
             "interface__status",

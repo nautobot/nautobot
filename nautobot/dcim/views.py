@@ -1982,15 +1982,15 @@ class InterfaceView(generic.ObjectView):
     def _get_interface_redundancy_groups_table(self, request, instance):
         """Return a table of assigned Interface Redundancy Groups."""
         queryset = instance.interfaceredundancygroupassociation_set.restrict(request.user)
-        queryset = queryset.select_related("group")
-        queryset = queryset.order_by("group", "priority")
+        queryset = queryset.select_related("interface_redundancy_group")
+        queryset = queryset.order_by("interface_redundancy_group", "priority")
         column_sequence = (
-            "group",
+            "interface_redundancy_group",
             "priority",
-            "group__status",
-            "group__virtual_ip",
-            "group__group_id",
-            "group__protocol",
+            "interface_redundancy_group__status",
+            "interface_redundancy_group__protocol",
+            "interface_redundancy_group__protocol_group_id",
+            "interface_redundancy_group__virtual_ip",
         )
         table = tables.InterfaceRedundancyGroupAssociationTable(
             data=queryset,
@@ -3189,7 +3189,7 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
     queryset = InterfaceRedundancyGroup.objects.select_related("status")
     queryset = queryset.prefetch_related("interfaces")
     queryset = queryset.annotate(
-        interface_count=count_related(Interface, "redundancy_groups"),
+        interface_count=count_related(Interface, "interface_redundancy_groups"),
     )
     serializer_class = serializers.InterfaceRedundancyGroupSerializer
     table_class = tables.InterfaceRedundancyGroupTable

@@ -433,11 +433,11 @@ class NestedInterfaceRedundancyGroupSerializer(WritableNestedSerializer):
         """Meta attributes."""
 
         model = models.InterfaceRedundancyGroup
-        fields = ["id", "url", "name", "slug"]
+        fields = ["id", "url", "name"]
 
 
 class NestedInterfaceRedundancyGroupAssociationSerializer(WritableNestedSerializer):
-    """ReliabilityGroupAssociation Nested Serializer."""
+    """InterfaceRedundancyGroupAssociation Nested Serializer."""
 
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroupassociation-detail")
     interface = NestedInterfaceSerializer()
