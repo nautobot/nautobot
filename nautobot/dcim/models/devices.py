@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from copy import deepcopy
 
 import yaml
 from django.contrib.contenttypes.fields import GenericRelation
@@ -15,7 +14,7 @@ from django.utils.safestring import mark_safe
 
 from netutils.lib_mapper import (
     ANSIBLE_LIB_MAPPER_REVERSE,
-    # HIERCONFIG_LIB_MAPPER_REVERSE, TODO: coming in netutils 1.5
+    HIERCONFIG_LIB_MAPPER_REVERSE,
     NETMIKO_LIB_MAPPER_REVERSE,
     NTCTEMPLATES_LIB_MAPPER_REVERSE,
     PYATS_LIB_MAPPER_REVERSE,
@@ -431,56 +430,32 @@ class Platform(OrganizationalModel):
     description = models.CharField(max_length=200, blank=True)
 
     @cached_property
-    def _network_drivers(self):
-        NETWORK_DRIVERS = deepcopy(get_settings_or_config("NETWORK_DRIVERS"))
+    def library_network_drivers(self):
+        """Dictionary of library-specific network drivers derived from network_driver by netutils library mapping or NETWORK_DRIVERS setting."""
+
+        library_network_drivers = {}
+        network_driver_key = self.network_driver
+        NETWORK_DRIVERS_CONFIG = get_settings_or_config("NETWORK_DRIVERS")
+
+        # Retrieve values from netutils mapping
         for key, mapping in (
             ("ansible", ANSIBLE_LIB_MAPPER_REVERSE),
-            # TODO ("hier_config", HIER_CONFIG_LIB_MAPPER_REVERSE),
+            ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
             ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
             ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
             ("pyats", PYATS_LIB_MAPPER_REVERSE),
             ("pyntc", PYNTC_LIB_MAPPER_REVERSE),
             ("scrapli", SCRAPLI_LIB_MAPPER_REVERSE),
         ):
-            # Fill in values from *LIB_MAPPER_REVERSE but let NETWORK_DRIVERS override them
-            NETWORK_DRIVERS[key] = {**mapping, **(NETWORK_DRIVERS.get(key, {}))}
-        return NETWORK_DRIVERS
+            if network_driver_key in mapping:
+                library_network_drivers[key] = mapping[network_driver_key]
 
-    @property
-    def ansible_driver(self):
-        """Collection string for use with Ansible; derived from network_driver by netutils."""
-        return self._network_drivers["ansible"].get(self.network_driver, None)
+        # Retrieve values from NETWORK_DRIVERS setting, overriding netutils
+        for key, mapping in NETWORK_DRIVERS_CONFIG.items():
+            if network_driver_key in mapping:
+                library_network_drivers[key] = mapping[network_driver_key]
 
-    # TODO, need netutils 1.5.0 release first
-    # @property
-    # def hier_config_driver(self):
-    #     """Style string for use with hier_config library; derived from network_driver by netutils."""
-    #     return self._network_drivers["hier_config"].get(self.network_driver, None)
-
-    @property
-    def netmiko_driver(self):
-        """Driver for use with netmiko library; derived from network_driver by netutils."""
-        return self._network_drivers["netmiko"].get(self.network_driver, None)
-
-    @property
-    def ntc_templates_driver(self):
-        """Platform string for use with ntc-templates parsers; derived from network_driver by netutils."""
-        return self._network_drivers["ntc_templates"].get(self.network_driver, None)
-
-    @property
-    def pyats_driver(self):
-        """OS string for use with PyATS library; derived from network_driver by netutils."""
-        return self._network_drivers["pyats"].get(self.network_driver, None)
-
-    @property
-    def pyntc_driver(self):
-        """Device type string for use with pyntc library; derived from network_driver by netutils."""
-        return self._network_drivers["pyntc"].get(self.network_driver, None)
-
-    @property
-    def scrapli_driver(self):
-        """Platform string for use with scrapli library; derived from network_driver by netutils."""
-        return self._network_drivers["scrapli"].get(self.network_driver, None)
+        return library_network_drivers
 
     csv_headers = [
         "name",
