@@ -50,7 +50,7 @@ A namespace groups together a set of related but distinct [VRFs](../../../user-g
 
 #### Concrete Relationship between Prefix and IP Address
 
-[IP addresses](./../../user-guide/core-data-model/ipam/ipaddress.md) now have a concrete relationship with its parent [Prefix](../../../user-guide/core-data-model/ipam/prefix.md). `IPAddress.parent` now refers to the parent prefix and `Prefix.ip_addresses` refers to the child ips.`
+[IP addresses](../../../user-guide/core-data-model/ipam/ipaddress.md) now have a concrete relationship with its parent [Prefix](../../../user-guide/core-data-model/ipam/prefix.md). `IPAddress.parent` now refers to the parent prefix and `Prefix.ip_addresses` refers to the child ips.`
 
 #### Concrete Relationship between Prefix and Self
 
