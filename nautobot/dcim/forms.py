@@ -4569,7 +4569,6 @@ class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVF
 class InterfaceRedundancyGroupForm(NautobotModelForm):
     """InterfaceRedundancyGroup create/edit form."""
 
-    model = InterfaceRedundancyGroup
     slug = SlugField()
     virtual_ip = DynamicModelChoiceField(
         queryset=IPAddress.objects.all(),
@@ -4595,18 +4594,39 @@ class InterfaceRedundancyGroupForm(NautobotModelForm):
 class InterfaceRedundancyGroupAssociationForm(NautobotModelForm):
     """InterfaceRedundancyGroupAssociation create/edit form."""
 
-    model = InterfaceRedundancyGroupAssociation
+    region = DynamicModelChoiceField(
+        queryset=Region.objects.all(),
+        required=False,
+    )
+    site = DynamicModelChoiceField(
+        queryset=Site.objects.all(),
+        required=False,
+        query_params={"region_id": "$region"},
+    )
+    rack = DynamicModelChoiceField(
+        queryset=Rack.objects.all(),
+        required=False,
+        null_option="None",
+        query_params={"site_id": "$site"},
+    )
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
-        help_text="Choose a device that contains the target interface.",
+        query_params={
+            "site_id": "$site",
+            "rack_id": "$rack",
+        },
     )
     interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         query_params={"device_id": "$device"},
         help_text="Choose an interface to add to the Redundancy Group.",
     )
-    priority = forms.IntegerField(min_value=1, required=False)
+    priority = forms.IntegerField(
+        min_value=1,
+        required=False,
+        help_text="Specify the interface priority as an integer.",
+    )
 
     class Meta:
         """Meta attributes."""
