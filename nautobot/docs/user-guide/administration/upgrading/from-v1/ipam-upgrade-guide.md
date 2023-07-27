@@ -10,7 +10,9 @@ This section details the high-level changes as it relates to the data modeling f
 
 ### Namespaces were introduced
 
-The new `Namespace` model expands on the functionality previously provided by `VRF.enforce_unique` and the `ENFORCE_GLOBAL_UNIQUE` setting, both of which have now been removed. Within a Namespace, all VRFs, Prefixes, and IP addresses must be unique. This enables greater flexibility in managing discrete duplicate `VRF`, `Prefix` or `IPAddress` objects, asserting that each set of duplicates will be in a distinct `Namespace`.
+The new `Namespace` model expands on the functionality previously provided by `VRF.enforce_unique` and the `ENFORCE_GLOBAL_UNIQUE` setting, both of which have now been removed. Within a Namespace, all VRFs, Prefixes, and IP addresses must be unique.
+
+Namespaces are functionally equivalent to distinct layer 3 routing tables. The introduction of Namespaces corrects previous modeling that required duplicate `IPAddress`, `Prefix`, and `VRF` objects. The ultimate goal of Namespaces is to enable greater flexibility in managing discrete duplicate `VRF`, `Prefix` or `IPAddress` objects, asserting that any set of duplicates objects will no longer be necessary by way of the core data model itself and instead becomes an intuitive way to explicitly manage duplicate IPAM objects within distinct `Namespaces`.
 
 For more details please refer to the [Namespace model documentation](../../../core-data-model/ipam/namespace.md).
 
