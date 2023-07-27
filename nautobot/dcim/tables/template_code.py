@@ -71,10 +71,10 @@ INTERFACE_IPADDRESSES = """
 {% endif %}
 """
 
-INTERFACE_REDUNDANCY_GROUP_DEVICES = """
+INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
 {% if record.interfaces %}
     {% for interface in record.interfaces.all %}
-        <a href="{{ interface.device.get_absolute_url }}">{{ interface.device }}</a><br />
+        <a href="{{ interface.get_absolute_url }}">{{ interface.device }}: {{ interface }}</a><br />
     {% endfor %}
 {% else %}
     --

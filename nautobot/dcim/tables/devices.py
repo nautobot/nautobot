@@ -42,7 +42,7 @@ from .template_code import (
     FRONTPORT_BUTTONS,
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
-    INTERFACE_REDUNDANCY_GROUP_DEVICES,
+    INTERFACE_REDUNDANCY_GROUP_INTERFACES,
     INTERFACE_REDUNDANCY_GROUP_STATUS,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_REDUNDANCY_INTERFACE_STATUS,
@@ -997,14 +997,10 @@ class InterfaceRedundancyGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    interface_count = tables.TemplateColumn(
-        template_code=LINKED_RECORD_COUNT,
-        verbose_name="Interfaces",
-    )
-    devices = tables.TemplateColumn(
-        template_code=INTERFACE_REDUNDANCY_GROUP_DEVICES,
+    interfaces = tables.TemplateColumn(
+        template_code=INTERFACE_REDUNDANCY_GROUP_INTERFACES,
         orderable=False,
-        verbose_name="Devices",
+        verbose_name="Interfaces",
     )
     actions = ButtonsColumn(InterfaceRedundancyGroup)
 
@@ -1016,10 +1012,9 @@ class InterfaceRedundancyGroupTable(BaseTable):
             "pk",
             "name",
             "description",
-            "interface_count",
             "protocol",
             "group_id",
-            "devices",
+            "interfaces",
         )
 
 

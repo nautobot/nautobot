@@ -1994,12 +1994,12 @@ class InterfaceView(generic.ObjectView):
         queryset = queryset.select_related("group")
         queryset = queryset.order_by("group", "priority")
         column_sequence = (
-            "group__virtual_ip",
             "group",
+            "priority",
             "group__status",
+            "group__virtual_ip",
             "group__group_id",
             "group__protocol",
-            "priority",
         )
         table = tables.InterfaceRedundancyGroupAssociationTable(
             data=queryset,
@@ -3224,9 +3224,9 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
         column_sequence = (
             "interface__device",
             "interface",
+            "priority",
             "interface__status",
             "interface__enabled",
-            "priority",
             "interface__ip_addresses",
             "interface__type",
             "interface__description",
