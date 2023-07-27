@@ -28,7 +28,7 @@ urlpatterns = [
     path(
         "other-models/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
-        name="anotherexamplemodel_dynamicgroups",
+        name="classificationgroupsmodel-list",
         kwargs={"model": AnotherExampleModel},
     ),
     path(
@@ -51,6 +51,6 @@ urlpatterns = [
     ),
     # This URL definition is here in order to test the override_views functionality which is defined
     # in examples.plugin_with_view_override.plugin_with_view_override.views
-    path("override-target/", views.ViewToBeOverridden.as_view(), name="view_to_be_overridden"),
+    path("override-target/", views.ViewToBeOverridden.as_view(), name="classificationgroupsmodel-list"),
 ]
 urlpatterns += router.urls

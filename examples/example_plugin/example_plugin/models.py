@@ -1,7 +1,9 @@
 from django.db import models
 from django.urls import reverse
+from django.db.models import Q
 
-from nautobot.apps.models import extras_features, OrganizationalModel
+from nautobot.apps.models import extras_features, OrganizationalModel, PrimaryModel
+from nautobot.utilities.choices import ChoiceSet
 
 
 @extras_features(
@@ -54,3 +56,51 @@ class AnotherExampleModel(OrganizationalModel):
 
     def get_absolute_url(self):
         return reverse("plugins:example_plugin:anotherexamplemodel", kwargs={"pk": self.pk})
+
+class ValueTypeChoices(ChoiceSet):
+
+    TYPE_ENV = "env"
+    TYPE_ASSET_TAG = "asset_tag"
+    TYPE_NETWORK = "network"
+
+    CHOICES = (
+        (TYPE_ENV, "Environment"),
+        (TYPE_ASSET_TAG, "Asset Tag"),
+        (TYPE_NETWORK, "Network"),
+    )
+
+@extras_features(
+    "custom_fields",
+    "relationships",
+)
+class ValueModel(PrimaryModel):
+    name = models.CharField(max_length=200)
+    value = models.CharField(max_length=200)
+    value_type = models.CharField(
+        max_length=250,
+        choices=ValueTypeChoices,
+    )
+
+@extras_features(
+    "custom_fields",
+    "relationships",
+)
+class ClassificationGroupsModel(PrimaryModel):
+    name = models.CharField(max_length=200)
+    environment = models.ForeignKey(
+        to="example_plugin.ValueModel",
+        on_delete=models.CASCADE,
+        related_name="environment_bundles",
+        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_ENV))
+    asset_tag = models.ForeignKey(
+        to="example_plugin.ValueModel",
+        on_delete=models.CASCADE,
+        related_name="asset_tag_bundles",
+        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_ASSET_TAG))
+    network = models.ForeignKey(
+        to="example_plugin.ValueModel",
+        on_delete=models.CASCADE,
+        related_name="network_bundles",
+        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_NETWORK))
+
+
