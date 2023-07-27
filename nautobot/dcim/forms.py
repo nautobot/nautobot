@@ -4588,7 +4588,6 @@ class InterfaceRedundancyGroupForm(NautobotModelForm):
             "virtual_ip",
             "protocol",
             "group_id",
-            "preempt",
             "secrets_group",
         ]
 

@@ -823,7 +823,6 @@ class InterfaceRedundancyGroup(PrimaryModel, ConfigContextModel, StatusModel):  
         null=True,
     )
     group_id = models.CharField(max_length=50, blank=True)
-    preempt = models.CharField(max_length=50, blank=True)
 
     class Meta:
         """Meta class."""

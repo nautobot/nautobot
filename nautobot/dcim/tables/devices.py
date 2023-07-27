@@ -1019,7 +1019,6 @@ class InterfaceRedundancyGroupTable(BaseTable):
             "interface_count",
             "protocol",
             "group_id",
-            "preempt",
             "devices",
         )
 
@@ -1063,7 +1062,6 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
             "group__virtual_ip",
             "group__protocol",
             "group__group_id",
-            "group__preempt",
             "interface__device",
             "interface__name",
             "interface__status",

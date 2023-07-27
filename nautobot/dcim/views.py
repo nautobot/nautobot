@@ -2000,7 +2000,6 @@ class InterfaceView(generic.ObjectView):
             "group__group_id",
             "group__protocol",
             "priority",
-            "group__preempt",
         )
         table = tables.InterfaceRedundancyGroupAssociationTable(
             data=queryset,
