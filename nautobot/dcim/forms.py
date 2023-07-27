@@ -4622,7 +4622,6 @@ class InterfaceRedundancyGroupAssociationForm(NautobotModelForm):
     )
     priority = forms.IntegerField(
         min_value=1,
-        required=False,
         help_text="Specify the interface priority as an integer.",
     )
 

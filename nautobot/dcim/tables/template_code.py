@@ -62,36 +62,24 @@ DEVICEBAY_STATUS = """
 """
 
 INTERFACE_IPADDRESSES = """
-{% if record.interface.ip_addresses %}
-    {% for ip in record.interface.ip_addresses.all %}
-        <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
-    {% endfor %}
-{% else %}
-    --
-{% endif %}
+{% for ip in record.interface.ip_addresses.all %}
+    <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
+{% endfor %}
 """
 
 INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
-{% if record.interfaces %}
-    {% for interface in record.interfaces.all %}
-        <a href="{{ interface.get_absolute_url }}">{{ interface.device }}: {{ interface }}</a><br />
-    {% endfor %}
-{% else %}
-    --
-{% endif %}
+{% for interface in record.interfaces.all %}
+    <a href="{{ interface.get_absolute_url }}">{{ interface.device }}: {{ interface }}</a><br />
+{% endfor %}
 """
 
 INTERFACE_REDUNDANCY_GROUP_STATUS = """
-{% if record.interface_redundancy_group.status %}
-    {% load helpers %}
-    <span class="label"
-        style="color: {{ record.interface_redundancy_group.status.color|fgcolor }};
-        background-color: #{{ record.interface_redundancy_group.status.color }}">
-        {{ record.interface_redundancy_group.get_status_display }}
-    </span>
-{% else %}
-    --
-{% endif %}
+{% load helpers %}
+<span class="label"
+    style="color: {{ record.interface_redundancy_group.status.color|fgcolor }};
+    background-color: #{{ record.interface_redundancy_group.status.color }}">
+    {{ record.interface_redundancy_group.get_status_display }}
+</span>
 """
 
 INTERFACE_REDUNDANCY_INTERFACE_PRIORITY = """
@@ -101,14 +89,10 @@ INTERFACE_REDUNDANCY_INTERFACE_PRIORITY = """
 """
 
 INTERFACE_REDUNDANCY_INTERFACE_STATUS = """
-{% if record.interface.status %}
-    {% load helpers %}
-    <span class="label" style="color: {{ record.interface.status.color|fgcolor }}; background-color: #{{ record.interface.status.color }}">
-        {{ record.interface.get_status_display }}
-    </span>
-{% else %}
-    --
-{% endif %}
+{% load helpers %}
+<span class="label" style="color: {{ record.interface.status.color|fgcolor }}; background-color: #{{ record.interface.status.color }}">
+    {{ record.interface.get_status_display }}
+</span>
 """
 
 INTERFACE_TAGGED_VLANS = """
