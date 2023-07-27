@@ -10,9 +10,7 @@ This section details the high-level changes as it relates to the data modeling f
 
 ### Namespaces were introduced
 
-The new `Namespace` model expands on the functionality previously provided by `VRF.enforce_unique` and the `ENFORCE_GLOBAL_UNIQUE` setting, both of which have now been removed. Within a Namespace, all VRFs, Prefixes, and IP addresses must be unique.
-
-Namespaces are functionally equivalent to distinct layer 3 routing tables. The introduction of Namespaces corrects previous modeling that required duplicate `IPAddress`, `Prefix`, and `VRF` objects. The ultimate goal of Namespaces is to enable greater flexibility in managing discrete duplicate `VRF`, `Prefix` or `IPAddress` objects, asserting that any set of duplicates objects will no longer be necessary by way of the core data model itself and instead becomes an intuitive way to explicitly manage duplicate IPAM objects within distinct `Namespaces`.
+The new `Namespace` model expands on the functionality previously provided by `VRF.enforce_unique` and the `ENFORCE_GLOBAL_UNIQUE` setting, both of which have now been removed. Within a Namespace, all VRFs, Prefixes, and IP addresses must be unique. This enables greater flexibility in managing discrete duplicate `VRF`, `Prefix` or `IPAddress` objects, asserting that each set of duplicates will be in a distinct `Namespace`.
 
 For more details please refer to the [Namespace model documentation](../../../core-data-model/ipam/namespace.md).
 
@@ -169,7 +167,7 @@ This addresses a fundamental flaw in which an Interface could have multiple `IPA
 
 On `Device` and `VirtualMachine` objects, the `primary_ip4` and `primary_ip6` fields were changed from a one-to-one field--which is a foreign key with a uniqueness constraint--to a foreign key, dropping the uniqueness constraint.
 
-This was necessary to support the case where the same `IPAddress` object may be assigned to one or more `Interface`/`VMInterface` objects, reducing the need to proliferate duplicate `IPAddress` objects merely for the purpose of facilitating `Interface`/`VMInterface` assignments.
+This was necessary to support the case where the same `IPAddress` object may be assigned to one or more `Interface`/`VMInterface` objects to share a (non-duplicated) primary `IPAddress` record, reducing the need to proliferate duplicate `IPAddress` objects merely for the purpose of facilitating `Interface`/`VMInterface` assignments.
 
 ## Preparing your IPAM Data for Nautobot 2.0
 
@@ -193,7 +191,9 @@ If you need to maintain duplicates for any reason, assert that each set of dupli
 
 ### IPAddress objects can no longer be orphaned
 
-The database migration will automatically create a parent `Prefix` for `IPAddresses` that do not have an eligible parent. For example an `IPAddress` with address of `1.2.3.4/32` will have a parent `Prefix` created of the same `network` and `prefix_length` e.g. `1.2.3.4/32`.
+`IPAddresses` must now always have a parent `Prefix` to contain them. Any `IPAddress` that does not have a parent is considered to be "orphaned" and as of Natutobot 2.0 this is not allowed.
+
+When upgrading to Nautobot 2.0, the database migration will automatically create a parent `Prefix` for `IPAddresses` that do not have an eligible parent `Prefix`. For example an `IPAddress` with address of `1.2.3.4/32` will have a parent `Prefix` created of the same `network` and `prefix_length` e.g. `1.2.3.4/32`.
 
 If you do not wish for these single-host `Prefixes` to be created, create a parent `Prefix` of your desired size to contain any would-be orphaned `IPAddresses` before upgrading.
 
@@ -203,7 +203,7 @@ This section includes various things to consider after you have successfully upg
 
 ### Review any Cleanup Namespaces
 
-> This may also apply to any "VRF Namespace" objects that were created, depending on your requirements for maintaining duplicate Prefix/IPAddress objects.
+> This may also apply to any "VRF Namespace" objects that were created, depending on your requirements on maintaining duplicate Prefix/IPAddress objects.
 
 A priority of the upgrade process is to assert that no data will be lost. Due to the introduction of strict uniqueness constraints to disallow duplicate `Prefix`, `IPAddress`, and `VRF` objects within the same `Namespace`.
 
@@ -231,9 +231,15 @@ In this example we'll use three `Namespaces`. "Global", the `Namespace` in which
     - There are no duplicate objects found in the "Temporary" Namespace. This Namespace can safely be deleted.
 - Delete the "Temporary" Namespace when done.
 
+### Merge duplicate IP Addresses
+
+After upgrading to Nautobot v2.0 and running the data migrations necessary, duplicate `IPAddress` objects might exist in your database. We define duplicate `IPAddress` objects as those which have the same `host` attribute but exist in different `Namespaces`. If you have no use case to keep those duplicate `IPAddress` objects around, we recommend you to use this tool to de-duplicate those `IPAddress` objects and keep your database clean and manageable. But if you do have reasons to maintain duplicate `IPAddress` objects, this tool is not for you.
+
+For more information, please see the [documentation on the Duplicate IP Address Merge Tool](../../../feature-guides/ip-address-merge-tool.md).
+
 ### Delete duplicate objects
 
-Because preventing data loss is prioritized, some objects that may have been required to be duplicates before may no longer be needed.
+Because preventing data loss is prioritized, some objects that may have been required to be duplicates before may no longer be needed. For objects that weren't covered by the Duplicate IP Address Merge Tool, deleting objects might be your next course of action.
 
 Some examples include:
 
