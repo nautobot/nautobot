@@ -201,7 +201,7 @@ This section includes various things to consider after you have successfully upg
 
 ### Review any Cleanup Namespaces
 
-> This may also apply to any "VRF Namespace" objects that were created, depending on your requirements on maintaining duplicate Prefix/IPAddress objects.
+> This may also apply to any "VRF Namespace" objects that were created, depending on your requirements for maintaining duplicate Prefix/IPAddress objects.
 
 A priority of the upgrade process is to assert that no data will be lost. Due to the introduction of strict uniqueness constraints to disallow duplicate `Prefix`, `IPAddress`, and `VRF` objects within the same `Namespace`.
 
