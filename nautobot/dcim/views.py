@@ -23,6 +23,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import ConfirmationForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
@@ -1309,8 +1310,21 @@ class PlatformView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(device_table)
 
+        network_driver_names = {
+            "ansible",
+            "hier_config",
+            "napalm",
+            "netmiko",
+            "ntc_templates",
+            "pyats",
+            "pyntc",
+            "scrapli",
+        }
+        network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS").keys())
+
         return {
             "device_table": device_table,
+            "network_driver_names": network_driver_names,
         }
 
 

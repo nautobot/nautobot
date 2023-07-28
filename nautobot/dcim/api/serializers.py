@@ -738,35 +738,23 @@ class DeviceRoleSerializer(NautobotModelSerializer):
 class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
-    ansible_driver = serializers.CharField(read_only=True)
-    # TODO hier_config_driver = serializers.CharField(read_only=True)
-    netmiko_driver = serializers.CharField(read_only=True)
-    ntc_templates_driver = serializers.CharField(read_only=True)
-    pyats_driver = serializers.CharField(read_only=True)
-    pyntc_driver = serializers.CharField(read_only=True)
-    scrapli_driver = serializers.CharField(read_only=True)
+    network_driver_mappings = serializers.JSONField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Platform
         fields = [
-            "url",
-            "name",
-            "slug",
-            "manufacturer",
-            "network_driver",
-            "ansible_driver",
-            # TODO "hier_config_driver",
-            "napalm_driver",
-            "napalm_args",
-            "netmiko_driver",
-            "ntc_templates_driver",
-            "pyats_driver",
-            "pyntc_driver",
-            "scrapli_driver",
             "description",
             "device_count",
+            "manufacturer",
+            "name",
+            "napalm_args",
+            "napalm_driver",
+            "network_driver",
+            "network_driver_mappings",
+            "slug",
+            "url",
             "virtualmachine_count",
         ]
 

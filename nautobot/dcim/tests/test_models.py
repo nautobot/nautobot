@@ -756,23 +756,23 @@ class PlatformTestCase(TestCase):
 
     def test_network_driver_netutils_defaults(self):
         """Test that a network_driver setting derives related fields from netutils by default."""
-        self.assertEqual(self.standard_platform.ansible_driver, "cisco.ios.ios")
-        # TODO self.assertEqual(self.standard_platform.hier_config_driver, "ios")
-        self.assertEqual(self.standard_platform.netmiko_driver, "cisco_ios")
-        self.assertEqual(self.standard_platform.ntc_templates_driver, "cisco_ios")
-        self.assertEqual(self.standard_platform.pyats_driver, "iosxe")
-        self.assertEqual(self.standard_platform.pyntc_driver, "cisco_ios_ssh")
-        self.assertEqual(self.standard_platform.scrapli_driver, "cisco_iosxe")
+        self.assertEqual(self.standard_platform.network_driver_mappings["ansible"], "cisco.ios.ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["hier_config"], "ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["netmiko"], "cisco_ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["ntc_templates"], "cisco_ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["pyats"], "iosxe")
+        self.assertEqual(self.standard_platform.network_driver_mappings["pyntc"], "cisco_ios_ssh")
+        self.assertEqual(self.standard_platform.network_driver_mappings["scrapli"], "cisco_iosxe")
 
-    def test_network_driver_unknown_none(self):
-        """Test that properties are None if the network_driver setting is not known by netutils."""
-        self.assertIsNone(self.custom_platform.ansible_driver)
-        # TODO self.assertIsNone(platform.hier_config_driver)
-        self.assertIsNone(self.custom_platform.netmiko_driver)
-        self.assertIsNone(self.custom_platform.ntc_templates_driver)
-        self.assertIsNone(self.custom_platform.pyats_driver)
-        self.assertIsNone(self.custom_platform.pyntc_driver)
-        self.assertIsNone(self.custom_platform.scrapli_driver)
+    def test_network_driver_unknown(self):
+        """Test that properties are not set if the network_driver setting is not known by netutils."""
+        self.assertNotIn("ansible", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("hier_config", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("netmiko", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("ntc_templates", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("pyats", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("pyntc", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("scrapli", self.custom_platform.network_driver_mappings)
 
     @override_settings(
         NETWORK_DRIVERS={
@@ -783,20 +783,28 @@ class PlatformTestCase(TestCase):
             "scrapli": {
                 "secret_sauce": "secret_scrapli",
             },
+            "supercoolnewtool": {
+                "cisco_ios": "cisco_xyz",
+                "secret_sauce": "secret_xyz",
+            },
         },
     )
     def test_network_driver_settings_override(self):
         """Test that settings.NETWORK_DRIVERS can extend and override the default behavior."""
         # Not overridden
-        self.assertEqual(self.standard_platform.ansible_driver, "cisco.ios.ios")
-        self.assertEqual(self.standard_platform.pyats_driver, "iosxe")
-        self.assertEqual(self.standard_platform.scrapli_driver, "cisco_iosxe")
-        self.assertIsNone(self.custom_platform.ansible_driver)
-        self.assertIsNone(self.custom_platform.pyats_driver)
+        self.assertEqual(self.standard_platform.network_driver_mappings["ansible"], "cisco.ios.ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["pyats"], "iosxe")
+        self.assertEqual(self.standard_platform.network_driver_mappings["scrapli"], "cisco_iosxe")
+        self.assertNotIn("ansible", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("pyats", self.custom_platform.network_driver_mappings)
         # Overridden
-        self.assertEqual(self.standard_platform.netmiko_driver, "cisco_xe")
-        self.assertEqual(self.custom_platform.netmiko_driver, "secret_driver")
-        self.assertEqual(self.custom_platform.scrapli_driver, "secret_scrapli")
+        self.assertEqual(self.standard_platform.network_driver_mappings["netmiko"], "cisco_xe")
+        self.assertEqual(self.custom_platform.network_driver_mappings["netmiko"], "secret_driver")
+        self.assertEqual(self.custom_platform.network_driver_mappings["scrapli"], "secret_scrapli")
+        self.assertIn("supercoolnewtool", self.standard_platform.network_driver_mappings)
+        self.assertEqual(self.standard_platform.network_driver_mappings["supercoolnewtool"], "cisco_xyz")
+        self.assertIn("supercoolnewtool", self.custom_platform.network_driver_mappings)
+        self.assertEqual(self.custom_platform.network_driver_mappings["supercoolnewtool"], "secret_xyz")
 
 
 class DeviceTestCase(TestCase):

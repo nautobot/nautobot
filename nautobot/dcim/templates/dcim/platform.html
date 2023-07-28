@@ -16,6 +16,16 @@
                     <td>{{ object.manufacturer|hyperlinked_object }}</td>
                 </tr>
                 <tr>
+                    <td>NAPALM driver</td>
+                    <td>{{ object.napalm_driver|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>NAPALM arguments</td>
+                    <td>
+                        <pre>{% if object.napalm_args %}{{ object.napalm_args|render_json }}{% endif %}</pre>
+                    </td>
+                </tr>
+                <tr>
                     <td>Network driver</td>
                     <td>{{ object.network_driver|placeholder }}</td>
                 </tr>
@@ -34,9 +44,14 @@
     <div class="panel-heading">
         <strong>Network Driver Mappings</strong>
     </div>
-    <div class="panel-body">
-        <pre>{{ object.library_network_drivers|render_json }}</pre>
-    </div>
+    <table class="table table-hover panel-body attr-table">
+        {% for key in network_driver_names %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ object.network_driver_mappings|get_item:key|placeholder }}</td>
+        </tr>
+        {% endfor %}
+    </table>
 </div>
 {% endblock content_right_page %}
 

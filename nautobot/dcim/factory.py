@@ -63,7 +63,7 @@ NAPALM_DRIVERS = {
 }
 
 
-NETMIKO_DRIVERS = {
+NETWORK_DRIVERS = {
     "A10": ["a10"],
     "Arista": ["arista_eos"],
     "Aruba": ["aruba_os", "aruba_procurve"],
@@ -193,7 +193,7 @@ class PlatformFactory(OrganizationalModelFactory):
 
     network_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NETMIKO_DRIVERS.get(o.manufacturer.name, [""]))),
+        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 

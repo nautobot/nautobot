@@ -35,10 +35,14 @@ class GraphQLTestCase(TestCase):
             self.assertEqual(resp["data"]["devices"][0]["dynamic_groups"][0]["name"], self.dynamic_group.name)
 
         with self.subTest("device platform drivers query"):
-            query = "query {devices {platform {network_driver ansible_driver netmiko_driver scrapli_driver}}}"
+            query = "query {devices {platform {network_driver network_driver_mappings}}}"
             resp = execute_query(query, user=self.user).to_dict()
             self.assertFalse(resp["data"].get("error"))
             self.assertEqual(resp["data"]["devices"][0]["platform"]["network_driver"], "cisco_ios")
-            self.assertEqual(resp["data"]["devices"][0]["platform"]["ansible_driver"], "cisco.ios.ios")
-            self.assertEqual(resp["data"]["devices"][0]["platform"]["netmiko_driver"], "cisco_ios")
-            self.assertEqual(resp["data"]["devices"][0]["platform"]["scrapli_driver"], "cisco_iosxe")
+            self.assertEqual(
+                resp["data"]["devices"][0]["platform"]["network_driver_mappings"]["ansible"], "cisco.ios.ios"
+            )
+            self.assertEqual(resp["data"]["devices"][0]["platform"]["network_driver_mappings"]["netmiko"], "cisco_ios")
+            self.assertEqual(
+                resp["data"]["devices"][0]["platform"]["network_driver_mappings"]["scrapli"], "cisco_iosxe"
+            )

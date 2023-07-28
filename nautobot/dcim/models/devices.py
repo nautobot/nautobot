@@ -431,10 +431,10 @@ class Platform(OrganizationalModel):
     description = models.CharField(max_length=200, blank=True)
 
     @cached_property
-    def library_network_drivers(self):
+    def network_driver_mappings(self):
         """Dictionary of library-specific network drivers derived from network_driver by netutils library mapping or NETWORK_DRIVERS setting."""
 
-        library_network_drivers = {}
+        network_driver_mappings = {}
         network_driver_key = self.network_driver
         NETWORK_DRIVERS_CONFIG = get_settings_or_config("NETWORK_DRIVERS")
 
@@ -450,14 +450,14 @@ class Platform(OrganizationalModel):
             ("scrapli", SCRAPLI_LIB_MAPPER_REVERSE),
         ):
             if network_driver_key in mapping:
-                library_network_drivers[key] = mapping[network_driver_key]
+                network_driver_mappings[key] = mapping[network_driver_key]
 
         # Retrieve values from NETWORK_DRIVERS setting, overriding netutils
         for key, mapping in NETWORK_DRIVERS_CONFIG.items():
             if network_driver_key in mapping:
-                library_network_drivers[key] = mapping[network_driver_key]
+                network_driver_mappings[key] = mapping[network_driver_key]
 
-        return library_network_drivers
+        return network_driver_mappings
 
     csv_headers = [
         "name",

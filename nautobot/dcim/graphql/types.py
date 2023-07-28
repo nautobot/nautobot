@@ -65,13 +65,7 @@ class DeviceType(gql_optimizer.OptimizedDjangoObjectType):
 class PlatformType(gql_optimizer.OptimizedDjangoObjectType):
     """GraphQL type object for Platform model."""
 
-    ansible_driver = graphene.String()
-    # TODO hier_config_driver = graphene.String()
-    netmiko_driver = graphene.String()
-    ntc_templates_driver = graphene.String()
-    pyats_driver = graphene.String()
-    pyntc_driver = graphene.String()
-    scrapli_driver = graphene.String()
+    network_driver_mappings = graphene.types.generic.GenericScalar()
 
     class Meta:
         model = Platform
