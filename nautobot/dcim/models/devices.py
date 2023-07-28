@@ -15,6 +15,7 @@ from django.utils.safestring import mark_safe
 from netutils.lib_mapper import (
     ANSIBLE_LIB_MAPPER_REVERSE,
     HIERCONFIG_LIB_MAPPER_REVERSE,
+    NAPALM_LIB_MAPPER_REVERSE,
     NETMIKO_LIB_MAPPER_REVERSE,
     NTCTEMPLATES_LIB_MAPPER_REVERSE,
     PYATS_LIB_MAPPER_REVERSE,
@@ -441,6 +442,7 @@ class Platform(OrganizationalModel):
         for key, mapping in (
             ("ansible", ANSIBLE_LIB_MAPPER_REVERSE),
             ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
+            ("napalm", NAPALM_LIB_MAPPER_REVERSE),
             ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
             ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
             ("pyats", PYATS_LIB_MAPPER_REVERSE),
