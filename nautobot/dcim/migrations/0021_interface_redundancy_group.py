@@ -10,7 +10,6 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0009_alter_vlan_name"),
         ("extras", "0058_jobresult_add_time_status_idxs"),

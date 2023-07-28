@@ -43,6 +43,7 @@ from .template_code import (
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
     INTERFACE_REDUNDANCY_GROUP_INTERFACES,
+    INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
     INTERFACE_REDUNDANCY_GROUP_STATUS,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_REDUNDANCY_INTERFACE_STATUS,
@@ -1035,7 +1036,7 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
         verbose_name="Group Status",
     )
     interface__ip_addresses = tables.TemplateColumn(
-        template_code=INTERFACE_IPADDRESSES,
+        template_code=INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
         orderable=False,
         verbose_name="IP Addresses",
     )

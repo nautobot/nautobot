@@ -62,7 +62,7 @@ DEVICEBAY_STATUS = """
 """
 
 INTERFACE_IPADDRESSES = """
-{% for ip in record.interface.ip_addresses.all %}
+{% for ip in record.ip_addresses.all %}
     <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
 {% endfor %}
 """
@@ -71,6 +71,12 @@ INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
 {% for interface in record.interfaces.all %}
     <a href="{{ interface.device.get_absolute_url }}">{{ interface.device }}</a>:
     <a href="{{ interface.get_absolute_url }}">{{ interface }}</a><br />
+{% endfor %}
+"""
+
+INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES = """
+{% for ip in record.interface.ip_addresses.all %}
+    <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
 {% endfor %}
 """
 

@@ -3,15 +3,9 @@
 
 {% block form %}
 <div class="panel panel-default">
-    <div class="panel-heading"><strong>Interface Redundancy Group</strong> {{ object }}</div>
+    <div class="panel-heading"><strong>Interface Redundancy Group Association</strong></div>
     <div class="panel-body">
-        {% render_field form.interface_redundancy_group %}
-        {% render_field form.region %}
-        {% render_field form.site %}
-        {% render_field form.rack %}
-        {% render_field form.device %}
-        {% render_field form.interface %}
-        {% render_field form.priority %}
+        {% render_form form %}
     </div>
 </div>
 {% include 'inc/extras_features_edit_form_fields.html' %}

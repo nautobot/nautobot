@@ -846,6 +846,35 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
         """Return a string representation of the instance."""
         return self.name
 
+    def add_interface(self, interface, priority):
+        """
+        Add an interface including `priority`.
+
+        :param interface:
+            Interface instance
+        :param priority:
+            Integer priority used by redundancy protocol
+        """
+        instance = self.interfaces.through(
+            interface_redundancy_group=self,
+            interface=interface,
+            priority=priority,
+        )
+        return instance.validated_save()
+
+    def remove_interface(self, interface):
+        """
+        Remove a child group.
+
+        :param interface:
+            Interface instance
+        """
+        instance = self.interfaces.through.objects.get(
+            interface_redundancy_group=self,
+            interface=interface,
+        )
+        return instance.delete()
+
 
 @extras_features(
     "relationships",
