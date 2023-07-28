@@ -838,6 +838,27 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
 
         ordering = ["name"]
 
+    csv_headers = [
+        "name",
+        "status",
+        "description",
+        "protocol",
+        "protocol_group_id",
+        "secrets_group",
+        "virtual_ip",
+    ]
+
+    def to_csv(self):
+        return (
+            self.name,
+            self.get_status_display(),
+            self.description,
+            self.protocol,
+            self.protocol_group_id,
+            self.secrets_group.name if self.secrets_group else None,
+            str(self.virtual_ip) if self.virtual_ip else None,
+        )
+
     def get_absolute_url(self):
         """Return detail view for InterfaceRedundancyGroup."""
         return reverse("dcim:interfaceredundancygroup", args=[self.id])

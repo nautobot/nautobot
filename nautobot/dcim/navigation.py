@@ -343,6 +343,12 @@ menu_items = (
                                     "dcim.add_interfaceredundancygroup",
                                 ],
                             ),
+                            NavMenuImportButton(
+                                link="dcim:interfaceredundancygroup_import",
+                                permissions=[
+                                    "dcim.add_interfaceredundancygroup",
+                                ],
+                            ),
                         ),
                     ),
                 ),

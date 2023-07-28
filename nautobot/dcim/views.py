@@ -19,6 +19,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import ObjectDestroyViewMixin, ObjectEditViewMixin
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
@@ -3182,6 +3183,7 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
 class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
     """ViewSet for the InterfaceRedundancyGroup model."""
 
+    bulk_create_form_class = forms.InterfaceRedundancyGroupCSVForm
     bulk_update_form_class = forms.InterfaceRedundancyGroupBulkEditForm
     filterset_class = filters.InterfaceRedundancyGroupFilterSet
     filterset_form_class = forms.InterfaceRedundancyGroupFilterForm
@@ -3194,10 +3196,6 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.InterfaceRedundancyGroupSerializer
     table_class = tables.InterfaceRedundancyGroupTable
     lookup_field = "pk"
-
-    def _process_bulk_create_form(self, form):
-        """Bulk creating (CSV import) is not supported."""
-        raise NotImplementedError()
 
     def get_extra_context(self, request, instance):
         """Return additional panels for display."""
@@ -3233,11 +3231,8 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
         return table
 
 
-class InterfaceRedundancyGroupAssociationCreateView(generic.ObjectEditView):
+class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDestroyViewMixin):
     queryset = InterfaceRedundancyGroupAssociation.objects.all()
-    model_form = forms.InterfaceRedundancyGroupAssociationForm
+    form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
-
-
-class InterfaceRedundancyGroupAssociationDeleteView(generic.ObjectDeleteView):
-    queryset = InterfaceRedundancyGroupAssociation.objects.all()
+    lookup_field = "pk"

@@ -4594,6 +4594,25 @@ class InterfaceRedundancyGroupForm(NautobotModelForm):
         ]
 
 
+class InterfaceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Secrets group",
+    )
+    virtual_ip = CSVModelChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        to_field_name="address",
+        help_text="Virtual IP Address",
+    )
+
+    class Meta:
+        model = InterfaceRedundancyGroup
+        fields = InterfaceRedundancyGroup.csv_headers
+
+
 class InterfaceRedundancyGroupAssociationForm(NautobotModelForm):
     """InterfaceRedundancyGroupAssociation create/edit form."""
 
@@ -4636,6 +4655,10 @@ class InterfaceRedundancyGroupAssociationForm(NautobotModelForm):
         model = InterfaceRedundancyGroupAssociation
         fields = [
             "interface_redundancy_group",
+            "region",
+            "site",
+            "rack",
+            "device",
             "interface",
             "priority",
         ]

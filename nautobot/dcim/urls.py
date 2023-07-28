@@ -38,24 +38,9 @@ app_name = "dcim"
 router = NautobotUIViewSetRouter()
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
+router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 
 urlpatterns = [
-    # Interface Redundancy Group Associations
-    path(
-        "interface-redundancy-group-associations/add/",
-        views.InterfaceRedundancyGroupAssociationCreateView.as_view(),
-        name="interfaceredundancygroupassociation_add",
-    ),
-    path(
-        "interface-redundancy-group-associations/<uuid:pk>/edit/",
-        views.InterfaceRedundancyGroupAssociationCreateView.as_view(),
-        name="interfaceredundancygroupassociation_edit",
-    ),
-    path(
-        "interface-redundancy-group-associations/<uuid:pk>/delete/",
-        views.InterfaceRedundancyGroupAssociationDeleteView.as_view(),
-        name="interfaceredundancygroupassociation_delete",
-    ),
     # Regions
     path("regions/", views.RegionListView.as_view(), name="region_list"),
     path("regions/add/", views.RegionEditView.as_view(), name="region_add"),
