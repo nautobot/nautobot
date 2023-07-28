@@ -11,44 +11,92 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('extras', '0058_jobresult_add_time_status_idxs'),
-        ('example_plugin', '0004_example_plugin_dynamicgroup'),
+        ("extras", "0058_jobresult_add_time_status_idxs"),
+        ("example_plugin", "0004_example_plugin_dynamicgroup"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ValueModel',
+            name="ValueModel",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('name', models.CharField(max_length=200)),
-                ('value', models.CharField(max_length=200)),
-                ('value_type', models.CharField(max_length=250)),
-                ('tags', taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(max_length=200)),
+                ("value", models.CharField(max_length=200)),
+                ("value_type", models.CharField(max_length=250)),
+                ("tags", taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.CreateModel(
-            name='ClassificationGroupsModel',
+            name="ClassificationGroupsModel",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('name', models.CharField(max_length=200)),
-                ('asset_tag', models.ForeignKey(limit_choices_to=models.Q(('value_type', 'asset_tag')), on_delete=django.db.models.deletion.CASCADE, related_name='asset_tag_bundles', to='example_plugin.valuemodel')),
-                ('environment', models.ForeignKey(limit_choices_to=models.Q(('value_type', 'env')), on_delete=django.db.models.deletion.CASCADE, related_name='environment_bundles', to='example_plugin.valuemodel')),
-                ('network', models.ForeignKey(limit_choices_to=models.Q(('value_type', 'network')), on_delete=django.db.models.deletion.CASCADE, related_name='network_bundles', to='example_plugin.valuemodel')),
-                ('tags', taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(max_length=200)),
+                (
+                    "asset_tag",
+                    models.ForeignKey(
+                        limit_choices_to=models.Q(("value_type", "asset_tag")),
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="asset_tag_bundles",
+                        to="example_plugin.valuemodel",
+                    ),
+                ),
+                (
+                    "environment",
+                    models.ForeignKey(
+                        limit_choices_to=models.Q(("value_type", "env")),
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="environment_bundles",
+                        to="example_plugin.valuemodel",
+                    ),
+                ),
+                (
+                    "network",
+                    models.ForeignKey(
+                        limit_choices_to=models.Q(("value_type", "network")),
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="network_bundles",
+                        to="example_plugin.valuemodel",
+                    ),
+                ),
+                ("tags", taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
     ]

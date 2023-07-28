@@ -3,7 +3,7 @@ from django import forms
 from nautobot.apps.forms import BulkEditForm, CSVModelForm, NautobotModelForm
 from nautobot.utilities.forms import BootstrapMixin
 
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from example_plugin.models import AnotherExampleModel, ExampleModel, ValueModel, ClassificationGroupsModel
 
 
 class ExamplePluginConfigForm(BootstrapMixin, forms.Form):
@@ -72,6 +72,82 @@ class AnotherExampleModelBulkEditForm(BootstrapMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=AnotherExampleModel.objects.all(), widget=forms.MultipleHiddenInput)
     name = forms.CharField(max_length=20, required=False)
     number = forms.IntegerField(required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
+# Value Model
+
+
+class ValueModelForm(NautobotModelForm):
+    """Generic create/update form for `ValueModel` objects."""
+
+    class Meta:
+        model = ValueModel
+        fields = ["name", "value", "value_type"]
+
+
+class ValueModelCSVForm(CSVModelForm):
+    """Generic CSV bulk import form for `ValueModel` objects."""
+
+    class Meta:
+        model = ValueModel
+        fields = ValueModel.csv_headers
+
+
+class ValueModelFilterForm(BootstrapMixin, forms.Form):
+    """Filtering/search form for `ValueModel` objects."""
+
+    model = ValueModel
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(max_length=20, required=False)
+
+
+class ValueModelBulkEditForm(BootstrapMixin, BulkEditForm):
+    """Bulk edit form for `ValueModel` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=ValueModel.objects.all(), widget=forms.MultipleHiddenInput)
+    name = forms.CharField(max_length=20, required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
+# Classification Model
+
+
+class ClassificationGroupsModelForm(NautobotModelForm):
+    """Generic create/update form for `ClassificationGroupsModel` objects."""
+
+    class Meta:
+        model = ClassificationGroupsModel
+        fields = ["name", "asset_tag", "network", "environment"]
+
+
+class ClassificationGroupsModelCSVForm(CSVModelForm):
+    """Generic CSV bulk import form for `ClassificationGroupsModel` objects."""
+
+    class Meta:
+        model = ClassificationGroupsModel
+        fields = ClassificationGroupsModel.csv_headers
+
+
+class ClassificationGroupsModelFilterForm(BootstrapMixin, forms.Form):
+    """Filtering/search form for `ClassificationGroupsModel` objects."""
+
+    model = ClassificationGroupsModel
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(max_length=20, required=False)
+
+
+class ClassificationGroupsModelBulkEditForm(BootstrapMixin, BulkEditForm):
+    """Bulk edit form for `ClassificationGroupsModel` objects."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ClassificationGroupsModel.objects.all(), widget=forms.MultipleHiddenInput
+    )
+    name = forms.CharField(max_length=20, required=False)
 
     class Meta:
         nullable_fields = []

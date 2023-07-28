@@ -5,7 +5,7 @@ from nautobot.apps import views
 from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device
 
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from example_plugin.models import AnotherExampleModel, ExampleModel, ValueModel, ClassificationGroupsModel
 from example_plugin import filters, forms, tables
 from example_plugin.api import serializers
 
@@ -100,6 +100,30 @@ class AnotherExampleModelUIViewSet(
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable
+
+
+class ValueModelUIViewSet(views.NautobotUIViewSet):
+    bulk_create_form_class = forms.ValueModelCSVForm
+    bulk_update_form_class = forms.ValueModelBulkEditForm
+    filterset_class = filters.ValueModelFilterSet
+    filterset_form_class = forms.ValueModelFilterForm
+    form_class = forms.ValueModelForm
+    lookup_field = "pk"
+    queryset = ValueModel.objects.all()
+    serializer_class = serializers.ValueModelSerializer
+    table_class = tables.ValueModelTable
+
+
+class ClassificationGroupsModelUIViewSet(views.NautobotUIViewSet):
+    bulk_create_form_class = forms.ClassificationGroupsModelCSVForm
+    bulk_update_form_class = forms.ClassificationGroupsModelBulkEditForm
+    filterset_class = filters.ClassificationGroupsModelFilterSet
+    filterset_form_class = forms.ClassificationGroupsModelFilterForm
+    form_class = forms.ClassificationGroupsModelForm
+    lookup_field = "pk"
+    queryset = ClassificationGroupsModel.objects.all()
+    serializer_class = serializers.ClassificationGroupsModelSerializer
+    table_class = tables.ClassificationGroupsModelTable
 
 
 class ViewToBeOverridden(View):

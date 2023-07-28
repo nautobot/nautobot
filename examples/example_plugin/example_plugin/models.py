@@ -57,6 +57,7 @@ class AnotherExampleModel(OrganizationalModel):
     def get_absolute_url(self):
         return reverse("plugins:example_plugin:anotherexamplemodel", kwargs={"pk": self.pk})
 
+
 class ValueTypeChoices(ChoiceSet):
 
     TYPE_ENV = "env"
@@ -68,6 +69,7 @@ class ValueTypeChoices(ChoiceSet):
         (TYPE_ASSET_TAG, "Asset Tag"),
         (TYPE_NETWORK, "Network"),
     )
+
 
 @extras_features(
     "custom_fields",
@@ -81,6 +83,12 @@ class ValueModel(PrimaryModel):
         choices=ValueTypeChoices,
     )
 
+    csv_headers = ["name", "value", "value_type"]
+
+    def get_absolute_url(self):
+        return reverse("plugins:example_plugin:valuemodel", kwargs={"pk": self.pk})
+
+
 @extras_features(
     "custom_fields",
     "relationships",
@@ -91,16 +99,22 @@ class ClassificationGroupsModel(PrimaryModel):
         to="example_plugin.ValueModel",
         on_delete=models.CASCADE,
         related_name="environment_bundles",
-        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_ENV))
+        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_ENV),
+    )
     asset_tag = models.ForeignKey(
         to="example_plugin.ValueModel",
         on_delete=models.CASCADE,
         related_name="asset_tag_bundles",
-        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_ASSET_TAG))
+        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_ASSET_TAG),
+    )
     network = models.ForeignKey(
         to="example_plugin.ValueModel",
         on_delete=models.CASCADE,
         related_name="network_bundles",
-        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_NETWORK))
+        limit_choices_to=Q(value_type=ValueTypeChoices.TYPE_NETWORK),
+    )
 
+    csv_headers = ["name", "environment", "asset_tag", "network"]
 
+    def get_absolute_url(self):
+        return reverse("plugins:example_plugin:classificationgroupsmodel", kwargs={"pk": self.pk})

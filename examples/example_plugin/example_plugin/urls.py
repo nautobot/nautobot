@@ -14,6 +14,8 @@ router = NautobotUIViewSetRouter()
 # ExampleModel is registered using the ViewSet
 router.register("models", views.ExampleModelUIViewSet)
 router.register("other-models", views.AnotherExampleModelUIViewSet)
+router.register("value-models", views.ValueModelUIViewSet)
+router.register("classification-groups-models", views.ClassificationGroupsModelUIViewSet)
 
 urlpatterns = [
     path("", views.ExamplePluginHomeView.as_view(), name="home"),
@@ -28,7 +30,7 @@ urlpatterns = [
     path(
         "other-models/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
-        name="classificationgroupsmodel-list",
+        name="anotherexamplemodel_dynamicgroups",
         kwargs={"model": AnotherExampleModel},
     ),
     path(
@@ -51,6 +53,6 @@ urlpatterns = [
     ),
     # This URL definition is here in order to test the override_views functionality which is defined
     # in examples.plugin_with_view_override.plugin_with_view_override.views
-    path("override-target/", views.ViewToBeOverridden.as_view(), name="classificationgroupsmodel-list"),
+    path("override-target/", views.ViewToBeOverridden.as_view(), name="view_to_be_overridden"),
 ]
 urlpatterns += router.urls

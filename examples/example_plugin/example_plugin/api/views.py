@@ -9,9 +9,19 @@ from rest_framework.views import APIView
 
 from nautobot.apps.api import NautobotModelViewSet
 
-from example_plugin.api.serializers import AnotherExampleModelSerializer, ExampleModelSerializer
-from example_plugin.filters import AnotherExampleModelFilterSet, ExampleModelFilterSet
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from example_plugin.api.serializers import (
+    AnotherExampleModelSerializer,
+    ExampleModelSerializer,
+    ValueModelSerializer,
+    ClassificationGroupsModelSerializer,
+)
+from example_plugin.filters import (
+    AnotherExampleModelFilterSet,
+    ExampleModelFilterSet,
+    ValueModelFilterSet,
+    ClassificationGroupsModelFilterSet,
+)
+from example_plugin.models import AnotherExampleModel, ExampleModel, ValueModel, ClassificationGroupsModel
 
 
 class AnotherExampleModelViewSet(NautobotModelViewSet):
@@ -24,6 +34,18 @@ class ExampleModelViewSet(NautobotModelViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = ExampleModelSerializer
     filterset_class = ExampleModelFilterSet
+
+
+class ValueModelViewSet(NautobotModelViewSet):
+    queryset = ValueModel.objects.all()
+    serializer_class = ValueModelSerializer
+    filterset_class = ValueModelFilterSet
+
+
+class ClassificationGroupsModelViewSet(NautobotModelViewSet):
+    queryset = ClassificationGroupsModel.objects.all()
+    serializer_class = ClassificationGroupsModelSerializer
+    filterset_class = ClassificationGroupsModelFilterSet
 
 
 #
