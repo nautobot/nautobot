@@ -613,7 +613,9 @@ class InterfaceRedundancyGroupAssociationSerializer(
 ):  # pylint: disable=too-many-ancestors
     """InterfaceRedundancyGroupAssociation Serializer."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroupassociation-detail")
+    url = serializers.HyperlinkedIdentityField(
+        view_name="dcim-api:interfaceredundancygroupassociation-detail",
+    )
     interface = NestedInterfaceSerializer()
     interface_redundancy_group = NestedInterfaceRedundancyGroupSerializer()
 
@@ -629,9 +631,13 @@ class InterfaceRedundancyGroupSerializer(
 ):
     """InterfaceRedundancyGroup Serializer."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroup-detail")
+    url = serializers.HyperlinkedIdentityField(
+        view_name="dcim-api:interfaceredundancygroup-detail",
+    )
     interfaces = InterfaceRedundancyGroupAssociationSerializer(
-        source="interfaceredundancygroupassociation_set", many=True, read_only=True
+        source="interface_redundancy_group_associations",
+        many=True,
+        read_only=True,
     )
     virtual_ip = NestedIPAddressSerializer()
 

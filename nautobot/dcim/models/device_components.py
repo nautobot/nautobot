@@ -854,8 +854,16 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
 class InterfaceRedundancyGroupAssociation(PrimaryModel):
     """Intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
 
-    interface_redundancy_group = models.ForeignKey(to="dcim.InterfaceRedundancyGroup", on_delete=models.CASCADE)
-    interface = models.ForeignKey(to="dcim.Interface", on_delete=models.CASCADE)
+    interface_redundancy_group = models.ForeignKey(
+        to="dcim.InterfaceRedundancyGroup",
+        on_delete=models.CASCADE,
+        related_name="interface_redundancy_group_associations",
+    )
+    interface = models.ForeignKey(
+        to="dcim.Interface",
+        on_delete=models.CASCADE,
+        related_name="interface_redundancy_group_associations",
+    )
     priority = models.PositiveSmallIntegerField()
 
     class Meta:

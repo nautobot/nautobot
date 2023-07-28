@@ -69,7 +69,8 @@ INTERFACE_IPADDRESSES = """
 
 INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
 {% for interface in record.interfaces.all %}
-    <a href="{{ interface.get_absolute_url }}">{{ interface.device }}: {{ interface }}</a><br />
+    <a href="{{ interface.device.get_absolute_url }}">{{ interface.device }}</a>:
+    <a href="{{ interface.get_absolute_url }}">{{ interface }}</a><br />
 {% endfor %}
 """
 
@@ -83,8 +84,9 @@ INTERFACE_REDUNDANCY_GROUP_STATUS = """
 """
 
 INTERFACE_REDUNDANCY_INTERFACE_PRIORITY = """
+{% load helpers %}
 <span class="badge badge-default">
-    {{ record.priority|default:'None' }}
+    {{ record.priority|placeholder }}
 </span>
 """
 

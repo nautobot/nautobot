@@ -4569,6 +4569,11 @@ class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVF
 class InterfaceRedundancyGroupForm(NautobotModelForm):
     """InterfaceRedundancyGroup create/edit form."""
 
+    protocol_group_id = forms.CharField(
+        label="Protocol Group ID",
+        help_text="Specify a group identifier, such as the VRRP group ID.",
+        required=False,
+    )
     virtual_ip = DynamicModelChoiceField(
         queryset=IPAddress.objects.all(),
         required=False,

@@ -1981,7 +1981,7 @@ class InterfaceView(generic.ObjectView):
 
     def _get_interface_redundancy_groups_table(self, request, instance):
         """Return a table of assigned Interface Redundancy Groups."""
-        queryset = instance.interfaceredundancygroupassociation_set.restrict(request.user)
+        queryset = instance.interface_redundancy_group_associations.restrict(request.user)
         queryset = queryset.select_related("interface_redundancy_group")
         queryset = queryset.order_by("interface_redundancy_group", "priority")
         column_sequence = (
@@ -3209,7 +3209,7 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
 
     def _get_interface_redundancy_groups_table(self, request, instance):
         """Return a table of assigned Interfaces."""
-        queryset = instance.interfaceredundancygroupassociation_set.restrict(request.user)
+        queryset = instance.interface_redundancy_group_associations.restrict(request.user)
         queryset = queryset.prefetch_related("interface")
         queryset = queryset.order_by("priority")
         column_sequence = (
