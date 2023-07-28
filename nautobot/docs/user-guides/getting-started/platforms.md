@@ -23,7 +23,7 @@ To create a Platform:
 10. Click on the `Create` button
 
 !!! tip
-    The network driver, if specified, is used with the [netutils](https://netutils.readthedocs.io/en/latest/) library to automatically populate a set of derived attributes such as `ansible_driver`, `netmiko_driver`, `pyats_driver`, etc.
+    The network driver, if specified, is used with the [netutils](https://netutils.readthedocs.io/en/latest/) library to automatically populate a `network_driver_mappings` derived property mapping the `network_driver` field to tool-specific driver names such as `ansible`, `netmiko`, `pyats`, etc.
 
 !!! tip
     NAPALM Driver Options include:

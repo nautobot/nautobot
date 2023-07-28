@@ -30,12 +30,7 @@ query ($device: [String!]) {
       }
       napalm_driver
       network_driver
-      ansible_driver
-      netmiko_driver
-      ntc_templates_driver
-      pyats_driver
-      pyntc_driver
-      scrapli_driver
+      network_driver_mappings
     }
     site {
       name
