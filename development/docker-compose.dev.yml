@@ -20,3 +20,4 @@ services:
   mkdocs:
     volumes:
       - ../:/source
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py

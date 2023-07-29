@@ -139,7 +139,6 @@ social-auth-app-django = "~5.2.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
 
-
 [tool.poetry.extras]
 all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
 ldap = ["django-auth-ldap"]
@@ -187,6 +186,8 @@ mkdocs-version-annotations = "~1.0.0"
 mkdocstrings = "~0.22.0"
 # Python-specific extension to mkdocstrings
 mkdocstrings-python = "~1.2.0"
+# A mkdocs plugin for `classy` Python docs
+mkdocs-python-classy = "^0.1.2"
 
 [tool.poetry.group.linting.dependencies]
 # Code style enforcement
