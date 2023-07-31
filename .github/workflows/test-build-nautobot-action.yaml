@@ -2,7 +2,7 @@
 # This file contains the important snippets from `ci_integration.yml` to be tested on feature branch push.
 #     Images `push` is hardcoded to `false` here.
 # TBD: Remove this file after review and before merge.
-name: "CI - Integration Branch"
+name: "Testing workflow"
 on:  # yamllint disable
   push:
     branches:
