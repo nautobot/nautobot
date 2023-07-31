@@ -605,7 +605,7 @@ DELETE /api/extras/dynamic-group-memberships/{uuid}/
 
 ## Membership and Caching
 
-Since looking up the members of a Dynamic Group can be a very expensive operation, Nautobot caches the results of these lookups for a configurable amount of time. By default, this cache is set to one (1) hour. This means that if you make a change a member (or potential member) of a Dynamic Group, it may take up to an hour for that change to be reflected in the group's membership. You can change this default value by changing the `DYNAMIC_GROUP_CACHE_TIMEOUT` in the administration panel. This value is in seconds.
+Since looking up the members of a Dynamic Group can be a very expensive operation, Nautobot caches the results of these lookups for a configurable amount of time. By default this cache is disabled. You can change this default value by changing the `DYNAMIC_GROUP_CACHE_TIMEOUT` in the administration panel. This value is in seconds.
 
 Creating, updating, or deleting a Dynamic Group will automatically invalidate the cache for that group. This means that the next time the group is evaluated, the cache will be refreshed with the new membership information.
 
@@ -619,7 +619,7 @@ A Dynamic Group object in the ORM exposes two (2) properties for retrieving the 
 Additionally, a Dynamic Group has the following methods for working with group membership and caching:
 
 - `update_cached_members` - A way of forcing an update to the cached members of a Dynamic Group. This will always perform database queries. It will also return the updated `members_cached` property.
-- `am_i_a_member` - A way of checking if an object is a member of a Dynamic Group. The arguments are:
+- `has_member` - A way of checking if an object is a member of a Dynamic Group. The arguments are:
     - `obj` - An instance of an object to check if it is a member of the given group.
     - `skip_cache` - A boolean value that will use the preferred method of checking an instances member depending if using the cached list (`obj in list`) or the uncached queryset (`members.filter(pk=obj.pk).exists()`) is desired, defaults to `False`.
 

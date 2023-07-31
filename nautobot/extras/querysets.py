@@ -185,7 +185,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         # Filter down to matching groups.
         my_groups = []
         for dynamic_group in list(eligible_groups):
-            if dynamic_group.am_i_a_member(obj, skip_cache=skip_cache):
+            if dynamic_group.has_member(obj, skip_cache=skip_cache):
                 my_groups.append(dynamic_group)
 
         return my_groups

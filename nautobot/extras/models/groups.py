@@ -352,7 +352,7 @@ class DynamicGroup(OrganizationalModel):
 
         return self.members_cached
 
-    def am_i_a_member(self, obj, skip_cache=False):
+    def has_member(self, obj, skip_cache=False):
         """
         Return True if the given object is a member of this group.
 

@@ -305,7 +305,7 @@ def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
         #   therefor we can ignore cache updates on DynamicGroups updates
         return
 
-    content_type = instance.content_type
+    content_type = instance._content_type_cached
     cache_key = f"{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
     cache.set(
         cache_key,
@@ -318,7 +318,7 @@ post_save.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
 post_delete.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
 
 
-def dynamic_group_update_cache_members(sender, instance, **kwargs):
+def dynamic_group_update_cached_members(sender, instance, **kwargs):
     """
     When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members.
     """
@@ -343,8 +343,8 @@ def dynamic_group_update_cache_members(sender, instance, **kwargs):
     _update_cache_and_parents(group)
 
 
-post_save.connect(dynamic_group_update_cache_members, sender=DynamicGroup)
-post_save.connect(dynamic_group_update_cache_members, sender=DynamicGroupMembership)
+post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)
+post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMembership)
 
 
 #
