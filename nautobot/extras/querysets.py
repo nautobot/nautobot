@@ -205,7 +205,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
 
     def _get_eligible_dynamic_groups(self, obj, skip_cache=False):
         """
-        Return a queryset of `DynamicGroup` objects that are eligible to filter the given object.
+        Return a queryset of `DynamicGroup` objects that are eligible to potentially contain the given object.
         """
         cache_key = f"{obj._meta.label_lower}._get_eligible_dynamic_groups"
 

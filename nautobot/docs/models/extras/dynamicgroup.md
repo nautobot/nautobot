@@ -616,7 +616,7 @@ A Dynamic Group object in the ORM exposes two (2) properties for retrieving the 
 - `members` - The evaluated QuerySet defined by the Dynamic Group and it's potential child groups. This will always perform database queries.
 - `members_cached` - A cached instance of `members.all()`. This will only perform database queries if the cache is expired. You can continue to perform `.filter()` and other QuerySet operations but this will incur additional database queries.
 
-Additionally methods for working with group membership and caching are:
+Additionally, a Dynamic Group has the following methods for working with group membership and caching:
 
 - `update_cached_members` - A way of forcing an update to the cached members of a Dynamic Group. This will always perform database queries. It will also return the updated `members_cached` property.
 - `am_i_a_member` - A way of checking if an object is a member of a Dynamic Group. The arguments are:
