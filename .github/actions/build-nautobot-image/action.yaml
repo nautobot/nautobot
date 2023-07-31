@@ -1,6 +1,6 @@
 ---
 name: "Build Nautobot Image"
-description: "Builds and pushes nautobot image"
+description: "Builds and pushes Nautobot image"
 inputs:
   branch:
     description: "Branch Name Used In Tag"
