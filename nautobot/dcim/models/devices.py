@@ -410,7 +410,7 @@ class Platform(OrganizationalModel):
         max_length=100,
         blank=True,
         help_text=mark_safe(
-            'The <a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">network driver</a> '
+            'The <a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">normalized network driver</a> '
             "to use when interacting with devices, e.g. <code>cisco_ios</code>, <code>arista_eos</code>, etc.<br>"
             "Library-specific driver names will be derived from this setting as appropriate"
         ),
