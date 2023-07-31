@@ -371,6 +371,10 @@ class DynamicGroup(OrganizationalModel):
             field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
             field_value = filterset_form.cleaned_data[field_name]
 
+            # `tag` on FilterForms is not a ModelMultipleChoiceField, so we need to handle it.
+            # On `FilterSetForm.tag`, it is a ModelMultipleChoiceField.
+            # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
+            # and literal FilterSet fields (ex: MultiValueCharFilter).
             if isinstance(field, (forms.ModelMultipleChoiceField, TagFilterField)):
                 field_to_query = field.to_field_name or "pk"
                 new_value = [getattr(item, field_to_query) for item in field_value]
