@@ -4,6 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
 from nautobot.dcim.choices import InterfaceModeChoices
+from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import hex_to_rgb, lighten_color, rgb_to_hex
 
 
@@ -47,6 +49,16 @@ def cable_status_color_css(record):
     base_color = record.cable.get_status_color().strip("#")
     lighter_color = rgb_to_hex(*lighten_color(*hex_to_rgb(base_color), 0.75))
     return f"background-color: #{lighter_color}"
+
+
+def get_network_driver_mapping_names():
+    """
+    Return a list of the names of all available network driver mapping key names derived from the netutils library and the optional NETWORK_DRIVERS setting.
+    """
+    network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
+    network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS").keys())
+
+    return sorted(network_driver_names)
 
 
 def validate_interface_tagged_vlans(instance, model, pk_set):

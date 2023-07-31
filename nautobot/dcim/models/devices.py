@@ -409,17 +409,16 @@ class Platform(OrganizationalModel):
     network_driver = models.CharField(
         max_length=100,
         blank=True,
-        help_text=mark_safe(
-            'The <a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">network driver</a> '
-            "to use when interacting with devices, e.g. <code>cisco_ios</code>, <code>arista_eos</code>, etc.<br>"
-            "Library-specific driver names will be derived from this setting as appropriate"
+        help_text=(
+            "The network driver to use when interacting with devices, e.g. cisco_ios, arista_eos, etc."
+            " Library-specific driver names will be derived from this setting as appropriate"
         ),
     )
     napalm_driver = models.CharField(
         max_length=50,
         blank=True,
         verbose_name="NAPALM driver",
-        help_text="The name of the NAPALM driver to use when interacting with devices",
+        help_text="The name of the NAPALM driver to use when Nautobot internals interact with devices",
     )
     napalm_args = models.JSONField(
         encoder=DjangoJSONEncoder,

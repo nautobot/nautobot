@@ -20,10 +20,10 @@ from django_tables2 import RequestConfig
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.utils import get_network_driver_mapping_names
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
-from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import ConfirmationForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.utilities.permissions import get_permission_for_model
@@ -33,7 +33,7 @@ from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
-from .constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES, NONCONNECTABLE_IFACE_TYPES
+from .constants import NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
@@ -1310,18 +1310,19 @@ class PlatformView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(device_table)
 
-        network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
-        network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS").keys())
-
         return {
             "device_table": device_table,
-            "network_driver_names": sorted(network_driver_names),
+            "network_driver_names": get_network_driver_mapping_names(),
         }
 
 
 class PlatformEditView(generic.ObjectEditView):
     queryset = Platform.objects.all()
     model_form = forms.PlatformForm
+    template_name = "dcim/platform_edit.html"
+
+    def get_extra_context(self, request, instance):
+        return {"network_driver_names": get_network_driver_mapping_names()}
 
 
 class PlatformDeleteView(generic.ObjectDeleteView):
