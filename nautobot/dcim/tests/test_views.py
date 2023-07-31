@@ -2994,6 +2994,37 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
+        cls.ips = IPAddress.objects.all()
+
+        interface_redundancy_groups = (
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 1",
+                protocol="hsrp",
+                status=statuses[0],
+                virtual_ip=cls.ips[0],
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 2",
+                protocol="carp",
+                status=statuses[1],
+                virtual_ip=cls.ips[1],
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 3",
+                protocol="vrrp",
+                status=statuses[2],
+                virtual_ip=cls.ips[2],
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 4",
+                protocol="glbp",
+                status=statuses[3],
+                virtual_ip=cls.ips[3],
+            ),
+        )
+
+        for group in interface_redundancy_groups:
+            group.validated_save()
 
         cls.form_data = {
             "name": "IRG χ",
@@ -3002,7 +3033,7 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,,status",
+            "name,protocol,status",
             "IRG δ,,active",
             "IRG ε,glbp,planned",
             "IRG ζ,hsrp,staging",

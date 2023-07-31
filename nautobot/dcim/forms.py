@@ -71,6 +71,7 @@ from .choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -4684,12 +4685,14 @@ class InterfaceRedundancyGroupBulkEditForm(
         queryset=InterfaceRedundancyGroup.objects.all(),
         widget=forms.MultipleHiddenInput,
     )
+    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
     description = forms.CharField(required=False)
 
     class Meta:
         """Meta attributes."""
 
         nullable_fields = [
+            "protocol",
             "description",
         ]
 
@@ -4697,6 +4700,7 @@ class InterfaceRedundancyGroupBulkEditForm(
 class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.ModelForm):
     """Filter form to filter searches."""
 
+    model = InterfaceRedundancyGroup
     q = forms.CharField(
         required=False,
         label="Search",
