@@ -69,7 +69,7 @@ Most changes in code location arise from the merging of the `nautobot.utilities`
 ??? info "Full table of code location changes"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-location-changes.yaml}
 
-### Replace PluginMenuItem with NavMenueItem
+### Replace PluginMenuItem with NavMenuItem
 
 In your app's `navigation.py` file. If you are still using `PluginMenuItem` from `nautobot.extras.plugin`, you should replace those code with `NavMenuGroup`, `NavMenuItem`, and `NavMenuTab` from `nautobot.apps.ui`.
 

@@ -36,7 +36,7 @@ This document provides guidance on migrating code from version 1.x to version 2.
             - [Convert Relationship Type between Prefix and VRF to Many to Many](migrating-an-app-from-v1.md#convert-relationship-type-between-prefix-and-vrf-to-many-to-many)
     - [Code Updates](migrating-an-app-from-v1.md#code-updates)
         - [Update Code Import Locations](migrating-an-app-from-v1.md#update-code-import-locations)
-        - [Replace PluginMenuItem with NavMenueItem](migrating-an-app-from-v1.md#replace-pluginmenuitem-with-navmenueitem)
+        - [Replace PluginMenuItem with NavMenuItem](migrating-an-app-from-v1.md#replace-pluginmenuitem-with-navmenuitem)
         - [Replace DjangoFilterBackend with NautobotFilterBackend](migrating-an-app-from-v1.md#replace-djangofilterbackend-with-nautobotfilterbackend)
         - [Revamp Rest API Serializers](migrating-an-app-from-v1.md#revamp-rest-api-serializers)
         - [Revamp CSV Import and Export](migrating-an-app-from-v1.md#revamp-csv-import-and-export)
