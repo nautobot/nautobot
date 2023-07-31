@@ -305,7 +305,7 @@ def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
         #   therefor we can ignore cache updates on DynamicGroups updates
         return
 
-    content_type = instance._content_type_cached
+    content_type = instance.content_type
     cache_key = f"{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
     cache.set(
         cache_key,

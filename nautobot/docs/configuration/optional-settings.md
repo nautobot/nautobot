@@ -303,6 +303,16 @@ If `True`, it will be possible to apply Config Context objects to Devices and Vi
 
 ---
 
+## CONTENT_TYPE_CACHE_TIMEOUT
+
+Default: `0` (disabled)
+
+Environment Variable: `NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT`
+
+The number of seconds to cache the content type accessible via a object's class property `Object._content_type_cached`. This can save frequent calls to `ContentType.objects.get_for_model(model)`. Set this to `0` to disable caching.
+
+---
+
 ## CORS_ALLOW_ALL_ORIGINS
 
 Default: `False`

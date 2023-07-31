@@ -621,7 +621,9 @@ Additionally, a Dynamic Group has the following methods for working with group m
 - `update_cached_members` - A way of forcing an update to the cached members of a Dynamic Group. This will always perform database queries. It will also return the updated `members_cached` property.
 - `has_member` - A way of checking if an object is a member of a Dynamic Group. The arguments are:
     - `obj` - An instance of an object to check if it is a member of the given group.
-    - `skip_cache` - A boolean value that will use the preferred method of checking an instances member depending if using the cached list (`obj in list`) or the uncached queryset (`members.filter(pk=obj.pk).exists()`) is desired, defaults to `False`.
+    - `skip_cache` - A boolean value to choose whether to use the cached member list (`skip_cache=False`, the default) or force the database query (`skip_cache=True`). This is a handy way to have Nautobot perform the ideal membership check.
+        - `DynamicGroup.members_cached.filter(pk=obj.pk).exists()` will re-perform a database query, where `DynamicGroup.has_member(obj, skip_cache=False)` will perform `obj in list(DyamicGroup.members_cached)`, performing no additional database queries.
+        - In contrast `DynamicGroup.members.filter(pk=obj.pk).exists()` will always a database query but a much faster one as opposed to`obj in list(DyamicGroup.members)`.
 
 A model instance that supports Dynamic Groups will expose the following properties:
 
