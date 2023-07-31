@@ -67,7 +67,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
@@ -84,6 +84,7 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.utilities.utils import is_uuid
 from nautobot.virtualization.models import Cluster
 
 
@@ -1776,12 +1777,32 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
 class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
     """Filter for InterfaceRedundancyGroup."""
 
+    q = SearchFilter(filter_predicates={"name": "icontains"})
+    tag = TagFilter()
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="secrets_group",
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="slug",
+        label="Secrets group",
+    )
+    virtual_ip = MultiValueCharFilter(
+        method="filter_virtual_ip",
+        label="Virtual IP Address (address or ID)",
+    )
+
     class Meta:
         """Meta attributes for filter."""
 
         model = InterfaceRedundancyGroup
-        # fields = "__all__"
-        fields = ["id", "name", "description", "virtual_ip"]
+        fields = ["id", "name", "description", "secrets_group", "virtual_ip", "protocol"]
+
+    # 2.0 TODO(jathan): Eliminate these methods.
+    def filter_virtual_ip(self, queryset, name, value):
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+        return queryset.filter(virtual_ip__in=ip_queryset)
 
 
 class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
@@ -1793,4 +1814,3 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearch
         model = InterfaceRedundancyGroupAssociation
 
         fields = ["id", "interface_redundancy_group", "interface", "priority"]
-        # fields = "__all__"

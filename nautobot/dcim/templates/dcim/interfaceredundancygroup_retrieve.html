@@ -32,7 +32,7 @@
         </tr>
         <tr>
             <td>Description</td>
-            <td>{{ object.description }}</td>
+            <td>{{ object.description | placeholder }}</td>
         </tr>
         <tr>
             <td>Virtual IP</td>
@@ -53,21 +53,6 @@
     </table>
 </div>
 {% endblock content_left_page %}
-
-{% block content_right_page %}
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>Comments</strong>
-    </div>
-    <div class="panel-body rendered-markdown">
-        {% if object.comments %}
-        {{ object.comments|render_markdown }}
-        {% else %}
-        <span class="text-muted">None</span>
-        {% endif %}
-    </div>
-</div>
-{% endblock content_right_page %}
 
 {% block content_full_width_page %}
 <div class="panel panel-default">

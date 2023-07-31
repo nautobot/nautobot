@@ -33,6 +33,7 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -2611,3 +2612,70 @@ class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
         # The test code for `utilities.testing.views.TestCase.model_to_dict()`
         # needs to be enhanced to use the actual API serializers when `api=True`
         cls.validation_excluded_fields = ["status"]
+
+
+class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
+    model = InterfaceRedundancyGroup
+    brief_fields = ["display", "id", "name", "protocol", "url"]
+    create_data = [
+        {
+            "name": "Interface Redundancy Group 4",
+            "protocol": "hsrp",
+            "status": "active",
+            "virtual_ip": None,
+        },
+        {
+            "name": "Interface Redundancy Group 5",
+            "protocol": "vrrp",
+            "status": "planned",
+            "virtual_ip": None,
+        },
+        {
+            "name": "Interface Redundancy Group 6",
+            "protocol": "glbp",
+            "status": "staging",
+            "virtual_ip": None,
+        },
+    ]
+    bulk_update_data = {
+        "protocol": "carp",
+    }
+    choices_fields = ["status", "protocol"]
+
+    @classmethod
+    def setUpTestData(cls):
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]
+        statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
+        ips = IPAddress.objects.all()
+        for i, data in enumerate(cls.create_data):
+            data["virtual_ip"] = ips[i].pk
+
+        interface_redundancy_groups = (
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 1",
+                protocol="hsrp",
+                status=statuses[0],
+                virtual_ip=ips[0],
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 2",
+                protocol="carp",
+                status=statuses[1],
+                virtual_ip=ips[1],
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 3",
+                protocol="vrrp",
+                status=statuses[2],
+                virtual_ip=ips[2],
+            ),
+        )
+
+        for group in interface_redundancy_groups:
+            group.validated_save()

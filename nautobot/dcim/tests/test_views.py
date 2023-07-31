@@ -20,6 +20,7 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -51,6 +52,7 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InterfaceRedundancyGroup,
     Manufacturer,
     InventoryItem,
     Location,
@@ -2982,5 +2984,32 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
+            "status": statuses[0].pk,
+        }
+
+
+class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = InterfaceRedundancyGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
+
+        cls.form_data = {
+            "name": "IRG χ",
+            "protocol": InterfaceRedundancyGroupProtocolChoices.GLBP,
+            "status": statuses[3].pk,
+        }
+
+        cls.csv_data = (
+            "name,,status",
+            "IRG δ,,active",
+            "IRG ε,glbp,planned",
+            "IRG ζ,hsrp,staging",
+            "IRG 7,carp,retired",
+        )
+
+        cls.bulk_edit_data = {
+            "protocol": InterfaceRedundancyGroupProtocolChoices.HSRP,
             "status": statuses[0].pk,
         }

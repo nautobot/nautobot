@@ -18,6 +18,7 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -112,6 +113,7 @@ from .nested_serializers import (  # noqa: F401
     NestedFrontPortTemplateSerializer,
     NestedInterfaceSerializer,
     NestedInterfaceRedundancyGroupSerializer,
+    NestedInterfaceRedundancyGroupAssociationSerializer,
     NestedInterfaceTemplateSerializer,
     NestedInventoryItemSerializer,
     NestedLocationSerializer,
@@ -623,7 +625,7 @@ class InterfaceRedundancyGroupAssociationSerializer(
         """Meta attributes."""
 
         model = InterfaceRedundancyGroupAssociation
-        fields = ["id", "url", "interface_redundancy_group", "interface", "priority"]
+        fields = "__all__"
 
 
 class InterfaceRedundancyGroupSerializer(
@@ -634,12 +636,14 @@ class InterfaceRedundancyGroupSerializer(
     url = serializers.HyperlinkedIdentityField(
         view_name="dcim-api:interfaceredundancygroup-detail",
     )
-    interfaces = InterfaceRedundancyGroupAssociationSerializer(
+    protocol = ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+    interfaces = NestedInterfaceRedundancyGroupAssociationSerializer(
         source="interface_redundancy_group_associations",
         many=True,
         read_only=True,
     )
     virtual_ip = NestedIPAddressSerializer()
+    secrets_group = NestedSecretsGroupSerializer()
 
     class Meta:
         """Meta attributes."""

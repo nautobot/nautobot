@@ -4578,6 +4578,10 @@ class InterfaceRedundancyGroupForm(NautobotModelForm):
         queryset=IPAddress.objects.all(),
         required=False,
     )
+    secrets_group = DynamicModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+    )
 
     class Meta:
         """Meta attributes."""
@@ -4644,6 +4648,10 @@ class InterfaceRedundancyGroupAssociationForm(NautobotModelForm):
         query_params={"device_id": "$device"},
         help_text="Choose an interface to add to the Redundancy Group.",
     )
+    interface_redundancy_group = DynamicModelChoiceField(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        help_text="Choose a Interface Redundancy Group.",
+    )
     priority = forms.IntegerField(
         min_value=1,
         help_text="Specify the interface priority as an integer.",
@@ -4686,7 +4694,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         ]
 
 
-class InterfaceRedundancyGroupFilterForm(BootstrapMixin, forms.ModelForm):
+class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.ModelForm):
     """Filter form to filter searches."""
 
     q = forms.CharField(

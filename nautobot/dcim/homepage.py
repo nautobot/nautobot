@@ -96,7 +96,7 @@ layout = (
                 weight=500,
             ),
             HomePageItem(
-                name="Interface Redundancy Group",
+                name="Interface Redundancy Groups",
                 link="dcim:interfaceredundancygroup_list",
                 model=models.InterfaceRedundancyGroup,
                 permissions=["dcim.view_interfaceredundancygroup"],

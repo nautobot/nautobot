@@ -130,6 +130,7 @@ class Migration(migrations.Migration):
             model_name="interfaceredundancygroup",
             name="virtual_ip",
             field=models.ForeignKey(
+                blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="interface_redundancy_groups",

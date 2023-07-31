@@ -830,6 +830,7 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
         to="ipam.IPAddress",
         on_delete=models.CASCADE,
         null=True,
+        blank=True,
         related_name="interface_redundancy_groups",
     )
 

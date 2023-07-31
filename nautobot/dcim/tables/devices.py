@@ -993,7 +993,6 @@ class DeviceRedundancyGroupTable(BaseTable):
 
 
 class InterfaceRedundancyGroupTable(BaseTable):
-    # pylint: disable=R0903
     """Table for list view."""
 
     pk = ToggleColumn()
@@ -1020,7 +1019,6 @@ class InterfaceRedundancyGroupTable(BaseTable):
 
 
 class InterfaceRedundancyGroupAssociationTable(BaseTable):
-    # pylint: disable=R0903
     """Table for list view."""
 
     pk = ToggleColumn()
