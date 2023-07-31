@@ -745,16 +745,16 @@ class PlatformSerializer(NautobotModelSerializer):
     class Meta:
         model = Platform
         fields = [
-            "description",
-            "device_count",
-            "manufacturer",
+            "url",
             "name",
-            "napalm_args",
+            "slug",
+            "manufacturer",
             "napalm_driver",
+            "napalm_args",
             "network_driver",
             "network_driver_mappings",
-            "slug",
-            "url",
+            "description",
+            "device_count",
             "virtualmachine_count",
         ]
 
