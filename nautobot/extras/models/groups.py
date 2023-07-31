@@ -371,7 +371,7 @@ class DynamicGroup(OrganizationalModel):
             field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
             field_value = filterset_form.cleaned_data[field_name]
 
-            if isinstance(field, forms.ModelMultipleChoiceField) or isinstance(field, TagFilterField):
+            if isinstance(field, (forms.ModelMultipleChoiceField, TagFilterField)):
                 field_to_query = field.to_field_name or "pk"
                 new_value = [getattr(item, field_to_query) for item in field_value]
 
