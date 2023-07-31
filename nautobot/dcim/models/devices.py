@@ -410,7 +410,7 @@ class Platform(OrganizationalModel):
         max_length=100,
         blank=True,
         help_text=(
-            "The network driver to use when interacting with devices, e.g. cisco_ios, arista_eos, etc."
+            "The normalized network driver to use when interacting with devices, e.g. cisco_ios, arista_eos, etc."
             " Library-specific driver names will be derived from this setting as appropriate"
         ),
     )
