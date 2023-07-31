@@ -33,7 +33,7 @@ from nautobot.virtualization.models import VirtualMachine
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
-from .constants import NONCONNECTABLE_IFACE_TYPES
+from .constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
@@ -1310,21 +1310,12 @@ class PlatformView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(device_table)
 
-        network_driver_names = {
-            "ansible",
-            "hier_config",
-            "napalm",
-            "netmiko",
-            "ntc_templates",
-            "pyats",
-            "pyntc",
-            "scrapli",
-        }
+        network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
         network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS").keys())
 
         return {
             "device_table": device_table,
-            "network_driver_names": network_driver_names,
+            "network_driver_names": sorted(network_driver_names),
         }
 
 
