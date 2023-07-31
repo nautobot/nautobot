@@ -23,7 +23,9 @@ Here are the typical instances required for the power utilization of a rack to b
 - 1 or more **Devices**
     - power port connected to a power outlet of the PDU
 
+<!-- markdownlint-disable MD037 -->
 The total power utilization for a rack is calculated as the sum of all allocated draw (from power ports of devices either directly connected to a power feed or connected to a power outlet of a device that is connected to a power feed) divided by the Total Power (Amps * Volts * Max Utilization %) for all power feeds.
+<!-- markdownlint-enable MD037 -->
 
 ## Example Power Topology
 
