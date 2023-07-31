@@ -1230,6 +1230,34 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
     }
     slug_source = "name"
 
+    @override_settings(
+        NETWORK_DRIVERS={
+            "netmiko": {"cisco_ios": "custom_cisco_netmiko"},
+            "custom_tool": {"custom_network_driver": "custom_tool_driver"},
+        },
+    )
+    def test_network_driver_mappings(self):
+        """
+        Check that network_driver_mappings field is correctly exposed by the API
+        """
+        platform1 = Platform.objects.create(
+            name="Test network driver mappings 1", slug="test-ndm-1", network_driver="cisco_ios"
+        )
+        platform2 = Platform.objects.create(
+            name="Test network driver mappings 2", slug="test-ndm-2", network_driver="custom_network_driver"
+        )
+        self.add_permissions("dcim.view_platform")
+
+        with self.subTest("Test cisco_ios platform with overridden netmiko driver"):
+            url = reverse("dcim-api:platform-detail", kwargs={"pk": platform1.pk})
+            response = self.client.get(url, **self.header)
+            self.assertDictEqual(platform1.network_driver_mappings, response.data["network_driver_mappings"])
+
+        with self.subTest("Test platform with custom network_driver with custom mapped driver"):
+            url = reverse("dcim-api:platform-detail", kwargs={"pk": platform2.pk})
+            response = self.client.get(url, **self.header)
+            self.assertDictEqual(platform2.network_driver_mappings, response.data["network_driver_mappings"])
+
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
