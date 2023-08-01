@@ -5250,7 +5250,9 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
                 interface_redundancy_group__in=[interface_redundancy_groups[0], interface_redundancy_groups[1]]
             ).count(),
         )
-        params = {"interface_redundancy_group": [interface_redundancy_groups[0].name, interface_redundancy_groups[1].name]}
+        params = {
+            "interface_redundancy_group": [interface_redundancy_groups[0].name, interface_redundancy_groups[1].name]
+        }
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
             InterfaceRedundancyGroupAssociation.objects.filter(
@@ -5264,12 +5266,16 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
             params = {"interface": [interfaces[0].pk, interfaces[1].pk]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroupAssociation.objects.filter(interface__in=[interfaces[0],interfaces[1]]).count(),
+                InterfaceRedundancyGroupAssociation.objects.filter(
+                    interface__in=[interfaces[0], interfaces[1]]
+                ).count(),
             )
             params = {"interface": [interfaces[0].name, interfaces[1].name]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroupAssociation.objects.filter(interface__in=[interfaces[0],interfaces[1]]).count(),
+                InterfaceRedundancyGroupAssociation.objects.filter(
+                    interface__in=[interfaces[0], interfaces[1]]
+                ).count(),
             )
 
     def test_priority(self):

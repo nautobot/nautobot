@@ -34,7 +34,7 @@ from nautobot.extras.models import (
     StatusModel,
 )
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import BaseModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, ChangeLoggedModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
@@ -897,7 +897,7 @@ class InterfaceRedundancyGroup(StatusModel, PrimaryModel):  # pylint: disable=to
     "relationships",
     "custom_fields",
 )
-class InterfaceRedundancyGroupAssociation(BaseModel):
+class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
     """Intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
 
     interface_redundancy_group = models.ForeignKey(
