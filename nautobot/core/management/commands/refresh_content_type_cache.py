@@ -19,6 +19,7 @@ class Command(BaseCommand):
 
         for content_type in content_types:
             self.stdout.write(self.style.SUCCESS(f"Processing {content_type}"))
-            cache_key = f"{content_type.model_class()._meta.label_lower}.content_type"
 
-            cache.set(cache_key, content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT)
+            cache.set(
+                content_type.model_class()._content_type_cache_key, content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT
+            )

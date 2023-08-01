@@ -203,11 +203,19 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
     def get_by_natural_key(self, slug):
         return self.get(slug=slug)
 
+    @classmethod
+    def _get_eligible_dynamic_groups_cache_key(cls, obj):
+        """
+        Return the cache key for the queryset of `DynamicGroup` objects that are eligible to potentially contain the
+        given object.
+        """
+        return f"{obj._meta.label_lower}._get_eligible_dynamic_groups"
+
     def _get_eligible_dynamic_groups(self, obj, skip_cache=False):
         """
         Return a queryset of `DynamicGroup` objects that are eligible to potentially contain the given object.
         """
-        cache_key = f"{obj._meta.label_lower}._get_eligible_dynamic_groups"
+        cache_key = self.__class__._get_eligible_dynamic_groups_cache_key(obj)
 
         def _query_eligible_dynamic_groups():
             """

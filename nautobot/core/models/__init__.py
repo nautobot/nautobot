@@ -46,13 +46,21 @@ class BaseModel(models.Model):
         return ContentType.objects.get_for_model(cls)
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def _content_type_cache_key(cls):  # pylint: disable=no-self-argument
+        """
+        Return the cache key for the ContentType of the object.
+
+        Necessary for use with _content_type_cached and management commands.
+        """
+        return f"{cls._meta.label_lower}._content_type"
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cached(cls):  # pylint: disable=no-self-argument
         """
         Return the ContentType of the object, cached.
         """
-        cache_key = f"{cls._meta.label_lower}._content_type"
 
-        return cache.get_or_set(cache_key, cls._content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT)
+        return cache.get_or_set(cls._content_type_cache_key, cls._content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT)
 
     class Meta:
         abstract = True

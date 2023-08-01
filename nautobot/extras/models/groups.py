@@ -323,13 +323,17 @@ class DynamicGroup(OrganizationalModel):
         return self.get_queryset()
 
     @property
+    def members_cache_key(self):
+        """Return the cache key for this group's members."""
+        return f"{self.__class__.__name__}.{self.id}.members_cached"
+
+    @property
     def members_cached(self):
         """Return the member objects for this group, cached if available."""
-        cache_key = f"{self.__class__.__name__}.{self.id}.cached_members"
 
         unpickled_query = None
         try:
-            cached_query = cache.get(cache_key)
+            cached_query = cache.get(self.members_cache_key)
             if cached_query is not None:
                 unpickled_query = pickle.loads(cached_query)
         except pickle.UnpicklingError:
@@ -338,7 +342,9 @@ class DynamicGroup(OrganizationalModel):
             if unpickled_query is None:
                 unpickled_query = self.members.all()
                 cached_query = pickle.dumps(unpickled_query)  # Explicitly pickle the query to evaluate it.
-                cache.set(cache_key, cached_query, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"))
+                cache.set(
+                    self.members_cache_key, cached_query, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT")
+                )
 
         return unpickled_query
 
@@ -347,8 +353,7 @@ class DynamicGroup(OrganizationalModel):
         Update the cached members of the groups. Also returns the updated cached members.
         """
 
-        cache_key = f"{self.__class__.__name__}.{self.id}.cached_members"
-        cache.delete(cache_key)
+        cache.delete(self.members_cache_key)
 
         return self.members_cached
 
