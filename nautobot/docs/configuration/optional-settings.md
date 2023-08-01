@@ -1147,8 +1147,9 @@ Default: `False`
 
 Environment Variable: `NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE`
 
-Set to True to use session cookies instead of persistent cookies.
-Session cookies will expire when a browser is closed.
+If this is set to True, Nautobot will use browser-length cookies - cookies that expire as soon as the user closes their browser.
+
+By default, `SESSION_EXPIRE_AT_BROWSER_CLOSE` is set to False, which means session cookies will be stored in users’ browsers for as long as [`SESSION_COOKIE_AGE`](#session_cookie_age).
 
 Please see the [official Django documentation on `SESSION_EXPIRE_AT_BROWSER_CLOSE`](https://docs.djangoproject.com/en/stable/ref/settings/#session-expire-at-browser-close) for more information.
 
