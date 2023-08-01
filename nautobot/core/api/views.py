@@ -2,8 +2,6 @@ import logging
 import platform
 from collections import OrderedDict
 
-import redis
-
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
@@ -432,13 +430,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
         workers = celery_app.control.inspect().active()  # list or None
         worker_count = len(workers) if workers is not None else 0
 
-        try:
-            rq_workers_running = RQWorker.count(get_rq_connection("default"))
-        except redis.exceptions.ResponseError as exc:
-            rq_workers_running = "failed"
-            logger = logging.getLogger("nautobot.core.api.views.StatusView")
-            logger.exception("Failed to query Redis for RQ worker count: %s", exc)
-
         return Response(
             {
                 "django-version": DJANGO_VERSION,
@@ -447,7 +438,7 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "plugins": plugins,
                 "python-version": platform.python_version(),
                 # 2.0 TODO: remove rq-workers-running
-                "rq-workers-running": rq_workers_running,
+                "rq-workers-running": RQWorker.count(get_rq_connection("default")),
                 "celery-workers-running": worker_count,
             }
         )

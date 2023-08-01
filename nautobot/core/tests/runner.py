@@ -1,12 +1,11 @@
-from time import sleep
-
 import yaml
+
+from django.core.management import call_command
 from django.conf import settings
-from django.core.management import call_command, CommandError
-from xmlrunner.extra.djangotestrunner import XMLTestRunner
+from django.test.runner import DiscoverRunner
 
 
-class NautobotTestRunner(XMLTestRunner):
+class NautobotTestRunner(DiscoverRunner):
     """
     Custom test runner that excludes integration tests by default.
 
@@ -56,30 +55,7 @@ class NautobotTestRunner(XMLTestRunner):
         result = super().setup_databases(**kwargs)
 
         if settings.TEST_USE_FACTORIES and result:
-            # Try to flush the database before loading test data.
-            # Experienced fails when flushing multiple test databases concurently, so we retry a few times.
-            for connection in result:
-                db_name = connection[0].alias
-
-                retry_count = 4
-                retry_wait = 1
-                while retry_count:
-                    try:
-                        print(f'Flushing test database "{db_name}"...')
-                        call_command("flush", "--no-input", "--database", db_name)
-                        break
-                    except CommandError as exception:
-                        retry_count -= 1
-                        print(
-                            f"Flush command failed with error: {exception}, "
-                            "will retry {retry_count} more times after {retry_wait} seconds ..."
-                        )
-                        sleep(retry_wait)
-                        retry_wait *= 2
-                else:
-                    raise CommandError(f"Failed to flush test database '{db_name}' after multiple attempts.")
-
-            command = ["generate_test_data", "--no-input"]
+            command = ["generate_test_data", "--flush", "--no-input"]
             if settings.TEST_FACTORY_SEED is not None:
                 command += ["--seed", settings.TEST_FACTORY_SEED]
             if self.cache_test_fixtures:
@@ -96,7 +72,7 @@ class NautobotTestRunner(XMLTestRunner):
         if settings.TEST_USE_FACTORIES and old_config:
             for connection in old_config:
                 db_name = connection[0].alias
-                print(f'Flushing test database "{db_name}"...')
+                print(f'Emptying test database "{db_name}"...')
                 call_command("flush", "--no-input", "--database", db_name)
                 print(f"Database {db_name} emptied!")
 
