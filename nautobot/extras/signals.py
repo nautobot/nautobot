@@ -8,9 +8,10 @@ from datetime import timedelta
 
 from cacheops.signals import cache_invalidated, cache_read
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save
+from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
@@ -284,6 +285,66 @@ def dynamic_group_membership_created(sender, instance, raw=False, **kwargs):
 
 m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children.through)
 pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
+
+
+def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
+    """
+    When a DynamicGroup is created or deleted, refresh the cache of eligible groups for the associated ContentType.
+
+    Can't change content_type_id on an existing instance, so no need to check for that.
+    """
+
+    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
+        # Caching is disabled, so there's nothing to do
+        return
+
+    if kwargs.get("created", None) is False:
+        # We do not care about updates
+        # "created" is not a kwarg for post_delete signals, so is unset or None
+        # "created" is a kwarg for post_save signals, but you cannot change content types of existing groups
+        #   therefor we can ignore cache updates on DynamicGroups updates
+        return
+
+    content_type = instance.content_type
+    cache_key = f"{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
+    cache.set(
+        cache_key,
+        DynamicGroup.objects.filter(content_type_id=instance.content_type_id),
+        get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"),
+    )
+
+
+post_save.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
+post_delete.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
+
+
+def dynamic_group_update_cached_members(sender, instance, **kwargs):
+    """
+    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members.
+    """
+
+    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
+        # Caching is disabled, so there's nothing to do
+        return
+
+    if isinstance(instance, DynamicGroupMembership):
+        group = instance.group
+    else:
+        group = instance
+
+    def _update_cache_and_parents(this_instance):
+        this_instance.update_cached_members()
+
+        # Since a change a group or group of groups does not affect it's children, we only need to go up the tree
+        # A group of groups does not use the cache of it's children due to the complexity of the set operations
+        for ancestor in list(this_instance.parents.all()):
+            _update_cache_and_parents(ancestor)
+
+    _update_cache_and_parents(group)
+
+
+post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)
+post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMembership)
 
 
 #
