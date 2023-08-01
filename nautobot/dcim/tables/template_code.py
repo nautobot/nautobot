@@ -68,10 +68,7 @@ INTERFACE_IPADDRESSES = """
 """
 
 INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
-{% for interface in record.interfaces.all %}
-    <a href="{{ interface.device.get_absolute_url }}">{{ interface.device }}</a>:
-    <a href="{{ interface.get_absolute_url }}">{{ interface }}</a><br />
-{% endfor %}
+<a href="{% url 'dcim:interface_list' %}?interface_redundancy_groups={{record}}">{{ record.interfaces.count }}</a>
 """
 
 INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES = """

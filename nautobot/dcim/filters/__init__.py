@@ -1312,6 +1312,10 @@ class InterfaceFilterSet(
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
+    interface_redundancy_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        to_field_name="name",
+    )
 
     class Meta:
         model = Interface
@@ -1325,6 +1329,7 @@ class InterfaceFilterSet(
             "mode",
             "description",
             "label",
+            "interface_redundancy_groups",
         ]
 
     def filter_device(self, queryset, name, value):
