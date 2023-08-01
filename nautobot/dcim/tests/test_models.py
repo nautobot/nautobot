@@ -289,30 +289,22 @@ class InterfaceRedundancyGroupTestCase(TestCase):
     def test_add_interface(self):
         interfaces = Interface.objects.all()
         interface_redundancy_group = self.interface_redundancy_groups[0]
-        previous_count = InterfaceRedundancyGroupAssociation.objects.filter(
-            interface_redundancy_group=interface_redundancy_group
-        ).count()
+        previous_count = interface_redundancy_group.interfaces.count()
         for i in range(3):
             interface_redundancy_group.add_interface(interfaces[i], i * 100)
-        after_count = InterfaceRedundancyGroupAssociation.objects.filter(
-            interface_redundancy_group=interface_redundancy_group
-        ).count()
+        after_count = interface_redundancy_group.interfaces.count()
         self.assertEqual(previous_count + 3, after_count)
 
     def test_remove_interface(self):
         interfaces = Interface.objects.all()
-        interface_redundancy_group_1 = self.interface_redundancy_groups[0]
+        interface_redundancy_group = self.interface_redundancy_groups[0]
         for i in range(3):
-            interface_redundancy_group_1.add_interface(interfaces[i], i * 100)
-        previous_count = InterfaceRedundancyGroupAssociation.objects.filter(
-            interface_redundancy_group=interface_redundancy_group_1
-        ).count()
+            interface_redundancy_group.add_interface(interfaces[i], i * 100)
+        previous_count = interface_redundancy_group.interfaces.count()
         self.assertEqual(previous_count, 3)
         for i in range(2):
-            interface_redundancy_group_1.remove_interface(interfaces[i])
-        after_count = InterfaceRedundancyGroupAssociation.objects.filter(
-            interface_redundancy_group=interface_redundancy_group_1
-        ).count()
+            interface_redundancy_group.remove_interface(interfaces[i])
+        after_count = interface_redundancy_group.interfaces.count()
         self.assertEqual(after_count, 1)
 
 
