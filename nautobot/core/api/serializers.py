@@ -161,16 +161,19 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
                 return super().to_internal_value(data["url"])
             elif "id" in data:
                 return super().to_internal_value(data["id"])
-        if not is_uuid(data) and not is_url(data) and isinstance(data, str):
+        if isinstance(data, str) and not is_uuid(data) and not is_url(data):
             # Maybe it's a composite-key?
             related_model = self._related_model
             if related_model is not None and hasattr(related_model, "natural_key_args_to_kwargs"):
-                data = related_model.natural_key_args_to_kwargs(deconstruct_composite_key(data))
+                try:
+                    data = related_model.natural_key_args_to_kwargs(deconstruct_composite_key(data))
+                except ValueError as err:
+                    # Not a correctly constructed composite key?
+                    raise ValidationError(f"Related object not found using provided composite-key: {data}") from err
             elif related_model is not None and related_model.label_lower == "auth.group":
                 # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method
                 data = {"name": deconstruct_composite_key(data)}
         return super().to_internal_value(data)
-
 
     def to_representation(self, value):
         """Convert URL representation to a brief nested representation."""

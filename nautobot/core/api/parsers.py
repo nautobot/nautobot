@@ -9,8 +9,6 @@ from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
-from nautobot.core.models.utils import deconstruct_composite_key
-
 
 logger = logging.getLogger(__name__)
 
