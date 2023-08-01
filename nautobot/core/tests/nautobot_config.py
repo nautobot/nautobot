@@ -24,25 +24,11 @@ PLUGINS = [
 # Hard-code the SECRET_KEY for simplicity
 SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-_GROUP_INDEX = os.getenv("NAUTOBOT_TEST_GROUP_INDEX", "")
-if _GROUP_INDEX:
-    # For tests parallelization
-    # Group with index "0" will use Redis DB 4 and 5, group with index "1" will use Redis DB 6 and 7, etc.
-    _redis_index = int((int(_GROUP_INDEX) + 2) * 2)
-    # Each group will use a separate SQL database
-    DATABASES["default"]["TEST"] = {  # noqa: F405
-        "NAME": f"nautobot_test{_GROUP_INDEX}",
-    }
-else:
-    # No parallelization
-    # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
-    _redis_index = 2
-
-
 # Redis variables
 
-CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=_redis_index)  # noqa: F405
-CACHEOPS_REDIS = parse_redis_connection(redis_database=_redis_index + 1)
+# Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
+CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
+CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
 CACHEOPS_ENABLED = False  # 2.0 TODO(jathan): Remove me.
 
 # Testing storages within cli.py
@@ -64,6 +50,5 @@ TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
 # Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
 METRICS_ENABLED = True
 
-TEST_OUTPUT_DIR = os.getenv("NAUTOBOT_TEST_OUTPUT_DIR")
 DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = 0
 CONTENT_TYPE_CACHE_TIMEOUT = 0

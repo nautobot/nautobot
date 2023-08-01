@@ -1871,7 +1871,7 @@ name = "lxml"
 version = "4.9.3"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
 category = "main"
-optional = false
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, != 3.4.*"
 files = [
     {file = "lxml-4.9.3-cp27-cp27m-macosx_11_0_x86_64.whl", hash = "sha256:b0a545b46b526d418eb91754565ba5b63b1c0b12f9bd2f808c852d9b4b2f9b5c"},
@@ -3970,21 +3970,6 @@ files = [
 ]
 
 [[package]]
-name = "unittest-xml-reporting"
-version = "3.2.0"
-description = "unittest-based test runner with Ant/JUnit like XML reporting."
-category = "dev"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "unittest-xml-reporting-3.2.0.tar.gz", hash = "sha256:edd8d3170b40c3a81b8cf910f46c6a304ae2847ec01036d02e9c0f9b85762d28"},
-    {file = "unittest_xml_reporting-3.2.0-py2.py3-none-any.whl", hash = "sha256:f3d7402e5b3ac72a5ee3149278339db1a8f932ee405f48bcb9c681372f2717d5"},
-]
-
-[package.dependencies]
-lxml = "*"
-
-[[package]]
 name = "uritemplate"
 version = "4.1.1"
 description = "Implementation of RFC 6570 URI Templates"
@@ -4248,4 +4233,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "51d64baff18dea1c0dfd7e46013c3cd6573a4071a30b2c629e78963d33ef11d8"
+content-hash = "dbc6c12eb81437b0852251370a9904256930fde12574668779abdbf0606091ec"
