@@ -881,7 +881,7 @@ class InterfaceRedundancyGroup(StatusModel, PrimaryModel):  # pylint: disable=to
 
     def remove_interface(self, interface):
         """
-        Remove a child group.
+        Remove an interface.
 
         :param interface:
             Interface instance
