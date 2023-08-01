@@ -738,6 +738,7 @@ class DeviceRoleSerializer(NautobotModelSerializer):
 class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
+    network_driver_mappings = serializers.JSONField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
@@ -750,6 +751,8 @@ class PlatformSerializer(NautobotModelSerializer):
             "manufacturer",
             "napalm_driver",
             "napalm_args",
+            "network_driver",
+            "network_driver_mappings",
             "description",
             "device_count",
             "virtualmachine_count",

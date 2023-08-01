@@ -1783,6 +1783,7 @@ class PlatformForm(NautobotModelForm):
             "name",
             "slug",
             "manufacturer",
+            "network_driver",
             "napalm_driver",
             "napalm_args",
             "description",

@@ -1,0 +1,4 @@
+Added `network_driver` database field to the `Platform` model.
+Added `network_driver_mappings` derived attribute on the `Platform` model.
+Added `CONSTANCE_DATABASE_CACHE_BACKEND = 'default'` to `settings.py`, which should improve performance a bit.
+Added support for `NETWORK_DRIVERS` config setting to override or extend default network driver mappings from `netutils` library.

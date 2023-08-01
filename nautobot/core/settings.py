@@ -5,6 +5,7 @@ import sys
 
 from django.contrib.messages import constants as messages
 import django.forms
+from django.utils.safestring import mark_safe
 
 from nautobot import __version__
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
@@ -536,6 +537,7 @@ LOGIN_REDIRECT_URL = "home"
 
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
+CONSTANCE_DATABASE_CACHE_BACKEND = "default"
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -554,6 +556,12 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     ],
     "release_check_url_field": [
         "django.forms.URLField",
+        {
+            "required": False,
+        },
+    ],
+    "optional_json_field": [
+        "django.forms.fields.JSONField",
         {
             "required": False,
         },
@@ -603,6 +611,20 @@ CONSTANCE_CONFIG = {
         "Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
     ],
+    "NETWORK_DRIVERS": [
+        {},
+        mark_safe(
+            "Extend or override default Platform.network_driver translations provided by "
+            '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
+            "Enter a dictionary in JSON format, for example:\n"
+            "<pre>{\n"
+            '    "netmiko": {"my_network_driver": "cisco_ios"},\n'
+            '    "pyats": {"my_network_driver": "iosxe"} \n'
+            "}</pre>",
+        ),
+        # Use custom field type defined above
+        "optional_json_field",
+    ],
     "PAGINATE_COUNT": [
         50,
         "Default number of objects to display per page when listing objects in the UI and/or REST API.",
@@ -646,7 +668,7 @@ CONSTANCE_CONFIG = {
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
-    "Device Connectivity": ["PREFER_IPV4"],
+    "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
