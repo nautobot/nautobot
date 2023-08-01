@@ -1150,7 +1150,7 @@ Environment Variable: `NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE`
 Set to True to use session cookies instead of persistent cookies.
 Session cookies will expire when a browser is closed.
 
-Please see the [official Django documentation on `SESSION_EXPIRE_AT_BROWSER_CLOSE`](https://docs.djangoproject.com/en/4.2/ref/settings/#session-expire-at-browser-close) for more information.
+Please see the [official Django documentation on `SESSION_EXPIRE_AT_BROWSER_CLOSE`](https://docs.djangoproject.com/en/stable/ref/settings/#session-expire-at-browser-close) for more information.
 
 ---
 
@@ -1162,7 +1162,7 @@ Environment Variable: `NAUTOBOT_SESSION_COOKIE_AGE`
 
 The age of session cookies, in seconds.
 
-Please see the [official Django documentation on `SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/4.2/ref/settings/#session-cookie-age) for more information.
+Please see the [official Django documentation on `SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/stable/ref/settings/#session-cookie-age) for more information.
 
 ---
 
