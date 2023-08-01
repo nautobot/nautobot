@@ -1,0 +1,1 @@
+Removed unused method `get_job_result_and_repository_record` in `nautobot.extras.datasources.git`.
