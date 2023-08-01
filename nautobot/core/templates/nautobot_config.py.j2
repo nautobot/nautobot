@@ -39,6 +39,9 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 
+# Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
+# CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
+
 # Celery broker URL used to tell workers where queues are located
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))

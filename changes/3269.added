@@ -1,0 +1,2 @@
+Added ability to cache `DynamicGroup` memberships in Redis to improve reverse lookup performance.
+Added ability to cache `ContentType` lookups in Redis to improve performance.

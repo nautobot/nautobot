@@ -1,10 +1,12 @@
 """Dynamic Groups Models."""
 
 import logging
+import pickle
 
 import django_filters
 from django import forms
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
@@ -17,6 +19,7 @@ from nautobot.core.models.generics import OrganizationalModel
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
+from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.utilities.forms.widgets import StaticSelect2
 from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
@@ -312,12 +315,77 @@ class DynamicGroup(OrganizationalModel):
 
     @property
     def members(self):
-        """Return the member objects for this group."""
+        """Return the member objects for this group, never cached."""
         # If there are child groups, return the generated group queryset, otherwise use this group's
         # `filter` directly.
         if self.children.exists():
             return self.get_group_queryset()
         return self.get_queryset()
+
+    @property
+    def members_cache_key(self):
+        """Return the cache key for this group's members."""
+        return f"{self.__class__.__name__}.{self.id}.members_cached"
+
+    @property
+    def members_cached(self):
+        """Return the member objects for this group, cached if available."""
+
+        unpickled_query = None
+        try:
+            cached_query = cache.get(self.members_cache_key)
+            if cached_query is not None:
+                unpickled_query = pickle.loads(cached_query)
+        except pickle.UnpicklingError:
+            logger.warning("Failed to unpickle cached members for %s", self)
+        finally:
+            if unpickled_query is None:
+                unpickled_query = self.members.all()
+                cached_query = pickle.dumps(unpickled_query)  # Explicitly pickle the query to evaluate it.
+                cache.set(
+                    self.members_cache_key, cached_query, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT")
+                )
+
+        return unpickled_query
+
+    def update_cached_members(self):
+        """
+        Update the cached members of the groups. Also returns the updated cached members.
+        """
+
+        cache.delete(self.members_cache_key)
+
+        return self.members_cached
+
+    def has_member(self, obj, use_cache=False):
+        """
+        Return True if the given object is a member of this group.
+
+        Does check if object's content type matches this group's content type.
+
+        Args:
+            obj (django.db.models.Model): The object to check for membership.
+            use_cache (bool, optional): Whether to use the cache and run the query directly. Defaults to False.
+
+        Returns:
+            bool: True if the object is a member of this group, otherwise False.
+        """
+
+        # Object's class may have content type cached, so check that first.
+        try:
+            if use_cache and type(obj)._content_type.id != self.content_type_id:
+                return False
+        except AttributeError:
+            # Object did not have `_content_type` even though we wanted to use it.
+            pass
+
+        if not use_cache and ContentType.objects.get_for_model(obj).id != self.content_type_id:
+            return False
+
+        if not use_cache:
+            return self.members.filter(pk=obj.pk).exists()
+        else:
+            return obj in list(self.members_cached)
 
     @property
     def count(self):

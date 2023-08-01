@@ -424,6 +424,8 @@ This will run the following management commands with default settings, in order:
 - `clearsessions`
 - `invalidate all`
 - `send_installation_metrics`
+- `refresh_content_type_cache`
+- `refresh_dynamic_group_member_caches`
 
 !!! note
     Commands listed here that are not covered in this document here are Django built-in commands.
@@ -445,6 +447,12 @@ Do not automatically remove stale content types.
 
 `--no-trace-paths`  
 Do not automatically generate missing cable paths.
+
+`--no-refresh-content-type-cache`  
+Do not automatically refresh the content type cache.
+
+`--no-refresh-dynamic-group-member-caches`  
+Do not automatically refresh the dynamic group member lists.
 
 ```no-highlight
 nautobot-server post_upgrade
@@ -479,6 +487,22 @@ Removing expired sessions...
 
 Invalidating cache...
 ```
+
+### `refresh_dynamic_group_member_caches`
+
++++ 1.6.0
+
+`nautobot-server refresh_dynamic_group_member_caches`
+
+Refresh the cached members of all Dynamic Groups. This is useful to periodically update the cached list of members of a Dynamic Group without having to wait for caches to expire, which defaults to one hour.
+
+### `refresh_content_type_caches`
+
++++ 1.6.0
+
+`nautobot-server refresh_content_type_caches`
+
+Refresh the cached ContentType object property available via `Model._content_type_cached`. If content types are added or removed, this command will update the cache to reflect the current state of the database, but should already be done through the `post_upgrade` command.
 
 ### `remove_stale_scheduled_jobs`
 

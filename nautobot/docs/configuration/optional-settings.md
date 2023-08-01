@@ -11,6 +11,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [BANNER_TOP](#banner_top)
 * [CHANGELOG_RETENTION](#changelog_retention)
 * [DEPLOYMENT_ID](#deployment_id)
+* [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
 * [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [NETWORK_DRIVERS](#network_drivers)
@@ -304,6 +305,18 @@ If `True`, it will be possible to apply Config Context objects to Devices and Vi
 
 ---
 
+## CONTENT_TYPE_CACHE_TIMEOUT
+
++++ 1.6.0
+
+Default: `0` (disabled)
+
+Environment Variable: `NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT`
+
+The number of seconds to cache the content type accessible via a object's class property `Object._content_type_cached`. This can save frequent calls to `ContentType.objects.get_for_model(model)`. Set this to `0` to disable caching.
+
+---
+
 ## CORS_ALLOW_ALL_ORIGINS
 
 Default: `False`
@@ -376,6 +389,18 @@ Default: `False`
 This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
 
 A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
+
+---
+
+## DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT
+
++++ 1.6.0
+
+Default: `0` (disabled)
+
+Environment Variable: `NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT`
+
+The number of seconds to cache the member list of dynamic groups. With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves), users will encounter a performance penalty using or accessing the membership lists. This setting allows users to accept a cached list for common use cases (particularly in the UI) that expires after the configured time. Set this to `0` to disable caching.
 
 ---
 
