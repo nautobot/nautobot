@@ -45,7 +45,7 @@
         <strong>Network Driver Mappings</strong>
     </div>
     <table class="table table-hover panel-body attr-table">
-        {% for key in network_driver_names %}
+        {% for key in network_driver_tool_names %}
         <tr>
             <td>{{ key }}</td>
             <td>{{ object.network_driver_mappings|get_item:key|placeholder }}</td>

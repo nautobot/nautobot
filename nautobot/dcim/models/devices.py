@@ -12,28 +12,8 @@ from django.utils.functional import cached_property
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from netutils.lib_mapper import (
-    ANSIBLE_LIB_MAPPER_REVERSE,
-    HIERCONFIG_LIB_MAPPER_REVERSE,
-    NAPALM_LIB_MAPPER_REVERSE,
-    NETMIKO_LIB_MAPPER_REVERSE,
-    NTCTEMPLATES_LIB_MAPPER_REVERSE,
-    PYATS_LIB_MAPPER_REVERSE,
-    PYNTC_LIB_MAPPER_REVERSE,
-    SCRAPLI_LIB_MAPPER_REVERSE,
-)
-
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
-
-from nautobot.extras.models import ConfigContextModel, StatusModel
-from nautobot.extras.querysets import ConfigContextModelQuerySet
-from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import ColorField, NaturalOrderingField
-from .device_components import (
+from nautobot.dcim.models.device_components import (
     ConsolePort,
     ConsoleServerPort,
     DeviceBay,
@@ -43,6 +23,15 @@ from .device_components import (
     PowerPort,
     RearPort,
 )
+from nautobot.dcim.utils import get_network_driver_mappings
+from nautobot.extras.models import ConfigContextModel, StatusModel
+from nautobot.extras.querysets import ConfigContextModelQuerySet
+from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.config import get_settings_or_config
+from nautobot.utilities.fields import ColorField, NaturalOrderingField
 
 
 __all__ = (
@@ -433,30 +422,8 @@ class Platform(OrganizationalModel):
     def network_driver_mappings(self):
         """Dictionary of library-specific network drivers derived from network_driver by netutils library mapping or NETWORK_DRIVERS setting."""
 
-        network_driver_mappings = {}
-        network_driver_key = self.network_driver
-        NETWORK_DRIVERS_CONFIG = get_settings_or_config("NETWORK_DRIVERS")
-
-        # Retrieve values from netutils mapping
-        for key, mapping in (
-            ("ansible", ANSIBLE_LIB_MAPPER_REVERSE),
-            ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
-            ("napalm", NAPALM_LIB_MAPPER_REVERSE),
-            ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
-            ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
-            ("pyats", PYATS_LIB_MAPPER_REVERSE),
-            ("pyntc", PYNTC_LIB_MAPPER_REVERSE),
-            ("scrapli", SCRAPLI_LIB_MAPPER_REVERSE),
-        ):
-            if network_driver_key in mapping:
-                network_driver_mappings[key] = mapping[network_driver_key]
-
-        # Retrieve values from NETWORK_DRIVERS setting, overriding netutils
-        for key, mapping in NETWORK_DRIVERS_CONFIG.items():
-            if network_driver_key in mapping:
-                network_driver_mappings[key] = mapping[network_driver_key]
-
-        return network_driver_mappings
+        network_driver_mappings = get_network_driver_mappings()
+        return network_driver_mappings.get(self.network_driver, {})
 
     csv_headers = [
         "name",
