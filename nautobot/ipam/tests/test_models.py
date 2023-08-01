@@ -203,7 +203,11 @@ class TestPrefix(TestCase):
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.2.1/24"), vrf=vrfs[1]),
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.3.1/24"), vrf=vrfs[2]),
         )
+        # Eliminate randomly generated IPs that can be contained in the child_ips and would not be accounted for in the assertSetEqual below.
         child_ip_pks = {p.pk for p in parent_prefix.get_child_ips()}
+        ip_pks = {ip.pk for ip in ips}
+        # Intersection of the two lists
+        child_ip_pks = set(child_ip_pks) & set(ip_pks)
 
         # Global container should return all children
         self.assertSetEqual(child_ip_pks, {ips[0].pk, ips[1].pk, ips[2].pk, ips[3].pk})
