@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("ipam", "0009_alter_vlan_name"),
         ("extras", "0058_jobresult_add_time_status_idxs"),
-        ("dcim", "0020_increase_device_asset_tag_size_limit"),
+        ("dcim", "0021_platform_network_driver"),
     ]
 
     operations = [
