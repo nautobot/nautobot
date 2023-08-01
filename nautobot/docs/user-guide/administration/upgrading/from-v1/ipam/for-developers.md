@@ -85,7 +85,6 @@ Most of the API behavior changes in Nautobot 2.0 fall into the following general
 Most renamed API fields in Nautobot 2.0 fall into the following general categories:
 
 1. Renaming of foreign keys and reverse relations to more consistently and specifically match the related model name or plural name (for example, `Circuit.type` to `Circuit.circuit_type`, `Interface.count_ipaddresses` to `Interface.ip_address_count`)
-2. Renaming of tree model fields for consistency and due to the change from `django-mptt` to `django-tree-queries` (for example, `InventoryItem._depth` to `InventoryItem.tree_depth`)
 
 | Model     | Renamed Field | New Name   |
 | :-------- | :------------ | :--------- |
