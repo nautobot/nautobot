@@ -31,7 +31,6 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceRedundancyGroup,
-    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     Location,
     LocationType,
