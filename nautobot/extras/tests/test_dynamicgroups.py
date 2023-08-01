@@ -946,7 +946,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         group = self.first_child
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{group.__class__.__name__}.{group.id}.cached_members")
+        cache.delete(group.members_cache_key)
 
         self.assertEqual(sorted(list(group.members)), sorted(list(group.members_cached)))
 
@@ -962,7 +962,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
                 return []
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{group.__class__.__name__}.{group.id}.cached_members")
+        cache.delete(group.members_cache_key)
 
         with patch.object(group, "get_queryset", return_value=FakeQuerySet()) as mock_get_queryset:
             group.members_cached
@@ -990,7 +990,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
                 return []
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{group.__class__.__name__}.{group.id}.cached_members")
+        cache.delete(group.members_cache_key)
 
         with patch.object(group, "get_queryset", return_value=FakeQuerySet()) as mock_get_queryset:
             group.members_cached
