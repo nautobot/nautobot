@@ -26,7 +26,8 @@ from nautobot.core.api.utils import (
     nested_serializer_factory,
 )
 from nautobot.core.models.managers import TagsManager
-from nautobot.core.models.utils import construct_composite_key
+from nautobot.core.models.utils import construct_composite_key, deconstruct_composite_key
+from nautobot.core.utils.data import is_url, is_uuid
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
@@ -137,6 +138,22 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
                 kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
         super().__init__(*args, **kwargs)
 
+    @property
+    def _related_model(self):
+        """The model class that this field is referencing to."""
+        if self.queryset is not None:
+            return self.queryset.model
+        # Foreign key where the destination is referenced by string rather than by Python class
+        if getattr(self.parent.Meta.model, self.source, False):
+            return getattr(self.parent.Meta.model, self.source).field.model
+
+        logger.warning(
+            "Unable to determine model for related field %r; "
+            "ensure that either the field defines a 'queryset' or the Meta defines the related 'model'.",
+            self.field_name,
+        )
+        return None
+
     def to_internal_value(self, data):
         """Convert potentially nested representation to a model instance."""
         if isinstance(data, dict):
@@ -144,7 +161,16 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
                 return super().to_internal_value(data["url"])
             elif "id" in data:
                 return super().to_internal_value(data["id"])
+        if not is_uuid(data) and not is_url(data) and isinstance(data, str):
+            # Maybe it's a composite-key?
+            related_model = self._related_model
+            if related_model is not None and hasattr(related_model, "natural_key_args_to_kwargs"):
+                data = related_model.natural_key_args_to_kwargs(deconstruct_composite_key(data))
+            elif related_model is not None and related_model.label_lower == "auth.group":
+                # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method
+                data = {"name": deconstruct_composite_key(data)}
         return super().to_internal_value(data)
+
 
     def to_representation(self, value):
         """Convert URL representation to a brief nested representation."""
@@ -153,21 +179,10 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
         # nested serializer provides an instance
         if isinstance(value, Model):
             model = type(value)
-
-        # foreign key relationship
-        elif self.queryset:
-            model = self.queryset.model
-
-        # foreign key relationship when the destination field is referenced by string not by class
-        elif getattr(self.parent.Meta.model, self.source, False):
-            model = getattr(self.parent.Meta.model, self.source).field.model
         else:
-            logger.warning(
-                "Unable to determine model for related field %r; "
-                "ensure that either the field defines a 'queryset' "
-                "or the Meta defines the related 'model'.",
-                self.field_name,
-            )
+            model = self._related_model
+
+        if model is None:
             return {"id": value.pk, "object_type": "unknown.unknown", "url": url}
         return {"id": value.pk, "object_type": model._meta.label_lower, "url": url}
 
