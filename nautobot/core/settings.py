@@ -280,6 +280,11 @@ SPECTACULAR_SETTINGS = {
         # result in this error:
         #   encountered multiple names for the same choice set
         "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
+        # These choice enums need to be overridden because they get assigned to the `protocol` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
+        "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
+        "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
     "COMPONENT_SPLIT_PATCH": True,

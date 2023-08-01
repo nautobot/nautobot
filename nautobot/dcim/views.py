@@ -19,6 +19,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import ObjectDestroyViewMixin, ObjectEditViewMixin
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.utils import get_network_driver_mapping_tool_names, get_all_network_driver_mappings
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
@@ -50,6 +51,8 @@ from .models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
     Location,
@@ -1973,12 +1976,37 @@ class InterfaceView(generic.ObjectView):
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
+        redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+
         return {
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
             "breadcrumb_url": "dcim:device_interfaces",
             "child_interfaces_table": child_interfaces_tables,
+            "redundancy_table": redundancy_table,
         }
+
+    def _get_interface_redundancy_groups_table(self, request, instance):
+        """Return a table of assigned Interface Redundancy Groups."""
+        queryset = instance.interface_redundancy_group_associations.restrict(request.user)
+        queryset = queryset.select_related("interface_redundancy_group")
+        queryset = queryset.order_by("interface_redundancy_group", "priority")
+        column_sequence = (
+            "interface_redundancy_group",
+            "priority",
+            "interface_redundancy_group__status",
+            "interface_redundancy_group__protocol",
+            "interface_redundancy_group__protocol_group_id",
+            "interface_redundancy_group__virtual_ip",
+        )
+        table = tables.InterfaceRedundancyGroupAssociationTable(
+            data=queryset,
+            sequence=column_sequence,
+            orderable=False,
+        )
+        for field in column_sequence:
+            table.columns.show(field)
+        return table
 
 
 class InterfaceCreateView(generic.ComponentCreateView):
@@ -3156,3 +3184,61 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
             members_table.columns.show("device_redundancy_group_priority")
             context["members_table"] = members_table
         return context
+
+
+class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
+    """ViewSet for the InterfaceRedundancyGroup model."""
+
+    bulk_create_form_class = forms.InterfaceRedundancyGroupCSVForm
+    bulk_update_form_class = forms.InterfaceRedundancyGroupBulkEditForm
+    filterset_class = filters.InterfaceRedundancyGroupFilterSet
+    filterset_form_class = forms.InterfaceRedundancyGroupFilterForm
+    form_class = forms.InterfaceRedundancyGroupForm
+    queryset = InterfaceRedundancyGroup.objects.select_related("status")
+    queryset = queryset.prefetch_related("interfaces")
+    queryset = queryset.annotate(
+        interface_count=count_related(Interface, "interface_redundancy_groups"),
+    )
+    serializer_class = serializers.InterfaceRedundancyGroupSerializer
+    table_class = tables.InterfaceRedundancyGroupTable
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, instance):
+        """Return additional panels for display."""
+        context = super().get_extra_context(request, instance)
+        if instance and self.action == "retrieve":
+            interface_table = self._get_interface_redundancy_groups_table(request, instance)
+            context["interface_table"] = interface_table
+        return context
+
+    def _get_interface_redundancy_groups_table(self, request, instance):
+        """Return a table of assigned Interfaces."""
+        queryset = instance.interface_redundancy_group_associations.restrict(request.user)
+        queryset = queryset.prefetch_related("interface")
+        queryset = queryset.order_by("priority")
+        column_sequence = (
+            "interface__device",
+            "interface",
+            "priority",
+            "interface__status",
+            "interface__enabled",
+            "interface__ip_addresses",
+            "interface__type",
+            "interface__description",
+            "interface__label",
+        )
+        table = tables.InterfaceRedundancyGroupAssociationTable(
+            data=queryset,
+            sequence=column_sequence,
+            orderable=False,
+        )
+        for column_name in column_sequence:
+            table.columns.show(column_name)
+        return table
+
+
+class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDestroyViewMixin):
+    queryset = InterfaceRedundancyGroupAssociation.objects.all()
+    form_class = forms.InterfaceRedundancyGroupAssociationForm
+    template_name = "dcim/interfaceredundancygroupassociation_create.html"
+    lookup_field = "pk"

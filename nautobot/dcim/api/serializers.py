@@ -18,6 +18,7 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -50,6 +51,8 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -109,6 +112,8 @@ from .nested_serializers import (  # noqa: F401
     NestedFrontPortSerializer,
     NestedFrontPortTemplateSerializer,
     NestedInterfaceSerializer,
+    NestedInterfaceRedundancyGroupSerializer,
+    NestedInterfaceRedundancyGroupAssociationSerializer,
     NestedInterfaceTemplateSerializer,
     NestedInventoryItemSerializer,
     NestedLocationSerializer,
@@ -598,6 +603,53 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
             "type",
             "description",
         ]
+
+
+#
+# Interface Redundancy group
+#
+
+
+class InterfaceRedundancyGroupAssociationSerializer(
+    ValidatedModelSerializer, TaggedModelSerializerMixin
+):  # pylint: disable=too-many-ancestors
+    """InterfaceRedundancyGroupAssociation Serializer."""
+
+    url = serializers.HyperlinkedIdentityField(
+        view_name="dcim-api:interfaceredundancygroupassociation-detail",
+    )
+    interface = NestedInterfaceSerializer()
+    interface_redundancy_group = NestedInterfaceRedundancyGroupSerializer()
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = "__all__"
+
+
+class InterfaceRedundancyGroupSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin
+):
+    """InterfaceRedundancyGroup Serializer."""
+
+    url = serializers.HyperlinkedIdentityField(
+        view_name="dcim-api:interfaceredundancygroup-detail",
+    )
+    protocol = ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+    interfaces = NestedInterfaceRedundancyGroupAssociationSerializer(
+        source="interface_redundancy_group_associations",
+        many=True,
+        read_only=True,
+    )
+    virtual_ip = NestedIPAddressSerializer(required=False)
+    secrets_group = NestedSecretsGroupSerializer(required=False)
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = "__all__"
 
 
 class PowerPortTemplateSerializer(NautobotModelSerializer):

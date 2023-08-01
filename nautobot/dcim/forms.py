@@ -24,6 +24,7 @@ from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,
+    NoteModelFormMixin,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -71,6 +72,7 @@ from .choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -108,6 +110,8 @@ from .models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -4558,3 +4562,184 @@ class DeviceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVF
     class Meta:
         model = DeviceRedundancyGroup
         fields = DeviceRedundancyGroup.csv_headers
+
+
+#
+# Interface Redundancy Groups
+#
+
+
+class InterfaceRedundancyGroupForm(NautobotModelForm):
+    """InterfaceRedundancyGroup create/edit form."""
+
+    protocol_group_id = forms.CharField(
+        label="Protocol Group ID",
+        help_text="Specify a group identifier, such as the VRRP group ID.",
+        required=False,
+    )
+    virtual_ip = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+    )
+    secrets_group = DynamicModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = [
+            "name",
+            "description",
+            "status",
+            "virtual_ip",
+            "protocol",
+            "protocol_group_id",
+            "secrets_group",
+        ]
+
+
+class InterfaceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
+    secrets_group = CSVModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+        to_field_name="name",
+        help_text="Secrets group",
+    )
+    virtual_ip = CSVModelChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        to_field_name="address",
+        help_text="Virtual IP Address",
+    )
+
+    class Meta:
+        model = InterfaceRedundancyGroup
+        fields = InterfaceRedundancyGroup.csv_headers
+
+
+class InterfaceRedundancyGroupAssociationForm(BootstrapMixin, NoteModelFormMixin):
+    """InterfaceRedundancyGroupAssociation create/edit form."""
+
+    region = DynamicModelChoiceField(
+        queryset=Region.objects.all(),
+        required=False,
+    )
+    site = DynamicModelChoiceField(
+        queryset=Site.objects.all(),
+        required=False,
+        query_params={"region_id": "$region"},
+    )
+    rack = DynamicModelChoiceField(
+        queryset=Rack.objects.all(),
+        required=False,
+        null_option="None",
+        query_params={"site_id": "$site"},
+    )
+    device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        query_params={
+            "site_id": "$site",
+            "rack_id": "$rack",
+        },
+    )
+    interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        query_params={"device_id": "$device"},
+        help_text="Choose an interface to add to the Redundancy Group.",
+    )
+    interface_redundancy_group = DynamicModelChoiceField(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        help_text="Choose a Interface Redundancy Group.",
+    )
+    priority = forms.IntegerField(
+        min_value=1,
+        help_text="Specify the interface priority as an integer.",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = [
+            "interface_redundancy_group",
+            "region",
+            "site",
+            "rack",
+            "device",
+            "interface",
+            "priority",
+        ]
+
+
+class InterfaceRedundancyGroupBulkEditForm(
+    TagsBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    """InterfaceRedundancyGroup bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+    description = forms.CharField(required=False)
+    virtual_ip = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False)
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+
+    class Meta:
+        """Meta attributes."""
+
+        nullable_fields = [
+            "protocol",
+            "description",
+            "virtual_ip",
+            "secrets_group",
+        ]
+
+
+class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.ModelForm):
+    """Filter form to filter searches."""
+
+    model = InterfaceRedundancyGroup
+    q = forms.CharField(
+        required=False,
+        label="Search",
+        help_text="Search within Name.",
+    )
+    name = forms.CharField(required=False, label="Name")
+    interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+    )
+    virtual_ip = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+    )
+    secrets_group = DynamicModelMultipleChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+    )
+    protocol = forms.ChoiceField(
+        choices=InterfaceRedundancyGroupProtocolChoices,
+        required=False,
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        # Define the fields above for ordering and widget purposes
+        fields = [
+            "q",
+            "name",
+            "description",
+            "interfaces",
+            "virtual_ip",
+            "secrets_group",
+            "protocol",
+        ]

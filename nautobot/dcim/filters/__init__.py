@@ -36,6 +36,8 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
     Location,
@@ -65,7 +67,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.utilities.deprecation import class_deprecated_in_favor_of
@@ -82,6 +84,7 @@ from nautobot.utilities.filters import (
     TagFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.utilities.utils import is_uuid
 from nautobot.virtualization.models import Cluster
 
 
@@ -104,6 +107,8 @@ __all__ = (
     "FrontPortTemplateFilterSet",
     "InterfaceConnectionFilterSet",
     "InterfaceFilterSet",
+    "InterfaceRedundancyGroupFilterSet",
+    "InterfaceRedundancyGroupAssociationFilterSet",
     "InterfaceTemplateFilterSet",
     "InventoryItemFilterSet",
     "LocationFilterSet",
@@ -1308,6 +1313,10 @@ class InterfaceFilterSet(
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
+    interface_redundancy_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        to_field_name="name",
+    )
 
     class Meta:
         model = Interface
@@ -1321,6 +1330,7 @@ class InterfaceFilterSet(
             "mode",
             "description",
             "label",
+            "interface_redundancy_groups",
         ]
 
     def filter_device(self, queryset, name, value):
@@ -1768,3 +1778,57 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
     class Meta:
         model = DeviceRedundancyGroup
         fields = ["id", "name", "slug", "failover_strategy"]
+
+
+class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+    """Filter for InterfaceRedundancyGroup."""
+
+    q = SearchFilter(filter_predicates={"name": "icontains"})
+    tag = TagFilter()
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="secrets_group",
+        queryset=SecretsGroup.objects.all(),
+        to_field_name="slug",
+        label="Secrets group",
+    )
+    virtual_ip = MultiValueCharFilter(
+        method="filter_virtual_ip",
+        label="Virtual IP Address (address or ID)",
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = InterfaceRedundancyGroup
+        fields = ["id", "name", "description", "secrets_group", "virtual_ip", "protocol", "protocol_group_id"]
+
+    # 2.0 TODO(jathan): Eliminate these methods.
+    def filter_virtual_ip(self, queryset, name, value):
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+        return queryset.filter(virtual_ip__in=ip_queryset)
+
+
+class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
+    """Filter for InterfaceRedundancyGroupAssociation."""
+
+    interface_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        to_field_name="name",
+        label="Interface Redundancy Groups (name or ID)",
+    )
+
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = InterfaceRedundancyGroupAssociation
+
+        fields = ["id", "interface_redundancy_group", "interface", "priority"]
