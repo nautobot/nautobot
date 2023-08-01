@@ -1757,7 +1757,7 @@ dev = ["Sphinx (>=4.1.1)", "black (>=19.10b0)", "colorama (>=0.3.4)", "docutils 
 name = "lxml"
 version = "4.9.2"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
-optional = false
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, != 3.4.*"
 files = [
     {file = "lxml-4.9.2-cp27-cp27m-macosx_10_15_x86_64.whl", hash = "sha256:76cf573e5a365e790396a5cc2b909812633409306c6531a6877c59061e42c4f2"},
@@ -3656,20 +3656,6 @@ files = [
 ]
 
 [[package]]
-name = "unittest-xml-reporting"
-version = "3.2.0"
-description = "unittest-based test runner with Ant/JUnit like XML reporting."
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "unittest-xml-reporting-3.2.0.tar.gz", hash = "sha256:edd8d3170b40c3a81b8cf910f46c6a304ae2847ec01036d02e9c0f9b85762d28"},
-    {file = "unittest_xml_reporting-3.2.0-py2.py3-none-any.whl", hash = "sha256:f3d7402e5b3ac72a5ee3149278339db1a8f932ee405f48bcb9c681372f2717d5"},
-]
-
-[package.dependencies]
-lxml = "*"
-
-[[package]]
 name = "uritemplate"
 version = "4.1.1"
 description = "Implementation of RFC 6570 URI Templates"
@@ -3939,4 +3925,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "58f3acba7a0b9e9d296ec436aee9e462888cc6d30c1bf97390ca6388ff99dcb3"
+content-hash = "46ba4ae90b168057a69104b258758d26a8927428f43913a735fd92d6c69206d6"
