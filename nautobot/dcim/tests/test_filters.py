@@ -198,6 +198,7 @@ def common_test_data(cls):
             manufacturer=manufacturers[0],
             napalm_driver="driver-1",
             napalm_args=["--test", "--arg1"],
+            network_driver="driver_1",
             description="A",
         ),
         Platform.objects.create(
@@ -206,6 +207,7 @@ def common_test_data(cls):
             manufacturer=manufacturers[1],
             napalm_driver="driver-2",
             napalm_args=["--test", "--arg2"],
+            network_driver="",
             description="B",
         ),
         Platform.objects.create(
@@ -214,6 +216,7 @@ def common_test_data(cls):
             manufacturer=manufacturers[2],
             napalm_driver="driver-3",
             napalm_args=["--test", "--arg3"],
+            network_driver="driver_3",
             description="C",
         ),
     )
@@ -2421,6 +2424,13 @@ class PlatformTestCase(FilterTestCases.NameSlugFilterTestCase):
         napalm_args = ['["--test", "--arg1"]', '["--test", "--arg2"]']
         params = {"napalm_args": napalm_args}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(napalm_args))
+
+    def test_network_driver(self):
+        drivers = ["driver_1", "driver_3"]
+        params = {"network_driver": drivers}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, Platform.objects.filter(network_driver__in=drivers)
+        )
 
     def test_devices(self):
         devices = [Device.objects.first(), Device.objects.last()]

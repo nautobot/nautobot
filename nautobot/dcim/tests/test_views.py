@@ -1326,6 +1326,7 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "manufacturer": manufacturer.pk,
             "napalm_driver": "junos",
             "napalm_args": None,
+            "network_driver": "juniper_junos",
             "description": "A new platform",
         }
 

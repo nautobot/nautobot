@@ -13,6 +13,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [DEPLOYMENT_ID](#deployment_id)
 * [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 * [MAX_PAGE_SIZE](#max_page_size)
+* [NETWORK_DRIVERS](#network_drivers)
 * [PAGINATE_COUNT](#paginate_count)
 * [PER_PAGE_DEFAULTS](#per_page_defaults)
 * [PREFER_IPV4](#prefer_ipv4)
@@ -666,6 +667,28 @@ Default: `30`
 Environment Variable: `NAUTOBOT_NAPALM_TIMEOUT`
 
 The amount of time (in seconds) to wait for NAPALM to connect to a device.
+
+---
+
+## NETWORK_DRIVERS
+
++++ 1.6.0
+
+Default: `{}` (Empty dictionary)
+
+An optional dictionary to extend or override the default `Platform.network_driver` translations provided by [netutils](https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/). For example, to add support for a custom `Platform.network_driver` value of `"my_network_driver"` for Netmiko and PyATS drivers:
+
+```python
+NETWORK_DRIVERS = {
+    "netmiko": {"my_network_driver": "cisco_ios"},
+    "pyats": {"my_network_driver": "iosxe"},
+}
+```
+
+The default top-level keys are `ansible`, `hier_config`, `napalm`, `netmiko`, `ntc_templates`, `pyats`, `pyntc`, and `scrapli`, but you can also add additional keys if you have an alternative network driver that you want your Nautobot instance to include.
+
+!!! tip
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
