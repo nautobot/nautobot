@@ -37,7 +37,7 @@ class DynamicGroupMixin:
         from nautobot.extras.models.groups import DynamicGroup
 
         if not hasattr(self, "_dynamic_groups"):
-            queryset = DynamicGroup.objects.get_for_object(self, skip_cache=True)
+            queryset = DynamicGroup.objects.get_for_object(self)
             self._dynamic_groups = queryset
 
         return self._dynamic_groups
@@ -56,7 +56,7 @@ class DynamicGroupMixin:
         from nautobot.extras.models.groups import DynamicGroup
 
         if not hasattr(self, "_dynamic_groups_cached"):
-            queryset = DynamicGroup.objects.get_for_object(self)
+            queryset = DynamicGroup.objects.get_for_object(self, use_cache=True)
             self._dynamic_groups_cached = queryset
 
         return self._dynamic_groups_cached
@@ -73,7 +73,7 @@ class DynamicGroupMixin:
         from nautobot.extras.models.groups import DynamicGroup
 
         if not hasattr(self, "_dynamic_groups_list"):
-            dg_list = DynamicGroup.objects.get_list_for_object(self, skip_cache=True)
+            dg_list = DynamicGroup.objects.get_list_for_object(self)
             self._dynamic_groups_list = dg_list
 
         return self._dynamic_groups_list
@@ -91,7 +91,7 @@ class DynamicGroupMixin:
         from nautobot.extras.models.groups import DynamicGroup
 
         if not hasattr(self, "_dynamic_groups_list_cached"):
-            dg_list = DynamicGroup.objects.get_list_for_object(self)
+            dg_list = DynamicGroup.objects.get_list_for_object(self, use_cache=True)
             self._dynamic_groups_list_cached = dg_list
 
         return self._dynamic_groups_list_cached

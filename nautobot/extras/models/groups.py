@@ -357,7 +357,7 @@ class DynamicGroup(OrganizationalModel):
 
         return self.members_cached
 
-    def has_member(self, obj, skip_cache=False):
+    def has_member(self, obj, use_cache=False):
         """
         Return True if the given object is a member of this group.
 
@@ -365,7 +365,7 @@ class DynamicGroup(OrganizationalModel):
 
         Args:
             obj (django.db.models.Model): The object to check for membership.
-            skip_cache (bool, optional): Whether to skip the cache and run the query directly. Defaults to False.
+            use_cache (bool, optional): Whether to use the cache and run the query directly. Defaults to False.
 
         Returns:
             bool: True if the object is a member of this group, otherwise False.
@@ -373,16 +373,16 @@ class DynamicGroup(OrganizationalModel):
 
         # Object's class may have content type cached, so check that first.
         try:
-            if not skip_cache and type(obj)._content_type.id != self.content_type_id:
+            if use_cache and type(obj)._content_type.id != self.content_type_id:
                 return False
         except AttributeError:
             # Object did not have `_content_type` even though we wanted to use it.
             pass
 
-        if skip_cache and ContentType.objects.get_for_model(obj).id != self.content_type_id:
+        if not use_cache and ContentType.objects.get_for_model(obj).id != self.content_type_id:
             return False
 
-        if skip_cache:
+        if not use_cache:
             return self.members.filter(pk=obj.pk).exists()
         else:
             return obj in list(self.members_cached)

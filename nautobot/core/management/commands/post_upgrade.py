@@ -79,18 +79,18 @@ class Command(BaseCommand):
             help="Do not automatically send installation metrics.",
         )
         parser.add_argument(
-            "--no-refresh-dynamic-group-member-caches",
-            action="store_false",
-            dest="refresh_dynamic_group_member_caches",
-            default=True,
-            help="Do not automatically refresh dynamic group member caches.",
-        )
-        parser.add_argument(
             "--no-refresh-content-type-cache",
             action="store_false",
             dest="refresh_content_type_cache",
             default=True,
             help="Do not automatically refresh content type cache.",
+        )
+        parser.add_argument(
+            "--no-refresh-dynamic-group-member-caches",
+            action="store_false",
+            dest="refresh_dynamic_group_member_caches",
+            default=True,
+            help="Do not automatically refresh dynamic group member caches.",
         )
 
     def handle(self, *args, **options):
@@ -144,14 +144,14 @@ class Command(BaseCommand):
             self.stdout.write("--no-send-installation-metrics was specified; skipping installation metrics.")
             self.stdout.write()
 
-        # Run refresh_dynamic_group_member_caches
-        if options.get("refresh_dynamic_group_member_caches"):
-            self.stdout.write("Refreshing dynamic group member caches...")
-            call_command("refresh_dynamic_group_member_caches")
-            self.stdout.write()
-
         # Run refresh_content_type_cache
         if options.get("remove_stale_contenttypes") or options.get("refresh_content_type_cache"):
             self.stdout.write("Refreshing _content_type cache")
             call_command("refresh_content_type_cache")
+            self.stdout.write()
+
+        # Run refresh_dynamic_group_member_caches
+        if options.get("refresh_dynamic_group_member_caches"):
+            self.stdout.write("Refreshing dynamic group member caches...")
+            call_command("refresh_dynamic_group_member_caches")
             self.stdout.write()

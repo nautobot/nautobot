@@ -11,6 +11,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [BANNER_TOP](#banner_top)
 * [CHANGELOG_RETENTION](#changelog_retention)
 * [DEPLOYMENT_ID](#deployment_id)
+* [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
 * [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [NETWORK_DRIVERS](#network_drivers)
@@ -306,6 +307,8 @@ If `True`, it will be possible to apply Config Context objects to Devices and Vi
 
 ## CONTENT_TYPE_CACHE_TIMEOUT
 
++++ 1.6.0
+
 Default: `0` (disabled)
 
 Environment Variable: `NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT`
@@ -390,6 +393,8 @@ A later release of Nautobot will address the underlying performance issues, and 
 ---
 
 ## DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT
+
++++ 1.6.0
 
 Default: `0` (disabled)
 

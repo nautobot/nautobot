@@ -13,13 +13,21 @@ class Command(BaseCommand):
 
         if settings.CONTENT_TYPE_CACHE_TIMEOUT == 0:
             self.stdout.write(self.style.NOTICE("CONTENT_TYPE_CACHE_TIMEOUT is set to 0; skipping cache refresh"))
-            return
+        else:
+            self.stdout.write(self.style.NOTICE("Refreshing content type cache"))
 
         content_types = ContentType.objects.all()
 
         for content_type in content_types:
-            self.stdout.write(self.style.SUCCESS(f"Processing {content_type}"))
+            try:
+                if settings.CONTENT_TYPE_CACHE_TIMEOUT == 0:
+                    cache.delete(content_type.model_class()._content_type_cache_key)
+                else:
+                    cache.set(
+                        content_type.model_class()._content_type_cache_key,
+                        content_type,
+                        settings.CONTENT_TYPE_CACHE_TIMEOUT,
+                    )
 
-            cache.set(
-                content_type.model_class()._content_type_cache_key, content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT
-            )
+            except AttributeError:
+                pass

@@ -165,7 +165,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 class DynamicGroupQuerySet(RestrictedQuerySet):
     """Queryset for `DynamicGroup` objects that provides a `get_for_object` method."""
 
-    def get_list_for_object(self, obj, skip_cache=False):
+    def get_list_for_object(self, obj, use_cache=False):
         """
         Return a list of `DynamicGroup` assigned to the given object. As opposed to `get_for_object`
         which will return a queryset but that is an additional query to the DB when you may just
@@ -173,32 +173,32 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
 
         Args:
             obj: The object to seek dynamic groups membership by.
-            skip_cache: If True, skip the cache and query the database directly.
+            use_cache: If True, use the cache and query the database directly.
         """
         if not isinstance(obj, Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
 
         # Get dynamic groups for this content_type using the discrete content_type fields to
         # optimize the query.
-        eligible_groups = self._get_eligible_dynamic_groups(obj, skip_cache=skip_cache)
+        eligible_groups = self._get_eligible_dynamic_groups(obj, use_cache=use_cache)
 
         # Filter down to matching groups.
         my_groups = []
         for dynamic_group in list(eligible_groups):
-            if dynamic_group.has_member(obj, skip_cache=skip_cache):
+            if dynamic_group.has_member(obj, use_cache=use_cache):
                 my_groups.append(dynamic_group)
 
         return my_groups
 
-    def get_for_object(self, obj, skip_cache=False):
+    def get_for_object(self, obj, use_cache=False):
         """
         Return a queryset of `DynamicGroup` objects that are assigned to the given object.
 
         Args:
             obj: The object to seek dynamic groups membership by.
-            skip_cache: If True, skip the cache and query the database directly.
+            use_cache: If True, use the cache and query the database directly.
         """
-        return self.filter(pk__in=[dg.pk for dg in self.get_list_for_object(obj, skip_cache=skip_cache)])
+        return self.filter(pk__in=[dg.pk for dg in self.get_list_for_object(obj, use_cache=use_cache)])
 
     def get_by_natural_key(self, slug):
         return self.get(slug=slug)
@@ -211,7 +211,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         """
         return f"{obj._meta.label_lower}._get_eligible_dynamic_groups"
 
-    def _get_eligible_dynamic_groups(self, obj, skip_cache=False):
+    def _get_eligible_dynamic_groups(self, obj, use_cache=False):
         """
         Return a queryset of `DynamicGroup` objects that are eligible to potentially contain the given object.
         """
@@ -223,13 +223,13 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
             eligible for a given object.
             """
             # Save a DB query if we can by using the _content_type field on the model which is a cached instance of the ContentType
-            if not skip_cache and hasattr(type(obj), "_content_type"):
+            if use_cache and hasattr(type(obj), "_content_type"):
                 return self.filter(content_type_id=type(obj)._content_type.id)
             return self.filter(
                 content_type__app_label=obj._meta.app_label, content_type__model=obj._meta.model_name
             ).select_related("content_type")
 
-        if skip_cache:
+        if not use_cache:
             eligible_dynamic_groups = _query_eligible_dynamic_groups()
             cache.set(cache_key, eligible_dynamic_groups, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"))
             return eligible_dynamic_groups

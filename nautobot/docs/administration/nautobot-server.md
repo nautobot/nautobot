@@ -424,6 +424,8 @@ This will run the following management commands with default settings, in order:
 - `clearsessions`
 - `invalidate all`
 - `send_installation_metrics`
+- `refresh_content_type_cache`
+- `refresh_dynamic_group_member_caches`
 
 !!! note
     Commands listed here that are not covered in this document here are Django built-in commands.
@@ -445,6 +447,12 @@ Do not automatically remove stale content types.
 
 `--no-trace-paths`  
 Do not automatically generate missing cable paths.
+
+`--no-refresh-content-type-cache`  
+Do not automatically refresh the content type cache.
+
+`--no-refresh-dynamic-group-member-caches`  
+Do not automatically refresh the dynamic group member lists.
 
 ```no-highlight
 nautobot-server post_upgrade
