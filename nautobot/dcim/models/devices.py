@@ -23,7 +23,7 @@ from nautobot.dcim.models.device_components import (
     PowerPort,
     RearPort,
 )
-from nautobot.dcim.utils import get_network_driver_mappings
+from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import ConfigContextModel, StatusModel
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
@@ -422,7 +422,7 @@ class Platform(OrganizationalModel):
     def network_driver_mappings(self):
         """Dictionary of library-specific network drivers derived from network_driver by netutils library mapping or NETWORK_DRIVERS setting."""
 
-        network_driver_mappings = get_network_driver_mappings()
+        network_driver_mappings = get_all_network_driver_mappings()
         return network_driver_mappings.get(self.network_driver, {})
 
     csv_headers = [

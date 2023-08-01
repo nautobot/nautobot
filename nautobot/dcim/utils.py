@@ -73,7 +73,7 @@ def get_network_driver_mapping_tool_names():
     return sorted(network_driver_names)
 
 
-def get_network_driver_mappings():
+def get_all_network_driver_mappings():
     """
     Return a dict of all available network driver mappings derived from the netutils library and the optional NETWORK_DRIVERS setting.
 
