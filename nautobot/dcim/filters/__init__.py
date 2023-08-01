@@ -1808,6 +1808,18 @@ class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
 class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
     """Filter for InterfaceRedundancyGroupAssociation."""
 
+    interface_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        to_field_name="name",
+        label="Interface Redundancy Groups (name or ID)",
+    )
+
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+
     class Meta:
         """Meta attributes for filter."""
 

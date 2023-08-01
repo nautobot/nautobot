@@ -24,6 +24,7 @@ from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,
+    NoteModelFormMixin,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -4618,7 +4619,7 @@ class InterfaceRedundancyGroupCSVForm(StatusModelCSVFormMixin, CustomFieldModelC
         fields = InterfaceRedundancyGroup.csv_headers
 
 
-class InterfaceRedundancyGroupAssociationForm(NautobotModelForm):
+class InterfaceRedundancyGroupAssociationForm(BootstrapMixin, NoteModelFormMixin):
     """InterfaceRedundancyGroupAssociation create/edit form."""
 
     region = DynamicModelChoiceField(

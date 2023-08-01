@@ -5076,28 +5076,28 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 1",
                 protocol="hsrp",
-                protocol_group_id=1,
+                protocol_group_id="1",
                 status=statuses[0],
                 virtual_ip=cls.ips[0],
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 2",
                 protocol="carp",
-                protocol_group_id=2,
+                protocol_group_id="2",
                 status=statuses[1],
                 virtual_ip=cls.ips[1],
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 3",
                 protocol="vrrp",
-                protocol_group_id=3,
+                protocol_group_id="3",
                 status=statuses[2],
                 virtual_ip=cls.ips[2],
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 4",
                 protocol="glbp",
-                protocol_group_id=4,
+                protocol_group_id="4",
                 status=statuses[3],
                 virtual_ip=cls.ips[3],
             ),
@@ -5198,31 +5198,39 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
                 protocol="hsrp",
                 status=statuses[0],
                 virtual_ip=cls.ips[0],
+                protocol_group_id="2",
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 2",
                 protocol="carp",
                 status=statuses[1],
                 virtual_ip=cls.ips[1],
+                protocol_group_id="3",
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 3",
                 protocol="vrrp",
                 status=statuses[2],
                 virtual_ip=cls.ips[2],
+                protocol_group_id="1",
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 4",
                 protocol="glbp",
                 status=statuses[3],
                 virtual_ip=cls.ips[3],
+                protocol_group_id="4",
             ),
         )
 
         for group in interface_redundancy_groups:
             group.validated_save()
 
-        secrets_groups = list(SecretsGroup.objects.all()[:2])
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 4", slug="secrets-group-4"),
+            SecretsGroup.objects.create(name="Secrets Group 5", slug="secrets-group-5"),
+            SecretsGroup.objects.create(name="Secrets Group 6", slug="secrets-group-6"),
+        )
 
         interface_redundancy_groups[0].secrets_group = secrets_groups[0]
         interface_redundancy_groups[0].validated_save()
@@ -5231,40 +5239,37 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
         interface_redundancy_groups[1].validated_save()
 
         for i, interface in enumerate(cls.interfaces):
-            association = InterfaceRedundancyGroupAssociation(
-                interface_redundancy_group=interface_redundancy_groups[i], interface=interface, priority=100 * i
-            )
-            association.validated_save()
+            interface_redundancy_groups[i].add_interface(interface, 100 * i)
 
     def test_interface_redundancy_group(self):
         interface_redundancy_groups = list(InterfaceRedundancyGroup.objects.all()[:2])
-        params = {"interface_redundancy_group": interface_redundancy_groups[0]}
+        params = {"interface_redundancy_group": [interface_redundancy_groups[0].pk, interface_redundancy_groups[1].pk]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
             InterfaceRedundancyGroupAssociation.objects.filter(
-                interface_redundancy_group=params["interface_redundancy_group"]
+                interface_redundancy_group__in=[interface_redundancy_groups[0], interface_redundancy_groups[1]]
             ).count(),
         )
-        params = {"interface_redundancy_group": interface_redundancy_groups[1]}
+        params = {"interface_redundancy_group": [interface_redundancy_groups[0].name, interface_redundancy_groups[1].name]}
         self.assertEqual(
             self.filterset(params, self.queryset).qs.count(),
             InterfaceRedundancyGroupAssociation.objects.filter(
-                interface_redundancy_group=params["interface_redundancy_group"]
+                interface_redundancy_group__in=[interface_redundancy_groups[0], interface_redundancy_groups[1]]
             ).count(),
         )
 
     def test_interface(self):
         interfaces = self.interfaces
         with self.subTest():
-            params = {"interface": interfaces[0].pk}
+            params = {"interface": [interfaces[0].pk, interfaces[1].pk]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroupAssociation.objects.filter(interface=params["interface"]).count(),
+                InterfaceRedundancyGroupAssociation.objects.filter(interface__in=[interfaces[0],interfaces[1]]).count(),
             )
-            params = {"interface": interfaces[1].pk}
+            params = {"interface": [interfaces[0].name, interfaces[1].name]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroupAssociation.objects.filter(interface=params["interface"]).count(),
+                InterfaceRedundancyGroupAssociation.objects.filter(interface__in=[interfaces[0],interfaces[1]]).count(),
             )
 
     def test_priority(self):
