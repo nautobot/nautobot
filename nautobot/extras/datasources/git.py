@@ -318,7 +318,6 @@ def update_git_config_contexts(repository_record, job_result):
                     device_name,
                     context_data,
                     repository_record,
-                    logger,
                 )
                 managed_local_config_contexts[local_type].add(device_name)
             except Exception as exc:
@@ -335,7 +334,7 @@ def update_git_config_contexts(repository_record, job_result):
     )
 
 
-def import_config_context(context_data, repository_record, job_result):  # pylint: disable=redefined-outer-name
+def import_config_context(context_data, repository_record, job_result):
     """
     Parse a given dictionary of data to create/update a ConfigContext record.
 
@@ -487,9 +486,7 @@ def import_config_context(context_data, repository_record, job_result):  # pylin
     return context_record.name if context_record else None
 
 
-def import_local_config_context(
-    local_type, device_name, context_data, repository_record, logger  # pylint: disable=redefined-outer-name
-):
+def import_local_config_context(local_type, device_name, context_data, repository_record):
     """
     Create/update the local config context data associated with a Device or VirtualMachine.
     """
@@ -623,9 +620,7 @@ def update_git_config_context_schemas(repository_record, job_result):
     )
 
 
-def import_config_context_schema(
-    context_schema_data, repository_record, job_result
-):  # pylint: disable=redefined-outer-name
+def import_config_context_schema(context_schema_data, repository_record, job_result):
     """Using data from schema file, create schema record in Nautobot."""
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
 
