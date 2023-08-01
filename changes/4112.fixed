@@ -1,0 +1,1 @@
+Fixed `api-status` API call when using higher Redis DB index.

@@ -169,6 +169,8 @@ invoke = "~1.7.1"
 rich = "~12.5.1"
 # Change log management and generation
 towncrier = "~22.8.0"
+# Store tests results in XML format
+unittest-xml-reporting = "~3.2.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~2.1.9"
 
