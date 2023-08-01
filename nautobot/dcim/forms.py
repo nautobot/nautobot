@@ -4677,7 +4677,6 @@ class InterfaceRedundancyGroupBulkEditForm(
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     NautobotBulkEditForm,
-    LocalContextModelBulkEditForm,
 ):
     """InterfaceRedundancyGroup bulk edit form."""
 
@@ -4687,6 +4686,8 @@ class InterfaceRedundancyGroupBulkEditForm(
     )
     protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
     description = forms.CharField(required=False)
+    virtual_ip = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False)
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
 
     class Meta:
         """Meta attributes."""
@@ -4694,6 +4695,8 @@ class InterfaceRedundancyGroupBulkEditForm(
         nullable_fields = [
             "protocol",
             "description",
+            "virtual_ip",
+            "secrets_group",
         ]
 
 
@@ -4707,6 +4710,22 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
         help_text="Search within Name.",
     )
     name = forms.CharField(required=False, label="Name")
+    interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+    )
+    virtual_ip = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+    )
+    secrets_group = DynamicModelMultipleChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+    )
+    protocol = forms.ChoiceField(
+        choices=InterfaceRedundancyGroupProtocolChoices,
+        required=False,
+    )
 
     class Meta:
         """Meta attributes."""
@@ -4717,4 +4736,8 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
             "q",
             "name",
             "description",
+            "interfaces",
+            "virtual_ip",
+            "secrets_group",
+            "protocol",
         ]

@@ -1794,7 +1794,7 @@ class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSlugSearchFilterSet):
         """Meta attributes for filter."""
 
         model = InterfaceRedundancyGroup
-        fields = ["id", "name", "description", "secrets_group", "virtual_ip", "protocol"]
+        fields = ["id", "name", "description", "secrets_group", "virtual_ip", "protocol", "protocol_group_id"]
 
     # 2.0 TODO(jathan): Eliminate these methods.
     def filter_virtual_ip(self, queryset, name, value):

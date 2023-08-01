@@ -1,6 +1,4 @@
 """Signal handlers for the example example_plugin."""
-EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT = "Default value"
-EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME = "example_plugin_auto_custom_field"
 
 
 def nautobot_database_ready_callback(sender, *, apps, **kwargs):
@@ -30,12 +28,12 @@ def nautobot_database_ready_callback(sender, *, apps, **kwargs):
     from nautobot.extras.choices import CustomFieldTypeChoices
 
     field, _ = CustomField.objects.update_or_create(
-        name=EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME,  # Effectively a slug, will go away in a future Nautobot release
-        slug=EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME,  # Note underscores rather than dashes!
+        name="example_plugin_auto_custom_field",  # Effectively a slug, will go away in a future Nautobot release
+        slug="example_plugin_auto_custom_field",  # Note underscores rather than dashes!
         defaults={
             "type": CustomFieldTypeChoices.TYPE_TEXT,
             "label": "Example Plugin Automatically Added Custom Field",
-            "default": EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
+            "default": "Default value",
         },
     )
     field.content_types.set([ContentType.objects.get_for_model(Site)])

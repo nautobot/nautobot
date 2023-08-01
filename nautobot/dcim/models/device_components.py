@@ -31,11 +31,10 @@ from nautobot.dcim.fields import MACAddressCharField
 from nautobot.extras.models import (
     RelationshipModel,
     Status,
-    StatusField,
     StatusModel,
 )
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.utilities.fields import NaturalOrderingField
 from nautobot.utilities.mptt import TreeManager
 from nautobot.utilities.ordering import naturalize_interface
@@ -787,7 +786,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     "statuses",
     "webhooks",
 )
-class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancestors
+class InterfaceRedundancyGroup(StatusModel, PrimaryModel):  # pylint: disable=too-many-ancestors
     """
     A collection of Interfaces that supply a redundancy group for protocols like HSRP/VRRP.
     """
@@ -795,10 +794,6 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
     name = models.CharField(max_length=100, unique=True)
     # Preemptively model 2.0 behavior by making `created` a DateTimeField rather than a DateField.
     created = models.DateTimeField(auto_now_add=True)
-    status = StatusField(
-        on_delete=models.PROTECT,
-        related_name="dcim_interfaceredundancygroup_related",
-    )
     description = models.CharField(
         max_length=200,
         blank=True,
@@ -902,7 +897,7 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
     "relationships",
     "custom_fields",
 )
-class InterfaceRedundancyGroupAssociation(PrimaryModel):
+class InterfaceRedundancyGroupAssociation(BaseModel):
     """Intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
 
     interface_redundancy_group = models.ForeignKey(

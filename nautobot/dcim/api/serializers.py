@@ -642,7 +642,8 @@ class InterfaceRedundancyGroupSerializer(
         many=True,
         read_only=True,
     )
-    virtual_ip = NestedIPAddressSerializer()
+    virtual_ip = NestedIPAddressSerializer(required=False)
+    secrets_group = NestedSecretsGroupSerializer(required=False)
 
     class Meta:
         """Meta attributes."""

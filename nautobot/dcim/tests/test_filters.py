@@ -5076,24 +5076,28 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 1",
                 protocol="hsrp",
+                protocol_group_id=1,
                 status=statuses[0],
                 virtual_ip=cls.ips[0],
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 2",
                 protocol="carp",
+                protocol_group_id=2,
                 status=statuses[1],
                 virtual_ip=cls.ips[1],
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 3",
                 protocol="vrrp",
+                protocol_group_id=3,
                 status=statuses[2],
                 virtual_ip=cls.ips[2],
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 4",
                 protocol="glbp",
+                protocol_group_id=4,
                 status=statuses[3],
                 virtual_ip=cls.ips[3],
             ),
@@ -5145,6 +5149,20 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 InterfaceRedundancyGroup.objects.filter(protocol="carp"),
+            )
+
+    def test_protocol_group_id(self):
+        with self.subTest():
+            params = {"protocol_group_id": [1, 2]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                InterfaceRedundancyGroup.objects.filter(protocol_group_id__in=params["protocol_group_id"]),
+            )
+        with self.subTest():
+            params = {"protocol_group_id": [3, 4]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                InterfaceRedundancyGroup.objects.filter(protocol_group_id__in=params["protocol_group_id"]),
             )
 
     def test_virtual_ip(self):
@@ -5251,14 +5269,14 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
 
     def test_priority(self):
         with self.subTest():
-            params = {"priority": "200"}
+            params = {"priority": [200, 300]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                InterfaceRedundancyGroupAssociation.objects.filter(priority="200"),
+                InterfaceRedundancyGroupAssociation.objects.filter(priority__in=params["priority"]),
             )
         with self.subTest():
-            params = {"priority": "300"}
+            params = {"priority": [100, 400]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                InterfaceRedundancyGroupAssociation.objects.filter(priority="200"),
+                InterfaceRedundancyGroupAssociation.objects.filter(priority__in=params["priority"]),
             )
