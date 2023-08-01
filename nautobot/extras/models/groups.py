@@ -18,6 +18,7 @@ from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.utilities.forms.fields import TagFilterField
 from nautobot.utilities.forms.widgets import StaticSelect2
 from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 
@@ -354,6 +355,9 @@ class DynamicGroup(OrganizationalModel):
         # Use the auto-generated filterset form perform creation of the filter dictionary.
         filterset_form = filterset.form
 
+        # Get the declared form for any overloaded form field definitions.
+        declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
+
         # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
         # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
         # filterset form, but will also catch errors in case a user-created dict is provided instead.
@@ -364,10 +368,14 @@ class DynamicGroup(OrganizationalModel):
         # empty/null value fields.
         new_filter = {}
         for field_name in filter_fields:
-            field = filterset_form.fields[field_name]
+            field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
             field_value = filterset_form.cleaned_data[field_name]
 
-            if isinstance(field, forms.ModelMultipleChoiceField):
+            # `tag` on FilterForms is not a ModelMultipleChoiceField, so we need to handle it.
+            # On `FilterSetForm.tag`, it is a ModelMultipleChoiceField.
+            # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
+            # and literal FilterSet fields (ex: MultiValueCharFilter).
+            if isinstance(field, (forms.ModelMultipleChoiceField, TagFilterField)):
                 field_to_query = field.to_field_name or "pk"
                 new_value = [getattr(item, field_to_query) for item in field_value]
 
