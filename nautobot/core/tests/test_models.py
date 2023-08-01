@@ -48,6 +48,7 @@ class BaseModelTest(TestCase):
         # Clean-up after ourselves
         cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
 
+    @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=0)
     def test__content_type_caching_disabled(self):
         """
         Verify that the ContentType of the object is not cached.
