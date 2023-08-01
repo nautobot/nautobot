@@ -86,6 +86,8 @@ filtered_sites_1 = Site.objects.filter(_custom_field_data__site_code="US-NC-RAL4
 filtered_sites_2 = Site.objects.filter(_custom_field_data__site_code__in=["US-NC-RAL42", "US-NC-CLT22"])  # -> ['Raleigh', 'Charlotte']
 ```
 
+For further ORM interaction with custom fields check out the [custom fields user guide](../../user-guides/custom-fields.md).
+
 ## Custom Fields and the REST API
 
 When retrieving an object via the REST API, all of its custom field data will be included within the `custom_fields` attribute. For example, below is the partial output of a site with two custom fields defined:

@@ -983,6 +983,8 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
     filterset_class = filters.YourAppModelFilterSet
     filterset_form_class = forms.YourAppModelFilterForm
     form_class = forms.YourAppModelForm
+    create_form_class = forms.YourAppModelCreateForm
+    update_form_class = forms.YourAppModelUpdateForm
     queryset = models.YourAppModel.objects.all()
     serializer_class = serializers.YourAppModelSerializer
     table_class = tables.YourAppModelTable

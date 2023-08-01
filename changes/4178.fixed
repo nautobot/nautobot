@@ -1,0 +1,1 @@
+Fixed JSON serialization of overloaded/non-default FilterForm fields on Dynamic Groups.

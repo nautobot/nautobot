@@ -1,0 +1,5 @@
+Added `invoke unittest-parallel`, which runs unit tests in parallel with results written to `.test-results` directory.
+Added `test-times.json` file which is used to distribute tests when running in parallel. This file can be updated by running `invoke sum-tests-times`.
+Added `invoke ps` to display docker compose services.
+Added `invoke export-docker-compose` to export docker compose configuration to `compose.yaml` file.
+Added `invoke logs` to display docker compose logs.

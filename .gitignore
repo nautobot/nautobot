@@ -31,3 +31,5 @@ htmlcov/*
 development/factory_dump.json
 node_modules
 nautobot/ui
+/.test-results/
+compose.yaml

@@ -315,6 +315,8 @@ Custom field data behaves like a python dictionary in the Nautobot Shell. When m
 'Network Testing (555-8080)'
 ```
 
+If you do not use `.validated_save()` when creating or updating objects, the custom field dictionary will not be populated with default values or even empty values and this can lead to unintuitive behaviour.
+
 ### Modify Custom Field Data in the Rest API
 
 Individual custom field data can be modified by sending a PATCH to the Rest API and setting the new value in the `custom_fields` key:
