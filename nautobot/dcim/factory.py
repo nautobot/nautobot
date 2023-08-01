@@ -48,18 +48,33 @@ MANUFACTURER_NAMES = (
     "F5",
     "Force10",
     "Fortinet",
+    "HP",
     "Huawei",
     "Juniper",
-    "HP",
     "Palo Alto",
 )
 
-# For `Platform.napalm_driver`, either randomly choose based on Manufacturer slug.
+# For `Platform.napalm_driver` and `Platform.network_driver`, either randomly choose based on Manufacturer name.
 NAPALM_DRIVERS = {
-    "arista": ["eos"],
-    "cisco": ["ios", "iosxr", "iosxr_netconf", "nxos", "nxos_ssh"],
-    "juniper": ["junos"],
-    "palo-alto": ["panos"],
+    "Arista": ["eos"],
+    "Cisco": ["ios", "iosxr", "iosxr_netconf", "nxos", "nxos_ssh"],
+    "Juniper": ["junos"],
+    "Palo Alto": ["panos"],
+}
+
+
+NETWORK_DRIVERS = {
+    "A10": ["a10"],
+    "Arista": ["arista_eos"],
+    "Aruba": ["aruba_os", "aruba_procurve"],
+    "Cisco": ["cisco_ios", "cisco_xr", "cisco_nxos", "cisco_xe"],
+    "Dell": ["dell_force10", "dell_os10"],
+    "F5": ["f5_ltm", "f5_tmsh", "f5_linux"],
+    "Fortinet": ["fortinet"],
+    "HP": ["hp_comware", "hp_procurve"],
+    "Huawei": ["huawei"],
+    "Juniper": ["juniper_junos"],
+    "Palo Alto": ["paloalto_panos"],
 }
 
 
@@ -167,13 +182,19 @@ class PlatformFactory(OrganizationalModelFactory):
     # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.slug, [""]))),
+        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 
     has_napalm_args = factory.Faker("pybool")
     napalm_args = factory.Maybe(
         "has_napalm_args", factory.Faker("pydict", nb_elements=2, value_types=[str, bool, int]), None
+    )
+
+    network_driver = factory.Maybe(
+        "has_manufacturer",
+        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
+        "",
     )
 
     has_description = factory.Faker("pybool")

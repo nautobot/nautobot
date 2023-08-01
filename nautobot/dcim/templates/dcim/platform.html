@@ -22,12 +22,12 @@
                 <tr>
                     <td>NAPALM arguments</td>
                     <td>
-                        <pre>
-                            {% if object.napalm_args %}
-                                {{ object.napalm_args|render_json }}
-                            {% endif %}
-                        </pre>
+                        <pre>{% if object.napalm_args %}{{ object.napalm_args|render_json }}{% endif %}</pre>
                     </td>
+                </tr>
+                <tr>
+                    <td>Network driver</td>
+                    <td>{{ object.network_driver|placeholder }}</td>
                 </tr>
                 <tr>
                     <td>Devices</td>
@@ -38,6 +38,22 @@
             </table>
         </div>
 {% endblock content_left_page %}
+
+{% block content_right_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Network Driver Mappings</strong>
+    </div>
+    <table class="table table-hover panel-body attr-table">
+        {% for key in network_driver_tool_names %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ object.network_driver_mappings|get_item:key|placeholder }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock content_right_page %}
 
 {% block content_full_width_page %}
         <div class="panel panel-default">

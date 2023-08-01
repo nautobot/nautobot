@@ -20,6 +20,7 @@ from django_tables2 import RequestConfig
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.utils import get_network_driver_mapping_tool_names, get_all_network_driver_mappings
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
@@ -1311,12 +1312,17 @@ class PlatformView(generic.ObjectView):
 
         return {
             "device_table": device_table,
+            "network_driver_tool_names": get_network_driver_mapping_tool_names(),
         }
 
 
 class PlatformEditView(generic.ObjectEditView):
     queryset = Platform.objects.all()
     model_form = forms.PlatformForm
+    template_name = "dcim/platform_edit.html"
+
+    def get_extra_context(self, request, instance):
+        return {"network_driver_names": sorted(get_all_network_driver_mappings().keys())}
 
 
 class PlatformDeleteView(generic.ObjectDeleteView):

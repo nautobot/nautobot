@@ -8,20 +8,12 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, ProtectedError, Q
+from django.utils.functional import cached_property
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
-
-from nautobot.extras.models import ConfigContextModel, StatusModel
-from nautobot.extras.querysets import ConfigContextModelQuerySet
-from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import ColorField, NaturalOrderingField
-from .device_components import (
+from nautobot.dcim.models.device_components import (
     ConsolePort,
     ConsoleServerPort,
     DeviceBay,
@@ -31,6 +23,15 @@ from .device_components import (
     PowerPort,
     RearPort,
 )
+from nautobot.dcim.utils import get_all_network_driver_mappings
+from nautobot.extras.models import ConfigContextModel, StatusModel
+from nautobot.extras.querysets import ConfigContextModelQuerySet
+from nautobot.extras.utils import extras_features
+from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.config import get_settings_or_config
+from nautobot.utilities.fields import ColorField, NaturalOrderingField
 
 
 __all__ = (
@@ -379,8 +380,9 @@ class DeviceRole(OrganizationalModel):
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
-    Nautobot uses Platforms to determine how to interact with devices when pulling inventory data or other information by
-    specifying a NAPALM driver.
+
+    Nautobot uses Platforms to determine how to interact with devices when pulling inventory data or other information
+    by specifying a network driver; `netutils` is then used to derive library-specific driver information from this.
     """
 
     name = models.CharField(max_length=100, unique=True)
@@ -393,11 +395,19 @@ class Platform(OrganizationalModel):
         null=True,
         help_text="Optionally limit this platform to devices of a certain manufacturer",
     )
+    network_driver = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=(
+            "The normalized network driver to use when interacting with devices, e.g. cisco_ios, arista_eos, etc."
+            " Library-specific driver names will be derived from this setting as appropriate"
+        ),
+    )
     napalm_driver = models.CharField(
         max_length=50,
         blank=True,
         verbose_name="NAPALM driver",
-        help_text="The name of the NAPALM driver to use when interacting with devices",
+        help_text="The name of the NAPALM driver to use when Nautobot internals interact with devices",
     )
     napalm_args = models.JSONField(
         encoder=DjangoJSONEncoder,
@@ -408,12 +418,20 @@ class Platform(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
+    @cached_property
+    def network_driver_mappings(self):
+        """Dictionary of library-specific network drivers derived from network_driver by netutils library mapping or NETWORK_DRIVERS setting."""
+
+        network_driver_mappings = get_all_network_driver_mappings()
+        return network_driver_mappings.get(self.network_driver, {})
+
     csv_headers = [
         "name",
         "slug",
         "manufacturer",
         "napalm_driver",
         "napalm_args",
+        "network_driver",
         "description",
     ]
 
@@ -433,6 +451,7 @@ class Platform(OrganizationalModel):
             self.manufacturer.name if self.manufacturer else None,
             self.napalm_driver,
             self.napalm_args,
+            self.network_driver,
             self.description,
         )
 
