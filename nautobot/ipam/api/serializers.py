@@ -14,6 +14,7 @@ from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
+    get_default_namespace,
     IPAddress,
     Namespace,
     Prefix,
@@ -53,6 +54,7 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         model = VRF
         fields = "__all__"
         list_display_fields = ["name", "rd", "tenant", "description"]
+        extra_kwargs = {"namespace": {"default": get_default_namespace}}
 
 
 #
@@ -159,6 +161,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         ]
         extra_kwargs = {
             "ip_version": {"read_only": True},
+            "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
         }
 

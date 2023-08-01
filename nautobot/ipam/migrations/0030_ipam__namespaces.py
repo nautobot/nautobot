@@ -132,7 +132,7 @@ class Migration(migrations.Migration):
             model_name="prefix",
             name="namespace",
             field=models.ForeignKey(
-                default=nautobot.ipam.models.get_default_namespace,
+                default=nautobot.ipam.models.get_default_namespace_pk,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="prefixes",
                 to="ipam.namespace",
@@ -161,7 +161,7 @@ class Migration(migrations.Migration):
             model_name="vrf",
             name="namespace",
             field=models.ForeignKey(
-                default=nautobot.ipam.models.get_default_namespace,
+                default=nautobot.ipam.models.get_default_namespace_pk,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="vrfs",
                 to="ipam.namespace",

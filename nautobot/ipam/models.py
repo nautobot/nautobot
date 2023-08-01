@@ -74,12 +74,16 @@ class Namespace(PrimaryModel):
 
 
 def get_default_namespace():
-    """Return the Global namespace for use in default value for foreign keys."""
+    """Return the Global namespace."""
     obj, _ = Namespace.objects.get_or_create(
         name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
     )
+    return obj
 
-    return obj.pk
+
+def get_default_namespace_pk():
+    """Return the PK of the Global namespace for use in default value for foreign keys."""
+    return get_default_namespace().pk
 
 
 @extras_features(
@@ -108,7 +112,7 @@ class VRF(PrimaryModel):
         "ipam.Namespace",
         on_delete=models.PROTECT,
         related_name="vrfs",
-        default=get_default_namespace,
+        default=get_default_namespace_pk,
     )
     devices = models.ManyToManyField(
         to="dcim.Device",
@@ -440,7 +444,7 @@ class Prefix(PrimaryModel):
         to="ipam.Namespace",
         on_delete=models.PROTECT,
         related_name="prefixes",
-        default=get_default_namespace,
+        default=get_default_namespace_pk,
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
