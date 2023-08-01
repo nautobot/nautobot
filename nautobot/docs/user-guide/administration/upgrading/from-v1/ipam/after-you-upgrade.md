@@ -6,9 +6,7 @@ This section includes various things to consider after you have successfully upg
 
 > This may also apply to any "VRF Namespace" objects that were created, depending on your requirements on maintaining duplicate Prefix/IPAddress objects.
 
-A priority of the upgrade process is to assert that no data will be lost. Due to the introduction of strict uniqueness constraints to disallow duplicate `Prefix`, `IPAddress`, and `VRF` objects within the same `Namespace`.
-
-Depending on the nature of your data, you may have numerous "VRF" or "Cleanup" Namespaces that were automatically created by the upgrade process as described in the previous section.
+A priority of the upgrade process is to assert that no data will be lost. Due to the introduction of strict uniqueness constraints to disallow duplicate `Prefix`, `IPAddress`, and `VRF` objects within the same `Namespace`, depending on the nature of your data, you may have numerous "VRF" or "Cleanup" Namespaces that were automatically created by the upgrade process as described in the previous section.
 
 ### A word on Tenant affinity
 
