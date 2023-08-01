@@ -494,8 +494,8 @@ class NautobotCSVParserTest(TestCase):
                     "vid": "22",  # parser could be enhanced to turn this to an int, but the serializer can handle it
                     "name": "hello",
                     "description": "It, I say, is a living!",
-                    "status": {"name": status.name},
-                    "tags": [{"name": tags.first().name}, {"name": tags.last().name}],
+                    "status": status.name,  # will be understood as a composite-key by the serializer
+                    "tags": [tags.first().name, tags.last().name],  # understood as a list of composite-keys
                     "tenant": None,
                 },
             ],
