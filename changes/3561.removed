@@ -1,3 +1,0 @@
-Dropped support for Python 3.7. Python 3.8 is now the minimum version required by Nautobot.
-Removed direct dependency on `importlib-metadata`.
-Removed direct dependency on `pycryptodome` as Nautobot does not currently use this library and hasn't for some time.
