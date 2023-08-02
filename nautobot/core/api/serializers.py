@@ -7,7 +7,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.db.models import AutoField, ManyToManyField, Model
+from django.db.models import AutoField, ManyToManyField
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -19,12 +19,12 @@ from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
-from nautobot.core.api.fields import ObjectTypeField
-from nautobot.core.api.mixins import WritableSerializerMixin
+from nautobot.core.api.fields import NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
+from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key
 from nautobot.core.utils.lookup import get_route_for_model
@@ -100,78 +100,6 @@ class OptInFieldsMixin:
         return self.__pruned_fields
 
 
-@extend_schema_field(
-    {
-        "type": "object",
-        "properties": {
-            "id": {
-                "oneOf": [
-                    {"type": "string", "format": "uuid"},
-                    {"type": "integer"},
-                ]
-            },
-            "object_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]+\\.[a-z][a-z0-9_]+$"},
-            "url": {
-                "type": "string",
-                "format": "uri",
-            },
-        },
-    }
-)
-class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.HyperlinkedRelatedField):
-    """DRF's built-in HyperlinkedRelatedField combined with custom to_internal_value() function"""
-
-    def __init__(self, *args, **kwargs):
-        """Override DRF's namespace-unaware default view_name logic for HyperlinkedRelatedField.
-
-        DRF defaults to '{model_name}-detail' instead of '{app_label}:{model_name}-detail'.
-        """
-        if "view_name" not in kwargs or (kwargs["view_name"].endswith("-detail") and ":" not in kwargs["view_name"]):
-            if "queryset" not in kwargs:
-                logger.warning(
-                    '"view_name=%r" is probably incorrect for this related API field; '
-                    'unable to determine the correct "view_name" as "queryset" wasn\'t specified',
-                    kwargs["view_name"],
-                )
-            else:
-                kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
-        super().__init__(*args, **kwargs)
-
-    def to_internal_value(self, data):
-        """Convert potentially nested representation to a model instance."""
-        if isinstance(data, dict):
-            if "url" in data:
-                return super().to_internal_value(data["url"])
-            elif "id" in data:
-                return super().to_internal_value(data["id"])
-        return super().to_internal_value(data)
-
-    def to_representation(self, value):
-        """Convert URL representation to a brief nested representation."""
-        url = super().to_representation(value)
-
-        # nested serializer provides an instance
-        if isinstance(value, Model):
-            model = type(value)
-
-        # foreign key relationship
-        elif self.queryset:
-            model = self.queryset.model
-
-        # foreign key relationship when the destination field is referenced by string not by class
-        elif getattr(self.parent.Meta.model, self.source, False):
-            model = getattr(self.parent.Meta.model, self.source).field.model
-        else:
-            logger.warning(
-                "Unable to determine model for related field %r; "
-                "ensure that either the field defines a 'queryset' "
-                "or the Meta defines the related 'model'.",
-                self.field_name,
-            )
-            return {"id": value.pk, "object_type": "unknown.unknown", "url": url}
-        return {"id": value.pk, "object_type": model._meta.label_lower, "url": url}
-
-
 class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
@@ -213,7 +141,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """
         return getattr(instance, "display", str(instance))
 
-    @extend_schema_field(serializers.CharField)
+    @extend_schema_field(
+        {
+            "type": "string",
+            "example": COMPOSITE_KEY_SEPARATOR.join(["attribute1", "attribute2"]),
+        }
+    )
     def get_composite_key(self, instance):
         try:
             return getattr(instance, "composite_key", construct_composite_key(instance.natural_key()))

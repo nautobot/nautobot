@@ -19,13 +19,13 @@ from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.versioning import NautobotAPIVersioning
+from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices
 from nautobot.extras import models as extras_models
 from nautobot.ipam import models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers
-from nautobot.ipam.factory import VLANGroupFactory
 
 
 class AppTest(testing.APITestCase):
@@ -500,8 +500,8 @@ class NautobotCSVParserTest(TestCase):
                     "vid": "22",  # parser could be enhanced to turn this to an int, but the serializer can handle it
                     "name": "hello",
                     "description": "It, I say, is a living!",
-                    "status": {"name": status.name},
-                    "tags": [{"name": tags.first().name}, {"name": tags.last().name}],
+                    "status": status.name,  # will be understood as a composite-key by the serializer
+                    "tags": [tags.first().name, tags.last().name],  # understood as a list of composite-keys
                     "tenant": None,
                 },
             ],
@@ -591,9 +591,9 @@ class WritableNestedSerializerTest(testing.APITestCase):
             parent=self.location1,
             status=self.statuses[0],
         )
-        self.vlan_group1 = VLANGroupFactory.create(location=self.location1)
-        self.vlan_group2 = VLANGroupFactory.create(location=self.location2)
-        self.vlan_group3 = VLANGroupFactory.create(location=self.location3)
+        self.vlan_group1 = ipam_models.VLANGroup.objects.create(name="Test VLANGroup 1", location=self.location1)
+        self.vlan_group2 = ipam_models.VLANGroup.objects.create(name="Test VLANGroup 2", location=self.location2)
+        self.vlan_group3 = ipam_models.VLANGroup.objects.create(name="Test VLANGroup 3", location=self.location3)
 
     def test_related_by_pk(self):
         data = {
@@ -683,6 +683,42 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["location"][0].startswith("Multiple objects match"))
+
+    def test_related_by_composite_key(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "status": self.statuses.first().composite_key,
+            "location": self.location1.composite_key,
+            "vlan_group": self.vlan_group1.composite_key,
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
+        vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
+        self.assertEqual(vlan.location, self.location1)
+
+    def test_related_by_composite_key_no_match(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "status": self.statuses.first().composite_key + COMPOSITE_KEY_SEPARATOR + "xyz",
+            "location": self.location1.composite_key + COMPOSITE_KEY_SEPARATOR + "hello" + COMPOSITE_KEY_SEPARATOR,
+            "vlan_group": self.vlan_group1.composite_key[1:-1],
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertTrue(response.data["status"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
 
     def test_related_by_invalid(self):
         data = {
