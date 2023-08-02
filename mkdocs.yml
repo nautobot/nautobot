@@ -117,6 +117,12 @@ nav:
         - Upgrading Nautobot from v1.X to v2.0:
           - "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
           - Migrating from Region and Site to Location: "user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md"
+          - IPAM Migration Guide:
+            - "user-guide/administration/upgrading/from-v1/ipam/index.md"
+            - "user-guide/administration/upgrading/from-v1/ipam/whats-changed.md"
+            - "user-guide/administration/upgrading/from-v1/ipam/before-you-upgrade.md"
+            - "user-guide/administration/upgrading/from-v1/ipam/after-you-upgrade.md"
+            - "user-guide/administration/upgrading/from-v1/ipam/for-developers.md"
       - Migration:
         - Migrating from NetBox: "user-guide/administration/migration/migrating-from-netbox.md"
         - Migrating from PostgreSQL to MySQL: "user-guide/administration/migration/migrating-from-postgresql.md"
