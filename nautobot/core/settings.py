@@ -557,10 +557,25 @@ CONSTANCE_CONFIG = {
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
         field_type=int,
     ),
+    "DEVICE_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
+        default=False,
+        help_text="Device names are not guaranteed globally-unique by Nautobot but in practice they often are. "
+        "Set this to True to use the device name alone as the natural key for Device objects. "
+        "Set this to False to use the sequence (name, tenant, location) as the natural key instead.",
+        field_type=bool,
+    ),
     "HIDE_RESTRICTED_UI": ConstanceConfigItem(
         default=False,
         help_text="If set to True, users with limited permissions will not be shown menu items and home-page elements that "
         "they do not have permission to access.",
+        field_type=bool,
+    ),
+    "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
+        default=False,
+        help_text="Location names are not guaranteed globally-unique by Nautobot but in practice they often are. "
+        "Set this to True to use the location name alone as the natural key for Location objects. "
+        "Set this to False to use the sequence (name, parent__name, parent__parent__name, ...) "
+        "as the natural key instead.",
         field_type=bool,
     ),
     "MAX_PAGE_SIZE": ConstanceConfigItem(
@@ -618,6 +633,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["PREFER_IPV4"],
+    "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
