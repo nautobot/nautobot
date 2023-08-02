@@ -6,9 +6,9 @@ from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     ChoiceField,
+    NautobotHyperlinkedRelatedField,
     NautobotModelSerializer,
 )
-from nautobot.core.api.serializers import NautobotHyperlinkedRelatedField
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
@@ -33,8 +33,6 @@ from nautobot.ipam.models import (
 
 
 class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:namespace-detail")
-
     class Meta:
         model = Namespace
         fields = "__all__"
@@ -208,6 +206,7 @@ class AvailablePrefixSerializer(serializers.Serializer):
 
 class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     address = IPFieldSerializer()
+    # namespace is not a model field, so we have to specify it explicitly
     namespace = NautobotHyperlinkedRelatedField(
         view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
     )

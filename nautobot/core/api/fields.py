@@ -1,10 +1,20 @@
 from collections import OrderedDict
+import logging
+
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Model
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
+
+from nautobot.core.api.mixins import WritableSerializerMixin
+from nautobot.core.models.utils import deconstruct_composite_key
+from nautobot.core.utils.data import is_url, is_uuid
+from nautobot.core.utils.lookup import get_route_for_model
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: why is this not a serializers.ChoiceField subclass??
@@ -114,6 +124,108 @@ class ContentTypeField(RelatedField):
         return f"{obj.app_label}.{obj.model}"
 
 
+@extend_schema_field(
+    {
+        "type": "object",
+        "properties": {
+            "id": {
+                "oneOf": [
+                    {"type": "string", "format": "uuid"},
+                    {"type": "integer"},
+                ]
+            },
+            "object_type": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]+\\.[a-z][a-z0-9_]+$",
+                "example": "app_label.modelname",
+            },
+            "url": {
+                "type": "string",
+                "format": "uri",
+            },
+        },
+    }
+)
+class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.HyperlinkedRelatedField):
+    """
+    Extend HyperlinkedRelatedField to include URL namespace-awareness, add 'object_type' field, and read composite-keys.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Override DRF's namespace-unaware default view_name logic for HyperlinkedRelatedField.
+
+        DRF defaults to '{model_name}-detail' instead of '{app_label}:{model_name}-detail'.
+        """
+        if "view_name" not in kwargs or (kwargs["view_name"].endswith("-detail") and ":" not in kwargs["view_name"]):
+            if "queryset" not in kwargs:
+                logger.warning(
+                    '"view_name=%r" is probably incorrect for this related API field; '
+                    'unable to determine the correct "view_name" as "queryset" wasn\'t specified',
+                    kwargs["view_name"],
+                )
+            else:
+                kwargs["view_name"] = get_route_for_model(kwargs["queryset"].model, "detail", api=True)
+        super().__init__(*args, **kwargs)
+
+    @property
+    def _related_model(self):
+        """The model class that this field is referencing to."""
+        if self.queryset is not None:
+            return self.queryset.model
+        # Foreign key where the destination is referenced by string rather than by Python class
+        if getattr(self.parent.Meta.model, self.source, False):
+            return getattr(self.parent.Meta.model, self.source).field.model
+
+        logger.warning(
+            "Unable to determine model for related field %r; "
+            "ensure that either the field defines a 'queryset' or the Meta defines the related 'model'.",
+            self.field_name,
+        )
+        return None
+
+    def to_internal_value(self, data):
+        """Convert potentially nested representation to a model instance."""
+        if isinstance(data, dict):
+            if "url" in data:
+                return super().to_internal_value(data["url"])
+            elif "id" in data:
+                return super().to_internal_value(data["id"])
+        if isinstance(data, str) and not is_uuid(data) and not is_url(data):
+            # Maybe it's a composite-key?
+            related_model = self._related_model
+            if related_model is not None and hasattr(related_model, "natural_key_args_to_kwargs"):
+                try:
+                    data = related_model.natural_key_args_to_kwargs(deconstruct_composite_key(data))
+                except ValueError as err:
+                    # Not a correctly constructed composite key?
+                    raise ValidationError(f"Related object not found using provided composite-key: {data}") from err
+            elif related_model is not None and related_model.label_lower == "auth.group":
+                # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method
+                data = {"name": deconstruct_composite_key(data)}
+        return super().to_internal_value(data)
+
+    def to_representation(self, value):
+        """Convert URL representation to a brief nested representation."""
+        url = super().to_representation(value)
+
+        # nested serializer provides an instance
+        if isinstance(value, Model):
+            model = type(value)
+        else:
+            model = self._related_model
+
+        if model is None:
+            return {"id": value.pk, "object_type": "unknown.unknown", "url": url}
+        return {"id": value.pk, "object_type": model._meta.label_lower, "url": url}
+
+
+@extend_schema_field(
+    {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]+\\.[a-z][a-z0-9_]+$",
+        "example": "app_label.modelname",
+    }
+)
 class ObjectTypeField(serializers.CharField):
     """
     Represent the ContentType of this serializer's model as "<app_label>.<model>".
