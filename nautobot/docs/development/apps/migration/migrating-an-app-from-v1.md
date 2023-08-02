@@ -1,11 +1,18 @@
 # Migration Guide to Upgrade an App from V1 to V2
 
-## Model Updates
+## Dependency Updates
 
-[Core](core.md)
-[DCIM](dcim.md)
-[Extras](extras.md)
-[IPAM](ipam.md)
+### Nautobot Version
+
+Change your Nautobot to the latest/v2.0 release.
+
+### Python Version
+
+Python 3.7 support is dropped for Nautobot v2.0 and Python 3.8 is the minimum version for Nautobot and its apps.
+
+### pylint-nautobot
+
+pylint-nautobot is now a required dev-dependency. Make sure you add `pylint-nautobot = "*"` under `tool.poetry.dev-dependencies` section in your `pyproject.toml`.
 
 ## Code Updates
 
@@ -123,16 +130,9 @@ class ExampleModelSerializer(NautobotModelSerializer):
 
 CSV Import for models are now done automatically via the Rest API. As a result of this change, `CSVForms` classes are no longer needed and should be deleted. In addition, `csv_headers` and `to_csv` attributes should be removed from your model definition. Check out our [release notes](../../../release-notes/version-2.0.md#revamped-csv-import-and-export-2569-3715) for this specific change.
 
-## Dependency Updates
+## Model Updates
 
-### Nautobot Version
-
-Change your Nautobot to the latest/v2.0 release.
-
-### Python Version
-
-Python 3.7 support is dropped for Nautobot v2.0 and Python 3.8 is the minimum version for Nautobot and its apps.
-
-### pylint-nautobot
-
-pylint-nautobot is now a required dev-dependency. Make sure you add `pylint-nautobot = "*"` under `tool.poetry.dev-dependencies` section in your `pyproject.toml`.
+[Core](core.md)
+[DCIM](dcim.md)
+[Extras](extras.md)
+[IPAM](ipam.md)
