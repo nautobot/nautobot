@@ -8,6 +8,14 @@ This document describes all new features and changes in Nautobot 1.6.
 
 ### Added
 
+#### Custom Field "Markdown" Type ([#4006](https://github.com/nautobot/nautobot/issues/4006))
+
+A new Custom Field type, "Markdown", has been added. Custom fields of this type can store Markdown-formatted text which will be rendered in the web UI.
+
+#### Caching of Dynamic Groups and Content Types ([#4092](https://github.com/nautobot/nautobot/pull/4092))
+
+APIs have been added to allow for caching of the results of looking up an object's content-type or Dynamic Group memberships, as well as for looking up the members of a Dynamic Group itself. These caches are disabled by default but can be enabled by configuring the [`DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT`](../configuration/optional-settings.md#dynamic_groups_member_cache_timeout) and [`CONTENT_TYPE_CACHE_TIMEOUT`](../configuration/optional-settings.md#content_type_cache_timeout) settings respectively. Apps (plugins) that make use of dynamic groups should review the [documentation for the APIs](../models/extras/dynamicgroup.md#membership-and-caching) to determine how and when to make use of the cache for improved performance.
+
 #### Installation Metrics ([#4047](https://github.com/nautobot/nautobot/issues/4047))
 
 A new setting, [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled), has been added to allow Nautobot to send anonymous installation metrics to the Nautobot maintainers. This setting is `True` by default but can be changed in `nautobot_config.py` or the `NAUTOBOT_INSTALLATION_METRICS_ENABLED` environment variable.
@@ -24,7 +32,8 @@ The following is an example of the data that is sent:
     "installed_apps": {
         # "example_plugin" hashed by sha256
         "3ffee4622af3aad6f78257e3ae12da99ca21d71d099f67f4a2e19e464453bee7": "1.0.0"
-    }
+    },
+    "debug": true
 }
 ```
 
@@ -34,6 +43,24 @@ The [Platform](../models/dcim/platform.md) model has been enhanced to include a 
 
 If the default derivations provided by `netutils` are not suitable for your purposes, you can extend or override them by configuring the [`NETWORK_DRIVERS`](../configuration/optional-settings.md#network_drivers) system setting.
 
+#### Python 3.11 Support ([#3561](https://github.com/nautobot/nautobot/issues/3561))
+
+Nautobot 1.6.0 formally adds support for installation and operation under Python 3.11.
+
 ### Changed
+
+#### Additional HIDE_RESTRICTED_UI Effects for Unauthenticated Users ([#3646](https://github.com/nautobot/nautobot/issues/3646))
+
+When `HIDE_RESTRICTED_UI` is enabled, unauthenticated users are no longer able to view the OpenAPI (Swagger) UI, the GraphiQL UI, or any configured top/bottom banners. Additionally, the page footer on the login page will not display the Nautobot server hostname in this case.
+
+#### Increased `Device.asset_tag` maximum length ([#3693](https://github.com/nautobot/nautobot/issues/3693))
+
+The maximum length of the `Device.asset_tag` field has been increased from 50 to 100 characters.
+
+### Removed
+
+#### Removed Python 3.7 Support ([#3561](https://github.com/nautobot/nautobot/issues/3561))
+
+As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->

@@ -605,7 +605,7 @@ DELETE /api/extras/dynamic-group-memberships/{uuid}/
 
 ## Membership and Caching
 
-Since looking up the members of a Dynamic Group can be a very expensive operation, Nautobot caches the results of these lookups for a configurable amount of time. By default this cache is disabled. You can change this default value by changing the `DYNAMIC_GROUP_CACHE_TIMEOUT` in the administration panel. This value is in seconds.
+Since looking up the members of a Dynamic Group can be a very expensive operation, Nautobot caches the results of these lookups for a configurable amount of time. By default this cache is disabled. You can change this default value by changing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` in the administration panel. This value is in seconds.
 
 Creating, updating, or deleting a Dynamic Group will automatically invalidate the cache for that group. This means that the next time the group is evaluated, the cache will be refreshed with the new membership information.
 
