@@ -283,7 +283,9 @@ jobs:
   container-build:
     name: "Build Container Images (GHCR Only)"
     runs-on: "ubuntu-22.04"
-    if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
+    if: |
+      github.event_name == "push" &&
+      (github.ref == "refs/heads/develop" || github.ref == "refs/heads/next")
     needs:
       - "integration-test"
     steps:
@@ -294,12 +296,9 @@ jobs:
           ref="${{ github.ref }}"
           branch="${ref#refs/heads/}"
 
+          # Merge cases to single branch
           case "$branch" in
-            "develop")
-              min_python_version="3.7"
-              max_python_version="3.10"
-              ;;
-            "next")
+            "develop"|"next")
               min_python_version="3.8"
               max_python_version="3.11"
               ;;

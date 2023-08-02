@@ -12,7 +12,9 @@ jobs:
   container-build:
     name: "Build Container Images (GHCR Only)"
     runs-on: "ubuntu-22.04"
-    if: "github.event_name == 'push'"
+    if: |
+      github.event_name == "push" &&
+      (github.ref == "u/snaselj-4028-ci-integration-workflows")
     steps:
       - name: "Configuration"
         id: "config"
