@@ -29,16 +29,6 @@ def migrate_ipaddress_to_m2m(apps, schema_editor):
         else:
             continue
 
-        address = netaddr.IPNetwork(f"{ip_address.host}/{ip_address.prefix_length}")
-        if (
-            address.version == 4
-            and parent.primary_ip4_id == ip_address.id
-            or address.version == 6
-            and parent.primary_ip6_id == ip_address.id
-        ):
-            m2m.primary_for_device = True
-            m2m.save()
-
 
 class Migration(migrations.Migration):
     dependencies = [
