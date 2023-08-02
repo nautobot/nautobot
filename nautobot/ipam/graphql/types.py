@@ -72,7 +72,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
         return None
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_objectƒ(self)
+        return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
 class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
@@ -90,4 +90,4 @@ class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
         return self.family
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
+        return DynamicGroup.objects.get_for_object(self, use_cache=True)

@@ -416,7 +416,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     @classmethod
     def setUpTestData(cls):
-
         vrfs = VRF.objects.filter(rd__isnull=False)[:3]
 
         cls.interface_ct = ContentType.objects.get_for_model(Interface)
@@ -765,7 +764,6 @@ class VLANGroupTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.regions = Region.objects.filter(sites__isnull=False)[:3]
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -809,7 +807,6 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     @classmethod
     def setUpTestData(cls):
-
         cls.regions = Region.objects.filter(sites__isnull=False)
         cls.sites = (
             Site.objects.filter(region=cls.regions[0]).first(),
@@ -956,7 +953,6 @@ class ServiceTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")

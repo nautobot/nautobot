@@ -6,7 +6,6 @@ import nautobot.utilities.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0008_increase_all_serial_lengths"),
     ]

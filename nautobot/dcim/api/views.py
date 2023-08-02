@@ -35,6 +35,8 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -810,6 +812,23 @@ class DeviceRedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 #
+# Interface Redundancy Groups
+#
+
+
+class InterfaceRedundancyGroupViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    queryset = InterfaceRedundancyGroup.objects.select_related("status").prefetch_related("interfaces")
+    serializer_class = serializers.InterfaceRedundancyGroupSerializer
+    filterset_class = filters.InterfaceRedundancyGroupFilterSet
+
+
+class InterfaceRedundancyGroupAssociationViewSet(StatusViewSetMixin, NautobotModelViewSet):
+    queryset = InterfaceRedundancyGroupAssociation.objects.all()
+    serializer_class = serializers.InterfaceRedundancyGroupAssociationSerializer
+    filterset_class = filters.InterfaceRedundancyGroupAssociationFilterSet
+
+
+#
 # Miscellaneous
 #
 
@@ -848,7 +867,6 @@ class ConnectedDeviceViewSet(ViewSet):
         responses={"200": serializers.DeviceSerializer},
     )
     def list(self, request):
-
         peer_device_name = request.query_params.get(self._device_param.name)
         peer_interface_name = request.query_params.get(self._interface_param.name)
 

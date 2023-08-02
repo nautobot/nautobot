@@ -19,7 +19,6 @@ def clear_custom_field_slugs_labels(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0045_add_custom_field_slug"),
     ]

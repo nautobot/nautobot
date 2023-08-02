@@ -58,7 +58,6 @@ class CSVDataField(forms.CharField):
     widget = forms.Textarea
 
     def __init__(self, from_form, *args, **kwargs):
-
         form = from_form()
         self.model = form.Meta.model
         self.fields = form.fields
@@ -104,7 +103,6 @@ class CSVFileField(forms.FileField):
     """
 
     def __init__(self, from_form, *args, **kwargs):
-
         form = from_form()
         self.model = form.Meta.model
         self.fields = form.fields

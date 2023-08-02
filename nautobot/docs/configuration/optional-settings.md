@@ -10,8 +10,11 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [BANNER_LOGIN](#banner_login)
 * [BANNER_TOP](#banner_top)
 * [CHANGELOG_RETENTION](#changelog_retention)
+* [DEPLOYMENT_ID](#deployment_id)
+* [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
 * [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 * [MAX_PAGE_SIZE](#max_page_size)
+* [NETWORK_DRIVERS](#network_drivers)
 * [PAGINATE_COUNT](#paginate_count)
 * [PER_PAGE_DEFAULTS](#per_page_defaults)
 * [PREFER_IPV4](#prefer_ipv4)
@@ -302,6 +305,18 @@ If `True`, it will be possible to apply Config Context objects to Devices and Vi
 
 ---
 
+## CONTENT_TYPE_CACHE_TIMEOUT
+
++++ 1.6.0
+
+Default: `0` (disabled)
+
+Environment Variable: `NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT`
+
+The number of seconds to cache the content type accessible via a object's class property `Object._content_type_cached`. This can save frequent calls to `ContentType.objects.get_for_model(model)`. Set this to `0` to disable caching.
+
+---
+
 ## CORS_ALLOW_ALL_ORIGINS
 
 Default: `False`
@@ -359,6 +374,14 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 ---
 
+## DEPLOYMENT_ID
+
++++ 1.6.0
+
+Default: a random UUID generated at install time.
+
+This setting is used to uniquely but anonymously identify Nautobot deployments when sending installation metrics. This setting is not generally intended to be user-serviceable. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
+
 ## DISABLE_PREFIX_LIST_HIERARCHY
 
 Default: `False`
@@ -366,6 +389,18 @@ Default: `False`
 This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
 
 A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
+
+---
+
+## DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT
+
++++ 1.6.0
+
+Default: `0` (disabled)
+
+Environment Variable: `NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT`
+
+The number of seconds to cache the member list of dynamic groups. With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves), users will encounter a performance penalty using or accessing the membership lists. This setting allows users to accept a cached list for common use cases (particularly in the UI) that expires after the configured time. Set this to `0` to disable caching.
 
 ---
 
@@ -532,6 +567,16 @@ git config --global https.proxy http://192.0.2.1:3128
 
 ---
 
+## INSTALLATION_METRICS_ENABLED
+
++++ 1.6.0
+
+Default: `True` for existing Nautobot deployments, user-specified when running `nautobot-server init` for a new deployment.
+
+Environment Variable: `NAUTOBOT_INSTALLATION_METRICS_ENABLED`
+
+When set to `True`, Nautobot will send anonymized installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../administration/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
+
 ## JOBS_ROOT
 
 Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
@@ -647,6 +692,28 @@ Default: `30`
 Environment Variable: `NAUTOBOT_NAPALM_TIMEOUT`
 
 The amount of time (in seconds) to wait for NAPALM to connect to a device.
+
+---
+
+## NETWORK_DRIVERS
+
++++ 1.6.0
+
+Default: `{}` (Empty dictionary)
+
+An optional dictionary to extend or override the default `Platform.network_driver` translations provided by [netutils](https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/). For example, to add support for a custom `Platform.network_driver` value of `"my_network_driver"` for Netmiko and PyATS drivers:
+
+```python
+NETWORK_DRIVERS = {
+    "netmiko": {"my_network_driver": "cisco_ios"},
+    "pyats": {"my_network_driver": "iosxe"},
+}
+```
+
+The default top-level keys are `ansible`, `hier_config`, `napalm`, `netmiko`, `ntc_templates`, `pyats`, `pyntc`, and `scrapli`, but you can also add additional keys if you have an alternative network driver that you want your Nautobot instance to include.
+
+!!! tip
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 

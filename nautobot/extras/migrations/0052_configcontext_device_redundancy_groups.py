@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0018_device_redundancy_group"),
         ("extras", "0051_add_job_task_queues"),

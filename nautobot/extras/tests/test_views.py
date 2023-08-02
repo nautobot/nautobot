@@ -46,6 +46,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
+from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
 from nautobot.ipam.factory import VLANFactory
@@ -144,7 +145,6 @@ class ConfigContextTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
 
         # Create three ConfigContexts
@@ -266,7 +266,6 @@ class ConfigContextSchemaTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
             name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
@@ -480,7 +479,6 @@ class DynamicGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
@@ -643,7 +641,6 @@ class NoteTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Site)
         cls.site = Site.objects.first()
         user = User.objects.first()
@@ -837,95 +834,7 @@ class GraphQLQueriesTestCase(
             GraphQLQuery(
                 name="graphql-query-3",
                 slug="graphql-query-3",
-                query="""
-query ($device: String!) {
-  devices(name: $device) {
-    config_context
-    name
-    position
-    serial
-    primary_ip4 {
-      id
-      primary_ip4_for {
-        id
-        name
-      }
-    }
-    tenant {
-      name
-    }
-    tags {
-      name
-      slug
-    }
-    device_role {
-      name
-    }
-    platform {
-      name
-      slug
-      manufacturer {
-        name
-      }
-      napalm_driver
-    }
-    site {
-      name
-      slug
-      vlans {
-        id
-        name
-        vid
-      }
-      vlan_groups {
-        id
-      }
-    }
-    interfaces {
-      description
-      mac_address
-      enabled
-      name
-      ip_addresses {
-        address
-        tags {
-          id
-        }
-      }
-      connected_circuit_termination {
-        circuit {
-          cid
-          commit_rate
-          provider {
-            name
-          }
-        }
-      }
-      tagged_vlans {
-        id
-      }
-      untagged_vlan {
-        id
-      }
-      cable {
-        termination_a_type
-        status {
-          name
-        }
-        color
-      }
-      tagged_vlans {
-        site {
-          name
-        }
-        id
-      }
-      tags {
-        id
-      }
-    }
-  }
-}""",
+                query=BIG_GRAPHQL_DEVICE_QUERY,
             ),
             GraphQLQuery(
                 name="Graphql Query 5",
@@ -1974,7 +1883,6 @@ class ObjectChangeTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site(name="Site 1", slug="site-1")
         site.save()
 
@@ -1987,7 +1895,6 @@ class ObjectChangeTestCase(TestCase):
             oc.save()
 
     def test_objectchange_list(self):
-
         url = reverse("extras:objectchange_list")
         params = {
             "user": User.objects.first().pk,
@@ -1997,7 +1904,6 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
-
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
@@ -2206,7 +2112,6 @@ class StatusTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
 

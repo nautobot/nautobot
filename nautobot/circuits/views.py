@@ -235,7 +235,6 @@ class CircuitSwapTerminations(generic.ObjectEditView):
         form = ConfirmationForm(request.POST)
 
         if form.is_valid():
-
             termination_a = CircuitTermination.objects.filter(
                 circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A
             ).first()

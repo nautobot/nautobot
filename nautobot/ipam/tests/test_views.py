@@ -30,7 +30,6 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         tenants = Tenant.objects.all()[:2]
 
         cls.form_data = {
@@ -61,7 +60,6 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         tenants = Tenant.objects.all()[:2]
 
         cls.form_data = {
@@ -167,7 +165,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
     @classmethod
     def setUpTestData(cls):
-
         sites = Site.objects.all()[:2]
         vrfs = VRF.objects.all()[:2]
 
@@ -234,7 +231,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         vrfs = VRF.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(IPAddress)
@@ -274,7 +270,6 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
 
         cls.form_data = {
@@ -300,7 +295,6 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         locations = Location.objects.filter(site__isnull=False)
         cls.sites = Site.objects.filter(locations__in=locations)
 
@@ -398,7 +392,6 @@ class ServiceTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         site = Site.objects.first()
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")

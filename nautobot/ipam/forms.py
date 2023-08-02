@@ -390,7 +390,6 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         ]
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self.fields["vrf"].empty_label = "Global"
@@ -436,7 +435,6 @@ class PrefixCSVForm(PrefixFieldMixin, LocatableModelCSVFormMixin, StatusModelCSV
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit vlan queryset by assigned site and group
             params = {
                 f"site__{self.fields['site'].to_field_name}": data.get("site"),
@@ -655,7 +653,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         }
 
     def __init__(self, *args, **kwargs):
-
         # Initialize helper selectors
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
@@ -834,7 +831,6 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldMo
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit interface queryset by assigned device
             if data.get("device"):
                 self.fields["interface"].queryset = Interface.objects.filter(
@@ -859,7 +855,6 @@ class IPAddressCSVForm(StatusModelCSVFormMixin, AddressFieldMixin, CustomFieldMo
             raise forms.ValidationError("No device or virtual machine specified; cannot set as primary IP")
 
     def save(self, *args, **kwargs):
-
         # Set interface assignment
         if self.cleaned_data["interface"]:
             self.instance.assigned_object = self.cleaned_data["interface"]
@@ -1070,7 +1065,6 @@ class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, CustomFie
         super().__init__(data, *args, **kwargs)
 
         if data:
-
             # Limit vlan queryset by assigned group
             params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
             self.fields["group"].queryset = self.fields["group"].queryset.filter(**params)

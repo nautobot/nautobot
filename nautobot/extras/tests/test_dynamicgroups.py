@@ -1,9 +1,14 @@
 import random
+import time
+
+from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
+from django.test import override_settings
 
 from nautobot.dcim.choices import PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet
@@ -45,7 +50,6 @@ from nautobot.utilities.testing import TestCase
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
-
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
 
@@ -605,10 +609,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         with self.assertRaises(ValidationError):
             parent.children.add(
                 child,
-                through_defaults=dict(
-                    operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
-                    weight=10,
-                ),
+                through_defaults={"operator": DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE, "weight": 10},
             )
 
     def test_remove_child(self):
@@ -960,6 +961,61 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
 
         this_dg.set_filter({"example_plugin_prefix_tenant_name": [a_tenant]})
         this_dg.validated_save()
+
+    def test_member_caching_output(self):
+        group = self.first_child
+
+        # Ensure the cache is empty from previous tests
+        cache.delete(group.members_cache_key)
+
+        self.assertEqual(sorted(list(group.members)), sorted(list(group.members_cached)))
+
+    @override_settings(DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT=2)
+    def test_member_caching_enabled(self):
+        """
+        Verify that the members list of the DynamicGroup is cached and expires.
+        """
+        group = self.first_child
+
+        class FakeQuerySet:
+            def all(self):
+                return []
+
+        # Ensure the cache is empty from previous tests
+        cache.delete(group.members_cache_key)
+
+        with patch.object(group, "get_queryset", return_value=FakeQuerySet()) as mock_get_queryset:
+            group.members_cached
+            group.members_cached
+            group.members_cached
+            self.assertEqual(mock_get_queryset.call_count, 1)
+
+            time.sleep(2)  # Let the cache expire
+
+            group.members_cached
+            self.assertEqual(mock_get_queryset.call_count, 2)
+
+        # Clean-up after ourselves
+        cache.delete(f"{group.__class__.__name__}.{group.id}.cached_members")
+
+    @override_settings(DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT=0)
+    def test_member_caching_disabled(self):
+        """
+        Verify that the members list of the DynamicGroup is not cached.
+        """
+        group = self.first_child
+
+        class FakeQuerySet:
+            def all(self):
+                return []
+
+        # Ensure the cache is empty from previous tests
+        cache.delete(group.members_cache_key)
+
+        with patch.object(group, "get_queryset", return_value=FakeQuerySet()) as mock_get_queryset:
+            group.members_cached
+            group.members_cached
+            self.assertEqual(mock_get_queryset.call_count, 2)
 
 
 class DynamicGroupMembershipModelTest(DynamicGroupTestBase):

@@ -19,7 +19,9 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import ObjectDestroyViewMixin, ObjectEditViewMixin
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.utils import get_network_driver_mapping_tool_names, get_all_network_driver_mappings
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable
@@ -49,6 +51,8 @@ from .models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
     Location,
@@ -95,7 +99,6 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
         return get_permission_for_model(self.queryset.model, "change")
 
     def post(self, request):
-
         selected_objects = []
         return_url = self.get_return_url(request)
 
@@ -103,9 +106,7 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
             form = self.form(request.POST)
 
             if form.is_valid():
-
                 with transaction.atomic():
-
                     count = 0
                     for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
                         if obj.cable is None:
@@ -160,7 +161,6 @@ class RegionView(generic.ObjectView):
     queryset = Region.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Sites
         sites = (
             Site.objects.restrict(request.user, "view")
@@ -451,7 +451,6 @@ class RackGroupView(generic.ObjectView):
     queryset = RackGroup.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Racks
         racks = (
             Rack.objects.restrict(request.user, "view")
@@ -511,7 +510,6 @@ class RackRoleView(generic.ObjectView):
     queryset = RackRole.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Racks
         racks = (
             Rack.objects.restrict(request.user, "view").filter(role=instance).select_related("group", "site", "tenant")
@@ -764,7 +762,6 @@ class ManufacturerView(generic.ObjectView):
     queryset = Manufacturer.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
@@ -1242,7 +1239,6 @@ class DeviceRoleView(generic.ObjectView):
     queryset = DeviceRole.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
@@ -1302,7 +1298,6 @@ class PlatformView(generic.ObjectView):
     queryset = Platform.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Devices
         devices = (
             Device.objects.restrict(request.user, "view")
@@ -1320,12 +1315,17 @@ class PlatformView(generic.ObjectView):
 
         return {
             "device_table": device_table,
+            "network_driver_tool_names": get_network_driver_mapping_tool_names(),
         }
 
 
 class PlatformEditView(generic.ObjectEditView):
     queryset = Platform.objects.all()
     model_form = forms.PlatformForm
+    template_name = "dcim/platform_edit.html"
+
+    def get_extra_context(self, request, instance):
+        return {"network_driver_names": sorted(get_all_network_driver_mappings().keys())}
 
 
 class PlatformDeleteView(generic.ObjectDeleteView):
@@ -1657,7 +1657,6 @@ class ChildDeviceBulkImportView(generic.BulkImportView):
     template_name = "dcim/device_import_child.html"
 
     def _save_obj(self, obj_form, request):
-
         obj = obj_form.save()
 
         # Save the reverse relation to the parent device bay
@@ -1977,12 +1976,37 @@ class InterfaceView(generic.ObjectView):
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
+        redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+
         return {
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
             "breadcrumb_url": "dcim:device_interfaces",
             "child_interfaces_table": child_interfaces_tables,
+            "redundancy_table": redundancy_table,
         }
+
+    def _get_interface_redundancy_groups_table(self, request, instance):
+        """Return a table of assigned Interface Redundancy Groups."""
+        queryset = instance.interface_redundancy_group_associations.restrict(request.user)
+        queryset = queryset.select_related("interface_redundancy_group")
+        queryset = queryset.order_by("interface_redundancy_group", "priority")
+        column_sequence = (
+            "interface_redundancy_group",
+            "priority",
+            "interface_redundancy_group__status",
+            "interface_redundancy_group__protocol",
+            "interface_redundancy_group__protocol_group_id",
+            "interface_redundancy_group__virtual_ip",
+        )
+        table = tables.InterfaceRedundancyGroupAssociationTable(
+            data=queryset,
+            sequence=column_sequence,
+            orderable=False,
+        )
+        for field in column_sequence:
+            table.columns.show(field)
+        return table
 
 
 class InterfaceCreateView(generic.ComponentCreateView):
@@ -2218,7 +2242,6 @@ class DeviceBayPopulateView(generic.ObjectEditView):
         form = forms.PopulateDeviceBayForm(device_bay, request.POST)
 
         if form.is_valid():
-
             device_bay.installed_device = form.cleaned_data["installed_device"]
             device_bay.save()
             messages.success(
@@ -2261,7 +2284,6 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
         form = ConfirmationForm(request.POST)
 
         if form.is_valid():
-
             removed_device = device_bay.installed_device
             device_bay.installed_device = None
             device_bay.save()
@@ -2537,7 +2559,6 @@ class CableCreateView(generic.ObjectEditView):
     template_name = "dcim/cable_connect.html"
 
     def dispatch(self, request, *args, **kwargs):
-
         # Set the model_form class based on the type of component being connected
         self.model_form = {
             "console-port": forms.ConnectCableToConsolePortForm,
@@ -2647,7 +2668,6 @@ class CableBulkDeleteView(generic.BulkDeleteView):
 
 
 class ConnectionsListView(generic.ObjectListView):
-
     CSVRow = namedtuple("CSVRow", ["device", "name", "dest_device", "dest_name", "reachable"])
 
     def queryset_to_csv_body_data(self):
@@ -2835,7 +2855,6 @@ class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, V
         return "dcim.change_virtualchassis"
 
     def get(self, request, pk):
-
         virtual_chassis = get_object_or_404(self.queryset, pk=pk)
         VCMemberFormSet = modelformset_factory(
             model=Device,
@@ -2860,7 +2879,6 @@ class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, V
         )
 
     def post(self, request, pk):
-
         virtual_chassis = get_object_or_404(self.queryset, pk=pk)
         VCMemberFormSet = modelformset_factory(
             model=Device,
@@ -2875,9 +2893,7 @@ class VirtualChassisEditView(ObjectPermissionRequiredMixin, GetReturnURLMixin, V
         formset = VCMemberFormSet(request.POST, queryset=members_queryset)
 
         if vc_form.is_valid() and formset.is_valid():
-
             with transaction.atomic():
-
                 # Save the VirtualChassis
                 vc_form.save()
 
@@ -2915,7 +2931,6 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
         return "dcim.change_virtualchassis"
 
     def get(self, request, pk):
-
         virtual_chassis = get_object_or_404(self.queryset, pk=pk)
 
         initial_data = {k: request.GET[k] for k in request.GET}
@@ -2934,20 +2949,17 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
         )
 
     def post(self, request, pk):
-
         virtual_chassis = get_object_or_404(self.queryset, pk=pk)
 
         member_select_form = forms.VCMemberSelectForm(request.POST)
 
         if member_select_form.is_valid():
-
             device = member_select_form.cleaned_data["device"]
             device.virtual_chassis = virtual_chassis
             data = {k: request.POST[k] for k in ["vc_position", "vc_priority"]}
             membership_form = forms.DeviceVCMembershipForm(data=data, validate_vc_position=True, instance=device)
 
             if membership_form.is_valid():
-
                 membership_form.save()
                 msg = f'Added member <a href="{device.get_absolute_url()}">{escape(device)}</a>'
                 messages.success(request, mark_safe(msg))
@@ -2958,7 +2970,6 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
                 return redirect(self.get_return_url(request, device))
 
         else:
-
             membership_form = forms.DeviceVCMembershipForm(data=request.POST)
 
         return render(
@@ -2980,7 +2991,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         return "dcim.change_device"
 
     def get(self, request, pk):
-
         device = get_object_or_404(self.queryset, pk=pk, virtual_chassis__isnull=False)
         form = ConfirmationForm(initial=request.GET)
 
@@ -2995,7 +3005,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         )
 
     def post(self, request, pk):
-
         device = get_object_or_404(self.queryset, pk=pk, virtual_chassis__isnull=False)
         form = ConfirmationForm(request.POST)
 
@@ -3007,7 +3016,6 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
             return redirect(device.get_absolute_url())
 
         if form.is_valid():
-
             devices = Device.objects.filter(pk=device.pk)
             for device in devices:
                 device.virtual_chassis = None
@@ -3176,3 +3184,61 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
             members_table.columns.show("device_redundancy_group_priority")
             context["members_table"] = members_table
         return context
+
+
+class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
+    """ViewSet for the InterfaceRedundancyGroup model."""
+
+    bulk_create_form_class = forms.InterfaceRedundancyGroupCSVForm
+    bulk_update_form_class = forms.InterfaceRedundancyGroupBulkEditForm
+    filterset_class = filters.InterfaceRedundancyGroupFilterSet
+    filterset_form_class = forms.InterfaceRedundancyGroupFilterForm
+    form_class = forms.InterfaceRedundancyGroupForm
+    queryset = InterfaceRedundancyGroup.objects.select_related("status")
+    queryset = queryset.prefetch_related("interfaces")
+    queryset = queryset.annotate(
+        interface_count=count_related(Interface, "interface_redundancy_groups"),
+    )
+    serializer_class = serializers.InterfaceRedundancyGroupSerializer
+    table_class = tables.InterfaceRedundancyGroupTable
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, instance):
+        """Return additional panels for display."""
+        context = super().get_extra_context(request, instance)
+        if instance and self.action == "retrieve":
+            interface_table = self._get_interface_redundancy_groups_table(request, instance)
+            context["interface_table"] = interface_table
+        return context
+
+    def _get_interface_redundancy_groups_table(self, request, instance):
+        """Return a table of assigned Interfaces."""
+        queryset = instance.interface_redundancy_group_associations.restrict(request.user)
+        queryset = queryset.prefetch_related("interface")
+        queryset = queryset.order_by("priority")
+        column_sequence = (
+            "interface__device",
+            "interface",
+            "priority",
+            "interface__status",
+            "interface__enabled",
+            "interface__ip_addresses",
+            "interface__type",
+            "interface__description",
+            "interface__label",
+        )
+        table = tables.InterfaceRedundancyGroupAssociationTable(
+            data=queryset,
+            sequence=column_sequence,
+            orderable=False,
+        )
+        for column_name in column_sequence:
+            table.columns.show(column_name)
+        return table
+
+
+class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDestroyViewMixin):
+    queryset = InterfaceRedundancyGroupAssociation.objects.all()
+    form_class = forms.InterfaceRedundancyGroupAssociationForm
+    template_name = "dcim/interfaceredundancygroupassociation_create.html"
+    lookup_field = "pk"

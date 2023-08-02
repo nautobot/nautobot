@@ -9,7 +9,6 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0008_increase_all_serial_lengths"),
         ("extras", "0021_customfield_changelog_data"),
