@@ -16,6 +16,10 @@ A new Custom Field type, "Markdown", has been added. Custom fields of this type 
 
 APIs have been added to allow for caching of the results of looking up an object's content-type or Dynamic Group memberships, as well as for looking up the members of a Dynamic Group itself. These caches are disabled by default but can be enabled by configuring the [`DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT`](../configuration/optional-settings.md#dynamic_groups_member_cache_timeout) and [`CONTENT_TYPE_CACHE_TIMEOUT`](../configuration/optional-settings.md#content_type_cache_timeout) settings respectively. Apps (plugins) that make use of dynamic groups should review the [documentation for the APIs](../models/extras/dynamicgroup.md#membership-and-caching) to determine how and when to make use of the cache for improved performance.
 
+#### Interface Redundancy Group ([#2825](https://github.com/nautobot/nautobot/issues/2825))
+
+Interface Redundancy Group model and related views have been added to allow logical grouping of multiple interfaces under a specific interface redundancy protocol (HSRP, VRRP, CARP, and etc).
+
 #### Installation Metrics ([#4047](https://github.com/nautobot/nautobot/issues/4047))
 
 A new setting, [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled), has been added to allow Nautobot to send anonymous installation metrics to the Nautobot maintainers. This setting is `True` by default but can be changed in `nautobot_config.py` or the `NAUTOBOT_INSTALLATION_METRICS_ENABLED` environment variable.
