@@ -8,6 +8,7 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
+from nautobot.circuits.models import Provider
 from nautobot.dcim.filters import SiteFilterSet
 from nautobot.dcim.forms import SiteCSVForm
 from nautobot.dcim.models import Site, Rack, Device
@@ -1284,6 +1285,84 @@ class CustomFieldModelTest(TestCase):
             template="{{ obj.location }}",
             weight=200,
         )
+
+    def test_custom_field_dict_population(self):
+        """Test that custom_field_data is properly populated when no data is passed in."""
+        name = "Custom Field"
+        custom_field = CustomField.objects.create(
+            # 2.0 TODO: #824 remove name field
+            name=name,
+            slug="custom_field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Provider)])
+
+        provider = Provider.objects.create(name="Test")
+        provider.validated_save()
+
+        self.assertIn(
+            name, provider._custom_field_data.keys(), "Custom fields aren't being set properly on a model on save."
+        )
+
+    def test_custom_field_required(self):
+        """Test that omitting required custom fields raises a ValidationError."""
+        name = "Custom Field"
+        custom_field = CustomField.objects.create(
+            # 2.0 TODO: #824 remove name field
+            name=name,
+            slug="custom_field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Provider)])
+
+        provider = Provider.objects.create(name="Test")
+        with self.assertRaises(ValidationError):
+            provider.validated_save()
+
+    def test_custom_field_required_on_update(self):
+        """Test that removing required custom fields and then updating an object raises a ValidationError."""
+        name = "Custom Field"
+        custom_field = CustomField.objects.create(
+            # 2.0 TODO: #824 remove name field
+            name=name,
+            slug="custom_field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Provider)])
+
+        provider = Provider.objects.create(name="Test", _custom_field_data={name: "Value"})
+        provider.validated_save()
+        provider._custom_field_data.pop(name)
+        with self.assertRaises(ValidationError):
+            provider.validated_save()
+
+    def test_update_removed_custom_field(self):
+        """Test that missing custom field keys are added on save."""
+        name = "Custom Field"
+        custom_field = CustomField.objects.create(
+            # 2.0 TODO: #824 remove name field
+            name=name,
+            slug="custom_field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Provider)])
+
+        # Explicitly there is no `validated_save` so the custom field is not populated
+        provider = Provider.objects.create(name="Test")
+
+        self.assertEqual(
+            {}, provider._custom_field_data, "Custom field data was not empty despite clean not being called."
+        )
+
+        provider.validated_save()
+
+        self.assertIn(name, provider._custom_field_data.keys())
 
     def test_cf_data(self):
         """

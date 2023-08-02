@@ -41,6 +41,7 @@ from nautobot.extras.models import (
     Status,
 )
 from nautobot.ipam.models import Prefix
+from nautobot.tenancy.models import Tenant
 from nautobot.utilities.forms.fields import MultiValueCharField
 from nautobot.utilities.forms.widgets import MultiValueCharInput
 from nautobot.utilities.testing import TestCase
@@ -941,6 +942,25 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
         self.assertIn(device, dg.members)
         expected = [str(device)]
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
+
+    def test_group_overloaded_filter_form_field(self):
+        """FilterForm fields can overload how they pass in the values."""
+
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+
+        a_tenant = Tenant.objects.first()
+
+        this_dg = DynamicGroup(
+            name="Prefix Group",
+            slug="prefix-dg",
+            description="A group of prefixes with a specific Tenant name.",
+            filter={},
+            content_type=prefix_ct,
+        )
+        this_dg.validated_save()
+
+        this_dg.set_filter({"example_plugin_prefix_tenant_name": [a_tenant]})
+        this_dg.validated_save()
 
     def test_member_caching_output(self):
         group = self.first_child
