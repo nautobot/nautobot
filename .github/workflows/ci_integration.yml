@@ -284,8 +284,8 @@ jobs:
     name: "Build Container Images (GHCR Only)"
     runs-on: "ubuntu-22.04"
     if: |
-      github.event_name == "push" &&
-      (github.ref == "refs/heads/develop" || github.ref == "refs/heads/next")
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')
     needs:
       - "integration-test"
     steps:
