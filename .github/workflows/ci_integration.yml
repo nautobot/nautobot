@@ -324,7 +324,7 @@ jobs:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
           password: "${{ secrets.GITHUB_TOKEN }}"
-      - name: "Build `final` Max"
+      - name: "Build `final` with max Python version"
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
@@ -333,21 +333,21 @@ jobs:
           push: false
           python-version: "${{ steps.config.outputs.max-python-version }}"
           target: "final"
-      - name: "Build `final-dev` Min"
-        uses: "./.github/actions/build-nautobot-image"
-        with:
-          branch: "${{ steps.config.outputs.branch }}"
-          image: "ghcr.io/nautobot/nautobot-dev"
-          latest: true
-          push: true
-          python-version: "${{ steps.config.outputs.min-python-version }}"
-          target: "final-dev"
-      - name: "Build `final-dev` Max"
+      - name: "Build `final-dev` with min Python version"
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot-dev"
           latest: false
+          push: true
+          python-version: "${{ steps.config.outputs.min-python-version }}"
+          target: "final-dev"
+      - name: "Build `final-dev` with max Python version"
+        uses: "./.github/actions/build-nautobot-image"
+        with:
+          branch: "${{ steps.config.outputs.branch }}"
+          image: "ghcr.io/nautobot/nautobot-dev"
+          latest: true
           push: true
           python-version: "${{ steps.config.outputs.max-python-version }}"
           target: "final-dev"

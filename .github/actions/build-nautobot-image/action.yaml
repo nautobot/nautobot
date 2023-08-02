@@ -9,7 +9,7 @@ inputs:
     description: "Produced Image Name"
     required: true
   latest:
-    description: "Tag As Latest"
+    description: "Whether To Tag As Latest"
     required: true
   push:
     description: "Whether To Push"
