@@ -76,6 +76,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -172,7 +173,6 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         regions = Region.objects.all()[:3]
         sites = Site.objects.all()[:3]
 
@@ -477,7 +477,6 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         content_types = ContentType.objects.filter(model__in=["site", "rack", "device"])
 
         ExportTemplate.objects.create(
@@ -612,95 +611,7 @@ class GraphQLTestCase(FilterTestCases.NameSlugFilterTestCase):
             GraphQLQuery(
                 name="graphql-query-3",
                 slug="graphql-query-3",
-                query="""
-query ($device: String!) {
-  devices(name: $device) {
-    config_context
-    name
-    position
-    serial
-    primary_ip4 {
-      id
-      primary_ip4_for {
-        id
-        name
-      }
-    }
-    tenant {
-      name
-    }
-    tags {
-      name
-      slug
-    }
-    device_role {
-      name
-    }
-    platform {
-      name
-      slug
-      manufacturer {
-        name
-      }
-      napalm_driver
-    }
-    site {
-      name
-      slug
-      vlans {
-        id
-        name
-        vid
-      }
-      vlan_groups {
-        id
-      }
-    }
-    interfaces {
-      description
-      mac_address
-      enabled
-      name
-      ip_addresses {
-        address
-        tags {
-          id
-        }
-      }
-      connected_circuit_termination {
-        circuit {
-          cid
-          commit_rate
-          provider {
-            name
-          }
-        }
-      }
-      tagged_vlans {
-        id
-      }
-      untagged_vlan {
-        id
-      }
-      cable {
-        termination_a_type
-        status {
-          name
-        }
-        color
-      }
-      tagged_vlans {
-        site {
-          name
-        }
-        id
-      }
-      tags {
-        id
-      }
-    }
-  }
-}""",
+                query=BIG_GRAPHQL_DEVICE_QUERY,
             ),
         )
 
@@ -719,7 +630,6 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         site_ct = ContentType.objects.get(app_label="dcim", model="site")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
@@ -1659,6 +1569,8 @@ class StatusTestCase(FilterTestCases.NameSlugFilterTestCase):
 
     def test_search(self):
         params = {"q": "active"}
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         q = Q(id__iexact="active") | Q(name__icontains="active") | Q(slug__icontains="active")
         q |= Q(content_types__model__icontains="active")
         self.assertQuerysetEqualAndNotEmpty(

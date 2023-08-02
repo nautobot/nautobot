@@ -203,7 +203,11 @@ class TestPrefix(TestCase):
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.2.1/24"), vrf=vrfs[1]),
             IPAddress.objects.create(address=netaddr.IPNetwork("10.0.3.1/24"), vrf=vrfs[2]),
         )
+        # Eliminate randomly generated IPs that can be contained in the child_ips and would not be accounted for in the assertSetEqual below.
         child_ip_pks = {p.pk for p in parent_prefix.get_child_ips()}
+        ip_pks = {ip.pk for ip in ips}
+        # Intersection of the two lists
+        child_ip_pks = set(child_ip_pks) & set(ip_pks)
 
         # Global container should return all children
         self.assertSetEqual(child_ip_pks, {ips[0].pk, ips[1].pk, ips[2].pk, ips[3].pk})
@@ -228,7 +232,6 @@ class TestPrefix(TestCase):
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
     def test_get_available_prefixes(self):
-
         prefixes = Prefix.objects.bulk_create(
             (
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
@@ -250,7 +253,6 @@ class TestPrefix(TestCase):
         self.assertEqual(available_prefixes, missing_prefixes)
 
     def test_get_available_ips(self):
-
         parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/28"))
         IPAddress.objects.bulk_create(
             (
@@ -279,7 +281,6 @@ class TestPrefix(TestCase):
         self.assertEqual(available_ips, missing_ips)
 
     def test_get_first_available_prefix(self):
-
         prefixes = Prefix.objects.bulk_create(
             (
                 Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
@@ -294,7 +295,6 @@ class TestPrefix(TestCase):
         self.assertEqual(prefixes[0].get_first_available_prefix(), netaddr.IPNetwork("10.0.4.0/22"))
 
     def test_get_first_available_ip(self):
-
         parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"))
         IPAddress.objects.bulk_create(
             (
@@ -309,7 +309,6 @@ class TestPrefix(TestCase):
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.5/24")
 
     def test_get_utilization(self):
-
         # Container Prefix
         prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), status=Prefix.STATUS_CONTAINER)
         Prefix.objects.bulk_create(
@@ -534,7 +533,6 @@ class TestVLANGroup(TestCase):
         self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
 
     def test_get_next_available_vid(self):
-
         vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
         VLAN.objects.bulk_create(
             (

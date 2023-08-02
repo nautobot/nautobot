@@ -34,6 +34,8 @@
                                     <a href="{{ value }}">{{ value|truncatechars:70 }}</a>
                                 {% elif field.type == 'multi-select' and value %}
                                     {{ value|join:", " }}
+                                {% elif field.type == 'markdown' and value %}
+                                    {{ value|render_markdown }}
                                 {% elif field.type == 'json' and value is not None %}
                                     <p>
                                         <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"

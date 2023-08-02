@@ -1,0 +1,64 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_buttons %}
+{% if perms.dcim.change_interfaceredundancygroup %}
+
+<div class="btn-group">
+    <a href="{% url 'dcim:interfaceredundancygroupassociation_add' %}?interface_redundancy_group={{ object.pk }}&return_url={% url 'dcim:interfaceredundancygroup' pk=object.pk %}"
+        class="btn btn-primary">
+        <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
+        Add Interface
+    </a>
+</div>
+
+{% endif %}
+{% endblock extra_buttons %}
+
+
+{% block content_left_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Interface Redundancy Group</strong>
+    </div>
+    <table class="table table-hover panel-body attr-table">
+        <tr>
+            <td>Status</td>
+            <td>
+                <span class="label" style="color: {{ object.status.color|fgcolor }}; 
+                    background-color: #{{ object.status.color }}">{{ object.get_status_display }}
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td>Description</td>
+            <td>{{ object.description | placeholder }}</td>
+        </tr>
+        <tr>
+            <td>Virtual IP</td>
+            <td>{{ object.virtual_ip | hyperlinked_object }}</td>
+        </tr>
+        <tr>
+            <td>Redundancy Protocol</td>
+            <td>{{ object.protocol | upper | placeholder }}</td>
+        </tr>
+        <tr>
+            <td>Protocol Group ID</td>
+            <td>{{ object.protocol_group_id | placeholder }}</td>
+        </tr>
+        <tr>
+            <td>Secrets Group</td>
+            <td>{{ object.secrets_group|hyperlinked_object }}</td>
+        </tr>
+    </table>
+</div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Interfaces</strong>
+    </div>
+    {% include 'responsive_table.html' with table=interface_table %}
+</div>
+{% endblock content_full_width_page %}

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0019_joblogentry__meta_options__related_name"),
     ]

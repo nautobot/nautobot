@@ -61,6 +61,10 @@ router.register(
 # Cables
 router.register("cables", views.CableViewSet)
 
+# Interface Redundancy Group
+router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupViewSet)
+router.register("interface-redundancy-group-associations", views.InterfaceRedundancyGroupAssociationViewSet)
+
 # Virtual chassis
 router.register("virtual-chassis", views.VirtualChassisViewSet)
 

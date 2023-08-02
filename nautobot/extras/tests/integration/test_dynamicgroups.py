@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from selenium.webdriver.common.keys import Keys
 
 from nautobot.dcim.models import Device
 from nautobot.extras.models import DynamicGroup
@@ -61,8 +62,9 @@ class DynamicGroupTestCase(SeleniumTestCase):
         status_input.click()  # Force focus on the input field to bring it on-screen
 
         # Fill in "Status: Active".
-        for _ in status_input.type("act\n", slowly=True):
+        for _ in status_input.type("act", slowly=True):
             pass
+        status_input.type(Keys.ENTER)
 
         # Click that "Update" button
         self.browser.find_by_text("Update").click()

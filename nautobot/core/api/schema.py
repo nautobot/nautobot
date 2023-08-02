@@ -62,7 +62,7 @@ class NautobotAutoSchema(AutoSchema):
     def get_operation(self, *args, **kwargs):
         operation = super().get_operation(*args, **kwargs)
         # drf-spectacular never generates a requestBody for DELETE operations, but our bulk-delete operations need one
-        if "requestBody" not in operation and self.is_bulk_action and self.method == "DELETE":
+        if operation is not None and "requestBody" not in operation and self.is_bulk_action and self.method == "DELETE":
             # based on drf-spectacular's `_get_request_body()`, `_get_request_for_media_type()`,
             # `_unwrap_list_serializer()`, and `_get_request_for_media_type()` methods
             request_serializer = self.get_request_serializer()

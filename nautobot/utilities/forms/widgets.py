@@ -156,7 +156,6 @@ class APISelect(SelectWithDisabled):
         self.attrs[key] = json.dumps(values, ensure_ascii=False)
 
     def get_context(self, name, value, attrs):
-
         # This adds null options to DynamicModelMultipleChoiceField selected choices
         # example <select ..>
         #           <option .. selected value="null">None</option>

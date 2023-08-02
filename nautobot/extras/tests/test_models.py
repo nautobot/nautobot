@@ -111,7 +111,6 @@ class ConfigContextTest(TestCase):
     """
 
     def setUp(self):
-
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
@@ -150,7 +149,6 @@ class ConfigContextTest(TestCase):
         )
 
     def test_higher_weight_wins(self):
-
         ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
         ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
 
@@ -158,7 +156,6 @@ class ConfigContextTest(TestCase):
         self.assertEqual(self.device.get_config_context(), expected_data)
 
     def test_name_ordering_after_weight(self):
-
         ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
         ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
 
@@ -200,7 +197,6 @@ class ConfigContextTest(TestCase):
         self.assertEqual(self.device.get_config_context(), annotated_queryset[0].get_config_context())
 
     def test_annotation_same_as_get_for_object_device_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
         site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
@@ -238,7 +234,6 @@ class ConfigContextTest(TestCase):
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
         site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
@@ -1432,7 +1427,6 @@ class JobLogEntryTest(TestCase):
         )
 
     def test_log_entry_creation(self):
-
         log = JobLogEntry(
             log_level=LogLevelChoices.LOG_SUCCESS,
             job_result=self.job_result,

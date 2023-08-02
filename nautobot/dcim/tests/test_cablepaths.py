@@ -38,7 +38,6 @@ class CablePathTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # Create a single device that will hold all components
         cls.site = Site.objects.first()
 

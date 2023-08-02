@@ -95,6 +95,14 @@ layout = (
                 description="Represents a set of devices which operate in a failover/HA group",
                 weight=500,
             ),
+            HomePageItem(
+                name="Interface Redundancy Groups",
+                link="dcim:interfaceredundancygroup_list",
+                model=models.InterfaceRedundancyGroup,
+                permissions=["dcim.view_interfaceredundancygroup"],
+                description="Represents a set of interfaces which operate in a failover/HA group",
+                weight=550,
+            ),
             HomePageGroup(
                 name="Connections",
                 weight=600,

@@ -49,3 +49,6 @@ TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
 
 # Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
 METRICS_ENABLED = True
+
+DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = 0
+CONTENT_TYPE_CACHE_TIMEOUT = 0

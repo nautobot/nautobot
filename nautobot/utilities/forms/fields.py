@@ -58,7 +58,6 @@ class CSVDataField(forms.CharField):
     widget = forms.Textarea
 
     def __init__(self, from_form, *args, **kwargs):
-
         form = from_form()
         self.model = form.Meta.model
         self.fields = form.fields
@@ -104,7 +103,6 @@ class CSVFileField(forms.FileField):
     """
 
     def __init__(self, from_form, *args, **kwargs):
-
         form = from_form()
         self.model = form.Meta.model
         self.fields = form.fields
@@ -453,6 +451,8 @@ class TagFilterField(forms.MultipleChoiceField):
 
         # Choices are fetched each time the form is initialized
         super().__init__(label="Tags", choices=get_choices, required=False, *args, **kwargs)
+
+    to_field_name = "slug"
 
 
 class DynamicModelChoiceMixin:

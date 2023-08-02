@@ -28,7 +28,6 @@ User = get_user_model()
 class WebhookTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
-
         site_ct = ContentType.objects.get_for_model(Site)
         MOCK_URL = "http://localhost/"
         MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
@@ -223,7 +222,6 @@ class WebhookTest(APITestCase):
         timestamp = str(timezone.now())
 
         def mock_send(_, request, **kwargs):
-
             # Validate the outgoing request body
             body = json.loads(request.body)
 

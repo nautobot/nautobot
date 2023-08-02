@@ -13,7 +13,6 @@ class Command(BaseCommand):
     """
 
     def run_from_argv(self, argv):
-
         # The "celery" command uses Click, which directly relies upon
         # `sys.argv`. So we must explicitly remove "celery" from `sys.argv` so
         # that we can directly invoke Click ourselves, letting it work with the
