@@ -57,6 +57,10 @@ When `HIDE_RESTRICTED_UI` is enabled, unauthenticated users are no longer able t
 
 The maximum length of the `Device.asset_tag` field has been increased from 50 to 100 characters.
 
+#### Changed Default Python Version for Docker Images ([#4029](https://github.com/nautobot/nautobot/issues/4029))
+
+The default Python version for Nautobot Docker images has been changed from 3.7 to 3.11.
+
 ### Removed
 
 #### Removed Python 3.7 Support ([#3561](https://github.com/nautobot/nautobot/issues/3561))
@@ -87,6 +91,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#3646](https://github.com/nautobot/nautobot/issues/3646) - Redirect unauthenticated users on all views to login page if `HIDE_RESTRICTED_UI` is True.
 - [#3646](https://github.com/nautobot/nautobot/issues/3646) - Only time is shown on the footer if a user is unauthenticated and `HIDE_RESTRICTED_UI` is True.
 - [#3693](https://github.com/nautobot/nautobot/issues/3693) - Increased Device model's `asset_tag` size limit to 100.
+- [#4029](https://github.com/nautobot/nautobot/issues/4029) - Changed default Python version for Docker images from 3.7 to 3.11.
 
 ### Dependencies
 

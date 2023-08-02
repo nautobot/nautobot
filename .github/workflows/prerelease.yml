@@ -85,9 +85,8 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=semver,pattern={{version}}+py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value={{version}}-py${{ matrix.python-version }}r
+            type=match,pattern=v(.*),group=1,suffix=-py${{ matrix.python-version }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build"
@@ -104,7 +103,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_PARALLEL=false
+            POETRY_PARALLEL=true
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
         uses: "docker/metadata-action@v3"
@@ -113,9 +112,8 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=semver,pattern={{version}}+py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value={{version}}-py${{ matrix.python-version }}r
+            type=match,pattern=v(.*),group=1,suffix=-py${{ matrix.python-version }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build Dev Containers"
@@ -132,7 +130,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_PARALLEL=false
+            POETRY_PARALLEL=true
 
   slack-notify:
     needs:
