@@ -236,10 +236,10 @@ class CustomFieldModel(models.Model):
         for cf in custom_fields.values():
             # 2.0 TODO: #824 replace cf.name with cf.slug
             if cf.name not in self._custom_field_data:
-                if cf.required:
-                    raise ValidationError(f"Missing required custom field '{cf.name}'.")
-                else:
+                if cf.default is not None:
                     self._custom_field_data[cf.name] = cf.default
+                elif cf.required:
+                    raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):
