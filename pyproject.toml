@@ -72,7 +72,7 @@ django-prometheus = "~2.3.1"
 django-redis = "~5.3.0"
 # RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
 # NOTE: django-rq 2.8 is available but since we don't use this any more ourselves we don't care about updating it.
-django-rq = "~2.5.1"
+django-rq = "~2.8.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.13.2", optional = true}
 # Advanced HTML tables
@@ -124,7 +124,7 @@ packaging = "~23.1"
 # Image processing library
 Pillow = "~10.0.0"
 # Custom prometheus metrics
-prometheus-client = "~0.17.1"
+prometheus-client = ">=0.14.1,<0.18"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.6"
