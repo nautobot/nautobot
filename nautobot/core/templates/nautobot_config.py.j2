@@ -39,6 +39,9 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
 
+# Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
+# CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
+
 # Celery broker URL used to tell workers where queues are located
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
@@ -379,6 +382,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     'http': 'http://10.10.1.10:3128',
 #     'https': 'http://10.10.1.10:1080',
 # }
+
+# Send anonymized installation metrics when `nautobot-server post_upgrade` command is run.
+#
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "{{ installation_metrics_enabled | default(True) }}"))
 
 # Directory where Jobs can be discovered.
 #

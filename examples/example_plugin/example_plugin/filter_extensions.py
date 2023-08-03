@@ -1,6 +1,8 @@
 from django import forms
 
 from nautobot.apps.filters import FilterExtension, MultiValueCharFilter
+from nautobot.tenancy.models import Tenant
+from nautobot.utilities.forms import DynamicModelMultipleChoiceField
 
 
 def suffix_search(queryset, name, value):
@@ -36,4 +38,23 @@ class DeviceFilterExtension(FilterExtension):
     model = "dcim.device"
 
 
-filter_extensions = [TenantFilterExtension, DeviceFilterExtension]
+class PrefixFilterExtension(FilterExtension):
+    """Created to test filter extensions and Dynamic Group support."""
+
+    model = "ipam.prefix"
+
+    filterset_fields = {
+        "example_plugin_prefix_tenant_name": MultiValueCharFilter(field_name="tenant__name", label="Tenant Name"),
+    }
+
+    filterform_fields = {
+        "example_plugin_prefix_tenant_name": DynamicModelMultipleChoiceField(
+            queryset=Tenant.objects.all(),
+            to_field_name="name",
+            required=False,
+            label="Tenant Name",
+        )
+    }
+
+
+filter_extensions = [TenantFilterExtension, DeviceFilterExtension, PrefixFilterExtension]

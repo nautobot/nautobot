@@ -91,7 +91,6 @@ class ObjectPermissionRequiredMixin(AccessMixin):
 
         # Check that the user has been granted the required permission(s).
         if user.has_perms((permission_required, *self.additional_permissions)):
-
             # Update the view's QuerySet to filter only the permitted objects
             action = resolve_permission(permission_required)[1]
             self.queryset = self.queryset.restrict(user, action)
@@ -101,7 +100,6 @@ class ObjectPermissionRequiredMixin(AccessMixin):
         return False
 
     def dispatch(self, request, *args, **kwargs):
-
         if not hasattr(self, "queryset"):
             raise ImproperlyConfigured(
                 (
@@ -124,7 +122,6 @@ class GetReturnURLMixin:
     default_return_url = None
 
     def get_return_url(self, request, obj=None):
-
         # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
         # considered safe.
         query_param = request.GET.get("return_url") or request.POST.get("return_url")

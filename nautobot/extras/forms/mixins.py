@@ -62,7 +62,6 @@ __all__ = (
 
 class CustomFieldModelFilterFormMixin(forms.Form):
     def __init__(self, *args, **kwargs):
-
         self.obj_type = ContentType.objects.get_for_model(self.model)
 
         super().__init__(*args, **kwargs)
@@ -85,7 +84,6 @@ class CustomFieldModelFilterFormMixin(forms.Form):
 
 class CustomFieldModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
         self.custom_fields = []
 
@@ -111,7 +109,6 @@ class CustomFieldModelFormMixin(forms.ModelForm):
             self.custom_fields.append(field_name)
 
     def clean(self):
-
         # Save custom field data on instance
         for field_name in self.custom_fields:
             # 2.0 TODO: #824 will let us just do:
@@ -348,7 +345,6 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                         logger.debug("Deleted %s RelationshipAssociation(s)", source_count + destination_count)
 
     def clean(self):
-
         # Get any initial required relationship objects errors (i.e. non-existent required objects)
         required_objects_errors = self.model.required_related_objects_errors(output_for="ui")
         already_invalidated_slugs = []
@@ -375,7 +371,6 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         # Get difference of add/remove objects for each required relationship:
         required_relationships_to_check = []
         for required_relationship in required_relationships:
-
             required_field = f"cr_{required_relationship['slug']}__{required_relationship['required_side']}"
 
             add_list = []
@@ -436,7 +431,6 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                         relationship_data_errors.setdefault(requires_message, []).append(str(editing))
 
         for relationship_message, object_list in relationship_data_errors.items():
-
             if len(object_list) > 5:
                 self.add_error(None, f"{len(object_list)} {relationship_message}")
             else:
@@ -447,7 +441,6 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
 
 class RelationshipModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-
         self.obj_type = ContentType.objects.get_for_model(self._meta.model)
         self.relationships = []
         super().__init__(*args, **kwargs)
@@ -638,7 +631,6 @@ class RelationshipModelFormMixin(forms.ModelForm):
                 association.save()
 
     def save(self, commit=True):
-
         obj = super().save(commit)
         if commit:
             self._save_relationships()

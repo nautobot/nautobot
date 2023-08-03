@@ -25,7 +25,6 @@ class UserTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         groups = (
             Group.objects.create(name="Group 1"),
             Group.objects.create(name="Group 2"),
@@ -120,7 +119,6 @@ class GroupTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         Group.objects.create(name="Group 1")
         Group.objects.create(name="Group 2")
         Group.objects.create(name="Group 3")
@@ -141,7 +139,6 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         groups = (
             Group.objects.create(name="Group 1"),
             Group.objects.create(name="Group 2"),
@@ -210,7 +207,6 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         users = (
             User(username="User1"),
             User(username="User2"),

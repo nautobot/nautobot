@@ -117,7 +117,6 @@ class CustomFieldTest(TestCase):
         obj_type = ContentType.objects.get_for_model(Site)
 
         for data in DATA:
-
             # Create a custom field
             # 2.0 TODO: #824 slug rather than name
             cf = CustomField(type=data["field_type"], name="my_field", required=False)
@@ -749,7 +748,6 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertEqual(len(response.data), len(data))
 
         for i, _obj in enumerate(data):
-
             # Validate response data
             response_cf = response.data[i]["custom_fields"]
             self.assertEqual(response_cf["text_field"], self.cf_text.default)
@@ -817,7 +815,6 @@ class CustomFieldDataAPITest(APITestCase):
         self.assertEqual(len(response.data), len(data))
 
         for i, _obj in enumerate(data):
-
             # Validate response data
             response_cf = response.data[i]["custom_fields"]
             self.assertEqual(response_cf["text_field"], custom_field_data["text_field"])
@@ -1086,7 +1083,6 @@ class CustomFieldImportTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         custom_fields = (
             CustomField(name="text", type=CustomFieldTypeChoices.TYPE_TEXT),
             CustomField(name="integer", type=CustomFieldTypeChoices.TYPE_INTEGER),

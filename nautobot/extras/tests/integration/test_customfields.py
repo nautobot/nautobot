@@ -59,8 +59,9 @@ class CustomFieldTestCase(SeleniumTestCase):
         # Find the "content_types" dynamic multi-select and type into it.
         # See: https://splinter.readthedocs.io/en/latest/elements-in-the-page.html#interacting-with-forms
         ct = self.browser.find_by_css(".select2-search__field")
-        for _ in ct.first.type("dev\n", slowly=True):
+        for _ in ct.first.type("dev", slowly=True):
             pass
+        ct.first.type(Keys.ENTER)
 
         # Enumerate and set the choices (if any)
         for idx, choice in enumerate(choices):

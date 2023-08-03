@@ -1,6 +1,10 @@
 import uuid
 
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.db import models
+from django.utils.functional import classproperty
 
 from nautobot.utilities.querysets import RestrictedQuerySet
 
@@ -33,6 +37,30 @@ class BaseModel(models.Model):
         True if the record exists in the database, False if it does not.
         """
         return not self._state.adding
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def _content_type(cls):  # pylint: disable=no-self-argument
+        """
+        Return the ContentType of the object, never cached.
+        """
+        return ContentType.objects.get_for_model(cls)
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def _content_type_cache_key(cls):  # pylint: disable=no-self-argument
+        """
+        Return the cache key for the ContentType of the object.
+
+        Necessary for use with _content_type_cached and management commands.
+        """
+        return f"{cls._meta.label_lower}._content_type"
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def _content_type_cached(cls):  # pylint: disable=no-self-argument
+        """
+        Return the ContentType of the object, cached.
+        """
+
+        return cache.get_or_set(cls._content_type_cache_key, cls._content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT)
 
     class Meta:
         abstract = True

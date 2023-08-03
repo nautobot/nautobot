@@ -1,0 +1,12 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Interface Redundancy Group Association</strong></div>
+    <div class="panel-body">
+        {% render_form form %}
+    </div>
+</div>
+{% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}

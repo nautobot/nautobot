@@ -42,7 +42,6 @@ class Command(BaseCommand):
         )
 
     def _generate_factory_data(self, seed, db_name):
-
         try:
             import factory.random
 

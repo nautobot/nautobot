@@ -29,7 +29,6 @@ class DeviceTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cls.site = Site.objects.first()
         cls.rack = Rack.objects.create(name="Rack 1", site=cls.site)
 

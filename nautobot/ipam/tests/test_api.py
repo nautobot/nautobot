@@ -29,7 +29,6 @@ from nautobot.utilities.testing.api import APITransactionTestCase
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("ipam-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -124,7 +123,6 @@ class AggregateTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         rir = RIR.objects.filter(is_private=False).first()
 
         cls.create_data = [
@@ -532,7 +530,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         vlan_groups = VLANGroup.objects.filter(site__isnull=False, location__isnull=False)[:2]
 
         # FIXME(jathan): The writable serializer for `status` takes the

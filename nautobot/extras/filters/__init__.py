@@ -835,7 +835,6 @@ class RelationshipFilterSet(BaseFilterSet):
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
-
     relationship = django_filters.ModelMultipleChoiceFilter(
         field_name="relationship__slug",
         queryset=Relationship.objects.all(),

@@ -452,7 +452,6 @@ class Rack(PrimaryModel, StatusModel):
 
         # Add devices to rack units list
         if self.present_in_database:
-
             # Retrieve all devices installed within the rack
             queryset = (
                 Device.objects.select_related("device_type", "device_type__manufacturer", "device_role")
@@ -667,7 +666,6 @@ class RackReservation(PrimaryModel):
         super().clean()
 
         if hasattr(self, "rack") and self.units:
-
             # Validate that all specified units exist in the Rack.
             invalid_units = [u for u in self.units if u not in self.rack.units]
             if invalid_units:

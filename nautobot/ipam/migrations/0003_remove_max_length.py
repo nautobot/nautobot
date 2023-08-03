@@ -5,7 +5,6 @@ import nautobot.ipam.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ipam", "0002_initial_part_2"),
     ]

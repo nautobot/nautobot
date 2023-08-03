@@ -22,12 +22,14 @@ from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.forms import (
+    CommentField,
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
     JSONField,
     LaxURLField,
     NullableDateField,
+    SmallTextarea,
     StaticSelect2,
     StaticSelect2Multiple,
     add_blank_choice,
@@ -548,9 +550,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     )
                 ]
 
+        # Markdown
+        elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
+            field = CommentField(widget=SmallTextarea, label=None)
+
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
-
             if simple_json_filter:
                 field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
             else:
@@ -597,10 +602,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         Validate a value according to the field's type validation rules.
         """
         if value not in [None, "", []]:
-
             # Validate text field
             if self.type in (CustomFieldTypeChoices.TYPE_TEXT, CustomFieldTypeChoices.TYPE_URL):
-
                 if not isinstance(value, str):
                     raise ValidationError("Value must be a string")
 

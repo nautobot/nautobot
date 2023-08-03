@@ -12,7 +12,6 @@ class NaturalOrderByManagerTest(TestCase):
         return
 
     def evaluate_ordering(self, names):
-
         # Create the Sites
         Site.objects.bulk_create(Site(name=name, slug=name.lower()) for name in names)
 
@@ -26,7 +25,6 @@ class NaturalOrderByManagerTest(TestCase):
         )
 
     def test_leading_digits(self):
-
         self.evaluate_ordering(
             [
                 "1Alpha",
@@ -51,7 +49,6 @@ class NaturalOrderByManagerTest(TestCase):
         )
 
     def test_trailing_digits(self):
-
         self.evaluate_ordering(
             [
                 "Alpha1",
@@ -76,7 +73,6 @@ class NaturalOrderByManagerTest(TestCase):
         )
 
     def test_leading_and_trailing_digits(self):
-
         self.evaluate_ordering(
             [
                 "1Alpha1",
