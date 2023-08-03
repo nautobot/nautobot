@@ -11,7 +11,7 @@ ARG PYTHON_VER
 #    - installs Node module dependencies (including dev dependencies) to /opt/nautobot/ui/node_modules/
 #    - installs Nautobot itself (and example apps) from /source/ in editable mode (to be overwritten by a volume mount)
 #    - pre-renders the 2.0 UI
-#    - runs Nautobot dev server as "nautobot" user using the "development/nautobot_config.py" file.
+#    - runs Nautobot dev server as "root" user using the "development/nautobot_config.py" file.
 # 2. "final-dev"
 #    - base image for Nautobot apps development
 #    - installs Python package dependencies (including dev dependencies) to a virtualenv in /opt/nautobot/
@@ -194,6 +194,8 @@ RUN mkdocs build --no-directory-urls && \
 ################################ Stage: dev (development environment for Nautobot core)
 
 FROM python-dev-dependencies AS dev
+
+USER root
 
 COPY --chown=nautobot:nautobot nautobot/ui /opt/nautobot/ui
 COPY --from=node-dev-dependencies --chown=nautobot:nautobot /opt/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
