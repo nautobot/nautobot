@@ -72,6 +72,25 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.0 (2023-08-03)
+
+### Added
+
+- [#4169](https://github.com/nautobot/nautobot/issues/4169) - Added environment variable `NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE` to set the `SESSION_EXPIRE_AT_BROWSER_CLOSE` Django setting which expires session cookies when the user closes their browser.
+- [#4184](https://github.com/nautobot/nautobot/issues/4184) - Added documentation detailing rack power utilization calculation.
+
+### Dependencies
+
+- [#4208](https://github.com/nautobot/nautobot/issues/4208) - Updated django-rq to 2.8.1.
+- [#4209](https://github.com/nautobot/nautobot/issues/4209) - Relaxed constraint on prometheus-client minimum version to `0.14.1`.
+
+### Fixed
+
+- [#4175](https://github.com/nautobot/nautobot/issues/4175) - Changed custom field clean to not populate null default values.
+- [#4204](https://github.com/nautobot/nautobot/issues/4204) - Fixed failing Apps CI by downgrading `jsonschema<4.18`.
+- [#4205](https://github.com/nautobot/nautobot/issues/4205) - Fixed failing Apps CI due to missing dependency of `toml`.
+
+
 ## v1.6.0-rc.1 (2023-08-02)
 
 ### Added
