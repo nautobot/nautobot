@@ -5,9 +5,7 @@ def migrate_ipaddress_to_m2m(apps, schema_editor):
     IPAddress = apps.get_model("ipam", "IPAddress")
     IPAddressToInterface = apps.get_model("ipam", "IPAddressToInterface")
     Interface = apps.get_model("dcim", "Interface")
-    Device = apps.get_model("dcim", "Device")
     VMInterface = apps.get_model("virtualization", "VMInterface")
-    VirtualMachine = apps.get_model("virtualization", "VirtualMachine")
 
     for ip_address in IPAddress.objects.filter(assigned_object_id__isnull=False):
         related_ct = ip_address.assigned_object_type
