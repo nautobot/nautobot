@@ -333,7 +333,7 @@ nav:
         - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
         - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
       - Migration Guides:
-        - "development/apps/migration/from-v1.md"
+        - From Nautobot v1: "development/apps/migration/from-v1.md"
         - Region and Site to Location: "development/apps/migration/region-and-site-to-location.md"
       - Advanced:
         - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
