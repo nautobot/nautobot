@@ -1,1 +1,1 @@
-Fixed failing Apps CI for missing dependency of `toml`
+Fixed failing Apps CI due to missing dependency of `toml`.
