@@ -1,29 +1,13 @@
-# Migration Guide to Upgrade an App from V1 to V2
+# Code Updates
 
-## Dependency Updates
-
-### Nautobot Version
-
-Change your Nautobot to the latest/v2.0 release.
-
-### Python Version
-
-Python 3.7 support is dropped for Nautobot v2.0 and Python 3.8 is the minimum version for Nautobot and its apps.
-
-### pylint-nautobot
-
-pylint-nautobot is now a required dev-dependency. Make sure you add `pylint-nautobot = "*"` under `tool.poetry.dev-dependencies` section in your `pyproject.toml`.
-
-## Code Updates
-
-### Update Code Import Locations
+## Update Code Import Locations
 
 Most changes in code location arise from the merging of the `nautobot.utilities` module into the `nautobot.core` module.
 
 ??? info "Full table of code location changes"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-location-changes.yaml}
 
-### Replace PluginMenuItem with NavMenuItem
+## Replace PluginMenuItem with NavMenuItem
 
 In your app's `navigation.py` file. If you are still using `PluginMenuItem` from `nautobot.extras.plugin`, you should replace those code with `NavMenuGroup`, `NavMenuItem`, and `NavMenuTab` from `nautobot.apps.ui`.
 
@@ -89,11 +73,11 @@ menu_items = (
 
 ```
 
-### Replace DjangoFilterBackend with NautobotFilterBackend
+## Replace DjangoFilterBackend with NautobotFilterBackend
 
 If your Custom `FilterBackend` class is derived from `DjangoFilterBackend`, you should replace `DjangoFilterBackend` with `NautobotFilterBackend`.
 
-### Revamp Rest API Serializers
+## Revamp Rest API Serializers
 
 All `NestedSerializers` classes are removed from Nautobot v2.0. If any `NestedSerializers` exist for your models, you should just remove their class definitions and references. In addition, the `?brief=` API query parameter is replaced by `?depth=<0-10>`. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are. Checkout our [API documentation](../../../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter) for this change.
 
@@ -126,13 +110,6 @@ class ExampleModelSerializer(NautobotModelSerializer):
         fields = ["url", "example_attribute_1", "example_attribute_2", "example_attribute_3"]
 ```
 
-### Revamp CSV Import and Export
+## Revamp CSV Import and Export
 
 CSV Import for models are now done automatically via the Rest API. As a result of this change, `CSVForms` classes are no longer needed and should be deleted. In addition, `csv_headers` and `to_csv` attributes should be removed from your model definition. Check out our [release notes](../../../release-notes/version-2.0.md#revamped-csv-import-and-export-2569-3715) for this specific change.
-
-## Model Updates
-
-[Core](core.md)
-[DCIM](dcim.md)
-[Extras](extras.md)
-[IPAM](ipam.md)

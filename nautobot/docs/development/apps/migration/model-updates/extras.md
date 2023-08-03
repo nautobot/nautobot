@@ -2,7 +2,7 @@
 
 ## Replace Role Related Models with Generic Role Model
 
-1. Narrowly defined role models including `dcim.DeviceRole`, `dcim.RackRole` and `ipam.Role` are replaced by a generic `extras.Role` model. 
+1. Narrowly defined role models including `dcim.DeviceRole`, `dcim.RackRole` and `ipam.Role` are replaced by a generic `extras.Role` model.
 2. If any of your models are using the replaced role models, it is required for you to remove the `role` field from your model and add either `nautobot.extras.models.roles.RoleModelMixin` or `nautobot.extras.models.roles.RoleRequiredRoleModelMixin` to your model class definition. `RoleModelMixin` adds a nullable `role` field whereas `RoleRequiredRoleModelMixin` adds a required `role` field.
 3. Please go [here](../../core/role-internals.md) to check out how the `extras.Role` model works in v2.0.
 
@@ -24,6 +24,6 @@ See details about the fundamental changes to `Job` Model [here](../../../user-gu
 
 ## Update CustomField, ComputedField, and Relationship
 
-1. In accordance with the removal of `slug` field in Nautobot v2.0, `CustomField`, `ComputeField` and `Relationship`'s `slug` field is replaced by the `key` field which contains a GraphQL-safe string that is used exclusively in the API and GraphQL. 
+1. In accordance with the removal of `slug` field in Nautobot v2.0, `CustomField`, `ComputeField` and `Relationship`'s `slug` field is replaced by the `key` field which contains a GraphQL-safe string that is used exclusively in the API and GraphQL.
 2. Their `label` fields are now used for display purposes only in the UI.
 3. Please go to their respective documentations for more information [CustomField](../../../user-guide/feature-guides/custom-fields.md), [ComputedField](../../../user-guide/platform-functionality/computedfield.md), and [Relationship](../../../user-guide/feature-guides/relationships.md).
