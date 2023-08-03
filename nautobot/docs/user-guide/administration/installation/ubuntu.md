@@ -214,7 +214,7 @@ Example output:
 PONG
 ```
 
-### Install Node.js
+## Install Node.js
 
 Nautobot 2.0+ requires Node.js version 18 or higher to build the new UI. Node.js version 18 is only listed on package repositories for Debian 12 Bookworm and Ubuntu 22.10 Kinetic Kudu.
 
