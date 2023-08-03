@@ -13,7 +13,6 @@ def migrate_ipaddress_to_m2m(apps, schema_editor):
         related_ct = ip_address.assigned_object_type
         if related_ct.app_label == "dcim" and related_ct.model == "interface":
             related_obj = Interface.objects.get(id=ip_address.assigned_object_id)
-            Device.objects.get(id=related_obj.device_id)
             IPAddressToInterface.objects.create(
                 ip_address=ip_address,
                 interface=related_obj,
