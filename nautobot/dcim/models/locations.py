@@ -9,6 +9,7 @@ from timezone_field import TimeZoneField
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.fields import ASNField
 from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features, FeatureQuery
@@ -216,11 +217,18 @@ class Location(TreeModel, PrimaryModel):
         """
         Due to the recursive nature of Location's natural key, we need a custom implementation of this property.
 
-        This returns a set of natural key lookups based on the current maximum depth of the Location tree.
+        When LOCATION_NAME_AS_NATURAL_KEY is set in settings or Constance, we use just the `name` for simplicity,
+        even though it's not technically guaranteed to be globally unique.
+
+        Otherwise, this returns a set of natural key lookups based on the current maximum depth of the Location tree.
         For example if the tree is 2 layers deep, it will return ["name", "parent__name", "parent__parent__name"].
 
         Without this custom implementation, the generic `natural_key_field_lookups` would recurse infinitely.
         """
+        if get_settings_or_config("LOCATION_NAME_AS_NATURAL_KEY"):
+            # opt-in simplified "pseudo-natural-key"
+            return ["name"]
+
         lookups = []
         name = "name"
         for _ in range(cls.objects.max_tree_depth() + 1):
