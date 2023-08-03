@@ -12,7 +12,7 @@ Before you follow the guide, please make sure that these operations are complete
 
 1. Make sure your working Nautobot is on Version 1.5.x with baseline migrations all run.  
 2. Stop Nautobot Server.  
-3. Create a backup of your Nautobot database. (Check out the [Export Data Guide](../../../user-guide/administration/migration/migrating-from-postgresql.md#export-data-from-postgresql) for this operation)
+3. Create a [backup](../../../user-guide/administration/upgrading/database-backup.md) of your Nautobot database.
 4. Update installed version of Nautobot to 2.0.0.  
 5. Run `nautobot-server migrate dcim 0030_migrate_region_and_site_data_to_locations`. (This operation will ensure that `("dcim", "0030_migrate_region_and_site_data_to_locations")` is the latest migration applied to your Nautobot instance and that `("dcim", "0034_remove_region_and_site")` is **not** applied. **Failure to complete this step will result in data loss**)  
 
