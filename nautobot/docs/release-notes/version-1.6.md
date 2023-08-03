@@ -90,7 +90,6 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#4204](https://github.com/nautobot/nautobot/issues/4204) - Fixed failing Apps CI by downgrading `jsonschema<4.18`.
 - [#4205](https://github.com/nautobot/nautobot/issues/4205) - Fixed failing Apps CI due to missing dependency of `toml`.
 
-
 ## v1.6.0-rc.1 (2023-08-02)
 
 ### Added
