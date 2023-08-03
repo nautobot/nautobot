@@ -20,7 +20,6 @@ def migrate_ipaddress_to_m2m(apps, schema_editor):
             )
         elif related_ct.app_label == "virtualization" and related_ct.model == "vminterface":
             related_obj = VMInterface.objects.get(id=ip_address.assigned_object_id)
-            VirtualMachine.objects.get(id=related_obj.virtual_machine_id)
             IPAddressToInterface.objects.create(
                 ip_address=ip_address,
                 vm_interface=related_obj,
