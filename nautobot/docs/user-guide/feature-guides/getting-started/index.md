@@ -8,7 +8,7 @@ It is intended to assist the user with:
 * Understanding the prerequisites for adding a new Device
 * Creating the necessary prerequisite objects to add a new Device
 * Adding new Devices
-* Adding and understanding Regions
+* Adding and understanding Location Types and Locations
 * Adding and understanding Platforms
 * Adding and understanding Tenants and Tenant Groups
 * Adding Interfaces to a Device
