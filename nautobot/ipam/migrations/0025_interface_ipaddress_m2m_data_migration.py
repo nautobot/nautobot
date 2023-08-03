@@ -1,5 +1,4 @@
 from django.db import migrations
-import netaddr
 
 
 def migrate_ipaddress_to_m2m(apps, schema_editor):
@@ -14,15 +13,15 @@ def migrate_ipaddress_to_m2m(apps, schema_editor):
         related_ct = ip_address.assigned_object_type
         if related_ct.app_label == "dcim" and related_ct.model == "interface":
             related_obj = Interface.objects.get(id=ip_address.assigned_object_id)
-            parent = Device.objects.get(id=related_obj.device_id)
-            m2m = IPAddressToInterface.objects.create(
+            Device.objects.get(id=related_obj.device_id)
+            IPAddressToInterface.objects.create(
                 ip_address=ip_address,
                 interface=related_obj,
             )
         elif related_ct.app_label == "virtualization" and related_ct.model == "vminterface":
             related_obj = VMInterface.objects.get(id=ip_address.assigned_object_id)
-            parent = VirtualMachine.objects.get(id=related_obj.virtual_machine_id)
-            m2m = IPAddressToInterface.objects.create(
+            VirtualMachine.objects.get(id=related_obj.virtual_machine_id)
+            IPAddressToInterface.objects.create(
                 ip_address=ip_address,
                 vm_interface=related_obj,
             )
