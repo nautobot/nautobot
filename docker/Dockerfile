@@ -195,6 +195,7 @@ RUN mkdocs build --no-directory-urls && \
 
 FROM python-dev-dependencies AS dev
 
+# hadolint ignore=DL3002
 USER root
 
 COPY --chown=nautobot:nautobot nautobot/ui /opt/nautobot/ui
