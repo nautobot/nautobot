@@ -124,7 +124,7 @@ packaging = "~23.1"
 # Image processing library
 Pillow = "~10.0.0"
 # Custom prometheus metrics
-prometheus-client = "~0.17.1"
+prometheus-client = ">=0.14.1,<0.18"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.6"
