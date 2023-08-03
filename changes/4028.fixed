@@ -1,2 +1,3 @@
-Fixed CI integration workflow to produce 3.7 and 3.10 for develop and 3.8 and 3.11 for next.
+Fixed CI integration workflow to build 3.8 and 3.11 for next and develop.
+Fixed CI integration workflow to publish 'final-dev', and build only `final` images.
 Fixed CI integration workflow `set-output` warnings.
