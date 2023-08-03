@@ -103,7 +103,7 @@ graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
 Jinja2 = "~3.1.2"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = ">=4.7.0,<4.19.0"
+jsonschema = ">=4.7.0,<4.18.0"
 # Rendering of markdown files to HTML
 # NOTE: Markdown 3.4.x is available but mkdocs 1.4.3 isn't yet compatible with it.
 Markdown = "~3.3.7"
@@ -138,6 +138,8 @@ social-auth-core = {version = "~4.4.2", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.2.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
+# Requirement for tests in some apps, added back for 1.6 can be removed in 2.0
+toml = "^0.10.2"
 
 
 [tool.poetry.extras]
