@@ -34,7 +34,7 @@ The recommended database encoding settings have been revised to rely upon the de
 The collation encoding is used to inform MySQL how characters are sorted in the database. This is important when it comes to retrieving data that has special characters or special byte-encoding such as accents or ligatures, and also including emojis. In some cases, with the `utf8mb4_bin` encoding we were previously recommending, case-insensitive searching may return inconsistent or incorrect results.
 
 !!! danger
-    It is **strongly recommended** that you backup your database before executing this query and that you perform this in a non-production environment to identify any potential issues prior to updating your production environment.
+    It is **strongly recommended** that you [backup your database](database-backup.md) before executing this query and that you perform this in a non-production environment to identify any potential issues prior to updating your production environment.
 
 If you have an existing MySQL database, you may update your database to use the recommended encoding by using `nautobot-server dbshell` to launch a database shell and executing the following command:
 

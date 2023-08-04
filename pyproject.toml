@@ -82,7 +82,7 @@ djangorestframework = "~3.14.0"
 # Adds JSON schema support to API endpoints for rendering JSON schema forms.
 drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.26.3", extras = ["sidecar"]}
+drf-spectacular = {version = "0.26.3", extras = ["sidecar"]}
 # Git integrations for Python
 GitPython = "~3.1.32"
 # GraphQL support

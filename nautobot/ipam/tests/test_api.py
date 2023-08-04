@@ -77,7 +77,6 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
                 "rd": "65000:5",
             },
             {
-                "namespace": namespace.pk,
                 "name": "VRF 6",
                 "rd": "65000:6",
             },
@@ -165,7 +164,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             {
                 "prefix": "192.168.6.0/24",
                 "status": cls.status.pk,
-                "namespace": cls.namespace.pk,
             },
         ]
         cls.bulk_update_data = {

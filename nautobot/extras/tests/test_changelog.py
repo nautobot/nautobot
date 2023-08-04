@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils.html import escape
 from rest_framework import status
 
+from example_plugin.signals import EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT, EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import APITestCase, TestCase
 from nautobot.core.testing.utils import post_data
@@ -262,6 +263,7 @@ class ChangeLogAPITest(APITestCase):
             "custom_fields": {
                 "my_field": "ABC",
                 "my_field_select": "Bar",
+                EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME: EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
             },
             "tags": [
                 {"name": self.tags[0].name},
@@ -299,6 +301,7 @@ class ChangeLogAPITest(APITestCase):
             "custom_fields": {
                 "my_field": "DEF",
                 "my_field_select": "Foo",
+                EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME: EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
             },
             "tags": [{"name": self.tags[2].name}],
         }
@@ -509,12 +512,13 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
     def test_get_snapshots(self):
         with context_managers.web_request_context(self.user):
             location_type = LocationType.objects.get(name="Campus")
-            location = Location.objects.create(
+            location = Location(
                 name="testobjectchangelocation",
                 description="initial description",
                 status=self.location_status,
                 location_type=location_type,
             )
+            location.validated_save()
         initial_object_change = get_changes_for_model(location).first()
 
         with self.subTest("test get_snapshots ObjectChange create"):

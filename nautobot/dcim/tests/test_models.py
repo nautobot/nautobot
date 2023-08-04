@@ -1,10 +1,12 @@
 from decimal import Decimal
 
+from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.core.models.utils import construct_composite_key
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
     CableStatusChoices,
@@ -564,6 +566,24 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             len(expected), Location.objects.max_tree_depth() + 1, "Not enough expected entries, fix the test!"
         )
         self.assertEqual(expected, Location.natural_key_field_lookups)
+        # Grab an arbitrary leaf node
+        location = Location.objects.filter(parent__isnull=False, children__isnull=True).first()
+        # Since we trim trailing None from the natural key, it may not be as many as `expected`, but since it's a leaf
+        # of some sort, it should definitely have more than just the single `name`.
+        self.assertGreater(len(location.natural_key()), 1)
+        self.assertLessEqual(len(location.natural_key()), len(expected))
+        self.assertEqual(location, Location.objects.get_by_natural_key(location.natural_key()))
+
+    @override_config(LOCATION_NAME_AS_NATURAL_KEY=True)
+    def test_custom_natural_key_field_lookups_override(self):
+        """Test that just name is used as the natural key when LOCATION_NAME_AS_NATURAL_KEY is set."""
+        self.assertEqual(["name"], Location.natural_key_field_lookups)
+        # Grab an arbitrary leaf node
+        location = Location.objects.filter(parent__isnull=False, children__isnull=True).first()
+        self.assertEqual([location.name], location.natural_key())
+        self.assertEqual(construct_composite_key([location.name]), location.composite_key)
+        self.assertEqual(location, Location.objects.get_by_natural_key([location.name]))
+        self.assertEqual(location, Location.objects.get(composite_key=location.composite_key))
 
     def test_custom_natural_key_args_to_kwargs(self):
         """Test that the custom implementation of Location.natural_key_args_to_kwargs works as intended."""
@@ -754,6 +774,38 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             name="Test Device 1",
         )
         self.device.validated_save()
+
+    def test_natural_key_default(self):
+        """Ensure that default natural-key for Device is (name, tenant, location)."""
+        self.assertEqual([self.device.name, None, *self.device.location.natural_key()], self.device.natural_key())
+        self.assertEqual(
+            construct_composite_key([self.device.name, None, *self.device.location.natural_key()]),
+            self.device.composite_key,
+        )
+        self.assertEqual(
+            self.device,
+            Device.objects.get_by_natural_key([self.device.name, None, *self.device.location.natural_key()]),
+        )
+        self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))
+
+    def test_natural_key_overrides(self):
+        """Ensure that the natural-key for Device is affected by settings/Constance."""
+        with override_config(DEVICE_NAME_AS_NATURAL_KEY=True):
+            self.assertEqual([self.device.name], self.device.natural_key())
+            self.assertEqual(construct_composite_key([self.device.name]), self.device.composite_key)
+            self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.name]))
+            self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))
+
+        with override_config(LOCATION_NAME_AS_NATURAL_KEY=True):
+            self.assertEqual([self.device.name, None, self.device.location.name], self.device.natural_key())
+            self.assertEqual(
+                construct_composite_key([self.device.name, None, self.device.location.name]),
+                self.device.composite_key,
+            )
+            self.assertEqual(
+                self.device, Device.objects.get_by_natural_key([self.device.name, None, self.device.location.name])
+            )
+            self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))
 
     def test_device_creation(self):
         """

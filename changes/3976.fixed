@@ -1,0 +1,1 @@
+Fixed an error when creating `VRF` or `Prefix` records via the REST API without specifying a `namespace` value.
