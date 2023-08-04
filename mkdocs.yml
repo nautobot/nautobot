@@ -334,7 +334,13 @@ nav:
         - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
       - Migration Guides:
         - From Nautobot v1: "development/apps/migration/from-v1.md"
-        - Region and Site to Location: "development/apps/migration/region-and-site-to-location.md"
+        - Dependency Updates: "development/apps/migration/dependency-updates.md"
+        - Code Updates: "development/apps/migration/code-updates.md"
+        - Model Updates:
+          - Global: "development/apps/migration/model-updates/global.md"
+          - DCIM: "development/apps/migration/model-updates/dcim.md"
+          - Extras: "development/apps/migration/model-updates/extras.md"
+          - IPAM: "development/apps/migration/model-updates/ipam.md"
       - Advanced:
         - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
     - Core Developer Guide:
