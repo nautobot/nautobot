@@ -14,11 +14,11 @@ on:
     inputs:
       invoke_context_name:
         required: true
-        description: "Invoke context name (This will be `UPPERCASE_WITH_UNDERSCORES`)"
+        description: "Invoke context name (Must be `UPPERCASE_WITH_UNDERSCORES`, e.g. `NAUTOBOT_DEVICE_ONBOARDING`)"
         type: string
       plugin_name:
         required: true
-        description: "Plugin name (This will be `lowercase-with-hyphens`)"
+        description: "Plugin name (Must be `lowercase-with-hyphens`, e.g. `nautobot-device-onboarding`)"
         type: string
 
 env:
