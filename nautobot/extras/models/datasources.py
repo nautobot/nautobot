@@ -2,6 +2,7 @@
 import os
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models, transaction
@@ -170,3 +171,12 @@ class GitRepository(PrimaryModel):
             self.__initial_slug = self.slug
 
         transaction.on_commit(on_commit_callback)
+
+    def clean(self):
+        """Overload clean to enforce a repo with duplicate url does not have duplicate provided_contents."""
+        duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id)
+        if duplicate_repos.exists():
+            for content in self.provided_contents:
+                if duplicate_repos.filter(provided_contents__contains=content).exists():
+                    raise ValidationError(f"Duplicate GitRepository detected providing {content}")
+        super().clean()

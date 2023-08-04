@@ -1,0 +1,1 @@
+Fixed duplicated git repos providing duplicated contents in the `provided_contents` attribute, duplicate repos with the same `remote_url` cannot provide a duplicate content.
