@@ -1,4 +1,4 @@
-# Code Updates
+# App Code Updates for Nautobot v2
 
 ## Update Code Import Locations
 
@@ -75,13 +75,13 @@ menu_items = (
 
 ## Replace DjangoFilterBackend with NautobotFilterBackend
 
-If your Custom `FilterBackend` class is derived from `DjangoFilterBackend`, you should replace `DjangoFilterBackend` with `NautobotFilterBackend`.
+If your REST API has any `FilterBackend` classes derived from `DjangoFilterBackend`, you should replace `DjangoFilterBackend` with `NautobotFilterBackend`.
 
 ## Revamp Rest API Serializers
 
-All `NestedSerializer` classes are removed from Nautobot v2.0. If any `NestedSerializers` exist for your models, you should just remove their class definitions and references. In addition, the `?brief=` API query parameter is replaced by `?depth=<0-10>`. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are. Checkout our [API documentation](../../../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter) for this change.
+`NestedSerializer` classes are no longer needed in Nautobot 2.0. If any `NestedSerializers` exist for your models, you should just remove their class definitions and references.
 
-After removing existing `NestedSerializers`, you can change the `fields` attribute in your serializers' `class Meta` to `__all__` and that will automatically include all the model's fields in the serializer. If you want to exclude certain fields of the model, you can specify a list of fields you want to display in the `fields` attribute instead.
+After removing existing `NestedSerializers`, you can change the `fields` attribute in your serializers' `class Meta` to `__all__` and that will automatically include all the model's fields in the serializer, including related-model fields that would previously have required a reference to a `NestedSerializer`. If you want to exclude certain fields of the model, you can specify a list of fields you want to display in the `fields` attribute instead.
 
 Include all model attributes:
 
@@ -109,6 +109,8 @@ class ExampleModelSerializer(NautobotModelSerializer):
         # example_attribute_4 is not included in the serializer
         fields = ["url", "example_attribute_1", "example_attribute_2", "example_attribute_3"]
 ```
+
+In addition, the `?brief=` API query parameter is replaced by `?depth=<0-10>`. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are. Check out our [API documentation](../../../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter) for this change.
 
 ## Revamp CSV Import and Export
 
