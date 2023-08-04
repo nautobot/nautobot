@@ -951,7 +951,8 @@ def prettier(context, autoformat=False):
 )
 def eslint(context, autoformat=False):
     """Check for ESLint rule compliance and other style issues."""
-    eslint_command = "npx eslint --max-warnings 0"
+    # babel-preset-react-app / eslint requires setting environment variable for either `NODE_ENV` or `BABEL_ENV` to 'test'|'development'|'production'
+    eslint_command = "NODE_ENV=test npx eslint --max-warnings 0"
 
     if autoformat:
         eslint_command += " --fix"
