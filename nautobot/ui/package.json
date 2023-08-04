@@ -106,7 +106,6 @@
   },
   "devDependencies": {
     "@chakra-ui/cli": "^2.3.0",
-    "@craco/craco": "^7.1.0",
     "babel-jest": "^29.6.2",
     "babel-plugin-module-resolver": "^5.0.0",
     "eslint": "^8.44.0",
