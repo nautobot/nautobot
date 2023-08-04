@@ -195,9 +195,6 @@ RUN mkdocs build --no-directory-urls && \
 
 FROM python-dev-dependencies AS dev
 
-# hadolint ignore=DL3002
-USER root
-
 COPY --chown=nautobot:nautobot nautobot/ui /opt/nautobot/ui
 COPY --from=node-dev-dependencies --chown=nautobot:nautobot /opt/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
 
@@ -212,6 +209,10 @@ RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=loc
 COPY --chown=nautobot:nautobot development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 RUN nautobot-server build_ui && rm -rf /source/*
+
+# switch to root user for dev stage: https://github.com/nautobot/nautobot/issues/4164
+# hadolint ignore=DL3002
+USER root
 
 # Run Nautobot development server by default
 EXPOSE 8080
