@@ -828,6 +828,8 @@ class JobResult(BaseModel, CustomFieldModel):
         if obj is not None and hasattr(obj, "get_absolute_url"):
             try:
                 absolute_url = obj.get_absolute_url()
+                # If absolute_url is longer than we can store, we discard it instead of truncating,
+                # since a truncated URL is pretty useless.
                 if len(absolute_url) <= JOB_LOG_MAX_ABSOLUTE_URL_LENGTH:
                     obj_absolute_url = absolute_url
             except Exception:
