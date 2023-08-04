@@ -10,6 +10,16 @@ on:
       plugin_name:
         required: true
         type: string
+  workflow_dispatch:
+    inputs:
+      invoke_context_name:
+        required: true
+        description: "Invoke context name (This will be `UPPERCASE_WITH_UNDERSCORES`)"
+        type: string
+      plugin_name:
+        required: true
+        description: "Plugin name (This will be `lowercase-with-hyphens`)"
+        type: string
 
 env:
   PYTHON_VERSION: "3.8"

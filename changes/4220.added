@@ -1,0 +1,1 @@
+Added `workflow_dispatch` to Upstream Testing workflow to enable manual execution of this CI workflow.
