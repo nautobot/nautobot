@@ -100,8 +100,6 @@
         "postcss-normalize": "^10.0.1",
         "postcss-preset-env": "^9.1.1",
         "prettier": "^2.8.8",
-        "react-app-alias": "^2.2.2",
-        "react-app-alias-ex": "^2.1.0",
         "resolve": "^1.22.4",
         "resolve-url-loader": "^5.0.0",
         "sass-loader": "^13.3.2",
