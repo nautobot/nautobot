@@ -752,6 +752,13 @@ class IPAddressEditView(generic.ObjectEditView):
                     ),
                 )
 
+        # Add IpAddress to interface if interface is in query_params
+        if interface_id := request.GET.get("interface"):
+            try:
+                interface = Interface.objects.get(id=interface_id)
+                interface.ip_addresses.add(obj)
+            except Interface.DoesNotExist:
+                messages.warning("Interface with id `{interface_id}` no found.")
         super().successful_post(request, obj, created, logger)
 
     def alter_obj(self, obj, request, url_args, url_kwargs):

@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
-from netaddr import EUI
+from netaddr import EUI, IPNetwork
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -81,6 +81,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -1344,14 +1345,51 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_interfaces(self):
         device = Device.objects.first()
+        self.add_permissions("ipam.add_ipaddress")
 
         intf_status = Status.objects.get_for_model(Interface).first()
-        Interface.objects.create(device=device, name="Interface 1", status=intf_status)
-        Interface.objects.create(device=device, name="Interface 2", status=intf_status)
-        Interface.objects.create(device=device, name="Interface 3", status=intf_status)
+        interfaces = (
+            Interface.objects.create(device=device, name="Interface 1", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 2", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 3", status=intf_status),
+        )
 
         url = reverse("dcim:device_interfaces", kwargs={"pk": device.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        # Count the number of occurrences of "Add IP address" in the response_body
+        count = response_body.count("Add IP address")
+        # Assert that "Add IP address" appears three times for each of the interfaces
+        self.assertEqual(count, 3)
+
+        # Assest assigning ipadress to interface
+        namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.get_or_create(
+            prefix="192.0.2.0/24",
+            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
+        )
+        form_data = {
+            "namespace": namespace.pk,
+            "address": IPNetwork("192.0.2.99/24"),
+            "tenant": None,
+            "status": Status.objects.get_for_model(IPAddress).first().pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+            "role": None,
+            "nat_inside": None,
+            "dns_name": None,
+            "description": None,
+            "tags": [],
+        }
+
+        request = {
+            "path": reverse("ipam:ipaddress_add") + f"?interface={interfaces[0].id}",
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        interfaces[0].refresh_from_db()
+        self.assertEqual(str(interfaces[0].ip_addresses.all().first().address), "192.0.2.99/24")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_rearports(self):
