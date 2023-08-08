@@ -453,6 +453,10 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     tenant = TenantColumn()
     parent__namespace = tables.Column(linkify=True)
+    interface_count = tables.Column(verbose_name="Interfaces")
+    interface_parent_count = tables.Column(verbose_name="Devices")
+    vm_interface_count = tables.Column(verbose_name="VM Interfaces")
+    vm_interface_parent_count = tables.Column(verbose_name="Virtual Machines")
     # TODO: add interface M2M
 
     class Meta(BaseTable.Meta):

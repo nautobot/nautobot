@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.db import models, transaction
-from django.db.models import Prefetch, ProtectedError, Q
+from django.db.models import Count, Prefetch, ProtectedError, Q
 from django.forms.models import model_to_dict
 from django.templatetags.static import static
 from django.shortcuts import get_object_or_404, redirect, render
@@ -672,7 +672,12 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    queryset = IPAddress.objects.select_related("tenant", "status", "role")
+    queryset = IPAddress.objects.select_related("tenant", "status", "role").annotate(
+        interface_count=Count("interfaces"),
+        interface_parent_count=(Count("interfaces__device", distinct=True)),
+        vm_interface_count=Count("vm_interfaces"),
+        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+    )
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
