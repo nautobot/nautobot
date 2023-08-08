@@ -18,9 +18,9 @@ __all__ = ("create_default_settings", "load_settings")
 TUPLE_SETTINGS = ("INSTALLED_APPS", "TEMPLATE_DIRS")
 
 
-def create_default_settings(filepath, settings_initializer):
+def create_default_settings(filepath, settings_initializer, **kwargs):
     if settings_initializer is not None:
-        output = settings_initializer()
+        output = settings_initializer(**kwargs)
     else:
         output = ""
 

@@ -314,7 +314,7 @@ class VLANGroupFactory(OrganizationalModelFactory):
 
     site = factory.Maybe(
         "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
+        factory.LazyAttribute(lambda obj: obj.location.site or obj.location.base_site),
         factory.Maybe(
             "has_site",
             random_instance(Site),
@@ -373,7 +373,7 @@ class VLANFactory(PrimaryModelFactory):
     has_location = factory.Faker("pybool")
     location = factory.Maybe(
         "has_group",
-        factory.LazyAttribute(lambda l: l.group.location),
+        factory.LazyAttribute(lambda vlan: vlan.group.location),
         factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
     )
 
@@ -383,10 +383,10 @@ class VLANFactory(PrimaryModelFactory):
     has_site = factory.Faker("pybool")
     site = factory.Maybe(
         "has_group",
-        factory.LazyAttribute(lambda l: l.group.site),
+        factory.LazyAttribute(lambda obj: obj.group.site),
         factory.Maybe(
             "has_location",
-            factory.LazyAttribute(lambda l: l.location.site),
+            factory.LazyAttribute(lambda obj: obj.location.site),
             factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
         ),
     )
@@ -454,7 +454,7 @@ class PrefixFactory(PrimaryModelFactory):
     # TODO: create a SiteGetOrCreateFactory to get or create a site with matching tenant
     site = factory.Maybe(
         "has_location",
-        factory.LazyAttribute(lambda l: l.location.site or l.location.base_site),
+        factory.LazyAttribute(lambda obj: obj.location.site or obj.location.base_site),
         factory.Maybe("has_site", random_instance(Site, allow_null=False), None),
     )
     status = factory.Maybe(

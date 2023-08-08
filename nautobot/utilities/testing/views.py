@@ -281,7 +281,6 @@ class ViewTestCases:
         slug_test_object = ""
 
         def test_create_object_without_permission(self):
-
             # Try GET without permission
             with disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(self._get_url("add")), 403)
@@ -716,7 +715,6 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
-
             # Try GET without permission
             with disable_warnings("django.request"):
                 response = self.client.get(self._get_url("list"))
@@ -726,7 +724,6 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_permission(self):
-
             # Add model-level permission
             obj_perm = ObjectPermission(name="Test permission", actions=["view"])
             obj_perm.save()

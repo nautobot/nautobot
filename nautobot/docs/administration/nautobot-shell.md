@@ -16,7 +16,7 @@ Example output:
 
 ```no-highlight
 ### Nautobot interactive shell (localhost)
-### Python 3.6.9 | Django 3.1 | Nautobot 1.0.0
+### Python 3.11.4 | Django 3.2.20 | Nautobot 1.6.0
 ### lsmodels() will show available models. Use help(<model>) for more info.
 ```
 

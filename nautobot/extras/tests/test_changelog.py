@@ -24,7 +24,6 @@ class ChangeLogViewTest(ModelViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # Create a custom field on the Site model
         ct = ContentType.objects.get_for_model(Site)
         cf = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="my_field", required=False)

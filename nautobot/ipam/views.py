@@ -160,7 +160,6 @@ class RIRView(generic.ObjectView):
     queryset = RIR.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Aggregates
         aggregates = Aggregate.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
 
@@ -323,7 +322,6 @@ class RoleView(generic.ObjectView):
     queryset = Role.objects.all()
 
     def get_extra_context(self, request, instance):
-
         # Prefixes
         prefixes = (
             Prefix.objects.restrict(request.user, "view")
@@ -674,7 +672,6 @@ class IPAddressEditView(generic.ObjectEditView):
     template_name = "ipam/ipaddress_edit.html"
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
-
         if "interface" in request.GET:
             try:
                 obj.assigned_object = Interface.objects.get(pk=request.GET["interface"])
@@ -699,7 +696,6 @@ class IPAddressAssignView(generic.ObjectView):
     queryset = IPAddress.objects.all()
 
     def dispatch(self, request, *args, **kwargs):
-
         # Redirect user if an interface has not been provided
         if "interface" not in request.GET and "vminterface" not in request.GET:
             return redirect("ipam:ipaddress_add")
@@ -723,7 +719,6 @@ class IPAddressAssignView(generic.ObjectView):
         table = None
 
         if form.is_valid():
-
             addresses = self.queryset.select_related("vrf", "tenant")
             # Limit to 100 results
             addresses = filters.IPAddressFilterSet(request.POST, addresses).qs[:100]

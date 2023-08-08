@@ -13,4 +13,4 @@ class TestFail(Job):
         Job function.
         """
         self.log_success(obj=None)
-        raise Exception("Test failure")
+        raise Exception("Test failure")  # pylint: disable=broad-exception-raised

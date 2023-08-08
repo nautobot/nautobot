@@ -52,7 +52,6 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
             fields = []
 
     def setUp(self):
-
         super().setUp()
 
         self.region1 = Region.objects.create(name="Test Region 1", slug="test-region-1")
@@ -68,84 +67,72 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         self.queryset = Site.objects.filter(name__icontains="Test Site")
 
     def test_filter_single_slug(self):
-
         kwargs = {"region": ["test-region-1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site1])
 
     def test_filter_single_pk(self):
-
         kwargs = {"region": [self.region1.pk]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site1])
 
     def test_filter_multiple_slug(self):
-
         kwargs = {"region": ["test-region-1", "test-region-2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site1, self.site2, self.site2a, self.site2ab])
 
     def test_filter_null(self):
-
         kwargs = {"region": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site0])
 
     def test_filter_combined_slug(self):
-
         kwargs = {"region": ["test-region-1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site0, self.site1])
 
     def test_filter_combined_pk(self):
-
         kwargs = {"region": [self.region2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site0, self.site2, self.site2a, self.site2ab])
 
     def test_filter_single_slug_exclude(self):
-
         kwargs = {"region__n": ["test-region-1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site0, self.site2, self.site2a, self.site2ab])
 
     def test_filter_single_pk_exclude(self):
-
         kwargs = {"region__n": [self.region2.pk]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site0, self.site1])
 
     def test_filter_multiple_slug_exclude(self):
-
         kwargs = {"region__n": ["test-region-1", "test-region-2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site0])
 
     def test_filter_null_exclude(self):
-
         kwargs = {"region__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site1, self.site2, self.site2a, self.site2ab])
 
     def test_filter_combined_slug_exclude(self):
-
         kwargs = {"region__n": ["test-region-1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(qs, [self.site2, self.site2a, self.site2ab])
 
     def test_filter_combined_pk_exclude(self):
-
         kwargs = {"region__n": [self.region2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
@@ -176,7 +163,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
     filterset = SiteFilterSet
 
     def setUp(self):
-
         super().setUp()
 
         self.site0 = Site.objects.create(name="Test Site 0", slug="test-site0")
@@ -191,35 +177,30 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.power_panel3a = PowerPanel.objects.create(site=self.site2, name="test-power-panel3")
 
     def test_filter_single_name(self):
-
         kwargs = {"power_panels": ["test-power-panel1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.site1])
 
     def test_filter_single_pk(self):
-
         kwargs = {"power_panels": [self.power_panel1.pk]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.site1])
 
     def test_filter_multiple_name(self):
-
         kwargs = {"power_panels": ["test-power-panel1", "test-power-panel2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.site1, self.site2])
 
     def test_filter_duplicate_name(self):
-
         kwargs = {"power_panels": ["test-power-panel3"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.site1, self.site2])
 
     def test_filter_null(self):
-
         kwargs = {"power_panels": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.filter(powerpanel__isnull=True)
@@ -227,7 +208,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_combined_name(self):
-
         kwargs = {"power_panels": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.filter(powerpanel__isnull=True) | Site.objects.filter(
@@ -237,7 +217,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_combined_pk(self):
-
         kwargs = {"power_panels": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.filter(powerpanel__isnull=True) | Site.objects.filter(
@@ -247,7 +226,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_single_name_exclude(self):
-
         kwargs = {"power_panels__n": ["test-power-panel1"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.exclude(powerpanel__name="test-power-panel1")
@@ -255,7 +233,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_single_pk_exclude(self):
-
         kwargs = {"power_panels__n": [self.power_panel2.pk]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.exclude(powerpanel__pk=self.power_panel2.pk)
@@ -263,7 +240,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_multiple_name_exclude(self):
-
         kwargs = {"power_panels__n": ["test-power-panel1", "test-power-panel2"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.exclude(powerpanel__name="test-power-panel1").exclude(
@@ -273,7 +249,6 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_duplicate_name_exclude(self):
-
         kwargs = {"power_panels__n": ["test-power-panel3"]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
         expected_result = Site.objects.exclude(powerpanel__name="test-power-panel3")
@@ -281,21 +256,18 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, mixins.NautobotTestCaseMi
         self.assertQuerysetEqualAndNotEmpty(qs, expected_result)
 
     def test_filter_null_exclude(self):
-
         kwargs = {"power_panels__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.site1, self.site2])
 
     def test_filter_combined_name_exclude(self):
-
         kwargs = {"power_panels__n": ["test-power-panel1", settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqualAndNotEmpty(qs, [self.site2])
 
     def test_filter_combined_pk_exclude(self):
-
         kwargs = {"power_panels__n": [self.power_panel2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.SiteFilterSet(kwargs, self.queryset).qs
 
@@ -717,7 +689,6 @@ class DynamicFilterLookupExpressionTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         manufacturers = (
             Manufacturer(name="Manufacturer 1", slug="manufacturer-1"),
             Manufacturer(name="Manufacturer 2", slug="manufacturer-2"),
@@ -1127,7 +1098,6 @@ class SearchFilterTest(TestCase, mixins.NautobotTestCaseMixin):
     filterset_class = SiteFilterSet
 
     def setUp(self):
-
         super().setUp()
 
         self.region1 = Region.objects.create(name="Test Region 1", slug="test-region-1")

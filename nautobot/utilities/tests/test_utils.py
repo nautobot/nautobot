@@ -59,7 +59,6 @@ class DictToFilterParamsTest(TestCase):
     """
 
     def test_dict_to_filter_params(self):
-
         input_ = {
             "a": True,
             "foo": {
@@ -101,7 +100,6 @@ class DeepMergeTest(TestCase):
     """
 
     def test_deepmerge(self):
-
         dict1 = {
             "active": True,
             "foo": 123,
@@ -311,6 +309,8 @@ class PrettyPrintQueryTest(TestCase):
 
     def test_pretty_print_query(self):
         """Test that each Q object, from deeply nested to flat, pretty prints as expected."""
+        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+        # pylint: disable=unsupported-binary-operation
         queries = [
             ((Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active")) | Q(status__slug="planned"),
             (Q(site__slug="ams01") | Q(site__slug="ang01")) & ~Q(status__slug="active"),
@@ -490,10 +490,14 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field = get_filterset_parameter_form_field(Site, field_name)
                 self.assertIsInstance(form_field, forms.ChoiceField)
 
-            device_fields = ["has_console_ports", "has_interfaces", "face"]
+            device_fields = ["has_console_ports", "has_interfaces"]
             for field_name in device_fields:
                 form_field = get_filterset_parameter_form_field(Device, field_name)
                 self.assertIsInstance(form_field, forms.ChoiceField)
+
+        with self.subTest("Test MultipleChoiceField"):
+            form_field = get_filterset_parameter_form_field(Device, "face")
+            self.assertIsInstance(form_field, forms.MultipleChoiceField)
 
         with self.subTest("Test DateTimePicker"):
             form_field = get_filterset_parameter_form_field(Site, "last_updated")
