@@ -1,0 +1,2 @@
+Added support for related-object specification by PK (UUID) in CSV imports as an alternative to composite-keys.
+Added support for related-object specification by composite-key in JSON REST API data.

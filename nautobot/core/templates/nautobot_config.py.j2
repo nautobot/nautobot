@@ -291,6 +291,12 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     r'^(https?://)?(\w+\.)?example\.com$',
 # ]
 
+# Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to True to use the device name alone as the natural key for Device objects.
+# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
+#
+# DEVICE_NAME_AS_NATURAL_KEY = False
+
 # Set to True to disable rendering of the IP prefix hierarchy in the the IPAM prefix list view.
 # Useful in case of poor performance when rendering this page.
 #
@@ -338,6 +344,12 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Directory where Jobs can be discovered.
 #
 # JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+
+# Location names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to True to use the location name alone as the natural key for Location objects.
+# Set this to False to use the sequence (name, parent__name, parent__parent__name, ...) as the natural key instead.
+#
+# LOCATION_NAME_AS_NATURAL_KEY = False
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 #

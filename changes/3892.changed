@@ -1,0 +1,2 @@
+Removed `logger` kwarg from `JobResult.log()`. Jobs' `self.logger` logging instance automatically logs to both the console and database and should be used instead of this method.
+Changed the function signatures for `nautobot.extras.datasources.git` methods `get_repo_from_url_to_path_and_from_branch`, `ensure_git_repository`, `git_repository_dry_run`, `import_config_context`, `import_local_config_context`, and `import_config_context_schema`.

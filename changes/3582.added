@@ -1,0 +1,1 @@
+The 'GetFilterSetFieldDOMElementAPIView' now has the option to return the filterset field's DOM element in JSON format.

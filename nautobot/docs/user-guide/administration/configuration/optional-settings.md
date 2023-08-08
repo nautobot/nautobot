@@ -10,7 +10,9 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [BANNER_LOGIN](#banner_login)
 * [BANNER_TOP](#banner_top)
 * [CHANGELOG_RETENTION](#changelog_retention)
+* [DEVICE_NAME_AS_NATURAL_KEY](#device_name_as_natural_key)
 * [HIDE_RESTRICTED_UI](#hide_restricted_ui)
+* [LOCATION_NAME_AS_NATURAL_KEY](#location_name_as_natural_key)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [PAGINATE_COUNT](#paginate_count)
 * [PER_PAGE_DEFAULTS](#per_page_defaults)
@@ -329,6 +331,16 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 ---
 
+## DEVICE_NAME_AS_NATURAL_KEY
+
++++ 2.0.0
+
+Default: `False`
+
+`Device` names are not guaranteed globally-unique by Nautobot but in practice they often are. Set this to `True` to use the device `name` alone as the natural key for `Device` objects. Set this to `False` to use the sequence `(name, tenant, location)` as the natural key instead.
+
+---
+
 ## EXEMPT_VIEW_PERMISSIONS
 
 Default: `[]` (Empty list)
@@ -492,6 +504,16 @@ The file path to a directory where [Jobs](../../platform-functionality/jobs/inde
 
 !!! caution
     This directory **must** contain an `__init__.py` file.
+
+---
+
+## LOCATION_NAME_AS_NATURAL_KEY
+
++++ 2.0.0
+
+Default: `False`
+
+`Location` names are not guaranteed globally-unique by Nautobot but in practice they often are. Set this to `True` to use the location `name` alone as the natural key for `Location` objects. Set this to `False` to use the sequence `(name, parent__name, parent__parent__name, ...)` as the natural key instead.
 
 ---
 

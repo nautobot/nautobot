@@ -1,0 +1,1 @@
+Moved `NautobotHyperlinkedRelatedField` from `nautobot.core.api.serializers` to `nautobot.core.api.fields`.

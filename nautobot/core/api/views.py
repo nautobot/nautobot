@@ -44,7 +44,6 @@ from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_q
 from nautobot.extras.registry import registry
 from . import serializers
 
-
 HTTP_ACTIONS = {
     "GET": "view",
     "OPTIONS": None,
@@ -959,4 +958,17 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
             model_form_instance = TempForm(auto_id="id_for_%s")
 
         bound_field = form_field.get_bound_field(model_form_instance, field_name)
-        return Response({"dom_element": bound_field.as_widget()})
+        if request.META.get("HTTP_ACCEPT") == "application/json":
+            data = {
+                "field_type": form_field.__class__.__name__,
+                "attrs": bound_field.field.widget.attrs,
+                # `is_required` is redundant here as it's not used in filterset;
+                # Just leaving it here because this would help when building create/edit form for new UI,
+                # This logic(as_json representation) should be extracted into a helper function at that time
+                "is_required": bound_field.field.widget.is_required,
+            }
+            if hasattr(bound_field.field.widget, "choices"):
+                data["choices"] = list(bound_field.field.widget.choices)
+        else:
+            data = bound_field.as_widget()
+        return Response(data)

@@ -542,11 +542,10 @@ function initializeDynamicFilterForm(context){
             $.ajax({
                 url: `/api/ui/core/filterset-fields/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
                 async: true,
-                contentType: 'application/json',
-                dataType: 'json',
+                headers: {'Accept': '*/*'},
                 type: 'GET',
             }).done(function (response) {
-                newEl = $(response.dom_element)
+                newEl = $(response)
                 newEl.addClass("lookup_value-input")
                 replaceEl(lookup_value_element, newEl)
                 if (newEl.prop("tagName") == "SELECT") {

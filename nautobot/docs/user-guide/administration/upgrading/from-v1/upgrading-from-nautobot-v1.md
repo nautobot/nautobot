@@ -136,10 +136,6 @@ In Nautobot 2.0, creating or updating prefixes that violate this guidance will r
 
 The `ipam.IPAddress` model has been modified to have a foreign key to `ipam.Prefix` as the `parent` field. Parenting of IP addresses is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization.
 
-| Removed                | Replaced With   |
-|------------------------|-----------------|
-| `get_child_prefixes()` | `descendants()` |
-
 #### IPAddress Parenting Guidance
 
 The following guidance has been added to the `IPAddress` model:

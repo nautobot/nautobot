@@ -226,6 +226,9 @@ Use this command to generate a JSON dump of the database contents.
 
 One example of using this command would be to [export data from PostgreSQL](../migration/migrating-from-postgresql.md#export-data-from-postgresql) and then [import the data dump into MySQL](../migration/migrating-from-postgresql.md#import-the-database-dump-into-mysql).
 
+!!! warning
+    While this command *can* be used in combination with `nautobot-server loaddata` as a way to do database backup-and-restore, it's not generally the most efficient or straightforward way to do so. Refer to [Database Backup](../upgrading/database-backup.md) for recommendations.
+
 ### `fix_custom_fields`
 
 `nautobot-server fix_custom_fields`
