@@ -764,7 +764,7 @@ class IPAddressEditView(generic.ObjectEditView):
                 vminterface = VMInterface.objects.get(id=interface_id)
                 vminterface.ip_addresses.add(obj)
             except VMInterface.DoesNotExist:
-                messages.warning(f'VMInterface with id "{vminterface_id}" not found.')
+                messages.warning(request, f'VMInterface with id "{vminterface_id}" not found.')
 
         super().successful_post(request, obj, created, logger)
 
