@@ -758,7 +758,7 @@ class IPAddressEditView(generic.ObjectEditView):
                 interface = Interface.objects.get(id=interface_id)
                 interface.ip_addresses.add(obj)
             except Interface.DoesNotExist:
-                messages.warning(f'Interface with id "{interface_id}" not found.')
+                messages.warning(request, f'Interface with id "{interface_id}" not found.')
         elif vminterface_id := request.GET.get("vminterface"):
             try:
                 vminterface = VMInterface.objects.get(id=interface_id)
