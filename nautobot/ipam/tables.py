@@ -507,12 +507,14 @@ class IPAddressDetailTable(IPAddressTable):
 
 
 class IPAddressAssignTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn(visible=True)
     address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
     # TODO: add interface M2M
 
     class Meta(BaseTable.Meta):
         model = IPAddress
         fields = (
+            "pk",
             "address",
             "dns_name",
             "type",

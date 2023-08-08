@@ -759,6 +759,13 @@ class IPAddressEditView(generic.ObjectEditView):
                 interface.ip_addresses.add(obj)
             except Interface.DoesNotExist:
                 messages.warning(f'Interface with id "{interface_id}" not found.')
+        elif vminterface_id := request.GET.get("vminterface"):
+            try:
+                vminterface = VMInterface.objects.get(id=interface_id)
+                vminterface.ip_addresses.add(obj)
+            except VMInterface.DoesNotExist:
+                messages.warning(f'VMInterface with id "{vminterface_id}" not found.')
+
         super().successful_post(request, obj, created, logger)
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
@@ -791,6 +798,12 @@ class IPAddressAssignView(generic.ObjectView):
         if "interface" not in request.GET and "vminterface" not in request.GET:
             return redirect("ipam:ipaddress_add")
 
+        interface_model = Interface if "interface" in request.GET else VMInterface
+        interface_id = request.GET.get("interface") or request.GET.get("vminterface")
+        if not interface_model.objects.filter(id=interface_id).exists():
+            messages.warning(request, f'{interface_model.__name__} with id "{interface_id}" not found.')
+            return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
+
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -806,6 +819,8 @@ class IPAddressAssignView(generic.ObjectView):
         )
 
     def post(self, request):
+        if pks := request.POST.getlist("pk"):
+            return self.assign_ipaddresses_to_interface(pks, request)
         form = forms.IPAddressAssignForm(request.POST)
         table = None
 
@@ -824,6 +839,14 @@ class IPAddressAssignView(generic.ObjectView):
                 "return_url": request.GET.get("return_url"),
             },
         )
+
+    def assign_ipaddresses_to_interface(self, pks, request):
+        ip_addresses = IPAddress.objects.filter(pk__in=pks)
+        interface_model = Interface if "interface" in request.GET else VMInterface
+        interface_id = request.GET.get("interface") or request.GET.get("vminterface")
+        interface = interface_model.objects.get(id=interface_id)
+        interface.ip_addresses.set(ip_addresses)
+        return redirect(request.GET.get("return_url"))
 
 
 class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermissionRequiredMixin, View):

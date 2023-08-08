@@ -39,10 +39,20 @@
     </form>
     {% if table %}
         <div class="row">
-            <div class="col-md-12" style="margin-top: 20px">
-                <h3>Search Results</h3>
-                {% include 'utilities/obj_table.html' with table_template='panel_table.html' %}
-            </div>
+            <form action="{% querystring request %}" method="post" class="form form-horizontal">
+                {% csrf_token %}
+                <div class="col-md-12" style="margin-top: 20px">
+                    <h3>Search Results</h3>
+                    {% include 'utilities/obj_table.html' with table_template='panel_table.html' %}
+                    <div class="pull-left noprint">
+                        {% if perms.dcim.change_interface %}
+                            <button type="submit" name="_edit" formaction="#" class="btn btn-primary btn-sm">
+                                <span class="mdi mdi-clipboard-tick" aria-hidden="true"></span> Assign Selected IPAddresses to Interface
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
         </div>
     {% endif %}
 {% endblock %}
