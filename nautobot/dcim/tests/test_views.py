@@ -1345,7 +1345,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_interfaces(self):
         device = Device.objects.first()
-        self.add_permissions("ipam.add_ipaddress")
+        self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
 
         intf_status = Status.objects.get_for_model(Interface).first()
         interfaces = (
@@ -1363,33 +1363,53 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Assert that "Add IP address" appears three times for each of the interfaces
         self.assertEqual(count, 3)
 
-        # Assest assigning ipadress to interface
-        namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
-        prefix_status = Status.objects.get_for_model(Prefix).first()
-        Prefix.objects.get_or_create(
-            prefix="192.0.2.0/24",
-            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
-        )
-        form_data = {
-            "namespace": namespace.pk,
-            "address": IPNetwork("192.0.2.99/24"),
-            "tenant": None,
-            "status": Status.objects.get_for_model(IPAddress).first().pk,
-            "type": IPAddressTypeChoices.TYPE_DHCP,
-            "role": None,
-            "nat_inside": None,
-            "dns_name": None,
-            "description": None,
-            "tags": [],
-        }
+        with self.subTest("Assert Create and Assign IPAddress"):
+            # Assest assigning ipadress to interface
+            namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
+            prefix_status = Status.objects.get_for_model(Prefix).first()
+            Prefix.objects.get_or_create(
+                prefix="192.0.2.0/24",
+                defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
+            )
+            form_data = {
+                "namespace": namespace.pk,
+                "address": IPNetwork("192.0.2.99/24"),
+                "tenant": None,
+                "status": Status.objects.get_for_model(IPAddress).first().pk,
+                "type": IPAddressTypeChoices.TYPE_DHCP,
+                "role": None,
+                "nat_inside": None,
+                "dns_name": None,
+                "description": None,
+                "tags": [],
+            }
 
-        request = {
-            "path": reverse("ipam:ipaddress_add") + f"?interface={interfaces[0].id}",
-            "data": post_data(form_data),
-        }
-        self.assertHttpStatus(self.client.post(**request), 302)
-        interfaces[0].refresh_from_db()
-        self.assertEqual(str(interfaces[0].ip_addresses.all().first().address), "192.0.2.99/24")
+            request = {
+                "path": reverse("ipam:ipaddress_add") + f"?interface={interfaces[0].id}",
+                "data": post_data(form_data),
+            }
+            self.assertHttpStatus(self.client.post(**request), 302)
+            interfaces[0].refresh_from_db()
+            self.assertEqual(str(interfaces[0].ip_addresses.all().first().address), "192.0.2.99/24")
+
+        with self.subTest("Assertx Assign IPAddress"):
+            ipaddresses = [str(ipadress) for ipadress in IPAddress.objects.values_list("pk", flat=True)[:3]]
+            form_data = {"pk": ipaddresses}
+            device_list_url = reverse("dcim:device_interfaces", args=(interfaces[1].pk,))
+            url = reverse("ipam:ipaddress_assign") + f"?interface={interfaces[1].id}&return_url={device_list_url}"
+            request = {
+                "path": url,
+                "data": post_data(form_data),
+            }
+            response = self.client.post(**request)
+            self.assertHttpStatus(response, 302)
+            interfaces[1].refresh_from_db()
+            self.assertEqual(interfaces[1].ip_addresses.count(), 3)
+            interface_ips = [str(ip) for ip in interfaces[1].ip_addresses.values_list("pk", flat=True)]
+            self.assertEqual(
+                sorted(ipaddresses),
+                sorted(interface_ips),
+            )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_rearports(self):
