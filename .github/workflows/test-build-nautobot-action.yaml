@@ -24,19 +24,15 @@ jobs:
           branch="${ref#refs/heads/}"
 
           case "$branch" in
-            "develop")
-              min_python_version="3.7"
-              max_python_version="3.10"
-              ;;
-            "next")
-              min_python_version="3.8"
-              max_python_version="3.11"
-              ;;
             "u/snaselj-4028-ci-integration-workflows")
-              min_python_version="3.7"
+              min_python_version="3.8"
               max_python_version="3.11"
               # Simplify branch name, to be able to use it as an image tag.
               export branch="snaselj"
+              ;;
+            "develop"|"next")
+              min_python_version="3.8"
+              max_python_version="3.11"
               ;;
             *)
               echo "Invalid branch $branch"

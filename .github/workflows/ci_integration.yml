@@ -296,7 +296,6 @@ jobs:
           ref="${{ github.ref }}"
           branch="${ref#refs/heads/}"
 
-          # Merge cases to single branch
           case "$branch" in
             "develop"|"next")
               min_python_version="3.8"
