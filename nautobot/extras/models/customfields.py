@@ -696,6 +696,10 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     def __str__(self):
         return self.value
 
+    def get_absolute_url(self):
+        # 2.0 TODO: replace slug with pk
+        return reverse("extras:customfield", args=[self.field.slug])
+
     def clean(self):
         if self.field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
             raise ValidationError("Custom field choices can only be assigned to selection fields.")

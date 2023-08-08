@@ -915,17 +915,9 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )
     elif isinstance(field, (filters.MultipleChoiceFilter, filters.ChoiceFilter)) and "choices" in field.extra:
-        form_field_class = forms.ChoiceField
-        form_field_class.widget = StaticSelect2Multiple()
-        form_attr = {"choices": field.extra.get("choices")}
-
-        form_field = form_field_class(**form_attr)
+        form_field = forms.MultipleChoiceField(choices=field.extra.get("choices"), widget=StaticSelect2Multiple)
     elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
-        form_field_class = forms.ChoiceField
-        form_field_class.widget = StaticSelect2()
-        form_attr = {"choices": BOOLEAN_CHOICES}
-
-        form_field = form_field_class(**form_attr)
+        form_field = forms.ChoiceField(choices=BOOLEAN_CHOICES, widget=StaticSelect2)
     elif isinstance(field, DateTimeFilter):
         form_field.widget = DateTimePicker()
     elif isinstance(field, DateFilter):
