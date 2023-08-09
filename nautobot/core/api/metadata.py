@@ -257,14 +257,13 @@ class NautobotMetadata(SimpleMetadata):
                 continue  # Ignore unknown fields.
             column_data = processor._get_column_properties(field, field_name)
             fields.append(column_data)
-        
-        # Construct the advanced tab table fields.
-        advanced_data = [{
-            "Object Details": {
-                "fields": advanced_fields
-            },
-        }]
 
+        # Construct the advanced tab table fields.
+        advanced_data = [
+            {
+                "Object Details": {"fields": advanced_fields},
+            }
+        ]
 
         return {
             "retrieve": self.determine_detail_view_schema(serializer),
