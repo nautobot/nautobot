@@ -710,6 +710,16 @@ class IPAddressEditView(generic.ObjectEditView):
     model_form = forms.IPAddressForm
     template_name = "ipam/ipaddress_edit.html"
 
+    def dispatch(self, request, *args, **kwargs):
+        if "interface" in request.GET or "vminterface" in request.GET:
+            interface_model = Interface if "interface" in request.GET else VMInterface
+            interface_id = request.GET.get("interface") or request.GET.get("vminterface")
+            if not interface_model.objects.restrict(request.user, "change").filter(id=interface_id).exists():
+                messages.warning(request, f'{interface_model.__name__} with id "{interface_id}" not found.')
+                return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
+
+        return super().dispatch(request, *args, **kwargs)
+
     def successful_post(self, request, obj, created, logger):
         """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
         # 3.0 TODO: remove this check after enabling strict enforcement of the equivalent logic in IPAddress.save()
@@ -753,18 +763,11 @@ class IPAddressEditView(generic.ObjectEditView):
                 )
 
         # Add IpAddress to interface if interface is in query_params
-        if interface_id := request.GET.get("interface"):
-            try:
-                interface = Interface.objects.get(id=interface_id)
-                interface.ip_addresses.add(obj)
-            except Interface.DoesNotExist:
-                messages.warning(request, f'Interface with id "{interface_id}" not found.')
-        elif vminterface_id := request.GET.get("vminterface"):
-            try:
-                vminterface = VMInterface.objects.get(id=interface_id)
-                vminterface.ip_addresses.add(obj)
-            except VMInterface.DoesNotExist:
-                messages.warning(request, f'VMInterface with id "{vminterface_id}" not found.')
+        if "interface" in request.GET or "vminterface" in request.GET:
+            interface_model = Interface if "interface" in request.GET else VMInterface
+            interface_id = request.GET.get("interface") or request.GET.get("vminterface")
+            interface = interface_model.objects.restrict(request.user, "change").get(id=interface_id)
+            interface.ip_addresses.add(obj)
 
         super().successful_post(request, obj, created, logger)
 
@@ -800,10 +803,9 @@ class IPAddressAssignView(generic.ObjectView):
 
         interface_model = Interface if "interface" in request.GET else VMInterface
         interface_id = request.GET.get("interface") or request.GET.get("vminterface")
-        if not interface_model.objects.filter(id=interface_id).exists():
+        if not interface_model.objects.restrict(request.user, "change").filter(id=interface_id).exists():
             messages.warning(request, f'{interface_model.__name__} with id "{interface_id}" not found.')
             return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
-
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
