@@ -1,0 +1,1 @@
+Fixed a bug that prevented renaming a `Rack` if it contained any devices whose names were not globally unique.
