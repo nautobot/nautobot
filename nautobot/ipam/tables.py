@@ -472,6 +472,10 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "dns_name",
             "description",
             "parent__namespace",
+            "interface_count",
+            "interface_parent_count",
+            "vm_interface_count",
+            "vm_interface_parent_count",
         )
         row_attrs = {
             "class": lambda record: "success" if not isinstance(record, IPAddress) else "",
