@@ -62,7 +62,7 @@ runs:
           type=raw,value=${{ inputs.branch }}-py${{ inputs.python-version }}
           type=raw,value=latest,enable=${{ inputs.latest }}
           type=raw,value=${{ inputs.branch }},enable=${{ inputs.latest-branch }}
-          type=raw,value=py${{ inputs.python-version }},enable=${{ inputs.latest-py }}
+          type=raw,value=latest-py${{ inputs.python-version }},enable=${{ inputs.latest-py }}
         labels: |
           org.opencontainers.image.title=Nautobot
     - name: "Build Dev"
