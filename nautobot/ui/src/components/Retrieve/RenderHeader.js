@@ -4,15 +4,16 @@ import {
     Box,
     Button as UIButton,
     ButtonGroup,
-    Heading,
-    Text,
-    MeatballsIcon,
     EditIcon,
-    DeleteIcon,
+    Heading,
+    MeatballsIcon,
     Menu,
+    MenuButton,
     MenuList,
     MenuItem,
+    BinIcon,
     NtcThumbnailIcon,
+    Text,
 } from "@nautobot/nautobot-ui";
 
 import { ReferenceDataTag } from "@components/ReferenceDataTag";
@@ -59,21 +60,23 @@ export default function RenderHeader({ data }) {
             </Heading>
             <ButtonGroup alignItems="center">
                 <Menu>
-                    <UIButton
+                    <MenuButton
+                        as={UIButton}
                         size="sm"
                         variant="primaryAction"
                         leftIcon={<MeatballsIcon />}
                     >
                         Actions
-                    </UIButton>
+                    </MenuButton>
                     <MenuList>
                         <MenuItem
+                            to={`${window.location.pathname}edit/`}
                             icon={<EditIcon />}
                             onClick={(e) => {
                                 e.preventDefault();
-                                // Because there is currently no support for Add view in the new UI for production,
+                                // Because there is currently no support for Edit view in the new UI for production,
                                 // the code below checks if the app is running in production and redirects the user to
-                                // the Add page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
+                                // the Edit page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
                                 if (process.env.NODE_ENV === "production") {
                                     document.location.href += "edit/";
                                 }
@@ -83,12 +86,13 @@ export default function RenderHeader({ data }) {
                             Edit
                         </MenuItem>
                         <MenuItem
-                            icon={<DeleteIcon />}
+                            to={`${window.location.pathname}delete/`}
+                            icon={<BinIcon />}
                             onClick={(e) => {
                                 e.preventDefault();
-                                // Because there is currently no support for Add view in the new UI for production,
+                                // Because there is currently no support for Delete view in the new UI for production,
                                 // the code below checks if the app is running in production and redirects the user to
-                                // the Add page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
+                                // the Delete page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
                                 if (process.env.NODE_ENV === "production") {
                                     document.location.href += "delete/";
                                 }

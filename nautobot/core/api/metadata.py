@@ -82,11 +82,13 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
                 if hasattr(field, "queryset") and hasattr(field.queryset, "model"):
                     model_options = field.queryset.model._meta
                     result["required"] = field.required
-                    # Custom Keyword: modelName and appLabel
-                    # This Keyword represents the model name of the uuid model
+                    # Custom Keyword: modelName, modelNamePlural and appLabel
+                    # modelName represents the model name of the uuid model
+                    # modelNamePlural represents the plural model name of the uuid model
                     # and appLabel represents the app_name of the model
                     result["modelName"] = model_options.model_name
                     result["appLabel"] = model_options.app_label
+                    result["modelNamePlural"] = model_options.verbose_name_plural
             if field.allow_null:
                 result["type"] = [result["type"], "null"]
             if enum := type_map_obj.get("enum"):
@@ -210,6 +212,16 @@ class NautobotMetadata(SimpleMetadata):
         serializer_meta = getattr(serializer, "Meta", None)
         return list(getattr(serializer_meta, "list_display_fields", []))
 
+    def get_advanced_tab_fields(self, serializer):
+        """Try to get the advanced tab fields or default to an empty list."""
+        default_advanced_fields = ["id", "url", "composite_key", "created", "last_updated"]
+        field_map = dict(serializer.fields)
+        all_fields = list(field_map)
+        for field in default_advanced_fields:
+            if field not in all_fields:
+                default_advanced_fields.remove(field)
+        return default_advanced_fields
+
     def determine_view_options(self, request, serializer):
         """Determine view options that will be used for non-form display metadata."""
         list_display = []
@@ -221,7 +233,7 @@ class NautobotMetadata(SimpleMetadata):
 
         # Explicitly order the "big ugly" fields to the bottom.
         processor.order_fields(all_fields)
-
+        advanced_fields = self.get_advanced_tab_fields(serializer)
         list_display_fields = self.get_list_display_fields(serializer)
 
         # Process the list_display fields first.
@@ -245,9 +257,18 @@ class NautobotMetadata(SimpleMetadata):
                 continue  # Ignore unknown fields.
             column_data = processor._get_column_properties(field, field_name)
             fields.append(column_data)
+        
+        # Construct the advanced tab table fields.
+        advanced_data = [{
+            "Object Details": {
+                "fields": advanced_fields
+            },
+        }]
+
 
         return {
             "retrieve": self.determine_detail_view_schema(serializer),
+            "advanced": advanced_data,
             "list_display_fields": list_display,
             "fields": fields,
         }
@@ -316,19 +337,15 @@ class NautobotMetadata(SimpleMetadata):
         """
 
         # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
-        fields_to_remove = ["composite_key", "url", "display", "status", "id"]
-        fields_to_add = ["id", "composite_key", "url"]
+        fields_to_remove = ["composite_key", "url", "display", "status", "id", "created", "updated"]
         # Make a deepcopy to avoid altering view_config
         view_config_layout = deepcopy(view_config.get("layout"))
 
-        for section_idx, section in enumerate(view_config_layout):
-            for idx, value in enumerate(section.values()):
+        for _, section in enumerate(view_config_layout):
+            for _, value in enumerate(section.values()):
                 for field in fields_to_remove:
                     if field in value["fields"]:
                         value["fields"].remove(field)
-                if section_idx == 0 and idx == 0:
-                    value["fields"].extend(fields_to_add)
-
         if view_config.get("include_others", False):
             view_config_layout = self.add_missing_field_to_view_config_layout(view_config_layout, fields_to_remove)
         return view_config_layout
@@ -407,9 +424,9 @@ class NautobotMetadata(SimpleMetadata):
             raise ViewConfigException("`layout` is a required key in creating a custom view_config")
 
         # 2. Validate `Other Fields` is not part of a layout group name, as this is a nautobot reserver keyword for group names
-        if any(
-            group_name for col in view_config["layout"] for group_name in col.keys() if group_name == "Other Fields"
-        ):
-            raise ViewConfigException("`Other Fields` is a reserved group name keyword.")
+        for col in view_config["layout"]:
+            for group_name in col.keys():
+                if group_name == "Other Fields" or group_name == "Object Details":
+                    raise ViewConfigException(f"`{group_name}` is a reserved group name keyword.")
 
         return view_config
