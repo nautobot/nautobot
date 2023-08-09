@@ -285,31 +285,38 @@ jobs:
     runs-on: "ubuntu-22.04"
     if: |
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')
+      (github.ref_name == 'develop' || github.ref_name == 'next')
     needs:
       - "integration-test"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: "Configuration"
         id: "config"
         shell: "bash"
         run: |
-          ref="${{ github.ref }}"
-          branch="${ref#refs/heads/}"
+          export BRANCH="${{ github.ref_name }}"
+          export LATEST="false"
+          export LATEST_BRANCH="false"
+          export LATEST_PY="false"
 
-          case "$branch" in
-            "develop"|"next")
-              min_python_version="3.8"
-              max_python_version="3.11"
-              ;;
-            *)
-              echo "Invalid branch $branch"
-              exit 1
-              ;;
-          esac
+          if [[ $BRANCH == "develop" ]]; then
+            export LATEST_PY="true"
+          fi
 
-          echo "branch=$branch" >> $GITHUB_OUTPUT
-          echo "min-python-version=$min_python_version" >> $GITHUB_OUTPUT
-          echo "max-python-version=$max_python_version" >> $GITHUB_OUTPUT
+          if [[ "${{ matrix.python-version }}" == "3.11" ]]; then
+            export LATEST_BRANCH="true"
+            if [[ $LATEST_PY == "true" ]]; then
+              export LATEST="true"
+            fi
+          fi
+
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+          echo "latest-branch=$LATEST_BRANCH" >> $GITHUB_OUTPUT
+          echo "latest-py=$LATEST_PY" >> $GITHUB_OUTPUT
       - name: "Check out repository code"
         uses: "actions/checkout@v3"
       - name: "Set up QEMU"
@@ -322,30 +329,27 @@ jobs:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
           password: "${{ secrets.GITHUB_TOKEN }}"
-      - name: "Build `final` with max Python version"
+      - name: "Build `final`"
+        if: |
+          steps.config.outputs.latest-branch == 'true'
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot"
-          latest: false
-          push: false
-          python-version: "${{ steps.config.outputs.max-python-version }}"
+          latest: "${{ steps.config.outputs.latest }}"
+          latest-branch: "${{ steps.config.outputs.latest-branch }}"
+          latest-py: "${{ steps.config.outputs.latest-py }}"
+          push: "false"
+          python-version: "${{ matrix.python-version }}"
           target: "final"
-      - name: "Build `final-dev` with min Python version"
+      - name: "Build and Push `final-dev`"
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot-dev"
-          latest: false
-          push: true
-          python-version: "${{ steps.config.outputs.min-python-version }}"
-          target: "final-dev"
-      - name: "Build `final-dev` with max Python version"
-        uses: "./.github/actions/build-nautobot-image"
-        with:
-          branch: "${{ steps.config.outputs.branch }}"
-          image: "ghcr.io/nautobot/nautobot-dev"
-          latest: true
-          push: true
-          python-version: "${{ steps.config.outputs.max-python-version }}"
+          latest: "${{ steps.config.outputs.latest }}"
+          latest-branch: "${{ steps.config.outputs.latest-branch }}"
+          latest-py: "${{ steps.config.outputs.latest-py }}"
+          push: "true"
+          python-version: "${{ matrix.python-version }}"
           target: "final-dev"
