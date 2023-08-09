@@ -14,21 +14,26 @@ jobs:
     runs-on: "ubuntu-22.04"
     if: |
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/u/snaselj-4028-ci-integration-workflows')
+      (github.ref_name == 'u/snaselj-4028-ci-integration-workflows')
     strategy:
       fail-fast: true
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+        # TBD: Remove this
+        branch: ["develop", "next"]
     steps:
       - name: "Configuration"
         id: "config"
         shell: "bash"
         run: |
+          # TBD: Replace with github.ref_name
+          export BRANCH="${{ matrix.branch }}"
+          # export BRANCH="${{ github.ref_name }}"
           export LATEST="false"
           export LATEST_BRANCH="false"
           export LATEST_PY="false"
 
-          if [[ "${{ github.ref_name }}" == "develop" ]]; then
+          if [[ $BRANCH == "develop" ]]; then
             export LATEST_PY="true"
           fi
 
@@ -39,6 +44,7 @@ jobs:
             fi
           fi
 
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           echo "latest=$LATEST" >> $GITHUB_OUTPUT
           echo "latest-branch=$LATEST_BRANCH" >> $GITHUB_OUTPUT
           echo "latest-py=$LATEST_PY" >> $GITHUB_OUTPUT
@@ -56,10 +62,10 @@ jobs:
       #     password: "${{ secrets.GITHUB_TOKEN }}"
       - name: "Build `final`"
         if: |
-          ${{ steps.config.outputs.latest }} == "true"
+          steps.config.outputs.latest == 'true'
         # TBD: Replace DEBUG `run` with actual build action
         run: |
-          echo "BRANCH: ${{ github.ref_name }}"
+          echo "BRANCH: ${{ steps.config.outputs.branch }}"
           echo "IMAGE: ghcr.io/nautobot/nautobot"
           echo "LATEST: ${{ steps.config.outputs.latest }}"
           echo "LATEST-BRANCH: ${{ steps.config.outputs.latest-branch }}"
@@ -69,7 +75,7 @@ jobs:
           echo "TARGET: final"
       #   uses: "./.github/actions/build-nautobot-image"
       #   with:
-      #     branch: "${{ github.ref_name }}"
+      #     branch: "${{ steps.config.outputs.branch }}"
       #     image: "ghcr.io/nautobot/nautobot"
       #     latest: "${{ steps.config.outputs.latest }}"
       #     latest-branch: "${{ steps.config.outputs.latest-branch }}"
@@ -80,7 +86,7 @@ jobs:
       - name: "Build `final-dev`"
         # TBD: Replace DEBUG `run` with actual build action
         run: |
-          echo "BRANCH: ${{ github.ref_name }}"
+          echo "BRANCH: ${{ steps.config.outputs.branch }}"
           echo "IMAGE: ghcr.io/nautobot/nautobot-dev"
           echo "LATEST: ${{ steps.config.outputs.latest }}"
           echo "LATEST-BRANCH: ${{ steps.config.outputs.latest-branch }}"
@@ -90,7 +96,7 @@ jobs:
           echo "TARGET: final-dev"
       #   uses: "./.github/actions/build-nautobot-image"
       #   with:
-      #     branch: "${{ github.ref_name }}"
+      #     branch: "${{ steps.config.outputs.branch }}"
       #     image: "ghcr.io/nautobot/nautobot-dev"
       #     latest: "${{ steps.config.outputs.latest }}"
       #     latest-branch: "${{ steps.config.outputs.latest-branch }}"
