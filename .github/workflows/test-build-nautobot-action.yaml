@@ -15,70 +15,86 @@ jobs:
     if: |
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/u/snaselj-4028-ci-integration-workflows')
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: "Configuration"
         id: "config"
         shell: "bash"
         run: |
-          ref="${{ github.ref }}"
-          branch="${ref#refs/heads/}"
+          export LATEST="false"
+          export LATEST_BRANCH="false"
+          export LATEST_PY="false"
 
-          case "$branch" in
-            "u/snaselj-4028-ci-integration-workflows")
-              min_python_version="3.8"
-              max_python_version="3.11"
-              # Simplify branch name, to be able to use it as an image tag.
-              export branch="snaselj"
-              ;;
-            "develop"|"next")
-              min_python_version="3.8"
-              max_python_version="3.11"
-              ;;
-            *)
-              echo "Invalid branch $branch"
-              exit 1
-              ;;
-          esac
+          if [[ "${{ github.ref_name }}" == "develop" ]]; then
+            export LATEST_PY="true"
+          fi
 
-          echo "branch=$branch" >> $GITHUB_OUTPUT
-          echo "min-python-version=$min_python_version" >> $GITHUB_OUTPUT
-          echo "max-python-version=$max_python_version" >> $GITHUB_OUTPUT
-      - name: "Check out repository code"
-        uses: "actions/checkout@v3"
-      - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@v2"
-      - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@v2"
-      - name: "Login to GitHub Container Registry"
-        uses: "docker/login-action@v2"
-        with:
-          registry: "ghcr.io"
-          username: "${{ github.actor }}"
-          password: "${{ secrets.GITHUB_TOKEN }}"
-      - name: "Build `final` Max"
-        uses: "./.github/actions/build-nautobot-image"
-        with:
-          branch: "${{ steps.config.outputs.branch }}"
-          image: "ghcr.io/nautobot/nautobot"
-          latest: false
-          push: false
-          python-version: "${{ steps.config.outputs.max-python-version }}"
-          target: "final"
-      - name: "Build `final-dev` Min"
-        uses: "./.github/actions/build-nautobot-image"
-        with:
-          branch: "${{ steps.config.outputs.branch }}"
-          image: "ghcr.io/nautobot/nautobot-dev"
-          latest: true
-          push: false
-          python-version: "${{ steps.config.outputs.min-python-version }}"
-          target: "final-dev"
-      - name: "Build `final-dev` Max"
-        uses: "./.github/actions/build-nautobot-image"
-        with:
-          branch: "${{ steps.config.outputs.branch }}"
-          image: "ghcr.io/nautobot/nautobot-dev"
-          latest: false
-          push: false
-          python-version: "${{ steps.config.outputs.max-python-version }}"
-          target: "final-dev"
+          if [[ "${{ matrix.python-version }}" == "3.11" ]]; then
+            export LATEST_BRANCH="true"
+            if [[ $LATEST_PY == "true" ]]; then
+              export LATEST="true"
+            fi
+          fi
+
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+          echo "latest-branch=$LATEST_BRANCH" >> $GITHUB_OUTPUT
+          echo "latest-py=$LATEST_PY" >> $GITHUB_OUTPUT
+      # - name: "Check out repository code"
+      #   uses: "actions/checkout@v3"
+      # - name: "Set up QEMU"
+      #   uses: "docker/setup-qemu-action@v2"
+      # - name: "Set up Docker Buildx"
+      #   uses: "docker/setup-buildx-action@v2"
+      # - name: "Login to GitHub Container Registry"
+      #   uses: "docker/login-action@v2"
+      #   with:
+      #     registry: "ghcr.io"
+      #     username: "${{ github.actor }}"
+      #     password: "${{ secrets.GITHUB_TOKEN }}"
+      - name: "Build `final`"
+        if: |
+          ${{ steps.config.outputs.latest }} == "true"
+        # TBD: Replace DEBUG `run` with actual build action
+        run: |
+          echo "BRANCH: ${{ github.ref_name }}"
+          echo "IMAGE: ghcr.io/nautobot/nautobot"
+          echo "LATEST: ${{ steps.config.outputs.latest }}"
+          echo "LATEST-BRANCH: ${{ steps.config.outputs.latest-branch }}"
+          echo "LATEST-PY: ${{ steps.config.outputs.latest-py }}"
+          echo "PUSH: false"
+          echo "PYTHON_VERSION: ${{ matrix.python-version }}"
+          echo "TARGET: final"
+      #   uses: "./.github/actions/build-nautobot-image"
+      #   with:
+      #     branch: "${{ github.ref_name }}"
+      #     image: "ghcr.io/nautobot/nautobot"
+      #     latest: "${{ steps.config.outputs.latest }}"
+      #     latest-branch: "${{ steps.config.outputs.latest-branch }}"
+      #     latest-py: "${{ steps.config.outputs.latest-py }}"
+      #     push: "false"
+      #     python-version: "${{ matrix.python-version }}"
+      #     target: "final"
+      - name: "Build `final-dev`"
+        # TBD: Replace DEBUG `run` with actual build action
+        run: |
+          echo "BRANCH: ${{ github.ref_name }}"
+          echo "IMAGE: ghcr.io/nautobot/nautobot-dev"
+          echo "LATEST: ${{ steps.config.outputs.latest }}"
+          echo "LATEST-BRANCH: ${{ steps.config.outputs.latest-branch }}"
+          echo "LATEST-PY: ${{ steps.config.outputs.latest-py }}"
+          echo "PUSH: true"
+          echo "PYTHON_VERSION: ${{ matrix.python-version }}"
+          echo "TARGET: final-dev"
+      #   uses: "./.github/actions/build-nautobot-image"
+      #   with:
+      #     branch: "${{ github.ref_name }}"
+      #     image: "ghcr.io/nautobot/nautobot-dev"
+      #     latest: "${{ steps.config.outputs.latest }}"
+      #     latest-branch: "${{ steps.config.outputs.latest-branch }}"
+      #     latest-py: "${{ steps.config.outputs.latest-py }}"
+      #     push: "true"
+      #     python-version: "${{ matrix.python-version }}"
+      #     target: "final-dev"

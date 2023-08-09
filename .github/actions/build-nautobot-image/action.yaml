@@ -33,6 +33,12 @@ inputs:
   latest:
     description: "Whether To Tag As Latest"
     required: true
+  latest-branch:
+    description: "Whether To Tag As Latest For Branch"
+    required: true
+  latest-py:
+    description: "Whether To Tag As Latest For Python Version"
+    required: true
   push:
     description: "Whether To Push"
     required: true
@@ -54,11 +60,9 @@ runs:
           latest=false
         tags: |
           type=raw,value=${{ inputs.branch }}-py${{ inputs.python-version }}
-          type=raw,value=${{ inputs.branch }}-{{sha}}-{{date 'X'}}-py${{ inputs.python-version }}
-          type=raw,value=${{ inputs.branch }},enable=${{ inputs.latest }}
-          type=raw,value=${{ inputs.branch }}-{{sha}}-{{date 'X'}},enable=${{ inputs.latest }}
           type=raw,value=latest,enable=${{ inputs.latest }}
-          type=raw,value=latest-py${{ inputs.python-version }},enable=${{ inputs.latest }}
+          type=raw,value=${{ inputs.branch }},enable=${{ inputs.latest-branch }}
+          type=raw,value=py${{ inputs.python-version }},enable=${{ inputs.latest-py }}
         labels: |
           org.opencontainers.image.title=Nautobot
     - name: "Build Dev"
