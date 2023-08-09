@@ -62,7 +62,7 @@ jobs:
       #     password: "${{ secrets.GITHUB_TOKEN }}"
       - name: "Build `final`"
         if: |
-          steps.config.outputs.latest == 'true'
+          steps.config.outputs.latest-branch == 'true'
         # TBD: Replace DEBUG `run` with actual build action
         run: |
           echo "BRANCH: ${{ steps.config.outputs.branch }}"
