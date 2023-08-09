@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.utils.safestring import mark_safe
 from netaddr import EUI
 from netaddr.core import AddrFormatError
