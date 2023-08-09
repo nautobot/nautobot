@@ -3,6 +3,8 @@
 {% load form_helpers %}
 {% load helpers %}
 
+{% block title %}Assign an IP address{% endblock %}
+
 {% block content %}
     <form action="{% querystring request %}" method="post" class="form form-horizontal">
         {% csrf_token %}

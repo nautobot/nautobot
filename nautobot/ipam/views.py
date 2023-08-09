@@ -795,14 +795,18 @@ class IPAddressAssignView(generic.ObjectView):
     """
 
     queryset = IPAddress.objects.all()
+    
+    def _get_interface_type_and_model(self, request):
+        interface_model = Interface if "interface" in request.GET else VMInterface
+        interface_id = request.GET.get("interface") or request.GET.get("vminterface")
+        return interface_id, interface_model
 
     def dispatch(self, request, *args, **kwargs):
         # Redirect user if an interface has not been provided
         if "interface" not in request.GET and "vminterface" not in request.GET:
             return redirect("ipam:ipaddress_add")
 
-        interface_model = Interface if "interface" in request.GET else VMInterface
-        interface_id = request.GET.get("interface") or request.GET.get("vminterface")
+        interface_id, interface_model = self._get_interface_type_and_model(request)
         if not interface_model.objects.restrict(request.user, "change").filter(id=interface_id).exists():
             messages.warning(request, f'{interface_model.__name__} with id "{interface_id}" not found.')
             return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
@@ -827,7 +831,9 @@ class IPAddressAssignView(generic.ObjectView):
         table = None
 
         if form.is_valid():
-            addresses = self.queryset.select_related("tenant")
+            interface_id, interface_model = self._get_interface_type_and_model(request)
+            obj = interface_model.objects.get(id=interface_id)
+            addresses = self.queryset.select_related("tenant").exclude(pk__in=obj.ip_addresses.values_list("pk"))
             # Limit to 100 results
             addresses = filters.IPAddressFilterSet(request.POST, addresses).qs[:100]
             table = tables.IPAddressAssignTable(addresses)

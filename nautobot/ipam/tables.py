@@ -516,6 +516,7 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
         fields = (
             "pk",
             "address",
+            "parent__namespace",
             "dns_name",
             "type",
             "status",
