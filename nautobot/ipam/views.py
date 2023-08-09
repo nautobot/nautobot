@@ -677,6 +677,7 @@ class IPAddressListView(generic.ObjectListView):
         interface_parent_count=(Count("interfaces__device", distinct=True)),
         vm_interface_count=Count("vm_interfaces"),
         vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+        assigned_count=Count("interfaces") + Count("vm_interfaces"),
     )
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
