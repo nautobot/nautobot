@@ -1360,7 +1360,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_body = response.content.decode(response.charset)
         # Count the number of occurrences of "Add IP address" in the response_body
         count = response_body.count("Add IP address")
-        # Assert that "Add IP address" appears three times for each of the interfaces
+        # Assert that "Add IP address" appears for each of the three interfaces
         self.assertEqual(count, 3)
 
         with self.subTest("Assert Create and Assign IPAddress"):
