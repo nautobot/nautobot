@@ -795,7 +795,7 @@ class IPAddressAssignView(generic.ObjectView):
     """
 
     queryset = IPAddress.objects.all()
-    
+
     def _get_interface_type_and_model(self, request):
         interface_model = Interface if "interface" in request.GET else VMInterface
         interface_id = request.GET.get("interface") or request.GET.get("vminterface")
