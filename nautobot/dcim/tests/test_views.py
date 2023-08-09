@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
-from netaddr import EUI, IPNetwork
+from netaddr import EUI
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -1382,6 +1382,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 "dns_name": None,
                 "description": None,
                 "tags": [],
+                "interface": interfaces[0].id
             }
 
             request = {
