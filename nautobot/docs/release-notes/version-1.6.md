@@ -91,11 +91,10 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 - [#3985](https://github.com/nautobot/nautobot/issues/3985) - Added error handling in `JobResult.log()` for the case where an object's `get_absolute_url()` raises an exception.
 - [#3985](https://github.com/nautobot/nautobot/issues/3985) - Added missing `get_absolute_url()` implementation on `CustomFieldChoice` model.
-- [#4222](https://github.com/nautobot/nautobot/issues/4222) - Fixed a bug in which `Job` `ChoiceVars` could sometimes get rendered incorrectly in the UI as multiple-choice fields.
-
 - [#4175](https://github.com/nautobot/nautobot/issues/4175) - Changed custom field clean to not populate null default values.
 - [#4204](https://github.com/nautobot/nautobot/issues/4204) - Fixed failing Apps CI by downgrading `jsonschema<4.18`.
 - [#4205](https://github.com/nautobot/nautobot/issues/4205) - Fixed failing Apps CI due to missing dependency of `toml`.
+- [#4222](https://github.com/nautobot/nautobot/issues/4222) - Fixed a bug in which `Job` `ChoiceVars` could sometimes get rendered incorrectly in the UI as multiple-choice fields.
 
 ## v1.6.0-rc.1 (2023-08-02)
 
