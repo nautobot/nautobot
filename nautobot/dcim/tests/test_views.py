@@ -1373,7 +1373,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             )
             form_data = {
                 "namespace": namespace.pk,
-                "address": IPNetwork("192.0.2.99/24"),
+                "address": "192.0.2.99/24",
                 "tenant": None,
                 "status": Status.objects.get_for_model(IPAddress).first().pk,
                 "type": IPAddressTypeChoices.TYPE_DHCP,
