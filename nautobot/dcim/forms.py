@@ -696,7 +696,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         cleaned_data = self.cleaned_data
         site = cleaned_data.get("site")
 
-        if self.instance and site != self.instance.site:
+        if self.instance and self.instance.present_in_database and site != self.instance.site:
             # If the site is changed, the rack post save signal attempts to update the rack devices,
             # which may result in an Exception if the updated devices conflict with existing devices at this site.
             # To avoid an unhandled exception in the signal, check for this scenario here.
