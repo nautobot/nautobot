@@ -845,7 +845,7 @@ class IPAddressAssignView(generic.ObjectView):
         interface_model = Interface if "interface" in request.GET else VMInterface
         interface_id = request.GET.get("interface") or request.GET.get("vminterface")
         interface = interface_model.objects.get(id=interface_id)
-        interface.ip_addresses.set(ip_addresses)
+        interface.ip_addresses.add(*ip_addresses)
         return redirect(request.GET.get("return_url"))
 
 

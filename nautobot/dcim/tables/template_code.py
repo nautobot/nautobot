@@ -191,7 +191,7 @@ POWEROUTLET_BUTTONS = """
 """
 
 INTERFACE_BUTTONS = """
-{% if perms.ipam.add_ipaddress %}
+{% if perms.ipam.add_ipaddress and perms.dcim.change_interface %}
     <a href="{% url 'ipam:ipaddress_add' %}?interface={{ record.pk }}&return_url={% url 'dcim:device_interfaces' pk=object.pk %}" class="btn btn-xs btn-success" title="Add IP address">
         <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
     </a>
