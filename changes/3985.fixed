@@ -1,2 +1,0 @@
-Added error handling in `JobResult.log()` for the case where an object's `get_absolute_url()` raises an exception.
-Added missing `get_absolute_url()` implementation on `CustomFieldChoice` model.
