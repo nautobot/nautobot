@@ -196,12 +196,14 @@ module.exports = function (webpackEnv) {
             : isEnvDevelopment && "development",
         // Stop compilation early in production
         bail: isEnvProduction,
+        // NAUTOBOT CHANGE TO CRACO DEFAULTS
         // Sourcemaps are our friend: https://blog.teamtreehouse.com/introduction-source-maps
         // Prefer a hidden sourcemap file to help with analyzing code but don't link it for production.
         // Generate a full sourcemap for debugging and analyzing with `npm run analyze`.
         devtool: process.env.NAUTOBOT_DEBUG
             ? "eval-source-map"
             : "hidden-source-map",
+        // NAUTOBOT CHANGE TO CRACO DEFAULTS
         // TODO(jathan): This might be safely deleted.
         devServer: {
             writeToDisk: true, // Write files to disk in dev mode so Django can serve the assets
@@ -217,11 +219,14 @@ module.exports = function (webpackEnv) {
             path: paths.appBuild,
             // Add /* filename */ comments to generated require()s in the output.
             pathinfo: isEnvDevelopment,
+            // NAUTOBOT CHANGE TO CRACO DEFAULTS
             // There will be one main bundle, and one file per asynchronous chunk.
             // In development, it does not produce real files.
             filename: "static/js/[name].js",
+            // NAUTOBOT CHANGE TO CRACO DEFAULTS
             chunkFilename: "static/js/[id]-[chunkhash].js", // DO have Webpack hash chunk filename
             assetModuleFilename: "static/media/[name].[ext]", // DO have Webpack hash chunk filename,
+            // NAUTOBOT CHANGE TO CRACO DEFAULTS
             // webpack uses `publicPath` to determine where the app is being served from.
             // It requires a trailing slash, or the file assets will get an incorrect path.
             // We inferred the "public path" (such as / or /my-project) from homepage.
@@ -637,6 +642,8 @@ module.exports = function (webpackEnv) {
                 new MiniCssExtractPlugin({
                     // Options similar to the same options in webpackOptions.output
                     // both options are optional
+                    // NAUTOBOT CHANGE TO CRACO DEFAULTS
+                    // Overload it to not hash the CSS filename.
                     filename: "static/css/[name].css",
                     chunkFilename:
                         "static/css/[name].[contenthash:8].chunk.css",
