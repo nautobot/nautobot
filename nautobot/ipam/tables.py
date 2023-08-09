@@ -455,7 +455,9 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     parent__namespace = tables.Column(linkify=True)
     interface_count = tables.Column(verbose_name="Interfaces")
     interface_parent_count = tables.Column(verbose_name="Devices")
-    vm_interface_count = tables.Column(verbose_name="VM Interfaces")
+    vm_interface_count = LinkedCountColumn(
+        viewname="virtualization:vminterface_list", url_params={"ip_addresses": "pk"}, verbose_name="VM Interfaces"
+    )
     vm_interface_parent_count = tables.Column(verbose_name="Virtual Machines")
 
     class Meta(BaseTable.Meta):
