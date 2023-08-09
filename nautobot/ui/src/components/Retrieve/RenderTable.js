@@ -7,9 +7,7 @@ function construct_model_url(model_title) {
     // helper function to turn plural model names to url safe strings
     // e.g. tenant groups -> tenant-groups
     var model_url = model_title;
-    if (model_url != undefined) {
-        model_url = model_url.replace(/\s+/g, "-").toLowerCase();
-    }
+    model_url = model_url.replace(/\s+/g, "-").toLowerCase();
     return model_url;
 }
 
