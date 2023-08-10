@@ -45,6 +45,7 @@ from .utils import (
     add_available_prefixes,
     add_available_vlans,
     handle_relationship_changes_when_merging_ips,
+    retrieve_interface_or_vminterface_from_request,
 )
 
 
@@ -712,10 +713,9 @@ class IPAddressEditView(generic.ObjectEditView):
 
     def dispatch(self, request, *args, **kwargs):
         if "interface" in request.GET or "vminterface" in request.GET:
-            interface_model = Interface if "interface" in request.GET else VMInterface
-            interface_id = request.GET.get("interface") or request.GET.get("vminterface")
-            if not interface_model.objects.restrict(request.user, "change").filter(id=interface_id).exists():
-                messages.warning(request, f'{interface_model.__name__} with id "{interface_id}" not found.')
+            _, error_msg = retrieve_interface_or_vminterface_from_request(request)
+            if error_msg:
+                messages.warning(request, error_msg)
                 return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
 
         return super().dispatch(request, *args, **kwargs)
@@ -764,9 +764,7 @@ class IPAddressEditView(generic.ObjectEditView):
 
         # Add IpAddress to interface if interface is in query_params
         if "interface" in request.GET or "vminterface" in request.GET:
-            interface_model = Interface if "interface" in request.GET else VMInterface
-            interface_id = request.GET.get("interface") or request.GET.get("vminterface")
-            interface = interface_model.objects.restrict(request.user, "change").get(id=interface_id)
+            interface, _ = retrieve_interface_or_vminterface_from_request(request)
             interface.ip_addresses.add(obj)
 
         super().successful_post(request, obj, created, logger)
@@ -796,20 +794,16 @@ class IPAddressAssignView(generic.ObjectView):
 
     queryset = IPAddress.objects.all()
 
-    def _get_interface_type_and_model(self, request):
-        interface_model = Interface if "interface" in request.GET else VMInterface
-        interface_id = request.GET.get("interface") or request.GET.get("vminterface")
-        return interface_id, interface_model
-
     def dispatch(self, request, *args, **kwargs):
         # Redirect user if an interface has not been provided
         if "interface" not in request.GET and "vminterface" not in request.GET:
             return redirect("ipam:ipaddress_add")
 
-        interface_id, interface_model = self._get_interface_type_and_model(request)
-        if not interface_model.objects.restrict(request.user, "change").filter(id=interface_id).exists():
-            messages.warning(request, f'{interface_model.__name__} with id "{interface_id}" not found.')
+        _, error_msg = retrieve_interface_or_vminterface_from_request(request)
+        if error_msg:
+            messages.warning(request, error_msg)
             return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
+
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -831,9 +825,8 @@ class IPAddressAssignView(generic.ObjectView):
         table = None
 
         if form.is_valid():
-            interface_id, interface_model = self._get_interface_type_and_model(request)
-            obj = interface_model.objects.get(id=interface_id)
-            addresses = self.queryset.select_related("tenant").exclude(pk__in=obj.ip_addresses.values_list("pk"))
+            interface, _ = retrieve_interface_or_vminterface_from_request(request)
+            addresses = self.queryset.select_related("tenant").exclude(pk__in=interface.ip_addresses.values_list("pk"))
             # Limit to 100 results
             addresses = filters.IPAddressFilterSet(request.POST, addresses).qs[:100]
             table = tables.IPAddressAssignTable(addresses)

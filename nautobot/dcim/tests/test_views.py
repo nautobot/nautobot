@@ -1505,8 +1505,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         # Create an interface and assign an IP to it.
         device = Device.objects.first()
-        intf_status = Status.objects.get_for_model(Interface).first()
-        interface = Interface.objects.create(device=device, name="Interface 1", status=intf_status)
+        interface = Interface.objects.first()
         namespace = Namespace.objects.first()
         Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace, status=self.prefix_status)
         ip_address = IPAddress.objects.create(address="1.2.3.4/32", namespace=namespace, status=self.ipaddr_status)
