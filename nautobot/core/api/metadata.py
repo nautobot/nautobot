@@ -4,6 +4,8 @@ from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
+from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 import drf_react_template.schema_form_encoder as schema
 from rest_framework import exceptions
 from rest_framework import fields as drf_fields, relations as drf_relations, serializers as drf_serializers
@@ -12,6 +14,7 @@ from rest_framework.request import clone_request
 
 from nautobot.core.exceptions import ViewConfigException
 from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.utils.lookup import get_route_for_model
 
 
 # FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
@@ -80,6 +83,12 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
             if isinstance(field, drf_serializers.RelatedField):
                 result["uniqueItems"] = True
                 if hasattr(field, "queryset") and hasattr(field.queryset, "model"):
+                    # We construct the correct list view url here so we can just append the object id to the end of the url in our frontend.
+                    # e.g. /dcim/locations/
+                    try:
+                        model_url = reverse(get_route_for_model(model=field.queryset.model, action="list"))
+                    except NoReverseMatch:
+                        model_url = None
                     model_options = field.queryset.model._meta
                     result["required"] = field.required
                     # Custom Keyword: modelName, modelNamePlural and appLabel
@@ -88,7 +97,7 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
                     # and appLabel represents the app_name of the model
                     result["modelName"] = model_options.model_name
                     result["appLabel"] = model_options.app_label
-                    result["modelNamePlural"] = model_options.verbose_name_plural
+                    result["modelUrl"] = model_url
             if field.allow_null:
                 result["type"] = [result["type"], "null"]
             if enum := type_map_obj.get("enum"):
@@ -215,12 +224,7 @@ class NautobotMetadata(SimpleMetadata):
     def get_advanced_tab_fields(self, serializer):
         """Try to get the advanced tab fields or default to an empty list."""
         default_advanced_fields = ["id", "url", "composite_key", "created", "last_updated"]
-        advanced_fields = default_advanced_fields
-        field_map = dict(serializer.fields)
-        all_fields = list(field_map)
-        for field in default_advanced_fields:
-            if field not in all_fields:
-                advanced_fields.remove(field)
+        advanced_fields = [field for field in default_advanced_fields if field in serializer.fields.keys()]
         return advanced_fields
 
     def determine_view_options(self, request, serializer):
@@ -300,25 +304,22 @@ class NautobotMetadata(SimpleMetadata):
 
         return metadata
 
-    def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields, advanced_fields):
+    def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields):
         """Add fields from view serializer fields that are missing from view_config_layout."""
         serializer_fields = self.view_serializer.fields.keys()
         view_config_fields = [
             field for config in view_config_layout for field_list in config.values() for field in field_list["fields"]
         ]
-        missing_fields = sorted(
-            set(serializer_fields) - set(view_config_fields) - set(exclude_fields) - set(advanced_fields)
-        )
+        missing_fields = sorted(set(serializer_fields) - set(view_config_fields) - set(exclude_fields))
         view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
         return view_config_layout
 
     def restructure_view_config(self, serializer, view_config):
         """
-        Restructure the view config by removing specific fields ("composite_key", "url", "display", "status", "id")
-        from the view config and adding standard fields ("id", "composite_key", "url") to the first item's fields.
+        Restructure the view config by removing specific fields ("composite_key", "url", "display", "status", "id", "created", "last_updated")
+        from the view config.
 
-        This operation aims to establish a standardized and consistent way of displaying the fields "id", "composite_key",
-        and "url" within the view config.
+        This operation aims to establish a standardized and consistent way of displaying the fields.
 
         Example:
             >>> view_config = [
@@ -339,7 +340,7 @@ class NautobotMetadata(SimpleMetadata):
         """
 
         # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
-        fields_to_remove = ["composite_key", "url", "display", "status", "id", "created", "updated"]
+        fields_to_remove = ["composite_key", "url", "display", "status", "id", "created", "last_updated"]
         advanced_fields = self.get_advanced_tab_fields(serializer)
         # Make a deepcopy to avoid altering view_config
         view_config_layout = deepcopy(view_config.get("layout"))
@@ -351,7 +352,7 @@ class NautobotMetadata(SimpleMetadata):
                         value["fields"].remove(field)
         if view_config.get("include_others", False):
             view_config_layout = self.add_missing_field_to_view_config_layout(
-                view_config_layout, fields_to_remove, advanced_fields
+                view_config_layout, fields_to_remove + advanced_fields
             )
         return view_config_layout
 
