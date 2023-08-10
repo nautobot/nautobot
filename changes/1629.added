@@ -1,0 +1,1 @@
+Added additional Prometheus metrics for workers per job queue and tasks per status/worker.

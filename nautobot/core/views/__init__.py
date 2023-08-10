@@ -25,6 +25,7 @@ from prometheus_client import multiprocess
 from prometheus_client.metrics_core import GaugeMetricFamily
 from prometheus_client.registry import Collector
 
+from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
@@ -33,6 +34,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
+from nautobot.extras.utils import get_celery_queues
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -284,6 +286,44 @@ class NautobotAppMetricsCollector(Collector):
         yield gauge
 
 
+class NautobotCeleryMetricsCollector(Collector):
+    """Custom celery metrics collector."""
+
+    def collect(self):
+        """Collect metrics from celery."""
+        yield self._collect_workers_per_status()
+        yield self._collect_workers_per_queue()
+
+    @staticmethod
+    def _collect_workers_per_status():
+        """Collect a metric for amount of tasks per worker and status."""
+        tasks_per_status_total = GaugeMetricFamily(
+            "nautobot_workers_tasks_per_status_and_worker_total",
+            "Number of tasks per status and worker",
+            labels=["status", "worker"],
+        )
+        inspect = app.control.inspect()
+        for state in ["active", "scheduled", "reserved"]:
+            tasks_per_worker = getattr(inspect, state)()
+            if not tasks_per_worker:
+                # Make sure that a metric is given out even if there is no worker.
+                tasks_per_status_total.add_metric(labels=[state], value=-1)
+                continue
+            for worker, tasks in tasks_per_worker.items():
+                tasks_per_status_total.add_metric(labels=[state, worker], value=len(tasks))
+        return tasks_per_status_total
+
+    @staticmethod
+    def _collect_workers_per_queue():
+        """Collect a metric for the amount of workers per queue."""
+        workers_per_queue_gauge = GaugeMetricFamily(
+            "nautobot_workers_per_queue_total", "Number of alive workers per queue", labels=["queue"]
+        )
+        for queue, worker_count in get_celery_queues().items():
+            workers_per_queue_gauge.add_metric([queue], worker_count)
+        return workers_per_queue_gauge
+
+
 def nautobot_metrics_view(request):
     """Exports /metrics.
 
@@ -296,15 +336,16 @@ def nautobot_metrics_view(request):
         multiprocess.MultiProcessCollector(prometheus_registry)
     else:
         prometheus_registry = prometheus_client.REGISTRY
-    # Instantiate and register the collector. Note that this has to be done every time this view is accessed, because
+    # Instantiate and register the collectors. Note that this has to be done every time this view is accessed, because
     # the registry for multiprocess metrics is also instantiated every time this view is accessed. As a result, the
     # same goes for the registration of the collector to the registry.
-    try:
-        nb_app_collector = NautobotAppMetricsCollector()
-        prometheus_registry.register(nb_app_collector)
-    except ValueError:
-        # Collector already registered, we are running without multiprocessing
-        pass
+    for collector_class in [NautobotAppMetricsCollector, NautobotCeleryMetricsCollector]:
+        try:
+            collector = collector_class()
+            prometheus_registry.register(collector)
+        except ValueError:
+            # Collector already registered, we are running without multiprocessing
+            pass
     metrics_page = prometheus_client.generate_latest(prometheus_registry)
     return HttpResponse(metrics_page, content_type=prometheus_client.CONTENT_TYPE_LATEST)
 
