@@ -6,10 +6,16 @@
 {% block title %}Assign an IP address{% endblock %}
 
 {% block content %}
-    <form action="{% querystring request %}" method="post" class="form form-horizontal">
-        {% csrf_token %}
+    <form action="#" method="get" class="form form-horizontal">
         {% for field in form.hidden_fields %}
             {{ field }}
+        {% endfor %}
+        {% for k, v_list in request.GET.lists %}
+            {% if k != 'q' %}
+                {% for v in v_list %}
+                    <input type="hidden" name="{{ k }}" value="{{ v }}" />
+                {% endfor %}
+            {% endif %}
         {% endfor %}
         <div class="row">
             <div class="col-md-6 col-md-offset-3">
@@ -26,7 +32,6 @@
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>Select IP Address</strong></div>
                 <div class="panel-body">
-                    {% render_field form.vrf_id %}
                     {% render_field form.q %}
                 </div>
             </div>
@@ -45,7 +50,7 @@
                 {% csrf_token %}
                 <div class="col-md-12" style="margin-top: 20px">
                     <h3>Search Results</h3>
-                    {% include 'utilities/obj_table.html' with table_template='panel_table.html' %}
+                    {% include 'utilities/obj_table.html' with table_template='panel_table.html' disable_pagination=True %}
                     <div class="pull-left noprint">
                         {% if perms.dcim.change_interface %}
                             <button type="submit" name="_edit" formaction="#" class="btn btn-primary btn-sm">
@@ -55,6 +60,7 @@
                     </div>
                 </div>
             </form>
+            {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
         </div>
     {% endif %}
 {% endblock %}
