@@ -198,7 +198,7 @@ class APIViewTestCases:
                 # 3. advanced_view_schema: This is the advanced tab schema generated from an OPTIONS request.
                 serializer = get_serializer_for_model(self._get_queryset().model)
                 advanced_view_schema = response.data["view_options"]["advanced"]
-                self.assertEquals(len(advanced_view_schema), 1)
+                self.assertEqual(len(advanced_view_schema), 1)
                 self.assertIn("Object Details", advanced_view_schema[0])
 
                 if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
