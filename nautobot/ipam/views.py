@@ -819,13 +819,16 @@ class IPAddressAssignView(generic.ObjectView):
         )
 
     def post(self, request):
+        interface, _ = retrieve_interface_or_vminterface_from_request(request)
+
         if pks := request.POST.getlist("pk"):
-            return self.assign_ipaddresses_to_interface(pks, request)
+            ip_addresses = IPAddress.objects.filter(pk__in=pks)
+            interface.ip_addresses.add(*ip_addresses)
+            return redirect(request.GET.get("return_url"))
+
         form = forms.IPAddressAssignForm(request.POST)
         table = None
-
         if form.is_valid():
-            interface, _ = retrieve_interface_or_vminterface_from_request(request)
             addresses = self.queryset.select_related("tenant").exclude(pk__in=interface.ip_addresses.values_list("pk"))
             # Limit to 100 results
             addresses = filters.IPAddressFilterSet(request.POST, addresses).qs[:100]
@@ -840,14 +843,6 @@ class IPAddressAssignView(generic.ObjectView):
                 "return_url": request.GET.get("return_url"),
             },
         )
-
-    def assign_ipaddresses_to_interface(self, pks, request):
-        ip_addresses = IPAddress.objects.filter(pk__in=pks)
-        interface_model = Interface if "interface" in request.GET else VMInterface
-        interface_id = request.GET.get("interface") or request.GET.get("vminterface")
-        interface = interface_model.objects.get(id=interface_id)
-        interface.ip_addresses.add(*ip_addresses)
-        return redirect(request.GET.get("return_url"))
 
 
 class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermissionRequiredMixin, View):
