@@ -1,5 +1,6 @@
 from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
 from django.db.models.functions import Coalesce
+from django.db import transaction
 
 from nautobot.core.models.utils import deconstruct_composite_key
 from nautobot.core.utils import permissions
@@ -173,3 +174,24 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
+
+    @transaction.atomic
+    def validated_create(self, **kwargs):
+        """Wrap create() & full_clean() in atomic transaction."""
+        obj = self.create(**kwargs)
+        obj.full_clean()
+        return obj
+
+    @transaction.atomic
+    def validated_get_or_create(self, **kwargs):
+        """Wrap get_or_create() & full_clean() in atomic transaction."""
+        obj, created = self.get_or_create(**kwargs)
+        obj.full_clean()
+        return obj, created
+
+    @transaction.atomic
+    def validated_update_or_create(self, **kwargs):
+        """Wrap update_or_create() & full_clean() in atomic transaction."""
+        obj, created = self.update_or_create(**kwargs)
+        obj.full_clean()
+        return obj, created
