@@ -30,13 +30,13 @@ inputs:
   image:
     description: "Produced Image Name"
     required: true
-  latest:
+  tag-latest:
     description: "Whether To Tag As Latest"
     required: true
-  latest-branch:
+  tag-latest-for-branch:
     description: "Whether To Tag As Latest For Branch"
     required: true
-  latest-py:
+  tag-latest-for-py:
     description: "Whether To Tag As Latest For Python Version"
     required: true
   push:
@@ -60,9 +60,9 @@ runs:
           latest=false
         tags: |
           type=raw,value=${{ inputs.branch }}-py${{ inputs.python-version }}
-          type=raw,value=latest,enable=${{ inputs.latest }}
-          type=raw,value=${{ inputs.branch }},enable=${{ inputs.latest-branch }}
-          type=raw,value=latest-py${{ inputs.python-version }},enable=${{ inputs.latest-py }}
+          type=raw,value=latest,enable=${{ inputs.tag-latest }}
+          type=raw,value=${{ inputs.branch }},enable=${{ inputs.tag-latest-for-branch }}
+          type=raw,value=latest-py${{ inputs.python-version }},enable=${{ inputs.tag-latest-for-py }}
         labels: |
           org.opencontainers.image.title=Nautobot
     - name: "Build Dev"

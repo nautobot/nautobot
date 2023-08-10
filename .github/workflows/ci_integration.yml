@@ -298,25 +298,25 @@ jobs:
         shell: "bash"
         run: |
           export BRANCH="${{ github.ref_name }}"
-          export LATEST="false"
-          export LATEST_BRANCH="false"
-          export LATEST_PY="false"
+          export TAG_LATEST="false"
+          export TAG_LATEST_FOR_BRANCH="false"
+          export TAG_LATEST_FOR_PY="false"
 
           if [[ $BRANCH == "develop" ]]; then
-            export LATEST_PY="true"
+            export TAG_LATEST_FOR_PY="true"
           fi
 
           if [[ "${{ matrix.python-version }}" == "3.11" ]]; then
-            export LATEST_BRANCH="true"
-            if [[ $LATEST_PY == "true" ]]; then
-              export LATEST="true"
+            export TAG_LATEST_FOR_BRANCH="true"
+            if [[ $TAG_LATEST_FOR_PY == "true" ]]; then
+              export TAG_LATEST="true"
             fi
           fi
 
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          echo "latest=$LATEST" >> $GITHUB_OUTPUT
-          echo "latest-branch=$LATEST_BRANCH" >> $GITHUB_OUTPUT
-          echo "latest-py=$LATEST_PY" >> $GITHUB_OUTPUT
+          echo "tag-latest=$TAG_LATEST" >> $GITHUB_OUTPUT
+          echo "tag-latest-for-branch=$TAG_LATEST_FOR_BRANCH" >> $GITHUB_OUTPUT
+          echo "tag-latest-for-py=$TAG_LATEST_FOR_PY" >> $GITHUB_OUTPUT
       - name: "Check out repository code"
         uses: "actions/checkout@v3"
       - name: "Set up QEMU"
@@ -331,25 +331,25 @@ jobs:
           password: "${{ secrets.GITHUB_TOKEN }}"
       - name: "Build `final`"
         if: |
-          steps.config.outputs.latest-branch == 'true'
+          steps.config.outputs.tag-latest-for-branch == 'true'
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot"
-          latest: "${{ steps.config.outputs.latest }}"
-          latest-branch: "${{ steps.config.outputs.latest-branch }}"
-          latest-py: "${{ steps.config.outputs.latest-py }}"
           push: "false"
           python-version: "${{ matrix.python-version }}"
+          tag-latest: "${{ steps.config.outputs.tag-latest }}"
+          tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
+          tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
           target: "final"
       - name: "Build and Push `final-dev`"
         uses: "./.github/actions/build-nautobot-image"
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot-dev"
-          latest: "${{ steps.config.outputs.latest }}"
-          latest-branch: "${{ steps.config.outputs.latest-branch }}"
-          latest-py: "${{ steps.config.outputs.latest-py }}"
           push: "true"
           python-version: "${{ matrix.python-version }}"
+          tag-latest: "${{ steps.config.outputs.tag-latest }}"
+          tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
+          tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
           target: "final-dev"
