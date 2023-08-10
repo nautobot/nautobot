@@ -1,13 +1,13 @@
 /**
  * This module provides utility functions to create Webpack and Jest alias configurations
  * from the `jsconfig.json` file and its extended configurations.
- * 
+ *
  * Summary:
  * 1. Reading the `jsconfig.json` and its extended configurations and Merging the base and extended configurations.
  * 2. Parsing the `compilerOptions.paths` from the merged configuration to generate:
  *    - Webpack aliases: Used to simplify import paths in Webpack configurations.
  *    - Jest aliases: Used to map module paths for Jest tests.
-**/
+ **/
 
 const path = require("path");
 const fs = require("fs");
