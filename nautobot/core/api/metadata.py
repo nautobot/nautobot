@@ -215,12 +215,13 @@ class NautobotMetadata(SimpleMetadata):
     def get_advanced_tab_fields(self, serializer):
         """Try to get the advanced tab fields or default to an empty list."""
         default_advanced_fields = ["id", "url", "composite_key", "created", "last_updated"]
+        advanced_fields = default_advanced_fields
         field_map = dict(serializer.fields)
         all_fields = list(field_map)
         for field in default_advanced_fields:
             if field not in all_fields:
-                default_advanced_fields.remove(field)
-        return default_advanced_fields
+                advanced_fields.remove(field)
+        return advanced_fields
 
     def determine_view_options(self, request, serializer):
         """Determine view options that will be used for non-form display metadata."""
@@ -299,17 +300,19 @@ class NautobotMetadata(SimpleMetadata):
 
         return metadata
 
-    def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields):
+    def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields, advanced_fields):
         """Add fields from view serializer fields that are missing from view_config_layout."""
         serializer_fields = self.view_serializer.fields.keys()
         view_config_fields = [
             field for config in view_config_layout for field_list in config.values() for field in field_list["fields"]
         ]
-        missing_fields = sorted(set(serializer_fields) - set(view_config_fields) - set(exclude_fields))
+        missing_fields = sorted(
+            set(serializer_fields) - set(view_config_fields) - set(exclude_fields) - set(advanced_fields)
+        )
         view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
         return view_config_layout
 
-    def restructure_view_config(self, view_config):
+    def restructure_view_config(self, serializer, view_config):
         """
         Restructure the view config by removing specific fields ("composite_key", "url", "display", "status", "id")
         from the view config and adding standard fields ("id", "composite_key", "url") to the first item's fields.
@@ -325,7 +328,7 @@ class NautobotMetadata(SimpleMetadata):
                 },
                 ...
             ]
-            >>> restructure_view_config(view_config)
+            >>> restructure_view_config(serializer, view_config)
             [
                 {
                     Location: {fields: ["name","id","composite_key","url"]},
@@ -337,6 +340,7 @@ class NautobotMetadata(SimpleMetadata):
 
         # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
         fields_to_remove = ["composite_key", "url", "display", "status", "id", "created", "updated"]
+        advanced_fields = self.get_advanced_tab_fields(serializer)
         # Make a deepcopy to avoid altering view_config
         view_config_layout = deepcopy(view_config.get("layout"))
 
@@ -346,7 +350,9 @@ class NautobotMetadata(SimpleMetadata):
                     if field in value["fields"]:
                         value["fields"].remove(field)
         if view_config.get("include_others", False):
-            view_config_layout = self.add_missing_field_to_view_config_layout(view_config_layout, fields_to_remove)
+            view_config_layout = self.add_missing_field_to_view_config_layout(
+                view_config_layout, fields_to_remove, advanced_fields
+            )
         return view_config_layout
 
     def get_m2m_and_non_m2m_fields(self, serializer):
@@ -413,7 +419,7 @@ class NautobotMetadata(SimpleMetadata):
             view_config = self.validate_view_config(serializer.Meta.detail_view_config)
         else:
             view_config = self.get_default_detail_view_config(serializer)
-        return self.restructure_view_config(view_config)
+        return self.restructure_view_config(serializer, view_config)
 
     def validate_view_config(self, view_config):
         """Validate view config"""

@@ -510,7 +510,6 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                         "fields": [
                             "role",
                             "platform",
-                            "status",
                             "primary_ip4",
                             "primary_ip6",
                             "secrets_group",

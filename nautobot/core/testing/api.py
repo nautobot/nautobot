@@ -195,20 +195,26 @@ class APIViewTestCases:
                 # Namings Help
                 # 1. detail_view_config: This is the detail view config set in the serializer.Meta.detail_view_config
                 # 2. detail_view_schema: This is the retrieve schema generated from an OPTIONS request.
+                # 3. advanced_view_schema: This is the advanced tab schema generated from an OPTIONS request.
                 serializer = get_serializer_for_model(self._get_queryset().model)
+                advanced_view_schema = response.data["view_options"]["advanced"]
+                self.assertEquals(len(advanced_view_schema), 1)
+                self.assertIn("Object Details", advanced_view_schema[0])
+
                 if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
                     detail_view_schema = response.data["view_options"]["retrieve"]
                     self.assertHttpStatus(response, status.HTTP_200_OK)
 
-                    # According to convention, `special_fields(`id`, `composite_key`, `url`)` should only exist at the end of the first col first group in
-                    # the `detail_view_schema` and should be deleted from any other places it may appear in the `detail_view_schema`. Assert this is True.
-                    with self.subTest("Assert special fields(`id`, `composite_key`, `url`)."):
-                        special_fields = ["id", "composite_key", "url"]
-
+                    # According to convention, fields in the advanced tab(`id`, `composite_key`, `url`, `created`, `last_updated`)` should not exist in
+                    # the `detail_view_schema`. Assert this is True.
+                    with self.subTest(
+                        "Assert advanced tab fields(`id`, `composite_key`, `url`, `created`, `last_updated`)."
+                    ):
+                        advanced_tab_fields = advanced_view_schema[0].get("Object Details")["fields"]
                         if detail_view_config.get("include_others"):
                             # Handle `Other Fields` specially as `Other Field` is dynamically added by nautobot and not part of the serializer view config
                             other_fields = detail_view_schema[0]["Other Fields"]["fields"]
-                            self.assertFalse(any(field for field in other_fields if field in special_fields))
+                            self.assertFalse(any(field for field in other_fields if field in advanced_tab_fields))
 
                         for col_idx, col in enumerate(detail_view_schema):
                             for group_idx, (group_title, group) in enumerate(col.items()):
@@ -217,18 +223,20 @@ class APIViewTestCases:
                                 group_fields = group["fields"]
                                 # Config on the serializer
                                 fields = detail_view_config["layout"][col_idx][group_title]["fields"]
-                                # According to convention, special_fields should only exist at the end of the first col group and should be
+                                # According to convention, advanced_tab_fields should only exist at the end of the first col group and should be
                                 # deleted from any other places it may appear in the layout. Assert this is True.
                                 if group_idx == 0 == col_idx:
-                                    self.assertEqual(special_fields, group_fields[-len(special_fields) :])
                                     self.assertFalse(
-                                        any(field in special_fields for field in group_fields[: -len(special_fields)])
+                                        any(
+                                            field in advanced_tab_fields
+                                            for field in group_fields[: -len(advanced_tab_fields)]
+                                        )
                                     )
                                 else:
-                                    self.assertFalse(any(field in special_fields for field in group_fields))
+                                    self.assertFalse(any(field in advanced_tab_fields for field in group_fields))
                                 # Assert response from options correspond to the view config set on the serializer
                                 self.assertTrue(
-                                    all(field in group_fields for field in fields if field not in special_fields)
+                                    all(field in group_fields for field in fields if field not in advanced_tab_fields)
                                 )
 
     class ListObjectsViewTestCase(APITestCase):
