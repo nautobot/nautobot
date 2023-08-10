@@ -453,7 +453,12 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     tenant = TenantColumn()
     parent__namespace = tables.Column(linkify=True)
-    # TODO: add interface M2M
+    interface_count = tables.Column(verbose_name="Interfaces")
+    interface_parent_count = tables.Column(verbose_name="Devices")
+    vm_interface_count = LinkedCountColumn(
+        viewname="virtualization:vminterface_list", url_params={"ip_addresses": "pk"}, verbose_name="VM Interfaces"
+    )
+    vm_interface_parent_count = tables.Column(verbose_name="Virtual Machines")
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -467,6 +472,10 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "dns_name",
             "description",
             "parent__namespace",
+            "interface_count",
+            "interface_parent_count",
+            "vm_interface_count",
+            "vm_interface_parent_count",
         )
         row_attrs = {
             "class": lambda record: "success" if not isinstance(record, IPAddress) else "",
@@ -477,7 +486,10 @@ class IPAddressDetailTable(IPAddressTable):
     nat_inside = tables.Column(linkify=True, orderable=False, verbose_name="NAT (Inside)")
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:ipaddress_list")
-    # TODO: add interface M2M
+    assigned = BooleanColumn(accessor="assigned_count")
+
+    def render_assigned(self, column, value):
+        return column.render(value > 0)
 
     class Meta(IPAddressTable.Meta):
         fields = (

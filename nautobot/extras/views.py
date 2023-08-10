@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.db.models import ProtectedError, Q
+from django.db.models import Count, ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -1801,9 +1801,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "rack",
                 "device_type",
             )
-            ipaddress = instance.ip_addresses.select_related(
-                # "vrf",
-                "tenant",
+            ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
+                interface_count=Count("interfaces"),
+                interface_parent_count=(Count("interfaces__device", distinct=True)),
+                vm_interface_count=Count("vm_interfaces"),
+                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                assigned_count=Count("interfaces") + Count("vm_interfaces"),
             )
             prefixes = instance.prefixes.select_related(
                 "location",

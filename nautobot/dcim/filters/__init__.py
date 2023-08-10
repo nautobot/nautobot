@@ -196,10 +196,6 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         field_name="devices",
         label="Has devices",
     )
-    has_circuit_terminations = RelatedMembershipBooleanFilter(
-        field_name="circuit_terminations",
-        label="Has circuit terminations",
-    )
     power_panels = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=PowerPanel.objects.all(),
