@@ -92,7 +92,16 @@ class NamespaceIPAddressesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Namespace
-        ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("status")
+        ip_addresses = (
+            instance.ip_addresses.restrict(request.user, "view")
+            .select_related("role", "status", "tenant")
+            .annotate(
+                interface_count=Count("interfaces"),
+                interface_parent_count=(Count("interfaces__device", distinct=True)),
+                vm_interface_count=Count("vm_interfaces"),
+                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+            )
+        )
 
         ip_address_table = tables.IPAddressTable(ip_addresses)
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
@@ -505,8 +514,14 @@ class PrefixIPAddressesView(generic.ObjectView):
         ipaddresses = (
             instance.ip_addresses.all()
             .restrict(request.user, "view")
-            .select_related("status")
+            .select_related("role", "status", "tenant")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")
+            .annotate(
+                interface_count=Count("interfaces"),
+                interface_parent_count=(Count("interfaces__device", distinct=True)),
+                vm_interface_count=Count("vm_interfaces"),
+                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+            )
         )
 
         # Add available IP addresses to the table if requested
@@ -696,7 +711,17 @@ class IPAddressView(generic.ObjectView):
         parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
 
         # Related IP table
-        related_ips = instance.siblings().restrict(request.user, "view").select_related("status", "role", "tenant")
+        related_ips = (
+            instance.siblings()
+            .restrict(request.user, "view")
+            .select_related("role", "status", "tenant")
+            .annotate(
+                interface_count=Count("interfaces"),
+                interface_parent_count=(Count("interfaces__device", distinct=True)),
+                vm_interface_count=Count("vm_interfaces"),
+                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+            )
+        )
         related_ips_table = tables.IPAddressTable(related_ips, orderable=False)
 
         paginate = {
@@ -998,7 +1023,12 @@ class IPAddressBulkImportView(generic.BulkImportView):
 
 class IPAddressBulkEditView(generic.BulkEditView):
     # queryset = IPAddress.objects.select_related("status", "role", "tenant", "vrf__tenant")
-    queryset = IPAddress.objects.select_related("status", "role", "tenant")
+    queryset = IPAddress.objects.select_related("role", "status", "tenant").annotate(
+        interface_count=Count("interfaces"),
+        interface_parent_count=(Count("interfaces__device", distinct=True)),
+        vm_interface_count=Count("vm_interfaces"),
+        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+    )
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
     form = forms.IPAddressBulkEditForm
@@ -1006,7 +1036,12 @@ class IPAddressBulkEditView(generic.BulkEditView):
 
 class IPAddressBulkDeleteView(generic.BulkDeleteView):
     # queryset = IPAddress.objects.select_related("status", "role", "tenant", "vrf__tenant")
-    queryset = IPAddress.objects.select_related("status", "role", "tenant")
+    queryset = IPAddress.objects.select_related("role", "status", "tenant").annotate(
+        interface_count=Count("interfaces"),
+        interface_parent_count=(Count("interfaces__device", distinct=True)),
+        vm_interface_count=Count("vm_interfaces"),
+        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+    )
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
 
