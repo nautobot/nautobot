@@ -76,6 +76,7 @@ export default function RenderHeader({ data }) {
                                 // Because there is currently no support for Edit view in the new UI for production,
                                 // the code below checks if the app is running in production and redirects the user to
                                 // the Edit page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
+                                // TODO: Get rid of this if statement when we have a Create/Update View in the new UI
                                 if (process.env.NODE_ENV === "production") {
                                     document.location.href += "edit/";
                                 }
@@ -92,6 +93,7 @@ export default function RenderHeader({ data }) {
                                 // Because there is currently no support for Delete view in the new UI for production,
                                 // the code below checks if the app is running in production and redirects the user to
                                 // the Delete page; after the page is reloaded, nautobot takes care of rendering the legacy UI.
+                                // TODO: Get rid of this if statement when we have a Delete View in the new UI
                                 if (process.env.NODE_ENV === "production") {
                                     document.location.href += "delete/";
                                 }

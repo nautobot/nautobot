@@ -248,7 +248,6 @@ class NautobotMetadata(SimpleMetadata):
 
         # Explicitly order the "big ugly" fields to the bottom.
         processor.order_fields(all_fields)
-        advanced_fields = self.get_advanced_tab_fields(serializer)
         list_display_fields = self.get_list_display_fields(serializer)
 
         # Process the list_display fields first.
