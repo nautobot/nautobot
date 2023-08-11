@@ -957,15 +957,21 @@ def eslint(context, autoformat=False):
         eslint_command += " --fix"
 
     if is_truthy(context.nautobot.local):
-        run_command(context, f"cd nautobot/ui && {eslint_command} .")
+        # babel-preset-react-app / eslint requires setting environment variable for either
+        # `NODE_ENV` or `BABEL_ENV` to 'test'|'development'|'production'
+        run_command(context, f"cd nautobot/ui && NODE_ENV=test {eslint_command} .")
     else:
         # TODO: we should really run against /source/nautobot/ui, not /opt/nautobot/ui, but eslint aborts if we do:
         #   ESLint couldn't find the config "@react-app" to extend from.
         #   Please check that the name of the config is correct.
         # Probably this is because we don't install node_modules under /source/nautobot/ui normally...?
+        #
+        # babel-preset-react-app / eslint requires setting environment variable for either
+        # `NODE_ENV` or `BABEL_ENV` to 'test'|'development'|'production'
         docker_compose(
             context,
-            f"run --workdir='/opt/nautobot/ui' --entrypoint '{eslint_command} /opt/nautobot/ui' nautobot",
+            "run --workdir='/opt/nautobot/ui' -e NODE_ENV=test "
+            f"--entrypoint '{eslint_command} /opt/nautobot/ui' nautobot",
         )
 
 
