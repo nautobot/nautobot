@@ -10,10 +10,10 @@
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
-        {% for k, v_list in request.GET.lists %}
-            {% if k != 'q' %}
-                {% for v in v_list %}
-                    <input type="hidden" name="{{ k }}" value="{{ v }}" />
+        {% for field_name, field_values in request.GET.lists %}
+            {% if field_name != 'q' %}
+                {% for field_value in field_values %}
+                    <input type="hidden" name="{{ field_name }}" value="{{ field_value }}" />
                 {% endfor %}
             {% endif %}
         {% endfor %}

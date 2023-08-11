@@ -568,7 +568,7 @@ class PrefixEditView(generic.ObjectEditView):
     model_form = forms.PrefixForm
     template_name = "ipam/prefix_edit.html"
 
-    def successful_post(self, request, obj, created, logger):
+    def successful_post(self, request, obj, created, _logger):
         """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
         # 3.0 TODO: remove these checks after enabling strict enforcement of the equivalent logic in Prefix.save()
         edit_url = reverse("ipam:prefix_edit", kwargs={"pk": obj.pk})
@@ -659,7 +659,7 @@ class PrefixEditView(generic.ObjectEditView):
                     ),
                 )
 
-        super().successful_post(request, obj, created, logger)
+        super().successful_post(request, obj, created, _logger)
 
 
 class PrefixDeleteView(generic.ObjectDeleteView):
@@ -754,7 +754,7 @@ class IPAddressEditView(generic.ObjectEditView):
 
         return super().dispatch(request, *args, **kwargs)
 
-    def successful_post(self, request, obj, created, logger):
+    def successful_post(self, request, obj, created, _logger):
         """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
         # 3.0 TODO: remove this check after enabling strict enforcement of the equivalent logic in IPAddress.save()
         if obj.parent.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
@@ -801,7 +801,7 @@ class IPAddressEditView(generic.ObjectEditView):
             interface, _ = retrieve_interface_or_vminterface_from_request(request)
             interface.ip_addresses.add(obj)
 
-        super().successful_post(request, obj, created, logger)
+        super().successful_post(request, obj, created, _logger)
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # TODO: update to work with interface M2M
@@ -874,7 +874,7 @@ class IPAddressAssignView(generic.ObjectView):
         interface, _ = retrieve_interface_or_vminterface_from_request(request)
 
         if pks := request.POST.getlist("pk"):
-            ip_addresses = IPAddress.objects.filter(pk__in=pks)
+            ip_addresses = IPAddress.objects.restrict(request.user, "view").filter(pk__in=pks)
             interface.ip_addresses.add(*ip_addresses)
             return redirect(request.GET.get("return_url"))
 
