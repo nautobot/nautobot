@@ -21,8 +21,6 @@ const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin"
 
 const createEnvironmentHash = require("./webpack/persistentCache/createEnvironmentHash");
 
-const nautobotAlias = require("../aliases");
-
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== "false";
 
@@ -55,19 +53,6 @@ const cssRegex = /\.css$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
 const sassModuleRegex = /\.module\.(scss|sass)$/;
-
-const hasJsxRuntime = (() => {
-    if (process.env.DISABLE_NEW_JSX_TRANSFORM === "true") {
-        return false;
-    }
-
-    try {
-        require.resolve("react/jsx-runtime");
-        return true;
-    } catch (e) {
-        return false;
-    }
-})();
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
@@ -176,11 +161,6 @@ module.exports = function (webpackEnv) {
         devtool: process.env.NAUTOBOT_DEBUG
             ? "eval-source-map"
             : "hidden-source-map",
-        // NAUTOBOT CHANGE TO CRACO DEFAULTS
-        // TODO(jathan): This might be safely deleted.
-        devServer: {
-            writeToDisk: true, // Write files to disk in dev mode so Django can serve the assets
-        },
         // These are the "entry points" to our application.
         // This means they will be the "root" imports that are included in JS bundle.
         entry: paths.appIndexJs,
@@ -304,7 +284,6 @@ module.exports = function (webpackEnv) {
                     "scheduler/tracing": "scheduler/tracing-profiling",
                 }),
                 ...(modules.webpackAliases || {}),
-                ...nautobotAlias.webpack,
             },
             plugins: [],
         },
@@ -389,9 +368,7 @@ module.exports = function (webpackEnv) {
                                             "babel-preset-react-app"
                                         ),
                                         {
-                                            runtime: hasJsxRuntime
-                                                ? "automatic"
-                                                : "classic",
+                                            runtime: "automatic",
                                         },
                                     ],
                                 ],
@@ -686,11 +663,7 @@ module.exports = function (webpackEnv) {
                         extends: [
                             require.resolve("eslint-config-react-app/base"),
                         ],
-                        rules: {
-                            ...(!hasJsxRuntime && {
-                                "react/react-in-jsx-scope": "error",
-                            }),
-                        },
+                        rules: {},
                     },
                 }),
         ].filter(Boolean),

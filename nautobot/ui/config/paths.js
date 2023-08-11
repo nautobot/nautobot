@@ -57,7 +57,6 @@ module.exports = {
     appPackageJson: resolveApp("package.json"),
     appSrc: resolveApp("src"),
     appJsConfig: resolveApp("jsconfig.json"),
-    testsSetup: resolveModule(resolveApp, "src/setupTests"),
     proxySetup: resolveApp("src/setupProxy.js"),
     appNodeModules: resolveApp("node_modules"),
     appWebpackCache: resolveApp("node_modules/.cache"),

@@ -49,45 +49,78 @@ function getAdditionalModulePaths(options = {}) {
 /**
  * Get webpack aliases based on the baseUrl of a compilerOptions object.
  *
+ * Nautobot extends the base implementation provided by create-react-app to handle `options.paths` as well as `baseUrl`.
+ *
  * @param {*} options
  */
 function getWebpackAliases(options = {}) {
     const baseUrl = options.baseUrl;
 
+    let aliases = {};
+
     if (!baseUrl) {
-        return {};
+        return aliases;
     }
 
     const baseUrlResolved = path.resolve(paths.appPath, baseUrl);
 
     if (path.relative(paths.appPath, baseUrlResolved) === "") {
-        return {
-            src: paths.appSrc,
-        };
+        aliases["src"] = paths.appSrc;
     }
+
+    for (let key in options.paths) {
+        // Remove the /* from the key
+        const aliasKey = key.replace("/*", "");
+        // Remove the /* from the value and resolve the path
+        const aliasValue = options.paths[key][0].replace("/*", "");
+        aliases[aliasKey] = path.resolve(paths.appPath, aliasValue);
+    }
+
+    return aliases;
 }
 
 /**
  * Get jest aliases based on the baseUrl of a compilerOptions object.
+ *
+ * Nautobot extends the base implementation provided by create-react-app to handle `options.paths` as well as `baseUrl`.
  *
  * @param {*} options
  */
 function getJestAliases(options = {}) {
     const baseUrl = options.baseUrl;
 
+    let aliases = {};
+
     if (!baseUrl) {
-        return {};
+        return aliases;
     }
 
     const baseUrlResolved = path.resolve(paths.appPath, baseUrl);
 
     if (path.relative(paths.appPath, baseUrlResolved) === "") {
-        return {
-            "^src/(.*)$": "<rootDir>/src/$1",
-        };
+        aliases["^src/(.*)$"] = "<rootDir>/src/$1";
     }
+
+    for (let key in options.paths) {
+        // Remove the /* from the key
+        const aliasKey = key.replace("/*", "");
+        // Remove the /* from the value and resolve the path
+        const aliasValue = options.paths[key][0].replace("/*", "");
+        aliases[`^${aliasKey}/(.*)$`] = `${path.resolve(
+            paths.appPath,
+            aliasValue
+        )}/$1`;
+    }
+
+    return aliases;
 }
 
+/**
+ * Get modules and aliases provided based on our jsconfig.
+ *
+ * Nautobot simplified the base implementation provided by create-react-app by removing references to tsconfig.json.
+ *
+ */
 function getModules() {
     const hasJsConfig = fs.existsSync(paths.appJsConfig);
 
@@ -95,6 +128,12 @@ function getModules() {
 
     if (hasJsConfig) {
         config = require(paths.appJsConfig);
+        // handle 'extends' keyword in config
+        const base_config = require(path.resolve(
+            paths.appPath,
+            config.extends
+        ));
+        config = { ...base_config, ...config };
     }
 
     config = config || {};
