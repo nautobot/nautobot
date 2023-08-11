@@ -11,8 +11,7 @@ module.exports = {
     ],
     testEnvironment: "jsdom",
     transform: {
-        "^.+\\.(js|jsx|mjs|cjs)$":
-            "<rootDir>/config/jest/babelTransform.js",
+        "^.+\\.(js|jsx|mjs|cjs)$": "<rootDir>/config/jest/babelTransform.js",
         "^.+\\.css$": "<rootDir>/config/jest/cssTransform.js",
         "^(?!.*\\.(js|jsx|mjs|cjs|css|json)$)":
             "<rootDir>/config/jest/fileTransform.js",
@@ -27,14 +26,7 @@ module.exports = {
         "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
         ...modules.jestAliases,
     },
-    moduleFileExtensions: [
-        "web.js",
-        "js",
-        "json",
-        "web.jsx",
-        "jsx",
-        "node",
-    ],
+    moduleFileExtensions: ["web.js", "js", "json", "web.jsx", "jsx", "node"],
     watchPlugins: [
         "jest-watch-typeahead/filename",
         "jest-watch-typeahead/testname",
