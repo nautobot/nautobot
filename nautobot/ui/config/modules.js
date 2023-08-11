@@ -129,7 +129,10 @@ function getModules() {
     if (hasJsConfig) {
         config = require(paths.appJsConfig);
         // handle 'extends' keyword in config
-        const base_config = require(path.resolve(paths.appPath, config.extends));
+        const base_config = require(path.resolve(
+            paths.appPath,
+            config.extends
+        ));
         config = { ...base_config, ...config };
     }
 
