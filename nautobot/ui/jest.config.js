@@ -1,4 +1,4 @@
-const nautobotAlias = require("./aliases");
+const modules = require("./config/modules");
 
 module.exports = {
     roots: ["<rootDir>/src"],
@@ -25,7 +25,7 @@ module.exports = {
     moduleNameMapper: {
         "^react-native$": "react-native-web",
         "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
-        ...nautobotAlias.jest,
+        ...modules.jestAliases,
     },
     moduleFileExtensions: [
         "web.js",

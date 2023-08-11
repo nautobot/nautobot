@@ -21,8 +21,6 @@ const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin"
 
 const createEnvironmentHash = require("./webpack/persistentCache/createEnvironmentHash");
 
-const nautobotAlias = require("../aliases");
-
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== "false";
 
@@ -304,7 +302,6 @@ module.exports = function (webpackEnv) {
                     "scheduler/tracing": "scheduler/tracing-profiling",
                 }),
                 ...(modules.webpackAliases || {}),
-                ...nautobotAlias.webpack,
             },
             plugins: [],
         },
