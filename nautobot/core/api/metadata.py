@@ -196,6 +196,7 @@ class NautobotMetadata(SimpleMetadata):
     """
 
     view_serializer = None
+    advanced_tab_fields = ["id", "url", "composite_key", "created", "last_updated"]
 
     def determine_actions(self, request, view):
         """Generate the actions and return the names of the allowed methods."""
@@ -233,7 +234,7 @@ class NautobotMetadata(SimpleMetadata):
                     advanced_fields += value["fields"]
         else:
             # Default advanced fields
-            advanced_fields = ["id", "url", "composite_key", "created", "last_updated"]
+            advanced_fields = self.advanced_tab_fields
         advanced_fields = [field for field in advanced_fields if field in serializer.fields.keys()]
         return advanced_fields
 
@@ -399,7 +400,7 @@ class NautobotMetadata(SimpleMetadata):
         Returns:
             A list representing the advanced view config.
         """
-        return {"layout": [{"Object Details": {"fields": ["id", "url", "composite_key", "created", "last_updated"]}}]}
+        return {"layout": [{"Object Details": {"fields": self.advanced_tab_fields}}]}
 
     def get_default_detail_view_config(self, serializer):
         """
