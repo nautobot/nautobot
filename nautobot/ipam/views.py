@@ -18,6 +18,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
@@ -45,8 +46,11 @@ from .utils import (
     add_available_prefixes,
     add_available_vlans,
     handle_relationship_changes_when_merging_ips,
+    retrieve_interface_or_vminterface_from_request,
 )
 
+
+logger = logging.getLogger(__name__)
 
 #
 # Namespaces
@@ -564,7 +568,7 @@ class PrefixEditView(generic.ObjectEditView):
     model_form = forms.PrefixForm
     template_name = "ipam/prefix_edit.html"
 
-    def successful_post(self, request, obj, created, logger):
+    def successful_post(self, request, obj, created, _logger):
         """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
         # 3.0 TODO: remove these checks after enabling strict enforcement of the equivalent logic in Prefix.save()
         edit_url = reverse("ipam:prefix_edit", kwargs={"pk": obj.pk})
@@ -655,7 +659,7 @@ class PrefixEditView(generic.ObjectEditView):
                     ),
                 )
 
-        super().successful_post(request, obj, created, logger)
+        super().successful_post(request, obj, created, _logger)
 
 
 class PrefixDeleteView(generic.ObjectDeleteView):
@@ -741,7 +745,16 @@ class IPAddressEditView(generic.ObjectEditView):
     model_form = forms.IPAddressForm
     template_name = "ipam/ipaddress_edit.html"
 
-    def successful_post(self, request, obj, created, logger):
+    def dispatch(self, request, *args, **kwargs):
+        if "interface" in request.GET or "vminterface" in request.GET:
+            _, error_msg = retrieve_interface_or_vminterface_from_request(request)
+            if error_msg:
+                messages.warning(request, error_msg)
+                return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def successful_post(self, request, obj, created, _logger):
         """Check for data that will be invalid in a future Nautobot release and warn the user if found."""
         # 3.0 TODO: remove this check after enabling strict enforcement of the equivalent logic in IPAddress.save()
         if obj.parent.type == choices.PrefixTypeChoices.TYPE_CONTAINER:
@@ -783,7 +796,12 @@ class IPAddressEditView(generic.ObjectEditView):
                     ),
                 )
 
-        super().successful_post(request, obj, created, logger)
+        # Add IpAddress to interface if interface is in query_params
+        if "interface" in request.GET or "vminterface" in request.GET:
+            interface, _ = retrieve_interface_or_vminterface_from_request(request)
+            interface.ip_addresses.add(obj)
+
+        super().successful_post(request, obj, created, _logger)
 
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # TODO: update to work with interface M2M
@@ -815,10 +833,32 @@ class IPAddressAssignView(generic.ObjectView):
         if "interface" not in request.GET and "vminterface" not in request.GET:
             return redirect("ipam:ipaddress_add")
 
+        _, error_msg = retrieve_interface_or_vminterface_from_request(request)
+        if error_msg:
+            messages.warning(request, error_msg)
+            return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
+
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        form = forms.IPAddressAssignForm()
+        interface, _ = retrieve_interface_or_vminterface_from_request(request)
+        form = forms.IPAddressAssignForm(data=request.GET)
+
+        table = None
+        if request.GET.get("q"):
+            addresses = self.queryset.select_related("tenant").exclude(pk__in=interface.ip_addresses.values_list("pk"))
+            table = tables.IPAddressAssignTable(addresses)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(table)
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            if max_page_size and paginate["per_page"] > max_page_size:
+                messages.warning(
+                    request,
+                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
+                )
 
         return render(
             request,
@@ -826,25 +866,22 @@ class IPAddressAssignView(generic.ObjectView):
             {
                 "form": form,
                 "return_url": request.GET.get("return_url", ""),
+                "table": table,
             },
         )
 
     def post(self, request):
-        form = forms.IPAddressAssignForm(request.POST)
-        table = None
+        interface, _ = retrieve_interface_or_vminterface_from_request(request)
 
-        if form.is_valid():
-            addresses = self.queryset.select_related("tenant")
-            # Limit to 100 results
-            addresses = filters.IPAddressFilterSet(request.POST, addresses).qs[:100]
-            table = tables.IPAddressAssignTable(addresses)
+        if pks := request.POST.getlist("pk"):
+            ip_addresses = IPAddress.objects.restrict(request.user, "view").filter(pk__in=pks)
+            interface.ip_addresses.add(*ip_addresses)
+            return redirect(request.GET.get("return_url"))
 
         return render(
             request,
             "ipam/ipaddress_assign.html",
             {
-                "form": form,
-                "table": table,
                 "return_url": request.GET.get("return_url"),
             },
         )
@@ -894,7 +931,6 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         return self.find_duplicate_ips(request)
 
     def post(self, request):
-        logger = logging.getLogger(__name__)
         collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
         operation_invalid = len(collapsed_ips) < 2

@@ -81,6 +81,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -1243,6 +1244,14 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             IPAddress.objects.create(address="3.3.3.3/32", namespace=namespace, status=cls.ipaddr_status),
         )
 
+        intf_status = Status.objects.get_for_model(Interface).first()
+
+        cls.interfaces = (
+            Interface.objects.create(device=devices[0], name="Interface 1", status=intf_status),
+            Interface.objects.create(device=devices[0], name="Interface 2", status=intf_status),
+            Interface.objects.create(device=devices[0], name="Interface 3", status=intf_status),
+        )
+
         for device, ipaddress in zip(devices, ipaddresses):
             RelationshipAssociation(
                 relationship=cls.relationships[0], source=device, destination=ipaddress
@@ -1344,14 +1353,86 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_interfaces(self):
         device = Device.objects.first()
-
-        intf_status = Status.objects.get_for_model(Interface).first()
-        Interface.objects.create(device=device, name="Interface 1", status=intf_status)
-        Interface.objects.create(device=device, name="Interface 2", status=intf_status)
-        Interface.objects.create(device=device, name="Interface 3", status=intf_status)
+        self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
 
         url = reverse("dcim:device_interfaces", kwargs={"pk": device.pk})
-        self.assertHttpStatus(self.client.get(url), 200)
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        # Count the number of occurrences of "Add IP address" in the response_body
+        count = response_body.count("Add IP address")
+        # Assert that "Add IP address" appears for each of the three interfaces
+        self.assertEqual(count, 3)
+
+    def test_device_interface_assign_ipaddress(self):
+        device = Device.objects.first()
+        self.add_permissions(
+            "ipam.add_ipaddress", "extras.view_status", "ipam.view_namespace", "dcim.view_device", "dcim.view_interface"
+        )
+        device_list_url = reverse("dcim:device_interfaces", args=(device.pk,))
+        namespace = Namespace.objects.first()
+        ipaddresses = [str(ipadress) for ipadress in IPAddress.objects.values_list("pk", flat=True)[:3]]
+        add_new_ip_form_data = {
+            "namespace": namespace.pk,
+            "address": "1.1.1.7/24",
+            "tenant": None,
+            "status": Status.objects.get_for_model(IPAddress).first().pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+            "role": None,
+            "nat_inside": None,
+            "dns_name": None,
+            "description": None,
+            "tags": [],
+            "interface": self.interfaces[0].id,
+        }
+        add_new_ip_request = {
+            "path": reverse("ipam:ipaddress_add") + f"?interface={self.interfaces[0].id}&return_url={device_list_url}",
+            "data": post_data(add_new_ip_form_data),
+        }
+        assign_ip_form_data = {"pk": ipaddresses}
+        assign_ip_request = {
+            "path": reverse("ipam:ipaddress_assign")
+            + f"?interface={self.interfaces[1].id}&return_url={device_list_url}",
+            "data": post_data(assign_ip_form_data),
+        }
+
+        with self.subTest("Assert Cannnot assign IPAddress('Add New') without permission"):
+            # Assert Add new IPAddress
+            response = self.client.post(**add_new_ip_request, follow=True)
+            response_body = response.content.decode(response.charset)
+            self.assertHttpStatus(response, 200)
+            self.interfaces[0].refresh_from_db()
+            self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
+            self.assertIn(f"Interface with id &quot;{self.interfaces[0].pk}&quot; not found", response_body)
+
+        with self.subTest("Assert Cannnot assign IPAddress(Exsisting IP) without permission"):
+            # Assert Assign Exsisting IPAddress
+            response = self.client.post(**assign_ip_request, follow=True)
+            response_body = response.content.decode(response.charset)
+            self.assertHttpStatus(response, 200)
+            self.interfaces[1].refresh_from_db()
+            self.assertEqual(self.interfaces[1].ip_addresses.all().count(), 0)
+            self.assertIn(f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found", response_body)
+
+        self.add_permissions("dcim.change_interface", "ipam.view_ipaddress")
+
+        with self.subTest("Assert Create and Assign IPAddress"):
+            self.assertHttpStatus(self.client.post(**add_new_ip_request), 302)
+            self.interfaces[0].refresh_from_db()
+            self.assertEqual(
+                str(self.interfaces[0].ip_addresses.all().first().address), add_new_ip_form_data["address"]
+            )
+
+        with self.subTest("Assert Assign IPAddress"):
+            response = self.client.post(**assign_ip_request)
+            self.assertHttpStatus(response, 302)
+            self.interfaces[1].refresh_from_db()
+            self.assertEqual(self.interfaces[1].ip_addresses.count(), 3)
+            interface_ips = [str(ip) for ip in self.interfaces[1].ip_addresses.values_list("pk", flat=True)]
+            self.assertEqual(
+                sorted(ipaddresses),
+                sorted(interface_ips),
+            )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_rearports(self):
@@ -1424,8 +1505,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         # Create an interface and assign an IP to it.
         device = Device.objects.first()
-        intf_status = Status.objects.get_for_model(Interface).first()
-        interface = Interface.objects.create(device=device, name="Interface 1", status=intf_status)
+        interface = Interface.objects.first()
         namespace = Namespace.objects.first()
         Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace, status=self.prefix_status)
         ip_address = IPAddress.objects.create(address="1.2.3.4/32", namespace=namespace, status=self.ipaddr_status)

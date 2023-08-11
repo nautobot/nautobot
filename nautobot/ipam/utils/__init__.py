@@ -1,9 +1,11 @@
 import netaddr
 
+from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.ipam.constants import VLAN_VID_MAX, VLAN_VID_MIN
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.ipam.querysets import IPAddressQuerySet
+from nautobot.virtualization.models import VMInterface
 
 
 def add_available_prefixes(parent, prefix_list):
@@ -250,3 +252,24 @@ def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, c
                     RelationshipAssociation.objects.filter(
                         relationship=relationship, destination_id=merged_ip.pk
                     ).delete()
+
+
+def retrieve_interface_or_vminterface_from_request(request):
+    """
+    Retrieve either an Interface or VMInterface based on the provided request's GET parameters.
+
+    Parameters:
+        - request (HttpRequest): The HTTP request object.
+
+    Returns:
+        tuple:
+            - Interface/VMInterface or None: The found interface object, or None if not found.
+            - str or None: An error message if the interface is not found, otherwise None.
+    """
+    interface_model = Interface if "interface" in request.GET else VMInterface
+    interface_id = request.GET.get("interface") or request.GET.get("vminterface")
+    try:
+        obj = interface_model.objects.restrict(request.user, "change").get(id=interface_id)
+        return obj, None
+    except interface_model.DoesNotExist:
+        return None, f'{interface_model.__name__} with id "{interface_id}" not found.'
