@@ -4,6 +4,7 @@ from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.ipam.constants import VLAN_VID_MAX, VLAN_VID_MIN
 from nautobot.ipam.models import Prefix, VLAN
+from nautobot.ipam.querysets import IPAddressQuerySet
 from nautobot.virtualization.models import VMInterface
 
 
@@ -47,6 +48,12 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False):
                 f"{first_ip_in_prefix}/{prefix.prefixlen}",
             )
         ]
+
+    # sort the IP address list
+    if isinstance(ipaddress_list, IPAddressQuerySet):
+        ipaddress_list = ipaddress_list.order_by("host")
+    elif isinstance(ipaddress_list, list):
+        ipaddress_list.sort(key=lambda ip: ip.host)
 
     # Account for any available IPs before the first real IP
     if ipaddress_list[0].address.ip > first_ip_in_prefix:
