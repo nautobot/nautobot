@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 const webpack = require("webpack");
-const resolve = require("resolve");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CaseSensitivePathsPlugin = require("case-sensitive-paths-webpack-plugin");
 const InlineChunkHtmlPlugin = require("react-dev-utils/InlineChunkHtmlPlugin");
@@ -18,10 +17,6 @@ const paths = require("./paths");
 const modules = require("./modules");
 const getClientEnvironment = require("./env");
 const ModuleNotFoundPlugin = require("react-dev-utils/ModuleNotFoundPlugin");
-const ForkTsCheckerWebpackPlugin =
-    process.env.TSC_COMPILE_ON_ERROR === "true"
-        ? require("react-dev-utils/ForkTsCheckerWarningWebpackPlugin")
-        : require("react-dev-utils/ForkTsCheckerWebpackPlugin");
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin");
 
 const createEnvironmentHash = require("./webpack/persistentCache/createEnvironmentHash");
@@ -50,14 +45,6 @@ const disableESLintPlugin = process.env.DISABLE_ESLINT_PLUGIN === "true";
 
 const imageInlineSizeLimit = parseInt(
     process.env.IMAGE_INLINE_SIZE_LIMIT || "10000"
-);
-
-// Check if TypeScript is setup
-const useTypeScript = fs.existsSync(paths.appTsConfig);
-
-// Check if Tailwind config exists
-const useTailwind = fs.existsSync(
-    path.join(paths.appPath, "tailwind.config.js")
 );
 
 // Get the path to the uncompiled service worker (if it exists).
@@ -128,36 +115,22 @@ module.exports = function (webpackEnv) {
                         // https://github.com/facebook/create-react-app/issues/2677
                         ident: "postcss",
                         config: false,
-                        plugins: !useTailwind
-                            ? [
-                                  "postcss-flexbugs-fixes",
-                                  [
-                                      "postcss-preset-env",
-                                      {
-                                          autoprefixer: {
-                                              flexbox: "no-2009",
-                                          },
-                                          stage: 3,
-                                      },
-                                  ],
-                                  // Adds PostCSS Normalize as the reset css with default options,
-                                  // so that it honors browserslist config in package.json
-                                  // which in turn let's users customize the target behavior as per their needs.
-                                  "postcss-normalize",
-                              ]
-                            : [
-                                  "tailwindcss",
-                                  "postcss-flexbugs-fixes",
-                                  [
-                                      "postcss-preset-env",
-                                      {
-                                          autoprefixer: {
-                                              flexbox: "no-2009",
-                                          },
-                                          stage: 3,
-                                      },
-                                  ],
-                              ],
+                        plugins: [
+                            "postcss-flexbugs-fixes",
+                            [
+                                "postcss-preset-env",
+                                {
+                                    autoprefixer: {
+                                        flexbox: "no-2009",
+                                    },
+                                    stage: 3,
+                                },
+                            ],
+                            // Adds PostCSS Normalize as the reset css with default options,
+                            // so that it honors browserslist config in package.json
+                            // which in turn let's users customize the target behavior as per their needs.
+                            "postcss-normalize",
+                        ],
                     },
                     sourceMap: isEnvProduction
                         ? shouldUseSourceMap
@@ -212,9 +185,6 @@ module.exports = function (webpackEnv) {
         // This means they will be the "root" imports that are included in JS bundle.
         entry: paths.appIndexJs,
         output: {
-            // TODO(jathan): Still working out quirks on how to properly tie together static files and self-hosting
-            // path = path.resolve(__dirname, "build/static")  // Should be in STATICFILES_DIRS
-            // publicPath = process.env.NAUTOBOT_STATIC_URL // Should match STATIC_URL
             // The build folder.
             path: paths.appBuild,
             // Add /* filename */ comments to generated require()s in the output.
@@ -323,7 +293,7 @@ module.exports = function (webpackEnv) {
             // for React Native Web.
             extensions: paths.moduleFileExtensions
                 .map((ext) => `.${ext}`)
-                .filter((ext) => useTypeScript || !ext.includes("ts")),
+                .filter((ext) => !ext.includes("ts")),
             alias: {
                 // Support React Native Web
                 // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
@@ -345,7 +315,7 @@ module.exports = function (webpackEnv) {
                 shouldUseSourceMap && {
                     enforce: "pre",
                     exclude: /@babel(?:\/|\\{1,2})runtime/,
-                    test: /\.(js|mjs|jsx|ts|tsx|css)$/,
+                    test: /\.(js|mjs|jsx|css)$/,
                     loader: require.resolve("source-map-loader"),
                 },
                 {
@@ -400,13 +370,13 @@ module.exports = function (webpackEnv) {
                                 },
                             ],
                             issuer: {
-                                and: [/\.(ts|tsx|js|jsx|md|mdx)$/],
+                                and: [/\.(js|jsx|md|mdx)$/],
                             },
                         },
                         // Process application JS with Babel.
-                        // The preset includes JSX, Flow, TypeScript, and some ESnext features.
+                        // The preset includes JSX, Flow, and some ESnext features.
                         {
-                            test: /\.(js|mjs|jsx|ts|tsx)$/,
+                            test: /\.(js|mjs|jsx)$/,
                             include: paths.appSrc,
                             loader: require.resolve("babel-loader"),
                             options: {
@@ -565,7 +535,7 @@ module.exports = function (webpackEnv) {
                             // by webpacks internal loaders.
                             exclude: [
                                 /^$/,
-                                /\.(js|mjs|jsx|ts|tsx)$/,
+                                /\.(js|mjs|jsx)$/,
                                 /\.html$/,
                                 /\.json$/,
                             ],
@@ -694,58 +664,10 @@ module.exports = function (webpackEnv) {
                     // See https://github.com/cra-template/pwa/issues/13#issuecomment-722667270
                     maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
                 }),
-            // TypeScript type checking
-            useTypeScript &&
-                new ForkTsCheckerWebpackPlugin({
-                    async: isEnvDevelopment,
-                    typescript: {
-                        typescriptPath: resolve.sync("typescript", {
-                            basedir: paths.appNodeModules,
-                        }),
-                        configOverwrite: {
-                            compilerOptions: {
-                                sourceMap: isEnvProduction
-                                    ? shouldUseSourceMap
-                                    : isEnvDevelopment,
-                                skipLibCheck: true,
-                                inlineSourceMap: false,
-                                declarationMap: false,
-                                noEmit: true,
-                                incremental: true,
-                                tsBuildInfoFile: paths.appTsBuildInfoFile,
-                            },
-                        },
-                        context: paths.appPath,
-                        diagnosticOptions: {
-                            syntactic: true,
-                        },
-                        mode: "write-references",
-                        // profile: true,
-                    },
-                    issue: {
-                        // This one is specifically to match during CI tests,
-                        // as micromatch doesn't match
-                        // '../cra-template-typescript/template/src/App.tsx'
-                        // otherwise.
-                        include: [
-                            { file: "../**/src/**/*.{ts,tsx}" },
-                            { file: "**/src/**/*.{ts,tsx}" },
-                        ],
-                        exclude: [
-                            { file: "**/src/**/__tests__/**" },
-                            { file: "**/src/**/?(*.){spec|test}.*" },
-                            { file: "**/src/setupProxy.*" },
-                            { file: "**/src/setupTests.*" },
-                        ],
-                    },
-                    logger: {
-                        infrastructure: "silent",
-                    },
-                }),
             !disableESLintPlugin &&
                 new ESLintPlugin({
                     // Plugin options
-                    extensions: ["js", "mjs", "jsx", "ts", "tsx"],
+                    extensions: ["js", "mjs", "jsx"],
                     formatter: require.resolve(
                         "react-dev-utils/eslintFormatter"
                     ),
