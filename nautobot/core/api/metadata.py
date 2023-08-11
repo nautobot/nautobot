@@ -12,6 +12,7 @@ from rest_framework import fields as drf_fields, relations as drf_relations, ser
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
+from nautobot.core.constants import RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA
 from nautobot.core.exceptions import ViewConfigException
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_route_for_model
@@ -93,7 +94,7 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
                     result["required"] = field.required
                     # Custom Keyword: modelName, modelNamePlural and appLabel
                     # modelName represents the model name of the uuid model
-                    # modelUrl represents the plural model name of the uuid model
+                    # modelUrl represents the UI URL to list instances of this model
                     # and appLabel represents the app_name of the model
                     result["modelName"] = model_options.model_name
                     result["appLabel"] = model_options.app_label
@@ -223,8 +224,17 @@ class NautobotMetadata(SimpleMetadata):
 
     def get_advanced_tab_fields(self, serializer):
         """Try to get the advanced tab fields or default to an empty list."""
-        default_advanced_fields = ["id", "url", "composite_key", "created", "last_updated"]
-        advanced_fields = [field for field in default_advanced_fields if field in serializer.fields.keys()]
+        if hasattr(serializer.Meta, "advanced_view_config"):
+            # Gather all fields defined in the custom `advanced_view_config` if there is one defined on the serializer.
+            advanced_view_layout = serializer.Meta.advanced_view_config["layout"]
+            advanced_fields = []
+            for section in advanced_view_layout:
+                for value in section.values():
+                    advanced_fields += value["fields"]
+        else:
+            # Default advanced fields
+            advanced_fields = ["id", "url", "composite_key", "created", "last_updated"]
+        advanced_fields = [field for field in advanced_fields if field in serializer.fields.keys()]
         return advanced_fields
 
     def determine_view_options(self, request, serializer):
@@ -263,16 +273,9 @@ class NautobotMetadata(SimpleMetadata):
             column_data = processor._get_column_properties(field, field_name)
             fields.append(column_data)
 
-        # Construct the advanced tab table fields.
-        advanced_data = [
-            {
-                "Object Details": {"fields": advanced_fields},
-            }
-        ]
-
         return {
             "retrieve": self.determine_detail_view_schema(serializer),
-            "advanced": advanced_data,
+            "advanced": self.determine_advanced_view_schema(serializer),
             "list_display_fields": list_display,
             "fields": fields,
         }
@@ -314,10 +317,10 @@ class NautobotMetadata(SimpleMetadata):
         view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
         return view_config_layout
 
-    def restructure_view_config(self, serializer, view_config):
+    def restructure_view_config(self, serializer, view_config, detail=True):
         """
-        Restructure the view config by removing specific fields ("composite_key", "url", "display", "status", "id", "created", "last_updated")
-        from the view config.
+        Restructure the view config by removing specific fields
+        ("composite_key", "url", "display", "status", "id", "created", "last_updated") from the view config.
 
         This operation aims to establish a standardized and consistent way of displaying the fields.
 
@@ -338,22 +341,24 @@ class NautobotMetadata(SimpleMetadata):
                 ...
             ]
         """
+        if detail:
+            # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
+            fields_to_remove = ["display", "status"]
+            fields_to_remove += self.get_advanced_tab_fields(serializer)
+        else:
+            fields_to_remove = []
 
-        # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
-        fields_to_remove = ["composite_key", "url", "display", "status", "id", "created", "last_updated"]
-        advanced_fields = self.get_advanced_tab_fields(serializer)
         # Make a deepcopy to avoid altering view_config
         view_config_layout = deepcopy(view_config.get("layout"))
 
-        for _, section in enumerate(view_config_layout):
-            for _, value in enumerate(section.values()):
+        for section in view_config_layout:
+            for value in section.values():
                 for field in fields_to_remove:
                     if field in value["fields"]:
                         value["fields"].remove(field)
-        if view_config.get("include_others", False):
-            view_config_layout = self.add_missing_field_to_view_config_layout(
-                view_config_layout, fields_to_remove + advanced_fields
-            )
+
+        if view_config.get("include_others", False) and detail:
+            view_config_layout = self.add_missing_field_to_view_config_layout(view_config_layout, fields_to_remove)
         return view_config_layout
 
     def get_m2m_and_non_m2m_fields(self, serializer):
@@ -375,6 +380,27 @@ class NautobotMetadata(SimpleMetadata):
                 non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
 
         return m2m_fields, non_m2m_fields
+
+    def get_default_advanced_view_config(self):
+        """
+        Generate advanced view config for the view
+
+        Examples:
+            >>> get_advanced_detail_view_config(serializer).
+            {
+                "layout":[
+                    {
+                        "Object Details": {
+                            "fields": ["id", "url", "composite_key", "created", "last_updated"]
+                        }
+                    },
+                ]
+            }
+
+        Returns:
+            A list representing the advanced view config.
+        """
+        return {"layout": [{"Object Details": {"fields": ["id", "url", "composite_key", "created", "last_updated"]}}]}
 
     def get_default_detail_view_config(self, serializer):
         """
@@ -422,6 +448,14 @@ class NautobotMetadata(SimpleMetadata):
             view_config = self.get_default_detail_view_config(serializer)
         return self.restructure_view_config(serializer, view_config)
 
+    def determine_advanced_view_schema(self, serializer):
+        """Determine the layout option that would be used for the detail view advanced tab"""
+        if hasattr(serializer.Meta, "advanced_view_config"):
+            view_config = self.validate_view_config(serializer.Meta.advanced_view_config)
+        else:
+            view_config = self.get_default_advanced_view_config()
+        return self.restructure_view_config(serializer, view_config, detail=False)
+
     def validate_view_config(self, view_config):
         """Validate view config"""
 
@@ -432,7 +466,7 @@ class NautobotMetadata(SimpleMetadata):
         # 2. Validate `Other Fields` is not part of a layout group name, as this is a nautobot reserver keyword for group names
         for col in view_config["layout"]:
             for group_name in col.keys():
-                if group_name in ["Other Fields", "Object Details"]:
+                if group_name in RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA:
                     raise ViewConfigException(f"`{group_name}` is a reserved group name keyword.")
 
         return view_config
