@@ -93,7 +93,7 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
                     result["required"] = field.required
                     # Custom Keyword: modelName, modelNamePlural and appLabel
                     # modelName represents the model name of the uuid model
-                    # modelNamePlural represents the plural model name of the uuid model
+                    # modelUrl represents the plural model name of the uuid model
                     # and appLabel represents the app_name of the model
                     result["modelName"] = model_options.model_name
                     result["appLabel"] = model_options.app_label
@@ -432,7 +432,7 @@ class NautobotMetadata(SimpleMetadata):
         # 2. Validate `Other Fields` is not part of a layout group name, as this is a nautobot reserver keyword for group names
         for col in view_config["layout"]:
             for group_name in col.keys():
-                if group_name == "Other Fields" or group_name == "Object Details":
+                if group_name in ["Other Fields", "Object Details"]:
                     raise ViewConfigException(f"`{group_name}` is a reserved group name keyword.")
 
         return view_config

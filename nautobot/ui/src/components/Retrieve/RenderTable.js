@@ -11,7 +11,7 @@ function RenderTable({ fields, schema, data }) {
                     const fieldData = data[fieldName];
                     let url = null;
                     if (fieldSchema?.modelUrl && fieldData?.id) {
-                        url = fieldSchema?.modelUrl + fieldData?.id + "/";
+                        url = fieldSchema.modelUrl + fieldData.id + "/";
                     }
                     return (
                         <Tr key={idx}>

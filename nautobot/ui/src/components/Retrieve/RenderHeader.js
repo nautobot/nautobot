@@ -1,6 +1,7 @@
 import { faCalendarPlus, faPencil } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+    BinIcon,
     Box,
     Button as UIButton,
     ButtonGroup,
@@ -11,7 +12,6 @@ import {
     MenuButton,
     MenuList,
     MenuItem,
-    BinIcon,
     NtcThumbnailIcon,
     Text,
 } from "@nautobot/nautobot-ui";
@@ -20,7 +20,6 @@ import { ReferenceDataTag } from "@components/ReferenceDataTag";
 import { humanFriendlyDate } from "@utils/date";
 
 export default function RenderHeader({ data }) {
-    // const { isOpen, onClose, onOpen } = useDisclosure();
     return (
         <Box display="flex" justifyContent="space-between" padding="md">
             <Heading display="flex" alignItems="center" gap="5px">
