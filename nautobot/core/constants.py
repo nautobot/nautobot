@@ -33,6 +33,12 @@ FILTER_NUMERIC_BASED_LOOKUP_MAP = {
 FILTER_NEGATION_LOOKUP_MAP = {"n": "exact"}
 
 #
+# Reserved Names
+#
+
+RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA = ["Other Fields", "Object Details"]
+
+#
 # Factory defaults
 #
 

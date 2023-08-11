@@ -594,17 +594,15 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
         expected_schema = [
             {
-                "Rack": {"fields": ["name", "location", "rack_group", "id", "composite_key", "url"]},
+                "Rack": {"fields": ["name", "location", "rack_group"]},
                 "Other Fields": {
                     "fields": [
                         "asset_tag",
                         "computed_fields",
-                        "created",
                         "custom_fields",
                         "desc_units",
                         "device_count",
                         "facility_id",
-                        "last_updated",
                         "notes_url",
                         "object_type",
                         "outer_depth",
@@ -623,7 +621,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             },
             {"Tags": {"fields": ["tags"]}, "Comments": {"fields": ["comments"]}},
         ]
-
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(expected_schema, detail_view_schema)
 

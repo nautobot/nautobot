@@ -65,6 +65,7 @@ export default function ObjectRetrieve({ api_url }) {
     const objectRetrieveTabSchema = {
         tabs: {
             [`${schemaData.name}`]: schemaData.view_options.retrieve,
+            Advanced: schemaData.view_options.advanced,
         },
     };
 

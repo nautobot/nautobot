@@ -1,7 +1,6 @@
 import { Table, Tbody, Td, Tr } from "@nautobot/nautobot-ui";
 
 import { ObjectTableItem } from "@components";
-import { buildUrl } from "@utils/url";
 
 function RenderTable({ fields, schema, data }) {
     return (
@@ -11,12 +10,8 @@ function RenderTable({ fields, schema, data }) {
                     const fieldSchema = schema[fieldName];
                     const fieldData = data[fieldName];
                     let url = null;
-                    if (fieldSchema?.appLabel) {
-                        url = buildUrl(
-                            fieldSchema.appLabel,
-                            fieldSchema.modelName,
-                            fieldData?.id
-                        );
+                    if (fieldSchema?.modelUrl && fieldData?.id) {
+                        url = fieldSchema.modelUrl + fieldData.id + "/";
                     }
                     return (
                         <Tr key={idx}>
