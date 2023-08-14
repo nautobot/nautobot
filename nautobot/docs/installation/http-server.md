@@ -14,7 +14,6 @@ be installed on your Nautobot server in a secure location that is readable only 
 
 Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
-
 === "Ubuntu/Debian"
 
     ```no-highlight
@@ -30,6 +29,7 @@ Two files will be created: the public certificate (`nautobot.crt`) and the priva
     -keyout /etc/pki/tls/private/nautobot.key \
     -out /etc/pki/tls/certs/nautobot.crt
     ```
+
 ## HTTP Server Installation
 
 Any HTTP server of your choosing is supported. For your convenience, setup instructions for NGINX are provided here.
@@ -176,7 +176,6 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
     ```no-highlight
     sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
     ```
-
 
 #### Restart NGINX
 

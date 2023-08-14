@@ -63,7 +63,6 @@ As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nau
     sudo -u nautobot python3.8 -m venv /opt/nautobot
     ```
 
-
 ### Update the Nautobot `.bashrc`
 
 So what about the `NAUTOBOT_ROOT`? We've referenced this environment variable several times. Here is where it finally gets set.
