@@ -14,12 +14,13 @@ import {
     PlusIcon,
     Button,
     EditIcon,
-    useToast,
+    Text,
 } from "@nautobot/nautobot-ui";
 import { useCallback, useMemo } from "react";
 
 import LoadingWidget from "../LoadingWidget";
 import ObjectTableItem from "./ObjectTableItem";
+import { useFiltersPanel } from "@components/FiltersPanel";
 import { Pagination } from "@components/Pagination";
 
 const getTableItemLink = (idx, obj) => {
@@ -111,6 +112,12 @@ export default function ObjectListTable({
         []
     );
 
+    const filtersPanel = useFiltersPanel({
+        content: <Text>You have successfully opened filters panel.</Text>,
+        id: "object-list-table-filters-panel",
+        title: "Filters",
+    });
+
     const table = useTableRenderer({
         columns: columns,
         data: tableData,
@@ -119,15 +126,6 @@ export default function ObjectListTable({
         state: { columnVisibility },
         onColumnVisibilityChange: setColumnVisibility,
         actionMenu: ActionMenu,
-    });
-
-    const toast = useToast({
-        duration: 5000,
-        isClosable: true,
-        position: "top-right",
-        status: "success",
-        description: "You have successfully made toast.",
-        title: "Ta da!",
     });
 
     return (
@@ -157,7 +155,11 @@ export default function ObjectListTable({
                             <UIButton
                                 size="sm"
                                 variant="secondary"
-                                onClick={toast}
+                                onClick={() =>
+                                    filtersPanel.isOpen
+                                        ? filtersPanel.close()
+                                        : filtersPanel.open()
+                                }
                             >
                                 Filters
                             </UIButton>
