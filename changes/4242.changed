@@ -1,0 +1,2 @@
+Changed `development/nautobot_config.py` to default installation metrics to disabled for developer environments.
+Changed behavior of `dev` and `final-dev` Docker images to disable installation metrics by default.
