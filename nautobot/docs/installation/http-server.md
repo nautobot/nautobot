@@ -14,10 +14,6 @@ be installed on your Nautobot server in a secure location that is readable only 
 
 Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
-!!! info
-    Some Linux installations, including CentOS, have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The command below may need to be changed to reflect the certificate location.
-
-    The following command will prompt you for additional details of the certificate; all of which are optional.
 
 === "Ubuntu/Debian"
 
