@@ -1,1 +1,1 @@
-Adds content.code.copy to the features list https://squidfunk.github.io/mkdocs-material/reference/code-blocks/#code-copy-button
+Added `content.code.copy` (https://squidfunk.github.io/mkdocs-material/reference/code-blocks/#code-copy-button) to the `features` list in `mkdocs.yml`
