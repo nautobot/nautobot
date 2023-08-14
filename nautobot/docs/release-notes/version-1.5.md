@@ -4,7 +4,7 @@
 
 This document describes all new features and changes in Nautobot 1.5.
 
-If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation.
+If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../user-guide/administration/migration/migrating-from-netbox.md) documentation.
 
 ## Release Overview
 
@@ -12,7 +12,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Added `nautobot-server generate_test_data` command ([#2536](https://github.com/nautobot/nautobot/issues/2536))
 
-A new management command, [`nautobot-server generate_test_data`](../administration/nautobot-server.md#generate_test_data), has been added that can be used to populate the Nautobot database with various data as a baseline for manual or automated testing. This is now used internally by Nautobot's unit testing suite to create a synthetic data set that looks and feels like real data with randomly-generated values. Most importantly, the objects are created with all of the fields fully and correctly populated, to assert that each object in the database is properly exercising all features.
+A new management command, [`nautobot-server generate_test_data`](../user-guide/administration/tools/nautobot-server.md#generate_test_data), has been added that can be used to populate the Nautobot database with various data as a baseline for manual or automated testing. This is now used internally by Nautobot's unit testing suite to create a synthetic data set that looks and feels like real data with randomly-generated values. Most importantly, the objects are created with all of the fields fully and correctly populated, to assert that each object in the database is properly exercising all features.
 
 !!! warning
     Be very cautious about running this command on your server instance. It is not intended to be used in production environments and will result in data loss.
@@ -23,10 +23,10 @@ Custom fields can now be assigned to a free-text "grouping" to improve usability
 
 #### Custom Celery Task Queues ([#2421](https://github.com/nautobot/nautobot/pull/2421))
 
-A new optional job property `task_queues` has been introduced to allow Nautobot to leverage custom celery queues for jobs. This will allow you to send jobs to specific workers based on which queue is selected. This property can be set on the job class and overridden in the job model, similar to other overridable job fields. If `task_queues` is not defined on the job class or job model, the job will only be able to use the default queue. A new field has been added to the job run form to allow you to select a queue when you run the job and  an optional field `task_queue` has been added to the REST API [job run endpoint](../additional-features/jobs.md#via-the-api) for the same purpose.
+A new optional job property `task_queues` has been introduced to allow Nautobot to leverage custom celery queues for jobs. This will allow you to send jobs to specific workers based on which queue is selected. This property can be set on the job class and overridden in the job model, similar to other overridable job fields. If `task_queues` is not defined on the job class or job model, the job will only be able to use the default queue. A new field has been added to the job run form to allow you to select a queue when you run the job and  an optional field `task_queue` has been added to the REST API [job run endpoint](../user-guide/platform-functionality/jobs/index.md#via-the-api) for the same purpose.
 
 !!! important
-    The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
+    The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../user-guide/administration/configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
 
 #### Device Redundancy Groups ([#1892](https://github.com/nautobot/nautobot/issues/1892))
 
@@ -55,7 +55,7 @@ from nautobot.apps.forms import (
 )
 ```
 
-For more details, please refer to the updated [app developer documentation](../plugins/development.md).
+For more details, please refer to the updated [app developer documentation](../development/apps/index.md).
 
 #### Nestable LocationTypes ([#2608](https://github.com/nautobot/nautobot/issues/2608))
 
@@ -97,7 +97,7 @@ Required relationships are enforced in the following scenarios:
 
 #### Database Query Caching is now Disabled by Default ([#1721](https://github.com/nautobot/nautobot/issues/1721))
 
-In prior versions of Nautobot, database query caching using the [`django-cacheops`](https://github.com/Suor/django-cacheops) application (aka Cacheops) was enabled by default. This is determined by the default value of the [`CACHEOPS_ENABLED`](../configuration/optional-settings.md#cacheops_enabled) setting being set to `True`.
+In prior versions of Nautobot, database query caching using the [`django-cacheops`](https://github.com/Suor/django-cacheops) application (aka Cacheops) was enabled by default. This is determined by the default value of the [`CACHEOPS_ENABLED`](../user-guide/administration/configuration/optional-settings.md#cacheops_enabled) setting being set to `True`.
 
 Through much trial and error we ultimately decided that this feature is more trouble than it is worth and we have begun to put more emphasis on improving performance of complex database queries over continuing to rely upon the various benefits and pitfalls of utilizing Cacheops.
 
@@ -110,7 +110,7 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 
 +/- 1.5.2
 
-Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting the `NAUTOBOT_LOG_DEPRECATION_WARNINGS` environment variable to `True` in your configuration. More information is available under [Optional Settings](../configuration/optional-settings.md#nautobot_log_deprecation_warnings).
+Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting the `NAUTOBOT_LOG_DEPRECATION_WARNINGS` environment variable to `True` in your configuration. More information is available under [Optional Settings](../user-guide/administration/configuration/optional-settings.md#nautobot_log_deprecation_warnings).
 
 !!! caution
     In Nautobot 2.0, deprecation warnings will again be logged by default; a future release of Nautobot 1.5.x will also re-enable default logging of deprecation warnings.
@@ -148,6 +148,52 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 | `TenancyFilterSet`             | `TenancyModelFilterSetMixin`                 |
 
 <!-- towncrier release notes start -->
+## v1.5.24 (2023-07-24)
+
+### Fixed
+
+- [#3312](https://github.com/nautobot/nautobot/issues/3312) - Fixed custom fields not auto-populating when creating objects through the ORM.
+- [#4127](https://github.com/nautobot/nautobot/issues/4127) - Fixed JavaScript error with 'Check Secret' button introduced in the previous patch release.
+
+### Security
+
+- [#4126](https://github.com/nautobot/nautobot/issues/4126) - Updated `cryptography` to `41.0.2` due to CVE-2023-38325. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+## v1.5.23 (2023-07-10)
+
+### Added
+
+- [#3235](https://github.com/nautobot/nautobot/issues/3235) - Added a warning notifying users when the requested `per_page` on a list page exceeds the `MAX_PAGE_SIZE` set.
+- [#3937](https://github.com/nautobot/nautobot/issues/3937) - Added a Nautobot 2.0 pre-migration management command aptly named `pre_migrate`.
+
+### Changed
+
+- [#1854](https://github.com/nautobot/nautobot/issues/1854) - When sorting tables for MPTT models, nesting/indentation of the model name display is disabled as it was misleading.
+- [#1854](https://github.com/nautobot/nautobot/issues/1854) - Disabled sorting on TreeNode model tables as TreeNode do not support sorting.
+- [#4049](https://github.com/nautobot/nautobot/issues/4049) - Restructured non-production dependencies in `pyproject.toml` to comply with latest Poetry expectations.
+- [#4050](https://github.com/nautobot/nautobot/issues/4050) - Added `develop-1.6` to list of target branches to run changelog step in pull request CI workflow.
+
+### Dependencies
+
+- [#4049](https://github.com/nautobot/nautobot/issues/4049) - Updated development-only dependencies for documentation rendering: `mkdocstrings` 0.22.0, `mkdocstrings-python` 1.1.2, and `griffe` 0.30.1.
+- [#4064](https://github.com/nautobot/nautobot/issues/4064) - Updated `Django` to `3.2.20` to address `CVE-2023-36053`.
+
+### Fixed
+
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Revised documentation for recommended parameters to use when running `nautobot-server dumpdata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Revised documentation around preparing to run `nautobot-server loaddata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Added documentation to run `nautobot-server trace_paths` after `nautobot-server loaddata`.
+- [#2374](https://github.com/nautobot/nautobot/issues/2374) - Fixed a signal handler that could cause `nautobot-server loaddata` to abort if certain data is present.
+- [#3109](https://github.com/nautobot/nautobot/issues/3109) - Fixed missing trailing slash in NautobotUIViewSet urls.
+- [#3422](https://github.com/nautobot/nautobot/issues/3422) - Fixed postgres database healthcheck error message in development environment.
+- [#3524](https://github.com/nautobot/nautobot/issues/3524) - Fixed the unhandled exception brought on by updating Rack to a new site with a similar device sharing the same name and tenant by catching error in 'RackForm.clean`.
+- [#4021](https://github.com/nautobot/nautobot/issues/4021) - Fixed erroneous warning banner on list views when `MAX_PAGE_SIZE` is set to zero.
+- [#4048](https://github.com/nautobot/nautobot/issues/4048) - Fixed broken tab navigation in secrets.
+
+### Security
+
+- [#4064](https://github.com/nautobot/nautobot/issues/4064) - Updated `Django` to `3.2.20` to address `CVE-2023-36053`.
+
 ## v1.5.22 (2023-06-26)
 
 ### Added
@@ -176,7 +222,7 @@ A number of mixin classes have been renamed and/or relocated for improved self-c
 ### Added
 
 - [#3806](https://github.com/nautobot/nautobot/issues/3806) - Added instructions and examples for SAML SSO using Okta as the IdP.
-- [#3811](https://github.com/nautobot/nautobot/issues/3811) - Added a note that addresses UWSGI buffer size concerns with Azure SSO in `nautobot/docs/configuration/authentication/sso.md`.
+- [#3811](https://github.com/nautobot/nautobot/issues/3811) - Added a note that addresses UWSGI buffer size concerns with Azure SSO in `nautobot/docs/user-guide/administration/configuration/authentication/sso.md`.
 - [#3897](https://github.com/nautobot/nautobot/issues/3897) - Adds log message when a secrets group for a git repository doesn't yield a token.
 
 ### Changed

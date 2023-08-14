@@ -9,7 +9,6 @@ from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
@@ -218,6 +217,8 @@ class Job(PrimaryModel):
 
     objects = BaseManager.from_queryset(JobQuerySet)()
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+
     class Meta:
         managed = True
         ordering = ["grouping", "name"]
@@ -335,6 +336,8 @@ class JobHook(OrganizationalModel):
     type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
     type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobhook.html"
+
     class Meta:
         ordering = ("name",)
 
@@ -418,6 +421,8 @@ class JobLogEntry(BaseModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+
     def __str__(self):
         return self.message
 
@@ -466,35 +471,25 @@ class JobResult(BaseModel, CustomFieldModel):
         help_text="Current state of the Job being run",
         db_index=True,
     )
-    data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
-    """
-    Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
-    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
-    Log Messages now go to their own object, the JobLogEntry.
-    data = {
-        "output": <optional string, such as captured stdout/stderr>,
-    }
-    """
-    worker = models.CharField(max_length=100, default=None, null=True)
-    task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
-    task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    # TODO(jathan): This field is currently unused for Jobs, but we should coerce it to a JSONField
-    # and set a contract that anything returned from a Job task MUST be JSON. In DCR core it is
-    # expected to be encoded/decoded using `content_type` and `content_encoding` which we have
-    # eliminated for our implmentation
-    result = models.TextField(
+    result = models.JSONField(
+        encoder=NautobotKombuJSONEncoder,
         null=True,
-        default=None,
+        blank=True,
         editable=False,
         verbose_name="Result Data",
         help_text="The data returned by the task",
     )
+    worker = models.CharField(max_length=100, default=None, null=True)
+    task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
+    task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+    celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     traceback = models.TextField(blank=True, null=True)
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
     objects = JobResultManager()
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -691,7 +686,6 @@ class JobResult(BaseModel, CustomFieldModel):
         obj=None,
         level_choice=LogLevelChoices.LOG_INFO,
         grouping="main",
-        logger=None,  # pylint: disable=redefined-outer-name
     ):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.
@@ -700,7 +694,6 @@ class JobResult(BaseModel, CustomFieldModel):
         obj (object): Object associated with this message, if any
         level_choice (LogLevelChoices): Message severity level
         grouping (str): Grouping to store the log message under
-        logger (logging.logger): Optional logger to also output the message to
         """
         if level_choice not in LogLevelChoices.as_dict():
             raise ValueError(f"Unknown logging level: {level_choice}")
@@ -727,10 +720,6 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save()
         else:
             log.save(using=JOB_LOGS)
-
-        if logger:
-            log_level = getattr(logging, level_choice.upper(), logging.INFO)
-            logger.log(log_level, message)
 
 
 #
@@ -777,6 +766,8 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="Enable confirmation pop-up box. <span class='text-danger'>WARNING: unselecting this option will allow the Job to run (and commit changes) with a single click!</span>",
         default=True,
     )
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobbutton.html"
 
     class Meta:
         ordering = ["group_name", "weight", "name"]
@@ -927,6 +918,8 @@ class ScheduledJob(BaseModel):
 
     objects = BaseManager.from_queryset(ScheduledJobExtendedQuerySet)()
     no_changes = False
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
 
     def __str__(self):
         return f"{self.name}: {self.interval}"

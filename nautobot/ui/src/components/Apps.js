@@ -1,6 +1,6 @@
 import { lazy } from "react";
 
-import NautobotApps from "../app_imports";
+import NautobotApps from "@generated/app_imports";
 import { getComponentFromModule } from "../utils";
 
 function get_components() {

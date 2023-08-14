@@ -49,5 +49,9 @@ class NautobotKombuJSONEncoder(JSONEncoder):
         elif isinstance(obj, TagsManager):
             obj = obj.values_list("id", flat=True)
             return obj
+        elif isinstance(obj, Exception):
+            # JobResult.result uses NautobotKombuJSONEncoder as an encoder and expects a JSONSerializable object,
+            # although an exception, such as a RuntimeException, can be supplied as the obj.
+            return f"{obj.__class__.__name__}: {obj}"
         else:
             return super().default(obj)

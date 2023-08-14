@@ -1,0 +1,1 @@
+Added useEffect to fix the last_page in Pagination from not updating dynamically.

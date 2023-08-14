@@ -88,6 +88,7 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
     objects = ComputedFieldManager()
 
     clone_fields = ["content_type", "description", "template", "fallback_value", "weight"]
+    natural_key_field_names = ["key"]
 
     class Meta:
         ordering = ["weight", "key"]
@@ -232,10 +233,13 @@ class CustomFieldModel(models.Model):
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
-        # Check for missing required values
+        # Check for missing values, erroring on required ones and populating non-required ones automatically
         for cf in custom_fields.values():
-            if cf.required and cf.key not in self._custom_field_data:
-                raise ValidationError(f"Missing required custom field '{cf.key}'.")
+            if cf.key not in self._custom_field_data:
+                if cf.required:
+                    raise ValidationError(f"Missing required custom field '{cf.key}'.")
+                else:
+                    self._custom_field_data[cf.key] = cf.default
 
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):
@@ -395,6 +399,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         "validation_maximum",
         "validation_regex",
     ]
+    natural_key_field_names = ["key"]
 
     class Meta:
         ordering = ["weight", "label"]
@@ -663,6 +668,8 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     )
     value = models.CharField(max_length=100)
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
+
+    documentation_static_path = "docs/user-guide/platform-functionality/customfield.html"
 
     class Meta:
         ordering = ["custom_field", "weight", "value"]

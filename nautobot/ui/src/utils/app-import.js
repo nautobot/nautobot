@@ -1,4 +1,4 @@
-import NautobotApps from "../app_imports";
+import NautobotApps from "@generated/app_imports";
 
 function EmptyElement() {
     return <></>;

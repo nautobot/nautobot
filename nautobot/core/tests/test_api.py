@@ -19,13 +19,13 @@ from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.versioning import NautobotAPIVersioning
+from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices
 from nautobot.extras import models as extras_models
 from nautobot.ipam import models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers
-from nautobot.ipam.factory import VLANGroupFactory
 
 
 class AppTest(testing.APITestCase):
@@ -403,15 +403,25 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
 
     def test_get_lookup_value_dom_element(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
-        response = self.client.get(url + "?content_type=dcim.location&field_name=name", **self.header)
+        response = self.client.get(f"{url}?content_type=dcim.location&field_name=name", **self.header)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data,
-            {
-                "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
-            },
+            '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>',
         )
+
+        # Also assert JSON representation
+        self.header["HTTP_ACCEPT"] = "application/json"
+        response = self.client.get(f"{url}?content_type=dcim.location&field_name=name&as_json", **self.header)
+        self.assertEqual(response.status_code, 200)
+        expected_response = {
+            "field_type": "MultiValueCharField",
+            "attrs": {"class": "form-control nautobot-select2-multi-value-char", "data-multiple": 1},
+            "choices": [],
+            "is_required": False,
+        }
+        self.assertEqual(response.data, expected_response)
 
     def test_get_lookup_value_dom_element_for_configcontext(self):
         url = reverse("core-api:filtersetfield-retrieve-lookupvaluedomelement")
@@ -420,12 +430,12 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data,
-            {
-                "dom_element": '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
+            (
+                '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
                 'display-field="display" value-field="name" data-depth="0" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
-            },
+            ),
         )
 
         with self.subTest("Assert correct lookup field dom element is generated"):
@@ -434,9 +444,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.data,
-                {
-                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
-                },
+                '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>',
             )
 
         with self.subTest("Assert TempFilterForm is used if model filterform raises error at initialization"):
@@ -449,9 +457,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.data,
-                {
-                    "dom_element": '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>'
-                },
+                '<select name="name" class="form-control nautobot-select2-multi-value-char" data-multiple="1" id="id_for_name" multiple>\n</select>',
             )
 
 
@@ -494,8 +500,8 @@ class NautobotCSVParserTest(TestCase):
                     "vid": "22",  # parser could be enhanced to turn this to an int, but the serializer can handle it
                     "name": "hello",
                     "description": "It, I say, is a living!",
-                    "status": {"name": status.name},
-                    "tags": [{"name": tags.first().name}, {"name": tags.last().name}],
+                    "status": status.name,  # will be understood as a composite-key by the serializer
+                    "tags": [tags.first().name, tags.last().name],  # understood as a list of composite-keys
                     "tenant": None,
                 },
             ],
@@ -585,9 +591,9 @@ class WritableNestedSerializerTest(testing.APITestCase):
             parent=self.location1,
             status=self.statuses[0],
         )
-        self.vlan_group1 = VLANGroupFactory.create(location=self.location1)
-        self.vlan_group2 = VLANGroupFactory.create(location=self.location2)
-        self.vlan_group3 = VLANGroupFactory.create(location=self.location3)
+        self.vlan_group1 = ipam_models.VLANGroup.objects.create(name="Test VLANGroup 1", location=self.location1)
+        self.vlan_group2 = ipam_models.VLANGroup.objects.create(name="Test VLANGroup 2", location=self.location2)
+        self.vlan_group3 = ipam_models.VLANGroup.objects.create(name="Test VLANGroup 3", location=self.location3)
 
     def test_related_by_pk(self):
         data = {
@@ -677,6 +683,42 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["location"][0].startswith("Multiple objects match"))
+
+    def test_related_by_composite_key(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "status": self.statuses.first().composite_key,
+            "location": self.location1.composite_key,
+            "vlan_group": self.vlan_group1.composite_key,
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
+        vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
+        self.assertEqual(vlan.location, self.location1)
+
+    def test_related_by_composite_key_no_match(self):
+        data = {
+            "vid": 100,
+            "name": "Test VLAN 100",
+            "status": self.statuses.first().composite_key + COMPOSITE_KEY_SEPARATOR + "xyz",
+            "location": self.location1.composite_key + COMPOSITE_KEY_SEPARATOR + "hello" + COMPOSITE_KEY_SEPARATOR,
+            "vlan_group": self.vlan_group1.composite_key[1:-1],
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+        self.assertTrue(response.data["status"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
 
     def test_related_by_invalid(self):
         data = {
@@ -854,3 +896,22 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
         }
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_response)
+
+
+class GetSettingsAPIViewTestCase(testing.APITestCase):
+    def test_get_settings(self):
+        """Assert get settings value"""
+        url = reverse("ui-api:settings")
+
+        with self.subTest("Test get allowed settings"):
+            url_with_filters = f"{url}?name=FEEDBACK_BUTTON_ENABLED"
+            response = self.client.get(url_with_filters, **self.header)
+            self.assertEqual(response.status_code, 200)
+            expected_response = {"FEEDBACK_BUTTON_ENABLED": True}
+            self.assertEqual(response.data, expected_response)
+        with self.subTest("Test get not-allowed settings"):
+            url_with_filters = f"{url}?name=NAPALM_PASSWORD"
+            response = self.client.get(url_with_filters, **self.header)
+            self.assertEqual(response.status_code, 400)
+            expected_response = {"error": "Invalid settings names specified: NAPALM_PASSWORD."}
+            self.assertEqual(response.data, expected_response)

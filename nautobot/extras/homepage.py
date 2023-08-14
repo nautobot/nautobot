@@ -7,7 +7,7 @@ def get_job_results(request):
     """Callback function to collect job history for panel."""
     return (
         JobResult.objects.filter(status__in=JobResultStatusChoices.READY_STATES)
-        .defer("data")
+        .defer("result")
         .order_by("-date_done")[:10]
     )
 

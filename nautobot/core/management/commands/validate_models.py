@@ -5,7 +5,10 @@ from django.core.exceptions import ValidationError
 
 
 class Command(BaseCommand):
-    help = "Validate the current models by running a `full_clean`. This goes through every model and every instance, this may take a long time to run."
+    help = (
+        "Validate all instances of a given model(s) by running a 'full_clean()' or 'validated_save()' on each. "
+        "This may take a long time to run."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -13,6 +16,11 @@ class Command(BaseCommand):
             metavar="app_label.ModelName",
             nargs="*",
             help="One or more specific models (each prefixed with its app_label) to validate.",
+        )
+        parser.add_argument(
+            "--save",
+            action="store_true",
+            help="Run validated_save() instead of full_clean() for more thorough data validation. May be slower.",
         )
 
     def _get_models(self, names):
@@ -64,6 +72,9 @@ class Command(BaseCommand):
             self.stdout.write(model_name)
             for instance in model.objects.all().iterator():
                 try:
-                    instance.full_clean()
+                    if options["save"]:
+                        instance.validated_save()
+                    else:
+                        instance.full_clean()
                 except ValidationError as err:
                     self.stdout.write(f"~~~~~ Model: `{model_name}` Instance: `{instance}` Error: `{err}`. ~~~~~")

@@ -108,6 +108,9 @@ class ObjectChange(BaseModel):
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
+    documentation_static_path = "docs/user-guide/platform-functionality/change-logging.html"
+    natural_key_field_names = ["pk"]
+
     class Meta:
         ordering = ["-time"]
         get_latest_by = "time"

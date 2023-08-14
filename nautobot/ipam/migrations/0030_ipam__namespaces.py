@@ -10,7 +10,7 @@ import uuid
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0071_rename_model_fields"),
+        ("extras", "0072_rename_model_fields"),
         ("ipam", "0029_ip_address_to_interface_uniqueness_constraints"),
     ]
 
@@ -132,7 +132,7 @@ class Migration(migrations.Migration):
             model_name="prefix",
             name="namespace",
             field=models.ForeignKey(
-                default=nautobot.ipam.models.get_default_namespace,
+                default=nautobot.ipam.models.get_default_namespace_pk,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="prefixes",
                 to="ipam.namespace",
@@ -161,7 +161,7 @@ class Migration(migrations.Migration):
             model_name="vrf",
             name="namespace",
             field=models.ForeignKey(
-                default=nautobot.ipam.models.get_default_namespace,
+                default=nautobot.ipam.models.get_default_namespace_pk,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="vrfs",
                 to="ipam.namespace",

@@ -1,4 +1,6 @@
 """Signal handlers for the example example_plugin."""
+EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT = "Default value"
+EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME = "example_plugin_auto_custom_field"  # Note underscores rather than dashes!
 
 
 def nautobot_database_ready_callback(sender, *, apps, **kwargs):
@@ -20,7 +22,7 @@ def nautobot_database_ready_callback(sender, *, apps, **kwargs):
         apps (django.apps.apps.Apps): Use this to look up model classes as needed
         **kwargs: See https://docs.djangoproject.com/en/3.1/ref/signals/#post-migrate for additional args
     """
-    # Ensure that a desired custom field exists on the Site model
+    # Ensure that a desired custom field exists on the Location model
     ContentType = apps.get_model("contenttypes", "ContentType")
     Location = apps.get_model("dcim", "Location")
     CustomField = apps.get_model("extras", "CustomField")
@@ -29,20 +31,20 @@ def nautobot_database_ready_callback(sender, *, apps, **kwargs):
 
     if hasattr(CustomField, "slug"):
         field, _ = CustomField.objects.update_or_create(
-            slug="example_plugin_auto_custom_field",  # Note underscores rather than dashes!
+            slug=EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME,
             defaults={
                 "type": CustomFieldTypeChoices.TYPE_TEXT,
                 "label": "Example Plugin Automatically Added Custom Field",
-                "default": "Default value",
+                "default": EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
             },
         )
     else:
         field, _ = CustomField.objects.update_or_create(
-            key="example_plugin_auto_custom_field",  # Note underscores rather than dashes!
+            key=EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME,
             defaults={
                 "type": CustomFieldTypeChoices.TYPE_TEXT,
                 "label": "Example Plugin Automatically Added Custom Field",
-                "default": "Default value",
+                "default": EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
             },
         )
     field.content_types.set([ContentType.objects.get_for_model(Location)])

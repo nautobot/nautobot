@@ -6,7 +6,7 @@ import nautobot.core.models.fields
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0079_tagsfield"),
+        ("extras", "0080_tagsfield"),
         ("circuits", "0015_remove_circuittype_provider_slug"),
     ]
 

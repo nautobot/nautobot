@@ -1,2 +1,0 @@
-Changed the REST API depth for generating the OpenAPI schema from 1 to 0.
-Set `ENUM_GENERATE_CHOICE_DESCRIPTION` to False to make OpenAPI schema for REST API filters less verbose.

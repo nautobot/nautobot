@@ -1,6 +1,7 @@
 from .fields import (
     ChoiceField,
     ContentTypeField,
+    NautobotHyperlinkedRelatedField,
     SerializedPKRelatedField,
     TimeZoneSerializerField,
 )
@@ -23,6 +24,7 @@ __all__ = (
     "ChoiceField",
     "ContentTypeField",
     "CustomFieldModelSerializerMixin",
+    "NautobotHyperlinkedRelatedField",
     "NautobotModelSerializer",
     "NotesSerializerMixin",
     "RelationshipModelSerializerMixin",

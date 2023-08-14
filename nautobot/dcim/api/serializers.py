@@ -492,6 +492,43 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "vc_priority": {"label": "Virtual chassis priority"},
         }
 
+        detail_view_config = {
+            "layout": [
+                {
+                    "Device": {
+                        "fields": [
+                            "location",
+                            "rack",
+                            "position",
+                            "tenant",
+                            "device_type",
+                            "serial",
+                            "asset_tag",
+                        ]
+                    },
+                    "Device Management": {
+                        "fields": [
+                            "role",
+                            "platform",
+                            "primary_ip4",
+                            "primary_ip6",
+                            "secrets_group",
+                            "device_redundancy_group",
+                        ]
+                    },
+                },
+                {
+                    "Tags": {
+                        "fields": ["tags"],
+                    },
+                    "Comments": {
+                        "fields": ["comments"],
+                    },
+                },
+            ],
+            "include_others": True,
+        }
+
     def get_field_names(self, declared_fields, info):
         """
         Add a couple of special fields to the serializer.

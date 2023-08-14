@@ -99,6 +99,8 @@ class SecretsGroup(OrganizationalModel):
         to=Secret, related_name="secrets_groups", through="extras.SecretsGroupAssociation", blank=True
     )
 
+    documentation_static_path = "docs/user-guide/platform-functionality/secret.html"
+
     def __str__(self):
         return self.name
 
@@ -126,6 +128,8 @@ class SecretsGroupAssociation(BaseModel):
     secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)
 
     natural_key_field_names = ["secrets_group", "access_type", "secret_type", "secret"]
+
+    documentation_static_path = "docs/user-guide/platform-functionality/secret.html"
 
     class Meta:
         unique_together = (

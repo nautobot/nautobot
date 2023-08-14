@@ -18,6 +18,15 @@
     font-size: 0.7rem;
 }
 
+/*
+* The default max-width is 61rem which does not provide nearly enough space to present code examples or larger tables
+*/
+.md-grid {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 95%;
+}
+
 .md-tabs__link {
     font-size: 0.8rem;
 }

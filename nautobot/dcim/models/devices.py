@@ -9,6 +9,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
+from django.utils.functional import classproperty
 from django.utils.safestring import mark_safe
 
 from nautobot.core.models import BaseManager
@@ -421,7 +422,7 @@ class Device(PrimaryModel, ConfigContextModel):
     )
     # todoindex:
     face = models.CharField(max_length=50, blank=True, choices=DeviceFaceChoices, verbose_name="Rack face")
-    primary_ip4 = models.OneToOneField(
+    primary_ip4 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
         related_name="primary_ip4_for",
@@ -429,7 +430,7 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
         verbose_name="Primary IPv4",
     )
-    primary_ip6 = models.OneToOneField(
+    primary_ip6 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
         related_name="primary_ip6_for",
@@ -495,7 +496,17 @@ class Device(PrimaryModel, ConfigContextModel):
         "secrets_group",
     ]
 
-    natural_key_field_names = ["name", "tenant", "location"]  # location should be last since it's variadic
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_names(cls):  # pylint: disable=no-self-argument
+        """
+        When DEVICE_NAME_AS_NATURAL_KEY is set in settings or Constance, we use just the `name` for simplicity.
+        """
+        if get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY"):
+            # opt-in simplified "pseudo-natural-key"
+            return ["name"]
+        else:
+            # true natural-key given current uniqueness constraints
+            return ["name", "tenant", "location"]  # location should be last since it's potentially variadic
 
     class Meta:
         ordering = ("_name",)  # Name may be null
@@ -824,6 +835,8 @@ class VirtualChassis(PrimaryModel):
     )
     name = models.CharField(max_length=64, unique=True)
     domain = models.CharField(max_length=30, blank=True)
+
+    natural_key_field_names = ["name"]
 
     class Meta:
         ordering = ["name"]

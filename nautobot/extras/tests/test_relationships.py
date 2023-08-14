@@ -1,6 +1,5 @@
 import logging
 import uuid
-from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -14,24 +13,24 @@ from nautobot.core.forms import (
 )
 from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import TestCase
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Device, Platform, Rack, Location, LocationType
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 
 
-class RelationshipBaseTest(TestCase):
+class RelationshipBaseTest:
     @classmethod
     def setUpTestData(cls):
         cls.location_ct = ContentType.objects.get_for_model(Location)
         cls.rack_ct = ContentType.objects.get_for_model(Rack)
         cls.vlan_ct = ContentType.objects.get_for_model(VLAN)
 
-        cls.locations = Location.objects.all()[:5]
+        cls.locations = Location.objects.get_for_model(Rack).get_for_model(VLAN)[:5]
 
         cls.rack_status = Status.objects.get_for_model(Rack).first()
         cls.racks = [
@@ -41,24 +40,24 @@ class RelationshipBaseTest(TestCase):
         ]
 
         cls.vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_groups = (VLANGroupFactory.create(location=cls.locations[idx]) for idx in range(3))
+        cls.vlan_group = VLANGroup.objects.create(name="Relationship Test VLANGroup")
         cls.vlans = [
             VLAN.objects.create(
-                name="VLAN A", vid=100, location=cls.locations[0], status=cls.vlan_status, vlan_group=vlan_groups[0]
+                name="VLAN A", vid=100, location=cls.locations[0], status=cls.vlan_status, vlan_group=cls.vlan_group
             ),
             VLAN.objects.create(
-                name="VLAN B", vid=100, location=cls.locations[1], status=cls.vlan_status, vlan_group=vlan_groups[0]
+                name="VLAN B", vid=101, location=cls.locations[1], status=cls.vlan_status, vlan_group=cls.vlan_group
             ),
             VLAN.objects.create(
-                name="VLAN C", vid=100, location=cls.locations[2], status=cls.vlan_status, vlan_group=vlan_groups[0]
+                name="VLAN C", vid=102, location=cls.locations[2], status=cls.vlan_status, vlan_group=cls.vlan_group
             ),
         ]
 
         cls.m2m_1 = Relationship(
-            label="Vlan to Rack",
+            label="VLAN to Rack",
             key="vlan_rack",
             source_type=cls.rack_ct,
-            source_label="My Vlans",
+            source_label="My VLANs",
             source_filter={"location": [cls.locations[0].name, cls.locations[1].name, cls.locations[2].name]},
             destination_type=cls.vlan_ct,
             destination_label="My Racks",
@@ -67,7 +66,7 @@ class RelationshipBaseTest(TestCase):
         cls.m2m_1.validated_save()
 
         cls.m2m_2 = Relationship(
-            label="Another Vlan to Rack",
+            label="Another VLAN to Rack",
             key="vlan_rack_2",
             source_type=cls.rack_ct,
             destination_type=cls.vlan_ct,
@@ -157,11 +156,12 @@ class RelationshipBaseTest(TestCase):
         ]
 
 
-@skip
-class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
+class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
+    model = Relationship
+
     def test_clean_filter_not_dict(self):
         m2m = Relationship(
-            label="Another Vlan to Rack",
+            label="Another VLAN to Rack",
             key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter=["a list not a dict"],
@@ -176,7 +176,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
 
     def test_clean_filter_not_valid(self):
         m2m = Relationship(
-            label="Another Vlan to Rack",
+            label="Another VLAN to Rack",
             key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter={"notvalid": "not a location"},
@@ -190,7 +190,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
         m2m = Relationship(
-            label="Another Vlan to Rack",
+            label="Another VLAN to Rack",
             key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter={"parent": "not a list"},
@@ -204,7 +204,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
         m2m = Relationship(
-            label="Another Vlan to Rack",
+            label="Another VLAN to Rack",
             key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter={"parent": ["not a valid location"]},
@@ -223,7 +223,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
 
     def test_clean_valid(self):
         m2m = Relationship(
-            label="Another Vlan to Rack",
+            label="Another VLAN to Rack",
             key="vlan_rack_2",
             source_type=self.location_ct,
             source_filter={"name": [self.locations[1].name]},
@@ -308,7 +308,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
             self.m2m_1.get_label("wrongside")
 
     def test_get_label_with_label(self):
-        self.assertEqual(self.m2m_1.get_label("source"), "My Vlans")
+        self.assertEqual(self.m2m_1.get_label("source"), "My VLANs")
         self.assertEqual(self.m2m_1.get_label("destination"), "My Racks")
 
     def test_get_label_without_label_defined(self):
@@ -342,7 +342,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         field = self.m2m_1.to_form_field("source")
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
-        self.assertEqual(field.label, "My Vlans")
+        self.assertEqual(field.label, "My VLANs")
         self.assertEqual(field.query_params, {})
 
         field = self.m2m_1.to_form_field("destination")
@@ -391,7 +391,7 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         """
         # Check if it catches the cr.key starting with a digit.
         cr1 = Relationship(
-            label="Vlans to Vlans",
+            label="VLANs to VLANs",
             key="12_vlans_to_vlans",
             type="symmetric-many-to-many",
             source_type=self.vlan_ct,
@@ -429,8 +429,9 @@ class RelationshipTest(RelationshipBaseTest):  # TODO: BaseModelTestCase mixin?
         )
 
 
-@skip
-class RelationshipAssociationTest(RelationshipBaseTest):
+class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
+    model = RelationshipAssociation
+
     def setUp(self):
         super().setUp()
 
@@ -543,14 +544,14 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.m2m_1, source=self.locations[0], destination=self.vlans[0])
             cra.clean()
-        expected_errors = {"source_type": ["source_type has a different value than defined in Vlan to Rack"]}
+        expected_errors = {"source_type": ["source_type has a different value than defined in VLAN to Rack"]}
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
         # Create with the wrong destination Type
         with self.assertRaises(ValidationError) as handler:
             cra = RelationshipAssociation(relationship=self.m2m_1, source=self.racks[0], destination=self.racks[0])
             cra.clean()
-        expected_errors = {"destination_type": ["destination_type has a different value than defined in Vlan to Rack"]}
+        expected_errors = {"destination_type": ["destination_type has a different value than defined in VLAN to Rack"]}
         self.assertEqual(handler.exception.message_dict, expected_errors)
 
     def test_clean_check_quantity_o2o(self):
@@ -901,8 +902,7 @@ class RelationshipAssociationTest(RelationshipBaseTest):
         self.assertEqual(1, RelationshipAssociation.objects.filter(destination_dcim_location=self.locations[0]).count())
 
 
-@skip
-class RelationshipTableTest(RelationshipBaseTest):
+class RelationshipTableTest(RelationshipBaseTest, TestCase):
     """
     Test inclusion of relationships in object table views.
     """
@@ -1054,7 +1054,9 @@ class RelationshipTableTest(RelationshipBaseTest):
                 self.assertIn(value, rendered_value)
 
 
-class RequiredRelationshipTestMixin(TestCase):
+class RequiredRelationshipTestMixin:
+    """Common test mixin for both view and API tests dealing with required relationships."""
+
     def send_data(self, model_class, data, interact_with, action="add", url_kwargs=None):
         # Helper to post data to a URL
 

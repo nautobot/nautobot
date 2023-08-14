@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.db.models import ProtectedError, Q
+from django.db.models import Count, ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -802,7 +802,7 @@ class GitRepositoryListView(generic.ObjectListView):
                 status__in=JobResultStatusChoices.READY_STATES,
             )
             .order_by("date_done")
-            .defer("data")
+            .defer("result")
         }
         return {
             "job_results": results,
@@ -1463,7 +1463,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("data").select_related("job_model", "user").prefetch_related("logs")
+    queryset = JobResult.objects.defer("result").select_related("job_model", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1475,7 +1475,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("data").all()
+    queryset = JobResult.objects.defer("result").all()
     table = tables.JobResultTable
 
 
@@ -1801,9 +1801,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 "rack",
                 "device_type",
             )
-            ipaddress = instance.ip_addresses.select_related(
-                # "vrf",
-                "tenant",
+            ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
+                interface_count=Count("interfaces"),
+                interface_parent_count=(Count("interfaces__device", distinct=True)),
+                vm_interface_count=Count("vm_interfaces"),
+                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                assigned_count=Count("interfaces") + Count("vm_interfaces"),
             )
             prefixes = instance.prefixes.select_related(
                 "location",

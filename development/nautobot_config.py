@@ -4,10 +4,13 @@ import os
 from nautobot.core.settings import *  # noqa: F403
 from nautobot.core.settings_funcs import is_truthy
 
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "012345678901234567890123456789012345678901234567890123456789")
+
 #
 # Debugging defaults to True rather than False for the development environment
 #
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "True"))
+
 
 # Django Debug Toolbar - enabled only when debugging
 if DEBUG:

@@ -1,6 +1,6 @@
 import os
 import tempfile
-from unittest import mock
+from unittest import mock, expectedFailure
 import uuid
 import warnings
 
@@ -717,6 +717,11 @@ class FileProxyTest(ModelTestCases.BaseModelTestCase):
         self.test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
         self.fp = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
 
+    @expectedFailure
+    def test_get_docs_url(self):
+        """Not a user-facing model, so no get_docs_url() return value is expected."""
+        super().test_get_docs_url()
+
     def test_create_file_proxy(self):
         """Test creation of `FileProxy` object."""
 
@@ -736,6 +741,14 @@ class FileProxyTest(ModelTestCases.BaseModelTestCase):
         self.fp.delete()
         self.assertEqual(FileProxy.objects.count(), 0)
         self.assertEqual(FileAttachment.objects.count(), 0)
+
+    def test_natural_key_symmetry(self):
+        """Test FileAttachment as well as FileProxy."""
+        super().test_natural_key_symmetry()
+        instance = FileAttachment.objects.first()
+        self.assertIsNotNone(instance)
+        self.assertIsNotNone(instance.natural_key())
+        self.assertEqual(FileAttachment.objects.get_by_natural_key(*instance.natural_key()), instance)
 
 
 class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
@@ -1465,6 +1478,25 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         self.assertEqual(log_object.message, log.message)
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)
+
+
+class JobResultTestCase(TestCase):
+    def test_passing_invalid_data_into_job_result(self):
+        """JobResult.result was changed from TextField to JSONField in https://github.com/nautobot/nautobot/pull/4133/files.
+        Assert passing json serializable and non-serializable data into JobResult.result"""
+
+        with self.subTest("Assert Passing Valid data"):
+            data = {
+                "output": "valid data",
+            }
+            job_result = JobResult.objects.create(name="ExampleJob1", user=None, result=data)
+            self.assertTrue(job_result.present_in_database)
+            self.assertEqual(job_result.result, data)
+
+        with self.subTest("Assert Passing Invalid data"):
+            with self.assertRaises(TypeError) as err:
+                JobResult.objects.create(name="ExampleJob2", user=None, result=lambda: 1)
+            self.assertEqual(str(err.exception), "Object of type function is not JSON serializable")
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):

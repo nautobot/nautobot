@@ -1,2 +1,0 @@
-The built-in "SLAAC" `Status` object has been removed and replaced with an `IPAddress.type` of the same name.
-The built-in "DHCP" `Status` object has been removed and replaced with an `IPAddress.type` of the same name.
