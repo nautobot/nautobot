@@ -20,6 +20,7 @@ theme:
     - "search.suggest"
     - "search.highlight"
     - "search.share"
+    - "content.code.copy"
   favicon: "assets/favicon.ico"
   logo: "assets/nautobot_logo.svg"
   palette:
