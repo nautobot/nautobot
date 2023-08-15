@@ -63,8 +63,9 @@ RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y && \
     apt-get clean all && \
-    npm install -g npm@latest && \
     rm -rf /var/lib/apt/lists/* && \
+    npm install -g npm@latest && \
+    rm -rf /root/.npm && \
     pip install --upgrade pip wheel && \
     rm -rf /tmp/tmp*
 
