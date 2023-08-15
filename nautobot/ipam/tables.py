@@ -495,6 +495,7 @@ class IPAddressDetailTable(IPAddressTable):
         fields = (
             "pk",
             "address",
+            "parent__namespace",
             "type",
             "status",
             "role",
@@ -508,6 +509,7 @@ class IPAddressDetailTable(IPAddressTable):
         default_columns = (
             "pk",
             "address",
+            "parent__namespace",
             "type",
             "status",
             "role",
