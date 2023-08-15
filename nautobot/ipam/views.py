@@ -90,6 +90,11 @@ class NamespaceUIViewSet(
         return context
 
 
+class NamespaceImportView(generic.BulkImportView):
+    queryset = Namespace.objects.all()
+    table = tables.NamespaceTable
+
+
 class NamespaceIPAddressesView(generic.ObjectView):
     queryset = Namespace.objects.all()
     template_name = "ipam/namespace_ipaddresses.html"
