@@ -63,6 +63,7 @@ RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y && \
     apt-get clean all && \
+    npm install -g npm@latest && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip wheel && \
     rm -rf /tmp/tmp*
@@ -115,7 +116,7 @@ WORKDIR /opt/nautobot/ui
 
 # Install (non-development) Node dependencies of Nautobot UI
 RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
-    npm install -g npm@latest && npm install --omit=dev
+    npm install --omit=dev
 
 ################################ Stage: node-dev-dependencies (intermediate build target)
 
