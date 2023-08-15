@@ -515,10 +515,10 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
+            type=raw,value=u/gas-4254-container-build-py${{ matrix.python-version }}
+            type=raw,value=u/gas-4254-container-build-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
+            type=raw,value=u/gas-4254-container-build,enable=${{ matrix.python-version == 3.8 }}
+            type=raw,value=u/gas-4254-container-build-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
             type=raw,value=latest,enable=${{ matrix.python-version == 3.8 && github.ref == 'refs/heads/develop' }}
             type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
           labels: |
