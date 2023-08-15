@@ -266,6 +266,9 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
     rm -rf /source && \
     rm -rf /tmp/tmp*
 
+# Don't send install metrics as this is a development target, not a deployment one
+ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
+
 COPY development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 ################################ Stage: final-dev (development environment for Nautobot plugins)
@@ -276,6 +279,9 @@ RUN pip install --no-deps --no-cache-dir /source/dist/*.whl && \
     rm -rf /source
 
 WORKDIR /opt/nautobot
+
+# Don't send install metrics as this is a development target, not a deployment one
+ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
 RUN nautobot-server init
 
