@@ -490,19 +490,26 @@ jobs:
 
   container-build-test:
     name: "Build Container Images (GHCR Only)"
-    runs-on: "ubuntu-20.04"
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         python-version: [ "3.8", "3.9", "3.10", "3.11" ]
-        platform: [ "linux/amd64", "linux/arm64" ]
+        runner: [ "self-hosted", "ubuntu-20.04" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
-      - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      - run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
         id: "gitbranch"
+      - run: |
+          if [ ${{ matrix.runner }} == "self-hosted" ]; then
+            echo "platform=linux/arm64" >> $GITHUB_OUTPUT
+          else
+            echo "platform=linux/amd64" >> $GITHUB_OUTPUT
+          fi
+        id: "platform"
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v1"
       - name: "Set up Docker Buildx"
@@ -530,11 +537,11 @@ jobs:
           load: true
           target: final
           file: "docker/Dockerfile"
-          platforms: "${{ matrix.platform }}"
+          platforms: "${{ steps.platform.outputs.platform }}"
           tags: "${{ steps.dockermeta.outputs.tags }}"
           labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ matrix.platform }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ matrix.platform }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ steps.platform.outputs.platform }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ steps.platform.outputs.platform }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
@@ -563,11 +570,11 @@ jobs:
           load: true
           target: final-dev
           file: "docker/Dockerfile"
-          platforms: "${{ matrix.platform }}"
+          platforms: "${{ steps.platform.outputs.platform }}"
           tags: "${{ steps.dockerdevmeta.outputs.tags }}"
           labels: "${{ steps.dockerdevmeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ matrix.platform }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ matrix.platform }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ steps.platform.outputs.platform }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ steps.platform.outputs.platform }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
