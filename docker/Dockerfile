@@ -115,7 +115,7 @@ WORKDIR /opt/nautobot/ui
 
 # Install (non-development) Node dependencies of Nautobot UI
 RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
-    npm install --omit=dev
+    npm install -g npm@latest && npm install --omit=dev
 
 ################################ Stage: node-dev-dependencies (intermediate build target)
 
