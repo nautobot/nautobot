@@ -72,6 +72,7 @@ class NamespaceUIViewSet(
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,
     view_mixins.ObjectNotesViewMixin,
 ):
     lookup_field = "pk"
@@ -88,11 +89,6 @@ class NamespaceUIViewSet(
             context.update(get_namespace_related_counts(instance, request))
 
         return context
-
-
-class NamespaceImportView(generic.BulkImportView):
-    queryset = Namespace.objects.all()
-    table = tables.NamespaceTable
 
 
 class NamespaceIPAddressesView(generic.ObjectView):

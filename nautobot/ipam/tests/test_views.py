@@ -62,7 +62,7 @@ class NamespaceTestCase(
             "name,location",
             f"Namespace 4,{locations[1].pk}",
             f"Namespace 5,{locations[2].pk}",
-            f"Namespace 6,",
+            "Namespace 6,",
         )
 
 

@@ -107,7 +107,6 @@ urlpatterns = [
         kwargs={"model": RIR},
     ),
     # Namespaces
-    path("namespaces/import/", views.NamespaceImportView.as_view(), name="namespace_import"),
     path(
         "namespaces/<uuid:pk>/ip-addresses/",
         views.NamespaceIPAddressesView.as_view(),
