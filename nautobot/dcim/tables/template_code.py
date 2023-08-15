@@ -67,6 +67,39 @@ INTERFACE_IPADDRESSES = """
 {% endfor %}
 """
 
+INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
+<a href="{% url 'dcim:interface_list' %}?interface_redundancy_groups={{record}}">{{ record.interfaces.count }}</a>
+"""
+
+INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES = """
+{% for ip in record.interface.ip_addresses.all %}
+    <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
+{% endfor %}
+"""
+
+INTERFACE_REDUNDANCY_GROUP_STATUS = """
+{% load helpers %}
+<span class="label"
+    style="color: {{ record.interface_redundancy_group.status.color|fgcolor }};
+    background-color: #{{ record.interface_redundancy_group.status.color }}">
+    {{ record.interface_redundancy_group.get_status_display }}
+</span>
+"""
+
+INTERFACE_REDUNDANCY_INTERFACE_PRIORITY = """
+{% load helpers %}
+<span class="badge badge-default">
+    {{ record.priority|placeholder }}
+</span>
+"""
+
+INTERFACE_REDUNDANCY_INTERFACE_STATUS = """
+{% load helpers %}
+<span class="label" style="color: {{ record.interface.status.color|fgcolor }}; background-color: #{{ record.interface.status.color }}">
+    {{ record.interface.get_status_display }}
+</span>
+"""
+
 INTERFACE_TAGGED_VLANS = """
 {% if record.mode == 'tagged' %}
     {% for vlan in record.tagged_vlans.all %}
@@ -79,6 +112,9 @@ INTERFACE_TAGGED_VLANS = """
 {% endif %}
 """
 
+LINKED_RECORD_COUNT = """
+<a href="{{ record.get_absolute_url }}">{{ value }}</a>
+"""
 
 TREE_LINK = """
 {% load helpers %}

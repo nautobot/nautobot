@@ -7,27 +7,27 @@ on:  # yamllint disable
       - "main"
       - "develop"
       - "next"
-  workflow_call:
+  workflow_call: {}
 
 jobs:
   black:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Linting: black"
         run: "poetry run invoke black"
   flake8:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Linting: flake8"
@@ -72,7 +72,7 @@ jobs:
       - name: "Linting: yamllint"
         run: "poetry run invoke yamllint"
   markdownlint:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
@@ -86,18 +86,18 @@ jobs:
       - name: "Linting: markdownlint"
         run: "poetry run invoke markdownlint"
   hadolint:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Run Hadolint"
         uses: "hadolint/hadolint-action@v1.6.0"
         with:
           dockerfile: "docker/Dockerfile"
   check-migrations:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -114,7 +114,7 @@ jobs:
           - "5432:5432"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Run check migrations"
@@ -126,7 +126,7 @@ jobs:
       - "markdownlint"
       - "hadolint"
   check-schema:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -144,7 +144,7 @@ jobs:
           - "5432:5432"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Run check-schema"
@@ -158,7 +158,7 @@ jobs:
       - "hadolint"
 
   pylint:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -176,7 +176,7 @@ jobs:
           - "5432:5432"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Run pylint"
@@ -186,7 +186,7 @@ jobs:
       - "check-schema"
 
   tests-postgres:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     strategy:
       fail-fast: true
       matrix:
@@ -211,7 +211,7 @@ jobs:
           - "6379:6379"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
@@ -229,7 +229,7 @@ jobs:
       - "check-schema"
 
   tests-mysql:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     strategy:
       fail-fast: true
       matrix:
@@ -256,7 +256,7 @@ jobs:
           - "6379:6379"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
@@ -388,7 +388,7 @@ jobs:
       - "tests-postgres"
 
   integration-test:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -414,7 +414,7 @@ jobs:
           - "4444:4444"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v3"
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
@@ -434,8 +434,10 @@ jobs:
 
   container-build:
     name: "Build Container Images (GHCR Only)"
-    runs-on: "ubuntu-20.04"
-    if: "github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/next')"
+    runs-on: "ubuntu-22.04"
+    if: |
+      github.event_name == 'push' &&
+      (github.ref_name == 'develop' || github.ref_name == 'next')
     needs:
       - "integration-test"
       - "migration-tests-mysql"
@@ -447,23 +449,46 @@ jobs:
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
+      - name: "Configuration"
+        id: "config"
+        shell: "bash"
+        run: |
+          export BRANCH="${{ github.ref_name }}"
+          export TAG_LATEST="false"
+          export TAG_LATEST_FOR_BRANCH="false"
+          export TAG_LATEST_FOR_PY="false"
+
+          if [[ $BRANCH == "develop" ]]; then
+            export TAG_LATEST_FOR_PY="true"
+          fi
+
+          if [[ "${{ matrix.python-version }}" == "3.11" ]]; then
+            export TAG_LATEST_FOR_BRANCH="true"
+            if [[ $TAG_LATEST_FOR_PY == "true" ]]; then
+              export TAG_LATEST="true"
+            fi
+          fi
+
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "tag-latest=$TAG_LATEST" >> $GITHUB_OUTPUT
+          echo "tag-latest-for-branch=$TAG_LATEST_FOR_BRANCH" >> $GITHUB_OUTPUT
+          echo "tag-latest-for-py=$TAG_LATEST_FOR_PY" >> $GITHUB_OUTPUT
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
-      - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: "gitbranch"
+        uses: "actions/checkout@v3"
       - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@v1"
+        uses: "docker/setup-qemu-action@v2"
       - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@v1"
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: "docker/setup-buildx-action@v2"
+      - name: "Login to GitHub Container Registry"
+        uses: "docker/login-action@v2"
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Docker Metadata"
-        id: "dockermeta"
-        uses: "docker/metadata-action@v3"
+          registry: "ghcr.io"
+          username: "${{ github.actor }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+      - name: "Build `final`"
+        if: |
+          steps.config.outputs.tag-latest-for-branch == 'true'
+        uses: "./.github/actions/build-nautobot-image"
         with:
           images: "ghcr.io/nautobot/nautobot"
           flavor: |

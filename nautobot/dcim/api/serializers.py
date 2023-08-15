@@ -28,6 +28,8 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
+    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -59,6 +61,8 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
     Location,
@@ -402,6 +406,38 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
+#
+# Interface Redundancy group
+#
+
+
+class InterfaceRedundancyGroupAssociationSerializer(ValidatedModelSerializer):
+    """InterfaceRedundancyGroupAssociation Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = "__all__"
+
+
+class InterfaceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    """InterfaceRedundancyGroup Serializer."""
+
+    protocol = ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = "__all__"
+        extra_kwargs = {
+            "virtual_ip": {"read_only": True},
+            "secrets_group": {"read_only": True},
+            "interfaces": {"source": "interface_redundancy_group_associations", "many": True, "read_only": True},
+        }
+
+
 class PowerPortTemplateSerializer(NautobotModelSerializer):
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
@@ -455,6 +491,7 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 
 
 class PlatformSerializer(NautobotModelSerializer):
+    network_driver_mappings = serializers.JSONField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     virtual_machine_count = serializers.IntegerField(read_only=True)
 
@@ -464,6 +501,11 @@ class PlatformSerializer(NautobotModelSerializer):
         list_display_fields = [
             "name",
             "manufacturer",
+            "napalm_driver",
+            "napalm_args",
+            "network_driver",
+            "network_driver_mappings",
+            "description",
             "device_count",
             "virtual_machine_count",
             "napalm_driver",
@@ -658,6 +700,23 @@ class InterfaceSerializer(
         extra_kwargs = {"cable": {"read_only": True}}
 
     def validate(self, data):
+        # set interface status to active on create (only!) if status was not provided
+        from nautobot.extras.models import Status
+
+        if self.instance is None and not data.get("status"):
+            # status is currently required in the Interface model but not required in api_version < 1.3 serializers
+            # which raises an error when validating except status is explicitly set here
+            query = Status.objects.get_for_model(Interface)
+            try:
+                data["status"] = query.get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+            except Status.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "status": "Interface default status 'active' does not exist, "
+                        "create 'active' status for Interface or use the latest api_version"
+                    }
+                )
+
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
         # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to

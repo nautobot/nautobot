@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from django.db.models import Count, Q
+from django.db.models import Q
 
 from timezone_field import TimeZoneFormField
 
@@ -41,6 +41,7 @@ from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotModelForm,
     NautobotFilterForm,
+    NoteModelFormMixin,
     LocalContextFilterForm,
     LocalContextModelForm,
     LocalContextModelBulkEditForm,
@@ -63,6 +64,7 @@ from .choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -97,6 +99,8 @@ from .models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -437,22 +441,22 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         cleaned_data = self.cleaned_data
         location = cleaned_data.get("location")
 
-        if self.instance:
+        if self.instance and self.instance.present_in_database and location != self.instance.location:
             # If the location is changed, the rack post save signal attempts to update the rack devices,
-            # which may result in an Exception.
-            # To avoid an unhandled exception in signal, catch this error here.
-            duplicate_devices_names = (
-                Device.objects.values_list("name", flat=True)
-                .annotate(name_count=Count("name"))
-                .filter(name_count__gt=1)
-            )
-            duplicate_devices = Device.objects.filter(
-                location=location, name__in=list(duplicate_devices_names)
-            ).values_list("name", flat=True)
+            # which may result in an Exception if the updated devices conflict with existing devices at this location.
+            # To avoid an unhandled exception in the signal, check for this scenario here.
+            duplicate_devices = set()
+            for device in self.instance.devices.all():
+                qs = Device.objects.exclude(pk=device.pk).filter(
+                    location=location, tenant=device.tenant, name=device.name
+                )
+                if qs.exists():
+                    duplicate_devices.add(qs.first().name)
             if duplicate_devices:
                 raise ValidationError(
                     {
-                        "location": f"Device with `name` in {list(duplicate_devices)} and location={location} already exists."
+                        "location": f"Device(s) {sorted(duplicate_devices)} already exist in location {location} and "
+                        "would conflict with same-named devices in this rack."
                     }
                 )
         return cleaned_data
@@ -1440,6 +1444,7 @@ class PlatformForm(NautobotModelForm):
         fields = [
             "name",
             "manufacturer",
+            "network_driver",
             "napalm_driver",
             "napalm_args",
             "description",
@@ -3574,4 +3579,161 @@ class DeviceRedundancyGroupBulkEditForm(
         nullable_fields = [
             "failover_strategy",
             "secrets_group",
+        ]
+
+
+#
+# Interface Redundancy Groups
+#
+
+
+class InterfaceRedundancyGroupForm(NautobotModelForm):
+    """InterfaceRedundancyGroup create/edit form."""
+
+    protocol_group_id = forms.CharField(
+        label="Protocol Group ID",
+        help_text="Specify a group identifier, such as the VRRP group ID.",
+        required=False,
+    )
+    virtual_ip = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+    )
+    secrets_group = DynamicModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = [
+            "name",
+            "description",
+            "status",
+            "virtual_ip",
+            "protocol",
+            "protocol_group_id",
+            "secrets_group",
+        ]
+
+
+class InterfaceRedundancyGroupAssociationForm(BootstrapMixin, NoteModelFormMixin):
+    """InterfaceRedundancyGroupAssociation create/edit form."""
+
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        query_params={"region_id": "$region"},
+    )
+    rack = DynamicModelChoiceField(
+        queryset=Rack.objects.all(),
+        required=False,
+        null_option="None",
+        query_params={"location_id": "$location"},
+    )
+    device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        query_params={
+            "location_id": "$location",
+            "rack_id": "$rack",
+        },
+    )
+    interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        query_params={"device_id": "$device"},
+        help_text="Choose an interface to add to the Redundancy Group.",
+    )
+    interface_redundancy_group = DynamicModelChoiceField(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        help_text="Choose a Interface Redundancy Group.",
+    )
+    priority = forms.IntegerField(
+        min_value=1,
+        help_text="Specify the interface priority as an integer.",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = [
+            "interface_redundancy_group",
+            "location",
+            "rack",
+            "device",
+            "interface",
+            "priority",
+        ]
+
+
+class InterfaceRedundancyGroupBulkEditForm(
+    TagsBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    """InterfaceRedundancyGroup bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=InterfaceRedundancyGroup.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+    description = forms.CharField(required=False)
+    virtual_ip = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False)
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
+
+    class Meta:
+        """Meta attributes."""
+
+        nullable_fields = [
+            "protocol",
+            "description",
+            "virtual_ip",
+            "secrets_group",
+        ]
+
+
+class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.ModelForm):
+    """Filter form to filter searches."""
+
+    model = InterfaceRedundancyGroup
+    q = forms.CharField(
+        required=False,
+        label="Search",
+        help_text="Search within Name.",
+    )
+    name = forms.CharField(required=False, label="Name")
+    interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+    )
+    virtual_ip = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+    )
+    secrets_group = DynamicModelMultipleChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+    )
+    protocol = forms.ChoiceField(
+        choices=InterfaceRedundancyGroupProtocolChoices,
+        required=False,
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        # Define the fields above for ordering and widget purposes
+        fields = [
+            "q",
+            "name",
+            "description",
+            "interfaces",
+            "virtual_ip",
+            "secrets_group",
+            "protocol",
         ]

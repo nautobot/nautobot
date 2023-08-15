@@ -34,6 +34,9 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #     }
 # }
 
+# Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
+# CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
+
 # Celery broker URL used to tell workers where queues are located
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
@@ -152,6 +155,11 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # The file path where uploaded media such as image attachments are stored. A trailing slash is not needed.
 #
 # MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
+
+# Set to True to use session cookies instead of persistent cookies.
+# Session cookies will expire when a browser is closed.
+#
+# SESSION_EXPIRE_AT_BROWSER_CLOSE = is_truthy(os.getenv("NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE", "False"))
 
 # The length of time (in seconds) for which a user will remain logged into the web UI before being prompted to
 # re-authenticate. (Default: 1209600 [14 days])
@@ -340,6 +348,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     'http': 'http://10.10.1.10:3128',
 #     'https': 'http://10.10.1.10:1080',
 # }
+
+# Send anonymized installation metrics when `nautobot-server post_upgrade` command is run.
+#
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "{{ installation_metrics_enabled | default(True) }}"))
 
 # Directory where Jobs can be discovered.
 #

@@ -10,6 +10,7 @@ from rest_framework import status
 from constance.test import override_config
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
@@ -31,6 +32,7 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -1027,6 +1029,7 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Test Platform 4",
+            "network_driver": "cisco_ios",
         },
         {
             "name": "Test Platform 5",
@@ -1040,7 +1043,36 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
     ]
     bulk_update_data = {
         "description": "New description",
+        "network_driver": "cisco_xe",
     }
+
+    @override_settings(
+        NETWORK_DRIVERS={
+            "netmiko": {"cisco_ios": "custom_cisco_netmiko"},
+            "custom_tool": {"custom_network_driver": "custom_tool_driver"},
+        },
+    )
+    def test_network_driver_mappings(self):
+        """
+        Check that network_driver_mappings field is correctly exposed by the API
+        """
+        platform1 = Platform.objects.create(
+            name="Test network driver mappings 1", slug="test-ndm-1", network_driver="cisco_ios"
+        )
+        platform2 = Platform.objects.create(
+            name="Test network driver mappings 2", slug="test-ndm-2", network_driver="custom_network_driver"
+        )
+        self.add_permissions("dcim.view_platform")
+
+        with self.subTest("Test cisco_ios platform with overridden netmiko driver"):
+            url = reverse("dcim-api:platform-detail", kwargs={"pk": platform1.pk})
+            response = self.client.get(url, **self.header)
+            self.assertDictEqual(platform1.network_driver_mappings, response.data["network_driver_mappings"])
+
+        with self.subTest("Test platform with custom network_driver with custom mapped driver"):
+            url = reverse("dcim-api:platform-detail", kwargs={"pk": platform2.pk})
+            response = self.client.get(url, **self.header)
+            self.assertDictEqual(platform2.network_driver_mappings, response.data["network_driver_mappings"])
 
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
@@ -1112,6 +1144,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             {
                 "device_type": device_type.pk,
                 "role": device_role.pk,
+                "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
                 "status": device_statuses[1].pk,
                 "name": "Test Device 4",
                 "location": locations[1].pk,
@@ -1123,6 +1156,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "device_type": device_type.pk,
                 "role": device_role.pk,
                 "status": device_statuses[1].pk,
+                "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
                 "name": "Test Device 5",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
@@ -1133,6 +1167,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "device_type": device_type.pk,
                 "role": device_role.pk,
                 "status": device_statuses[1].pk,
+                "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
                 "name": "Test Device 6",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
@@ -2410,3 +2445,125 @@ class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
             "failover_strategy": "active-passive",
             "status": statuses[1].pk,
         }
+        # FIXME(jathan): The writable serializer for `status` takes the
+        # status `name` (str) and not the `pk` (int). Do not validate this
+        # field right now, since we are asserting that it does create correctly.
+        #
+        # The test code for `nautobot.core.testing.views.TestCase.model_to_dict()`
+        # needs to be enhanced to use the actual API serializers when `api=True`
+        cls.validation_excluded_fields = ["status"]
+
+
+class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
+    model = InterfaceRedundancyGroup
+    brief_fields = ["display", "id", "name", "protocol", "url"]
+    create_data = [
+        {
+            "name": "Interface Redundancy Group 4",
+            "protocol": "hsrp",
+            "status": "active",
+            "protocol_group_id": "1",
+        },
+        {
+            "name": "Interface Redundancy Group 5",
+            "protocol": "vrrp",
+            "status": "planned",
+            "protocol_group_id": "2",
+        },
+        {
+            "name": "Interface Redundancy Group 6",
+            "protocol": "glbp",
+            "status": "staging",
+            "protocol_group_id": "3",
+        },
+    ]
+    bulk_update_data = {
+        "protocol": "carp",
+        "status": "active",
+        "virtual_ip": None,
+    }
+    choices_fields = ["status", "protocol"]
+    # FIXME(jathan): The writable serializer for `status` takes the
+    # status `name` (str) and not the `pk` (int). Do not validate this
+    # field right now, since we are asserting that it does create correctly.
+    #
+    # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+    # needs to be enhanced to use the actual API serializers when `api=True`
+    validation_excluded_fields = ["status"]
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
+        ips = IPAddress.objects.all()
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
+            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 3", slug="secrets-group-3"),
+        )
+        # Populating the data secrets_group and virtual_ip here.
+        for i, data in enumerate(cls.create_data[:2]):
+            data["secrets_group"] = secrets_groups[i].pk
+        for i, data in enumerate(cls.create_data[1:]):
+            data["virtual_ip"] = ips[i].pk
+
+        cls.bulk_update_data["virtual_ip"] = ips[0].pk
+
+        interface_redundancy_groups = (
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 1",
+                protocol="hsrp",
+                status=statuses[0],
+                virtual_ip=None,
+                protocol_group_id="4",
+                secrets_group=secrets_groups[0],
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 2",
+                protocol="carp",
+                status=statuses[1],
+                virtual_ip=ips[1],
+                protocol_group_id="5",
+                secrets_group=secrets_groups[1],
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 3",
+                protocol="vrrp",
+                status=statuses[2],
+                virtual_ip=ips[2],
+                protocol_group_id="6",
+                secrets_group=None,
+            ),
+        )
+
+        for group in interface_redundancy_groups:
+            group.validated_save()
+
+        cls.device_type = DeviceType.objects.first()
+        cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.location = Location.objects.filter(content_types=Device).first()
+        cls.device = Device.objects.create(
+            device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+        )
+        non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
+        cls.interfaces = (
+            Interface.objects.create(
+                device=cls.device,
+                name="Interface 1",
+                type="1000base-t",
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.device,
+                name="Interface 2",
+                type="1000base-t",
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.device,
+                name="Interface 3",
+                type=InterfaceTypeChoices.TYPE_BRIDGE,
+                status=non_default_status,
+            ),
+        )
+        for i, interface in enumerate(cls.interfaces):
+            interface_redundancy_groups[0].add_interface(interface, i * 100)

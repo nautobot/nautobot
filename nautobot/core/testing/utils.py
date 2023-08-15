@@ -1,6 +1,8 @@
 from contextlib import contextmanager
 import logging
+import random
 import re
+import string
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -107,3 +109,11 @@ def get_deletable_objects(model, queryset):
         if isinstance(field, (TreeNodeForeignKey)):
             q &= Q(**{f"{field.related_query_name()}__isnull": True})
     return queryset.filter(q)
+
+
+def generate_random_device_asset_tag_of_specified_size(size):
+    """
+    This function is for testing purposes only and it will return a random string of size 100 consists of letters and numbers.
+    """
+    asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))
+    return asset_tag

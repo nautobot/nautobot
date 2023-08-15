@@ -25,13 +25,18 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
 )
-from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import (
     LogLevelChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+)
+from nautobot.extras.constants import (
+    JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
+    JOB_LOG_MAX_GROUPING_LENGTH,
+    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -57,6 +62,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
+from nautobot.extras.utils import get_job_content_type
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
@@ -956,6 +962,54 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         location_oc.request_id = uuid.uuid4()
         location_oc.change_context = ObjectChangeEventContextChoices.CONTEXT_ORM
         location_oc.validated_save()
+
+    def test_log(self):
+        """Test that logs are rendered correctly."""
+        job_result = JobResult.objects.create(name="irrelevant", obj_type=get_job_content_type(), job_id=uuid.uuid4())
+        job_result.use_job_logs_db = False
+
+        # Most basic usage
+        log = job_result.log("Hello")
+        self.assertEqual("Hello", log.message)
+        self.assertEqual(LogLevelChoices.LOG_DEFAULT, log.log_level)
+        self.assertEqual("main", log.grouping)
+        self.assertIsNone(log.log_object)
+        self.assertIsNone(log.absolute_url)
+
+        # Advanced usage
+        obj = IPAddress.objects.create(address="1.1.1.1/32")
+        log = job_result.log("Hi", obj=obj, level_choice=LogLevelChoices.LOG_WARNING, grouping="other")
+        self.assertEqual("Hi", log.message)
+        self.assertEqual(LogLevelChoices.LOG_WARNING, log.log_level)
+        self.assertEqual("other", log.grouping)
+        self.assertEqual(str(obj), log.log_object)
+        self.assertEqual(obj.get_absolute_url(), log.absolute_url)
+
+        # Length constraints
+        class MockObject1:
+            def __str__(self):
+                return "a" * (JOB_LOG_MAX_LOG_OBJECT_LENGTH * 2)
+
+            def get_absolute_url(self):
+                return "b" * (JOB_LOG_MAX_ABSOLUTE_URL_LENGTH * 2)
+
+        obj = MockObject1()
+        log = job_result.log("Hi", obj=obj, grouping="c" * JOB_LOG_MAX_GROUPING_LENGTH * 2)
+        self.assertEqual("Hi", log.message)
+        self.assertEqual("a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH, log.log_object)
+        self.assertEqual("c" * JOB_LOG_MAX_GROUPING_LENGTH, log.grouping)
+        self.assertIsNone(log.absolute_url)
+
+        # Error handling
+        class MockObject2(MockObject1):
+            def get_absolute_url(self):
+                raise NotImplementedError()
+
+        obj = MockObject2()
+        log = job_result.log("Hi", obj=obj)
+        self.assertEqual("Hi", log.message)
+        self.assertEqual("a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH, log.log_object)
+        self.assertIsNone(log.absolute_url)
 
 
 class RoleTest(NautobotTestCaseMixin, ModelTestCases.BaseModelTestCase):

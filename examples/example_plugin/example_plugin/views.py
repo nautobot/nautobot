@@ -93,7 +93,9 @@ class AnotherExampleModelUIViewSet(
     bulk_update_form_class = forms.AnotherExampleModelBulkEditForm
     filterset_class = filters.AnotherExampleModelFilterSet
     filterset_form_class = forms.AnotherExampleModelFilterForm
-    form_class = forms.AnotherExampleModelForm
+    create_form_class = forms.AnotherExampleModelCreateForm
+    update_form_class = forms.AnotherExampleModelUpdateForm
+    lookup_field = "pk"
     queryset = AnotherExampleModel.objects.all()
     serializer_class = serializers.AnotherExampleModelSerializer
     table_class = tables.AnotherExampleModelTable

@@ -4,6 +4,9 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import is_protected_type
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
@@ -72,6 +75,30 @@ class BaseModel(models.Model):
                     continue
 
         return AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def _content_type(cls):  # pylint: disable=no-self-argument
+        """
+        Return the ContentType of the object, never cached.
+        """
+        return ContentType.objects.get_for_model(cls)
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def _content_type_cache_key(cls):  # pylint: disable=no-self-argument
+        """
+        Return the cache key for the ContentType of the object.
+
+        Necessary for use with _content_type_cached and management commands.
+        """
+        return f"{cls._meta.label_lower}._content_type"
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def _content_type_cached(cls):  # pylint: disable=no-self-argument
+        """
+        Return the ContentType of the object, cached.
+        """
+
+        return cache.get_or_set(cls._content_type_cache_key, cls._content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT)
 
     class Meta:
         abstract = True

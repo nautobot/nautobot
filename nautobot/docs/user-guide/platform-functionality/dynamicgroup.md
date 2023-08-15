@@ -594,3 +594,67 @@ To delete a Dynamic Group Membership you would send a `DELETE` request to the de
 ```json
 DELETE /api/extras/dynamic-group-memberships/{uuid}/
 ```
+
+## Membership and Caching
+
+Since looking up the members of a Dynamic Group can be a very expensive operation, Nautobot caches the results of these lookups for a configurable amount of time. By default this cache is disabled. You can change this default value by changing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` in the administration panel. This value is in seconds.
+
+Creating, updating, or deleting a Dynamic Group will automatically invalidate the cache for that group. This means that the next time the group is evaluated, the cache will be refreshed with the new membership information.
+
+This greatly speeds up the reverse association of any object to any Dynamic Group(s) to which it may be associated.
+
+A Dynamic Group object in the ORM exposes two (2) properties for retrieving the members of that group:
+
+- `members` - The evaluated QuerySet defined by the Dynamic Group and it's potential child groups. This will always perform database queries.
+- `members_cached` - A cached instance of `members.all()`. This will only perform database queries if the cache is expired. You can continue to perform `.filter()` and other QuerySet operations but this will incur additional database queries.
+
+Additionally, a Dynamic Group has the following methods for working with group membership and caching:
+
+- `update_cached_members` - A way of forcing an update to the cached members of a Dynamic Group. This will always perform database queries. It will also return the updated `members_cached` property.
+- `has_member` - A way of checking if an object is a member of a Dynamic Group. The arguments are:
+    - `obj` - An instance of an object to check if it is a member of the given group.
+    - `use_cache` - A boolean value to choose whether to use the cached member list (`use_cache=True`) or force the database query (`use_cache=False`, the default). This is a handy way to have Nautobot perform the ideal membership check.
+        - `DynamicGroup.members_cached.filter(pk=obj.pk).exists()` will re-perform a database query, where `DynamicGroup.has_member(obj, use_cache=False)` will perform `obj in list(DyamicGroup.members_cached)`, performing no additional database queries.
+        - In contrast `DynamicGroup.members.filter(pk=obj.pk).exists()` will always a database query but a much faster one as opposed to`obj in list(DyamicGroup.members)`.
+
+A model instance that supports Dynamic Groups will expose the following properties:
+
+- `dynamic_groups` - A QuerySet of `DynamicGroup` objects; performs the most database queries.
+    - Iterates over all Dynamic Groups that are applicable to the instance's content type, resulting in a list (what is available as `dynamic_groups_list`) of applicable Dynamic Groups.
+    - A final query (`DynamicGroup.objects.filter(pk__in=dynamic_groups_list)`) is necessary to retrieve a QuerySet of `DynamicGroup` objects.
+    - Always performs `N+1` queries where `N` is the number of Dynamic Groups that are applicable to the instance's content type
+    - Evaluation of `instance_1.dynamic_groups` adds no benefit to `instance_2.dynamic_groups`: each instance will perform `N+1` queries.
+- `dynamic_groups_cached` - A QuerySet of `DynamicGroup` objects; uses cached member list if available. Ideal for most use cases.
+    - Uses cached member lists for each Dynamic Group that is applicable to the instance's content type. Membership check returns a list (what is available as `dynamic_groups_list_cached`) of applicable Dynamic Groups.
+    - A query (`DynamicGroup.objects.filter(pk__in=dynamic_groups_list_cached)`) is necessary to retrieve a QuerySet of `DynamicGroup` objects.
+    - Ideal for most use cases, performing only `1` query if membership lists are cached.
+    - Evaluation of `instance_1.dynamic_groups_cached` benefits `instance_2.dynamic_groups_cached` as all dynamic group membership lists are cached: `instance_1.dynamic_groups_cached` may perform `N+1` queries, but `instance_2.dynamic_groups_cached` will perform `1` query.
+- `dynamic_groups_list` - List of membership to `DynamicGroup` objects; performs one less database query than `dynamic_groups`.
+    - The internal list used by `dynamic_groups` to retrieve a QuerySet of `DynamicGroup` objects, but saves the final query.
+    - Beneficial if you don't need QuerySet instance of `DynamicGroup` objects, but want to use uncached membership lists on a large amount of objects.
+    - Always performs `N` queries where `N` is the number of Dynamic Groups that are applicable to the instance's content type
+- `dynamic_groups_list_cached` - List of membership to `DynamicGroup` objects; uses cached member list if available. Performs no database queries in optimal conditions.
+    - The internal list used by `dynamic_groups_cached` to retrieve a QuerySet of `DynamicGroup` objects, but saves the final query.
+    - The most optimal way to retrieve a list of `DynamicGroup` objects for an instance: Worst case `instance_1.dynamic_groups_list_cached` will perform `N` queries, but `instance_2.dynamic_groups_list_cached` will perform `0` queries.
+
+### Invalidating/Refreshing the Cache
+
+If you need to invalidate the membership cache for a Dynamic Group, you can do so by running the management command: `nautobot-server refresh_dynamic_group_member_caches`. This will invalidate the cache for all Dynamic Groups.
+
+You can also create a `Job` to run periodically to refresh the cache for particular Dynamic Groups and running on a schedule:
+
+```python
+from nautobot.extras.jobs import Job, ObjectVar
+from nautobot.extras.models import DynamicGroup
+
+class ExampleDynamicGroupMemberCacheRefresh(Job):
+    dynamic_group = ObjectVar(
+        model=DynamicGroup
+    )
+
+    class Meta:
+        name = "Update Dynamic Group Member Cache"
+
+    def run(self, data, commit):
+        DynamicGroup.objects.get(pk=data['dynamic_group']).update_cached_members()
+```

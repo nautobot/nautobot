@@ -193,8 +193,16 @@ However, because we've set the `NAUTOBOT_ROOT`, this command will automatically 
 
 ```no-highlight
 nautobot-server init
-Configuration file created at '/opt/nautobot/nautobot_config.py'
+
+Nautobot would like to send anonymized installation metrics to the project's maintainers.
+These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
+Allow Nautobot to send these metrics? [y/n]: y
+Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
+Configuration file created at /opt/nautobot/nautobot_config.py
 ```
+
++++ 1.6.0
+    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [send_installation_metrics](../administration/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 ### Required Settings
 

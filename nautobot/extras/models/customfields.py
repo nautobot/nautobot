@@ -4,17 +4,17 @@ from collections import OrderedDict
 from datetime import datetime, date
 
 from django import forms
-from django.db import transaction
+from django.db import models, transaction
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
-from django.db import models
 from django.forms.widgets import TextInput
 from django.utils.safestring import mark_safe
 
 from nautobot.core.forms import (
     add_blank_choice,
+    CommentField,
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
@@ -22,6 +22,7 @@ from nautobot.core.forms import (
     LaxURLField,
     MultiValueCharInput,
     NullableDateField,
+    SmallTextarea,
     StaticSelect2,
     StaticSelect2Multiple,
 )
@@ -236,10 +237,10 @@ class CustomFieldModel(models.Model):
         # Check for missing values, erroring on required ones and populating non-required ones automatically
         for cf in custom_fields.values():
             if cf.key not in self._custom_field_data:
-                if cf.required:
-                    raise ValidationError(f"Missing required custom field '{cf.key}'.")
-                else:
+                if cf.default is not None:
                     self._custom_field_data[cf.key] = cf.default
+                elif cf.required:
+                    raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):
@@ -519,6 +520,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                         message=mark_safe(f"Values must match this regex: <code>{self.validation_regex}</code>"),
                     )
                 ]
+
+        # Markdown
+        elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
+            field = CommentField(widget=SmallTextarea, label=None)
 
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:

@@ -237,5 +237,21 @@ class RackTestCase(TestCase):
         form = RackForm(data=data, instance=racks[0])
         self.assertEqual(
             str(form.errors.as_data()["location"][0]),
-            str([f"Device with `name` in ['device1'] and location={locations[1]} already exists."]),
+            str(
+                [
+                    f"Device(s) ['device1'] already exist in location {locations[1]} and "
+                    "would conflict with same-named devices in this rack."
+                ]
+            ),
         )
+
+        # Check for https://github.com/nautobot/nautobot/issues/4149
+        data = {
+            "name": "New name",
+            "site": racks[0].site.pk,
+            "status": racks[0].status.pk,
+            "u_height": 48,
+            "width": RackWidthChoices.WIDTH_19IN,
+        }
+        form = RackForm(data=data, instance=racks[0])
+        self.assertTrue(form.is_valid())

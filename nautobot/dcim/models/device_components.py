@@ -7,7 +7,7 @@ from django.db.models import Sum
 from django.utils.functional import classproperty
 
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.generics import BaseModel, ChangeLoggedModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
@@ -15,6 +15,7 @@ from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -34,6 +35,7 @@ from nautobot.extras.models import (
     RelationshipModel,
     Status,
     StatusField,
+    StatusModel,
 )
 from nautobot.extras.utils import extras_features
 
@@ -45,6 +47,8 @@ __all__ = (
     "DeviceBay",
     "FrontPort",
     "Interface",
+    "InterfaceRedundancyGroup",
+    "InterfaceRedundancyGroupAssociation",
     "InventoryItem",
     "PathEndpoint",
     "PowerOutlet",
@@ -756,6 +760,149 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     @property
     def parent(self):
         return self.device
+
+
+@extras_features(
+    "custom_fields",
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "relationships",
+    "statuses",
+    "webhooks",
+)
+class InterfaceRedundancyGroup(StatusModel, PrimaryModel):  # pylint: disable=too-many-ancestors
+    """
+    A collection of Interfaces that supply a redundancy group for protocols like HSRP/VRRP.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    # Preemptively model 2.0 behavior by making `created` a DateTimeField rather than a DateField.
+    created = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+    interfaces = models.ManyToManyField(
+        to="dcim.Interface",
+        through="dcim.InterfaceRedundancyGroupAssociation",
+        related_name="interface_redundancy_groups",
+        blank=True,
+    )
+    protocol = models.CharField(
+        max_length=50,
+        blank=True,
+        choices=InterfaceRedundancyGroupProtocolChoices,
+        verbose_name="Redundancy Protocol",
+    )
+    protocol_group_id = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+    )
+    virtual_ip = models.ForeignKey(
+        to="ipam.IPAddress",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="interface_redundancy_groups",
+    )
+
+    class Meta:
+        """Meta class."""
+
+        ordering = ["name"]
+
+    csv_headers = [
+        "name",
+        "status",
+        "description",
+        "protocol",
+        "protocol_group_id",
+        "secrets_group",
+        "virtual_ip",
+    ]
+
+    def to_csv(self):
+        return (
+            self.name,
+            self.get_status_display(),
+            self.description,
+            self.protocol,
+            self.protocol_group_id,
+            self.secrets_group.name if self.secrets_group else None,
+            str(self.virtual_ip) if self.virtual_ip else None,
+        )
+
+    def __str__(self):
+        """Return a string representation of the instance."""
+        return self.name
+
+    def add_interface(self, interface, priority):
+        """
+        Add an interface including `priority`.
+
+        :param interface:
+            Interface instance
+        :param priority:
+            Integer priority used by redundancy protocol
+        """
+        instance = self.interfaces.through(
+            interface_redundancy_group=self,
+            interface=interface,
+            priority=priority,
+        )
+        return instance.validated_save()
+
+    def remove_interface(self, interface):
+        """
+        Remove an interface.
+
+        :param interface:
+            Interface instance
+        """
+        instance = self.interfaces.through.objects.get(
+            interface_redundancy_group=self,
+            interface=interface,
+        )
+        return instance.delete()
+
+
+@extras_features(
+    "relationships",
+    "custom_fields",
+)
+class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
+    """Intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
+
+    interface_redundancy_group = models.ForeignKey(
+        to="dcim.InterfaceRedundancyGroup",
+        on_delete=models.CASCADE,
+        related_name="interface_redundancy_group_associations",
+    )
+    interface = models.ForeignKey(
+        to="dcim.Interface",
+        on_delete=models.CASCADE,
+        related_name="interface_redundancy_group_associations",
+    )
+    priority = models.PositiveSmallIntegerField()
+
+    class Meta:
+        """Meta class."""
+
+        unique_together = (("interface_redundancy_group", "interface"),)
+        ordering = ("interface_redundancy_group", "-priority")
+
+    def __str__(self):
+        """Return a string representation of the instance."""
+        return f"{self.interface_redundancy_group}: {self.interface.device} {self.interface}: {self.priority}"
 
 
 #
