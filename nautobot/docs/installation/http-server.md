@@ -18,8 +18,8 @@ Two files will be created: the public certificate (`nautobot.crt`) and the priva
 
     ```no-highlight
     sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/ssl/private/nautobot.key \
-    -out /etc/ssl/certs/nautobot.crt
+      -keyout /etc/ssl/private/nautobot.key \
+      -out /etc/ssl/certs/nautobot.crt
     ```
 
 === "CentOS/RHEL8"
