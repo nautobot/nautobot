@@ -64,7 +64,8 @@ class Command(BaseCommand):
         prepared_request = requests.Request("POST", METRICS_ENDPOINT, json=payload).prepare()
         try:
             with requests.Session() as session:
-                response = session.send(prepared_request, proxies=settings.HTTP_PROXIES, timeout=30)
+                # fail after just over 3 seconds if unable to connect, and take no longer than 30 seconds in total
+                response = session.send(prepared_request, proxies=settings.HTTP_PROXIES, timeout=(3.05, 27))
 
             if response.ok:
                 self.stdout.write(self.style.SUCCESS(f"Installation metrics successfully sent to '{METRICS_ENDPOINT}'"))
