@@ -490,7 +490,7 @@ jobs:
 
   container-build-test:
     name: "Build Container Images (GHCR Only)"
-    runs-on: self-hosted
+    runs-on: "ubuntu-20.04"
     strategy:
       fail-fast: false
       matrix:
