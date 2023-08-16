@@ -497,11 +497,11 @@ jobs:
         python-version: [ "3.8", "3.9", "3.10", "3.11" ]
         runner: [ "self-hosted", "ubuntu-20.04" ]
         platform: [ "linux/amd64", "linux/arm64" ]
-      exclude:
-        - runner: "self-hosted"
-          platform: "linux/amd64"
-        - runner: "ubuntu-20.04"
-          platform: "linux/arm64"
+        exclude:
+          - runner: "self-hosted"
+            platform: "linux/amd64"
+          - runner: "ubuntu-20.04"
+            platform: "linux/arm64"
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
