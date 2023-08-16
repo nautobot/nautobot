@@ -496,6 +496,12 @@ jobs:
       matrix:
         python-version: [ "3.8", "3.9", "3.10", "3.11" ]
         runner: [ "self-hosted", "ubuntu-20.04" ]
+        platform: [ "linux/amd64", "linux/arm64" ]
+      exclude:
+        - runner: "self-hosted"
+          platform: "linux/amd64"
+        - runner: "ubuntu-20.04"
+          platform: "linux/arm64"
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
@@ -503,13 +509,6 @@ jobs:
         uses: "actions/checkout@v2"
       - run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
         id: "gitbranch"
-      - run: |
-          if [ ${{ matrix.runner }} == "self-hosted" ]; then
-            echo "platform=linux/arm64" >> $GITHUB_OUTPUT
-          else
-            echo "platform=linux/amd64" >> $GITHUB_OUTPUT
-          fi
-        id: "platform"
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v1"
       - name: "Set up Docker Buildx"
@@ -532,51 +531,43 @@ jobs:
             org.opencontainers.image.title=Nautobot
       - name: "Build"
         uses: "docker/build-push-action@v2"
+        id: "dockerbuild"
         with:
           push: false
           load: true
           target: final
           file: "docker/Dockerfile"
-          platforms: "${{ steps.platform.outputs.platform }}"
+          platforms: "${{ matrix.platform }}"
           tags: "${{ steps.dockermeta.outputs.tags }}"
           labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ steps.platform.outputs.platform }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ steps.platform.outputs.platform }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ matrix.platform }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ matrix.platform }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
             DEPENDENCIES_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
             POETRY_PARALLEL=true
-      - name: "Docker Dev Metadata"
-        id: "dockerdevmeta"
-        uses: "docker/metadata-action@v3"
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.dockerbuild.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+      - name: Upload digest
+        uses: actions/upload-artifact@v3
         with:
-          images: "ghcr.io/nautobot/nautobot-dev"
-          flavor: |
-            latest=false
-          tags: |
-            type=raw,value=u-gas-4254-container-build-py${{ matrix.python-version }}
-            type=raw,value=u-gas-4254-container-build-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value=u-gas-4254-container-build,enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value=u-gas-4254-container-build-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.8 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build Dev Containers"
-        uses: "docker/build-push-action@v2"
+          name: "digests-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}"
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+  container-build-push:
+    needs:
+      - container-build-test
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v3
         with:
-          push: false
-          load: true
-          target: final-dev
-          file: "docker/Dockerfile"
-          platforms: "${{ steps.platform.outputs.platform }}"
-          tags: "${{ steps.dockerdevmeta.outputs.tags }}"
-          labels: "${{ steps.dockerdevmeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ steps.platform.outputs.platform }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ steps.platform.outputs.platform }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            DEPENDENCIES_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
-            POETRY_PARALLEL=true
+          name: "digests-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}"
+          path: /tmp/digests
+      - name: "List digests"
+        run: "ls -l /tmp/digests"
