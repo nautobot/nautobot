@@ -35,7 +35,6 @@ from nautobot.extras.models import (
     RelationshipModel,
     Status,
     StatusField,
-    StatusModel,
 )
 from nautobot.extras.utils import extras_features
 
@@ -772,12 +771,13 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     "statuses",
     "webhooks",
 )
-class InterfaceRedundancyGroup(StatusModel, PrimaryModel):  # pylint: disable=too-many-ancestors
+class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancestors
     """
     A collection of Interfaces that supply a redundancy group for protocols like HSRP/VRRP.
     """
 
     name = models.CharField(max_length=100, unique=True)
+    status = StatusField(blank=False, null=False)
     # Preemptively model 2.0 behavior by making `created` a DateTimeField rather than a DateField.
     created = models.DateTimeField(auto_now_add=True)
     description = models.CharField(
