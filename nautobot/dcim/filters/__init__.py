@@ -1544,7 +1544,7 @@ class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSearchFilterSet):
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         label="Secrets group",
     )
     virtual_ip = MultiValueCharFilter(

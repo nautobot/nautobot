@@ -248,7 +248,7 @@ class RackTestCase(TestCase):
         # Check for https://github.com/nautobot/nautobot/issues/4149
         data = {
             "name": "New name",
-            "site": racks[0].site.pk,
+            "location": racks[0].location.pk,
             "status": racks[0].status.pk,
             "u_height": 48,
             "width": RackWidthChoices.WIDTH_19IN,

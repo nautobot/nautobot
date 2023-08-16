@@ -1056,11 +1056,9 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         """
         Check that network_driver_mappings field is correctly exposed by the API
         """
-        platform1 = Platform.objects.create(
-            name="Test network driver mappings 1", slug="test-ndm-1", network_driver="cisco_ios"
-        )
+        platform1 = Platform.objects.create(name="Test network driver mappings 1", network_driver="cisco_ios")
         platform2 = Platform.objects.create(
-            name="Test network driver mappings 2", slug="test-ndm-2", network_driver="custom_network_driver"
+            name="Test network driver mappings 2", network_driver="custom_network_driver"
         )
         self.add_permissions("dcim.view_platform")
 
@@ -2457,37 +2455,12 @@ class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
 class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = InterfaceRedundancyGroup
     brief_fields = ["display", "id", "name", "protocol", "url"]
-    create_data = [
-        {
-            "name": "Interface Redundancy Group 4",
-            "protocol": "hsrp",
-            "status": "active",
-            "protocol_group_id": "1",
-        },
-        {
-            "name": "Interface Redundancy Group 5",
-            "protocol": "vrrp",
-            "status": "planned",
-            "protocol_group_id": "2",
-        },
-        {
-            "name": "Interface Redundancy Group 6",
-            "protocol": "glbp",
-            "status": "staging",
-            "protocol_group_id": "3",
-        },
-    ]
-    bulk_update_data = {
-        "protocol": "carp",
-        "status": "active",
-        "virtual_ip": None,
-    }
-    choices_fields = ["status", "protocol"]
+    choices_fields = ["protocol"]
     # FIXME(jathan): The writable serializer for `status` takes the
     # status `name` (str) and not the `pk` (int). Do not validate this
     # field right now, since we are asserting that it does create correctly.
     #
-    # The test code for `utilities.testing.views.TestCase.model_to_dict()`
+    # The test code for `nautobot.core.testing.views.TestCase.model_to_dict()`
     # needs to be enhanced to use the actual API serializers when `api=True`
     validation_excluded_fields = ["status"]
 
@@ -2496,17 +2469,42 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
         ips = IPAddress.objects.all()
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
-            SecretsGroup.objects.create(name="Secrets Group 3", slug="secrets-group-3"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+            SecretsGroup.objects.create(name="Secrets Group 3"),
         )
         # Populating the data secrets_group and virtual_ip here.
-        for i, data in enumerate(cls.create_data[:2]):
-            data["secrets_group"] = secrets_groups[i].pk
-        for i, data in enumerate(cls.create_data[1:]):
-            data["virtual_ip"] = ips[i].pk
-
-        cls.bulk_update_data["virtual_ip"] = ips[0].pk
+        cls.create_data = [
+            {
+                "name": "Interface Redundancy Group 4",
+                "protocol": "hsrp",
+                "status": "Active",
+                "protocol_group_id": "1",
+                "secrets_group": secrets_groups[0].pk,
+                "virtual_ip": ips[0].pk,
+            },
+            {
+                "name": "Interface Redundancy Group 5",
+                "protocol": "vrrp",
+                "status": "Planned",
+                "protocol_group_id": "2",
+                "secrets_group": secrets_groups[1].pk,
+                "virtual_ip": None,
+            },
+            {
+                "name": "Interface Redundancy Group 6",
+                "protocol": "glbp",
+                "status": "Staging",
+                "protocol_group_id": "3",
+                "secrets_group": None,
+                "virtual_ip": ips[1].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "protocol": "carp",
+            "status": "Active",
+            "virtual_ip": ips[0].pk,
+        }
 
         interface_redundancy_groups = (
             InterfaceRedundancyGroup(
@@ -2538,11 +2536,16 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         for group in interface_redundancy_groups:
             group.validated_save()
 
+        cls.device_status = Status.objects.get_for_model(Device).first()
         cls.device_type = DeviceType.objects.first()
         cls.device_role = Role.objects.get_for_model(Device).first()
-        cls.location = Location.objects.filter(content_types=Device).first()
+        cls.location = Location.objects.filter(location_type__name="Campus").first()
         cls.device = Device.objects.create(
-            device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+            device_type=cls.device_type,
+            role=cls.device_role,
+            name="Device 1",
+            location=cls.location,
+            status=cls.device_status,
         )
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
         cls.interfaces = (

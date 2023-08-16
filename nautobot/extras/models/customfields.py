@@ -240,7 +240,7 @@ class CustomFieldModel(models.Model):
                 if cf.default is not None:
                     self._custom_field_data[cf.key] = cf.default
                 elif cf.required:
-                    raise ValidationError(f"Missing required custom field '{cf.name}'.")
+                    raise ValidationError(f"Missing required custom field '{cf.key}'.")
 
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):

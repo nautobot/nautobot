@@ -1,6 +1,5 @@
-BIG_GRAPHQL_DEVICE_QUERY = (
-    """
-query ($device: String!) {
+BIG_GRAPHQL_DEVICE_QUERY = """
+query ($device: [String!]) {
   devices(name: $device) {
     config_context
     name
@@ -84,5 +83,4 @@ query ($device: String!) {
       }
     }
   }
-}""",
-)
+}"""

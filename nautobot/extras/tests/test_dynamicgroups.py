@@ -938,7 +938,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         this_dg = DynamicGroup(
             name="Prefix Group",
-            slug="prefix-dg",
             description="A group of prefixes with a specific Tenant name.",
             filter={},
             content_type=prefix_ct,

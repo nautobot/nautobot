@@ -142,10 +142,10 @@ def common_test_data(cls):
 
     platforms = Platform.objects.all()[:3]
     for num, platform in enumerate(platforms):
-        platform.manufacturer = (manufacturers[num],)
+        platform.manufacturer = manufacturers[num]
         platform.napalm_driver = f"driver-{num}"
         platform.napalm_args = ["--test", f"--arg{num}"]
-        platform.network_driver = (f"driver_{num}",)
+        platform.network_driver = f"driver_{num}"
         platform.save()
     cls.platforms = platforms
 
@@ -3046,21 +3046,21 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
                 InterfaceRedundancyGroup.objects.filter(secrets_group__in=params["secrets_group"]).count(),
             )
         with self.subTest():
-            params = {"secrets_group": [secrets_groups[0].slug, secrets_groups[1].slug]}
+            params = {"secrets_group": [secrets_groups[0].name, secrets_groups[1].name]}
             self.assertEqual(
                 self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroup.objects.filter(secrets_group__slug__in=params["secrets_group"]).count(),
+                InterfaceRedundancyGroup.objects.filter(secrets_group__name__in=params["secrets_group"]).count(),
             )
 
     def test_protocol(self):
         with self.subTest():
-            params = {"protocol": "hsrp"}
+            params = {"protocol": ["hsrp"]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 InterfaceRedundancyGroup.objects.filter(protocol="hsrp"),
             )
         with self.subTest():
-            params = {"protocol": "carp"}
+            params = {"protocol": ["carp"]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 InterfaceRedundancyGroup.objects.filter(protocol="carp"),
@@ -3142,9 +3142,9 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
             group.validated_save()
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 4", slug="secrets-group-4"),
-            SecretsGroup.objects.create(name="Secrets Group 5", slug="secrets-group-5"),
-            SecretsGroup.objects.create(name="Secrets Group 6", slug="secrets-group-6"),
+            SecretsGroup.objects.create(name="Secrets Group 4"),
+            SecretsGroup.objects.create(name="Secrets Group 5"),
+            SecretsGroup.objects.create(name="Secrets Group 6"),
         )
 
         interface_redundancy_groups[0].secrets_group = secrets_groups[0]

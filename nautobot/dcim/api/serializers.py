@@ -432,8 +432,6 @@ class InterfaceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSer
         model = InterfaceRedundancyGroup
         fields = "__all__"
         extra_kwargs = {
-            "virtual_ip": {"read_only": True},
-            "secrets_group": {"read_only": True},
             "interfaces": {"source": "interface_redundancy_group_associations", "many": True, "read_only": True},
         }
 

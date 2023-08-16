@@ -211,9 +211,9 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
         statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
         cls.ips = IPAddress.objects.all()
         cls.secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
-            SecretsGroup.objects.create(name="Secrets Group 3", slug="secrets-group-3"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+            SecretsGroup.objects.create(name="Secrets Group 3"),
         )
 
         cls.interface_redundancy_groups = (
@@ -255,9 +255,14 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
 
         cls.device_type = DeviceType.objects.first()
         cls.device_role = Role.objects.get_for_model(Device).first()
-        cls.location = Location.objects.filter(content_types=Device).first()
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.location = Location.objects.filter(location_type__name="Campus").first()
         cls.device = Device.objects.create(
-            device_type=cls.device_type, device_role=cls.device_role, name="Device 1", location=cls.location
+            device_type=cls.device_type,
+            role=cls.device_role,
+            name="Device 1",
+            location=cls.location,
+            status=cls.device_status,
         )
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
         cls.interfaces = (
@@ -809,8 +814,8 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
 
 class PlatformTestCase(TestCase):
     def setUp(self):
-        self.standard_platform = Platform(name="Cisco IOS", slug="cisco-ios", network_driver="cisco_ios")
-        self.custom_platform = Platform(name="Private Platform", slug="private-platform", network_driver="secret_sauce")
+        self.standard_platform = Platform(name="Cisco IOS", network_driver="cisco_ios")
+        self.custom_platform = Platform(name="Private Platform", network_driver="secret_sauce")
 
     def test_network_driver_netutils_defaults(self):
         """Test that a network_driver setting derives related fields from netutils by default."""

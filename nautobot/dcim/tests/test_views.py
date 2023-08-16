@@ -2882,10 +2882,10 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "name,protocol,status",
-            "IRG δ,,active",
-            "IRG ε,glbp,planned",
-            "IRG ζ,hsrp,staging",
-            "IRG 7,carp,retired",
+            f"IRG δ,hsrp,{statuses[0].name}",
+            f"IRG ε,glbp,{statuses[1].name}",
+            f"IRG ζ,hsrp,{statuses[0].name}",
+            f"IRG 7,carp,{statuses[2].name}",
         )
 
         cls.bulk_edit_data = {

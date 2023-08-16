@@ -1209,11 +1209,10 @@ class CustomFieldModelTest(TestCase):
 
     def test_custom_field_dict_population_null(self):
         """Test that custom_field_data is not populated when the default value is None."""
-        name = "Custom Field"
+        label = "Custom Field"
         custom_field = CustomField.objects.create(
-            # 2.0 TODO: #824 remove name field
-            name=name,
-            slug="custom_field",
+            label=label,
+            key="custom_field",
             default=None,
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
@@ -1224,7 +1223,9 @@ class CustomFieldModelTest(TestCase):
         provider.validated_save()
 
         self.assertNotIn(
-            name, provider._custom_field_data.keys(), "Custom fields aren't being set properly on a model on save."
+            "custom_field",
+            provider._custom_field_data.keys(),
+            "Custom fields aren't being set properly on a model on save.",
         )
 
     def test_custom_field_required(self):
