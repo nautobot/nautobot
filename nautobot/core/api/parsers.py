@@ -60,7 +60,7 @@ class NautobotCSVParser(BaseParser):
 
     def _group_data_by_field_name(self, data):
         """
-        Convert csv dict with keys separated by '__' into a nested dictionary.
+        Converts a dictionary with flat keys separated by '__' into a nested dictionary structure suitable for serialization.
 
         Example:
             Input:
@@ -88,20 +88,19 @@ class NautobotCSVParser(BaseParser):
             }
         """
 
-        def create_nested_dict(keys, value):
+        def insert_nested_dict(keys, value, current_dict):
+            key = keys[0]
             if len(keys) == 1:
-                return {keys[0]: value}
-            return {keys[0]: create_nested_dict(keys[1:], value)}
+                current_dict[key] = value
+            else:
+                current_dict[key] = current_dict.get(key, {})
+                insert_nested_dict(keys[1:], value, current_dict[key])
 
         result_dict = {}
         for original_key, original_value in data.items():
             split_keys = original_key.split("__")
-            current_dict = result_dict
-            for nested_key, nested_value in create_nested_dict(split_keys, original_value).items():
-                if nested_key in current_dict:
-                    current_dict[nested_key].update(nested_value)
-                else:
-                    current_dict[nested_key] = nested_value
+            insert_nested_dict(split_keys, original_value, result_dict)
+
         return result_dict
 
     def row_elements_to_data(self, counter, row, serializer):
