@@ -3,6 +3,7 @@ Utilities and primitives for the `nautobot-server` CLI command.
 """
 
 from pathlib import Path
+import logging
 import os
 
 from django.core.exceptions import ImproperlyConfigured
