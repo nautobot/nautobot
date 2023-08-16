@@ -352,7 +352,7 @@ Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still wo
 
 Default: a random UUID generated at install time.
 
-This setting is used to uniquely but anonymously identify Nautobot deployments when sending installation metrics. This setting is not generally intended to be user-serviceable. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
+This setting is used to uniquely but anonymously identify Nautobot deployments when sending installation metrics. This setting is not generally intended to be user-serviceable. See the documentation for the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management command for more details.
 
 ## DEVICE_NAME_AS_NATURAL_KEY
 
@@ -555,7 +555,7 @@ Default: `True` for existing Nautobot deployments, user-specified when running `
 
 Environment Variable: `NAUTOBOT_INSTALLATION_METRICS_ENABLED`
 
-When set to `True`, Nautobot will send anonymized installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../administration/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../administration/nautobot-server.md#send_installation_metrics) management command for more details.
+When set to `True`, Nautobot will send anonymized installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management command for more details.
 
 ## JOBS_ROOT
 
