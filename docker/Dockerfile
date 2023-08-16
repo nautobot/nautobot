@@ -116,16 +116,14 @@ COPY --chown=nautobot:nautobot nautobot/ui/package.json nautobot/ui/package-lock
 WORKDIR /opt/nautobot/ui
 
 # Install (non-development) Node dependencies of Nautobot UI
-RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
-    npm install --omit=dev
+RUN npm install --omit=dev
 
 ################################ Stage: node-dev-dependencies (intermediate build target)
 
 FROM node-dependencies AS node-dev-dependencies
 
 # Install development Node dependencies of Nautobot UI
-RUN --mount=type=cache,target="/opt/nautobot/.npm",uid=999,gid=999,sharing=locked \
-    npm install --include=dev
+RUN npm install --include=dev
 
 ################################ Stage: python-dependencies (intermediate build target)
 
