@@ -207,37 +207,37 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
     model = InterfaceRedundancyGroup
 
     @classmethod
-    def setUpTestData(self):
+    def setUpTestData(cls):
         statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
-        self.ips = IPAddress.objects.all()
-        self.secrets_groups = (
+        cls.ips = IPAddress.objects.all()
+        cls.secrets_groups = (
             SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
             SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
             SecretsGroup.objects.create(name="Secrets Group 3", slug="secrets-group-3"),
         )
 
-        self.interface_redundancy_groups = (
+        cls.interface_redundancy_groups = (
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 1",
                 protocol="hsrp",
                 status=statuses[0],
                 virtual_ip=None,
-                secrets_group=self.secrets_groups[0],
+                secrets_group=cls.secrets_groups[0],
                 protocol_group_id="1",
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 2",
                 protocol="carp",
                 status=statuses[1],
-                virtual_ip=self.ips[1],
-                secrets_group=self.secrets_groups[1],
+                virtual_ip=cls.ips[1],
+                secrets_group=cls.secrets_groups[1],
                 protocol_group_id="2",
             ),
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 3",
                 protocol="vrrp",
                 status=statuses[2],
-                virtual_ip=self.ips[2],
+                virtual_ip=cls.ips[2],
                 secrets_group=None,
                 protocol_group_id="3",
             ),
@@ -245,48 +245,48 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
                 name="Interface Redundancy Group 4",
                 protocol="glbp",
                 status=statuses[3],
-                virtual_ip=self.ips[3],
-                secrets_group=self.secrets_groups[2],
+                virtual_ip=cls.ips[3],
+                secrets_group=cls.secrets_groups[2],
             ),
         )
 
-        for group in self.interface_redundancy_groups:
+        for group in cls.interface_redundancy_groups:
             group.validated_save()
 
-        self.device_type = DeviceType.objects.first()
-        self.device_role = Role.objects.get_for_model(Device).first()
-        self.location = Location.objects.filter(content_types=Device).first()
-        self.device = Device.objects.create(
-            device_type=self.device_type, device_role=self.device_role, name="Device 1", location=self.location
+        cls.device_type = DeviceType.objects.first()
+        cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.location = Location.objects.filter(content_types=Device).first()
+        cls.device = Device.objects.create(
+            device_type=cls.device_type, device_role=cls.device_role, name="Device 1", location=cls.location
         )
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
-        self.interfaces = (
+        cls.interfaces = (
             Interface.objects.create(
-                device=self.device,
+                device=cls.device,
                 name="Interface 1",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
-                device=self.device,
+                device=cls.device,
                 name="Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
-                device=self.device,
+                device=cls.device,
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
             ),
             Interface.objects.create(
-                device=self.device,
+                device=cls.device,
                 name="Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
             ),
             Interface.objects.create(
-                device=self.device,
+                device=cls.device,
                 name="Interface 5",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,

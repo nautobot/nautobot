@@ -40,7 +40,7 @@ class ModelUtilsTestCase(TestCase):
                 self.assertEqual(deconstruct_composite_key(composite_key), values)
 
 
-class NaturalKeyTestCase(TestCase):
+class NaturalKeyTestCase(BaseModelTest):
     """Test the various natural-key APIs for a few representative models."""
 
     def test_natural_key(self):
