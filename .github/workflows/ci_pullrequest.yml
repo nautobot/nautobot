@@ -490,18 +490,11 @@ jobs:
 
   container-build-test:
     name: "Build Container Images (GHCR Only)"
-    runs-on: ${{ matrix.runner }}
+    runs-on: self-hosted
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
-        runner: [ "self-hosted", "ubuntu-20.04" ]
-        platform: [ "linux/amd64", "linux/arm64" ]
-        exclude:
-          - runner: "self-hosted"
-            platform: "linux/amd64"
-          - runner: "ubuntu-20.04"
-            platform: "linux/arm64"
+        python-version: [ "3.8", "3.11" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
@@ -537,11 +530,11 @@ jobs:
           load: true
           target: final
           file: "docker/Dockerfile"
-          platforms: "${{ matrix.platform }}"
+          platforms: "linux/amd64,linux/arm64"
           tags: "${{ steps.dockermeta.outputs.tags }}"
           labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ matrix.platform }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}-${{ matrix.platform }}"
+          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
+          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
@@ -555,7 +548,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v3
         with:
-          name: "digests-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}"
+          name: "digests-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}-${{ matrix.python-version }}"
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -563,11 +556,15 @@ jobs:
     needs:
       - container-build-test
     runs-on: "ubuntu-20.04"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
     steps:
       - name: Download digests
         uses: actions/download-artifact@v3
         with:
-          name: "digests-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}"
+          name: "digests-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}-${{ matrix.python-version }}"
           path: /tmp/digests
       - name: "List digests"
         run: "ls -l /tmp/digests"
