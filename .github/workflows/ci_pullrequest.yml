@@ -491,6 +491,12 @@ jobs:
   container-build-test:
     name: "Build Container Images (GHCR Only)"
     runs-on: "ubuntu-20.04"
+    # Permissions to use OIDC token authentication
+    permissions:
+      contents: read
+      id-token: write
+      # Allows pushing to the GitHub Container Registry
+      packages: write
     strategy:
       fail-fast: false
       matrix:
