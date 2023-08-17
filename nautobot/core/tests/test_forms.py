@@ -371,7 +371,7 @@ class AddFieldToFormClassTest(TestCase):
         with self.assertRaises(AttributeError):
             forms.add_field_to_filter_form_class(
                 ipam_forms.ServiceFilterForm,
-                "port",
+                "ports",
                 django_forms.CharField(required=False, label="Added Field Description"),
             )
 
