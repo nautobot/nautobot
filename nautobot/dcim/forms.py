@@ -350,7 +350,7 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     )
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -537,7 +537,7 @@ class RackFilterForm(
     )
     type = forms.MultipleChoiceField(choices=RackTypeChoices, required=False, widget=StaticSelect2Multiple())
     width = forms.MultipleChoiceField(choices=RackWidthChoices, required=False, widget=StaticSelect2Multiple())
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -643,7 +643,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
             api_url="/api/users/users/",
         ),
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -770,7 +770,7 @@ class DeviceTypeFilterForm(NautobotFilterForm):
         label="Has pass-through ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -1795,7 +1795,7 @@ class DeviceFilterForm(
         label="Has rear ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -1828,7 +1828,7 @@ class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixi
 class ConsolePortFilterForm(DeviceComponentFilterForm):
     model = ConsolePort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class ConsolePortForm(NautobotModelForm):
@@ -1886,7 +1886,7 @@ class ConsolePortBulkEditForm(
 class ConsoleServerPortFilterForm(DeviceComponentFilterForm):
     model = ConsoleServerPort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class ConsoleServerPortForm(NautobotModelForm):
@@ -1944,7 +1944,7 @@ class ConsoleServerPortBulkEditForm(
 class PowerPortFilterForm(DeviceComponentFilterForm):
     model = PowerPort
     type = forms.MultipleChoiceField(choices=PowerPortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class PowerPortForm(NautobotModelForm):
@@ -2019,7 +2019,7 @@ class PowerPortBulkEditForm(
 class PowerOutletFilterForm(DeviceComponentFilterForm):
     model = PowerOutlet
     type = forms.MultipleChoiceField(choices=PowerOutletTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class PowerOutletForm(NautobotModelForm):
@@ -2126,7 +2126,7 @@ class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mac_address = forms.CharField(required=False, label="MAC address")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
@@ -2482,7 +2482,7 @@ class InterfaceBulkEditForm(
 class FrontPortFilterForm(DeviceComponentFilterForm):
     model = FrontPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class FrontPortForm(NautobotModelForm):
@@ -2610,7 +2610,7 @@ class FrontPortBulkEditForm(
 class RearPortFilterForm(DeviceComponentFilterForm):
     model = RearPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class RearPortForm(NautobotModelForm):
@@ -2682,7 +2682,7 @@ class RearPortBulkEditForm(
 
 class DeviceBayFilterForm(DeviceComponentFilterForm):
     model = DeviceBay
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class DeviceBayForm(NautobotModelForm):
@@ -2836,7 +2836,7 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
     serial = forms.CharField(required=False)
     asset_tag = forms.CharField(required=False)
     discovered = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -3140,7 +3140,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
             "rack": "$rack",
         },
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -3361,7 +3361,7 @@ class VirtualChassisFilterForm(NautobotFilterForm):
         null_option="None",
         query_params={"tenant_group": "$tenant_group"},
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -3413,7 +3413,7 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         null_option="None",
         query_params={"location": "$location"},
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -3528,7 +3528,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class DeviceRedundancyGroupForm(NautobotModelForm):
@@ -3554,7 +3554,7 @@ class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormM
         queryset=SecretsGroup.objects.all(), to_field_name="name", required=False
     )
 
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class DeviceRedundancyGroupBulkEditForm(

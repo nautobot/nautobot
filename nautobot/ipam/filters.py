@@ -178,20 +178,20 @@ class PrefixFilterSet(
         field_name="vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="VRF (ID or RD)",
+        label="Assigned VRF (ID or RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
-        label="VRF",
+        label="Present in VRF",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
         field_name="vrfs__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
-        label="VRF (RD)",
+        label="Present in VRF (RD)",
     )
     vlan_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
