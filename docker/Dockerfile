@@ -27,7 +27,7 @@ ARG PYTHON_VER
 #      dev     final-dev
 #
 #  The design philosphy for this image hierarchy is:
-#  
+#
 #  - pyproject.toml is the source of truth for dependencies
 #  - Non-intermediate image targets (final, final-dev, dev) will not contain files they don't need
 #      - EX: No dev dependencies in final image
@@ -73,7 +73,7 @@ ARG PYTHON_VER
 #
 # dependencies-dev (intermediate build target)
 #   copies built Nautobot wheel and files from build-nautobot
-#   installs Markdownlint 
+#   installs Markdownlint
 #   adds files and configuration for Nautobot development server to run
 #
 # dev (development environment for Nautobot core)
@@ -103,7 +103,7 @@ ENV PYTHONUNBUFFERED=1 \
 # hadolint ignore=DL3005,DL3008,DL3013
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y git mime-support curl libxml2 libmariadb3 openssl && \
+    apt-get install --no-install-recommends -y git mime-support curl libxml2 libmariadb3 openssl libxmlsec1-dev libxmlsec1-openssl && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/* && \
@@ -126,7 +126,7 @@ ARG POETRY_PARALLEL
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
