@@ -40,6 +40,32 @@ from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
+class NamespaceTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectNotesViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkImportObjectsViewTestCase,
+):
+    model = Namespace
+
+    @classmethod
+    def setUpTestData(cls):
+        locations = Location.objects.all()[:4]
+
+        cls.form_data = {"name": "Namespace X", "location": locations[0].pk, "description": "A new Namespace"}
+
+        cls.csv_data = (
+            "name,location",
+            f"Namespace 4,{locations[1].pk}",
+            f"Namespace 5,{locations[2].pk}",
+            "Namespace 6,",
+        )
+
+
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VRF
 

@@ -72,6 +72,7 @@ class NamespaceUIViewSet(
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,
     view_mixins.ObjectNotesViewMixin,
 ):
     lookup_field = "pk"
