@@ -474,13 +474,7 @@ jobs:
           echo "tag-latest-for-branch=$TAG_LATEST_FOR_BRANCH" >> $GITHUB_OUTPUT
           echo "tag-latest-for-py=$TAG_LATEST_FOR_PY" >> $GITHUB_OUTPUT
       - name: "Check out repository code"
-<<<<<<< HEAD
         uses: "actions/checkout@v3"
-=======
-        uses: "actions/checkout@v2"
-      - run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
-        id: "gitbranch"
->>>>>>> d8063e75a (fix deprecated set-output in ci_integration.yml)
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v2"
       - name: "Set up Docker Buildx"
