@@ -14,7 +14,7 @@ def clear_interface_redundancy_group_status(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0048_interface_redundancy_group"),
+        ("dcim", "0022_interface_redundancy_group"),
     ]
 
     operations = [

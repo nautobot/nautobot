@@ -3,7 +3,6 @@ import logging
 import pytz
 import random
 
-from django.utils.text import slugify
 from faker import Faker
 
 from django.contrib.auth import get_user_model
@@ -184,7 +183,7 @@ class PlatformFactory(OrganizationalModelFactory):
     # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(slugify(o.manufacturer.name), [""]))),
+        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 

@@ -439,7 +439,7 @@ def migrate_site_and_region_data_to_locations(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("circuits", "0009_circuittermination_location"),
-        ("dcim", "0029_add_tree_managers_and_foreign_keys_pre_data_migration"),
+        ("dcim", "0033_add_tree_managers_and_foreign_keys_pre_data_migration"),
     ]
 
     operations = [

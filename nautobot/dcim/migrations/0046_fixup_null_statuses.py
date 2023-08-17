@@ -42,7 +42,7 @@ def migrate_null_statuses(apps, schema):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0041_ipam__namespaces"),
+        ("dcim", "0045_ipam__namespaces"),
     ]
 
     operations = [

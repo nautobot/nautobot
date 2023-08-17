@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0025_device_and_rack_roles_data_migrations"),
+        ("dcim", "0029_device_and_rack_roles_data_migrations"),
     ]
 
     operations = [

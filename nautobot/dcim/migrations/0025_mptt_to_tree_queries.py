@@ -6,7 +6,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0020_move_site_fields_to_location_model"),
+        ("dcim", "0024_move_site_fields_to_location_model"),
     ]
 
     operations = [

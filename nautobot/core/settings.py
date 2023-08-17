@@ -594,11 +594,6 @@ CONSTANCE_CONFIG = {
         "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
         field_type=str,
     ),
-    "DISABLE_PREFIX_LIST_HIERARCHY": ConstanceConfigItem(
-        default=False,
-        help_text="Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
-        field_type=bool,
-    ),
     "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": ConstanceConfigItem(
         default=0,
         help_text="Dynamic Group member cache timeout in seconds. This is the amount of time that a Dynamic Group's member list "
@@ -689,14 +684,14 @@ CONSTANCE_CONFIG = {
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
-    "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
+    "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI", "FEEDBACK_BUTTON_ENABLED"],
+    "User Interface": ["HIDE_RESTRICTED_UI", "FEEDBACK_BUTTON_ENABLED"],
 }
 
 #

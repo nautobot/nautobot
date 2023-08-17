@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0066_rename_configcontext_role"),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("dcim", "0027_remove_device_role_and_rack_role"),
+        ("dcim", "0031_remove_device_role_and_rack_role"),
     ]
 
     operations = [

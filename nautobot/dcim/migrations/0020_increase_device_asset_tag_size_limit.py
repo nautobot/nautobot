@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0045_remove_slugs_and_change_device_primary_ip_fields"),
+        ("dcim", "0019_device_redundancy_group_data_migration"),
     ]
 
     operations = [

@@ -6,7 +6,7 @@ import nautobot.core.models.fields
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0022_interface_mac_address_data_migration"),
+        ("dcim", "0026_interface_mac_address_data_migration"),
     ]
 
     operations = [

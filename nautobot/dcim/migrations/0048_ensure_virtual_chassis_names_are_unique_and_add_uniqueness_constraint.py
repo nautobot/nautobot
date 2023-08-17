@@ -12,7 +12,7 @@ def ensure_virtual_chassis_names_are_all_unique(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0043_status_nonnullable"),
+        ("dcim", "0047_status_nonnullable"),
     ]
 
     operations = [

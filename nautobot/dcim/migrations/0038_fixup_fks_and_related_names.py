@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("tenancy", "0006_created_datetime"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("dcim", "0033_created_datetime"),
+        ("dcim", "0037_created_datetime"),
     ]
 
     operations = [

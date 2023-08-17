@@ -2980,6 +2980,14 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
     queryset = InterfaceRedundancyGroup.objects.all()
     filterset = InterfaceRedundancyGroupFilterSet
 
+    generic_filter_tests = (
+        ["name"],
+        ["secrets_group", "secrets_group__id"],
+        ["secrets_group", "secrets_group__name"],
+        ["protocol"],
+        ["protocol_group_id"],
+    )
+
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
@@ -3030,57 +3038,6 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
         interface_redundancy_groups[1].secrets_group = secrets_groups[1]
         interface_redundancy_groups[1].validated_save()
 
-    def test_name(self):
-        interface_redundancy_groups = list(InterfaceRedundancyGroup.objects.all()[:2])
-        params = {"name": [interface_redundancy_groups[0].name, interface_redundancy_groups[1].name]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            InterfaceRedundancyGroup.objects.filter(name__in=params["name"]).count(),
-        )
-
-    def test_secrets_group(self):
-        secrets_groups = list(SecretsGroup.objects.all()[:2])
-        with self.subTest():
-            params = {"secrets_group": [secrets_groups[0].pk, secrets_groups[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroup.objects.filter(secrets_group__in=params["secrets_group"]).count(),
-            )
-        with self.subTest():
-            params = {"secrets_group": [secrets_groups[0].name, secrets_groups[1].name]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroup.objects.filter(secrets_group__name__in=params["secrets_group"]).count(),
-            )
-
-    def test_protocol(self):
-        with self.subTest():
-            params = {"protocol": ["hsrp"]}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                InterfaceRedundancyGroup.objects.filter(protocol="hsrp"),
-            )
-        with self.subTest():
-            params = {"protocol": ["carp"]}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                InterfaceRedundancyGroup.objects.filter(protocol="carp"),
-            )
-
-    def test_protocol_group_id(self):
-        with self.subTest():
-            params = {"protocol_group_id": [1, 2]}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                InterfaceRedundancyGroup.objects.filter(protocol_group_id__in=params["protocol_group_id"]),
-            )
-        with self.subTest():
-            params = {"protocol_group_id": [3, 4]}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                InterfaceRedundancyGroup.objects.filter(protocol_group_id__in=params["protocol_group_id"]),
-            )
-
     def test_virtual_ip(self):
         with self.subTest():
             params = {"virtual_ip": [self.ips[0].pk, self.ips[1].pk]}
@@ -3099,6 +3056,13 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
 class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     queryset = InterfaceRedundancyGroupAssociation.objects.all()
     filterset = InterfaceRedundancyGroupAssociationFilterSet
+    generic_filter_tests = (
+        ["interface_redundancy_group", "interface_redundancy_group__id"],
+        ["interface_redundancy_group", "interface_redundancy_group__name"],
+        ["interface", "interface__id"],
+        ["interface", "interface__name"],
+        ["priority"],
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -3156,54 +3120,3 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
 
         for i, interface in enumerate(cls.interfaces):
             interface_redundancy_groups[i].add_interface(interface, 100 * i)
-
-    def test_interface_redundancy_group(self):
-        interface_redundancy_groups = list(InterfaceRedundancyGroup.objects.all()[:2])
-        params = {"interface_redundancy_group": [interface_redundancy_groups[0].pk, interface_redundancy_groups[1].pk]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            InterfaceRedundancyGroupAssociation.objects.filter(
-                interface_redundancy_group__in=[interface_redundancy_groups[0], interface_redundancy_groups[1]]
-            ).count(),
-        )
-        params = {
-            "interface_redundancy_group": [interface_redundancy_groups[0].name, interface_redundancy_groups[1].name]
-        }
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            InterfaceRedundancyGroupAssociation.objects.filter(
-                interface_redundancy_group__in=[interface_redundancy_groups[0], interface_redundancy_groups[1]]
-            ).count(),
-        )
-
-    def test_interface(self):
-        interfaces = self.interfaces
-        with self.subTest():
-            params = {"interface": [interfaces[0].pk, interfaces[1].pk]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroupAssociation.objects.filter(
-                    interface__in=[interfaces[0], interfaces[1]]
-                ).count(),
-            )
-            params = {"interface": [interfaces[0].name, interfaces[1].name]}
-            self.assertEqual(
-                self.filterset(params, self.queryset).qs.count(),
-                InterfaceRedundancyGroupAssociation.objects.filter(
-                    interface__in=[interfaces[0], interfaces[1]]
-                ).count(),
-            )
-
-    def test_priority(self):
-        with self.subTest():
-            params = {"priority": [200, 300]}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                InterfaceRedundancyGroupAssociation.objects.filter(priority__in=params["priority"]),
-            )
-        with self.subTest():
-            params = {"priority": [100, 400]}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                InterfaceRedundancyGroupAssociation.objects.filter(priority__in=params["priority"]),
-            )

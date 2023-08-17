@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
     dependencies = [
         ("ipam", "0026_ipaddress_remove_assigned_object"),
-        ("dcim", "0040_tagsfield"),
+        ("dcim", "0044_tagsfield"),
     ]
 
     operations = [

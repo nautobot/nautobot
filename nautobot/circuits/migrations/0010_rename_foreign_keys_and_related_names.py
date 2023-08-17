@@ -6,7 +6,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0031_rename_path_end_point_related_name"),
+        ("dcim", "0035_rename_path_end_point_related_name"),
         ("circuits", "0009_circuittermination_location"),
     ]
 

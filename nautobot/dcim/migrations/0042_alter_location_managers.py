@@ -6,7 +6,7 @@ import nautobot.dcim.models.locations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0037_interface_ip_addresses_m2m"),
+        ("dcim", "0041_interface_ip_addresses_m2m"),
     ]
 
     operations = [

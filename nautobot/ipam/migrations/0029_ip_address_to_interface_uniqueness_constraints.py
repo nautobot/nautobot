@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
     dependencies = [
         ("virtualization", "0022_vminterface_timestamps_data_migration"),
-        ("dcim", "0040_tagsfield"),
+        ("dcim", "0044_tagsfield"),
         ("ipam", "0028_tagsfield"),
     ]
 

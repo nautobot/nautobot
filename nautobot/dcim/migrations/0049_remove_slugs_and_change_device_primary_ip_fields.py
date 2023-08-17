@@ -6,7 +6,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0044_ensure_virtual_chassis_names_are_unique_and_add_uniqueness_constraint"),
+        ("dcim", "0048_ensure_virtual_chassis_names_are_unique_and_add_uniqueness_constraint"),
     ]
 
     operations = [

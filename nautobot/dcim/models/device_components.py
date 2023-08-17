@@ -820,27 +820,6 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
 
         ordering = ["name"]
 
-    csv_headers = [
-        "name",
-        "status",
-        "description",
-        "protocol",
-        "protocol_group_id",
-        "secrets_group",
-        "virtual_ip",
-    ]
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.get_status_display(),
-            self.description,
-            self.protocol,
-            self.protocol_group_id,
-            self.secrets_group.name if self.secrets_group else None,
-            str(self.virtual_ip) if self.virtual_ip else None,
-        )
-
     def __str__(self):
         """Return a string representation of the instance."""
         return self.name
@@ -875,10 +854,6 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
         return instance.delete()
 
 
-@extras_features(
-    "relationships",
-    "custom_fields",
-)
 class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
     """Intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
 

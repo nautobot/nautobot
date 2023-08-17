@@ -13,7 +13,7 @@ from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionCh
 @skip("test skipped until base test can be fixed to handle new migrations")
 class SiteAndRegionDataMigrationToLocation(NautobotDataMigrationTest):
     migrate_from = [("dcim", "0029_add_tree_managers_and_foreign_keys_pre_data_migration")]
-    migrate_to = [("dcim", "0030_migrate_region_and_site_data_to_locations")]
+    migrate_to = [("dcim", "0034_migrate_region_and_site_data_to_locations")]
 
     def populateDataBeforeMigration(self, installed_apps):
         """Populate Site/Site-related and Region/Region-related Data before migrating them to Locations"""

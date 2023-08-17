@@ -7,7 +7,7 @@ import nautobot.core.models.fields
 class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0080_tagsfield"),
-        ("dcim", "0039_remove_slug"),
+        ("dcim", "0043_remove_slug"),
     ]
 
     operations = [

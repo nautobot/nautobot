@@ -16,7 +16,7 @@ Before you follow the guide, please make sure that these operations are complete
 2. Stop Nautobot Server.  
 3. Create a [backup](../../../../user-guide/administration/upgrading/database-backup.md) of your Nautobot database.
 4. Update installed version of Nautobot to 2.0.0.  
-5. Run `nautobot-server migrate dcim 0030_migrate_region_and_site_data_to_locations`. (This operation will ensure that `("dcim", "0030_migrate_region_and_site_data_to_locations")` is the latest migration applied to your Nautobot instance and that `("dcim", "0034_remove_region_and_site")` is **not** applied. **Failure to complete this step will result in data loss**)  
+5. Run `nautobot-server migrate dcim 0034_migrate_region_and_site_data_to_locations`. (This operation will ensure that `("dcim", "0034_migrate_region_and_site_data_to_locations")` is the latest migration applied to your Nautobot instance and that `("dcim", "0034_remove_region_and_site")` is **not** applied. **Failure to complete this step will result in data loss**)  
 
 After you complete those operations, follow the guide below for each of your installed apps to:  
 
@@ -101,14 +101,14 @@ class Migration(migrations.Migration):
 ```
 
 !!! warning
-    First we need to add a mandatory dependency to a Nautobot 2.0 migration file, namely `("dcim", "0030_migrate_region_and_site_data_to_locations")`. This dependent migration is very important as it creates the `Location` and `LocationType` records corresponding to the existing `Site`/`Region` records, which you will need to reference to migrate your data.
+    First we need to add a mandatory dependency to a Nautobot 2.0 migration file, namely `("dcim", "0034_migrate_region_and_site_data_to_locations")`. This dependent migration is very important as it creates the `Location` and `LocationType` records corresponding to the existing `Site`/`Region` records, which you will need to reference to migrate your data.
     **Without it, your data migration might not work!**
 
 ```python
     dependencies = [
         # The dcim migration creates the Site Type and Region Type Locations that
         # your data models are migrating to. It has to be run **before** this migration.
-        ("dcim", "0030_migrate_region_and_site_data_to_locations"),
+        ("dcim", "0034_migrate_region_and_site_data_to_locations"),
         ("example_app", "0007_add_location_field_to_example_model"),
     ]
 ```
@@ -184,7 +184,7 @@ class Migration(migrations.Migration):
         # The dcim migration creates the Site Type and Region Type Locations that
         # your data models are migrating to.
         # Therefore, It has to be run **before** this migration.
-        ("dcim", "0030_migrate_region_and_site_data_to_locations"),
+        ("dcim", "0034_migrate_region_and_site_data_to_locations"),
         ("example_app", "0007_add_location_field_to_example_model"),
     ]
     operations = [
@@ -248,7 +248,7 @@ class Migration(migrations.Migration):
 ```python
     # Ensure this migration is run before the migration that removes Region and Site Models
     run_before = [
-        ("dcim", "0036_remove_region_and_site"),
+        ("dcim", "0040_remove_region_and_site"),
     ]
 ```
 
@@ -264,7 +264,7 @@ class Migration(migrations.Migration):
     
     # Ensure this migration is run before the migration that removes Region and Site Models
     run_before = [
-        ("dcim", "0036_remove_region_and_site"),
+        ("dcim", "0040_remove_region_and_site"),
     ]
     dependencies = [
         ("example_app", "0008_migrate_example_model_data_from_site_to_location"),

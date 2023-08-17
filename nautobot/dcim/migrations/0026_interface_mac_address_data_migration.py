@@ -9,7 +9,7 @@ def null_macaddress_to_empty(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0021_mptt_to_tree_queries"),
+        ("dcim", "0025_mptt_to_tree_queries"),
     ]
 
     operations = [

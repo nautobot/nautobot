@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0046_increase_device_asset_tag_size_limit"),
+        ("dcim", "0020_increase_device_asset_tag_size_limit"),
     ]
 
     operations = [

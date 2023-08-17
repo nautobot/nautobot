@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0032_remove_site_foreign_key_from_dcim_models"),
+        ("dcim", "0036_remove_site_foreign_key_from_dcim_models"),
     ]
 
     operations = [

@@ -2454,7 +2454,6 @@ class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
 
 class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = InterfaceRedundancyGroup
-    brief_fields = ["display", "id", "name", "protocol", "url"]
     choices_fields = ["protocol"]
     # FIXME(jathan): The writable serializer for `status` takes the
     # status `name` (str) and not the `pk` (int). Do not validate this
