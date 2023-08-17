@@ -1,6 +1,8 @@
 import hashlib
+import json
 import platform
 import requests
+import requests.exceptions
 import uuid
 
 from constance import config
@@ -57,19 +59,28 @@ class Command(BaseCommand):
         }
 
         # send the payload to the metrics endpoint
+        self.stdout.write(self.style.SUCCESS(f"Sending installation metrics to '{METRICS_ENDPOINT}':"))
+        self.stdout.write(self.style.SUCCESS(json.dumps(payload, indent=4)))
         prepared_request = requests.Request("POST", METRICS_ENDPOINT, json=payload).prepare()
-        with requests.Session() as session:
-            response = session.send(prepared_request, proxies=settings.HTTP_PROXIES)
+        try:
+            with requests.Session() as session:
+                # fail after just over 3 seconds if unable to connect, and take no longer than 30 seconds in total
+                response = session.send(prepared_request, proxies=settings.HTTP_PROXIES, timeout=(3.05, 27))
 
-        if response.ok:
-            self.stdout.write(self.style.SUCCESS(f"Metrics successfully sent to '{METRICS_ENDPOINT}'"))
-        else:
+            if response.ok:
+                self.stdout.write(self.style.SUCCESS(f"Installation metrics successfully sent to '{METRICS_ENDPOINT}'"))
+            else:
+                self.stderr.write(
+                    self.style.ERROR(
+                        f"Failed to send installation metrics to '{METRICS_ENDPOINT}'; "
+                        f"response status {response.status_code}: {response.text}"
+                    )
+                )
+        except requests.exceptions.RequestException as exc:
+            self.stderr.write(self.style.ERROR(f"Failed to send installation metrics to '{METRICS_ENDPOINT}: {exc}"))
+        finally:
             self.stderr.write(
-                self.style.ERROR(
-                    f"Failed to send metrics to '{METRICS_ENDPOINT}'; "
-                    f"response status {response.status_code}: {response.content}"
+                self.style.NOTICE(
+                    "To disable installation metrics, set INSTALLATION_METRICS_ENABLED = False in your Nautobot config."
                 )
             )
-        self.stderr.write(
-            "To disable installation metrics, you can set INSTALLATION_METRICS_ENABLED = False in your Nautobot config."
-        )
