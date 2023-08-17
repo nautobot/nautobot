@@ -348,7 +348,7 @@ class PrefixFilterForm(
         "type",
         "ip_version",
         "prefix_length",
-        "vrf_id",
+        "vrfs",
         "present_in_vrf_id",
         "status",
         "location",
@@ -380,10 +380,10 @@ class PrefixFilterForm(
         label="Prefix length",
         widget=StaticSelect2(),
     )
-    vrf = DynamicModelMultipleChoiceField(
+    vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
-        label="Assigned VRF",
+        label="Assigned VRF(s)",
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
@@ -602,7 +602,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "parent",
         "ip_version",
         "mask_length",
-        "vrf_id",
+        "vrfs",
         "present_in_vrf_id",
         "status",
         "role",
@@ -631,10 +631,10 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         label="Mask length",
         widget=StaticSelect2Multiple(),
     )
-    vrf_id = DynamicModelMultipleChoiceField(
+    vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
-        label="Assigned VRF",
+        label="Assigned VRF(s)",
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")

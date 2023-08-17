@@ -311,7 +311,7 @@ class PrefixFilterCustomDataTestCase(TestCase):
         params = {"contains": "2001:db8:0:1::/64"}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv6)
 
-    def test_vrf(self):
+    def test_vrfs(self):
         prefixes = self.queryset[:2]
         vrfs = (
             VRF.objects.create(name="VRF 1", rd="65000:100", namespace=self.namespace),
@@ -321,12 +321,12 @@ class PrefixFilterCustomDataTestCase(TestCase):
         prefixes[0].vrfs.add(vrfs[1])
         prefixes[1].vrfs.add(vrfs[0])
         prefixes[1].vrfs.add(vrfs[1])
-        params = {"vrf": [vrfs[0].pk, vrfs[1].pk]}
+        params = {"vrfs": [vrfs[0].pk, vrfs[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vrfs__in=vrfs).distinct(),
         )
-        params = {"vrf": [vrfs[0].pk, vrfs[1].rd]}
+        params = {"vrfs": [vrfs[0].pk, vrfs[1].rd]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vrfs__in=vrfs).distinct(),
@@ -718,13 +718,13 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length__in=params["mask_length"])
         )
 
-    def test_vrf(self):
+    def test_vrfs(self):
         vrfs = list(VRF.objects.filter(prefixes__ip_addresses__isnull=False, rd__isnull=False).distinct())[:2]
-        params = {"vrf": [vrfs[0].pk, vrfs[1].pk]}
+        params = {"vrfs": [vrfs[0].pk, vrfs[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent__vrfs__in=vrfs).distinct()
         )
-        params = {"vrf": [vrfs[0].pk, vrfs[1].rd]}
+        params = {"vrfs": [vrfs[0].pk, vrfs[1].rd]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent__vrfs__in=vrfs).distinct()
         )

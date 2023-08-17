@@ -112,7 +112,6 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         label="Import VRF(s) (ID or RD)",
     )
     exporting_vrfs = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="exporting_vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="Export VRF(s) (ID or RD)",
@@ -174,8 +173,7 @@ class PrefixFilterSet(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
-    vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="vrfs",
+    vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="Assigned VRF (ID or RD)",
@@ -304,7 +302,7 @@ class IPAddressFilterSet(
         method="filter_address",
         label="Address",
     )
-    vrf = NaturalKeyOrPKMultipleChoiceFilter(
+    vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",

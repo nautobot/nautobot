@@ -1,4 +1,5 @@
-Renamed `Prefix` `mask_length` filter to `prefix_length`.
+Renamed `IPAddress` `vrf` filter to `vrfs`.
+Renamed `Prefix` `mask_length` filter to `prefix_length` and `vrf` filter to `vrfs`.
 Enhanced `Prefix` `vlan_vid` filter to permit multiple query values.
 Renamed `RouteTarget` `exporting_vrf` filter to `exporting_vrfs` and `importing_vrf` filter to `importing_vrfs`.
 Renamed `Service` `port` filter to `ports`.
