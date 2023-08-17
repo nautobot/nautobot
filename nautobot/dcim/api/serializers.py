@@ -29,7 +29,6 @@ from nautobot.dcim.choices import (
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
-    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
