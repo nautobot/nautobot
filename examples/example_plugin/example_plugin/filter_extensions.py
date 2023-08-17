@@ -2,6 +2,7 @@ from django import forms
 
 from nautobot.apps.filters import FilterExtension, MultiValueCharFilter
 from nautobot.tenancy.models import Tenant
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.core.forms.fields import DynamicModelMultipleChoiceField
 
 
@@ -44,7 +45,12 @@ class PrefixFilterExtension(FilterExtension):
     model = "ipam.prefix"
 
     filterset_fields = {
-        "example_plugin_prefix_tenant_name": MultiValueCharFilter(field_name="tenant__name", label="Tenant Name"),
+        "example_plugin_prefix_tenant_name": NaturalKeyOrPKMultipleChoiceFilter(
+            field_name="tenant",
+            queryset=Tenant.objects.all(),
+            to_field_name="name",
+            label="Tenant Name",
+        ),
     }
 
     filterform_fields = {
