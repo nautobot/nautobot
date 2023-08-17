@@ -2443,25 +2443,11 @@ class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
             "failover_strategy": "active-passive",
             "status": statuses[1].pk,
         }
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `nautobot.core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
 
 
 class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = InterfaceRedundancyGroup
     choices_fields = ["protocol"]
-    # FIXME(jathan): The writable serializer for `status` takes the
-    # status `name` (str) and not the `pk` (int). Do not validate this
-    # field right now, since we are asserting that it does create correctly.
-    #
-    # The test code for `nautobot.core.testing.views.TestCase.model_to_dict()`
-    # needs to be enhanced to use the actual API serializers when `api=True`
-    validation_excluded_fields = ["status"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2477,7 +2463,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Interface Redundancy Group 4",
                 "protocol": "hsrp",
-                "status": "Active",
+                "status": statuses[0].pk,
                 "protocol_group_id": "1",
                 "secrets_group": secrets_groups[0].pk,
                 "virtual_ip": ips[0].pk,
@@ -2485,7 +2471,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Interface Redundancy Group 5",
                 "protocol": "vrrp",
-                "status": "Planned",
+                "status": statuses[1].pk,
                 "protocol_group_id": "2",
                 "secrets_group": secrets_groups[1].pk,
                 "virtual_ip": None,
@@ -2493,7 +2479,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Interface Redundancy Group 6",
                 "protocol": "glbp",
-                "status": "Staging",
+                "status": statuses[3].pk,
                 "protocol_group_id": "3",
                 "secrets_group": None,
                 "virtual_ip": ips[1].pk,
@@ -2501,7 +2487,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         ]
         cls.bulk_update_data = {
             "protocol": "carp",
-            "status": "Active",
+            "status": statuses[2].pk,
             "virtual_ip": ips[0].pk,
         }
 
