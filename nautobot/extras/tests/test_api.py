@@ -2596,6 +2596,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
 
         # Delete existing factory generated objects that may interfere with this test
         IPAddress.objects.all().delete()
+        Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         VLAN.objects.all().delete()
 
