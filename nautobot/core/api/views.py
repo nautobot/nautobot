@@ -493,6 +493,11 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
+        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+            doc_url = reverse("api_docs")
+            login_url = reverse(settings.LOGIN_URL)
+            return redirect(f"{login_url}?next={doc_url}")
+
         # For backward compatibility wtih drf-yasg, `/api/docs/?format=openapi` is a redirect to the JSON schema.
         if request.GET.get("format") == "openapi":
             return redirect("schema_json", permanent=True)

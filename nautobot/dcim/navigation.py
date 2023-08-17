@@ -244,6 +244,28 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="dcim:interfaceredundancygroup_list",
+                        name="Interface Redundancy Groups",
+                        weight=600,
+                        permissions=[
+                            "dcim.view_interfaceredundancygroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:interfaceredundancygroup_add",
+                                permissions=[
+                                    "dcim.add_interfaceredundancygroup",
+                                ],
+                            ),
+                            NavMenuImportButton(
+                                link="dcim:interfaceredundancygroup_import",
+                                permissions=[
+                                    "dcim.add_interfaceredundancygroup",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(

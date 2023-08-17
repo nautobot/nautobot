@@ -449,7 +449,11 @@ nautobot-server init
 Example output:
 
 ```no-highlight
-Configuration file created at '/home/example/.nautobot/nautobot_config.py'
+Nautobot would like to send anonymized installation metrics to the project's maintainers.
+These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
+Allow Nautobot to send these metrics? [y/n]: n
+Installation metrics will not be sent by default.
+Configuration file created at /home/example/.nautobot/nautobot_config.py
 ```
 
 You may also specify alternate file locations. Please refer to [Configuring Nautobot](../../user-guide/administration/configuration/index.md) for how to do that.

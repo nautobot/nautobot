@@ -14,6 +14,7 @@ from netaddr import EUI
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.core.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
+from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -21,6 +22,7 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -51,6 +53,7 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InterfaceRedundancyGroup,
     Manufacturer,
     InventoryItem,
     Location,
@@ -1128,6 +1131,7 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "manufacturer": manufacturer.pk,
             "napalm_driver": "junos",
             "napalm_args": None,
+            "network_driver": "juniper_junos",
             "description": "A new platform",
         }
 
@@ -1264,7 +1268,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "platform": platforms[1].pk,
             "name": "Device X",
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
-            "asset_tag": "ABCDEF",
+            "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
             "location": locations[1].pk,
             "rack": racks[1].pk,
             "position": 1,
@@ -2817,4 +2821,76 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
             "status": statuses[0].pk,
+        }
+
+
+class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = InterfaceRedundancyGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
+        cls.ips = IPAddress.objects.all()
+        cls.secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+            SecretsGroup.objects.create(name="Secrets Group 3"),
+        )
+
+        interface_redundancy_groups = (
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 1",
+                protocol="hsrp",
+                status=statuses[0],
+                virtual_ip=None,
+                secrets_group=cls.secrets_groups[0],
+                protocol_group_id="1",
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 2",
+                protocol="carp",
+                status=statuses[1],
+                virtual_ip=cls.ips[1],
+                secrets_group=cls.secrets_groups[1],
+                protocol_group_id="2",
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 3",
+                protocol="vrrp",
+                status=statuses[2],
+                virtual_ip=cls.ips[2],
+                secrets_group=None,
+                protocol_group_id="3",
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 4",
+                protocol="glbp",
+                status=statuses[3],
+                virtual_ip=cls.ips[3],
+                secrets_group=cls.secrets_groups[2],
+            ),
+        )
+
+        for group in interface_redundancy_groups:
+            group.validated_save()
+
+        cls.form_data = {
+            "name": "IRG χ",
+            "protocol": InterfaceRedundancyGroupProtocolChoices.GLBP,
+            "status": statuses[3].pk,
+        }
+
+        cls.csv_data = (
+            "name,protocol,status",
+            f"IRG δ,hsrp,{statuses[0].name}",
+            f"IRG ε,glbp,{statuses[1].name}",
+            f"IRG ζ,hsrp,{statuses[0].name}",
+            f"IRG 7,carp,{statuses[2].name}",
+        )
+
+        cls.bulk_edit_data = {
+            "protocol": InterfaceRedundancyGroupProtocolChoices.HSRP,
+            "status": statuses[0].pk,
+            "virtual_ip": cls.ips[0].pk,
+            "secrets_group": cls.secrets_groups[1].pk,
         }

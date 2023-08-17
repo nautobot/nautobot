@@ -23,6 +23,7 @@ CHOICESET_MAP = {
     "dcim.PowerFeed": dcim_choices.PowerFeedStatusChoices,
     "dcim.Rack": dcim_choices.RackStatusChoices,
     "dcim.DeviceRedundancyGroup": dcim_choices.DeviceRedundancyGroupStatusChoices,
+    "dcim.InterfaceRedundancyGroup": dcim_choices.InterfaceRedundancyGroupStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
     "ipam.VLAN": ipam_choices.VLANStatusChoices,

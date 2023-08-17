@@ -4,6 +4,7 @@ from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.models.utils import construct_composite_key
@@ -31,10 +32,12 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
     InterfaceTemplate,
     Location,
     LocationType,
     Manufacturer,
+    Platform,
     PowerPort,
     PowerPortTemplate,
     PowerOutlet,
@@ -46,7 +49,7 @@ from nautobot.dcim.models import (
     RearPortTemplate,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, Role, Status
+from nautobot.extras.models import CustomField, Role, SecretsGroup, Status
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -198,6 +201,123 @@ class InterfaceTemplateTestCase(TestCase):
         )
         first_status = Status.objects.get_for_model(Interface).first()
         self.assertIsNotNone(device_2.interfaces.get(name="Test_Template_1").status, first_status)
+
+
+class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
+    model = InterfaceRedundancyGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
+        cls.ips = IPAddress.objects.all()
+        cls.secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+            SecretsGroup.objects.create(name="Secrets Group 3"),
+        )
+
+        cls.interface_redundancy_groups = (
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 1",
+                protocol="hsrp",
+                status=statuses[0],
+                virtual_ip=None,
+                secrets_group=cls.secrets_groups[0],
+                protocol_group_id="1",
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 2",
+                protocol="carp",
+                status=statuses[1],
+                virtual_ip=cls.ips[1],
+                secrets_group=cls.secrets_groups[1],
+                protocol_group_id="2",
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 3",
+                protocol="vrrp",
+                status=statuses[2],
+                virtual_ip=cls.ips[2],
+                secrets_group=None,
+                protocol_group_id="3",
+            ),
+            InterfaceRedundancyGroup(
+                name="Interface Redundancy Group 4",
+                protocol="glbp",
+                status=statuses[3],
+                virtual_ip=cls.ips[3],
+                secrets_group=cls.secrets_groups[2],
+            ),
+        )
+
+        for group in cls.interface_redundancy_groups:
+            group.validated_save()
+
+        cls.device_type = DeviceType.objects.first()
+        cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.device_status = Status.objects.get_for_model(Device).first()
+        cls.location = Location.objects.filter(location_type__name="Campus").first()
+        cls.device = Device.objects.create(
+            device_type=cls.device_type,
+            role=cls.device_role,
+            name="Device 1",
+            location=cls.location,
+            status=cls.device_status,
+        )
+        non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
+        cls.interfaces = (
+            Interface.objects.create(
+                device=cls.device,
+                name="Interface 1",
+                type="1000base-t",
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.device,
+                name="Interface 2",
+                type="1000base-t",
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.device,
+                name="Interface 3",
+                type=InterfaceTypeChoices.TYPE_BRIDGE,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.device,
+                name="Interface 4",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                status=non_default_status,
+            ),
+            Interface.objects.create(
+                device=cls.device,
+                name="Interface 5",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=non_default_status,
+            ),
+        )
+
+    def test_add_interface(self):
+        interfaces = Interface.objects.all()
+        interface_redundancy_group = self.interface_redundancy_groups[0]
+        previous_count = interface_redundancy_group.interfaces.count()
+        for i in range(3):
+            interface_redundancy_group.add_interface(interfaces[i], i * 100)
+        after_count = interface_redundancy_group.interfaces.count()
+        self.assertEqual(previous_count + 3, after_count)
+
+    def test_remove_interface(self):
+        interfaces = Interface.objects.all()
+        interface_redundancy_group = self.interface_redundancy_groups[0]
+        for i in range(3):
+            interface_redundancy_group.add_interface(interfaces[i], i * 100)
+        previous_count = interface_redundancy_group.interfaces.count()
+        self.assertEqual(previous_count, 3)
+        for i in range(2):
+            interface_redundancy_group.remove_interface(interfaces[i])
+        after_count = interface_redundancy_group.interfaces.count()
+        self.assertEqual(after_count, 1)
 
 
 class RackGroupTestCase(ModelTestCases.BaseModelTestCase):
@@ -690,6 +810,64 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             f"only have a Location of the same type or of type {self.root_nestable_type} as its parent",
             str(cm.exception),
         )
+
+
+class PlatformTestCase(TestCase):
+    def setUp(self):
+        self.standard_platform = Platform(name="Cisco IOS", network_driver="cisco_ios")
+        self.custom_platform = Platform(name="Private Platform", network_driver="secret_sauce")
+
+    def test_network_driver_netutils_defaults(self):
+        """Test that a network_driver setting derives related fields from netutils by default."""
+        self.assertEqual(self.standard_platform.network_driver_mappings["ansible"], "cisco.ios.ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["hier_config"], "ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["netmiko"], "cisco_ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["ntc_templates"], "cisco_ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["pyats"], "iosxe")
+        self.assertEqual(self.standard_platform.network_driver_mappings["pyntc"], "cisco_ios_ssh")
+        self.assertEqual(self.standard_platform.network_driver_mappings["scrapli"], "cisco_iosxe")
+
+    def test_network_driver_unknown(self):
+        """Test that properties are not set if the network_driver setting is not known by netutils."""
+        self.assertNotIn("ansible", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("hier_config", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("netmiko", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("ntc_templates", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("pyats", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("pyntc", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("scrapli", self.custom_platform.network_driver_mappings)
+
+    @override_settings(
+        NETWORK_DRIVERS={
+            "netmiko": {
+                "secret_sauce": "secret_driver",
+                "cisco_ios": "cisco_xe",
+            },
+            "scrapli": {
+                "secret_sauce": "secret_scrapli",
+            },
+            "supercoolnewtool": {
+                "cisco_ios": "cisco_xyz",
+                "secret_sauce": "secret_xyz",
+            },
+        },
+    )
+    def test_network_driver_settings_override(self):
+        """Test that settings.NETWORK_DRIVERS can extend and override the default behavior."""
+        # Not overridden
+        self.assertEqual(self.standard_platform.network_driver_mappings["ansible"], "cisco.ios.ios")
+        self.assertEqual(self.standard_platform.network_driver_mappings["pyats"], "iosxe")
+        self.assertEqual(self.standard_platform.network_driver_mappings["scrapli"], "cisco_iosxe")
+        self.assertNotIn("ansible", self.custom_platform.network_driver_mappings)
+        self.assertNotIn("pyats", self.custom_platform.network_driver_mappings)
+        # Overridden
+        self.assertEqual(self.standard_platform.network_driver_mappings["netmiko"], "cisco_xe")
+        self.assertEqual(self.custom_platform.network_driver_mappings["netmiko"], "secret_driver")
+        self.assertEqual(self.custom_platform.network_driver_mappings["scrapli"], "secret_scrapli")
+        self.assertIn("supercoolnewtool", self.standard_platform.network_driver_mappings)
+        self.assertEqual(self.standard_platform.network_driver_mappings["supercoolnewtool"], "cisco_xyz")
+        self.assertIn("supercoolnewtool", self.custom_platform.network_driver_mappings)
+        self.assertEqual(self.custom_platform.network_driver_mappings["supercoolnewtool"], "secret_xyz")
 
 
 class DeviceTestCase(ModelTestCases.BaseModelTestCase):

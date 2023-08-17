@@ -16,7 +16,7 @@ class ClusterType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = ClusterFilterSet
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
+        return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
 class VirtualMachineType(gql_optimizer.OptimizedDjangoObjectType):
@@ -29,7 +29,7 @@ class VirtualMachineType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = VirtualMachineFilterSet
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
+        return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
 class VMInterfaceType(gql_optimizer.OptimizedDjangoObjectType):

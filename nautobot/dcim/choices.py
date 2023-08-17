@@ -1343,3 +1343,38 @@ class DeviceRedundancyGroupFailoverStrategyChoices(ChoiceSet):
         (FAILOVER_ACTIVE_ACTIVE, "Active/Active"),
         (FAILOVER_ACTIVE_PASSIVE, "Active/Passive"),
     )
+
+
+#
+# Interface Redundancy Groups
+#
+
+
+class InterfaceRedundancyGroupStatusChoices(ChoiceSet):
+    STATUS_PLANNED = "planned"
+    STATUS_STAGING = "staging"
+    STATUS_ACTIVE = "active"
+    STATUS_DECOMMISSIONING = "decommissioning"
+    STATUS_RETIRED = "retired"
+
+    CHOICES = (
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_STAGING, "Staging"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+        (STATUS_RETIRED, "Retired"),
+    )
+
+
+class InterfaceRedundancyGroupProtocolChoices(ChoiceSet):
+    HSRP = "hsrp"
+    VRRP = "vrrp"
+    GLBP = "glbp"
+    CARP = "carp"
+
+    CHOICES = (
+        (HSRP, "HSRP"),
+        (VRRP, "VRRP"),
+        (GLBP, "GLBP"),
+        (CARP, "CARP"),
+    )

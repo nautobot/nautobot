@@ -1,20 +1,23 @@
 """Dynamic Groups Models."""
 
 import logging
+import pickle
 
 import django_filters
 from django import forms
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.utils.functional import cached_property
 
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.core.forms.fields import DynamicModelChoiceField
+from nautobot.core.forms.fields import DynamicModelChoiceField, TagFilterField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
@@ -309,12 +312,77 @@ class DynamicGroup(OrganizationalModel):
 
     @property
     def members(self):
-        """Return the member objects for this group."""
+        """Return the member objects for this group, never cached."""
         # If there are child groups, return the generated group queryset, otherwise use this group's
         # `filter` directly.
         if self.children.exists():
             return self.get_group_queryset()
         return self.get_queryset()
+
+    @property
+    def members_cache_key(self):
+        """Return the cache key for this group's members."""
+        return f"{self.__class__.__name__}.{self.id}.members_cached"
+
+    @property
+    def members_cached(self):
+        """Return the member objects for this group, cached if available."""
+
+        unpickled_query = None
+        try:
+            cached_query = cache.get(self.members_cache_key)
+            if cached_query is not None:
+                unpickled_query = pickle.loads(cached_query)
+        except pickle.UnpicklingError:
+            logger.warning("Failed to unpickle cached members for %s", self)
+        finally:
+            if unpickled_query is None:
+                unpickled_query = self.members.all()
+                cached_query = pickle.dumps(unpickled_query)  # Explicitly pickle the query to evaluate it.
+                cache.set(
+                    self.members_cache_key, cached_query, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT")
+                )
+
+        return unpickled_query
+
+    def update_cached_members(self):
+        """
+        Update the cached members of the groups. Also returns the updated cached members.
+        """
+
+        cache.delete(self.members_cache_key)
+
+        return self.members_cached
+
+    def has_member(self, obj, use_cache=False):
+        """
+        Return True if the given object is a member of this group.
+
+        Does check if object's content type matches this group's content type.
+
+        Args:
+            obj (django.db.models.Model): The object to check for membership.
+            use_cache (bool, optional): Whether to use the cache and run the query directly. Defaults to False.
+
+        Returns:
+            bool: True if the object is a member of this group, otherwise False.
+        """
+
+        # Object's class may have content type cached, so check that first.
+        try:
+            if use_cache and type(obj)._content_type.id != self.content_type_id:
+                return False
+        except AttributeError:
+            # Object did not have `_content_type` even though we wanted to use it.
+            pass
+
+        if not use_cache and ContentType.objects.get_for_model(obj).id != self.content_type_id:
+            return False
+
+        if not use_cache:
+            return self.members.filter(pk=obj.pk).exists()
+        else:
+            return obj in list(self.members_cached)
 
     @property
     def count(self):
@@ -347,6 +415,9 @@ class DynamicGroup(OrganizationalModel):
         # Use the auto-generated filterset form perform creation of the filter dictionary.
         filterset_form = filterset.form
 
+        # Get the declared form for any overloaded form field definitions.
+        declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
+
         # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
         # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
         # filterset form, but will also catch errors in case a user-created dict is provided instead.
@@ -357,10 +428,14 @@ class DynamicGroup(OrganizationalModel):
         # empty/null value fields.
         new_filter = {}
         for field_name in filter_fields:
-            field = filterset_form.fields[field_name]
+            field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
             field_value = filterset_form.cleaned_data[field_name]
 
-            if isinstance(field, forms.ModelMultipleChoiceField):
+            # `tag` on FilterForms is not a ModelMultipleChoiceField, so we need to handle it.
+            # On `FilterSetForm.tag`, it is a ModelMultipleChoiceField.
+            # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
+            # and literal FilterSet fields (ex: MultiValueCharFilter).
+            if isinstance(field, (forms.ModelMultipleChoiceField, TagFilterField)):
                 field_to_query = field.to_field_name or "pk"
                 new_value = [getattr(item, field_to_query) for item in field_value]
 

@@ -50,6 +50,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
+from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
@@ -828,92 +829,7 @@ class GraphQLQueriesTestCase(
             ),
             GraphQLQuery(
                 name="graphql-query-3",
-                query="""
-query ($device: String!) {
-  devices(name: $device) {
-    config_context
-    name
-    position
-    serial
-    primary_ip4 {
-      id
-      primary_ip4_for {
-        id
-        name
-      }
-    }
-    tenant {
-      name
-    }
-    tags {
-      name
-    }
-    device_role {
-      name
-    }
-    platform {
-      name
-      manufacturer {
-        name
-      }
-      napalm_driver
-    }
-    location {
-      name
-      vlans {
-        id
-        name
-        vid
-      }
-      vlan_groups {
-        id
-      }
-    }
-    interfaces {
-      description
-      mac_address
-      enabled
-      name
-      ip_addresses {
-        address
-        tags {
-          id
-        }
-      }
-      connected_circuit_termination {
-        circuit {
-          cid
-          commit_rate
-          provider {
-            name
-          }
-        }
-      }
-      tagged_vlans {
-        id
-      }
-      untagged_vlan {
-        id
-      }
-      cable {
-        termination_a_type
-        status {
-          name
-        }
-        color
-      }
-      tagged_vlans {
-        location {
-          name
-        }
-        id
-      }
-      tags {
-        id
-      }
-    }
-  }
-}""",
+                query=BIG_GRAPHQL_DEVICE_QUERY,
             ),
             GraphQLQuery(
                 name="Graphql Query 5",
@@ -2049,6 +1965,7 @@ class RelationshipTestCase(
 
         # Delete existing factory generated objects that may interfere with this test
         IPAddress.objects.all().delete()
+        Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         VLAN.objects.all().delete()
 

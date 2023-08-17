@@ -50,11 +50,6 @@ def get_base_template(base_template, model):
     return base_template
 
 
-def get_job_content_type():
-    """Return a cached instance of the `ContentType` for `extras.Job`."""
-    return ContentType.objects.get(app_label="extras", model="job")
-
-
 def image_upload(instance, filename):
     """
     Return a path for uploading image attachments.

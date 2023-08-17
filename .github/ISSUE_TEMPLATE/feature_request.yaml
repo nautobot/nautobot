@@ -1,7 +1,7 @@
 ---
 name: ✨ Feature Request
 description: Propose a new Nautobot feature or enhancement
-labels: ["type: feature"]
+labels: ["type: feature", "triage"]
 body:
   - type: markdown
     attributes:

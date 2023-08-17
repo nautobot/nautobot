@@ -206,6 +206,7 @@ nav:
           - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
         - Cable: "user-guide/core-data-model/dcim/cable.md"
         - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+        - Interface Redundancy Group: "user-guide/core-data-model/dcim/interfaceredundancygroup.md"
         - Power Panel : "user-guide/core-data-model/dcim/powerpanel.md"
         - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
         - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
@@ -365,6 +366,7 @@ nav:
   - Release Notes:
     - "release-notes/index.md"
     - Version 2.0: "release-notes/version-2.0.md"
+    - Version 1.6: "release-notes/version-1.6.md"
     - Version 1.5: "release-notes/version-1.5.md"
     - Version 1.4: "release-notes/version-1.4.md"
     - Version 1.3: "release-notes/version-1.3.md"

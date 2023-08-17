@@ -7,7 +7,7 @@ import nautobot.core.models.fields
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0033_created_datetime"),
+        ("dcim", "0037_created_datetime"),
         ("circuits", "0012_created_datetime"),
     ]
 

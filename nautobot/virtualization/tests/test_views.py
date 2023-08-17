@@ -131,7 +131,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        deviceroles = Role.objects.get_for_model(VirtualMachine)[:2]
+        vmroles = Role.objects.get_for_model(VirtualMachine)[:2]
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         locations = (
@@ -154,21 +154,21 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         VirtualMachine.objects.create(
             name="Virtual Machine 1",
             cluster=clusters[0],
-            role=deviceroles[0],
+            role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
             cluster=clusters[0],
-            role=deviceroles[0],
+            role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
             cluster=clusters[0],
-            role=deviceroles[0],
+            role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
         )
@@ -179,7 +179,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "platform": platforms[1].pk,
             "name": "Virtual Machine X",
             "status": status_staged.pk,
-            "role": deviceroles[1].pk,
+            "role": vmroles[1].pk,
             "primary_ip4": None,
             "primary_ip6": None,
             "vcpus": 4,
@@ -202,7 +202,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": None,
             "platform": platforms[1].pk,
             "status": status_staged.pk,
-            "role": deviceroles[1].pk,
+            "role": vmroles[1].pk,
             "vcpus": 8,
             "memory": 65535,
             "disk": 8000,

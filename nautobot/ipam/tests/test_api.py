@@ -599,14 +599,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         statuses = Status.objects.get_for_model(VLAN)
         vlan_groups = VLANGroup.objects.filter(location__isnull=False)[:2]
 
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `core.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
         cls.create_data = [
             {
                 "vid": 4,

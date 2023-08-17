@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0043_status_nonnullable"),
+        ("dcim", "0047_status_nonnullable"),
         ("virtualization", "0025_status_nonnullable"),
         ("ipam", "0035_ensure_all_services_fit_uniqueness_constraint"),
     ]

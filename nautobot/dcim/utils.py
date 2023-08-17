@@ -2,9 +2,21 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from netutils.lib_mapper import (
+    ANSIBLE_LIB_MAPPER_REVERSE,
+    HIERCONFIG_LIB_MAPPER_REVERSE,
+    NAPALM_LIB_MAPPER_REVERSE,
+    NETMIKO_LIB_MAPPER_REVERSE,
+    NTCTEMPLATES_LIB_MAPPER_REVERSE,
+    PYATS_LIB_MAPPER_REVERSE,
+    PYNTC_LIB_MAPPER_REVERSE,
+    SCRAPLI_LIB_MAPPER_REVERSE,
+)
 
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
 from nautobot.dcim.choices import InterfaceModeChoices
+from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
 
 
 def compile_path_node(ct_id, object_id):
@@ -47,6 +59,62 @@ def cable_status_color_css(record):
     base_color = record.cable.get_status_color().strip("#")
     lighter_color = rgb_to_hex(*lighten_color(*hex_to_rgb(base_color), 0.75))
     return f"background-color: #{lighter_color}"
+
+
+def get_network_driver_mapping_tool_names():
+    """
+    Return a list of all available network driver tool names derived from the netutils library and the optional NETWORK_DRIVERS setting.
+
+    Tool names are "ansible", "hier_config", "napalm", "netmiko", etc...
+    """
+    network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
+    network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS").keys())
+
+    return sorted(network_driver_names)
+
+
+def get_all_network_driver_mappings():
+    """
+    Return a dict of all available network driver mappings derived from the netutils library and the optional NETWORK_DRIVERS setting.
+
+    Example output:
+        {
+            "cisco_ios": {
+                "ansible": "cisco.ios.ios",
+                "napalm": "ios",
+            },
+            "cisco_nxos": {
+                "ansible": "cisco.nxos.nxos",
+                "napalm": "nxos",
+            },
+            etc...
+        }
+    """
+    network_driver_mappings = {}
+
+    # initialize mapping from netutils library
+    for tool_name, mappings in (
+        ("ansible", ANSIBLE_LIB_MAPPER_REVERSE),
+        ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
+        ("napalm", NAPALM_LIB_MAPPER_REVERSE),
+        ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
+        ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
+        ("pyats", PYATS_LIB_MAPPER_REVERSE),
+        ("pyntc", PYNTC_LIB_MAPPER_REVERSE),
+        ("scrapli", SCRAPLI_LIB_MAPPER_REVERSE),
+    ):
+        for normalized_name, mapped_name in mappings.items():
+            network_driver_mappings.setdefault(normalized_name, {})
+            network_driver_mappings[normalized_name][tool_name] = mapped_name
+
+    # add mappings from optional NETWORK_DRIVERS setting
+    network_drivers_config = get_settings_or_config("NETWORK_DRIVERS")
+    for tool_name, mappings in network_drivers_config.items():
+        for normalized_name, mapped_name in mappings.items():
+            network_driver_mappings.setdefault(normalized_name, {})
+            network_driver_mappings[normalized_name][tool_name] = mapped_name
+
+    return network_driver_mappings
 
 
 def validate_interface_tagged_vlans(instance, model, pk_set):

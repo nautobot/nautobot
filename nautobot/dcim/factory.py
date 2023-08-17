@@ -3,7 +3,6 @@ import logging
 import pytz
 import random
 
-from django.utils.text import slugify
 from faker import Faker
 
 from django.contrib.auth import get_user_model
@@ -61,18 +60,33 @@ MANUFACTURER_NAMES = (
     "F5",
     "Force10",
     "Fortinet",
+    "HP",
     "Huawei",
     "Juniper",
-    "HP",
     "Palo Alto",
 )
 
-# For `Platform.napalm_driver`, either randomly choose based on Manufacturer slugified name.
+# For `Platform.napalm_driver` and `Platform.network_driver`, either randomly choose based on Manufacturer name.
 NAPALM_DRIVERS = {
-    "arista": ["eos"],
-    "cisco": ["ios", "iosxr", "iosxr_netconf", "nxos", "nxos_ssh"],
-    "juniper": ["junos"],
-    "palo-alto": ["panos"],
+    "Arista": ["eos"],
+    "Cisco": ["ios", "iosxr", "iosxr_netconf", "nxos", "nxos_ssh"],
+    "Juniper": ["junos"],
+    "Palo Alto": ["panos"],
+}
+
+
+NETWORK_DRIVERS = {
+    "A10": ["a10"],
+    "Arista": ["arista_eos"],
+    "Aruba": ["aruba_os", "aruba_procurve"],
+    "Cisco": ["cisco_ios", "cisco_xr", "cisco_nxos", "cisco_xe"],
+    "Dell": ["dell_force10", "dell_os10"],
+    "F5": ["f5_ltm", "f5_tmsh", "f5_linux"],
+    "Fortinet": ["fortinet"],
+    "HP": ["hp_comware", "hp_procurve"],
+    "Huawei": ["huawei"],
+    "Juniper": ["juniper_junos"],
+    "Palo Alto": ["paloalto_panos"],
 }
 
 
@@ -169,7 +183,7 @@ class PlatformFactory(OrganizationalModelFactory):
     # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(slugify(o.manufacturer.name), [""]))),
+        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 
@@ -179,6 +193,12 @@ class PlatformFactory(OrganizationalModelFactory):
     )
 
     has_description = NautobotBoolIterator()
+    network_driver = factory.Maybe(
+        "has_manufacturer",
+        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
+        "",
+    )
+
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 

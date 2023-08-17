@@ -12,7 +12,9 @@ from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.test.utils import isolate_apps
+from django.utils.timezone import now
 
+from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.mixins import NautobotTestCaseMixin
@@ -25,13 +27,19 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
 )
-from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.choices import (
     LogLevelChoices,
+    JobResultStatusChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+)
+from nautobot.extras.constants import (
+    JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
+    JOB_LOG_MAX_GROUPING_LENGTH,
+    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -956,6 +964,69 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         location_oc.request_id = uuid.uuid4()
         location_oc.change_context = ObjectChangeEventContextChoices.CONTEXT_ORM
         location_oc.validated_save()
+
+    def test_log(self):
+        """Test that logs are rendered correctly."""
+        jobs = JobModel.objects.all()[:2]
+        job_result = JobResult.objects.create(
+            name="irrelevant",
+            job_model=jobs[0],
+            date_done=now(),
+            user=None,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            task_kwargs={},
+            scheduled_job=None,
+        )
+        job_result.use_job_logs_db = False
+
+        # Most basic usage
+        job_result.log("Hello")
+        log = JobLogEntry.objects.get(job_result=job_result)
+        self.assertEqual("Hello", log.message)
+        self.assertEqual(LogLevelChoices.LOG_INFO, log.log_level)
+        self.assertEqual("main", log.grouping)
+        self.assertEqual("", log.log_object)
+        self.assertEqual("", log.absolute_url)
+
+        # Advanced usage
+        obj = CircuitType.objects.create(name="Advance CT")
+        job_result.log("Hi", obj=obj, level_choice=LogLevelChoices.LOG_WARNING, grouping="other")
+        log = JobLogEntry.objects.get(job_result=job_result, message="Hi", log_object=obj)
+        self.assertEqual("Hi", log.message)
+        self.assertEqual(LogLevelChoices.LOG_WARNING, log.log_level)
+        self.assertEqual("other", log.grouping)
+        self.assertEqual(str(obj), log.log_object)
+        self.assertEqual(obj.get_absolute_url(), log.absolute_url)
+
+        # Length constraints
+        class MockObject1:
+            def __str__(self):
+                return "a" * (JOB_LOG_MAX_LOG_OBJECT_LENGTH * 2)
+
+            def get_absolute_url(self):
+                return "b" * (JOB_LOG_MAX_ABSOLUTE_URL_LENGTH * 2)
+
+        obj = MockObject1()
+        job_result.log("Hi 1", obj=obj, grouping="c" * JOB_LOG_MAX_GROUPING_LENGTH * 2)
+        log = JobLogEntry.objects.get(
+            job_result=job_result, message="Hi 1", log_object="a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH
+        )
+        self.assertEqual("Hi 1", log.message)
+        self.assertEqual("a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH, log.log_object)
+        self.assertEqual("c" * JOB_LOG_MAX_GROUPING_LENGTH, log.grouping)
+        self.assertEqual("b" * JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, log.absolute_url)
+
+        # Error handling
+        class MockObject2(MockObject1):
+            def get_absolute_url(self):
+                raise NotImplementedError()
+
+        obj = MockObject2()
+        job_result.log("Hi 2", obj=obj)
+        log = JobLogEntry.objects.get(job_result=job_result, message="Hi 2")
+        self.assertEqual("Hi 2", log.message)
+        self.assertEqual("a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH, log.log_object)
+        self.assertEqual("", log.absolute_url)
 
 
 class RoleTest(NautobotTestCaseMixin, ModelTestCases.BaseModelTestCase):

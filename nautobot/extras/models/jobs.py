@@ -700,18 +700,28 @@ class JobResult(BaseModel, CustomFieldModel):
 
         message = sanitize(str(message))
 
-        log = JobLogEntry(
-            job_result=self,
-            log_level=level_choice,
-            grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
-            message=message,
-            created=timezone.now().isoformat(),
-            log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else "",
-            absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
-            if hasattr(obj, "get_absolute_url")
-            else "",
-        )
-
+        try:
+            log = JobLogEntry(
+                job_result=self,
+                log_level=level_choice,
+                grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
+                message=message,
+                created=timezone.now().isoformat(),
+                log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else "",
+                absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
+                if hasattr(obj, "get_absolute_url")
+                else "",
+            )
+        except NotImplementedError:
+            log = JobLogEntry(
+                job_result=self,
+                log_level=level_choice,
+                grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
+                message=message,
+                created=timezone.now().isoformat(),
+                log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else "",
+                absolute_url="",
+            )
         # If the override is provided, we want to use the default database(pass no using argument)
         # Otherwise we want to use a separate database here so that the logs are created immediately
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs

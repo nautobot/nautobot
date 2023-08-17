@@ -28,6 +28,7 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
@@ -59,6 +60,8 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
     Location,
@@ -402,6 +405,36 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
+#
+# Interface Redundancy group
+#
+
+
+class InterfaceRedundancyGroupAssociationSerializer(ValidatedModelSerializer):
+    """InterfaceRedundancyGroupAssociation Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = "__all__"
+
+
+class InterfaceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    """InterfaceRedundancyGroup Serializer."""
+
+    protocol = ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = "__all__"
+        extra_kwargs = {
+            "interfaces": {"source": "interface_redundancy_group_associations", "many": True, "read_only": True},
+        }
+
+
 class PowerPortTemplateSerializer(NautobotModelSerializer):
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
@@ -455,6 +488,7 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 
 
 class PlatformSerializer(NautobotModelSerializer):
+    network_driver_mappings = serializers.JSONField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     virtual_machine_count = serializers.IntegerField(read_only=True)
 
@@ -464,6 +498,10 @@ class PlatformSerializer(NautobotModelSerializer):
         list_display_fields = [
             "name",
             "manufacturer",
+            "napalm_driver",
+            "napalm_args",
+            "network_driver",
+            "network_driver_mappings",
             "device_count",
             "virtual_machine_count",
             "napalm_driver",

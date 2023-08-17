@@ -206,6 +206,8 @@ RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=loc
     poetry install --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
+ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
+
 COPY --chown=nautobot:nautobot development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
 RUN nautobot-server build_ui && rm -rf /source/*
@@ -236,6 +238,9 @@ RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=loc
     rm -rf /source/*
 
 WORKDIR /opt/nautobot
+
+# Don't send install metrics as this is a development target, not a deployment one
+ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
 RUN nautobot-server init && \
     nautobot-server build_ui

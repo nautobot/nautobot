@@ -1,6 +1,7 @@
 ---
 name: 🏡 Housekeeping
 about: A change pertaining to the codebase itself (developers only)
+labels: ["type: housekeeping", "triage"]
 
 ---
 
