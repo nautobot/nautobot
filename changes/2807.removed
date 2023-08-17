@@ -1,0 +1,3 @@
+Removed `RouteTarget` `exporting_vrf_id` and `importing_vrf_id` filters as they are redundant with the `exporting_vrfs` and `importing_vrfs` filters.
+Removed `Service` `device_id` and `virtual_machine_id` filters as they are redundant with the `device` and `virtual_machine` filters.
+Removed `VRF` `export_target_id` and `import_target_id` filters as they are redundant with the `export_targets` and `import_targets` filters.
