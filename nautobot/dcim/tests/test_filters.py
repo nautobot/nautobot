@@ -3017,8 +3017,9 @@ class InterfaceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
                 virtual_ip=cls.ips[3],
             ),
         )
-
+        tags = Tag.objects.get_for_model(InterfaceRedundancyGroup)
         for group in interface_redundancy_groups:
+            group.tags.set(tags)
             group.validated_save()
 
         secrets_groups = list(SecretsGroup.objects.all()[:2])
