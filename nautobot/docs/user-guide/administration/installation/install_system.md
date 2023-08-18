@@ -5,7 +5,7 @@ The documentation assumes that you are running one of the following:
 - Ubuntu 20.04+
 - Debian 11+
 - RHEL/CentOS 8.2+
-  - Also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
+    - Also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
 
 ## Install System Packages
 
@@ -39,8 +39,6 @@ In this step you'll set up your database server, create a database and database 
 You must select either MySQL or PostgreSQL. PostgreSQL is used by default with Nautobot, so if you just want to get started or don't have a preference, please stick with PostgreSQL.
 
 Please follow the steps for your selected database backend below.
-
-### Database Setup
 
 === "Ubuntu/Debian PostgreSQL"
 

@@ -89,6 +89,7 @@ Nautobot has been tested and confirmed to work on the following platforms. Detai
 can be found by following the link to each.
 
 The supported installations include:
+
 - Red Hat flavors of Linux including CentOS 8.2+ or Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
 - Ubuntu 20.04 or later is supported.
 
