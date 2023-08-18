@@ -14,6 +14,7 @@ theme:
     - "django"
     - "yaml"
   features:
+    - "navigation.footer"
     - "navigation.tracking"
     - "navigation.tabs"
     - "navigation.tabs.sticky"
@@ -80,6 +81,8 @@ markdown_extensions:
   - "pymdownx.inlinehilite"
   - "pymdownx.snippets"
   - "pymdownx.superfences"
+  - "pymdownx.tabbed":
+      "alternate_style": true 
 
 plugins:
   - "search"
@@ -98,7 +101,6 @@ plugins:
             heading_level: 1
             show_root_heading: true
             show_root_members_full_path: true
-
 nav:
   - Overview: "index.md"
   - User Guide:
@@ -106,9 +108,7 @@ nav:
     - Administration:
       - Installation:
         - "user-guide/administration/installation/index.md"
-        - Installing System Dependencies:
-          - On RHEL: "user-guide/administration/installation/centos.md"
-          - On Ubuntu: "user-guide/administration/installation/ubuntu.md"
+        - Nautobot Install System: "user-guide/adminstration/installation/install_system.md"
         - Installing Nautobot: "user-guide/administration/installation/nautobot.md"
         - Deploying Nautobot Services: "user-guide/administration/installation/services.md"
         - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
