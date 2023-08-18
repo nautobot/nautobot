@@ -148,14 +148,14 @@ In addition to the above improvements, you can now reference related objects in 
 
 Instead of:
 
-```
+```csv
 name,rack
 Device one,7f3ca431-8103-45cc-a9ce-b94c1f784a1d
 ```
 
 you can use:
 
-```
+```csv
 name,rack__location__name,rack__name
 Device one,Equinix DC6,R204
 ```
