@@ -1,2 +1,0 @@
-Added handleOnKeyDown to Pagination to now update the page number when Enter key is pressed.
-Added double arrow icons to Pagination for navigating to first/last page.

@@ -1,1 +1,0 @@
-Removed `node_modules` shared volume from Docker development environment as no longer needed.

@@ -1,3 +1,0 @@
-Fixed inability to filter most models with `.exclude(composite_key="...")`.
-Fixed inability to call `Prefix.objects.exclude(prefix="...")`.
-Fixed inability to call `IPAddress.objects.exclude(address="...")`.

@@ -1,7 +1,0 @@
-Changed development `nodejs` Docker container to use Nautobot `dev` image instead of generic `node` image.
-Changed the `dev` and `final-dev` Docker images to install and run Nautobot as a `nautobot` user instead of as `root`.
-Updated `poetry` version included in `dev` and `final-dev` Docker images from 1.3.1 to 1.5.1.
-Updated `markdownlint-cli` to version 0.35.0.
-Changed all Docker images to install Nautobot and its dependencies to a virtualenv in `/opt/nautobot/` instead of the system Python.
-Changed Docker build to install dependencies for and then build the new UI as a separate set of stages from the installation of Python dependencies and build of the Python package.
-Consolidated development/non-development `package.json` and `package-lock.json` files into a single set of files.
