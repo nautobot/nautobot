@@ -37,6 +37,8 @@ app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
+router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 
 urlpatterns = [
     # Regions

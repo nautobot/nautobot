@@ -68,13 +68,16 @@ def generate_settings(config_template=CONFIG_TEMPLATE, **kwargs):
     ran and returns a string representing the default data to put into the
     settings file.
     """
-    secret_key = get_random_secret_key()
+    template_vars = {
+        "secret_key": get_random_secret_key(),
+        "installation_metrics_enabled": kwargs.get("installation_metrics_enabled", True),
+    }
 
     with open(config_template) as fh:
         environment = Environment(loader=BaseLoader, keep_trailing_newline=True)
         config = environment.from_string(fh.read())
 
-    return config.render(secret_key=secret_key)
+    return config.render(**template_vars)
 
 
 def _configure_settings(config):
@@ -148,7 +151,6 @@ def _configure_settings(config):
 
         # django-storages
         if settings.STORAGE_BACKEND.startswith("storages."):
-
             try:
                 import storages.utils
             except ModuleNotFoundError as e:

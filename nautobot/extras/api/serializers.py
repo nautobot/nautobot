@@ -597,6 +597,7 @@ class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
 # Export templates
 #
 
+
 # TODO: export-templates don't support custom-fields, is this omission intentional?
 class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelSerializer, NotesSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:exporttemplate-detail")
@@ -730,7 +731,6 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         ]
 
     def validate(self, data):
-
         # Validate that the parent object exists
         try:
             data["content_type"].get_object_for_this_type(id=data["object_id"])
@@ -744,7 +744,6 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
     @extend_schema_field(serializers.DictField)
     def get_parent(self, obj):
-
         # Static mapping of models to their nested serializers
         if isinstance(obj.parent, Device):
             serializer = NestedDeviceSerializer
@@ -755,7 +754,9 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
         elif isinstance(obj.parent, Site):
             serializer = NestedSiteSerializer
         else:
-            raise Exception("Unexpected type of parent object for ImageAttachment")
+            raise Exception(  # pylint: disable=broad-exception-raised
+                "Unexpected type of parent object for ImageAttachment"
+            )
 
         return serializer(obj.parent, context={"request": self.context["request"]}).data
 
@@ -1028,7 +1029,6 @@ class JobMultiPartInputSerializer(serializers.Serializer):
                 )
 
             if data["_schedule_interval"] == JobExecutionType.TYPE_CUSTOM:
-
                 if data.get("_schedule_crontab") is None:
                     raise serializers.ValidationError({"_schedule_crontab": "Please enter a valid crontab."})
                 try:

@@ -13,7 +13,6 @@ User = get_user_model()
 class NoteModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
-
         site_ct = ContentType.objects.get_for_model(Site)
 
         user = User.objects.first()

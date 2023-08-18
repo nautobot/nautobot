@@ -1,0 +1,85 @@
+# Action to build and push Nautobot images.
+#
+# Prerequisites
+#
+# Before running this action, the calling workflow has to perform the following steps:
+#
+# ```
+# steps:
+#   - name: "Check out repository code"
+#     uses: "actions/checkout@v3"
+#   - name: "Set up QEMU"
+#     uses: "docker/setup-qemu-action@v2"
+#   - name: "Set up Docker Buildx"
+#     uses: "docker/setup-buildx-action@v2"
+#   # To be able to push to GitHub Container Registry, we need to log in to it first.
+#   - name: "Login to GitHub Container Registry"
+#     uses: "docker/login-action@v2"
+#     with:
+#       registry: "ghcr.io"
+#       username: "${{ github.actor }}"
+#       password: "${{ secrets.GITHUB_TOKEN }}"
+# ```
+---
+name: "Build Nautobot Image"
+description: "Builds and pushes Nautobot image"
+inputs:
+  branch:
+    description: "Branch Name Used In Tag"
+    required: true
+  image:
+    description: "Produced Image Name"
+    required: true
+  tag-latest:
+    description: "Whether To Tag As Latest"
+    required: true
+  tag-latest-for-branch:
+    description: "Whether To Tag As Latest For Branch"
+    required: true
+  tag-latest-for-py:
+    description: "Whether To Tag As Latest For Python Version"
+    required: true
+  push:
+    description: "Whether To Push"
+    required: true
+  python-version:
+    description: "Python Version"
+    required: true
+  target:
+    description: "Target Stage Name"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: "Setup Metadata"
+      id: "metadata"
+      uses: "docker/metadata-action@v4"
+      with:
+        images: "${{ inputs.image }}"
+        flavor: |
+          latest=false
+        tags: |
+          type=raw,value=${{ inputs.branch }}-py${{ inputs.python-version }}
+          type=raw,value=latest,enable=${{ inputs.tag-latest }}
+          type=raw,value=${{ inputs.branch }},enable=${{ inputs.tag-latest-for-branch }}
+          type=raw,value=latest-py${{ inputs.python-version }},enable=${{ inputs.tag-latest-for-py }}
+        labels: |
+          org.opencontainers.image.title=Nautobot
+    - name: "Build Dev"
+      env:
+        INVOKE_NAUTOBOT_PYTHON_VER: "${{ inputs.python-version }}"
+      uses: "docker/build-push-action@v4"
+      with:
+        push: "${{ inputs.push }}"
+        target: "${{ inputs.target }}"
+        file: "docker/Dockerfile"
+        platforms: "linux/amd64,linux/arm64"
+        tags: "${{ steps.metadata.outputs.tags }}"
+        labels: "${{ steps.metadata.outputs.labels }}"
+        cache-from: "type=gha,scope=nautobot-${{ inputs.branch }}-${{ inputs.python-version }}"
+        cache-to: "type=gha,mode=max,scope=nautobot-${{ inputs.branch }}-${{ inputs.python-version }}"
+        context: "."
+        build-args: |
+          PYTHON_VER=${{ inputs.python-version }}
+          DEPENDENCIES_BASE_BRANCH=${{ inputs.branch }}
+          POETRY_PARALLEL=true

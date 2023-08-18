@@ -5,6 +5,7 @@ import sys
 
 from django.contrib.messages import constants as messages
 import django.forms
+from django.utils.safestring import mark_safe
 
 from nautobot import __version__
 from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
@@ -76,9 +77,19 @@ EXEMPT_EXCLUDE_MODELS = (
     ("users", "objectpermission"),
 )
 
+# Models to exempt from the enforcement of view permissions
 EXEMPT_VIEW_PERMISSIONS = []
+
+# The file path to a directory where cloned Git repositories will be located
 GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
+
+# HTTP proxies to use for outbound requests originating from Nautobot (e.g. when sending webhook requests)
 HTTP_PROXIES = None
+
+# Send anonymized installation metrics when post_upgrade or send_installation_metrics management commands are run
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "True"))
+
+# The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
@@ -269,6 +280,11 @@ SPECTACULAR_SETTINGS = {
         # result in this error:
         #   encountered multiple names for the same choice set
         "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
+        # These choice enums need to be overridden because they get assigned to the `protocol` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
+        "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
+        "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
     "COMPONENT_SPLIT_PATCH": True,
@@ -363,6 +379,7 @@ else:
     }
 
 MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
+SESSION_EXPIRE_AT_BROWSER_CLOSE = is_truthy(os.getenv("NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE", "False"))
 SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  # 2 weeks, in seconds
 SESSION_FILE_PATH = os.getenv("NAUTOBOT_SESSION_FILE_PATH", None)
 SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
@@ -526,6 +543,7 @@ LOGIN_REDIRECT_URL = "home"
 
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
+CONSTANCE_DATABASE_CACHE_BACKEND = "default"
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -544,6 +562,12 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     ],
     "release_check_url_field": [
         "django.forms.URLField",
+        {
+            "required": False,
+        },
+    ],
+    "optional_json_field": [
+        "django.forms.fields.JSONField",
         {
             "required": False,
         },
@@ -567,9 +591,21 @@ CONSTANCE_CONFIG = {
         90,
         "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
     ],
+    "DEPLOYMENT_ID": [
+        "",
+        "Randomly generated UUID used to identify this installation.\n"
+        "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
+    ],
     "DISABLE_PREFIX_LIST_HIERARCHY": [
         False,
         "Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
+    ],
+    "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": [
+        0,
+        "Dynamic Group member cache timeout in seconds. This is the amount of time that a Dynamic Group's member list "
+        "will be cached in Django cache backend. Since retrieving the member list of a Dynamic Group can be a very "
+        "expensive operation, especially in reverse, this cache is used to speed up the process of retrieving the "
+        "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
     ],
     "HIDE_RESTRICTED_UI": [
         False,
@@ -580,6 +616,20 @@ CONSTANCE_CONFIG = {
         1000,
         "Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
+    ],
+    "NETWORK_DRIVERS": [
+        {},
+        mark_safe(
+            "Extend or override default Platform.network_driver translations provided by "
+            '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
+            "Enter a dictionary in JSON format, for example:\n"
+            "<pre>{\n"
+            '    "netmiko": {"my_network_driver": "cisco_ios"},\n'
+            '    "pyats": {"my_network_driver": "iosxe"} \n'
+            "}</pre>",
+        ),
+        # Use custom field type defined above
+        "optional_json_field",
     ],
     "PAGINATE_COUNT": [
         50,
@@ -624,8 +674,10 @@ CONSTANCE_CONFIG = {
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
-    "Device Connectivity": ["PREFER_IPV4"],
+    "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
+    "Installation Metrics": ["DEPLOYMENT_ID"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
+    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
@@ -705,6 +757,9 @@ CACHES = {
         },
     }
 }
+
+# Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
+CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
 
 #
 # Django RQ (used for legacy background processesing)

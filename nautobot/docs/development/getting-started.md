@@ -423,7 +423,11 @@ nautobot-server init
 Example output:
 
 ```no-highlight
-Configuration file created at '/home/example/.nautobot/nautobot_config.py'
+Nautobot would like to send anonymized installation metrics to the project's maintainers.
+These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
+Allow Nautobot to send these metrics? [y/n]: n
+Installation metrics will not be sent by default.
+Configuration file created at /home/example/.nautobot/nautobot_config.py
 ```
 
 You may also specify alternate file locations. Please refer to [Configuring Nautobot](../configuration/index.md) for how to do that.
@@ -531,7 +535,7 @@ Example output:
 
 ```no-highlight
 ### Nautobot interactive shell (localhost)
-### Python 3.9.1 | Django 3.1.3 | Nautobot 1.0.0b1
+### Python 3.11.4 | Django 3.2.20 | Nautobot 1.6.0
 ### lsmodels() will show available models. Use help(<model>) for more info.
 >>>
 ```

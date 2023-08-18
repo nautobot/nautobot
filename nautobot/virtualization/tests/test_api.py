@@ -20,7 +20,6 @@ from nautobot.virtualization.models import (
 
 class AppTest(APITestCase):
     def test_root(self):
-
         url = reverse("virtualization-api:api-root")
         response = self.client.get(f"{url}?format=api", **self.header)
 
@@ -54,7 +53,6 @@ class ClusterTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
         ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2")
         ClusterType.objects.create(name="Cluster Type 3", slug="cluster-type-3")
@@ -87,7 +85,6 @@ class ClusterGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-type-1")
         ClusterGroup.objects.create(name="Cluster Group 2", slug="cluster-type-2")
         ClusterGroup.objects.create(name="Cluster Group 3", slug="cluster-type-3")
@@ -102,7 +99,6 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         cluster_types = (
             ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1"),
             ClusterType.objects.create(name="Cluster Type 2", slug="cluster-type-2"),
@@ -293,7 +289,6 @@ class VMInterfaceTestVersion12(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         clustertype = ClusterType.objects.create(name="Test Cluster Type 1", slug="test-cluster-type-1")
         cluster = Cluster.objects.create(name="Test Cluster 1", type=clustertype)
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1")

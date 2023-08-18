@@ -23,7 +23,12 @@ from nautobot.dcim.models import (
     Platform,
     Site,
 )
-from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.constants import (
+    JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
+    JOB_LOG_MAX_GROUPING_LENGTH,
+    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
+    JOB_OVERRIDABLE_FIELDS,
+)
 from nautobot.extras.choices import LogLevelChoices, SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.jobs import get_job, Job as JobClass
 from nautobot.extras.models import (
@@ -111,7 +116,6 @@ class ConfigContextTest(TestCase):
     """
 
     def setUp(self):
-
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         self.devicetype = DeviceType.objects.create(
             manufacturer=manufacturer, model="Device Type 1", slug="device-type-1"
@@ -150,7 +154,6 @@ class ConfigContextTest(TestCase):
         )
 
     def test_higher_weight_wins(self):
-
         ConfigContext.objects.create(name="context 1", weight=101, data={"a": 123, "b": 456, "c": 777})
         ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
 
@@ -158,7 +161,6 @@ class ConfigContextTest(TestCase):
         self.assertEqual(self.device.get_config_context(), expected_data)
 
     def test_name_ordering_after_weight(self):
-
         ConfigContext.objects.create(name="context 1", weight=100, data={"a": 123, "b": 456, "c": 777})
         ConfigContext.objects.create(name="context 2", weight=100, data={"a": 123, "b": 456, "c": 789})
 
@@ -200,7 +202,6 @@ class ConfigContextTest(TestCase):
         self.assertEqual(self.device.get_config_context(), annotated_queryset[0].get_config_context())
 
     def test_annotation_same_as_get_for_object_device_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
         site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
@@ -238,7 +239,6 @@ class ConfigContextTest(TestCase):
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
-
         location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 1})
         location_context.locations.add(self.location)
         site_context = ConfigContext.objects.create(name="site", weight=100, data={"site": 1})
@@ -953,6 +953,54 @@ class JobResultTest(TestCase):
         job_result.job_id = uuid.uuid4()
         self.assertIsNone(job_result.related_object)
 
+    def test_log(self):
+        """Test that logs are rendered correctly."""
+        job_result = JobResult.objects.create(name="irrelevant", obj_type=get_job_content_type(), job_id=uuid.uuid4())
+        job_result.use_job_logs_db = False
+
+        # Most basic usage
+        log = job_result.log("Hello")
+        self.assertEqual("Hello", log.message)
+        self.assertEqual(LogLevelChoices.LOG_DEFAULT, log.log_level)
+        self.assertEqual("main", log.grouping)
+        self.assertIsNone(log.log_object)
+        self.assertIsNone(log.absolute_url)
+
+        # Advanced usage
+        obj = IPAddress.objects.create(address="1.1.1.1/32")
+        log = job_result.log("Hi", obj=obj, level_choice=LogLevelChoices.LOG_WARNING, grouping="other")
+        self.assertEqual("Hi", log.message)
+        self.assertEqual(LogLevelChoices.LOG_WARNING, log.log_level)
+        self.assertEqual("other", log.grouping)
+        self.assertEqual(str(obj), log.log_object)
+        self.assertEqual(obj.get_absolute_url(), log.absolute_url)
+
+        # Length constraints
+        class MockObject1:
+            def __str__(self):
+                return "a" * (JOB_LOG_MAX_LOG_OBJECT_LENGTH * 2)
+
+            def get_absolute_url(self):
+                return "b" * (JOB_LOG_MAX_ABSOLUTE_URL_LENGTH * 2)
+
+        obj = MockObject1()
+        log = job_result.log("Hi", obj=obj, grouping="c" * JOB_LOG_MAX_GROUPING_LENGTH * 2)
+        self.assertEqual("Hi", log.message)
+        self.assertEqual("a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH, log.log_object)
+        self.assertEqual("c" * JOB_LOG_MAX_GROUPING_LENGTH, log.grouping)
+        self.assertIsNone(log.absolute_url)
+
+        # Error handling
+        class MockObject2(MockObject1):
+            def get_absolute_url(self):
+                raise NotImplementedError()
+
+        obj = MockObject2()
+        log = job_result.log("Hi", obj=obj)
+        self.assertEqual("Hi", log.message)
+        self.assertEqual("a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH, log.log_object)
+        self.assertIsNone(log.absolute_url)
+
 
 class SecretTest(TestCase):
     """
@@ -1432,7 +1480,6 @@ class JobLogEntryTest(TestCase):
         )
 
     def test_log_entry_creation(self):
-
         log = JobLogEntry(
             log_level=LogLevelChoices.LOG_SUCCESS,
             job_result=self.job_result,

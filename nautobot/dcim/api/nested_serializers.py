@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema_field
 from nautobot.core.api import BaseModelSerializer, WritableNestedSerializer
 from nautobot.dcim import models
 
+
 __all__ = [
     "NestedCableSerializer",
     "NestedConsolePortSerializer",
@@ -18,6 +19,8 @@ __all__ = [
     "NestedFrontPortSerializer",
     "NestedFrontPortTemplateSerializer",
     "NestedInterfaceSerializer",
+    "NestedInterfaceRedundancyGroupSerializer",
+    "NestedInterfaceRedundancyGroupAssociationSerializer",
     "NestedInterfaceTemplateSerializer",
     "NestedInventoryItemSerializer",
     "NestedLocationSerializer",
@@ -414,3 +417,32 @@ class NestedPowerFeedSerializer(WritableNestedSerializer):
     class Meta:
         model = models.PowerFeed
         fields = ["id", "url", "name", "cable"]
+
+
+#
+# Interface Redundancy group
+#
+
+
+class NestedInterfaceRedundancyGroupSerializer(WritableNestedSerializer):
+    """InterfaceRedundancyGroup Nested Serializer."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroup-detail")
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.InterfaceRedundancyGroup
+        fields = ["id", "url", "name", "protocol"]
+
+
+class NestedInterfaceRedundancyGroupAssociationSerializer(WritableNestedSerializer):
+    """InterfaceRedundancyGroupAssociation Nested Serializer."""
+
+    url = serializers.HyperlinkedIdentityField(view_name="dcim-api:interfaceredundancygroupassociation-detail")
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.InterfaceRedundancyGroupAssociation
+        fields = ["id", "url", "priority"]

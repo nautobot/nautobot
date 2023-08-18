@@ -19,6 +19,9 @@ if DEBUG:
     # For the Docker dev environment, we don't know in advance what that IP may be, so override to skip that check
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG}
 
+# Do *not* send anonymized install metrics when post_upgrade or send_installation_metrics management commands are run
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "False"))
+
 #
 # Logging for the development environment, taking into account the redefinition of DEBUG above
 #
@@ -51,7 +54,9 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
     )
     SOCIAL_AUTH_KEYCLOAK_KEY = "nautobot"
     SOCIAL_AUTH_KEYCLOAK_SECRET = "7b1c3527-8702-4742-af69-2b74ee5742e8"
-    SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8087/realms/nautobot/").json()["public_key"]
+    SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8087/realms/nautobot/", timeout=15).json()[
+        "public_key"
+    ]
     SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL = "http://localhost:8087/realms/nautobot/protocol/openid-connect/auth"
     SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False

@@ -39,7 +39,6 @@ class VirtualMachineTestCase(TestCase):
         self.status = statuses.get(slug="active")
 
     def test_vm_duplicate_name_per_cluster(self):
-
         vm1 = VirtualMachine(
             cluster=self.cluster,
             name="Test VM 1",

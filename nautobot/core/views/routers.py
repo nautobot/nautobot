@@ -1,4 +1,4 @@
-from rest_framework.routers import Route, SimpleRouter
+from rest_framework.routers import DynamicRoute, Route, SimpleRouter
 
 
 class NautobotUIViewSetRouter(SimpleRouter):
@@ -79,22 +79,11 @@ class NautobotUIViewSetRouter(SimpleRouter):
             detail=True,
             initkwargs={"suffix": "Edit"},
         ),
-        Route(
-            url=r"^{prefix}/{lookup}/changelog/$",
-            mapping={
-                "get": "changelog",
-            },
-            name="{basename}_changelog",
+        # DynamicRoute will handle ChangeLog & Notes UI Views
+        DynamicRoute(
+            url=r"^{prefix}/{lookup}/{url_path}{trailing_slash}$",
+            name="{basename}_{url_name}",
             detail=True,
-            initkwargs={"suffix": "Changelog"},
-        ),
-        Route(
-            url=r"^{prefix}/{lookup}/notes/$",
-            mapping={
-                "get": "notes",
-            },
-            name="{basename}_notes",
-            detail=True,
-            initkwargs={"suffix": "Notes"},
+            initkwargs={},
         ),
     ]

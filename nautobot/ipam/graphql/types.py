@@ -71,7 +71,7 @@ class IPAddressType(OptimizedNautobotObjectType):
         return None
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_objectƒ(self)
+        return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
 class PrefixType(OptimizedNautobotObjectType):
@@ -89,4 +89,4 @@ class PrefixType(OptimizedNautobotObjectType):
         return self.family
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
+        return DynamicGroup.objects.get_for_object(self, use_cache=True)

@@ -18,6 +18,7 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
+    InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -50,6 +51,8 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -109,6 +112,8 @@ from .nested_serializers import (  # noqa: F401
     NestedFrontPortSerializer,
     NestedFrontPortTemplateSerializer,
     NestedInterfaceSerializer,
+    NestedInterfaceRedundancyGroupSerializer,
+    NestedInterfaceRedundancyGroupAssociationSerializer,
     NestedInterfaceTemplateSerializer,
     NestedInventoryItemSerializer,
     NestedLocationSerializer,
@@ -600,6 +605,53 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
         ]
 
 
+#
+# Interface Redundancy group
+#
+
+
+class InterfaceRedundancyGroupAssociationSerializer(
+    ValidatedModelSerializer, TaggedModelSerializerMixin
+):  # pylint: disable=too-many-ancestors
+    """InterfaceRedundancyGroupAssociation Serializer."""
+
+    url = serializers.HyperlinkedIdentityField(
+        view_name="dcim-api:interfaceredundancygroupassociation-detail",
+    )
+    interface = NestedInterfaceSerializer()
+    interface_redundancy_group = NestedInterfaceRedundancyGroupSerializer()
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = "__all__"
+
+
+class InterfaceRedundancyGroupSerializer(
+    NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin
+):
+    """InterfaceRedundancyGroup Serializer."""
+
+    url = serializers.HyperlinkedIdentityField(
+        view_name="dcim-api:interfaceredundancygroup-detail",
+    )
+    protocol = ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+    interfaces = NestedInterfaceRedundancyGroupAssociationSerializer(
+        source="interface_redundancy_group_associations",
+        many=True,
+        read_only=True,
+    )
+    virtual_ip = NestedIPAddressSerializer(required=False)
+    secrets_group = NestedSecretsGroupSerializer(required=False)
+
+    class Meta:
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = "__all__"
+
+
 class PowerPortTemplateSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:powerporttemplate-detail")
     device_type = NestedDeviceTypeSerializer()
@@ -738,6 +790,7 @@ class DeviceRoleSerializer(NautobotModelSerializer):
 class PlatformSerializer(NautobotModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:platform-detail")
     manufacturer = NestedManufacturerSerializer(required=False, allow_null=True)
+    network_driver_mappings = serializers.JSONField(read_only=True)
     device_count = serializers.IntegerField(read_only=True)
     virtualmachine_count = serializers.IntegerField(read_only=True)
 
@@ -750,6 +803,8 @@ class PlatformSerializer(NautobotModelSerializer):
             "manufacturer",
             "napalm_driver",
             "napalm_args",
+            "network_driver",
+            "network_driver_mappings",
             "description",
             "device_count",
             "virtualmachine_count",
@@ -811,7 +866,6 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Stat
         validators = []
 
     def validate(self, data):
-
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
         if data.get("rack") and data.get("position") and data.get("face"):
             validator = UniqueTogetherValidator(
@@ -977,7 +1031,6 @@ class PowerPortSerializer(
 
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     def validate(self, data):
-
         # Validate many-to-many VLAN assignments
         mode = data.get("mode", getattr(self.instance, "mode", None))
 
@@ -1047,7 +1100,6 @@ class InterfaceSerializerVersion12(
         ]
 
     def validate(self, data):
-
         # set interface status to active on create (only!) if status was not provided
         if self.instance is None and not data.get("status"):
             # status is currently required in the Interface model but not required in api_version < 1.3 serializers

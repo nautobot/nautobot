@@ -6,7 +6,6 @@ import nautobot.extras.management
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0003_initial_part_3"),
     ]

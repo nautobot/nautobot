@@ -22,12 +22,14 @@ from nautobot.extras.utils import FeatureQuery, extras_features
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.utilities.forms import (
+    CommentField,
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
     JSONField,
     LaxURLField,
     NullableDateField,
+    SmallTextarea,
     StaticSelect2,
     StaticSelect2Multiple,
     add_blank_choice,
@@ -234,10 +236,10 @@ class CustomFieldModel(models.Model):
         for cf in custom_fields.values():
             # 2.0 TODO: #824 replace cf.name with cf.slug
             if cf.name not in self._custom_field_data:
-                if cf.required:
-                    raise ValidationError(f"Missing required custom field '{cf.name}'.")
-                else:
+                if cf.default is not None:
                     self._custom_field_data[cf.name] = cf.default
+                elif cf.required:
+                    raise ValidationError(f"Missing required custom field '{cf.name}'.")
 
     # Computed Field Methods
     def has_computed_fields(self, advanced_ui=None):
@@ -548,9 +550,12 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     )
                 ]
 
+        # Markdown
+        elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
+            field = CommentField(widget=SmallTextarea, label=None)
+
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
-
             if simple_json_filter:
                 field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
             else:
@@ -597,10 +602,8 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         Validate a value according to the field's type validation rules.
         """
         if value not in [None, "", []]:
-
             # Validate text field
             if self.type in (CustomFieldTypeChoices.TYPE_TEXT, CustomFieldTypeChoices.TYPE_URL):
-
                 if not isinstance(value, str):
                     raise ValidationError("Value must be a string")
 
@@ -692,6 +695,10 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
     def __str__(self):
         return self.value
+
+    def get_absolute_url(self):
+        # 2.0 TODO: replace slug with pk
+        return reverse("extras:customfield", args=[self.field.slug])
 
     def clean(self):
         if self.field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):

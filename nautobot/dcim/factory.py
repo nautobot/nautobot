@@ -48,18 +48,33 @@ MANUFACTURER_NAMES = (
     "F5",
     "Force10",
     "Fortinet",
+    "HP",
     "Huawei",
     "Juniper",
-    "HP",
     "Palo Alto",
 )
 
-# For `Platform.napalm_driver`, either randomly choose based on Manufacturer slug.
+# For `Platform.napalm_driver` and `Platform.network_driver`, either randomly choose based on Manufacturer name.
 NAPALM_DRIVERS = {
-    "arista": ["eos"],
-    "cisco": ["ios", "iosxr", "iosxr_netconf", "nxos", "nxos_ssh"],
-    "juniper": ["junos"],
-    "palo-alto": ["panos"],
+    "Arista": ["eos"],
+    "Cisco": ["ios", "iosxr", "iosxr_netconf", "nxos", "nxos_ssh"],
+    "Juniper": ["junos"],
+    "Palo Alto": ["panos"],
+}
+
+
+NETWORK_DRIVERS = {
+    "A10": ["a10"],
+    "Arista": ["arista_eos"],
+    "Aruba": ["aruba_os", "aruba_procurve"],
+    "Cisco": ["cisco_ios", "cisco_xr", "cisco_nxos", "cisco_xe"],
+    "Dell": ["dell_force10", "dell_os10"],
+    "F5": ["f5_ltm", "f5_tmsh", "f5_linux"],
+    "Fortinet": ["fortinet"],
+    "HP": ["hp_comware", "hp_procurve"],
+    "Huawei": ["huawei"],
+    "Juniper": ["juniper_junos"],
+    "Palo Alto": ["paloalto_panos"],
 }
 
 
@@ -167,13 +182,19 @@ class PlatformFactory(OrganizationalModelFactory):
     # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.slug, [""]))),
+        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 
     has_napalm_args = factory.Faker("pybool")
     napalm_args = factory.Maybe(
         "has_napalm_args", factory.Faker("pydict", nb_elements=2, value_types=[str, bool, int]), None
+    )
+
+    network_driver = factory.Maybe(
+        "has_manufacturer",
+        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
+        "",
     )
 
     has_description = factory.Faker("pybool")
@@ -265,7 +286,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
     has_description = factory.Faker("pybool")
     description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
 
-    nestable = factory.LazyAttribute(lambda l: bool(l.name in ["Campus", "Root"]))
+    nestable = factory.LazyAttribute(lambda loc_type: bool(loc_type.name in ["Campus", "Root"]))
 
     @factory.lazy_attribute
     def parent(self):
@@ -336,7 +357,7 @@ class LocationFactory(PrimaryModelFactory):
             "_parent",
         )
 
-    name = factory.LazyAttributeSequence(lambda l, n: f"{l.location_type.name}-{n:02d}")
+    name = factory.LazyAttributeSequence(lambda loc, num: f"{loc.location_type.name}-{num:02d}")
     status = random_instance(lambda: Status.objects.get_for_model(Location), allow_null=False)
 
     @factory.iterator
@@ -369,7 +390,7 @@ class LocationFactory(PrimaryModelFactory):
             return factory.random.randgen.choice(parents)
         return None
 
-    has_site = factory.LazyAttribute(lambda l: not bool(l.parent))
+    has_site = factory.LazyAttribute(lambda loc: not bool(loc.parent))
     site = factory.Maybe("has_site", random_instance(Site, allow_null=False), None)
 
     has_tenant = factory.Faker("pybool")
