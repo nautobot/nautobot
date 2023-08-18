@@ -7,7 +7,7 @@ on:  # yamllint disable
       - "main"
       - "develop"
       - "next"
-  workflow_call: {}
+  workflow_call:
 
 jobs:
   black:
@@ -446,8 +446,6 @@ jobs:
       fail-fast: true
       matrix:
         python-version: [ "3.8", "3.9", "3.10", "3.11" ]
-    env:
-      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
       - name: "Configuration"
         id: "config"
@@ -490,63 +488,22 @@ jobs:
           steps.config.outputs.tag-latest-for-branch == 'true'
         uses: "./.github/actions/build-nautobot-image"
         with:
-          images: "ghcr.io/nautobot/nautobot"
-          flavor: |
-            latest=false
-          tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.8 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build"
-        uses: "docker/build-push-action@v2"
+          branch: "${{ steps.config.outputs.branch }}"
+          image: "ghcr.io/nautobot/nautobot"
+          push: "false"
+          python-version: "${{ matrix.python-version }}"
+          tag-latest: "${{ steps.config.outputs.tag-latest }}"
+          tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
+          tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
+          target: "final"
+      - name: "Build and Push `final-dev`"
+        uses: "./.github/actions/build-nautobot-image"
         with:
-          push: true
-          target: final
-          file: "docker/Dockerfile"
-          platforms: "linux/amd64,linux/arm64"
-          tags: "${{ steps.dockermeta.outputs.tags }}"
-          labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            DEPENDENCIES_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
-            POETRY_PARALLEL=true
-      - name: "Docker Dev Metadata"
-        id: "dockerdevmeta"
-        uses: "docker/metadata-action@v3"
-        with:
-          images: "ghcr.io/nautobot/nautobot-dev"
-          flavor: |
-            latest=false
-          tags: |
-            type=raw,value={{branch}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}}-py${{ matrix.python-version }}
-            type=raw,value={{branch}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ matrix.python-version == 3.8 }}
-            type=raw,value=latest,enable=${{ matrix.python-version == 3.8 && github.ref == 'refs/heads/develop' }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ github.ref == 'refs/heads/develop' }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build Dev Containers"
-        uses: "docker/build-push-action@v2"
-        with:
-          push: true
-          target: final-dev
-          file: "docker/Dockerfile"
-          platforms: "linux/amd64,linux/arm64"
-          tags: "${{ steps.dockerdevmeta.outputs.tags }}"
-          labels: "${{ steps.dockerdevmeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            DEPENDENCIES_BASE_BRANCH=${{ steps.gitbranch.outputs.branch }}
-            POETRY_PARALLEL=true
+          branch: "${{ steps.config.outputs.branch }}"
+          image: "ghcr.io/nautobot/nautobot-dev"
+          push: "true"
+          python-version: "${{ matrix.python-version }}"
+          tag-latest: "${{ steps.config.outputs.tag-latest }}"
+          tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
+          tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
+          target: "final-dev"
