@@ -1,1 +1,0 @@
-Added `DEVICE_NAME_AS_NATURAL_KEY` and `LOCATION_NAME_AS_NATURAL_KEY` optional config settings to allow the use of simplified natural keys for Device and Location models.

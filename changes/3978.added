@@ -1,1 +1,0 @@
-Added data migration for JobResult to migrate old status to its equivalent new status.
