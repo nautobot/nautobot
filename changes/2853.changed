@@ -1,0 +1,2 @@
+Renamed `JobView` to `JobRunView` and `JobDetailView` to `JobView`.
+Rename url lookups `job` to `job_run_by_class_path` and `job_detail` to `job`.

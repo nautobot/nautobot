@@ -1040,8 +1040,7 @@ class JobListView(generic.ObjectListView):
         }
 
 
-# 2.0 TODO: this should really be "JobRunView"
-class JobView(ObjectPermissionRequiredMixin, View):
+class JobRunView(ObjectPermissionRequiredMixin, View):
     """
     View the parameters of a Job and enqueue it if desired.
     """
@@ -1231,8 +1230,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         )
 
 
-# 2.0 TODO: this should really be "JobView"
-class JobDetailView(generic.ObjectView):
+class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
 

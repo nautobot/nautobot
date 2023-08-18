@@ -201,7 +201,7 @@
                                     {% if features.jobs %}
                                         <ul class="list-unstyled">
                                             {% for job in features.jobs %}
-                                            <li><a href="{% url 'extras:job' class_path=job.class_path %}">{{ job }}</a></li>
+                                            <li><a href="{% url 'extras:job_run_by_class_path' class_path=job.class_path %}">{{ job }}</a></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}

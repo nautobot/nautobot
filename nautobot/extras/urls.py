@@ -406,11 +406,6 @@ urlpatterns = [
     ),
     # Jobs
     path("jobs/", views.JobListView.as_view(), name="job_list"),
-    path(
-        "jobs/results/<uuid:pk>/",
-        RedirectView.as_view(pattern_name="extras:jobresult"),
-        name="job_jobresult",
-    ),  # 2.0 TODO(jathan): Remove this, no existing code references `job_jobresult` but plugins and others may.
     path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
     path("jobs/scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
     path("jobs/scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
@@ -429,11 +424,10 @@ urlpatterns = [
         views.JobApprovalRequestView.as_view(),
         name="scheduledjob_approval_request_view",
     ),
-    # 2.0 TODO: JobDetailView should be just JobView, but see below
     path(
         "jobs/<uuid:pk>/",
-        views.JobDetailView.as_view(),
-        name="job_detail",  # 2.0 TODO: name="job",
+        views.JobView.as_view(),
+        name="job",
     ),
     path("jobs/<uuid:pk>/edit/", views.JobEditView.as_view(), name="job_edit"),
     path("jobs/<uuid:pk>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
@@ -449,9 +443,8 @@ urlpatterns = [
         name="job_notes",
         kwargs={"model": Job},
     ),
-    # 2.0 TODO: JobView should actually be JobRunView, but keeping it as-is for backwards compatibility
-    path("jobs/<uuid:pk>/run/", views.JobView.as_view(), name="job_run"),
-    path("jobs/<str:class_path>/", views.JobView.as_view(), name="job"),
+    path("jobs/<uuid:pk>/run/", views.JobRunView.as_view(), name="job_run"),
+    path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     # Job hooks
     path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
     path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),

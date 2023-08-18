@@ -1386,7 +1386,7 @@ class JobTestCase(
 
         cls.run_urls = (
             # Legacy URL (job class path based)
-            reverse("extras:job", kwargs={"class_path": cls.test_pass.class_path}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": cls.test_pass.class_path}),
             # Current URL (job model pk based)
             reverse("extras:job_run", kwargs={"pk": cls.test_pass.pk}),
         )
@@ -1397,7 +1397,7 @@ class JobTestCase(
 
         cls.extra_run_urls = (
             # Legacy URL (job class path based)
-            reverse("extras:job", kwargs={"class_path": cls.test_required_args.class_path}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": cls.test_required_args.class_path}),
             # Current URL (job model pk based)
             reverse("extras:job_run", kwargs={"pk": cls.test_required_args.pk}),
         )
@@ -1553,7 +1553,7 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
 
         for run_url in (
-            reverse("extras:job", kwargs={"class_path": self.test_not_installed.class_path}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": self.test_not_installed.class_path}),
             reverse("extras:job_run", kwargs={"pk": self.test_not_installed.pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
@@ -1568,7 +1568,7 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
 
         for run_url in (
-            reverse("extras:job", kwargs={"class_path": "fail.TestFail"}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "fail.TestFail"}),
             reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
