@@ -5,7 +5,7 @@ The documentation assumes that you are running one of the following:
 - Ubuntu 20.04+
 - Debian 11+
 - RHEL/CentOS 8.2+
-  - Also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
+    - Also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
 
 ## Install System Packages
 
@@ -17,12 +17,24 @@ This will install:
 - Python 3
 - Pip
 - Redis server and client
+- NodeJS
 
-=== "Ubuntu/Debian"
+=== "Ubuntu 22.10/Debian 12 or higher"
 
     ```no-highlight
     sudo apt update -y
-    sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
+    sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server nodejs
+    ```
+
+=== "Ubuntu 20.04 - 22.04"
+
+    ```no-highlight
+    # Add Nodesource
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+
+    # Update and install packages
+    sudo apt update -y
+    sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server nodejs
     ```
 
 === "RHEL8 + Derivatives"
@@ -30,7 +42,22 @@ This will install:
     ```no-highlight
     sudo dnf check-update
     sudo dnf install -y git python38 python38-devel python38-pip redis
+
+    # You may need to reset your Node.js module before you can switch to the Node.js 18 stream
+    sudo dnf module reset -y nodejs
+    sudo dnf module enable -y nodejs:18
+
+    # Install NodeJS Stream
+    sudo dnf module install -y nodejs:18/common
     ```
+
+### Verify Node Install
+
+```no-highlight
+node -v
+```
+
+This should show a version greater than 18
 
 ## Database Setup
 
@@ -39,8 +66,6 @@ In this step you'll set up your database server, create a database and database 
 You must select either MySQL or PostgreSQL. PostgreSQL is used by default with Nautobot, so if you just want to get started or don't have a preference, please stick with PostgreSQL.
 
 Please follow the steps for your selected database backend below.
-
-### Database Setup
 
 === "Ubuntu/Debian PostgreSQL"
 
@@ -431,6 +456,9 @@ Please follow the steps for your selected database backend below.
     mysql> \q
     Bye
     ```
+
+!!! tip
+    Now is a good time to think about your [database backup](../upgrading/database-backup.md) strategy as well.
 
 ## Redis Setup
 

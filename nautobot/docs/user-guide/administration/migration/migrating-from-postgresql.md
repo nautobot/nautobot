@@ -31,7 +31,6 @@ Create the MySQL database for Nautobot, ensuring that it is utilizing the defaul
 
 In very rare cases, there may problems when importing your data from the case-sensitive PostgreSQL database dump that will need to be handled on a case-by-case basis. Please refer to the [instructions](../installation/install_system.md) as necessary if you are unsure how to set up MySQL and create the Nautobot database.
 
-
 ### Confirming database encoding
 
 To confirm that your MySQL database has the correct encoding, you may start up a database shell using `nautobot-server dbshell` and run the following command with the prompt `(nautobot-mysql) $`
