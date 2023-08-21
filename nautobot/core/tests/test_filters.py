@@ -1402,5 +1402,5 @@ class FilterTypeTest(TestCase):
         self.client.force_login(user)
         ipam_factory.PrefixFactory()
         prefix_list_url = reverse(lookup.get_route_for_model(ipam_models.Prefix, "list"))
-        response = self.client.get(f"{prefix_list_url}?mask_length__lte=20")
+        response = self.client.get(f"{prefix_list_url}?prefix_length__lte=20")
         self.assertNotContains(response, "Invalid filters were specified")

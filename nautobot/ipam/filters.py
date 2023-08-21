@@ -6,6 +6,7 @@ from netaddr.core import AddrFormatError
 
 from nautobot.core.filters import (
     MultiValueCharFilter,
+    MultiValueNumberFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -65,24 +66,12 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
             "description": "icontains",
         },
     )
-    import_target_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="import_targets",
-        queryset=RouteTarget.objects.all(),
-        label="Import target (ID) - Deprecated (use import_target filter)",
-    )
-    import_target = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="import_targets",
+    import_targets = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
         label="Import target (ID or name)",
     )
-    export_target_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="export_targets",
-        queryset=RouteTarget.objects.all(),
-        label="Export target (ID) - Deprecated (use export_target filter)",
-    )
-    export_target = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="export_targets",
+    export_targets = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
         label="Export target (ID or name)",
@@ -117,27 +106,15 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
             "description": "icontains",
         },
     )
-    importing_vrf_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="importing_vrfs",
-        queryset=VRF.objects.all(),
-        label="Importing VRF (ID) - Deprecated (use import_vrf filter)",
-    )
-    importing_vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="importing_vrfs",
+    importing_vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="Import VRF (ID or RD)",
+        label="Import VRF(s) (ID or RD)",
     )
-    exporting_vrf_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="exporting_vrfs",
-        queryset=VRF.objects.all(),
-        label="Exporting VRF (ID) - Deprecated (use export_vrf filter)",
-    )
-    exporting_vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="exporting_vrfs",
+    exporting_vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="Export VRF (ID or RD)",
+        label="Export VRF(s) (ID or RD)",
     )
 
     class Meta:
@@ -196,33 +173,29 @@ class PrefixFilterSet(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
-    mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
-    mask_length__gte = django_filters.NumberFilter(label="mask_length__gte", method="filter_prefix_length_gte")
-    mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
-    vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="vrfs",
+    vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="VRF (ID or RD)",
+        label="Assigned VRF (ID or RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
-        label="VRF",
+        label="Present in VRF",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
         field_name="vrfs__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
-        label="VRF (RD)",
+        label="Present in VRF (RD)",
     )
     vlan_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
         label="VLAN (ID)",
     )
-    vlan_vid = django_filters.NumberFilter(
+    vlan_vid = MultiValueNumberFilter(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
     )
@@ -245,7 +218,7 @@ class PrefixFilterSet(
 
     class Meta:
         model = Prefix
-        fields = ["date_allocated", "id", "prefix", "tags", "type"]
+        fields = ["date_allocated", "id", "prefix_length", "tags"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
@@ -256,15 +229,6 @@ class PrefixFilterSet(
             return queryset.net_equals(netaddr.IPNetwork(value))
         except (AddrFormatError, ValueError):
             return queryset.none()
-
-    def filter_prefix_length_eq(self, queryset, name, value):
-        return queryset.filter(prefix_length__exact=value)
-
-    def filter_prefix_length_lte(self, queryset, name, value):
-        return queryset.filter(prefix_length__lte=value)
-
-    def filter_prefix_length_gte(self, queryset, name, value):
-        return queryset.filter(prefix_length__gte=value)
 
     def search_within(self, queryset, name, value):
         value = value.strip()
@@ -338,7 +302,7 @@ class IPAddressFilterSet(
         method="filter_address",
         label="Address",
     )
-    vrf = NaturalKeyOrPKMultipleChoiceFilter(
+    vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
@@ -520,25 +484,17 @@ class ServiceFilterSet(NautobotFilterSet):
             "description": "icontains",
         },
     )
-    device_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        label="Device (ID) - Deprecated (use device filter)",
-    )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Device (ID or name)",
-    )
-    virtual_machine_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=VirtualMachine.objects.all(),
-        label="Virtual machine (ID) - Deprecated (use virtual_machine filter)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
         label="Virtual machine (ID or name)",
     )
-    port = NumericArrayFilter(field_name="ports", lookup_expr="contains")
+    ports = NumericArrayFilter(field_name="ports", lookup_expr="contains")
 
     class Meta:
         model = Service
