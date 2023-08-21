@@ -1,1 +1,1 @@
-Fixed a permissions issue when using `final-dev` containers by  switching to root user before exposing port and entrypoint.
+Fixed a permission issue when using `final-dev` containers by switching to root user before exposing port and entrypoint.
