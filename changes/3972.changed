@@ -1,5 +1,0 @@
-Changed the natural-key for `ComponentModel` to `["name", "device"]`.
-Re-ordered the natural-key fields for `PowerOutlet` and `PowerPanel`.
-Changed the natural-key fields for `Cable`, `CablePath`, and `TaggedItem` to merely "pk".
-Changed the natural-key for `RackReservation` to `["units", "racks"]`.
-Changed the natural-key of `VirtualChassis` to "name".

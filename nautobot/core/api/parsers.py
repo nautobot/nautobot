@@ -58,6 +58,51 @@ class NautobotCSVParser(BaseParser):
         except Exception as exc:
             raise ParseError(str(exc)) from exc
 
+    def _group_data_by_field_name(self, data):
+        """
+        Converts a dictionary with flat keys separated by '__' into a nested dictionary structure suitable for serialization.
+
+        Example:
+            Input:
+                {
+                    'type': 'virtual',
+                    'name': 'Interface 4',
+                    'device__name': 'Device 1',
+                    'device__tenant__name': '',
+                    'device__location': 'Test+Location+1',
+                    'status': 'Active',
+                }
+
+            Output:
+            {
+                'type': 'virtual',
+                'name': 'Interface 4',
+                'device': {
+                    'name': 'Device 1',
+                    'location': 'Test+Location+1',
+                    "tenant":{
+                        "name": "",
+                    }
+                },
+                'status': 'Active'
+            }
+        """
+
+        def insert_nested_dict(keys, value, current_dict):
+            key = keys[0]
+            if len(keys) == 1:
+                current_dict[key] = value
+            else:
+                current_dict[key] = current_dict.get(key, {})
+                insert_nested_dict(keys[1:], value, current_dict[key])
+
+        result_dict = {}
+        for original_key, original_value in data.items():
+            split_keys = original_key.split("__")
+            insert_nested_dict(split_keys, original_value, result_dict)
+
+        return result_dict
+
     def row_elements_to_data(self, counter, row, serializer):
         """
         Parse a single row of CSV data (represented as a dict) into a dict suitable for consumption by the serializer.
@@ -66,11 +111,12 @@ class NautobotCSVParser(BaseParser):
         could we then literally have the parser just return list(reader) and not need this function at all?
         """
         data = {}
-        for column, key in enumerate(row.keys(), start=1):
+        fields_value_mapping = self._group_data_by_field_name(row)
+        for column, key in enumerate(fields_value_mapping.keys(), start=1):
             if not key:
                 raise ParseError(f"Row {counter}: Column {column}: missing/empty header for this column")
 
-            value = row[key]
+            value = fields_value_mapping[key]
             if key.startswith("cf_"):
                 # Custom field
                 if value == "":

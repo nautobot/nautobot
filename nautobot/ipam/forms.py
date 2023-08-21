@@ -134,15 +134,15 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 class VRFFilterForm(NautobotFilterForm, TenancyFilterForm):
     model = VRF
-    field_order = ["q", "import_target", "export_target", "tenant_group", "tenant"]
+    field_order = ["q", "import_targets", "export_targets", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
-    import_target = DynamicModelMultipleChoiceField(
+    import_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(), to_field_name="name", required=False
     )
-    export_target = DynamicModelMultipleChoiceField(
+    export_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(), to_field_name="name", required=False
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -185,13 +185,13 @@ class RouteTargetFilterForm(NautobotFilterForm, TenancyFilterForm):
         "exporting_vrfs",
     ]
     q = forms.CharField(required=False, label="Search")
-    importing_vrf_id = DynamicModelMultipleChoiceField(
-        queryset=VRF.objects.all(), required=False, label="Imported by VRF"
+    importing_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, label="Imported by VRF(s)"
     )
-    exporting_vrf_id = DynamicModelMultipleChoiceField(
-        queryset=VRF.objects.all(), required=False, label="Exported by VRF"
+    exporting_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, label="Exported by VRF(s)"
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -347,9 +347,9 @@ class PrefixFilterForm(
         "within_include",
         "type",
         "ip_version",
-        "mask_length",
-        # "vrf_id",
-        # "present_in_vrf_id",
+        "prefix_length",
+        "vrfs",
+        "present_in_vrf_id",
         "status",
         "location",
         "role",
@@ -357,7 +357,7 @@ class PrefixFilterForm(
         "tenant",
         "rir",
     ]
-    mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    prefix_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")
     within_include = forms.CharField(
         required=False,
@@ -374,28 +374,26 @@ class PrefixFilterForm(
         label="IP version",
         widget=StaticSelect2(),
     )
-    mask_length = forms.ChoiceField(
+    prefix_length = forms.ChoiceField(
         required=False,
         choices=PREFIX_MASK_LENGTH_CHOICES,
-        label="Mask length",
+        label="Prefix length",
         widget=StaticSelect2(),
     )
-    """
-    vrf_id = DynamicModelMultipleChoiceField(
+    vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
-        label="Assigned VRF",
+        label="Assigned VRF(s)",
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    """
     type = forms.MultipleChoiceField(
         required=False,
         choices=PrefixTypeChoices,
         widget=StaticSelect2Multiple(),
     )
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -604,7 +602,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "parent",
         "ip_version",
         "mask_length",
-        "vrf_id",
+        "vrfs",
         "present_in_vrf_id",
         "status",
         "role",
@@ -633,10 +631,10 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         label="Mask length",
         widget=StaticSelect2Multiple(),
     )
-    vrf_id = DynamicModelMultipleChoiceField(
+    vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
-        label="Assigned VRF",
+        label="Assigned VRF(s)",
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
@@ -645,7 +643,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         choices=add_blank_choice(IPAddressTypeChoices),
         widget=StaticSelect2(),
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -754,7 +752,7 @@ class VLANFilterForm(
         null_option="None",
         query_params={"location": "$location"},
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -823,10 +821,10 @@ class ServiceFilterForm(NautobotFilterForm):
         required=False,
         widget=StaticSelect2Multiple(),
     )
-    port = forms.IntegerField(
+    ports = forms.IntegerField(
         required=False,
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class ServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):

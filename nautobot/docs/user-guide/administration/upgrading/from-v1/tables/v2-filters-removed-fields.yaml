@@ -462,6 +462,12 @@
   Removed Filter: "slug"
   Comments:
 - Model: "RouteTarget"
+  Removed Filter: "exporting_vrf_id"
+  Comments: "Use `exporting_vrfs` filter"
+- Model: "RouteTarget"
+  Removed Filter: "importing_vrf_id"
+  Comments: "Use `importing_vrfs` filter"
+- Model: "RouteTarget"
   Removed Filter: "slug"
   Comments:
 - Model: "RouteTarget"
@@ -478,6 +484,12 @@
   Comments: "Use `secrets_group` filter"
 - Model: "SecretsGroupAssociation"
   Removed Filter: "slug"
+  Comments:
+- Model: "Service"
+  Removed Filter: "device_id"
+  Comments:
+- Model: "Service"
+  Removed Filter: "virtual_machine_id"
   Comments:
 - Model: "Status"
   Removed Filter: "slug"
@@ -572,6 +584,12 @@
 - Model: "VRF"
   Removed Filter: "tenant_group_id"
   Comments:
+- Model: "VRF"
+  Removed Filter: "export_target_id"
+  Comments: "Use `export_targets` filter"
+- Model: "VRF"
+  Removed Filter: "import_target_id"
+  Comments: "Use `import_targets` filter"
 - Model: "Webhook"
   Removed Filter: "slug"
   Comments:

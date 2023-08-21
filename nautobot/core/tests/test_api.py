@@ -480,11 +480,13 @@ class NautobotCSVParserTest(TestCase):
     def test_parse_success(self):
         status = extras_models.Status.objects.first()  # pylint: disable=redefined-outer-name
         tags = extras_models.Tag.objects.get_for_model(ipam_models.VLAN)
+        location = dcim_models.Location.objects.filter(parent__isnull=False).first()
+
         csv_data = "\n".join(
             [
                 # the "foobar" column is not understood by the serializer; per usual REST API behavior, it'll be skipped
-                "vid,name,foobar,description,status,tags,tenant",
-                f'22,hello,huh?,"It, I say, is a living!",{status.name},"{tags.first().name},{tags.last().name}",',
+                "vid,name,foobar,description,status,tags,tenant,location__name,location__parent__name",
+                f'22,hello,huh?,"It, I say, is a living!",{status.name},"{tags.first().name},{tags.last().name}",,{location.name},{location.parent.name}',
             ]
         )
 
@@ -503,6 +505,10 @@ class NautobotCSVParserTest(TestCase):
                     "status": status.name,  # will be understood as a composite-key by the serializer
                     "tags": [tags.first().name, tags.last().name],  # understood as a list of composite-keys
                     "tenant": None,
+                    "location": {  # parsed representation of CSV data: `location__name`,`location__parent__name`
+                        "name": location.name,
+                        "parent": {"name": location.parent.name},
+                    },
                 },
             ],
         )

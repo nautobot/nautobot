@@ -1891,10 +1891,10 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
         cls.csv_data = (
-            "device,name,type,status",
-            f"{device.composite_key},Interface 4,1000base-t,{statuses[0].name}",
-            f"{device.pk},Interface 5,1000base-t,{statuses[0].name}",
-            f"{device.composite_key},Interface 6,1000base-t,{statuses[0].name}",
+            "type,name,device__name,device__location__name,status",
+            f"virtual,Interface 4,{device.name},{device.location.name},{statuses[0].name}",
+            f"1000base-t,Interface 5,{device.name},{device.location.name},{statuses[0].name}",
+            f"1000base-t,Interface 6,{device.name},{device.location.name},{statuses[1].name}",
         )
 
 

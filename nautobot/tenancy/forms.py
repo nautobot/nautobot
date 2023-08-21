@@ -71,7 +71,7 @@ class TenantFilterForm(NautobotFilterForm):
         required=False,
         null_option="None",
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #

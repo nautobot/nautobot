@@ -132,7 +132,7 @@ class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, Tenan
         required=False,
         null_option="None",
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
@@ -375,7 +375,7 @@ class VirtualMachineFilterForm(
         label="Has a primary IP",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -625,7 +625,7 @@ class VMInterfaceFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         query_params={"cluster_id": "$cluster_id"},
     )
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
