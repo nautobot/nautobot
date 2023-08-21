@@ -1,1 +1,0 @@
-Added a timeout and exception handling to the `nautobot-server send_installation_metrics` command.

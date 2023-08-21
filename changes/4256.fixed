@@ -1,2 +1,0 @@
-Introduced new `mkdocs` setting of `tabbed`.
-Updated docs at `nautobot/docs/installation/nautobot.md` and `nautobot/docs/installation/http-server.md` to adopt tabbed interfaces.
