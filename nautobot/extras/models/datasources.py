@@ -180,5 +180,8 @@ class GitRepository(PrimaryModel):
                 q |= models.Q(provided_contents__contains=item)
             duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id).filter(q)
             if duplicate_repos.exists():
-                raise ValidationError("Duplicate GitRepository detected providing one or more duplicated content")
+                raise ValidationError(
+                    f"Another Git repository already configured for remote URL {self.remote_url} "
+                    "provides contents overlapping with this repository."
+                )
         super().clean()

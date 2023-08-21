@@ -836,5 +836,11 @@ class GitTest(TransactionTestCase):
             provided_contents=["extras.job"],
         )
 
-        with self.assertRaises(ValidationError, msg="Duplicate GitRepository detected providing extras.job"):
+        with self.assertRaises(ValidationError) as cm:
             repo2.validated_save(trigger_resync=False)
+
+        self.assertIn(
+            f"Another Git repository already configured for remote URL {repo1.remote_url} "
+            "provides contents overlapping with this repository.",
+            str(cm.exception),
+        )
