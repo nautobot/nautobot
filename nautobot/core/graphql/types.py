@@ -1,13 +1,25 @@
 from django.contrib.contenttypes.models import ContentType
+from rest_framework.reverse import NoReverseMatch, reverse
 import graphene
 import graphene_django_optimizer as gql_optimizer
+
+from nautobot.utilities.utils import get_route_for_model
 
 
 class OptimizedNautobotObjectType(gql_optimizer.OptimizedDjangoObjectType):
     url = graphene.String()
 
     def resolve_url(self, args):
-        return self.get_absolute_url()
+        for action in ["retrieve", "detail", ""]:
+            route = get_route_for_model(self._meta.model, action, api=True)
+
+            for field in ["pk", "slug"]:
+                try:
+                    return reverse(route, kwargs={field: getattr(self, field)})
+                except (NoReverseMatch, AttributeError):
+                    continue
+
+        raise AttributeError(f"Unable to determine URL for object {self!r}")
 
     class Meta:
         abstract = True
