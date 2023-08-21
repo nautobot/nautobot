@@ -448,6 +448,11 @@ class TagFilterField(django_forms.MultipleChoiceField):
         # Choices are fetched each time the form is initialized
         super().__init__(label="Tags", choices=get_choices, required=False, *args, **kwargs)
 
+    # TODO: this is probably wrong since a MultipleChoiceField isn't a Model*Field,
+    # but it's necessary for now since dynamic-groups expect TagFilterField to have a to_field_name attribute.
+    # We should probably revisit this at some point.
+    to_field_name = "name"
+
 
 class DynamicModelChoiceMixin:
     """
