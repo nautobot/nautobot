@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms.array import SimpleArrayField
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.utils.safestring import mark_safe
 from netaddr import EUI
 from netaddr.core import AddrFormatError
@@ -696,21 +696,21 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         cleaned_data = self.cleaned_data
         site = cleaned_data.get("site")
 
-        if self.instance:
+        if self.instance and self.instance.present_in_database and site != self.instance.site:
             # If the site is changed, the rack post save signal attempts to update the rack devices,
-            # which may result in an Exception.
-            # To avoid an unhandled exception in signal, catch this error here.
-            duplicate_devices_names = (
-                Device.objects.values_list("name", flat=True)
-                .annotate(name_count=Count("name"))
-                .filter(name_count__gt=1)
-            )
-            duplicate_devices = Device.objects.filter(site=site, name__in=list(duplicate_devices_names)).values_list(
-                "name", flat=True
-            )
+            # which may result in an Exception if the updated devices conflict with existing devices at this site.
+            # To avoid an unhandled exception in the signal, check for this scenario here.
+            duplicate_devices = set()
+            for device in self.instance.devices.all():
+                qs = Device.objects.exclude(pk=device.pk).filter(site=site, tenant=device.tenant, name=device.name)
+                if qs.exists():
+                    duplicate_devices.add(qs.first().name)
             if duplicate_devices:
                 raise ValidationError(
-                    {"site": f"Device with `name` in {list(duplicate_devices)} and site={site} already exists."}
+                    {
+                        "site": f"Device(s) {sorted(duplicate_devices)} already exist in site {site} and "
+                        "would conflict with same-named devices in this rack."
+                    }
                 )
         return cleaned_data
 
