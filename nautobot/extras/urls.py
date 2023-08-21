@@ -1,5 +1,4 @@
 from django.urls import path
-from django.views.generic import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
