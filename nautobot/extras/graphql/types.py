@@ -10,7 +10,7 @@ class NautobotObjectType(DjangoObjectType):
     url = graphene.String()
 
     def resolve_url(self, args):
-        return self.get_absolute_url(api=True)
+        return self.get_absolute_url()
 
     class Meta:
         abstract = True
@@ -20,13 +20,13 @@ class OptimizedNautobotObjectType(gql_optimizer.OptimizedDjangoObjectType):
     url = graphene.String()
 
     def resolve_url(self, args):
-        return self.get_absolute_url(api=True)
+        return self.get_absolute_url()
 
     class Meta:
         abstract = True
 
 
-class TagType(gql_optimizer.OptimizedDjangoObjectType):
+class TagType(OptimizedNautobotObjectType):
     """Graphql Type Object for Tag model."""
 
     class Meta:
@@ -34,7 +34,7 @@ class TagType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = TagFilterSet
 
 
-class StatusType(gql_optimizer.OptimizedDjangoObjectType):
+class StatusType(OptimizedNautobotObjectType):
     """Graphql Type object for `Status` model."""
 
     class Meta:
@@ -42,7 +42,7 @@ class StatusType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = StatusFilterSet
 
 
-class DynamicGroupType(gql_optimizer.OptimizedDjangoObjectType):
+class DynamicGroupType(OptimizedNautobotObjectType):
     """Graphql Type object for `DynamicGroup` model."""
 
     class Meta:

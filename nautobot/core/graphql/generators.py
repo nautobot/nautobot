@@ -8,7 +8,7 @@ from graphql import GraphQLError
 
 from nautobot.core.graphql.utils import str_to_var_name, get_filtering_args_from_filterset
 from nautobot.extras.choices import RelationshipSideChoices
-from nautobot.extras.graphql.types import NautobotObjectType
+from nautobot.extras.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.utilities.utils import get_filterset_for_model
 
@@ -206,7 +206,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
     return resolve_relationship
 
 
-def generate_schema_type(app_name: str, model: object) -> NautobotObjectType:
+def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjectType:
     """
     Take a Django model and generate a Graphene Type class definition.
 
@@ -217,7 +217,7 @@ def generate_schema_type(app_name: str, model: object) -> NautobotObjectType:
     Example:
         For a model with a name of "Device", the following class definition is generated:
 
-        class DeviceType(NautobotObjectType):
+        class DeviceType(OptimizedNautobotObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
@@ -226,7 +226,7 @@ def generate_schema_type(app_name: str, model: object) -> NautobotObjectType:
         '<app_name>.filters.<ModelName>FilterSet' the filterset will be stored in
         filterset_class as follows:
 
-        class DeviceType(NautobotObjectType):
+        class DeviceType(OptimizedNautobotObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
@@ -242,7 +242,7 @@ def generate_schema_type(app_name: str, model: object) -> NautobotObjectType:
 
     main_attrs["Meta"] = type("Meta", (object,), meta_attrs)
 
-    schema_type = type(f"{model.__name__}Type", (NautobotObjectType,), main_attrs)
+    schema_type = type(f"{model.__name__}Type", (OptimizedNautobotObjectType,), main_attrs)
     return schema_type
 
 
