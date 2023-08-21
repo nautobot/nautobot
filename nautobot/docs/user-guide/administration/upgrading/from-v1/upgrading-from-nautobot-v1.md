@@ -404,6 +404,24 @@ The `commit_default` job field has been renamed to `dryrun_default` and the defa
 
 The `request` property has been changed to a Celery request instead of a Django web request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
 
+### URL Changes
+
+The Job url path `jobs/results/<uuid:pk>/` and url pattern name `job_jobresult` are removed. Use url path `job-results/<uuid:pk>/` and url pattern name `jobresult` instead. Any `extras:job_jobresult` references should be removed and be replaced by `extras:jobresult`.
+
+The Job url path `jobs/<str:class_path>/` and url pattern name `job` are renamed to url path `jobs/<str:class_path>/run/` and url pattern name `job_run_by_class_path`. Any `extras:job` references should be removed and be replaced by `extras:job_run_by_class_path`.
+
+The Job url pattern name `job_detail` are rename to `job`. Any `extras:job_detail` references should be removed and be replaced by `extras:job`.
+
+### Function Changes
+
+Changed `as_form_class`, `as_form` and `validate_data` functions on `BaseJob` Model to `classmethods`.
+
+### Function Renames
+
+`JobDetailView` is renamed to `JobView`.
+
+`JobView` is renamed to `JobRunView`.
+
 ## Settings Changes
 
 ### Added Settings

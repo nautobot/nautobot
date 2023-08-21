@@ -1,2 +1,3 @@
 Renamed `JobView` to `JobRunView` and `JobDetailView` to `JobView`.
 Rename url lookups `job` to `job_run_by_class_path` and `job_detail` to `job`.
+Changed `as_form_class`, `as_form` and `validate_data` functions on BaseJob Model to `classmethods`.
