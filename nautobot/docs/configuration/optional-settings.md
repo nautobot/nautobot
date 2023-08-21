@@ -1208,6 +1208,20 @@ Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djan
 
 ---
 
+### SESSION_EXPIRE_AT_BROWSER_CLOSE
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE`
+
+If this is set to True, Nautobot will use browser-length cookies - cookies that expire as soon as the user closes their browser.
+
+By default, `SESSION_EXPIRE_AT_BROWSER_CLOSE` is set to False, which means session cookies will be stored in users’ browsers for as long as [`SESSION_COOKIE_AGE`](#session_cookie_age).
+
+Please see the [official Django documentation on `SESSION_EXPIRE_AT_BROWSER_CLOSE`](https://docs.djangoproject.com/en/stable/ref/settings/#session-expire-at-browser-close) for more information.
+
+---
+
 ### SESSION_COOKIE_AGE
 
 Default: `1209600` (2 weeks, in seconds)
@@ -1215,6 +1229,8 @@ Default: `1209600` (2 weeks, in seconds)
 Environment Variable: `NAUTOBOT_SESSION_COOKIE_AGE`
 
 The age of session cookies, in seconds.
+
+Please see the [official Django documentation on `SESSION_COOKIE_AGE`](https://docs.djangoproject.com/en/stable/ref/settings/#session-cookie-age) for more information.
 
 ---
 

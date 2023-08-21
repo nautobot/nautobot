@@ -51,9 +51,17 @@ In the following steps, we will have you create the virtualenv within the `NAUTO
 
 As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libraries.
 
-```no-highlight
-sudo -u nautobot python3 -m venv /opt/nautobot
-```
+=== "Ubuntu/Debian"
+
+    ```no-highlight
+    sudo -u nautobot python3 -m venv /opt/nautobot
+    ```
+
+=== "CentOS/RHEL8"
+
+    ```no-highlight
+    sudo -u nautobot python3.8 -m venv /opt/nautobot
+    ```
 
 ### Update the Nautobot `.bashrc`
 
@@ -193,8 +201,16 @@ However, because we've set the `NAUTOBOT_ROOT`, this command will automatically 
 
 ```no-highlight
 nautobot-server init
-Configuration file created at '/opt/nautobot/nautobot_config.py'
+
+Nautobot would like to send anonymized installation metrics to the project's maintainers.
+These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
+Allow Nautobot to send these metrics? [y/n]: y
+Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
+Configuration file created at /opt/nautobot/nautobot_config.py
 ```
+
++++ 1.6.0
+    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [send_installation_metrics](../administration/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 ### Required Settings
 

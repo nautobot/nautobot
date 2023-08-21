@@ -490,10 +490,14 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field = get_filterset_parameter_form_field(Site, field_name)
                 self.assertIsInstance(form_field, forms.ChoiceField)
 
-            device_fields = ["has_console_ports", "has_interfaces", "face"]
+            device_fields = ["has_console_ports", "has_interfaces"]
             for field_name in device_fields:
                 form_field = get_filterset_parameter_form_field(Device, field_name)
                 self.assertIsInstance(form_field, forms.ChoiceField)
+
+        with self.subTest("Test MultipleChoiceField"):
+            form_field = get_filterset_parameter_form_field(Device, "face")
+            self.assertIsInstance(form_field, forms.MultipleChoiceField)
 
         with self.subTest("Test DateTimePicker"):
             form_field = get_filterset_parameter_form_field(Site, "last_updated")

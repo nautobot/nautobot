@@ -824,6 +824,17 @@ class JobResult(BaseModel, CustomFieldModel):
 
         message = sanitize(str(message))
 
+        obj_absolute_url = None
+        if obj is not None and hasattr(obj, "get_absolute_url"):
+            try:
+                absolute_url = obj.get_absolute_url()
+                # If absolute_url is longer than we can store, we discard it instead of truncating,
+                # since a truncated URL is pretty useless.
+                if len(absolute_url) <= JOB_LOG_MAX_ABSOLUTE_URL_LENGTH:
+                    obj_absolute_url = absolute_url
+            except Exception:
+                pass
+
         log = JobLogEntry(
             job_result=self,
             log_level=level_choice,
@@ -831,9 +842,7 @@ class JobResult(BaseModel, CustomFieldModel):
             message=message,
             created=timezone.now().isoformat(),
             log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else None,
-            absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
-            if hasattr(obj, "get_absolute_url")
-            else None,
+            absolute_url=obj_absolute_url,
         )
 
         # If the override is provided, we want to use the default database(pass no using argument)
@@ -853,6 +862,8 @@ class JobResult(BaseModel, CustomFieldModel):
             else:
                 log_level = logging.INFO
             logger.log(log_level, message)
+
+        return log
 
 
 #

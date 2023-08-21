@@ -19,6 +19,9 @@ if DEBUG:
     # For the Docker dev environment, we don't know in advance what that IP may be, so override to skip that check
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG}
 
+# Do *not* send anonymized install metrics when post_upgrade or send_installation_metrics management commands are run
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "False"))
+
 #
 # Logging for the development environment, taking into account the redefinition of DEBUG above
 #
