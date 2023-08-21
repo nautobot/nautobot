@@ -146,6 +146,24 @@ Conversely, importing objects from CSV format has also been reimplemented in the
 
 An immediate benefit you can notice from this reimplementation is that CSVs should now **generally** be "round-trip" capable, meaning that you can export a set of records to CSV format and then import that CSV into a different Nautobot instance (or delete the records and use the CSV to recreate them) without needing to "massage" the CSV into a different set of columns or fields.
 
+In addition to the above improvements, you can now reference related objects in your CSV by using a combination of unique fields. For instance:
+
+Instead of:
+
+```csv
+name,rack
+Device one,7f3ca431-8103-45cc-a9ce-b94c1f784a1d
+```
+
+you can use:
+
+```csv
+name,rack__location__name,rack__name
+Device one,Equinix DC6,R204
+```
+
+This enhancement allows you to specify related objects using their unique attributes, making data import even more intuitive and flexible.
+
 #### Renamed Database Foreign Keys and Related Names ([#2520](https://github.com/nautobot/nautobot/issues/2520))
 
 Some Foreign Key fields have been renamed to follow a more self-consistent pattern across the Nautobot app. This change is aimed to offer more clarity and predictability when it comes to related object database operations:
