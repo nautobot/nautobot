@@ -1,1 +1,0 @@
-Fixed dependencies required for saml support missing in final docker image.
