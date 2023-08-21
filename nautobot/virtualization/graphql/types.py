@@ -1,7 +1,7 @@
 import graphene
 import graphene_django_optimizer as gql_optimizer
 
-from nautobot.extras.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import DynamicGroup
 from nautobot.virtualization.filters import ClusterFilterSet, VirtualMachineFilterSet, VMInterfaceFilterSet
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface

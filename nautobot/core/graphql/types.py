@@ -1,6 +1,16 @@
 from django.contrib.contenttypes.models import ContentType
+import graphene
+import graphene_django_optimizer as gql_optimizer
 
-from nautobot.extras.graphql.types import OptimizedNautobotObjectType
+
+class OptimizedNautobotObjectType(gql_optimizer.OptimizedDjangoObjectType):
+    url = graphene.String()
+
+    def resolve_url(self, args):
+        return self.get_absolute_url()
+
+    class Meta:
+        abstract = True
 
 
 class ContentTypeType(OptimizedNautobotObjectType):

@@ -1,7 +1,8 @@
 import graphene
 
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.dcim.graphql.types import InterfaceType
-from nautobot.extras.graphql.types import OptimizedNautobotObjectType, TagType  # noqa: F401
+from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.extras.models import DynamicGroup
 from nautobot.ipam import filters, models
 from nautobot.virtualization.graphql.types import VMInterfaceType

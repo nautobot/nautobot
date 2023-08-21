@@ -2,6 +2,7 @@ import graphene
 import graphene_django_optimizer as gql_optimizer
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import construct_resolver
 from nautobot.dcim.filters import (
     CableFilterSet,
@@ -35,7 +36,7 @@ from nautobot.dcim.models import (
     RearPort,
     Site,
 )
-from nautobot.extras.graphql.types import OptimizedNautobotObjectType, TagType  # noqa: F401
+from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.extras.models import DynamicGroup
 
 

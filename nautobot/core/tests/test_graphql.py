@@ -30,6 +30,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
 )
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
@@ -53,7 +54,6 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import (
     ChangeLoggedModel,
     CustomField,

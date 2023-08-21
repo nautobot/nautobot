@@ -6,9 +6,9 @@ import graphene
 import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name, get_filtering_args_from_filterset
 from nautobot.extras.choices import RelationshipSideChoices
-from nautobot.extras.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.utilities.utils import get_filterset_for_model
 
