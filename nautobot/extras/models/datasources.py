@@ -174,10 +174,11 @@ class GitRepository(PrimaryModel):
 
     def clean(self):
         """Overload clean to enforce a repo with duplicate url does not have duplicate provided_contents."""
-        q = models.Q()
-        for item in self.provided_contents:
-            q |= models.Q(provided_contents__contains=item)
-        duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id).filter(q)
-        if duplicate_repos.exists():
-            raise ValidationError("Duplicate GitRepository detected providing one or more duplicated content")
+        if self.provided_contents:
+            q = models.Q()
+            for item in self.provided_contents:
+                q |= models.Q(provided_contents__contains=item)
+            duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id).filter(q)
+            if duplicate_repos.exists():
+                raise ValidationError("Duplicate GitRepository detected providing one or more duplicated content")
         super().clean()
