@@ -1118,9 +1118,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
     def post(self, request, class_path=None, pk=None):
         job_model = self._get_job_model_or_404(class_path, pk)
 
-        job_form = (
-            job_model.job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
-        )
+        job_form = job_model.job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
         task_queue = request.POST.get("_task_queue")
 
