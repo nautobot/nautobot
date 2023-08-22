@@ -88,7 +88,7 @@ FROM system-dependencies AS system-dev-dependencies
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
