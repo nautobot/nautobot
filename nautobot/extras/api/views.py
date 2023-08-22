@@ -615,7 +615,7 @@ class JobViewSet(
 
         cleaned_data = None
         try:
-            cleaned_data = job_class().validate_data(data, files=files)
+            cleaned_data = job_class.validate_data(data, files=files)
             cleaned_data = job_model.job_class.prepare_job_kwargs(cleaned_data)
 
         except FormsValidationError as e:

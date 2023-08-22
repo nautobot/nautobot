@@ -549,16 +549,18 @@ class BaseJob(Task):
 
         return file_vars
 
-    def as_form_class(self):
+    @classmethod
+    def as_form_class(cls):
         """
         Dynamically generate a Django form class corresponding to the variables in this Job.
 
         In most cases you should use `.as_form()` instead of calling this method directly.
         """
-        fields = {name: var.as_field() for name, var in self._get_vars().items()}
+        fields = {name: var.as_field() for name, var in cls._get_vars().items()}
         return type("JobForm", (JobForm,), fields)
 
-    def as_form(self, data=None, files=None, initial=None, approval_view=False):
+    @classmethod
+    def as_form(cls, data=None, files=None, initial=None, approval_view=False):
         """
         Return a Django form suitable for populating the context data required to run this Job.
 
@@ -566,29 +568,29 @@ class BaseJob(Task):
         during a approval review workflow.
         """
 
-        form = self.as_form_class()(data, files, initial=initial)
+        form = cls.as_form_class()(data, files, initial=initial)
 
         try:
-            job_model = JobModel.objects.get_for_class_path(self.class_path)
-            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else self.dryrun_default
-            task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
+            job_model = JobModel.objects.get_for_class_path(cls.class_path)
+            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
+            task_queues = job_model.task_queues if job_model.task_queues_override else cls.task_queues
         except JobModel.DoesNotExist:
-            logger.error("No Job instance found in the database corresponding to %s", self.class_path)
-            dryrun_default = self.dryrun_default
-            task_queues = self.task_queues
+            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
+            dryrun_default = cls.dryrun_default
+            task_queues = cls.task_queues
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
-        if self.supports_dryrun and (not initial or "dryrun" not in initial):
+        if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
             form.fields["dryrun"].initial = dryrun_default
         if not settings.DEBUG:
             form.fields["_profile"].widget = forms.HiddenInput()
 
         # https://github.com/PyCQA/pylint/issues/3484
-        if self.field_order:  # pylint: disable=using-constant-test
-            form.order_fields(self.field_order)
+        if cls.field_order:  # pylint: disable=using-constant-test
+            form.order_fields(cls.field_order)
 
         if approval_view:
             # Set `disabled=True` on all fields
@@ -724,8 +726,9 @@ class BaseJob(Task):
 
         return return_data
 
-    def validate_data(self, data, files=None):
-        cls_vars = self._get_vars()
+    @classmethod
+    def validate_data(cls, data, files=None):
+        cls_vars = cls._get_vars()
 
         if not isinstance(data, dict):
             raise ValidationError("Job data needs to be a dict")
@@ -735,7 +738,7 @@ class BaseJob(Task):
                 raise ValidationError({k: "Job data contained an unknown property"})
 
         # defer validation to the form object
-        f = self.as_form(data=self.deserialize_data(data), files=files)
+        f = cls.as_form(data=cls.deserialize_data(data), files=files)
         if not f.is_valid():
             raise ValidationError(f.errors)
 

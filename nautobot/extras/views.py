@@ -1040,8 +1040,7 @@ class JobListView(generic.ObjectListView):
         }
 
 
-# 2.0 TODO: this should really be "JobRunView"
-class JobView(ObjectPermissionRequiredMixin, View):
+class JobRunView(ObjectPermissionRequiredMixin, View):
     """
     View the parameters of a Job and enqueue it if desired.
     """
@@ -1068,11 +1067,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
         try:
             try:
-                job_instance = job_model.job_class()
+                job_class = job_model.job_class
             except TypeError as exc:
                 # job_class may be None
                 raise RuntimeError("Job code for this job is not currently installed or loadable") from exc
-            initial = normalize_querydict(request.GET, form_class=job_instance.as_form_class())
+            initial = normalize_querydict(request.GET, form_class=job_class.as_form_class())
             if "kwargs_from_job_result" in initial:
                 job_result_pk = initial.pop("kwargs_from_job_result")
                 try:
@@ -1093,11 +1092,11 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     )
 
             template_name = "extras/job.html"
-            job_form = job_instance.as_form(initial=initial)
-            if hasattr(job_instance, "template_name"):
+            job_form = job_class.as_form(initial=initial)
+            if hasattr(job_class, "template_name"):
                 try:
-                    get_template(job_instance.template_name)
-                    template_name = job_instance.template_name
+                    get_template(job_class.template_name)
+                    template_name = job_class.template_name
                 except TemplateDoesNotExist as err:
                     messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
         except RuntimeError as err:
@@ -1119,9 +1118,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def post(self, request, class_path=None, pk=None):
         job_model = self._get_job_model_or_404(class_path, pk)
 
-        job_form = (
-            job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
-        )
+        job_form = job_model.job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
         task_queue = request.POST.get("_task_queue")
 
@@ -1231,8 +1228,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         )
 
 
-# 2.0 TODO: this should really be "JobView"
-class JobDetailView(generic.ObjectView):
+class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
 
