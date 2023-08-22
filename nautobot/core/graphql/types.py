@@ -3,7 +3,7 @@ from rest_framework.reverse import NoReverseMatch, reverse
 import graphene
 import graphene_django_optimizer as gql_optimizer
 
-from nautobot.utilities.utils import get_route_for_model
+from nautobot.core.utils.lookup import get_route_for_model
 
 
 class OptimizedNautobotObjectType(gql_optimizer.OptimizedDjangoObjectType):

@@ -1,5 +1,6 @@
 import graphene
 
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import DynamicGroup
 from nautobot.ipam import models, filters
 

@@ -4,21 +4,6 @@ import graphene_django_optimizer as gql_optimizer
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import construct_resolver
-from nautobot.dcim.filters import (
-    CableFilterSet,
-    ConsolePortFilterSet,
-    ConsoleServerPortFilterSet,
-    DeviceFilterSet,
-    FrontPortFilterSet,
-    InterfaceFilterSet,
-    PlatformFilterSet,
-    PowerFeedFilterSet,
-    PowerOutletFilterSet,
-    PowerPortFilterSet,
-    RackFilterSet,
-    RearPortFilterSet,
-    SiteFilterSet,
-)
 from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
 from nautobot.dcim.models import (
     Cable,
@@ -55,7 +40,7 @@ from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.extras.models import DynamicGroup
 
 
-class LocationType(gql_optimizer.OptimizedDjangoObjectType):
+class LocationType(OptimizedNautobotObjectType):
     """Graphql Type Object for Location model."""
 
     class Meta:

@@ -31,6 +31,8 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
 )
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.testing import NautobotTestClient, create_test_user
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
@@ -67,7 +69,6 @@ from nautobot.extras.models import (
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import NautobotTestClient, create_test_user
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.factory import ClusterTypeFactory
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface

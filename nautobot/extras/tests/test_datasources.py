@@ -801,14 +801,14 @@ class GitTest(TransactionTestCase):
         remote_url = "http://localhost/duplicates.git"
         repo1 = GitRepository(
             name="Repo 1",
-            slug="repo-1",
+            slug="repo_1",
             remote_url=remote_url,
             provided_contents=["extras.job"],
         )
         repo1.validated_save(trigger_resync=False)
         repo2 = GitRepository(
             name="Repo 2",
-            slug="repo-2",
+            slug="repo_2",
             remote_url=remote_url,
             provided_contents=["extras.configcontext"],
         )
@@ -821,14 +821,14 @@ class GitTest(TransactionTestCase):
         remote_url = "http://localhost/duplicates.git"
         repo1 = GitRepository(
             name="Repo 1",
-            slug="repo-1",
+            slug="repo_1",
             remote_url=remote_url,
             provided_contents=["extras.job"],
         )
         repo1.validated_save(trigger_resync=False)
         repo2 = GitRepository(
             name="Repo 2",
-            slug="repo-2",
+            slug="repo_2",
             remote_url=remote_url,
             provided_contents=["extras.job"],
         )

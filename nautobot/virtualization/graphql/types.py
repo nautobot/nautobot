@@ -1,5 +1,4 @@
 import graphene
-import graphene_django_optimizer as gql_optimizer
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import DynamicGroup
