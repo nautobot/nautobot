@@ -245,6 +245,10 @@ ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 RUN nautobot-server init && \
     nautobot-server build_ui
 
+# switch to root user for final-dev stage: https://github.com/nautobot/nautobot/issues/4300
+# hadolint ignore=DL3002
+USER root
+
 # Run Nautobot development server by default
 EXPOSE 8080
 CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
