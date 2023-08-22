@@ -47,8 +47,6 @@
   Class/Function(s): "PluginMenuButton"
 - Module: "nautobot.extras.plugins"
   Class/Function(s): "PluginMenuItem"
-- Module: "nautobot.extras.urls"
-  Class/Function(s): "jobs/results/<uuid:pk>/"
 - Module: "nautobot.ipam.api.nested_serializers"
   Class/Function(s): "(all)"
 - Module: "nautobot.tenancy.api.nested_serializers"

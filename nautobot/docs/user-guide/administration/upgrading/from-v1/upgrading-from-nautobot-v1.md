@@ -290,6 +290,13 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 ??? info "Full table of code removals"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-removals.yaml}
 
+## Renamed Python Code
+
+The below is mostly relevant only to authors of Jobs and Nautobot Apps. End users should not be impacted by the changes in this section. Most of the code renames are only relevant to Job related classes.
+
+??? info "Full table of code renames"
+    {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-renames.yaml}
+
 ## Git Data Source Changes
 
 The Configuration Contexts Metadata key `schema` has been replaced with `config_context_schema`. This means that any `schema` references in your git repository's data must be updated to reflect this change.
@@ -406,15 +413,13 @@ The `request` property has been changed to a Celery request instead of a Django 
 
 ### URL Changes
 
-The Job url path `jobs/results/<uuid:pk>/` and url pattern name `job_jobresult` are removed. Use url path `job-results/<uuid:pk>/` and url pattern name `jobresult` instead. Any `extras:job_jobresult` references should be removed and be replaced by `extras:jobresult`.
+The Job URL path `jobs/results/<uuid:pk>/` and URL pattern name `job_jobresult` are removed. Use URL path `job-results/<uuid:pk>/` and URL pattern name `jobresult` instead. Any `extras:job_jobresult` references should be removed and be replaced by `extras:jobresult`.
 
-The Job url path `jobs/<str:class_path>/` and url pattern name `job` are renamed to url path `jobs/<str:class_path>/run/` and url pattern name `job_run_by_class_path`. Any `extras:job` references should be removed and be replaced by `extras:job_run_by_class_path`.
-
-The Job url pattern name `job_detail` are rename to `job`. Any `extras:job_detail` references should be removed and be replaced by `extras:job`.
+The Job URL path `/extras/jobs/<str:class_path>/` and associated URL pattern name `extras:job` are changed to URL path `/extras/jobs/<str:class_path>/run/` and the URL pattern is renamed to `extras:job_run_by_class_path`. Conversely, the Job detail view URL pattern name `extras:job_detail` has been renamed to `extras:job` for consistency with other object detail view URL patterns.
 
 ### Function Changes
 
-Changed `as_form_class`, `as_form` and `validate_data` functions on `BaseJob` Model to `classmethods`.
+Changed `as_form_class`, `as_form` and `validate_data` functions on `BaseJob` Model to `classmethods` so that they can be called directly from the class without needing to instantiate the Job in order to access them.
 
 ### Function Renames
 
