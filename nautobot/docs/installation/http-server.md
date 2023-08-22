@@ -14,16 +14,21 @@ be installed on your Nautobot server in a secure location that is readable only 
 
 Two files will be created: the public certificate (`nautobot.crt`) and the private key (`nautobot.key`). The certificate is published to the world, whereas the private key must be kept secret at all times.
 
-!!! info
-    Some Linux installations, including CentOS, have changed the location for SSL certificates from `/etc/ssl/` to `/etc/pki/tls/`. The command below may need to be changed to reflect the certificate location.
+=== "Ubuntu/Debian"
 
-    The following command will prompt you for additional details of the certificate; all of which are optional.
+    ```no-highlight
+    sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout /etc/ssl/private/nautobot.key \
+      -out /etc/ssl/certs/nautobot.crt
+    ```
 
-```no-highlight
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout /etc/ssl/private/nautobot.key \
-  -out /etc/ssl/certs/nautobot.crt
-```
+=== "CentOS/RHEL8"
+
+    ```no-highlight
+    sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout /etc/pki/tls/private/nautobot.key \
+      -out /etc/pki/tls/certs/nautobot.crt
+    ```
 
 ## HTTP Server Installation
 
@@ -41,17 +46,17 @@ and is by far the most popular choice.
 
 Begin by installing NGINX:
 
-On Ubuntu:
+=== "Ubuntu/Debian"
 
-```no-highlight
-sudo apt install -y nginx
-```
+    ```no-highlight
+    sudo apt install -y nginx
+    ```
 
-On CentOS/RHEL:
+=== "CentOS/RHEL8"
 
-```no-highlight
-sudo dnf install -y nginx
-```
+    ```no-highlight
+    sudo dnf install -y nginx
+    ```
 
 #### Configure NGINX
 
@@ -61,69 +66,116 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
 !!! note
     If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
-```nginxconf
-server {
-    listen 443 ssl http2 default_server;
-    listen [::]:443 ssl http2 default_server;
+=== "Ubuntu/Debian"
+    ```nginxconf
+    server {
+        listen 443 ssl http2 default_server;
+        listen [::]:443 ssl http2 default_server;
 
-    server_name _;
+        server_name _;
 
-    ssl_certificate /etc/ssl/certs/nautobot.crt;
-    ssl_certificate_key /etc/ssl/private/nautobot.key;
+        ssl_certificate /etc/ssl/certs/nautobot.crt;
+        ssl_certificate_key /etc/ssl/private/nautobot.key;
 
-    client_max_body_size 25m;
+        client_max_body_size 25m;
 
-    location /static/ {
-        alias /opt/nautobot/static/;
+        location /static/ {
+            alias /opt/nautobot/static/;
+        }
+
+        # For subdirectory hosting, you'll want to toggle this (e.g. `/nautobot/`).
+        # Don't forget to set `FORCE_SCRIPT_NAME` in your `nautobot_config.py` to match.
+        # location /nautobot/ {
+        location / {
+            include uwsgi_params;
+            uwsgi_pass  127.0.0.1:8001;
+            uwsgi_param Host $host;
+            uwsgi_param X-Real-IP $remote_addr;
+            uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
+            uwsgi_param X-Forwarded-Proto $http_x_forwarded_proto;
+
+            # If you want subdirectory hosting, uncomment this. The path must match
+            # the path of this location block (e.g. `/nautobot`). For NGINX the path
+            # MUST NOT end with a trailing "/".
+            # uwsgi_param SCRIPT_NAME /nautobot;
+        }
+
     }
 
-    # For subdirectory hosting, you'll want to toggle this (e.g. `/nautobot/`).
-    # Don't forget to set `FORCE_SCRIPT_NAME` in your `nautobot_config.py` to match.
-    # location /nautobot/ {
-    location / {
-        include uwsgi_params;
-        uwsgi_pass  127.0.0.1:8001;
-        uwsgi_param Host $host;
-        uwsgi_param X-Real-IP $remote_addr;
-        uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
-        uwsgi_param X-Forwarded-Proto $http_x_forwarded_proto;
+    server {
+        # Redirect HTTP traffic to HTTPS
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        server_name _;
+        return 301 https://$host$request_uri;
+    }
+    ```
 
-        # If you want subdirectory hosting, uncomment this. The path must match
-        # the path of this location block (e.g. `/nautobot`). For NGINX the path
-        # MUST NOT end with a trailing "/".
-        # uwsgi_param SCRIPT_NAME /nautobot;
+=== "CentOS/RHEL8"
+
+    ```nginxconf
+    server {
+        listen 443 ssl http2 default_server;
+        listen [::]:443 ssl http2 default_server;
+
+        server_name _;
+
+        ssl_certificate /etc/pki/tls/certs/nautobot.crt;
+        ssl_certificate_key /etc/pki/tls/private/nautobot.key;
+
+        client_max_body_size 25m;
+
+        location /static/ {
+            alias /opt/nautobot/static/;
+        }
+
+        # For subdirectory hosting, you'll want to toggle this (e.g. `/nautobot/`).
+        # Don't forget to set `FORCE_SCRIPT_NAME` in your `nautobot_config.py` to match.
+        # location /nautobot/ {
+        location / {
+            include uwsgi_params;
+            uwsgi_pass  127.0.0.1:8001;
+            uwsgi_param Host $host;
+            uwsgi_param X-Real-IP $remote_addr;
+            uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
+            uwsgi_param X-Forwarded-Proto $http_x_forwarded_proto;
+
+            # If you want subdirectory hosting, uncomment this. The path must match
+            # the path of this location block (e.g. `/nautobot`). For NGINX the path
+            # MUST NOT end with a trailing "/".
+            # uwsgi_param SCRIPT_NAME /nautobot;
+        }
+
     }
 
-}
-
-server {
-    # Redirect HTTP traffic to HTTPS
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-    return 301 https://$host$request_uri;
-}
-```
+    server {
+        # Redirect HTTP traffic to HTTPS
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        server_name _;
+        return 301 https://$host$request_uri;
+    }
+    ```
 
 #### Enable Nautobot
 
-On Ubuntu:
+=== "Ubuntu/Debian"
 
-To enable the Nautobot site, you'll need to delete `/etc/nginx/sites-enabled/default` and create a symbolic link in the
-`sites-enabled` directory to the configuration file you just created:
+    To enable the Nautobot site, you'll need to delete `/etc/nginx/sites-enabled/default` and create a symbolic link in the
+    `sites-enabled` directory to the configuration file you just created:
 
-```no-highlight
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
-```
+    ```no-highlight
+    sudo rm -f /etc/nginx/sites-enabled/default
+    sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
+    ```
 
-On CentOS:
+=== "CentOS/RHEL8"
 
-Run the following command to disable the default site that comes with the `nginx` package:
+    Run the following command to disable the default site that comes with the `nginx` package:
 
-```no-highlight
-sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
-```
+    ```no-highlight
+    sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
+    ```
 
 #### Restart NGINX
 

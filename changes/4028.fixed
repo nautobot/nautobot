@@ -1,2 +1,0 @@
-Fixed CI integration workflow to publish 'final-dev', and build only `final` images.
-Fixed CI integration workflow `set-output` warnings.
