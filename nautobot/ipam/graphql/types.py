@@ -1,11 +1,10 @@
 import graphene
-import graphene_django_optimizer as gql_optimizer
 
 from nautobot.extras.models import DynamicGroup
 from nautobot.ipam import models, filters
 
 
-class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
+class IPAddressType(OptimizedNautobotObjectType):
     """Graphql Type Object for IPAddress model."""
 
     address = graphene.String()
@@ -20,7 +19,7 @@ class IPAddressType(gql_optimizer.OptimizedDjangoObjectType):
         return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
-class PrefixType(gql_optimizer.OptimizedDjangoObjectType):
+class PrefixType(OptimizedNautobotObjectType):
     """Graphql Type Object for Prefix model."""
 
     prefix = graphene.String()

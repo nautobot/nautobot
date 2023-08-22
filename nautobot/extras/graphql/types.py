@@ -1,10 +1,9 @@
-import graphene_django_optimizer as gql_optimizer
-
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import Status, Tag, DynamicGroup
 from nautobot.extras.filters import StatusFilterSet, TagFilterSet, DynamicGroupFilterSet
 
 
-class TagType(gql_optimizer.OptimizedDjangoObjectType):
+class TagType(OptimizedNautobotObjectType):
     """Graphql Type Object for Tag model."""
 
     class Meta:
@@ -12,7 +11,7 @@ class TagType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = TagFilterSet
 
 
-class StatusType(gql_optimizer.OptimizedDjangoObjectType):
+class StatusType(OptimizedNautobotObjectType):
     """Graphql Type object for `Status` model."""
 
     class Meta:
@@ -20,7 +19,7 @@ class StatusType(gql_optimizer.OptimizedDjangoObjectType):
         filterset_class = StatusFilterSet
 
 
-class DynamicGroupType(gql_optimizer.OptimizedDjangoObjectType):
+class DynamicGroupType(OptimizedNautobotObjectType):
     """Graphql Type object for `DynamicGroup` model."""
 
     class Meta:

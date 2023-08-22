@@ -1,12 +1,13 @@
 import graphene
 import graphene_django_optimizer as gql_optimizer
 
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import DynamicGroup
-from nautobot.virtualization.models import VirtualMachine, VMInterface, Cluster
-from nautobot.virtualization.filters import VirtualMachineFilterSet, VMInterfaceFilterSet, ClusterFilterSet
+from nautobot.virtualization.filters import ClusterFilterSet, VirtualMachineFilterSet, VMInterfaceFilterSet
+from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 
 
-class ClusterType(gql_optimizer.OptimizedDjangoObjectType):
+class ClusterType(OptimizedNautobotObjectType):
     """GraphQL type object for Cluster model."""
 
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
@@ -19,7 +20,7 @@ class ClusterType(gql_optimizer.OptimizedDjangoObjectType):
         return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
-class VirtualMachineType(gql_optimizer.OptimizedDjangoObjectType):
+class VirtualMachineType(OptimizedNautobotObjectType):
     """GraphQL type object for VirtualMachine model."""
 
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
@@ -32,7 +33,7 @@ class VirtualMachineType(gql_optimizer.OptimizedDjangoObjectType):
         return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
-class VMInterfaceType(gql_optimizer.OptimizedDjangoObjectType):
+class VMInterfaceType(OptimizedNautobotObjectType):
     """GraphQL type object for VMInterface model."""
 
     class Meta:

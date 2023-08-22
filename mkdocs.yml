@@ -14,12 +14,13 @@ theme:
     - "django"
     - "yaml"
   features:
-    - "navigation.tracking"
+    - "content.code.copy"
     - "navigation.tabs"
     - "navigation.tabs.sticky"
-    - "search.suggest"
+    - "navigation.tracking"
     - "search.highlight"
     - "search.share"
+    - "search.suggest"
   favicon: "assets/favicon.ico"
   logo: "assets/nautobot_logo.svg"
   palette:
@@ -80,6 +81,8 @@ markdown_extensions:
   - "pymdownx.inlinehilite"
   - "pymdownx.snippets"
   - "pymdownx.superfences"
+  - "pymdownx.tabbed":
+      "alternate_style": true
 
 plugins:
   - "search"

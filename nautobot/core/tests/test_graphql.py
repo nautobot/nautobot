@@ -12,19 +12,17 @@ from django.test.client import RequestFactory
 from django.urls import reverse
 from graphql import GraphQLError
 import graphene.types
-from graphene_django import DjangoObjectType
 from graphene_django.settings import graphene_settings
 from graphql.error.located_error import GraphQLLocatedError
 from graphql import get_default_backend
 from rest_framework import status
 
 from nautobot.circuits.models import Provider, CircuitTermination
+from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
     generate_schema_type,
 )
-from nautobot.core.graphql import execute_query, execute_saved_query
-from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.schema import (
     extend_schema_type,
     extend_schema_type_custom_field,
@@ -69,6 +67,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.utilities.testing import NautobotTestClient, create_test_user
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.factory import ClusterTypeFactory
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
@@ -128,13 +127,13 @@ class GraphQLUtilsTestCase(TestCase):
 class GraphQLGenerateSchemaTypeTestCase(TestCase):
     def test_model_w_filterset(self):
         schema = generate_schema_type(app_name="dcim", model=Device)
-        self.assertEqual(schema.__bases__[0], DjangoObjectType)
+        self.assertEqual(schema.__bases__[0], OptimizedNautobotObjectType)
         self.assertEqual(schema._meta.model, Device)
         self.assertEqual(schema._meta.filterset_class, DeviceFilterSet)
 
     def test_model_wo_filterset(self):
         schema = generate_schema_type(app_name="wrong_app", model=ChangeLoggedModel)
-        self.assertEqual(schema.__bases__[0], DjangoObjectType)
+        self.assertEqual(schema.__bases__[0], OptimizedNautobotObjectType)
         self.assertEqual(schema._meta.model, ChangeLoggedModel)
         self.assertIsNone(schema._meta.filterset_class)
 
