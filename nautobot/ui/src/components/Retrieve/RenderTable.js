@@ -8,7 +8,7 @@ function RenderTable({ fields, schema, data }) {
             <Tbody>
                 {fields.map((fieldName, idx) => {
                     const fieldSchema = schema[fieldName];
-                    if (fieldSchema === undefined) {
+                    if (!fieldSchema) {
                         return;
                     }
                     const fieldData = data[fieldName];
