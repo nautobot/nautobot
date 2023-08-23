@@ -9,7 +9,7 @@ function RenderTable({ fields, schema, data }) {
                 {fields.map((fieldName, idx) => {
                     const fieldSchema = schema[fieldName];
                     if (!fieldSchema) {
-                        return;
+                        return "";
                     }
                     const fieldData = data[fieldName];
                     let url = null;
