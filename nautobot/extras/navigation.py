@@ -701,6 +701,15 @@ navigation = (
                         link="extras:customlink_list",
                         permissions=["extras.view_customlink"],
                     ),
+                    NavItem(
+                        name="Notes",
+                        weight=500,
+                        # TODO figure out what link we should put here
+                        # This NavItem is required for the breadCrumb on NotesDetailView to render.
+                        # However `extras:note_list` is not a reverse url lookup that does not exist.
+                        link="extras:note_list",
+                        permissions=["extras.view_note"],
+                    ),
                 ),
             ),
         ),

@@ -70,7 +70,7 @@ export default function ObjectRetrieve({ api_url }) {
     };
 
     return (
-        <GenericView objectData={data}>
+        <GenericView objectData={data} key={window.location.pathname}>
             <Box background="white-0" borderRadius="md">
                 <RenderHeader data={data} />
                 <RenderTabs
