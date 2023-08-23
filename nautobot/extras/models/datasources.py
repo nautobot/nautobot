@@ -102,6 +102,17 @@ class GitRepository(PrimaryModel):
                     f'Please choose a different slug, as "{self.slug}" is an installed Python package or module.'
                 )
 
+        if self.provided_contents:
+            q = models.Q()
+            for item in self.provided_contents:
+                q |= models.Q(provided_contents__contains=item)
+            duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id).filter(q)
+            if duplicate_repos.exists():
+                raise ValidationError(
+                    f"Another Git repository already configured for remote URL {self.remote_url} "
+                    "provides contents overlapping with this repository."
+                )
+
     def get_latest_sync(self):
         """
         Return a `JobResult` for the latest sync operation.

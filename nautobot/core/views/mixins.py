@@ -1076,7 +1076,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         if not table.rows:
             messages.warning(
                 request,
-                f"No {queryset.model._meta.verbose_name_plural} were selected for deletion.",
+                f"No {queryset.model._meta.verbose_name_plural} were selected to update.",
             )
             return redirect(self.get_return_url(request))
         data.update({"table": table})
