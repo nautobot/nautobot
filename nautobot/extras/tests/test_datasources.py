@@ -805,14 +805,14 @@ class GitTest(TransactionTestCase):
             remote_url=remote_url,
             provided_contents=["extras.job"],
         )
-        repo1.validated_save(trigger_resync=False)
+        repo1.validated_save()
         repo2 = GitRepository(
             name="Repo 2",
             slug="repo_2",
             remote_url=remote_url,
             provided_contents=["extras.configcontext"],
         )
-        repo2.validated_save(trigger_resync=False)
+        repo2.validated_save()
         repos = GitRepository.objects.filter(remote_url=remote_url)
         self.assertEqual(repos.count(), 2)
 
@@ -825,7 +825,7 @@ class GitTest(TransactionTestCase):
             remote_url=remote_url,
             provided_contents=["extras.job"],
         )
-        repo1.validated_save(trigger_resync=False)
+        repo1.validated_save()
         repo2 = GitRepository(
             name="Repo 2",
             slug="repo_2",
@@ -834,7 +834,7 @@ class GitTest(TransactionTestCase):
         )
 
         with self.assertRaises(ValidationError) as cm:
-            repo2.validated_save(trigger_resync=False)
+            repo2.validated_save()
 
         self.assertIn(
             f"Another Git repository already configured for remote URL {repo1.remote_url} "
