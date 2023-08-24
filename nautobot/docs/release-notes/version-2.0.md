@@ -311,6 +311,38 @@ Check out the specific changes documented in the table at [UI and REST API Filte
 Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully removed from Nautobot 2.0.
 
 <!-- towncrier release notes start -->
+## v2.0.0.rc-2 (2023-08-24)
+
+### Added
+
+- [#3794](https://github.com/nautobot/nautobot/issues/3794) - Added support for multi-column keys for CSV Import.
+
+### Changed
+
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Renamed `IPAddress` `vrf` filter to `vrfs`.
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Renamed `Prefix` `mask_length` filter to `prefix_length` and `vrf` filter to `vrfs`.
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Enhanced `Prefix` `vlan_vid` filter to permit multiple query values.
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Renamed `RouteTarget` `exporting_vrf` filter to `exporting_vrfs` and `importing_vrf` filter to `importing_vrfs`.
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Renamed `Service` `port` filter to `ports`.
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Renamed `VRF` `export_target` filter to `export_targets` and `import_target` filter to `import_targets`.
+- [#2853](https://github.com/nautobot/nautobot/issues/2853) - Renamed `JobView` to `JobRunView` and `JobDetailView` to `JobView`.
+- [#2853](https://github.com/nautobot/nautobot/issues/2853) - Rename url lookups `job` to `job_run_by_class_path` and `job_detail` to `job`.
+- [#2853](https://github.com/nautobot/nautobot/issues/2853) - Changed `as_form_class`, `as_form` and `validate_data` functions on BaseJob Model to `classmethods`.
+- [#4305](https://github.com/nautobot/nautobot/issues/4305) - Merged develop back into next after release 1.6.1
+
+### Fixed
+
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Fixed misnamed `tag` fields on various filter forms (correct filter name is now `tags`).
+- [#4299](https://github.com/nautobot/nautobot/issues/4299) - Added missing `to_field_name` attribute on `TagFilterField`, which was causing dynamic-group filtering failures.
+- [#4300](https://github.com/nautobot/nautobot/issues/4300) - Fixed a permission issue when using `final-dev` containers by switching to root user before exposing port and entrypoint.
+
+### Removed
+
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Removed `RouteTarget` `exporting_vrf_id` and `importing_vrf_id` filters as they are redundant with the `exporting_vrfs` and `importing_vrfs` filters.
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Removed `Service` `device_id` and `virtual_machine_id` filters as they are redundant with the `device` and `virtual_machine` filters.
+- [#2807](https://github.com/nautobot/nautobot/issues/2807) - Removed `VRF` `export_target_id` and `import_target_id` filters as they are redundant with the `export_targets` and `import_targets` filters.
+- [#2853](https://github.com/nautobot/nautobot/issues/2853) - Removed `/extras/jobs/results/<uuid:pk>/` URL endpoint.
+
 ## v2.0.0rc1 (2023-08-18)
 
 ### Added
