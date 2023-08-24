@@ -80,7 +80,7 @@ markdown_extensions:
   - "pymdownx.snippets"
   - "pymdownx.superfences"
   - "pymdownx.tabbed":
-      "alternate_style": true 
+      "alternate_style": true
 
 plugins:
   - "search"
@@ -178,6 +178,7 @@ nav:
               - Front Port: "models/dcim/frontport.md"
               - Front Port Template: "models/dcim/frontporttemplate.md"
               - Interface: "models/dcim/interface.md"
+              - Interface Redundancy Group: "models/dcim/interfaceredundancygroup.md"
               - Interface Template: "models/dcim/interfacetemplate.md"
               - Inventory Item: "models/dcim/inventoryitem.md"
               - Location: "models/dcim/location.md"
