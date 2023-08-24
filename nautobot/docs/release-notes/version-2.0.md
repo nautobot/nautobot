@@ -343,7 +343,6 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 - [#2807](https://github.com/nautobot/nautobot/issues/2807) - Removed `VRF` `export_target_id` and `import_target_id` filters as they are redundant with the `export_targets` and `import_targets` filters.
 - [#2853](https://github.com/nautobot/nautobot/issues/2853) - Removed `/extras/jobs/results/<uuid:pk>/` URL endpoint.
 
-
 ## v2.0.0rc1 (2023-08-18)
 
 ### Added
