@@ -63,7 +63,7 @@ class DeviceType(OptimizedNautobotObjectType):
         return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
-class PlatformType(gql_optimizer.OptimizedDjangoObjectType):
+class PlatformType(OptimizedNautobotObjectType):
     """GraphQL type object for Platform model."""
 
     network_driver_mappings = graphene.types.generic.GenericScalar()
