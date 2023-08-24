@@ -138,7 +138,9 @@ class GraphQLTestCase(TestCase):
                 graphene_object_type_definition = graphene_settings.SCHEMA.get_type(graphql_field["type"]["name"])
 
                 # simple check for url field in type definition
-                self.assertIn("url", graphene_object_type_definition.fields, f"Missing url field for {graphql_field['name']}")
+                self.assertIn(
+                    "url", graphene_object_type_definition.fields, f"Missing url field for {graphql_field['name']}"
+                )
 
                 graphene_object_type_instance = graphene_object_type_definition.graphene_type()
                 model = graphene_object_type_instance._meta.model
@@ -150,8 +152,13 @@ class GraphQLTestCase(TestCase):
                     request = RequestFactory(SERVER_NAME="nautobot.example.com").post("/graphql/")
                     request.user = self.user
                     resp = execute_query(query, request=request).to_dict()
-                    self.assertIsNotNone(resp["data"]["query"]["url"], f"No url returned in graphql for {graphql_field['name']}")
-                    self.assertTrue(resp["data"]["query"]["url"].endswith(f"/{obj.pk}/"), f"Mismatched url returned in graphql for {graphql_field['name']}")
+                    self.assertIsNotNone(
+                        resp["data"]["query"]["url"], f"No url returned in graphql for {graphql_field['name']}"
+                    )
+                    self.assertTrue(
+                        resp["data"]["query"]["url"].endswith(f"/{obj.pk}/"),
+                        f"Mismatched url returned in graphql for {graphql_field['name']}",
+                    )
 
 
 class GraphQLUtilsTestCase(TestCase):
