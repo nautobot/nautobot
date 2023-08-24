@@ -8,6 +8,9 @@ function RenderTable({ fields, schema, data }) {
             <Tbody>
                 {fields.map((fieldName, idx) => {
                     const fieldSchema = schema[fieldName];
+                    if (!fieldSchema) {
+                        return "";
+                    }
                     const fieldData = data[fieldName];
                     let url = null;
                     if (fieldSchema?.modelUrl && fieldData?.id) {
