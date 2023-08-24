@@ -51,9 +51,17 @@ In the following steps, we will have you create the virtualenv within the `NAUTO
 
 As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libraries.
 
-```no-highlight
-sudo -u nautobot python3 -m venv /opt/nautobot
-```
+=== "Ubuntu/Debian"
+
+    ```no-highlight
+    sudo -u nautobot python3 -m venv /opt/nautobot
+    ```
+
+=== "CentOS/RHEL8"
+
+    ```no-highlight
+    sudo -u nautobot python3.8 -m venv /opt/nautobot
+    ```
 
 ### Update the Nautobot `.bashrc`
 

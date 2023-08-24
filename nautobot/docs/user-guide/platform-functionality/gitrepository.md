@@ -10,6 +10,9 @@ Some text-based content is more conveniently stored in a separate Git repository
 !!! important
     Nautobot's Git integration depends on the availability of the `git` program. If `git` is not installed, Nautobot will be unable to pull data from Git repositories.
 
++/- 1.6.2
+    To proactively avoid conflicts in data, it is no longer possible to configure multiple Git repository entries that both have the same `remote_url` and also provide the same data type(s). Configuration of multiple entries with the same `remote_url` is still permitted if they are configured to provide entirely distinct types of data.
+
 ## Repository Configuration
 
 When defining a Git repository for Nautobot to consume, the `name`, `remote URL`, and `branch` parameters are mandatory - the name acts as a unique identifier, and the remote URL and branch are needed for Nautobot to be able to locate and access the specified repository. Additionally, if the repository is private you may specify a `secrets group` that can be used to gain access to the repository.
