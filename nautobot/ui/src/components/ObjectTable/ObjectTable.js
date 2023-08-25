@@ -10,10 +10,6 @@ import {
 import ObjectTableItem from "./ObjectTableItem";
 
 function getTableItemLink(idx, obj) {
-    if (idx === 0) {
-        // TODO: ui-schema should be providing the name of the field used to describe the object (name)
-        return window.location.pathname + obj.id + "/";
-    }
     if (typeof obj !== "object" || !obj || !obj.url) {
         return null;
     }

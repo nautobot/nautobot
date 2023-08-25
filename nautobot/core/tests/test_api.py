@@ -897,6 +897,7 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
                     "Computed Fields": "/extras/computed-fields/",
                     "Custom Fields": "/extras/custom-fields/",
                     "Custom Links": "/extras/custom-links/",
+                    "Notes": "",
                 },
             },
         }
