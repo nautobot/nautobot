@@ -23,3 +23,6 @@ IP addresses can be assigned to interfaces. VLANs can also be assigned to each i
 
 !!! note
     Although devices and virtual machines both can have interfaces, a separate model is used for each. Thus, device interfaces have some properties that are not present on virtual machine interfaces and vice versa.
+
++++ 1.6.0
+    Interfaces can now be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.
