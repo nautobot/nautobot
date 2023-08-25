@@ -6,6 +6,9 @@ Interface Redundancy Groups represent groups of interfaces that share a single v
 
 Interface Redundancy Groups must be created before interfaces can be assigned to the group.
 
+!!! note
+    While Interface Redundancy Groups were designed to represent first hop redundancy protocols, they may be used to represent any grouping of redundant interfaces.
+
 ## Required Fields
 
 When adding Interfaces to the Interface Redundancy Group, a priority integer value must be set for each interface in the group. This value will depend on the redundancy protocol being used. For example, HSRP uses a priority value between 1 and 255.
