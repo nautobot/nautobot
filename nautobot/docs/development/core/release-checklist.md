@@ -180,6 +180,27 @@ Once CI has completed on the PR, merge it.
 !!! important
     Do not squash merge this branch into `main`. Make sure to select `Create a merge commit` when merging in GitHub.
 
+### Create a New Release Tag
+
+You need to create a release tag locally so that you can use it later when you draft the new release for nautobot, for example, `v1.4.3`.
+To create the tag locally:
+
+```bash
+$ git tag v1.4.3
+```
+
+To list all the tags to see if it is created successfully:
+
+```bash
+$ git tag
+```
+
+To push the tag upstream:
+
+```bash
+$ git push origin v1.4.3
+```
+
 ### Create a New Release
 
 Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with the following parameters.
@@ -187,7 +208,7 @@ Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with th
 * **Tag:** Current version (e.g. `v1.0.0`)
 
 !!! warning
-    The tag needs to be created before you draft the new release. To create a new release tag, refer to this [document](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release)
+    You will need to create a new release tag locally **before** you draft the new release. To create a new release tag, follow the steps outlined [here](#create-a-new-release-tag).
 
 * **Target:** `main`
 * **Title:** Version and date (e.g. `v1.0.0 - 2021-06-01`)
