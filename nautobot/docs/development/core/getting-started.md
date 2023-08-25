@@ -683,6 +683,9 @@ In cases where you haven't made any changes to the database (which is most of th
 !!! warning
     In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
 
++/- 1.5.11
+    The `--cache-test-fixtures` argument was added to the `invoke unittest` and `nautobot-server test` commands to allow for caching of test factory data between test runs. See the [factories documentation](./testing.md#factory-caching) for more information.
+
 #### Integration Tests
 
 Integration tests are automated tests written and run to ensure that the Nautobot application behaves as expected when being used as it would be in practice. By contrast to unit tests, where individual units of code are being tested, integration tests rely upon the server code actually running, and web UI clients or API clients to make real connections to the service to exercise actual workflows, such as navigating to the login page, filling out the username/passwords fields, and clicking the "Log In" button.
@@ -711,6 +714,9 @@ Integration tests are run using the `invoke integration-test` command. All integ
 
 !!! tip
     You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
+
++/- 1.5.11
+    The `--cache-test-fixtures` argument was added to the `invoke integration-test` and `nautobot-server test` commands to allow for caching of test factory data between test runs. See the [factories documentation](./testing.md#factory-caching) for more information.
 
 ##### Customizing Integration Test Executions
 
