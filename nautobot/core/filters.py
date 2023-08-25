@@ -501,7 +501,7 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         predicates = []
         for obj in value:
             # Try to get the `to_field_name` (e.g. `name`) or just pass the object through.
-            val = getattr(obj, self.field.to_field_name, obj)
+            val = getattr(obj, "pk", obj)
             if val == self.null_value:
                 val = None
             predicates.append(self.get_filter_predicate(val))

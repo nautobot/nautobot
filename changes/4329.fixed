@@ -1,0 +1,1 @@
+Fixed `TreeNodeMultipleChoiceFilter` filtering with ancestors to use the ID of the descendants.
