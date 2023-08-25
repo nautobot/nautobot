@@ -1,0 +1,1 @@
+Fixed an error when trying to send a webhook after all Change Logs for an object have been deleted/pruned.
