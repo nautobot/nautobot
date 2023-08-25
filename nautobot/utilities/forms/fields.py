@@ -778,7 +778,8 @@ class TagFilterField(DynamicModelMultipleChoiceField):
     """
 
     def __init__(self, model, *args, query_params=None, queryset=None, **kwargs):
-        queryset = queryset or model.tags.all()
+        if queryset is None:
+            queryset = model.tags.all()
         query_params = query_params or {}
         query_params.update({"content_types": model._meta.label_lower})
         super().__init__(
