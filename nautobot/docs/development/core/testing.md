@@ -61,7 +61,7 @@ generic_filter_tests = (
 )
 ```
 
-### Generic Tag Tests
+### Tags Filter Test
 
 If the model being tested is a `PrimaryModel`, the `tags` filter will be automatically tested by passing at least two values to the filter and verifying that the result matches the equivalent queryset filter.
 
