@@ -87,10 +87,8 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
             location_type=self.location_type,
             status=status,
         )
-        """
-        To ensure child objects with parents of the same name are not included in the results for filtering
-        we create parents with the same name under different ancestors.
-        """
+        # To ensure child objects with parents of the same name are not included in the results for filtering,
+        # we create parents with the same name under different ancestors.
         self.parent_location_same_name_1 = dcim_models.Location.objects.create(
             parent=self.child_location_1,
             name="Test Parent Location Same Name",
