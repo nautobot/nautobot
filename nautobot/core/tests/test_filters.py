@@ -87,26 +87,60 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
             location_type=self.location_type,
             status=status,
         )
+        # To ensure child objects with parents of the same name are not included in the results for filtering,
+        # we create parents with the same name under different ancestors.
+        self.parent_location_same_name_1 = dcim_models.Location.objects.create(
+            parent=self.child_location_1,
+            name="Test Parent Location Same Name",
+            location_type=self.location_type,
+            status=status,
+        )
+        self.parent_location_same_name_2 = dcim_models.Location.objects.create(
+            parent=self.child_location_2ab,
+            name="Test Parent Location Same Name",
+            location_type=self.location_type,
+            status=status,
+        )
+        self.child_location_same_name_1 = dcim_models.Location.objects.create(
+            parent=self.parent_location_same_name_1,
+            name="Test Child Location Same Name Parent 1",
+            location_type=self.location_type,
+            status=status,
+        )
+        self.child_location_same_name_2 = dcim_models.Location.objects.create(
+            parent=self.parent_location_same_name_2,
+            name="Test Child Location Same Name Parent 2",
+            location_type=self.location_type,
+            status=status,
+        )
         self.queryset = dcim_models.Location.objects.filter(name__icontains="Test Child Location")
 
     def test_filter_single_name(self):
         kwargs = {"parent": [self.parent_location_1.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_1])
+        self.assertQuerysetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
 
     def test_filter_single_pk(self):
         kwargs = {"parent": [self.parent_location_1.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_1])
+        self.assertQuerysetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
 
     def test_filter_multiple_name(self):
         kwargs = {"parent": [self.parent_location_1.name, self.parent_location_2.name]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
-            qs, [self.child_location_1, self.child_location_2, self.child_location_2a, self.child_location_2ab]
+            qs,
+            [
+                self.child_location_1,
+                self.child_location_same_name_1,
+                self.child_location_2,
+                self.child_location_2a,
+                self.child_location_2ab,
+                self.child_location_same_name_2,
+            ],
         )
 
     def test_filter_null(self):
@@ -119,14 +153,21 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         kwargs = {"parent": [self.parent_location_1.name, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1])
+        self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1, self.child_location_same_name_1])
 
     def test_filter_combined_pk(self):
         kwargs = {"parent": [self.parent_location_2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
-            qs, [self.child_location_0, self.child_location_2, self.child_location_2a, self.child_location_2ab]
+            qs,
+            [
+                self.child_location_0,
+                self.child_location_2,
+                self.child_location_2a,
+                self.child_location_2ab,
+                self.child_location_same_name_2,
+            ],
         )
 
     def test_filter_single_name_exclude(self):
@@ -134,14 +175,21 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
-            qs, [self.child_location_0, self.child_location_2, self.child_location_2a, self.child_location_2ab]
+            qs,
+            [
+                self.child_location_0,
+                self.child_location_2,
+                self.child_location_2a,
+                self.child_location_2ab,
+                self.child_location_same_name_2,
+            ],
         )
 
     def test_filter_single_pk_exclude(self):
         kwargs = {"parent__n": [self.parent_location_2.pk]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1])
+        self.assertQuerysetEqual(qs, [self.child_location_0, self.child_location_1, self.child_location_same_name_1])
 
     def test_filter_multiple_name_exclude(self):
         kwargs = {"parent__n": [self.parent_location_1.name, self.parent_location_2.name]}
@@ -154,20 +202,31 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
-            qs, [self.child_location_1, self.child_location_2, self.child_location_2a, self.child_location_2ab]
+            qs,
+            [
+                self.child_location_1,
+                self.child_location_same_name_1,
+                self.child_location_2,
+                self.child_location_2a,
+                self.child_location_2ab,
+                self.child_location_same_name_2,
+            ],
         )
 
     def test_filter_combined_name_exclude(self):
         kwargs = {"parent__n": [self.parent_location_1.name, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_2, self.child_location_2a, self.child_location_2ab])
+        self.assertQuerysetEqual(
+            qs,
+            [self.child_location_2, self.child_location_2a, self.child_location_2ab, self.child_location_same_name_2],
+        )
 
     def test_filter_combined_pk_exclude(self):
         kwargs = {"parent__n": [self.parent_location_2.pk, settings.FILTERS_NULL_CHOICE_VALUE]}
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
-        self.assertQuerysetEqual(qs, [self.child_location_1])
+        self.assertQuerysetEqual(qs, [self.child_location_1, self.child_location_same_name_1])
 
     def test_lookup_expr_param_ignored(self):
         """
