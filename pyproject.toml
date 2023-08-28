@@ -346,5 +346,6 @@ issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 [tool.towncrier.fragment.dependencies]
 [tool.towncrier.fragment.deprecated]
 [tool.towncrier.fragment.fixed]
+[tool.towncrier.fragment.housekeeping]
 [tool.towncrier.fragment.removed]
 [tool.towncrier.fragment.security]
