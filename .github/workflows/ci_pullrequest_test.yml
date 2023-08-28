@@ -145,8 +145,13 @@ jobs:
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
+      - "black"
       - "check-migrations"
       - "check-schema"
+      - "flake8"
+      - "yamllint"
+      - "markdownlint"
+      - "hadolint"
   tests-mysql:
     runs-on: "ubuntu-20.04"
     strategy:
@@ -177,8 +182,13 @@ jobs:
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
+      - "black"
       - "check-migrations"
       - "check-schema"
+      - "flake8"
+      - "yamllint"
+      - "markdownlint"
+      - "hadolint"
   tests-ui:
     runs-on: "ubuntu-20.04"
     env:
@@ -217,8 +227,13 @@ jobs:
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
+      - "black"
       - "check-migrations"
       - "check-schema"
+      - "flake8"
+      - "yamllint"
+      - "markdownlint"
+      - "hadolint"
   migration-tests-postgres:
     runs-on: "ubuntu-20.04"
     strategy:
@@ -246,8 +261,13 @@ jobs:
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
+      - "black"
       - "check-migrations"
       - "check-schema"
+      - "flake8"
+      - "yamllint"
+      - "markdownlint"
+      - "hadolint"
   performance-test:
     runs-on: "ubuntu-20.04"
     strategy:
@@ -276,8 +296,13 @@ jobs:
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
-      - "tests-postgres"
-      - "tests-mysql"
+      - "black"
+      - "check-migrations"
+      - "check-schema"
+      - "flake8"
+      - "yamllint"
+      - "markdownlint"
+      - "hadolint"
   integration-test:
     runs-on: "ubuntu-20.04"
     env:
@@ -307,15 +332,20 @@ jobs:
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
+      - "black"
       - "check-migrations"
       - "check-schema"
+      - "flake8"
+      - "yamllint"
+      - "markdownlint"
+      - "hadolint"
   changelog:
     if: contains(fromJson('["develop","next","develop-1.6"]'), github.base_ref)
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Do nothing"
         run: "echo 'no-op success job'"
-  tests_passed:
+  tests-passed:
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Do nothing"
@@ -324,6 +354,7 @@ jobs:
       - "integration-test"
       - "migration-tests-mysql"
       - "migration-tests-postgres"
+      - "pylint"
       - "tests-mysql"
       - "tests-postgres"
       - "tests-ui"
