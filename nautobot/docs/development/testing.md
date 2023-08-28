@@ -61,6 +61,14 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 !!! info
     Because plugins also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact plugin tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
+### Factory Caching
+
++++ 1.5.11
+
+To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test`, `invoke unittest` and `invoke integration-test` commands: `--cache-test-fixtures`. When running one of these commands with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests. It's a good idea to let this file be regenerated after pulling new code from the repository, as the factory data may have changed.
+
+Factory caching is disabled by default. When using the `invoke` commands to run tests, caching can be enabled by default for your development environment by setting the `cache_test_fixtures` key to `True` in the `invoke.yml` file.
+
 ## Performance Tests
 
 +++ 1.5.0
