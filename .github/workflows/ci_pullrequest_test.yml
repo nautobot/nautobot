@@ -142,6 +142,9 @@ jobs:
         ports:
           - "6379:6379"
     steps:
+      - name: Sleep for 30 seconds
+        run: sleep 30s
+        shell: bash
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
@@ -179,6 +182,9 @@ jobs:
         ports:
           - "6379:6379"
     steps:
+      - name: Sleep for 30 seconds
+        run: sleep 30s
+        shell: bash
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
@@ -329,6 +335,8 @@ jobs:
         ports:
           - "4444:4444"
     steps:
+      - name: "Fail job"
+        run: exit 1
       - name: "Do nothing"
         run: "echo 'no-op success job'"
     needs:
