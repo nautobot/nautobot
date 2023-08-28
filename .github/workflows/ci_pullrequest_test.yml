@@ -1,0 +1,329 @@
+---
+# A lighter-weight version of CI specifically for pull requests
+name: "CI - Pull Request"
+concurrency:  # Cancel any existing runs of this workflow for this same PR
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+on:  # yamllint disable
+  pull_request:
+  workflow_call:
+
+jobs:
+  black:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  flake8:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  prettier:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  eslint:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  yamllint:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  markdownlint:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  hadolint:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  check-migrations:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  check-schema:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  pylint:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  tests-postgres:
+    runs-on: "ubuntu-20.04"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: [ "3.8", "3.11" ]
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+      redis:
+        image: "redis:6-alpine"
+        ports:
+          - "6379:6379"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+    needs:
+      - "check-migrations"
+      - "check-schema"
+  tests-mysql:
+    runs-on: "ubuntu-20.04"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: [ "3.9", "3.10" ]
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_DB_USER: "root"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_HOST: "127.0.0.1"
+      NAUTOBOT_DB_PORT: "3306"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.mysql"
+    services:
+      mysql:
+        image: "mysql:8"
+        env:
+          MYSQL_ROOT_PASSWORD: "decinablesprewad"
+          MYSQL_PASSWORD: "decinablesprewad"
+          MYSQL_DATABASE: "nautobot"
+        ports:
+          - "3306:3306"
+      redis:
+        image: "redis:6-alpine"
+        ports:
+          - "6379:6379"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+    needs:
+      - "check-migrations"
+      - "check-schema"
+  tests-ui:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+    needs:
+      - "prettier"
+      - "eslint"
+  migration-tests-mysql:
+    runs-on: "ubuntu-20.04"
+    strategy:
+      fail-fast: true
+      matrix:
+        dataset-file:
+          - "development/datasets/nautobot_1.5.16_mysql.tar.gz"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
+      NAUTOBOT_DB_USER: "root"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_HOST: "127.0.0.1"
+      NAUTOBOT_DB_PORT: "3306"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.mysql"
+    services:
+      mysql:
+        image: "mysql:8"
+        env:
+          MYSQL_ROOT_PASSWORD: "decinablesprewad"
+          MYSQL_PASSWORD: "decinablesprewad"
+          MYSQL_DATABASE: "nautobot"
+        ports:
+          - "3306:3306"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+    needs:
+      - "check-migrations"
+      - "check-schema"
+  migration-tests-postgres:
+    runs-on: "ubuntu-20.04"
+    strategy:
+      fail-fast: true
+      matrix:
+        dataset-file:
+          - "development/datasets/nautobot_1.5.16_postgres.tar.gz"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+      PGPASSWORD: "decinablesprewad"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+    needs:
+      - "check-migrations"
+      - "check-schema"
+  performance-test:
+    runs-on: "ubuntu-20.04"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: [ "3.8", "3.11" ]
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+      redis:
+        image: "redis:6-alpine"
+        ports:
+          - "6379:6379"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+    needs:
+      - "tests-postgres"
+      - "tests-mysql"
+  integration-test:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+      NAUTOBOT_SELENIUM_URL: "http://localhost:4444/wd/hub"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+      redis:
+        image: "redis:6-alpine"
+        ports:
+          - "6379:6379"
+      selenium:
+        image: "selenium/standalone-firefox:4.9.1"
+        ports:
+          - "4444:4444"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+    needs:
+      - "check-migrations"
+      - "check-schema"
+  changelog:
+    if: contains(fromJson('["develop","next","develop-1.6"]'), github.base_ref)
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+  tests_passed:
+    runs-on: "ubuntu-20.04"
+    steps:
+      - name: "Do nothing"
+        run: "echo 'no-op success job'"
+    needs:
+      - "integration-test"
+      - "migration-tests-mysql"
+      - "migration-tests-postgres"
+      - "tests-mysql"
+      - "tests-postgres"
+      - "tests-ui"
