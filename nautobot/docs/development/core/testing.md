@@ -36,6 +36,35 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 +/- 2.0.0
     The base test classes moved from `nautobot.utilities.testing` to `nautobot.core.testing`.
 
+## Generic Filter Tests
+
++++ 2.0.0
+
+Nautobot provides a set of generic tests for testing the behavior of FilterSets. These tests are located in [`nautobot.core.testing.filters.FilterTestCase`](../../code-reference/nautobot/apps/testing.md#nautobot.core.testing.filters.FilterTestCases.FilterTestCase) and can be used to test some common filters in Nautobot.
+
+### Generic Boolean Filter Tests
+
+When using `FilterTestCase`, all filters that are instances of `nautobot.core.filters.RelatedMembershipBooleanFilter` that are not using a custom filter method will be tested to verify that the filter returns the same results as the model's queryset. `RelatedMembershipBooleanFilter` filters will be tested for both `True` and `False` values.
+
+### Generic Multiple Choice Filter Tests
+
+A `generic_filter_tests` attribute with a list of filters can be defined on the test class to run generic tests against multiple choice filters. The `generic_filter_tests` attribute should be in the following format:
+
+```python
+generic_filter_tests = (
+    # use a single item when the filter name matches the model field name
+    ["model_field"],
+    # use [filter_name, field_name] when the filter name does not match the model field name
+    ["related_object_filter", "related_object__name"],
+    # the field name is passed as a kwarg to the `queryset.filter` method, so the dunder syntax can be used to make nested queries
+    ["related_object_filter", "related_object__id"],
+)
+```
+
+### Tags Filter Test
+
+If the model being tested is a `PrimaryModel`, the `tags` filter will be automatically tested by passing at least two values to the filter and verifying that the result matches the equivalent queryset filter.
+
 ## Integration Tests
 
 ### Troubleshooting Integration Tests
@@ -70,6 +99,14 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 
 !!! info
     Because plugins also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact plugin tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
+
+### Factory Caching
+
++++ 1.5.11
+
+To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test`, `invoke unittest` and `invoke integration-test` commands: `--cache-test-fixtures`. When running one of these commands with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests. It's a good idea to let this file be regenerated after pulling new code from the repository, as the factory data may have changed.
+
+Factory caching is disabled by default. When using the `invoke` commands to run tests, caching can be enabled by default for your development environment by setting the `cache_test_fixtures` key to `True` in the `invoke.yml` file.
 
 ## Performance Tests
 
