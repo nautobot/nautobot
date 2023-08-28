@@ -499,6 +499,7 @@ jobs:
         with:
           branch: "${{ github.head_ref }}"
           image: "ghcr.io/nautobot/nautobot"
+          platforms: "linux/amd64"
           push: "false"
           python-version: "3.11"
           tag-latest: "false"
