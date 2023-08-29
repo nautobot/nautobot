@@ -8,6 +8,7 @@ on:  # yamllint disable
       - "develop"
       - "next"
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   check-schema:
