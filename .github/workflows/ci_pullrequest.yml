@@ -470,7 +470,6 @@ jobs:
     steps:
       - run: "echo 'All tests succeeded'"
     needs:
-      - "changelog"
       - "container-build-test"
       - "integration-test"
       - "migration-tests-mysql"
