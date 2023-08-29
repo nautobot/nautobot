@@ -196,7 +196,7 @@ class NautobotMetadata(SimpleMetadata):
     """
 
     view_serializer = None
-    advanced_tab_fields = ["id", "url", "composite_key", "created", "last_updated"]
+    advanced_tab_fields = ["id", "url", "object_type", "composite_key", "created", "last_updated"]
 
     def determine_actions(self, request, view):
         """Generate the actions and return the names of the allowed methods."""
@@ -343,7 +343,7 @@ class NautobotMetadata(SimpleMetadata):
         """
         if detail:
             # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
-            fields_to_remove = ["display", "status"]
+            fields_to_remove = ["display", "status", "tags", "custom_fields", "relationships", "computed_fields"]
             fields_to_remove += self.get_advanced_tab_fields(serializer)
         else:
             fields_to_remove = []

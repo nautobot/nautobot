@@ -230,6 +230,32 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "parent": {"required": False},
         }
 
+        detail_view_config = {
+            "layout": [
+                {
+                    "IP Address": {
+                        "fields": [
+                            "namespace",  # Showing as blank
+                            "ip_version",
+                            "type",
+                            "role",
+                            "vrfs",  # Missing from UI
+                            "dns_name",
+                            "description",
+                        ]
+                    },
+                    "Operational Details": {
+                        "fields": [
+                            "tenant",
+                            "assignment",  # Missing from UI
+                            "nat_inside",
+                            "nat_outside_list",
+                        ]
+                    },
+                },
+            ],
+        }
+
     def validate(self, data):
         namespace = data.get("namespace", None)
         parent = data.get("parent", None)
