@@ -404,9 +404,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                     },
                 },
                 {
-                    "Tags": {
-                        "fields": ["tags"],
-                    },
                     "Comments": {
                         "fields": ["comments"],
                     },
