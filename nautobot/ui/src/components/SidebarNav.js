@@ -31,6 +31,21 @@ export default function SidebarNav() {
         CurrentContextIcon = appContextIcons[currentContext];
     }
 
+    const isDisabledLinkProps = (route) => {
+        if (!isEnabledRoute(route)) {
+            return {
+                color: "gray.500",
+                cursor: "not-allowed",
+                _hover: {
+                    color: "gray.500",
+                },
+                // Prevent link click event
+                onClick: (e) => e.preventDefault(),
+            };
+        }
+        return {};
+    };
+
     return (
         <>
             <Heading variant="sidebar">
@@ -68,15 +83,6 @@ export default function SidebarNav() {
                                                         <SidebarButton
                                                             as={ReactRouterLink}
                                                             key={menu_idx}
-                                                            isDisabled={
-                                                                !isEnabledRoute(
-                                                                    menu[1]
-                                                                )
-                                                            }
-                                                            _disabled={{
-                                                                color: "gray.500",
-                                                                cursor: "not-allowed",
-                                                            }}
                                                             level={1}
                                                             to={menu[1]}
                                                             isLast={
@@ -88,6 +94,9 @@ export default function SidebarNav() {
                                                                 menu[1] ===
                                                                 location.pathname
                                                             }
+                                                            {...isDisabledLinkProps(
+                                                                menu[1]
+                                                            )}
                                                         >
                                                             {menu[0]}
                                                         </SidebarButton>
@@ -134,15 +143,6 @@ export default function SidebarNav() {
                                                                                 to={
                                                                                     submenu[1]
                                                                                 }
-                                                                                isDisabled={
-                                                                                    !isEnabledRoute(
-                                                                                        submenu[1]
-                                                                                    )
-                                                                                }
-                                                                                _disabled={{
-                                                                                    color: "gray.500",
-                                                                                    cursor: "not-allowed",
-                                                                                }}
                                                                                 isLast={
                                                                                     submenu_idx ===
                                                                                     submenu_arr.length -
@@ -152,6 +152,9 @@ export default function SidebarNav() {
                                                                                     submenu[1] ===
                                                                                     location.pathname
                                                                                 }
+                                                                                {...isDisabledLinkProps(
+                                                                                    submenu[1]
+                                                                                )}
                                                                             >
                                                                                 {
                                                                                     submenu[0]
