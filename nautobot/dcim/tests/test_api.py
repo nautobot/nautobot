@@ -603,7 +603,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                         "desc_units",
                         "device_count",
                         "facility_id",
-                        "notes_url",
                         "outer_depth",
                         "outer_unit",
                         "outer_width",
