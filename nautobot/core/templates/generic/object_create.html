@@ -25,14 +25,16 @@
                     {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
                 </h3>
                 {% block tabs %}{% endblock %}
-                {% if form.non_field_errors %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
-                            {{ form.non_field_errors }}
+                {% block form_errors %}
+                    {% if form.non_field_errors %}
+                        <div class="panel panel-danger">
+                            <div class="panel-heading"><strong>Errors</strong></div>
+                            <div class="panel-body">
+                                {{ form.non_field_errors }}
+                            </div>
                         </div>
-                    </div>
-                {% endif %}
+                    {% endif %}
+                {% endblock %}
                 {% block form %}
                     <div class="panel panel-default">
                         <div class="panel-heading"><strong>{{ obj_type|capfirst }}</strong></div>
