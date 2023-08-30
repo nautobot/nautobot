@@ -72,12 +72,10 @@ export default function GenericObjectListView() {
     );
     let data_fetched = !listDataFetching;
 
-    let table_name = toTitleCase(model_name, "-");
     if (!data_loaded) {
         return (
             <GenericView gridBackground="white-0">
-            {
-                (menuPath) => (
+                {(menuPath) => (
                     <NautobotGridItem>
                         <ObjectListTable
                             tableData={{}}
@@ -91,8 +89,7 @@ export default function GenericObjectListView() {
                             data_fetched={data_fetched}
                         />
                     </NautobotGridItem>
-                )
-            }
+                )}
             </GenericView>
         );
     }
@@ -113,24 +110,22 @@ export default function GenericObjectListView() {
     }
     return (
         <GenericView gridBackground="white-0">
-            {
-                (menuPath) => (
-                    <NautobotGridItem>
-                        {/* TODO(timizuo): Use @component/ObjectTable instead, after pagination control has been added to @component/ObjectTable */}
-                        <ObjectListTable
-                            tableData={listData.results}
-                            defaultHeaders={defaultHeaders}
-                            tableHeaders={tableHeaders}
-                            totalCount={listData.count}
-                            active_page_number={active_page_number}
-                            page_size={page_size}
-                            tableTitle={menuPath[menuPath.length - 1]}
-                            data_loaded={data_loaded}
-                            data_fetched={data_fetched}
-                        />
-                    </NautobotGridItem>
-                )
-            }
+            {(menuPath) => (
+                <NautobotGridItem>
+                    {/* TODO(timizuo): Use @component/ObjectTable instead, after pagination control has been added to @component/ObjectTable */}
+                    <ObjectListTable
+                        tableData={listData.results}
+                        defaultHeaders={defaultHeaders}
+                        tableHeaders={tableHeaders}
+                        totalCount={listData.count}
+                        active_page_number={active_page_number}
+                        page_size={page_size}
+                        tableTitle={menuPath[menuPath.length - 1]}
+                        data_loaded={data_loaded}
+                        data_fetched={data_fetched}
+                    />
+                </NautobotGridItem>
+            )}
         </GenericView>
     );
 }

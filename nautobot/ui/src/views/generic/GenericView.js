@@ -88,7 +88,10 @@ export default function GenericView({
     const { pathname } = useLocation();
     const { data: menu, isSuccess } = useGetUIMenuQuery();
 
-    const menuPath = useMemo(() => findMenuPathRecursive(pathname, menu), [menu, pathname])
+    const menuPath = useMemo(
+        () => findMenuPathRecursive(pathname, menu),
+        [menu, pathname]
+    );
     const breadcrumbs = useMemo(
         () =>
             (function () {
@@ -100,13 +103,9 @@ export default function GenericView({
                         },
                     ];
                 }
-                return breadcrumbsRecursive(
-                    menuPath,
-                    menu,
-                    objectData
-                );
+                return breadcrumbsRecursive(menuPath, menu, objectData);
             })(),
-        [menu, objectData, pathname, isSuccess]
+        [menu, objectData, pathname, isSuccess, menuPath]
     );
 
     const currentState = useSelector((state) => state.appState);
@@ -143,7 +142,9 @@ export default function GenericView({
                         gridAutoRows="auto"
                         marginTop="sm"
                     >
-                        { typeof children === "function" ? children(menuPath) : children}
+                        {typeof children === "function"
+                            ? children(menuPath)
+                            : children}
                     </NautobotGrid>
                 </Box>
 
