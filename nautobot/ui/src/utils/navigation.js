@@ -37,12 +37,17 @@ export function getPluginRoutes() {
  * Return true if `route` is part of the routes enabled for new-ui.
  */
 export const isEnabledRoute = (route) =>
+    process.env.NODE_ENV === "development" ||
     nautobot_config["enabled-routes"].includes(route);
 
 /**
  * Return true if `context` has children routes which are part of the enabled new-ui routes.
  */
 export function isEnabledContextRoute(menuInfo, context_name) {
+    if (process.env.NODE_ENV === "development") {
+        return true;
+    }
+
     let isEnabledContextRoute = false;
     const context = menuInfo[context_name];
     Object.entries(context).forEach(([_, sub_context]) => {
