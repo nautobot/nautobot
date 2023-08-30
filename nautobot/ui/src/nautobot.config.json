@@ -1,3 +1,7 @@
 {
-    "enabled-routes": ["/dcim/devices/", "/dcim/device-types/", "/ipam/ip-addresses/"]
+    "enabled-routes": [
+        "/dcim/devices/",
+        "/dcim/device-types/",
+        "/ipam/ip-addresses/"
+    ]
 }
