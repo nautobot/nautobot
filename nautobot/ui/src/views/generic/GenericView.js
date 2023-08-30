@@ -88,6 +88,7 @@ export default function GenericView({
     const { pathname } = useLocation();
     const { data: menu, isSuccess } = useGetUIMenuQuery();
 
+    // Using useMemo to prevent unnecessary re-execution of findMenuPathRecursive
     const menuPath = useMemo(
         () => findMenuPathRecursive(pathname, menu),
         [menu, pathname]

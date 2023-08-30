@@ -216,6 +216,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = [
             "address",
+            "type",
             "vrf",
             "status",
             "role",
@@ -235,11 +236,11 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 {
                     "IP Address": {
                         "fields": [
-                            "namespace",  # Showing as blank
+                            # FixMe(timizuo): Missing in new-ui; resolve when working on #4355
+                            "namespace",
                             "ip_version",
                             "type",
                             "role",
-                            "vrfs",  # Missing from UI
                             "dns_name",
                             "description",
                         ]
@@ -247,7 +248,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                     "Operational Details": {
                         "fields": [
                             "tenant",
-                            "assignment",  # Missing from UI
+                            "assigned",  # FixMe(timizuo) Missing in new-ui; resolve when working on #4355
                             "nat_inside",
                             "nat_outside_list",
                         ]
