@@ -254,11 +254,11 @@ jobs:
       (github.ref_name == 'develop' || github.ref_name == 'next')
     needs:
       - "check-schema"
-      - "tests-mysql"
-      - "tests-postgres"
       - "integration-test"
       - "migration-tests-mysql"
       - "migration-tests-postgres"
+      - "tests-mysql"
+      - "tests-postgres"
       - "tests-ui"
     strategy:
       fail-fast: true
