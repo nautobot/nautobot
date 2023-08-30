@@ -279,6 +279,7 @@ jobs:
       - "integration-test"
       - "migration-tests-mysql"
       - "migration-tests-postgres"
+      - "tests-ui"
     strategy:
       fail-fast: true
       matrix:
@@ -346,10 +347,3 @@ jobs:
           tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
           tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
           target: "final-dev"
-    needs:
-      - "tests-postgres"
-      - "tests-mysql"
-      - "integration-test"
-      - "migration-tests-mysql"
-      - "migration-tests-postgres"
-      - "tests-ui"
