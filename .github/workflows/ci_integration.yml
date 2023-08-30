@@ -216,9 +216,6 @@ jobs:
         run: "poetry install"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset ${{ matrix.dataset-file }}"
-    needs:
-      - "pylint"
-      - "tests-postgres"
   integration-test:
     runs-on: "ubuntu-22.04"
     env:
