@@ -11,7 +11,6 @@ import {
     updateCurrentContext,
     getCurrentAppContextSelector,
 } from "@utils/store";
-import { toTitleCase } from "@utils/string";
 
 export default function GenericObjectListView() {
     const { app_label, model_name } = useParams();
