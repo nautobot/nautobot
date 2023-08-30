@@ -74,6 +74,8 @@ jobs:
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
+    needs:
+      - "check-schema"
   tests-mysql:
     name: "Unit tests (MySQL and Python 3.8)"
     runs-on: "ubuntu-22.04"
@@ -116,6 +118,8 @@ jobs:
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
+    needs:
+      - "check-schema"
   tests-ui:
     runs-on: "ubuntu-20.04"
     env:
@@ -137,6 +141,8 @@ jobs:
       - name: "Run unittest-ui"
         working-directory: ./nautobot/ui
         run: "poetry run invoke unittest-ui"
+    needs:
+      - "check-schema"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.8)"
     runs-on: "ubuntu-20.04"
@@ -179,6 +185,8 @@ jobs:
         run: "poetry install --no-interaction --no-root --extras mysql"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset ${{ matrix.dataset-file }}"
+    needs:
+      - "check-schema"
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.11)"
     runs-on: "ubuntu-20.04"
@@ -216,6 +224,8 @@ jobs:
         run: "poetry install"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset ${{ matrix.dataset-file }}"
+    needs:
+      - "check-schema"
   integration-test:
     runs-on: "ubuntu-22.04"
     env:
@@ -255,6 +265,8 @@ jobs:
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
+    needs:
+      - "check-schema"
   container-build:
     name: "Build Container Images (amd64 on GHCR Only)"
     runs-on: "ubuntu-22.04"
@@ -334,3 +346,10 @@ jobs:
           tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
           tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
           target: "final-dev"
+    needs:
+      - "tests-postgres"
+      - "tests-mysql"
+      - "integration-test"
+      - "migration-tests-mysql"
+      - "migration-tests-postgres"
+      - "tests-ui"
