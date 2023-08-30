@@ -16,6 +16,8 @@ import {
 } from "@utils/store";
 import { appContextIcons } from "@constants/icons";
 
+import { isEnabledRoute } from "@utils/navigation";
+
 // The sidebar accordion
 export default function SidebarNav() {
     const isLoggedIn = useSelector(isLoggedInSelector);
@@ -28,6 +30,21 @@ export default function SidebarNav() {
     if (currentContext) {
         CurrentContextIcon = appContextIcons[currentContext];
     }
+
+    const isDisabledLinkProps = (route) => {
+        if (!isEnabledRoute(route)) {
+            return {
+                color: "gray.500",
+                cursor: "not-allowed",
+                _hover: {
+                    color: "gray.500",
+                },
+                // Prevent link click event
+                onClick: (e) => e.preventDefault(),
+            };
+        }
+        return {};
+    };
 
     return (
         <>
@@ -77,6 +94,9 @@ export default function SidebarNav() {
                                                                 menu[1] ===
                                                                 location.pathname
                                                             }
+                                                            {...isDisabledLinkProps(
+                                                                menu[1]
+                                                            )}
                                                         >
                                                             {menu[0]}
                                                         </SidebarButton>
@@ -132,6 +152,9 @@ export default function SidebarNav() {
                                                                                     submenu[1] ===
                                                                                     location.pathname
                                                                                 }
+                                                                                {...isDisabledLinkProps(
+                                                                                    submenu[1]
+                                                                                )}
                                                                             >
                                                                                 {
                                                                                     submenu[0]
