@@ -208,21 +208,20 @@ class LocationSerializer(
                 {
                     "Location": {
                         "fields": [
-                            "name",
                             "location_type",
                             "tenant",
-                            "description",
                             "facility",
                             "asn",
                             "time_zone",
-                            "latitude",
-                            "longitude",
+                            "description",
                         ]
                     },
                     "Contact Info": {
                         "fields": [
                             "physical_address",
                             "shipping_address",
+                            "latitude",
+                            "longitude",
                             "contact_name",
                             "contact_phone",
                             "contact_email",
