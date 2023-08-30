@@ -388,6 +388,35 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = ["model", "manufacturer", "part_number", "u_height", "is_full_depth", "device_count"]
 
+        detail_view_config = {
+            "layout": [
+                {
+                    "Chassis": {
+                        "fields": [
+                            "manufacturer",
+                            "model",
+                            "part_number",
+                            "u_height",
+                            "is_full_depth",
+                            "subdevice_role",
+                            "front_image",
+                            "rear_image",
+                            "device_count",
+                        ]
+                    },
+                },
+                {
+                    "Tags": {
+                        "fields": ["tags"],
+                    },
+                    "Comments": {
+                        "fields": ["comments"],
+                    },
+                },
+            ],
+            "include_others": True,
+        }
+
 
 class ConsolePortTemplateSerializer(NautobotModelSerializer):
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
