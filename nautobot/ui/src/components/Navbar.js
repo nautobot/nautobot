@@ -25,15 +25,18 @@ import {
 
 import RouterButton from "@components/RouterButton";
 import {
+    currentUserSelector,
     isLoggedInSelector,
     getCurrentContextSelector,
-    currentUserSelector,
+    getMenuInfoSelector,
 } from "@utils/store";
+import { isEnabledContextRoute } from "@utils/navigation";
 
 export function Navbar() {
     const isLoggedIn = useSelector(isLoggedInSelector);
     const currentContext = useSelector(getCurrentContextSelector);
     const currentUser = useSelector(currentUserSelector);
+    const menuInfo = useSelector(getMenuInfoSelector);
 
     return (
         <UINavbar>
@@ -68,11 +71,18 @@ export function Navbar() {
                     <ReactRouterNavLink key={to} to={to}>
                         {({ isActive }) => (
                             <NavbarSection
-                                as="span"
+                                as="button"
                                 isActive={
                                     isActive || children === currentContext
                                 }
                                 children={children}
+                                disabled={
+                                    !isEnabledContextRoute(menuInfo, [children])
+                                }
+                                _disabled={{
+                                    color: "gray.400",
+                                    cursor: "not-allowed",
+                                }}
                                 {...rest}
                             />
                         )}
