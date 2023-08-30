@@ -16,6 +16,8 @@ import {
 } from "@utils/store";
 import { appContextIcons } from "@constants/icons";
 
+import { isEnabledRoute } from "@utils/navigation";
+
 // The sidebar accordion
 export default function SidebarNav() {
     const isLoggedIn = useSelector(isLoggedInSelector);
@@ -66,6 +68,15 @@ export default function SidebarNav() {
                                                         <SidebarButton
                                                             as={ReactRouterLink}
                                                             key={menu_idx}
+                                                            isDisabled={
+                                                                !isEnabledRoute(
+                                                                    menu[1]
+                                                                )
+                                                            }
+                                                            _disabled={{
+                                                                color: "gray.500",
+                                                                cursor: "not-allowed",
+                                                            }}
                                                             level={1}
                                                             to={menu[1]}
                                                             isLast={
@@ -123,6 +134,15 @@ export default function SidebarNav() {
                                                                                 to={
                                                                                     submenu[1]
                                                                                 }
+                                                                                isDisabled={
+                                                                                    !isEnabledRoute(
+                                                                                        submenu[1]
+                                                                                    )
+                                                                                }
+                                                                                _disabled={{
+                                                                                    color: "gray.500",
+                                                                                    cursor: "not-allowed",
+                                                                                }}
                                                                                 isLast={
                                                                                     submenu_idx ===
                                                                                     submenu_arr.length -

@@ -1,0 +1,3 @@
+{
+    "enabled-routes": ["/dcim/devices/", "/ipam/ip-addresses/"]
+}
