@@ -146,12 +146,8 @@ jobs:
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.8)"
     runs-on: "ubuntu-20.04"
-    strategy:
-      fail-fast: true
-      matrix:
-        dataset-file:
-          - "development/datasets/nautobot_1.5.16_mysql.tar.gz"
     env:
+      MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
       NAUTOBOT_DB_USER: "root"
@@ -184,18 +180,14 @@ jobs:
       - name: "Install MySql Dependencies"
         run: "poetry install --no-interaction --no-root --extras mysql"
       - name: "Run migration test"
-        run: "poetry run invoke migration-test --db-engine mysql --dataset ${{ matrix.dataset-file }}"
+        run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
     needs:
       - "check-schema"
   migration-tests-postgres:
     name: "Run migrations against test dataset (PostgreSQL and Python 3.11)"
     runs-on: "ubuntu-20.04"
-    strategy:
-      fail-fast: true
-      matrix:
-        dataset-file:
-          - "development/datasets/nautobot_1.5.16_postgres.tar.gz"
     env:
+      MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
       NAUTOBOT_DB_USER: "nautobot"
@@ -223,7 +215,7 @@ jobs:
       - name: "Reinstall Nautobot Local"
         run: "poetry install"
       - name: "Run migration test"
-        run: "poetry run invoke migration-test --db-engine postgres --dataset ${{ matrix.dataset-file }}"
+        run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
     needs:
       - "check-schema"
   integration-test:
