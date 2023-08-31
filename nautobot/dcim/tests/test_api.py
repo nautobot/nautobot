@@ -600,8 +600,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                 "Other Fields": {
                     "fields": [
                         "asset_tag",
-                        "computed_fields",
-                        "custom_fields",
                         "desc_units",
                         "device_count",
                         "facility_id",
@@ -609,7 +607,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                         "outer_unit",
                         "outer_width",
                         "power_feed_count",
-                        "relationships",
                         "role",
                         "serial",
                         "tenant",
@@ -619,7 +616,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                     ]
                 },
             },
-            {"Tags": {"fields": ["tags"]}, "Comments": {"fields": ["comments"]}},
+            {"Comments": {"fields": ["comments"]}},
         ]
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(expected_schema, detail_view_schema)
