@@ -230,7 +230,6 @@ class LocationSerializer(
                     },
                 },
                 {
-                    "Tags": {"fields": ["tags"]},
                     "Comments": {"fields": ["comments"]},
                 },
             ],
@@ -290,7 +289,6 @@ class RackSerializer(
                     },
                 },
                 {
-                    "Tags": {"fields": ["tags"]},
                     "Comments": {"fields": ["comments"]},
                 },
             ],
@@ -406,9 +404,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                     },
                 },
                 {
-                    "Tags": {
-                        "fields": ["tags"],
-                    },
                     "Comments": {
                         "fields": ["comments"],
                     },
@@ -585,9 +580,6 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                     },
                 },
                 {
-                    "Tags": {
-                        "fields": ["tags"],
-                    },
                     "Comments": {
                         "fields": ["comments"],
                     },

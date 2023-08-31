@@ -216,6 +216,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = [
             "address",
+            "type",
             "vrf",
             "status",
             "role",
@@ -228,6 +229,32 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "mask_length": {"read_only": True},
             "nat_outside_list": {"read_only": True},
             "parent": {"required": False},
+        }
+
+        detail_view_config = {
+            "layout": [
+                {
+                    "IP Address": {
+                        "fields": [
+                            # FixMe(timizuo): Missing in new-ui; resolve when working on #4355
+                            "namespace",
+                            "ip_version",
+                            "type",
+                            "role",
+                            "dns_name",
+                            "description",
+                        ]
+                    },
+                    "Operational Details": {
+                        "fields": [
+                            "tenant",
+                            "assigned",  # FixMe(timizuo) Missing in new-ui; resolve when working on #4355
+                            "nat_inside",
+                            "nat_outside_list",
+                        ]
+                    },
+                },
+            ],
         }
 
     def validate(self, data):

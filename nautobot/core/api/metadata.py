@@ -343,7 +343,15 @@ class NautobotMetadata(SimpleMetadata):
         """
         if detail:
             # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
-            fields_to_remove = ["display", "status", "notes_url"]
+            fields_to_remove = [
+                "display",
+                "status",
+                "tags",
+                "custom_fields",
+                "relationships",
+                "computed_fields",
+                "notes_url",
+            ]
             fields_to_remove += self.get_advanced_tab_fields(serializer)
         else:
             fields_to_remove = []
