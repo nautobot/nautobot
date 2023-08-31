@@ -520,6 +520,15 @@ class DynamicGroup(OrganizationalModel):
             )
         return super().delete(*args, **kwargs)
 
+    def clean_fields(self, exclude=None):
+        if exclude is None:
+            exclude = []
+
+        if "filter" not in exclude:
+            self.clean_filter()
+
+        super().clean_fields(exclude=exclude)
+
     def clean(self):
         super().clean()
 
@@ -529,9 +538,6 @@ class DynamicGroup(OrganizationalModel):
 
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
-
-        # Validate `filter` dict
-        self.clean_filter()
 
     def generate_query_for_filter(self, filter_field, value):
         """
