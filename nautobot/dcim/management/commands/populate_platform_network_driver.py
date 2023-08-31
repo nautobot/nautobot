@@ -17,6 +17,8 @@ If no mapping is found, the value of the Platform.slug field will be used instea
 --no-use-slug-field can be used to disable populating the network_driver field from the Platform.slug field.
 
 --no-use-napalm-driver-field can be used to disable populating the network_driver field from the Platform.napalm_driver field.
+
+By default, the network_driver field will only be populated if it is currently empty. Use --force to overwrite existing values.
 """
 
 
@@ -45,10 +47,23 @@ class Command(BaseCommand):
             default=False,
             help="Prompt to confirm before updating the network_driver field on each platform.",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            default=False,
+            help="Overwrite existing network_driver field values.",
+        )
 
     def handle(self, *args, **options):
-        for platform in Platform.objects.filter(network_driver=""):
+        for platform in Platform.objects.all():
             self.stdout.write(f"Checking {platform}...")
+
+            if platform.network_driver and not options["force"]:
+                self.stdout.write(
+                    self.style.WARNING(f"{platform} currently is set to {platform.network_driver}, skipping.")
+                )
+                continue
+
             network_driver = ""
             if options["use_napalm_driver_field"] and platform.napalm_driver:
                 if platform.napalm_driver in NAPALM_LIB_MAPPER:

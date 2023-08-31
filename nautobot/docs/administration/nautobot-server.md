@@ -376,10 +376,13 @@ Please see the dedicated guide on the [Nautobot Shell](nautobot-shell.md) for mo
 
 `nautobot-server populate_platform_network_driver`
 
-This is a convenience command to populate the `network_driver` field on the `Platform` model. This is useful for users who have upgraded from Nautobot 1.5.x to 1.6.x and have not yet populated the `network_driver` field on the `Platform` model. By default, this command will attempt to map the `Platform.napalm_driver` field to a matching `network_driver` value through the `netutils.lib_mapper.NAPALM_LIB_MAPPER` mapping. If no match is found, the value of the `Platform.slug` field will be used as the `network_driver` instead. These behaviors can be modified through the `--no-use-slug-field` and `--no-use-napalm-driver-field` arguments. If the `--interactive` argument is provided, the user will be prompted to confirm each change.
+This is a convenience command to populate the `network_driver` field on the `Platform` model. This is useful for users who have upgraded from Nautobot 1.5.x to 1.6.x and have not yet populated the `network_driver` field on the `Platform` model. By default, this command will attempt to map the `Platform.napalm_driver` field to a matching `network_driver` value through the `netutils.lib_mapper.NAPALM_LIB_MAPPER` mapping. If no match is found, the value of the `Platform.slug` field will be used as the `network_driver` instead. These behaviors can be modified through the `--no-use-slug-field` and `--no-use-napalm-driver-field` arguments. If the `--interactive` argument is provided, the user will be prompted to confirm each change. By default, the `network_driver` field will only be populated if it is currently empty. Use `--force` to overwrite existing values.
 
 !!! important
-    The `Platform.slug` field will be removed in Nautobot v2.0.0. We recommend populating the `network_driver` field with the appropriate value before upgrading to v2.0 or higher if you're using any Nautobot apps or jobs that connect to devices.
+    The `Platform.slug` field will be removed in Nautobot v2.0. We recommend populating the `network_driver` field with the appropriate value before upgrading to v2.0 or higher if you're using any Nautobot apps or jobs that connect to devices.
+
+!!! note
+    Some Nautobot apps (eg: Device Onboarding and Golden Config) require the `Platform.slug` to be set to the netmiko driver name in Nautobot v1.X. If you are using these apps, you should inspect your platforms' `slug` and `napalm_driver` fields to determine whether the `--no-use-slug-field` and `--no-use-napalm-driver-field` arguments should be used in your environment.
 
 ```no-highlight
 nautobot-server populate_platform_network_driver [--no-use-slug-field | --no-use-napalm-driver-field] [--interactive]
