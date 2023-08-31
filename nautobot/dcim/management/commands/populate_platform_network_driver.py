@@ -10,7 +10,7 @@ Populate the Platform.network_driver field from the napalm_driver or slug fields
 
 This command will attempt to find a valid mapping from the Platform.napalm_driver field to a matching entry in netutils.lib_mapper.NAPALM_LIB_MAPPER.
 
-If no mapping is found, the Platform.slug field will be used instead.
+If no mapping is found, the value of the Platform.slug field will be used instead.
 
 --interactive can be used to prompt for confirmation before making changes to each Platform.
 
