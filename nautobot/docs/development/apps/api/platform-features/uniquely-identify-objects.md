@@ -20,7 +20,7 @@ However, there are also some disadvantages to using primary keys:
 
 ### Natural Keys
 
-A natural key is an identifier that is based on the natural attributes of a record, such as a platforms's name or in the case of some Nautobot models, a combination of fields. For example, the Prefix model's natural key is formed using a combination of the `prefix` field and the associated Namespace's `name`. Here are some advantages of using natural keys:
+A natural key is an identifier that is based on the natural attributes of a record, such as a platform's name or, in the case of some Nautobot models, a combination of fields. For example, the Prefix model's natural key is formed using a combination of the `prefix` field and the associated Namespace's `name`. Here are some advantages of using natural keys:
 
 - **Usability:** Natural keys are more user-friendly and easier to remember.
 - **Portability:** Natural keys can be used to identify an object in multiple contexts, such as in external applications or in different databases.
@@ -28,7 +28,7 @@ A natural key is an identifier that is based on the natural attributes of a reco
 However, there are also some disadvantages to using natural keys:
 
 - **Complexity:** Using natural keys can make it more difficult to change the underlying data structure without breaking existing integrations.
-- **Performance:** Natural keys are not guaranteed to be indexed which can make lookups slower. Also, natural keys that use a combination of fields will require database joins to retrieve the object from the database.
+- **Performance:** Natural keys are not guaranteed to be indexed which can make lookups slower. Also, natural keys that include fields from related objects will require database joins to retrieve the object from the database.
 
 In general, the decision of whether to use a primary key or a natural key depends on the specific requirements of the application. If uniqueness is critical, or if performance is a concern, a primary key may be the best choice. If human-readability is important, or if portability is a concern, a natural key may be the best choice.
 
