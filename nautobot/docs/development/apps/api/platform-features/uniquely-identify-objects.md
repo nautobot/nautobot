@@ -13,7 +13,10 @@ The primary key is a concrete database field and is the primary method for refer
 - **Uniqueness:** Primary keys are guaranteed to be unique.
 - **Performance:** Primary keys are always indexed in Nautobot, which makes lookups very fast.
 
-However, primary keys in Nautobot use UUIDs and can be difficult to work with directly.
+However, there are also some disadvantages to using primary keys:
+
+- **Usability**: Primary keys in Nautobot use UUIDs and can be difficult to work with directly.
+- **Portability:** Primary keys are specific to a single database and cannot be used to identify an object in multiple contexts, such as in external applications or in different databases.
 
 ### Natural Keys
 
