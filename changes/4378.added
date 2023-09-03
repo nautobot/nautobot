@@ -1,0 +1,1 @@
+Added the ability to automatically apply `isnull` filters when model field is nullable.
