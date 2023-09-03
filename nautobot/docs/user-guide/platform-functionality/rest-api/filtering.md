@@ -73,10 +73,28 @@ Custom fields can be mixed with built-in fields to further narrow results. When 
 
 ## Lookup Expressions
 
-Certain model fields (including, in Nautobot 1.4.0 and later, custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows
-for negation and other context-specific filtering.
+Certain model fields (including, in Nautobot 1.4.0 and later, custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows for negation and other context-specific filtering.
 
 These lookup expressions can be applied by adding a suffix to the desired field's name, e.g. `mac_address__n`. In this case, the filter expression is for negation and it is separated by two underscores. Below are the lookup expressions that are supported across different field types.
+
+### Nullable Fields
+
+The `isnull` lookup expression is automatically added when the following three conditions are met:
+
+1. A FilterSet that inherits `nautobot.apps.filters.BaseFilterSet`
+2. The model field is set to `Null = True`
+3. A model field that is or inherits from one of:
+    - `django.db.models.CharField`
+    - `django.db.models.DateField`
+    - `django.db.models.DecimalField`
+    - `django.db.models.ForeignKey`
+    - `django.db.models.FloatField`
+    - `django.db.models.IntegerField`
+    - `django.db.models.TextField`
+    - `django.db.models.UUIDField`
+
++/- 2.0.0
+    This feature was only added in Nautobot 2.0.0.
 
 ### Numeric Fields
 
