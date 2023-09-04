@@ -207,8 +207,6 @@ ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
 COPY --chown=nautobot:nautobot development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
-ENV PATH="/opt/nautobot/bin:${PATH}"
-
 RUN nautobot-server build_ui && rm -rf /source/*
 
 # Run Nautobot development server by default
@@ -269,7 +267,6 @@ RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     rm -rf /source/*
 
 USER nautobot
-ENV PATH="/opt/nautobot/bin:${PATH}"
 
 # Generate self-signed SSL certs
 RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
