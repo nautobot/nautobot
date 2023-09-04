@@ -71,17 +71,11 @@ RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
 
 HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --fail http://localhost:8080/health/ || exit 1
 
-ARG PYTHON_VER
 # Generate nautobot user and its required dirs for later consumption
 RUN mkdir /opt/nautobot /opt/nautobot/.cache /prom_cache /source && \
     groupadd --gid 999 --system nautobot && \
     useradd --uid 999 --gid 999 --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot && \
-    chown -R nautobot:nautobot \
-    /opt/nautobot \
-    /prom_cache \
-    /source \
-    /usr/local/bin \
-    /usr/local/lib/python${PYTHON_VER}/site-packages
+    chown -R nautobot:nautobot /opt/nautobot /prom_cache /source
 
 # Common entrypoint for all environments
 COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
@@ -131,34 +125,36 @@ FROM node-dependencies AS node-dev-dependencies
 # Install development Node dependencies of Nautobot UI
 RUN npm install --include=dev
 
+################################ Stage: poetry (stub for poetry only)
+
+FROM python:${PYTHON_VER}-slim AS poetry
+# Install Poetry manually via its installer script;
+# if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
+# https://python-poetry.org/docs/master/#installing-with-the-official-installer
+# This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
+ARG POETRY_HOME=/opt/poetry
+ARG POETRY_INSTALLER_PARALLEL=true
+ARG POETRY_VERSION=1.5.1
+ARG POETRY_VIRTUALENVS_CREATE=false
+ADD https://install.python-poetry.org /tmp/install-poetry.py
+RUN python /tmp/install-poetry.py
+
+# Add poetry install location to the $PATH
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
+
+RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
+    poetry config installer.parallel "${POETRY_INSTALLER_PARALLEL}" && \
+    poetry config installer.no-binary pyuwsgi
+
 ################################ Stage: python-dependencies (intermediate build target)
 
 # hadolint ignore=DL3006
 FROM system-dev-dependencies-$TARGETARCH AS python-dependencies
 
-USER nautobot
-
-# Install Poetry manually via its installer script;
-# if we instead used "pip install poetry" it would install its own dependencies globally which may conflict with ours.
-# https://python-poetry.org/docs/master/#installing-with-the-official-installer
-# This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
-RUN --mount=type=cache,target="/opt/nautobot/.cache",uid=999,gid=999,sharing=locked \
-    curl -sSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
-    python /tmp/install-poetry.py --version 1.5.1 && \
-    rm -f /tmp/install-poetry.py
-
-# Add nautobot and poetry install location to the $PATH
-ENV PATH="/opt/nautobot/bin:${PATH}:/opt/nautobot/.local/bin"
-
-# Poetry 1.1.0 added parallel installation as an option;
-# unfortunately it seems to have some issues with installing/updating "requests" and "certifi"
-# while simultaneously atttempting to *use* those packages to install other packages.
-# This is disabled by default (safer), but can be re-enabled by setting POETRY_PARALLEL=true
-# pyuwsgi wheel doesn't support ssl so we build it from source
-# https://github.com/nautobot/nautobot/issues/193
-RUN poetry config virtualenvs.create false && \
-    poetry config installer.parallel "${POETRY_PARALLEL:-false}" && \
-    poetry config installer.no-binary pyuwsgi
+ARG POETRY_HOME=/opt/poetry
+COPY --from=poetry ${POETRY_HOME} ${POETRY_HOME}
+COPY --from=poetry /root/.config/pypoetry /root/.config/pypoetry
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 # The example_plugin is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
 COPY --chown=nautobot:nautobot pyproject.toml poetry.lock README.md /source/
@@ -167,7 +163,7 @@ COPY --chown=nautobot:nautobot examples /source/examples
 WORKDIR /source
 
 # Install (non-development) Python dependencies of Nautobot
-RUN --mount=type=cache,target="/opt/nautobot/.cache/pypoetry",uid=999,gid=999,sharing=locked \
+RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
@@ -176,7 +172,7 @@ RUN --mount=type=cache,target="/opt/nautobot/.cache/pypoetry",uid=999,gid=999,sh
 FROM python-dependencies AS python-dev-dependencies
 
 # Add development-specific dependencies of Nautobot to the installation
-RUN --mount=type=cache,target="/opt/nautobot/.cache/pypoetry",uid=999,gid=999,sharing=locked \
+RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-root --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
@@ -203,7 +199,7 @@ COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/nautobot/project-static/docs /source/nautobot/project-static/docs
 
-RUN --mount=type=cache,target="/opt/nautobot/.cache/pypoetry",uid=999,gid=999,sharing=locked \
+RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-ansi --extras all && \
     rm -rf /tmp/tmp*
 
@@ -211,11 +207,9 @@ ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
 COPY --chown=nautobot:nautobot development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
-RUN nautobot-server build_ui && rm -rf /source/*
+ENV PATH="/opt/nautobot/bin:${PATH}"
 
-# switch to root user for dev stage: https://github.com/nautobot/nautobot/issues/4164
-# hadolint ignore=DL3002
-USER root
+RUN nautobot-server build_ui && rm -rf /source/*
 
 # Run Nautobot development server by default
 EXPOSE 8080
@@ -227,16 +221,17 @@ FROM python-dev-dependencies AS final-dev
 
 COPY --chown=nautobot:nautobot nautobot/ui /opt/nautobot/ui
 COPY --from=node-dev-dependencies --chown=nautobot:nautobot /opt/nautobot/ui/node_modules /opt/nautobot/ui/node_modules
-
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 
 # Install Nautobot wheel, and uninstall example apps as they're not included in the final-dev image
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
 # hadolint ignore=DL3042
-RUN --mount=type=cache,target="/opt/nautobot/.cache/pip",uid=999,gid=999,sharing=locked \
+RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     pip install --no-deps /source/dist/*.whl && \
     pip uninstall -y example-plugin example-plugin-with-view-override && \
     rm -rf /source/*
+
+USER nautobot
 
 WORKDIR /opt/nautobot
 
@@ -258,9 +253,6 @@ CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
 
 FROM system-dependencies AS final
 
-USER nautobot
-ENV PATH="/opt/nautobot/bin:${PATH}"
-
 ARG PYTHON_VER
 COPY --from=python-dependencies /usr/local/lib/python${PYTHON_VER}/site-packages /usr/local/lib/python${PYTHON_VER}/site-packages
 COPY --from=python-dependencies /usr/local/bin /usr/local/bin
@@ -272,9 +264,12 @@ COPY --from=final-dev --chown=nautobot:nautobot /opt/nautobot/ui /opt/nautobot/u
 
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
 # hadolint ignore=DL3042
-RUN --mount=type=cache,target="/opt/nautobot/.cache/pip",uid=999,gid=999,sharing=locked \
+RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     pip install --no-deps /source/dist/*.whl && \
     rm -rf /source/*
+
+USER nautobot
+ENV PATH="/opt/nautobot/bin:${PATH}"
 
 # Generate self-signed SSL certs
 RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \

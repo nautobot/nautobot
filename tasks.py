@@ -221,7 +221,7 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     if force_rm:
         command += " --force-rm"
     if poetry_parallel:
-        command += " --build-arg POETRY_PARALLEL=true"
+        command += " --build-arg POETRY_INSTALLER_PARALLEL=true"
     if pull:
         command += " --pull"
 
@@ -304,7 +304,7 @@ def buildx(
             f"--cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}",
         ]
     if poetry_parallel:
-        command_tokens.append("--build-arg POETRY_PARALLEL=true")
+        command_tokens.append("--build-arg POETRY_INSTALLER_PARALLEL=true")
 
     command = " ".join(command_tokens)
     env = {"PYTHON_VER": context.nautobot.python_ver}
