@@ -69,6 +69,9 @@ Most removed database fields in Nautobot 2.0 fall into the following general cat
 ??? info "Full table of removed database fields"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-database-removed-fields.yaml}
 
+!!! info
+    For more information on how to update your integrations after the removal of `slug` fields, see [Uniquely Identifying a Nautobot Object](../../../../development/apps/api/platform-features/uniquely-identify-objects.md).
+
 ### Replaced Models
 
 #### Generic Role Model
