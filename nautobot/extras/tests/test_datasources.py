@@ -8,6 +8,7 @@ import uuid
 import yaml
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.test import RequestFactory
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, LocationType, Location, Manufacturer, Site
@@ -797,3 +798,49 @@ class GitTest(TransactionTestCase):
                     clone_initially=False,
                 )
                 MockGitRepo.return_value.diff_remote.assert_called()
+
+    def test_duplicate_repo_url_with_unique_provided_contents(self, MockGitRepo):
+        """Create a duplicate repo but with unique provided_contents."""
+        remote_url = "http://localhost/duplicates.git"
+        repo1 = GitRepository(
+            name="Repo 1",
+            slug="repo-1",
+            remote_url=remote_url,
+            provided_contents=["extras.job"],
+        )
+        repo1.validated_save(trigger_resync=False)
+        repo2 = GitRepository(
+            name="Repo 2",
+            slug="repo-2",
+            remote_url=remote_url,
+            provided_contents=["extras.configcontext"],
+        )
+        repo2.validated_save(trigger_resync=False)
+        repos = GitRepository.objects.filter(remote_url=remote_url)
+        self.assertEqual(repos.count(), 2)
+
+    def test_duplicate_repo_url_with_duplicate_provided_contents(self, MockGitRepo):
+        """Create a duplicate repo but with duplicate provided_contents."""
+        remote_url = "http://localhost/duplicates.git"
+        repo1 = GitRepository(
+            name="Repo 1",
+            slug="repo-1",
+            remote_url=remote_url,
+            provided_contents=["extras.job"],
+        )
+        repo1.validated_save(trigger_resync=False)
+        repo2 = GitRepository(
+            name="Repo 2",
+            slug="repo-2",
+            remote_url=remote_url,
+            provided_contents=["extras.job"],
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            repo2.validated_save(trigger_resync=False)
+
+        self.assertIn(
+            f"Another Git repository already configured for remote URL {repo1.remote_url} "
+            "provides contents overlapping with this repository.",
+            str(cm.exception),
+        )

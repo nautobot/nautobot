@@ -3,6 +3,7 @@ import types
 from unittest import skip
 import uuid
 
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -11,19 +12,18 @@ from django.test.client import RequestFactory
 from django.urls import reverse
 from graphql import GraphQLError
 import graphene.types
-from graphene_django import DjangoObjectType
 from graphene_django.settings import graphene_settings
+from graphene_django.registry import get_global_registry
 from graphql.error.located_error import GraphQLLocatedError
 from graphql import get_default_backend
 from rest_framework import status
 
 from nautobot.circuits.models import Provider, CircuitTermination
+from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
     generate_schema_type,
 )
-from nautobot.core.graphql import execute_query, execute_saved_query
-from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.schema import (
     extend_schema_type,
     extend_schema_type_custom_field,
@@ -32,6 +32,8 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_null_field_choice,
 )
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, SiteFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
@@ -54,8 +56,6 @@ from nautobot.dcim.models import (
     Site,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.utilities.testing import NautobotTestClient, create_test_user
-
 from nautobot.extras.models import (
     ChangeLoggedModel,
     CustomField,
@@ -66,8 +66,10 @@ from nautobot.extras.models import (
     Status,
     Webhook,
 )
+from nautobot.extras.registry import registry
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.utilities.testing import NautobotTestClient, create_test_user
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -116,6 +118,48 @@ class GraphQLTestCase(TestCase):
         resp = execute_saved_query("gql-2", user=self.user, variables={"name": "site-1"}).to_dict()
         self.assertFalse(resp["data"].get("error"))
 
+    def test_graphql_types_registry(self):
+        """Ensure models with graphql feature are registered in the graphene_django registry."""
+        graphene_django_registry = get_global_registry()
+        for app_label, models in registry["model_features"]["graphql"].items():
+            for model_name in models:
+                model = apps.get_model(app_label=app_label, model_name=model_name)
+                self.assertIsNotNone(graphene_django_registry.get_type_for_model(model))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_graphql_url_field(self):
+        """Test the url field for all graphql types."""
+        schema = graphene_settings.SCHEMA.introspect()
+        graphql_fields = schema["__schema"]["types"][0]["fields"]
+        for graphql_field in graphql_fields:
+            if graphql_field["type"]["kind"] == "LIST" or graphql_field["name"] == "content_type":
+                continue
+            with self.subTest(f"Testing graphql url field for {graphql_field['name']}"):
+                graphene_object_type_definition = graphene_settings.SCHEMA.get_type(graphql_field["type"]["name"])
+
+                # simple check for url field in type definition
+                self.assertIn(
+                    "url", graphene_object_type_definition.fields, f"Missing url field for {graphql_field['name']}"
+                )
+
+                graphene_object_type_instance = graphene_object_type_definition.graphene_type()
+                model = graphene_object_type_instance._meta.model
+
+                # if an instance of this model exists, run a test query to retrieve the url
+                if model.objects.exists():
+                    obj = model.objects.first()
+                    query = f'{{ query: {graphql_field["name"]}(id:"{obj.pk}") {{ url }} }}'
+                    request = RequestFactory(SERVER_NAME="nautobot.example.com").post("/graphql/")
+                    request.user = self.user
+                    resp = execute_query(query, request=request).to_dict()
+                    self.assertIsNotNone(
+                        resp["data"]["query"]["url"], f"No url returned in graphql for {graphql_field['name']}"
+                    )
+                    self.assertTrue(
+                        resp["data"]["query"]["url"].endswith(f"/{obj.pk}/"),
+                        f"Mismatched url returned in graphql for {graphql_field['name']}",
+                    )
+
 
 class GraphQLUtilsTestCase(TestCase):
     def test_str_to_var_name(self):
@@ -127,13 +171,13 @@ class GraphQLUtilsTestCase(TestCase):
 class GraphQLGenerateSchemaTypeTestCase(TestCase):
     def test_model_w_filterset(self):
         schema = generate_schema_type(app_name="dcim", model=Device)
-        self.assertEqual(schema.__bases__[0], DjangoObjectType)
+        self.assertEqual(schema.__bases__[0], OptimizedNautobotObjectType)
         self.assertEqual(schema._meta.model, Device)
         self.assertEqual(schema._meta.filterset_class, DeviceFilterSet)
 
     def test_model_wo_filterset(self):
         schema = generate_schema_type(app_name="wrong_app", model=ChangeLoggedModel)
-        self.assertEqual(schema.__bases__[0], DjangoObjectType)
+        self.assertEqual(schema.__bases__[0], OptimizedNautobotObjectType)
         self.assertEqual(schema._meta.model, ChangeLoggedModel)
         self.assertIsNone(schema._meta.filterset_class)
 
