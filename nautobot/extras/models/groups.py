@@ -21,7 +21,6 @@ from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembersh
 from nautobot.extras.utils import extras_features
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.utilities.forms.fields import TagFilterField
 from nautobot.utilities.forms.widgets import StaticSelect2
 from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 
@@ -438,11 +437,9 @@ class DynamicGroup(OrganizationalModel):
             field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
             field_value = filterset_form.cleaned_data[field_name]
 
-            # `tag` on FilterForms is not a ModelMultipleChoiceField, so we need to handle it.
-            # On `FilterSetForm.tag`, it is a ModelMultipleChoiceField.
             # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
             # and literal FilterSet fields (ex: MultiValueCharFilter).
-            if isinstance(field, (forms.ModelMultipleChoiceField, TagFilterField)):
+            if isinstance(field, forms.ModelMultipleChoiceField):
                 field_to_query = field.to_field_name or "pk"
                 new_value = [getattr(item, field_to_query) for item in field_value]
 
@@ -523,6 +520,15 @@ class DynamicGroup(OrganizationalModel):
             )
         return super().delete(*args, **kwargs)
 
+    def clean_fields(self, exclude=None):
+        if exclude is None:
+            exclude = []
+
+        if "filter" not in exclude:
+            self.clean_filter()
+
+        super().clean_fields(exclude=exclude)
+
     def clean(self):
         super().clean()
 
@@ -532,9 +538,6 @@ class DynamicGroup(OrganizationalModel):
 
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
-
-        # Validate `filter` dict
-        self.clean_filter()
 
     def generate_query_for_filter(self, filter_field, value):
         """
