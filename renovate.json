@@ -22,9 +22,7 @@
       "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
       "groupName": "Lock-file Patch Releases for LTM branches",
       "matchBaseBranches": ["ltm/*"],
-      "schedule": [
-        "before 4am on Friday"
-      ],
+      "extends": ["schedule:monthly"],
       "major": {"enabled": false},
       "minor": {"enabled": false}
     },
