@@ -6,7 +6,6 @@ on:
       - "develop"
       - "next"
       - "main"
-      - "ltm/1.6"
 
 jobs:
   webhook:

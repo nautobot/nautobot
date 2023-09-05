@@ -322,7 +322,7 @@ jobs:
       - "tests-mysql"
 
   changelog:
-    if: contains(fromJson('["develop","next","develop-1.6"]'), github.base_ref)
+    if: contains(fromJson('["develop","next","develop-1.6", "ltm/1.6"]'), github.base_ref)
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"
