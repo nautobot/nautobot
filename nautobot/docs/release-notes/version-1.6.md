@@ -72,6 +72,33 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.2 (2023-09-01)
+
+### Added
+
+- [#3289](https://github.com/nautobot/nautobot/issues/3289) - Added documentation on factory data caching.
+- [#3913](https://github.com/nautobot/nautobot/issues/3913) - Added `url` field to GraphQL objects.
+- [#4201](https://github.com/nautobot/nautobot/issues/4201) - Added docs for `InterfaceRedundancyGroup`.
+- [#4316](https://github.com/nautobot/nautobot/issues/4316) - Added management command "nautobot-server populate_platform_network_driver" to help update the `Platform.network_driver` field in bulk.
+- [#4317](https://github.com/nautobot/nautobot/issues/4317) - Added tests for GraphQL url field.
+
+### Changed
+
+- [#3212](https://github.com/nautobot/nautobot/issues/3212) - Updated Dynamic Group field filter/child group exclusivity error to be more noticeable.
+- [#3949](https://github.com/nautobot/nautobot/issues/3949) - Moved DynamicGroup `clean_filter()` call from `clean()` to `clean_fields()`, which has the impact that it will still be called by `full_clean()` and `validated_save()` but no longer called on a simple `clean()`.
+- [#4216](https://github.com/nautobot/nautobot/issues/4216) - Changed the rendering of `TagFilterField` to prevent very slow rendering of pages when large numbers of tags are defined.
+- [#4217](https://github.com/nautobot/nautobot/issues/4217) - Added a restriction that two Git repositories with the same `remote_url` cannot overlap in their `provided_contents`, as such cases are highly likely to introduce data conflicts.
+
+### Fixed
+
+- [#3949](https://github.com/nautobot/nautobot/issues/3949) - Fixed a ValueError when editing an existing DynamicGroup that has invalid `filter` data.
+- [#3949](https://github.com/nautobot/nautobot/issues/3949) - Fixed `DynamicGroup.clean_fields()` so that it will respect an `exclude=["filter"]` kwarg by not validating the `filter` field.
+- [#4262](https://github.com/nautobot/nautobot/issues/4262) - Fixed warning message when trying to use bulk edit with no items selected.
+
+### Housekeeping
+
+- [#4331](https://github.com/nautobot/nautobot/issues/4331) - Added a "housekeeping" subsection to the release-notes via `towncrier`.
+
 ## v1.6.1 (2023-08-21)
 
 ### Changed
