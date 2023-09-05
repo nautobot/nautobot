@@ -214,13 +214,13 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "celery"
-version = "5.3.3"
+version = "5.3.4"
 description = "Distributed Task Queue."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "celery-5.3.3-py3-none-any.whl", hash = "sha256:d65c0be70d0949fcda8893876a071a7cfd9f248f9ad92e1919845e5cbc268db7"},
-    {file = "celery-5.3.3.tar.gz", hash = "sha256:bac90ef99b70b9b5b5d4cfcebf6f1ab5168b86c6120bc7c5814cd8234dfd9381"},
+    {file = "celery-5.3.4-py3-none-any.whl", hash = "sha256:1e6ed40af72695464ce98ca2c201ad0ef8fd192246f6c9eac8bba343b980ad34"},
+    {file = "celery-5.3.4.tar.gz", hash = "sha256:9023df6a8962da79eb30c0c84d5f4863d9793a466354cc931d7f72423996de28"},
 ]
 
 [package.dependencies]
@@ -687,13 +687,13 @@ graph = ["objgraph (>=1.7.2)"]
 
 [[package]]
 name = "django"
-version = "3.2.20"
+version = "3.2.21"
 description = "A high-level Python Web framework that encourages rapid development and clean, pragmatic design."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "Django-3.2.20-py3-none-any.whl", hash = "sha256:a477ab326ae7d8807dc25c186b951ab8c7648a3a23f9497763c37307a2b5ef87"},
-    {file = "Django-3.2.20.tar.gz", hash = "sha256:dec2a116787b8e14962014bf78e120bba454135108e1af9e9b91ade7b2964c40"},
+    {file = "Django-3.2.21-py3-none-any.whl", hash = "sha256:d31b06c58aa2cd73998ca5966bc3001243d3c4e77ee2d0c479bced124765fd99"},
+    {file = "Django-3.2.21.tar.gz", hash = "sha256:a5de4c484e7b7418e6d3e52a5b8794f0e6b9f9e4ce3c037018cf1c489fa87f3c"},
 ]
 
 [package.dependencies]
@@ -1376,13 +1376,13 @@ smmap = ">=3.0.1,<6"
 
 [[package]]
 name = "gitpython"
-version = "3.1.33"
+version = "3.1.34"
 description = "GitPython is a Python library used to interact with Git repositories"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "GitPython-3.1.33-py3-none-any.whl", hash = "sha256:11f22466f982211ad8f3bdb456c03be8466c71d4da8774f3a9f68344e89559cb"},
-    {file = "GitPython-3.1.33.tar.gz", hash = "sha256:13aaa3dff88a23afec2d00eb3da3f2e040e2282e41de484c5791669b31146084"},
+    {file = "GitPython-3.1.34-py3-none-any.whl", hash = "sha256:5d3802b98a3bae1c2b8ae0e1ff2e4aa16bcdf02c145da34d092324f599f01395"},
+    {file = "GitPython-3.1.34.tar.gz", hash = "sha256:85f7d365d1f6bf677ae51039c1ef67ca59091c7ebd5a3509aa399d4eda02d6dd"},
 ]
 
 [package.dependencies]
@@ -2740,13 +2740,13 @@ pylint = ">=1.7"
 
 [[package]]
 name = "pymdown-extensions"
-version = "10.2.1"
+version = "10.3"
 description = "Extension pack for Python Markdown."
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "pymdown_extensions-10.2.1-py3-none-any.whl", hash = "sha256:bded105eb8d93f88f2f821f00108cb70cef1269db6a40128c09c5f48bfc60ea4"},
-    {file = "pymdown_extensions-10.2.1.tar.gz", hash = "sha256:d0c534b4a5725a4be7ccef25d65a4c97dba58b54ad7c813babf0eb5ba9c81591"},
+    {file = "pymdown_extensions-10.3-py3-none-any.whl", hash = "sha256:77a82c621c58a83efc49a389159181d570e370fff9f810d3a4766a75fc678b66"},
+    {file = "pymdown_extensions-10.3.tar.gz", hash = "sha256:94a0d8a03246712b64698af223848fd80aaf1ae4c4be29c8c61939b0467b5722"},
 ]
 
 [package.dependencies]
@@ -2965,13 +2965,13 @@ test = ["coverage (>=4.5.2)", "flake8 (>=3.6.0,<=5.0.0)", "freezegun (>=0.3.11,<
 
 [[package]]
 name = "pytz"
-version = "2023.3"
+version = "2023.3.post1"
 description = "World timezone definitions, modern and historical"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytz-2023.3-py2.py3-none-any.whl", hash = "sha256:a151b3abb88eda1d4e34a9814df37de2a80e301e68ba0fd856fb9b46bfbbbffb"},
-    {file = "pytz-2023.3.tar.gz", hash = "sha256:1d8ce29db189191fb55338ee6d0387d82ab59f3d00eac103412d64e0ebd0c588"},
+    {file = "pytz-2023.3.post1-py2.py3-none-any.whl", hash = "sha256:ce42d816b81b68506614c11e8937d3aa9e41007ceb50bfdcb0749b921bf646c7"},
+    {file = "pytz-2023.3.post1.tar.gz", hash = "sha256:7b4fddbeb94a1eba4b557da24f19fdf9db575192544270a9101d8509f9f43d7b"},
 ]
 
 [[package]]
