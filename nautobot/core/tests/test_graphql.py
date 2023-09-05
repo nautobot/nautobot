@@ -3,6 +3,7 @@ import types
 from unittest import skip
 import uuid
 
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -13,6 +14,7 @@ from django.urls import reverse
 from graphql import GraphQLError
 import graphene.types
 from graphene_django.settings import graphene_settings
+from graphene_django.registry import get_global_registry
 from graphql.error.located_error import GraphQLLocatedError
 from graphql import get_default_backend
 from rest_framework import status
@@ -66,6 +68,7 @@ from nautobot.extras.models import (
     Status,
     Webhook,
 )
+from nautobot.extras.registry import registry
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
 from nautobot.users.models import ObjectPermission, Token
@@ -116,6 +119,48 @@ class GraphQLTestCase(TestCase):
     def test_execute_saved_query_with_variable(self):
         resp = execute_saved_query("GQL 2", user=self.user, variables={"name": "location-1"}).to_dict()
         self.assertFalse(resp["data"].get("error"))
+
+    def test_graphql_types_registry(self):
+        """Ensure models with graphql feature are registered in the graphene_django registry."""
+        graphene_django_registry = get_global_registry()
+        for app_label, models in registry["model_features"]["graphql"].items():
+            for model_name in models:
+                model = apps.get_model(app_label=app_label, model_name=model_name)
+                self.assertIsNotNone(graphene_django_registry.get_type_for_model(model))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_graphql_url_field(self):
+        """Test the url field for all graphql types."""
+        schema = graphene_settings.SCHEMA.introspect()
+        graphql_fields = schema["__schema"]["types"][0]["fields"]
+        for graphql_field in graphql_fields:
+            if graphql_field["type"]["kind"] == "LIST" or graphql_field["name"] == "content_type":
+                continue
+            with self.subTest(f"Testing graphql url field for {graphql_field['name']}"):
+                graphene_object_type_definition = graphene_settings.SCHEMA.get_type(graphql_field["type"]["name"])
+
+                # simple check for url field in type definition
+                self.assertIn(
+                    "url", graphene_object_type_definition.fields, f"Missing url field for {graphql_field['name']}"
+                )
+
+                graphene_object_type_instance = graphene_object_type_definition.graphene_type()
+                model = graphene_object_type_instance._meta.model
+
+                # if an instance of this model exists, run a test query to retrieve the url
+                if model.objects.exists():
+                    obj = model.objects.first()
+                    query = f'{{ query: {graphql_field["name"]}(id:"{obj.pk}") {{ url }} }}'
+                    request = RequestFactory(SERVER_NAME="nautobot.example.com").post("/graphql/")
+                    request.user = self.user
+                    resp = execute_query(query, request=request).to_dict()
+                    self.assertIsNotNone(
+                        resp["data"]["query"]["url"], f"No url returned in graphql for {graphql_field['name']}"
+                    )
+                    self.assertTrue(
+                        resp["data"]["query"]["url"].endswith(f"/{obj.pk}/"),
+                        f"Mismatched url returned in graphql for {graphql_field['name']}",
+                    )
 
 
 class GraphQLUtilsTestCase(TestCase):
