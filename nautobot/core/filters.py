@@ -460,6 +460,7 @@ class TagFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
         kwargs.setdefault("field_name", "tags")
         kwargs.setdefault("conjoined", True)
+        kwargs.setdefault("label", "Tags")
         kwargs.setdefault("queryset", Tag.objects.all())
 
         super().__init__(*args, **kwargs)

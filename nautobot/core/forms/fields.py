@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.forms.fields import BoundField, InvalidJSONInput
 from django.forms.fields import JSONField as _JSONField
 from django.urls import reverse
@@ -431,29 +431,6 @@ class SlugField(django_forms.SlugField):
         self.widget.attrs["slug-source"] = slug_source
 
 
-class TagFilterField(django_forms.MultipleChoiceField):
-    """
-    A filter field for the tags of a model. Only the tags used by a model are displayed.
-
-    :param model: The model of the filter
-    """
-
-    widget = widgets.StaticSelect2Multiple
-
-    def __init__(self, model, *args, **kwargs):
-        def get_choices():
-            tags = model.tags.annotate(count=Count("extras_taggeditem_items")).order_by("name")
-            return [(str(tag.name), f"{tag.name} ({tag.count})") for tag in tags]
-
-        # Choices are fetched each time the form is initialized
-        super().__init__(label="Tags", choices=get_choices, required=False, *args, **kwargs)
-
-    # TODO: this is probably wrong since a MultipleChoiceField isn't a Model*Field,
-    # but it's necessary for now since dynamic-groups expect TagFilterField to have a to_field_name attribute.
-    # We should probably revisit this at some point.
-    to_field_name = "name"
-
-
 class DynamicModelChoiceMixin:
     """
     :param display_field: The name of the attribute of an API response object to display in the selection list
@@ -789,3 +766,26 @@ class MultiMatchModelMultipleChoiceField(DynamicModelChoiceMixin, django_filters
         if null:
             result += [self.null_value]
         return result
+
+
+class TagFilterField(DynamicModelMultipleChoiceField):
+    """
+    A filter field for the tags of a model. Only the tags used by a model are displayed.
+
+    :param model: The model of the filter
+    """
+
+    def __init__(self, model, *args, query_params=None, queryset=None, **kwargs):
+        if queryset is None:
+            queryset = model.tags.all()
+        query_params = query_params or {}
+        query_params.update({"content_types": model._meta.label_lower})
+        super().__init__(
+            label="Tags",
+            query_params=query_params,
+            queryset=queryset,
+            required=False,
+            to_field_name="name",
+            *args,
+            **kwargs,
+        )
