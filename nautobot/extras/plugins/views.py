@@ -16,10 +16,10 @@ from rest_framework.views import APIView
 from django_tables2 import RequestConfig
 
 from nautobot.core.api.views import NautobotAPIVersionMixin
-from nautobot.utilities.forms import TableConfigForm
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.forms import TableConfigForm
+from nautobot.core.views.mixins import AdminRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledPluginsTable
-from nautobot.utilities.views import AdminRequiredMixin
 
 
 class InstalledPluginsView(AdminRequiredMixin, View):
@@ -88,7 +88,7 @@ class InstalledPluginDetailView(LoginRequiredMixin, View):
 
 class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
     """
-    API view for listing all installed plugins
+    API view for listing all installed non-core Apps.
     """
 
     permission_classes = [permissions.IsAdminUser]
@@ -99,15 +99,28 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
 
     @staticmethod
     def _get_plugin_data(plugin_app_config):
+        try:
+            home_url = reverse(plugin_app_config.home_view_name)
+        except NoReverseMatch:
+            home_url = None
+        try:
+            config_url = reverse(plugin_app_config.config_view_name)
+        except NoReverseMatch:
+            config_url = None
+        try:
+            docs_url = reverse(plugin_app_config.docs_view_name)
+        except NoReverseMatch:
+            docs_url = None
         return {
             "name": plugin_app_config.verbose_name,
             "package": plugin_app_config.name,
             "author": plugin_app_config.author,
             "author_email": plugin_app_config.author_email,
             "description": plugin_app_config.description,
-            # 2.0 TODO: Remove verison key/value when bumping to major revision
-            "verison": plugin_app_config.version,
             "version": plugin_app_config.version,
+            "home_url": home_url,
+            "config_url": config_url,
+            "docs_url": docs_url,
         }
 
     @extend_schema(exclude=True)

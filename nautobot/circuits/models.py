@@ -1,13 +1,11 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.urls import reverse
 
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 
 from .choices import CircuitTerminationSideChoices
@@ -23,28 +21,17 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class ProviderNetwork(PrimaryModel):
     name = models.CharField(max_length=100, db_index=True)
-    slug = AutoSlugField(populate_from="name")
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="provider_networks")
     description = models.CharField(max_length=200, blank=True)
     comments = models.TextField(blank=True)
-
-    csv_headers = [
-        "provider",
-        "name",
-        "slug",
-        "description",
-        "comments",
-    ]
 
     class Meta:
         ordering = ("provider", "name")
@@ -56,30 +43,16 @@ class ProviderNetwork(PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("circuits:providernetwork", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.provider.name,
-            self.name,
-            self.slug,
-            self.description,
-            self.comments,
-        )
-
     @property
     def display(self):
         return f"{self.provider} {self.name}"
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Provider(PrimaryModel):
@@ -89,7 +62,6 @@ class Provider(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     asn = ASNField(
         blank=True,
         null=True,
@@ -103,16 +75,6 @@ class Provider(PrimaryModel):
     admin_contact = models.TextField(blank=True, verbose_name="Admin contact")
     comments = models.TextField(blank=True)
 
-    csv_headers = [
-        "name",
-        "slug",
-        "asn",
-        "account",
-        "portal_url",
-        "noc_contact",
-        "admin_contact",
-        "comments",
-    ]
     clone_fields = [
         "asn",
         "account",
@@ -127,23 +89,8 @@ class Provider(PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("circuits:provider", args=[self.slug])
 
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.asn,
-            self.account,
-            self.portal_url,
-            self.noc_contact,
-            self.admin_contact,
-            self.comments,
-        )
-
-
-@extras_features("custom_fields", "custom_validators", "graphql", "relationships")
+@extras_features("custom_validators", "graphql")
 class CircuitType(OrganizationalModel):
     """
     Circuits can be organized by their functional role. For example, a user might wish to define CircuitTypes named
@@ -151,13 +98,10 @@ class CircuitType(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(
         max_length=200,
         blank=True,
     )
-
-    csv_headers = ["name", "slug", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -165,28 +109,16 @@ class CircuitType(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("circuits:circuittype", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.description,
-        )
-
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
-class Circuit(PrimaryModel, StatusModel):
+class Circuit(PrimaryModel):
     """
     A communications circuit connects two points.
     Each Circuit belongs to a Provider; Providers may have multiple circuits.
@@ -195,8 +127,9 @@ class Circuit(PrimaryModel, StatusModel):
     """
 
     cid = models.CharField(max_length=100, verbose_name="Circuit ID")
+    status = StatusField(blank=False, null=False)
     provider = models.ForeignKey(to="circuits.Provider", on_delete=models.PROTECT, related_name="circuits")
-    type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
+    circuit_type = models.ForeignKey(to="CircuitType", on_delete=models.PROTECT, related_name="circuits")
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -210,7 +143,7 @@ class Circuit(PrimaryModel, StatusModel):
     comments = models.TextField(blank=True)
 
     # Cache associated CircuitTerminations
-    termination_a = models.ForeignKey(
+    circuit_termination_a = models.ForeignKey(
         to="circuits.CircuitTermination",
         on_delete=models.SET_NULL,
         related_name="+",
@@ -218,7 +151,7 @@ class Circuit(PrimaryModel, StatusModel):
         blank=True,
         null=True,
     )
-    termination_z = models.ForeignKey(
+    circuit_termination_z = models.ForeignKey(
         to="circuits.CircuitTermination",
         on_delete=models.SET_NULL,
         related_name="+",
@@ -227,20 +160,9 @@ class Circuit(PrimaryModel, StatusModel):
         null=True,
     )
 
-    csv_headers = [
-        "cid",
-        "provider",
-        "type",
-        "status",
-        "tenant",
-        "install_date",
-        "commit_rate",
-        "description",
-        "comments",
-    ]
     clone_fields = [
         "provider",
-        "type",
+        "circuit_type",
         "status",
         "tenant",
         "install_date",
@@ -255,44 +177,19 @@ class Circuit(PrimaryModel, StatusModel):
     def __str__(self):
         return self.cid
 
-    def get_absolute_url(self):
-        return reverse("circuits:circuit", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.cid,
-            self.provider.name,
-            self.type.name,
-            self.get_status_display(),
-            self.tenant.name if self.tenant else None,
-            self.install_date,
-            self.commit_rate,
-            self.description,
-            self.comments,
-        )
-
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "webhooks",
 )
 class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
-    circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="terminations")
+    circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="circuit_terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.PROTECT,
-        related_name="circuit_terminations",
-        blank=True,
-        null=True,
-    )
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -323,27 +220,18 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return f"Termination {self.term_side}: {self.site or self.provider_network}"
-
-    def get_absolute_url(self):
-        return reverse("circuits:circuittermination", args=[self.pk])
+        return f"Termination {self.term_side}: {self.location or self.provider_network}"
 
     def clean(self):
         super().clean()
 
-        # Must define either site *or* provider network
-        if self.site is None and self.provider_network is None:
-            raise ValidationError("A circuit termination must attach to either a site or a provider network.")
-        if self.site and self.provider_network:
-            raise ValidationError("A circuit termination cannot attach to both a site and a provider network.")
-        # If and only if a site is defined, a location *may* also be defined.
+        # Must define either location *or* provider network
+        if self.location is None and self.provider_network is None:
+            raise ValidationError("A circuit termination must attach to either a location or a provider network.")
+        if self.location and self.provider_network:
+            raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
+        # A valid location for contenttype CircuitTermination must be assigned.
         if self.location is not None:
-            if self.provider_network is not None:
-                raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
-            if self.site is not None and self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {
@@ -369,6 +257,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     def get_peer_termination(self):
         peer_side = "Z" if self.term_side == "A" else "A"
         try:
-            return CircuitTermination.objects.select_related("site").get(circuit=self.circuit, term_side=peer_side)
+            return CircuitTermination.objects.select_related("location").get(circuit=self.circuit, term_side=peer_side)
         except CircuitTermination.DoesNotExist:
             return None

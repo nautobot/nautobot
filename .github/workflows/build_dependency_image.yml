@@ -21,7 +21,7 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v3"
       - name: "Get Git Branch/Tag Name" # For tagging dependencies image, supports branch or tag reference
-        run: echo "##[set-output name=branch;]$(echo $GITHUB_REF | awk -F '/' '{print $NF}')"
+        run: echo "branch=$(echo $GITHUB_REF | awk -F '/' '{print $NF}')" >> $GITHUB_OUTPUT
         id: "gitbranch"
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v1"

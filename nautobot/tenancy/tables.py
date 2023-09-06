@@ -1,6 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
     LinkedCountColumn,
@@ -9,8 +9,9 @@ from nautobot.utilities.tables import (
 )
 from .models import Tenant, TenantGroup
 
-MPTT_LINK = """
-{% for i in record.get_ancestors %}
+TREE_LINK = """
+{% load helpers %}
+{% for i in record.tree_depth|as_range %}
     <i class="mdi mdi-circle-small"></i>
 {% endfor %}
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
@@ -51,17 +52,17 @@ class TenantColumn(tables.TemplateColumn):
 
 class TenantGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=MPTT_LINK, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
     tenant_count = LinkedCountColumn(
         viewname="tenancy:tenant_list",
-        url_params={"group": "slug"},
+        url_params={"tenant_group": "name"},
         verbose_name="Tenants",
     )
-    actions = ButtonsColumn(TenantGroup, pk_field="slug")
+    actions = ButtonsColumn(TenantGroup)
 
     class Meta(BaseTable.Meta):
         model = TenantGroup
-        fields = ("pk", "name", "tenant_count", "description", "slug", "actions")
+        fields = ("pk", "name", "tenant_count", "description", "actions")
         default_columns = ("pk", "name", "tenant_count", "description", "actions")
 
 
@@ -73,10 +74,10 @@ class TenantGroupTable(BaseTable):
 class TenantTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    group = tables.Column(linkify=True)
+    tenant_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="tenancy:tenant_list")
 
     class Meta(BaseTable.Meta):
         model = Tenant
-        fields = ("pk", "name", "slug", "group", "description", "tags")
-        default_columns = ("pk", "name", "group", "description")
+        fields = ("pk", "name", "tenant_group", "description", "tags")
+        default_columns = ("pk", "name", "tenant_group", "description")

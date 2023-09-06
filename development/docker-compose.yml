@@ -24,7 +24,7 @@ services:
     healthcheck:
       interval: 5s
       timeout: 5s
-      start_period: 45s
+      start_period: 10m  # intentionally conservative upper bound for `npm install` time in a fresh setup
       retries: 3
       test:
         - "CMD"

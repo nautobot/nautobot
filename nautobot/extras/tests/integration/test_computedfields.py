@@ -1,9 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import ComputedField
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 
@@ -22,7 +22,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         self.device = create_test_device()
         self.computed_field = ComputedField.objects.create(
             content_type=ContentType.objects.get_for_model(Device),
-            slug="device_computed_field",
+            key="device_computed_field",
             label="Device Computed Field",
             template="{{ obj.name }} is awesome!",
         )

@@ -4,6 +4,8 @@ from django.core.management import call_command
 from django.conf import settings
 from django.test.runner import DiscoverRunner
 
+from nautobot.core.celery import app, setup_nautobot_job_logging
+
 
 class NautobotTestRunner(DiscoverRunner):
     """
@@ -13,7 +15,7 @@ class NautobotTestRunner(DiscoverRunner):
     explicitly passed in with `nautobot-server test --tag integration`.
 
     By Nautobot convention, integration tests must be tagged with "integration". The base
-    `nautobot.utilities.testing.integration.SeleniumTestCase` has this tag, therefore any test cases
+    `nautobot.core.testing.integration.SeleniumTestCase` has this tag, therefore any test cases
     inheriting from that class do not need to be explicitly tagged.
 
     Only integration tests that DO NOT inherit from `SeleniumTestCase` will need to be explicitly tagged.
@@ -49,6 +51,9 @@ class NautobotTestRunner(DiscoverRunner):
         super().setup_test_environment(**kwargs)
         # Remove 'testserver' that Django "helpfully" adds automatically to ALLOWED_HOSTS, masking issues like #3065
         settings.ALLOWED_HOSTS.remove("testserver")
+        if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            # Make sure logs get captured when running Celery tasks, even though we don't have/need a Celery worker
+            setup_nautobot_job_logging(None, None, app.conf)
 
     def setup_databases(self, **kwargs):
         result = super().setup_databases(**kwargs)

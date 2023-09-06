@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.extras.choices import LogLevelChoices
 
 
-logger = logging.getLogger("nautobot.datasources.utils")
+logger = logging.getLogger(__name__)
 
 
 def files_from_contenttype_directories(base_path, job_result, log_grouping):
@@ -29,12 +29,9 @@ def files_from_contenttype_directories(base_path, job_result, log_grouping):
             try:
                 model_content_type = ContentType.objects.get(app_label=app_label, model=modelname)
             except ContentType.DoesNotExist:
-                job_result.log(
-                    f"Skipping `{app_label}.{modelname}` as it isn't a known content type",
-                    level_choice=LogLevelChoices.LOG_WARNING,
-                    grouping=log_grouping,
-                    logger=logger,
-                )
+                msg = f"Skipping `{app_label}.{modelname}` as it isn't a known content type"
+                logger.warning(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping=log_grouping)
                 continue
 
             for filename in os.listdir(modelname_path):

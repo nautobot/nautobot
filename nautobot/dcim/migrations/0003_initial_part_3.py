@@ -3,7 +3,6 @@
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-import mptt.fields
 import nautobot.extras.models.statuses
 import taggit.managers
 
@@ -29,7 +28,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="rackgroup",
             name="parent",
-            field=mptt.fields.TreeForeignKey(
+            field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
@@ -308,7 +307,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="inventoryitem",
             name="parent",
-            field=mptt.fields.TreeForeignKey(
+            field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,

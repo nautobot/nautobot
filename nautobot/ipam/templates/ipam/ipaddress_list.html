@@ -1,0 +1,11 @@
+{% extends 'generic/object_list.html' %}
+{% load helpers %}
+{% load static %}
+
+{% block buttons %}
+    {% if permissions.change %}
+        <a type="button" name="_merge" href="{% url 'ipam:ipaddress_merge' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-success">
+            <span class="mdi mdi-set-merge" aria-hidden="true"></span> Find and Merge Duplicate IPs
+        </a>
+    {% endif %}
+{% endblock %}

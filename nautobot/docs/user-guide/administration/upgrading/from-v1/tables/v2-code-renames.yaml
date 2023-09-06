@@ -1,0 +1,5 @@
+---
+- Old Name: "nautobot.extras.views.JobDetailView"
+  New Name: "nautobot.extras.views.JobView"
+- Old Name: "nautobot.extras.views.JobView"
+  New Name: "nautobot.extras.views.JobRunView"

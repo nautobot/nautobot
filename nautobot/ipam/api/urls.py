@@ -1,9 +1,12 @@
-from nautobot.core.api import OrderedDefaultRouter
+from nautobot.core.api.routers import OrderedDefaultRouter
 from . import views
 
 
 router = OrderedDefaultRouter()
 router.APIRootView = views.IPAMRootView
+
+# Namespaces
+router.register("namespaces", views.NamespaceViewSet)
 
 # VRFs
 router.register("vrfs", views.VRFViewSet)
@@ -14,11 +17,7 @@ router.register("route-targets", views.RouteTargetViewSet)
 # RIRs
 router.register("rirs", views.RIRViewSet)
 
-# Aggregates
-router.register("aggregates", views.AggregateViewSet)
-
 # Prefixes
-router.register("roles", views.RoleViewSet)
 router.register("prefixes", views.PrefixViewSet)
 
 # IP addresses

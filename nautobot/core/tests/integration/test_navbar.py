@@ -1,7 +1,6 @@
 from django.test.utils import override_settings
 
-from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 
 class NavBarTestCase(SeleniumTestCase):
@@ -10,13 +9,13 @@ class NavBarTestCase(SeleniumTestCase):
     fixtures = ["user-data.json"]
     navbar = {
         "Organization": {
-            "Sites": {
-                "Sites": {
-                    "permission": "dcim.view_site",
+            "Locations": {
+                "Location": {
+                    "permission": "dcim.view_location",
                     "buttons": ["Add", "Import"],
                 },
-                "Regions": {
-                    "permission": "dcim.view_region",
+                "Location Types": {
+                    "permission": "dcim.view_locationtype",
                     "buttons": ["Add", "Import"],
                 },
             },
@@ -70,30 +69,15 @@ class NavBarTestCase(SeleniumTestCase):
                 # Append onto tab xpath with group name search
                 group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]")
 
-                for item_name, item_details in items.items():
+                for item_name in items:
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
-                    item = group.find_by_xpath(item_xpath)
-
-                    for button_name in item_details["buttons"]:
-                        button = item.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
-                        # Ensure button has matching class for its name
-                        button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
-                        if button_class:
-                            rendered_button_class = button["class"].split(" ")[-1].split("-")[-1]
-                            self.assertEqual(button_class, rendered_button_class)
-                        # Ensure button has matching icon for its name
-                        button_icon = getattr(ButtonActionIconChoices, button_name.upper(), None)
-                        if button_icon:
-                            icon = button.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
-                            rendered_button_icon = icon["class"].split(" ")[-1]
-                            self.assertEqual(button_icon, rendered_button_icon)
+                    group.find_by_xpath(item_xpath)
 
     @override_settings(HIDE_RESTRICTED_UI=False)
     def test_navbar_render_limit_permissions(self):
         """
         Render navbar from home page with limited permissions.
         """
-        self.add_permissions("dcim.view_site")
         self.add_permissions("extras.view_relationship")
         user_permissions = self.user.get_all_permissions()
 
@@ -136,7 +120,7 @@ class NavBarTestCase(SeleniumTestCase):
                 # Append onto tab xpath with group name search
                 group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[contains(text(), '{group_name}')]")
 
-                for item_name, _ in items.items():
+                for item_name in items:
                     item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[contains(text(), '{item_name}')]]"
                     item = group.find_by_xpath(item_xpath)
                     self.assertEqual(item["class"], "disabled", f"Item `{item_name}` should be disabled.")

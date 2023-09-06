@@ -1,4 +1,4 @@
-from nautobot.utilities.choices import ChoiceSet
+from nautobot.core.choices import ChoiceSet
 
 
 #
@@ -22,16 +22,6 @@ class CircuitStatusChoices(ChoiceSet):
         (STATUS_DEPROVISIONING, "Deprovisioning"),
         (STATUS_DECOMMISSIONED, "Decommissioned"),
     )
-
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_DEPROVISIONING: "warning",
-        STATUS_ACTIVE: "success",
-        STATUS_PLANNED: "info",
-        STATUS_PROVISIONING: "primary",
-        STATUS_OFFLINE: "danger",
-        STATUS_DECOMMISSIONED: "default",
-    }
 
 
 #

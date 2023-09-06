@@ -1,13 +1,9 @@
-from nautobot.core.api import OrderedDefaultRouter
+from nautobot.core.api.routers import OrderedDefaultRouter
 from . import views
 
 
 router = OrderedDefaultRouter()
 router.APIRootView = views.DCIMRootView
-
-# Sites
-router.register("regions", views.RegionViewSet)
-router.register("sites", views.SiteViewSet)
 
 # Locations
 router.register("location-types", views.LocationTypeViewSet)
@@ -15,7 +11,6 @@ router.register("locations", views.LocationViewSet)
 
 # Racks
 router.register("rack-groups", views.RackGroupViewSet)
-router.register("rack-roles", views.RackRoleViewSet)
 router.register("racks", views.RackViewSet)
 router.register("rack-reservations", views.RackReservationViewSet)
 
@@ -34,7 +29,6 @@ router.register("rear-port-templates", views.RearPortTemplateViewSet)
 router.register("device-bay-templates", views.DeviceBayTemplateViewSet)
 
 # Devices
-router.register("device-roles", views.DeviceRoleViewSet)
 router.register("platforms", views.PlatformViewSet)
 router.register("devices", views.DeviceViewSet)
 

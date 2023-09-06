@@ -35,7 +35,6 @@ urlpatterns = [
     path("media/<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
     # Admin
     path("admin/", admin_site.urls),
-    path("admin/background-tasks/", include("django_rq.urls")),
     # Errors
     path("media-failure/", StaticMediaFailureView.as_view(), name="media_failure"),
     # Plugins

@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 import logging
 
 from celery import current_app
@@ -38,11 +39,29 @@ class NautobotScheduleEntry(ModelEntry):
             )
             self._disable(model)
 
-        self.options = {}
-        if model.queue:
-            self.options["queue"] = model.queue
+        self.options = {"nautobot_job_scheduled_job_id": model.id, "headers": {}}
 
-        self.options["headers"] = {}
+        if model.user:
+            self.options["nautobot_job_user_id"] = model.user.id
+        else:
+            logger.error(
+                "Disabling schedule %s with missing user",
+                self.name,
+            )
+            self._disable(model)
+
+        if model.job_model:
+            self.options["nautobot_job_job_model_id"] = model.job_model.id
+        else:
+            logger.error(
+                "Disabling schedule %s with missing job model",
+                self.name,
+            )
+            self._disable(model)
+
+        if isinstance(model.celery_kwargs, Mapping):
+            self.options.update(model.celery_kwargs)
+
         self.total_run_count = model.total_run_count
         self.model = model
 

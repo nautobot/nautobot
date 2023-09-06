@@ -42,6 +42,12 @@
                   </td>
               </tr>
               <tr>
+                  <td>Task</td>
+                  <td>
+                      <code>{{ object.task }}</code>
+                  </td>
+              </tr>
+              <tr>
                   <td>Requester</td>
                   <td>
                       {{ object.user }}
@@ -61,12 +67,6 @@
                   <td>Approved At</td>
                   <td>
                       {{ object.approved_at | placeholder }}
-                  </td>
-              </tr>
-              <tr>
-                  <td>Job Class</td>
-                  <td>
-                      {{ object.job_class }}
                   </td>
               </tr>
           </table>
@@ -119,7 +119,7 @@
               <strong>User Inputs</strong>
           </div>
           <table class="table table-hover panel-body attr-table">
-              {% for key, value in object.kwargs.data.items %}
+              {% for key, value in object.kwargs.items %}
               <tr>
                 <td>{{ labels|get_item:key }}</td>
                 <td>{% if value is None %}–{% else %}<code>{{ value }}</code>{% endif %}</td>

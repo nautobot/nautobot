@@ -14,9 +14,10 @@
         <div class="panel-heading"><strong>IP Address</strong></div>
         <div class="panel-body">
             {% render_field form.address %}
+            {% render_field form.namespace %}
+            {% render_field form.type %}
             {% render_field form.status %}
             {% render_field form.role %}
-            {% render_field form.vrf %}
             {% render_field form.dns_name %}
             {% render_field form.description %}
         </div>
@@ -29,30 +30,6 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Interface Assignment</strong>
-        </div>
-        <div class="panel-body">
-            {% with vm_tab_active=form.initial.vminterface %}
-                <ul class="nav nav-tabs" role="tablist">
-                    <li role="presentation"{% if not vm_tab_active %} class="active"{% endif %}><a href="#device" role="tab" data-toggle="tab">Device</a></li>
-                    <li role="presentation"{% if vm_tab_active %} class="active"{% endif %}><a href="#virtualmachine" role="tab" data-toggle="tab">Virtual Machine</a></li>
-                </ul>
-                <div class="tab-content">
-                    <div class="tab-pane{% if not vm_tab_active %} active{% endif %}" id="device">
-                        {% render_field form.device %}
-                        {% render_field form.interface %}
-                    </div>
-                    <div class="tab-pane{% if vm_tab_active %} active{% endif %}" id="virtualmachine">
-                        {% render_field form.virtual_machine %}
-                        {% render_field form.vminterface %}
-                    </div>
-                </div>
-            {% endwith %}
-            {% render_field form.primary_for_parent %}
-        </div>
-    </div>
-    <div class="panel panel-default">
         <div class="panel-heading"><strong>NAT IP (Inside)</strong></div>
         <div class="panel-body">
             <ul class="nav nav-tabs" role="tablist">
@@ -62,8 +39,7 @@
             </ul>
             <div class="tab-content">
                 <div class="tab-pane active" id="by_device">
-                    {% render_field form.nat_region %}
-                    {% render_field form.nat_site %}
+                    {% render_field form.nat_location %}
                     {% render_field form.nat_rack %}
                     {% render_field form.nat_device %}
                 </div>
