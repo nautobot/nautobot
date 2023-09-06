@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Provider
 from nautobot.extras.models import Tag
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 
 class TagFilterTestCase(SeleniumTestCase):
@@ -38,7 +38,7 @@ class TagFilterTestCase(SeleniumTestCase):
         time.sleep(0.5)
 
         # Find the "Tags" field and select it
-        self.browser.find_by_xpath("//label[@for='id_tag']").click()
+        self.browser.find_by_xpath("//label[@for='id_tags']").click()
         self.browser.driver.switch_to.active_element.click()
         # Wait for choices to load
         time.sleep(0.5)
@@ -57,7 +57,7 @@ class TagFilterTestCase(SeleniumTestCase):
         time.sleep(0.5)
 
         # Find the "Tags" field and select it
-        self.browser.find_by_xpath("//label[@for='id_tag']").click()
+        self.browser.find_by_xpath("//label[@for='id_tags']").click()
         self.browser.driver.switch_to.active_element.click()
         # Wait for choices to load
         time.sleep(0.5)
