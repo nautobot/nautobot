@@ -251,7 +251,7 @@ jobs:
     runs-on: "ubuntu-22.04"
     if: |
       github.event_name == 'push' &&
-      (github.ref_name == 'develop' || github.ref_name == 'next')
+      (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm/1.6')
     needs:
       - "check-schema"
       - "integration-test"
