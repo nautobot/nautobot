@@ -1,0 +1,7 @@
+/*
+!/nautobot
+/nautobot/*
+!/nautobot/ui
+/nautobot/ui/build
+# These files get rendered by `nautobot-server build_ui`
+/nautobot/ui/generated

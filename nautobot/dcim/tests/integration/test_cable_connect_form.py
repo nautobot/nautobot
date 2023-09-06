@@ -3,10 +3,10 @@ import time
 from django.urls import reverse
 from splinter.exceptions import ElementDoesNotExist
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Interface
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.models import Status
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 
 class CableConnectFormTestCase(SeleniumTestCase):
@@ -35,10 +35,10 @@ class CableConnectFormTestCase(SeleniumTestCase):
         self.login(self.user.username, self.password)
         device1 = create_test_device("Device 1")
         create_test_device("Device 2")
-        active = Status.objects.get(name="Active")
-        interface1 = Interface.objects.create(device=device1, name="Interface 1", status=active)
-        Interface.objects.create(device=device1, name="Interface 2", status=active)
-        Interface.objects.create(device=device1, name="Interface 3", status=active)
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interface1 = Interface.objects.create(device=device1, name="Interface 1", status=interface_status)
+        Interface.objects.create(device=device1, name="Interface 2", status=interface_status)
+        Interface.objects.create(device=device1, name="Interface 3", status=interface_status)
         cable_connect_form_url = reverse(
             "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
         )
@@ -91,8 +91,5 @@ class CableConnectFormTestCase(SeleniumTestCase):
         self.assertIn("no elements could be found", str(context.exception))
 
         # check the correct css query is present in the HTML
-        js_query = (
-            '"select#id_termination_b_region, select#id_termination_b_site, '
-            'select#id_termination_b_rack, select#id_termination_b_device"'
-        )
+        js_query = '"select#id_termination_b_location, select#id_termination_b_rack, select#id_termination_b_device"'
         self.assertIn(js_query, self.browser.html)

@@ -9,14 +9,14 @@ from django.contrib.auth.backends import (
 from django.contrib.auth.models import Group
 from django.db.models import Q
 
-from nautobot.users.models import ObjectPermission
-from nautobot.utilities.permissions import (
+from nautobot.core.utils.permissions import (
     permission_is_exempt,
     resolve_permission,
     resolve_permission_ct,
 )
+from nautobot.users.models import ObjectPermission
 
-logger = logging.getLogger("nautobot.authentication")
+logger = logging.getLogger(__name__)
 
 
 class ObjectPermissionBackend(ModelBackend):
@@ -153,7 +153,7 @@ def assign_permissions_to_user(user, permissions=None):
         except ValueError:
             logging.error(
                 f"Invalid permission name: '{permission_name}'. Permissions must be in the form "
-                "<app>.<action>_<model>. (Example: dcim.add_site)"
+                "<app>.<action>_<model>. (Example: dcim.add_location)"
             )
     if permissions_list:
         logger.debug(f"Assigned permissions to remotely-authenticated user {user}: {permissions_list}")

@@ -1,5 +1,13 @@
 import django_tables2 as tables
 
+from nautobot.core.tables import (
+    BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
+    LinkedCountColumn,
+    TagColumn,
+    ToggleColumn,
+)
 from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -11,14 +19,6 @@ from nautobot.dcim.models import (
     PowerOutletTemplate,
     PowerPortTemplate,
     RearPortTemplate,
-)
-from nautobot.utilities.tables import (
-    BaseTable,
-    BooleanColumn,
-    ButtonsColumn,
-    LinkedCountColumn,
-    TagColumn,
-    ToggleColumn,
 )
 
 __all__ = (
@@ -43,22 +43,20 @@ __all__ = (
 class ManufacturerTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    devicetype_count = tables.Column(verbose_name="Device Types")
-    inventoryitem_count = tables.Column(verbose_name="Inventory Items")
+    device_type_count = tables.Column(verbose_name="Device Types")
+    inventory_item_count = tables.Column(verbose_name="Inventory Items")
     platform_count = tables.Column(verbose_name="Platforms")
-    slug = tables.Column()
-    actions = ButtonsColumn(Manufacturer, pk_field="slug")
+    actions = ButtonsColumn(Manufacturer)
 
     class Meta(BaseTable.Meta):
         model = Manufacturer
         fields = (
             "pk",
             "name",
-            "devicetype_count",
-            "inventoryitem_count",
+            "device_type_count",
+            "inventory_item_count",
             "platform_count",
             "description",
-            "slug",
             "actions",
         )
 
@@ -72,10 +70,10 @@ class DeviceTypeTable(BaseTable):
     pk = ToggleColumn()
     model = tables.Column(linkify=True, verbose_name="Device Type")
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
-    instance_count = LinkedCountColumn(
+    device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"device_type_id": "pk"},
-        verbose_name="Instances",
+        url_params={"device_type": "pk"},
+        verbose_name="Devices",
     )
     tags = TagColumn(url_name="dcim:devicetype_list")
 
@@ -85,12 +83,11 @@ class DeviceTypeTable(BaseTable):
             "pk",
             "model",
             "manufacturer",
-            "slug",
             "part_number",
             "u_height",
             "is_full_depth",
             "subdevice_role",
-            "instance_count",
+            "device_count",
             "tags",
         )
         default_columns = (
@@ -100,7 +97,7 @@ class DeviceTypeTable(BaseTable):
             "part_number",
             "u_height",
             "is_full_depth",
-            "instance_count",
+            "device_count",
         )
 
 

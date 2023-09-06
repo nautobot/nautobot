@@ -1,13 +1,21 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
+from nautobot.core.tables import (
+    BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
+    ColoredLabelColumn,
+    LinkedCountColumn,
+    TagColumn,
+    ToggleColumn,
+)
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
-    DeviceRole,
     FrontPort,
     Interface,
     InterfaceRedundancyGroup,
@@ -20,18 +28,8 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.dcim.utils import cable_status_color_css
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
-    BaseTable,
-    BooleanColumn,
-    ButtonsColumn,
-    ColorColumn,
-    ColoredLabelColumn,
-    LinkedCountColumn,
-    TagColumn,
-    ToggleColumn,
-)
 from .template_code import (
     CABLETERMINATION,
     CONSOLEPORT_BUTTONS,
@@ -70,7 +68,6 @@ __all__ = (
     "DevicePowerOutletTable",
     "DeviceRearPortTable",
     "DeviceRedundancyGroupTable",
-    "DeviceRoleTable",
     "DeviceTable",
     "FrontPortTable",
     "InterfaceTable",
@@ -86,49 +83,6 @@ __all__ = (
 
 
 #
-# Device roles
-#
-
-
-class DeviceRoleTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.LinkColumn()
-    device_count = LinkedCountColumn(viewname="dcim:device_list", url_params={"role": "slug"}, verbose_name="Devices")
-    vm_count = LinkedCountColumn(
-        viewname="virtualization:virtualmachine_list",
-        url_params={"role": "slug"},
-        verbose_name="VMs",
-    )
-    color = ColorColumn()
-    vm_role = BooleanColumn()
-    actions = ButtonsColumn(DeviceRole, pk_field="slug")
-
-    class Meta(BaseTable.Meta):
-        model = DeviceRole
-        fields = (
-            "pk",
-            "name",
-            "device_count",
-            "vm_count",
-            "color",
-            "vm_role",
-            "description",
-            "slug",
-            "actions",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "device_count",
-            "vm_count",
-            "color",
-            "vm_role",
-            "description",
-            "actions",
-        )
-
-
-#
 # Platforms
 #
 
@@ -138,15 +92,15 @@ class PlatformTable(BaseTable):
     name = tables.LinkColumn()
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"platform": "slug"},
+        url_params={"platform": "pk"},
         verbose_name="Devices",
     )
-    vm_count = LinkedCountColumn(
+    virtual_machine_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
-        url_params={"platform": "slug"},
+        url_params={"platform": "pk"},
         verbose_name="VMs",
     )
-    actions = ButtonsColumn(Platform, pk_field="slug")
+    actions = ButtonsColumn(Platform)
 
     class Meta(BaseTable.Meta):
         model = Platform
@@ -155,8 +109,7 @@ class PlatformTable(BaseTable):
             "name",
             "manufacturer",
             "device_count",
-            "vm_count",
-            "slug",
+            "virtual_machine_count",
             "napalm_driver",
             "napalm_args",
             "network_driver",
@@ -168,7 +121,8 @@ class PlatformTable(BaseTable):
             "name",
             "manufacturer",
             "device_count",
-            "vm_count",
+            "virtual_machine_count",
+            "napalm_driver",
             "network_driver",
             "description",
             "actions",
@@ -180,14 +134,12 @@ class PlatformTable(BaseTable):
 #
 
 
-class DeviceTable(StatusTableMixin, BaseTable):
+class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
-    device_role = ColoredLabelColumn(verbose_name="Role")
     device_type = tables.LinkColumn(
         viewname="dcim:devicetype",
         args=[Accessor("device_type__pk")],
@@ -215,12 +167,11 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "name",
             "status",
             "tenant",
-            "device_role",
+            "role",
             "device_type",
             "platform",
             "serial",
             "asset_tag",
-            "site",
             "location",
             "rack",
             "position",
@@ -242,10 +193,9 @@ class DeviceTable(StatusTableMixin, BaseTable):
             "name",
             "status",
             "tenant",
-            "site",
             "location",
             "rack",
-            "device_role",
+            "role",
             "device_type",
             "primary_ip",
         )
@@ -255,9 +205,9 @@ class DeviceImportTable(BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
     status = ColoredLabelColumn()
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
-    device_role = tables.Column(verbose_name="Role")
+    role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
 
     class Meta(BaseTable.Meta):
@@ -266,10 +216,10 @@ class DeviceImportTable(BaseTable):
             "name",
             "status",
             "tenant",
-            "site",
+            "location",
             "rack",
             "position",
-            "device_role",
+            "role",
             "device_type",
         )
         empty_text = False
@@ -587,6 +537,7 @@ class BaseInterfaceTable(BaseTable):
         orderable=False,
         verbose_name="Tagged VLANs",
     )
+    vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
 class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
@@ -605,6 +556,7 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
             "type",
             "mgmt_only",
             "mtu",
+            "vrf",
             "mode",
             "mac_address",
             "description",
@@ -655,6 +607,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "lag",
             "mgmt_only",
             "mtu",
+            "vrf",
             "mode",
             "mac_address",
             "description",
@@ -677,6 +630,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "parent_interface",
             "lag",
             "mtu",
+            "vrf",
             "mode",
             "description",
             "ip_addresses",
@@ -910,7 +864,7 @@ class InventoryItemTable(DeviceComponentTable):
 
 class DeviceInventoryItemTable(InventoryItemTable):
     name = tables.TemplateColumn(
-        template_code='<a href="{{ record.get_absolute_url }}" style="padding-left: {{ record.level }}0px">'
+        template_code='<a href="{{ record.get_absolute_url }}" style="padding-left: {{ record.tree_depth }}0px">'
         "{{ value }}</a>",
         attrs={"td": {"class": "text-nowrap"}},
     )
@@ -975,17 +929,17 @@ class VirtualChassisTable(BaseTable):
 class DeviceRedundancyGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    member_count = tables.TemplateColumn(
+    device_count = tables.TemplateColumn(
         template_code=LINKED_RECORD_COUNT,
-        verbose_name="Members",
+        verbose_name="Devices",
     )
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:deviceredundancygroup_list")
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup
-        fields = ("pk", "name", "slug", "status", "failover_strategy", "member_count", "secrets_group", "tags")
-        default_columns = ("pk", "name", "status", "failover_strategy", "member_count")
+        fields = ("pk", "name", "status", "failover_strategy", "device_count", "secrets_group", "tags")
+        default_columns = ("pk", "name", "status", "failover_strategy", "device_count")
 
 
 #

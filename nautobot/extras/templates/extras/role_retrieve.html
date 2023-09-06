@@ -1,0 +1,120 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Role</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>
+                    {{ object.name }}
+                </td>
+            </tr>
+            <tr>
+                <td>Weight</td>
+                <td>
+                    {{ object.weight|placeholder }}
+                </td>
+            </tr>
+            <tr>
+                <td>Content Type(s)</td>
+                <td>
+                    <ul class="list-unstyled">
+                        {% for ct in content_types %}
+                            <li>{{ ct }}</li>
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+            <tr>
+                <td>Color</td>
+                <td>
+                    <span class="label color-block" style="background-color: #{{ object.color }}">&nbsp;</span>
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>
+                    {{ object.description|placeholder }}
+                </td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+         <div class="panel-heading">
+             <strong>Devices</strong>
+         </div>
+         {% include 'inc/table.html' with table=device_table %}
+         {% if perms.ipam.add_device %}
+             <div class="panel-footer text-right noprint">
+                 <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Device
+                 </a>
+             </div>
+         {% endif %}
+     </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=device_table.page %}
+    <div class="panel panel-default">
+         <div class="panel-heading">
+             <strong>IP Addresses</strong>
+         </div>
+         {% include 'inc/table.html' with table=ipaddress_table %}
+         {% if perms.ipam.add_ipaddress %}
+             <div class="panel-footer text-right noprint">
+                 <a href="{% url 'ipam:ipaddress_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add IP Address
+                 </a>
+             </div>
+         {% endif %}
+     </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=ipaddress_table.page %}
+     <div class="panel panel-default">
+         <div class="panel-heading">
+             <strong>Prefixes</strong>
+         </div>
+         {% include 'inc/table.html' with table=prefix_table %}
+         {% if perms.ipam.add_prefix %}
+             <div class="panel-footer text-right noprint">
+                 <a href="{% url 'ipam:prefix_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Prefix
+                 </a>
+             </div>
+         {% endif %}
+     </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=prefix_table.page %}
+    <div class="panel panel-default">
+         <div class="panel-heading">
+             <strong>Virtual Machines</strong>
+         </div>
+         {% include 'inc/table.html' with table=virtual_machine_table %}
+         {% if perms.virtualization.add_virtualmachine %}
+             <div class="panel-footer text-right noprint">
+                 <a href="{% url 'virtualization:virtualmachine_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Virtual Machine
+                 </a>
+             </div>
+         {% endif %}
+     </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=virtual_machine_table.page %}
+    <div class="panel panel-default">
+         <div class="panel-heading">
+             <strong>VLANs</strong>
+         </div>
+         {% include 'inc/table.html' with table=vlan_table %}
+         {% if perms.ipam.add_vlan %}
+             <div class="panel-footer text-right noprint">
+                 <a href="{% url 'ipam:vlan_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VLAN
+                 </a>
+             </div>
+         {% endif %}
+     </div>
+    {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
+     <div class="row"></div>
+ {% endblock content_full_width_page %}

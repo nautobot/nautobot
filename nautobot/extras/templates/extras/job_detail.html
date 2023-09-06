@@ -9,7 +9,7 @@
 
 {% block extra_buttons %}
     {% if perms.extras.run_job %}
-        <a href="{% url 'extras:job_run' slug=object.slug %}" class="btn btn-primary"
+        <a href="{% url 'extras:job_run' pk=object.pk %}" class="btn btn-primary"
            {% if not object.installed or not object.enabled %}disabled="disabled"{% endif %}>
             <i class="mdi mdi-play" aria-hidden="true"></i> Run/Schedule
         </a>
@@ -22,16 +22,6 @@
             <strong>Source Code</strong>
         </div>
         <table class="table table-hover panel-body attr-table">
-            <tr>
-                <td>Source</td>
-                <td>{{ object.source | bettertitle }}</td>
-            </tr>
-            {% if object.source == "git" %}
-                <tr>
-                    <td>Repository</td>
-                    <td>{{ object.git_repository|hyperlinked_object }}</td>
-                </tr>
-            {% endif %}
             <tr>
                 <td>Module</td>
                 <td><code>{{ object.module_name }}</code></td>
@@ -152,20 +142,28 @@
                 </td>
             </tr>
             <tr>
-                <td>Default to Committing Changes</td>
-                <td>{{ object.commit_default | render_boolean }}</td>
+                <td>Supports Dryrun</td>
+                <td colspan="2">{{ object.supports_dryrun | render_boolean }}</td>
+            </tr>
+            <tr>
+                <td>Default to Dryrun</td>
+                <td>{{ object.dryrun_default | render_boolean }}</td>
                 <td>
-                    {% if object.commit_default_override %}
+                    {% if object.dryrun_default_override %}
                         <span class="text-muted">
                             overridden; default is
                             {% if object.installed %}
-                                {{ object.job_class.commit_default | render_boolean }}
+                                {{ object.job_class.dryrun_default | render_boolean }}
                             {% else %}
                                 unknown (not currently installed)
                             {% endif %}
                         </span>
                     {% endif %}
                 </td>
+            </tr>
+            <tr>
+                <td>Read-Only Execution</td>
+                <td colspan="2">{{ object.read_only | render_boolean }}</td>
             </tr>
             <tr>
                 <td>Hide from Default UI</td>
@@ -176,22 +174,6 @@
                             overridden; default is
                             {% if object.installed %}
                                 {{ object.job_class.hidden | render_boolean }}
-                            {% else %}
-                                unknown (not currently installed)
-                            {% endif %}
-                        </span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td>Read-Only Execution</td>
-                <td>{{ object.read_only | render_boolean }}</td>
-                <td>
-                    {% if object.read_only_override %}
-                        <span class="text-muted">
-                            overridden; default is
-                            {% if object.installed %}
-                                {{ object.job_class.read_only | render_boolean }}
                             {% else %}
                                 unknown (not currently installed)
                             {% endif %}

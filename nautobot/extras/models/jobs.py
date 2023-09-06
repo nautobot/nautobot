@@ -1,35 +1,36 @@
 # Data models relating to Jobs
 
+import contextlib
 from datetime import timedelta
 import logging
-import os
-import uuid
 
 from celery import schedules
-
+from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.core.serializers.json import DjangoJSONEncoder
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import signals
-from django.urls import reverse
 from django.utils import timezone
-
+from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
-from django_celery_beat.managers import ExtendedManager
 from prometheus_client import Histogram
 
-from nautobot.core.celery import NautobotKombuJSONEncoder
-from nautobot.core.fields import AutoSlugField, slugify_dots_to_dashes
-from nautobot.core.models import BaseModel
+from nautobot.core.celery import (
+    app,
+    NautobotKombuJSONEncoder,
+    setup_nautobot_job_logging,
+)
+from nautobot.core.celery.control import refresh_git_repository
+from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
     JobExecutionType,
     JobResultStatusChoices,
-    JobSourceChoices,
     LogLevelChoices,
 )
 from nautobot.extras.constants import (
@@ -38,23 +39,16 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
-    JOB_MAX_SLUG_LENGTH,
-    JOB_MAX_SOURCE_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
-from nautobot.extras.models import ChangeLoggedModel
+from nautobot.extras.models import ChangeLoggedModel, GitRepository
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
-    FeatureQuery,
     extras_features,
-    get_job_content_type,
-    jobs_in_directory,
 )
-from nautobot.utilities.fields import JSONArrayField
-from nautobot.utilities.logging import sanitize
 
 from .customfields import CustomFieldModel
 
@@ -79,11 +73,9 @@ JOB_RESULT_METRIC = Histogram(
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "graphql",
     "job_results",
-    "relationships",
     "webhooks",
 )
 class Job(PrimaryModel):
@@ -92,23 +84,6 @@ class Job(PrimaryModel):
     """
 
     # Information used to locate the Job source code
-    source = models.CharField(
-        max_length=JOB_MAX_SOURCE_LENGTH,
-        choices=JobSourceChoices,
-        editable=False,
-        db_index=True,
-        help_text="Source of the Python code for this job - local, Git repository, or plugins",
-    )
-    git_repository = models.ForeignKey(
-        to="extras.GitRepository",
-        blank=True,
-        null=True,
-        default=None,
-        on_delete=models.SET_NULL,
-        db_index=True,
-        related_name="jobs",
-        help_text="Git repository that provides this job",
-    )
     module_name = models.CharField(
         max_length=JOB_MAX_NAME_LENGTH,
         editable=False,
@@ -122,12 +97,6 @@ class Job(PrimaryModel):
         help_text="Name of the Python class providing this job",
     )
 
-    slug = AutoSlugField(
-        max_length=JOB_MAX_SLUG_LENGTH,
-        populate_from=["class_path"],
-        slugify_function=slugify_dots_to_dashes,
-    )
-
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
     grouping = models.CharField(
@@ -138,7 +107,7 @@ class Job(PrimaryModel):
     name = models.CharField(
         max_length=JOB_MAX_NAME_LENGTH,
         help_text="Human-readable name of this job",
-        db_index=True,
+        unique=True,
     )
     description = models.TextField(blank=True, help_text="Markdown formatting is supported")
 
@@ -168,17 +137,17 @@ class Job(PrimaryModel):
     approval_required = models.BooleanField(
         default=False, help_text="Whether the job requires approval from another user before running"
     )
-    commit_default = models.BooleanField(
-        default=True, help_text="Whether the job defaults to committing changes when run, or defaults to a dry-run"
-    )
     hidden = models.BooleanField(
         default=False,
         db_index=True,
         help_text="Whether the job defaults to not being shown in the UI",
     )
     # Job.Meta.field_order is not overridable in this model
+    dryrun_default = models.BooleanField(
+        default=False, help_text="Whether the job defaults to running with dryrun argument set to true"
+    )
     read_only = models.BooleanField(
-        default=False, help_text="Whether the job is prevented from making lasting changes to the database"
+        default=False, editable=False, help_text="Set to true if the job does not make any changes to the environment"
     )
     soft_time_limit = models.FloatField(
         default=0,
@@ -198,6 +167,11 @@ class Job(PrimaryModel):
         blank=True,
         help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
     )
+    supports_dryrun = models.BooleanField(
+        default=False,
+        editable=False,
+        help_text="If supported, allows the job to bypass approval when running with dryrun argument set to true",
+    )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     grouping_override = models.BooleanField(
@@ -212,20 +186,15 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured description will remain even if the underlying Job source code changes",
     )
-
     approval_required_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    commit_default_override = models.BooleanField(
+    dryrun_default_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     hidden_override = models.BooleanField(
-        default=False,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
-    )
-    read_only_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
@@ -246,98 +215,36 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
 
-    objects = JobQuerySet.as_manager()
+    objects = BaseManager.from_queryset(JobQuerySet)()
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
     class Meta:
         managed = True
         ordering = ["grouping", "name"]
-        unique_together = [
-            ("source", "git_repository", "module_name", "job_class_name"),
-            ("grouping", "name"),
-        ]
+        unique_together = ["module_name", "job_class_name"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._job_class = None
         self._latest_result = None
 
     def __str__(self):
         return self.name
 
-    def validate_unique(self, exclude=None):
-        """
-        Check for duplicate (source, module_name, job_class_name) in the case where git_repository is None.
-
-        This is needed because NULL != NULL and so the unique_together constraint will not flag this case.
-        """
-        if self.git_repository is None:
-            if Job.objects.exclude(pk=self.pk).filter(
-                source=self.source, module_name=self.module_name, job_class_name=self.job_class_name
-            ):
-                raise ValidationError(
-                    {"job_class_name": "A Job already exists with this source, module_name, and job_class_name"}
-                )
-
-        super().validate_unique(exclude=exclude)
-
-    @property
+    @cached_property
     def job_class(self):
         """Get the Job class (source code) associated with this Job model."""
         if not self.installed:
             return None
-        if self._job_class is None:
-            if self.source == JobSourceChoices.SOURCE_LOCAL:
-                path = settings.JOBS_ROOT
-                for job_info in jobs_in_directory(settings.JOBS_ROOT, module_name=self.module_name):
-                    if job_info.job_class_name == self.job_class_name:
-                        self._job_class = job_info.job_class
-                        break
-                else:
-                    logger.warning("Module %s job class %s not found!", self.module_name, self.job_class_name)
-            elif self.source == JobSourceChoices.SOURCE_GIT:
-                from nautobot.extras.datasources.git import ensure_git_repository
-
-                if self.git_repository is None:
-                    logger.warning("Job %s %s has no associated Git repository", self.module_name, self.job_class_name)
-                    return None
-                try:
-                    # In the case where we have multiple Nautobot instances, or multiple worker instances,
-                    # they are not required to share a common filesystem; therefore, we may need to refresh our local
-                    # clone of the Git repository to ensure that it is in sync with the latest repository clone
-                    # from any instance.
-                    ensure_git_repository(
-                        self.git_repository,
-                        head=self.git_repository.current_head,
-                        logger=logger,
-                    )
-                    path = os.path.join(self.git_repository.filesystem_path, "jobs")
-                    for job_info in jobs_in_directory(path, module_name=self.module_name):
-                        if job_info.job_class_name == self.job_class_name:
-                            self._job_class = job_info.job_class
-                            break
-                    else:
-                        logger.warning(
-                            "Module %s job class %s not found in repository %s",
-                            self.module_name,
-                            self.job_class_name,
-                            self.git_repository,
-                        )
-                except ObjectDoesNotExist:
-                    return None
-                except Exception as exc:
-                    logger.error(f"Error during local clone/refresh of Git repository {self.git_repository}: {exc}")
-                    return None
-            elif self.source == JobSourceChoices.SOURCE_PLUGIN:
-                # pkgutil.resolve_name is only available in Python 3.9 and later
-                self._job_class = import_object(f"{self.module_name}.{self.job_class_name}")
-
-        return self._job_class
+        try:
+            return self.job_task.__class__
+        except Exception as exc:
+            logger.error(str(exc))
+            return None
 
     @property
     def class_path(self):
-        if self.git_repository is not None:
-            return f"{self.source}.{self.git_repository.slug}/{self.module_name}/{self.job_class_name}"
-        return f"{self.source}/{self.module_name}/{self.job_class_name}"
+        return f"{self.module_name}.{self.job_class_name}"
 
     @property
     def latest_result(self):
@@ -348,7 +255,7 @@ class Job(PrimaryModel):
         JobListview, the returned object only includes its `status` field.
         """
         if self._latest_result is None:
-            self._latest_result = self.results.only("status").first()
+            self._latest_result = self.job_results.only("status").first()
         return self._latest_result
 
     @property
@@ -357,12 +264,25 @@ class Job(PrimaryModel):
 
     @property
     def runnable(self):
-        return (
-            self.enabled
-            and self.installed
-            and self.job_class is not None
-            and not (self.has_sensitive_variables and self.approval_required)
-        )
+        return self.enabled and self.installed and not (self.has_sensitive_variables and self.approval_required)
+
+    @cached_property
+    def git_repository(self):
+        """GitRepository record, if any, that owns this Job."""
+        try:
+            return GitRepository.objects.get(slug=self.module_name.split(".")[0])
+        except GitRepository.DoesNotExist:
+            return None
+
+    @property
+    def job_task(self):
+        """Get the registered Celery task, refreshing it if necessary."""
+        if self.git_repository is not None:
+            # If this Job comes from a Git repository, make sure we have the correct version of said code.
+            refresh_git_repository(
+                state=None, repository_pk=self.git_repository.pk, head=self.git_repository.current_head
+            )
+        return app.tasks[f"{self.module_name}.{self.job_class_name}"]
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -371,30 +291,20 @@ class Job(PrimaryModel):
                 if not getattr(self, f"{field_name}_override", False):
                     setattr(self, field_name, getattr(self.job_class, field_name))
 
-        if self.git_repository is not None and self.source != JobSourceChoices.SOURCE_GIT:
-            raise ValidationError('A Git repository may only be specified when the source is "git"')
-
         # Protect against invalid input when auto-creating Job records
-        if len(self.source) > JOB_MAX_SOURCE_LENGTH:
-            raise ValidationError(f"Source may not exceed {JOB_MAX_SOURCE_LENGTH} characters in length")
         if len(self.module_name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Module name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.grouping) > JOB_MAX_GROUPING_LENGTH:
-            raise ValidationError("Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
+            raise ValidationError(f"Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        if len(self.slug) > JOB_MAX_SLUG_LENGTH:
-            raise ValidationError(f"Slug may not exceed {JOB_MAX_SLUG_LENGTH} characters in length")
 
         if self.has_sensitive_variables is True and self.approval_required is True:
             raise ValidationError(
                 {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
             )
-
-    def get_absolute_url(self):
-        return reverse("extras:job_detail", kwargs={"slug": self.slug})
 
 
 @extras_features("graphql")
@@ -415,17 +325,18 @@ class JobHook(OrganizationalModel):
     enabled = models.BooleanField(default=True)
     job = models.ForeignKey(
         to=Job,
-        related_name="job_hook",
+        related_name="job_hooks",
         verbose_name="Job",
         help_text="The job that this job hook will initiate",
         on_delete=models.CASCADE,
         limit_choices_to={"is_job_hook_receiver": True},
     )
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     type_create = models.BooleanField(default=False, help_text="Call this job hook when a matching object is created.")
     type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
     type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobhook.html"
 
     class Meta:
         ordering = ("name",)
@@ -439,9 +350,6 @@ class JobHook(OrganizationalModel):
         # At least one action type must be selected
         if not self.type_create and not self.type_delete and not self.type_update:
             raise ValidationError("You must select at least one type: create, update, and/or delete.")
-
-    def get_absolute_url(self):
-        return reverse("extras:jobhook", kwargs={"slug": self.slug})
 
     @classmethod
     def check_for_conflicts(
@@ -499,9 +407,9 @@ class JobHook(OrganizationalModel):
 class JobLogEntry(BaseModel):
     """Stores each log entry for the JobResult."""
 
-    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="logs")
+    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="job_log_entries")
     log_level = models.CharField(
-        max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_DEFAULT, db_index=True
+        max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_INFO, db_index=True
     )
     grouping = models.CharField(max_length=JOB_LOG_MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
@@ -510,10 +418,10 @@ class JobLogEntry(BaseModel):
     # compatibility with existing JobResult logs. GFK would pose a problem with dangling foreign-key
     # references, whereas this allows us to retain all records for as long as the entry exists.
     # This also simplifies migration from the JobResult Data field as these were stored as strings.
-    log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, null=True, blank=True)
-    absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, null=True, blank=True)
+    log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
+    absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
-    csv_headers = ["created", "grouping", "log_level", "log_object", "message"]
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
     def __str__(self):
         return self.message
@@ -523,16 +431,13 @@ class JobLogEntry(BaseModel):
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
 
-    def to_csv(self):
-        """Indicates model fields to return as csv."""
-        return (str(self.created), self.grouping, self.log_level, self.log_object, self.message)
-
 
 #
 # Job results
 #
+
+
 @extras_features(
-    "custom_fields",
     "custom_links",
     "graphql",
 )
@@ -545,260 +450,233 @@ class JobResult(BaseModel, CustomFieldModel):
     # This is because we want to be able to keep JobResult records for tracking and auditing purposes even after
     # deleting the corresponding Job record.
     job_model = models.ForeignKey(
-        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="results"
+        to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="job_results"
     )
-
     name = models.CharField(max_length=255, db_index=True)
-    obj_type = models.ForeignKey(
-        to=ContentType,
-        related_name="job_results",
-        verbose_name="Object types",
-        limit_choices_to=FeatureQuery("job_results"),
-        help_text="The object type to which this job result applies",
-        on_delete=models.CASCADE,
+    task_name = models.CharField(
+        max_length=255,
+        null=True,
+        db_index=True,
+        help_text="Registered name of the Celery task for this job. Internal use only.",
     )
-    created = models.DateTimeField(auto_now_add=True, db_index=True)
-    completed = models.DateTimeField(null=True, blank=True, db_index=True)
+    date_created = models.DateTimeField(auto_now_add=True, db_index=True)
+    date_done = models.DateTimeField(null=True, blank=True, db_index=True)
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", blank=True, null=True
     )
-    # todoindex:
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
         default=JobResultStatusChoices.STATUS_PENDING,
+        help_text="Current state of the Job being run",
+        db_index=True,
     )
-    data = models.JSONField(encoder=DjangoJSONEncoder, null=True, blank=True)
-    job_kwargs = models.JSONField(blank=True, null=True, encoder=NautobotKombuJSONEncoder)
-    schedule = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
-    """
-    Although "data" is technically an unstructured field, we have a standard structure that we try to adhere to.
+    result = models.JSONField(
+        encoder=NautobotKombuJSONEncoder,
+        null=True,
+        blank=True,
+        editable=False,
+        verbose_name="Result Data",
+        help_text="The data returned by the task",
+    )
+    worker = models.CharField(max_length=100, default=None, null=True)
+    task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
+    task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+    celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+    traceback = models.TextField(blank=True, null=True)
+    meta = models.JSONField(null=True, default=None, editable=False)
+    scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
-    This structure is created loosely as a superset of the formats used by Scripts and Reports in NetBox 2.10.
+    objects = JobResultManager()
 
-    Log Messages now go to their own object, the JobLogEntry.
-
-    data = {
-        "output": <optional string, such as captured stdout/stderr>,
-    }
-    """
-
-    job_id = models.UUIDField(unique=True)
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.use_job_logs_db = True
 
     class Meta:
-        ordering = ["-created"]
-        get_latest_by = "created"
+        ordering = ["-date_created"]
+        get_latest_by = "date_created"
         indexes = [
             models.Index(
                 name="extras_jobresult_rcreated_idx",
-                fields=["-created"],
+                fields=["-date_created"],
             ),
             models.Index(
-                name="extras_jr_rcompleted_idx",
-                fields=["-completed"],
+                name="extras_jr_rdone_idx",
+                fields=["-date_done"],
             ),
             models.Index(
                 name="extras_jr_statrcreate_idx",
-                fields=["status", "-created"],
+                fields=["status", "-date_created"],
             ),
             models.Index(
-                name="extras_jr_statrcompl_idx",
-                fields=["status", "-completed"],
+                name="extras_jr_statrdone_idx",
+                fields=["status", "-date_done"],
             ),
         ]
 
+    natural_key_field_names = ["id"]
+
     def __str__(self):
-        return str(self.job_id)
+        return f"{self.name} started at {self.date_created} ({self.status})"
+
+    def as_dict(self):
+        """This is required by the django-celery-results DB backend."""
+        return {
+            "id": self.id,
+            "task_name": self.task_name,
+            "task_args": self.task_args,
+            "task_kwargs": self.task_kwargs,
+            "status": self.status,
+            "result": self.result,
+            "date_done": self.date_done,
+            "traceback": self.traceback,
+            "meta": self.meta,
+            "worker": self.worker,
+        }
 
     @property
     def duration(self):
-        if not self.completed:
+        if not self.date_done:
             return None
 
-        duration = self.completed - self.created
+        duration = self.date_done - self.date_created
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
 
-    @property
-    def related_object(self):
-        """Get the related object, if any, identified by the `obj_type`, `name`, and/or `job_id` fields.
-
-        If `obj_type` is extras.Job, then the `name` is used to look up an extras.jobs.Job subclass based on the
-        `class_path` of the Job subclass.
-        Note that this is **not** the extras.models.Job model class nor an instance thereof.
-
-        Else, if the the model class referenced by `obj_type` has a `name` field, our `name` field will be used
-        to look up a corresponding model instance. This is used, for example, to look up a related `GitRepository`;
-        more generally it can be used by any model that 1) has a unique `name` field and 2) needs to have a many-to-one
-        relationship between JobResults and model instances.
-
-        Else, the `obj_type` and `job_id` will be used together as a quasi-GenericForeignKey to look up a model
-        instance whose PK corresponds to the `job_id`. This behavior is currently unused in the Nautobot core,
-        but may be of use to plugin developers wishing to create JobResults that have a one-to-one relationship
-        to plugin model instances.
-
-        This method is potentially rather slow as get_job() may need to actually load the Job class from disk;
-        consider carefully whether you actually need to use it.
-        """
-        from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
-
-        if self.obj_type == get_job_content_type():
-            # Related object is an extras.Job subclass, our `name` matches its `class_path`
-            return get_job(self.name)
-
-        model_class = self.obj_type.model_class()
-
-        if model_class is not None:
-            if hasattr(model_class, "name"):
-                # See if we have a many-to-one relationship from JobResult to model_class record, based on `name`
-                try:
-                    return model_class.objects.get(name=self.name)
-                except model_class.DoesNotExist:
-                    pass
-
-            # See if we have a one-to-one relationship from JobResult to model_class record based on `job_id`
-            try:
-                return model_class.objects.get(id=self.job_id)
-            except model_class.DoesNotExist:
-                pass
-
-        return None
-
-    @property
-    def related_name(self):
-        """
-        A human-friendlier "name" for the Job Result.
-
-        This is commonly the name for extras.Job based jobs, but if the definition of the Job
-        or in cases of Git Repositories or other Related Objects there is no Job name definition available.
-
-        Properly handle those cases.
-        """
-        if self.job_model:
-            # No need to call related_object(), getting the Job class name if we already have a job_model
-            return self.job_model.name
-        elif self.obj_type == get_job_content_type():
-            # Related object is an extras.Job subclass but the Job Model has been deleted
-            # Calling self.related_object will call ensure_git_repository() but will ultimately return None
-            return self.name
-
-        # At this point related_object is likely a GitRepository
-        related_object = self.related_object
-        if not related_object:
-            return self.name
-        if hasattr(related_object, "name"):
-            return related_object.name
-        return str(related_object)
-
-    @property
-    def linked_record(self):
-        """
-        A newer alternative to self.related_object that looks up an extras.models.Job instead of an extras.jobs.Job.
-        """
-        if self.job_model is not None:
-            return self.job_model
-        model_class = self.obj_type.model_class()
-        if model_class is not None:
-            if hasattr(model_class, "name"):
-                try:
-                    return model_class.objects.get(name=self.name)
-                except model_class.DoesNotExist:
-                    pass
-            if hasattr(model_class, "class_path"):
-                try:
-                    return model_class.objects.get(class_path=self.name)
-                except model_class.DoesNotExist:
-                    pass
-        return None
-
-    def get_absolute_url(self):
-        return reverse("extras:jobresult", kwargs={"pk": self.pk})
-
+    # FIXME(jathan): This needs to go away. Need to think about that the impact
+    # will be in the JOB_RESULT_METRIC and how to compensate for it.
     def set_status(self, status):
         """
         Helper method to change the status of the job result. If the target status is terminal, the  completion
         time is also set.
         """
         self.status = status
-        if status in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+        if status in JobResultStatusChoices.READY_STATES:
+            self.date_done = timezone.now()
             # Only add metrics if we have a related job model. If we are moving to a terminal state we should always
             # have a related job model, so this shouldn't be too tight of a restriction.
-            self.completed = timezone.now()
             if self.job_model:
-                duration = self.completed - self.created
+                duration = self.date_done - self.created
                 JOB_RESULT_METRIC.labels(self.job_model.grouping, self.job_model.name, status).observe(
                     duration.total_seconds()
                 )
 
     @classmethod
-    def enqueue_job(cls, func, name, obj_type, user, *args, celery_kwargs=None, schedule=None, **kwargs):
+    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, **job_kwargs):
         """
-        Create a JobResult instance and enqueue a job using the given callable
+        Create a JobResult instance and run a job in the current process, blocking until the job finishes.
 
-        func: The callable object to be enqueued for execution
-        name: Name for the JobResult instance - corresponds to the desired Job class's "class_path" attribute,
-            if obj_type is extras.Job; for other funcs and obj_types it may differ.
-        obj_type: ContentType to link to the JobResult instance obj_type
-        user: User object to link to the JobResult instance
-        celery_kwargs: Dictionary of kwargs to pass as **kwargs to Celery when job is queued
-        args: additional args passed to the callable
-        schedule: Optional ScheduledJob instance to link to the JobResult
-        kwargs: additional kwargs passed to the callable
+        Running tasks synchronously in celery is *NOT* supported and if possible `enqueue_job` with synchronous=False
+        should be used instead.
+
+        Args:
+            job_model (Job): The Job to be enqueued for execution
+            user (User): User object to link to the JobResult instance
+            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
+            profile (bool, optional): Whether to run cProfile on the job execution
+            *job_args: positional args passed to the job task
+            **job_kwargs: keyword args passed to the job task
+
+        Returns:
+            JobResult instance
         """
-        # Discard "request" parameter from the kwargs that we save in the job_result, as it's not relevant to re-runs,
-        # and will likely go away in the future.
-        job_result_kwargs = {key: value for key, value in kwargs.items() if key != "request"}
+        return cls.enqueue_job(
+            job_model, user, *job_args, celery_kwargs=celery_kwargs, profile=profile, synchronous=True, **job_kwargs
+        )
+
+    @classmethod
+    def enqueue_job(
+        cls,
+        job_model,
+        user,
+        *job_args,
+        celery_kwargs=None,
+        profile=False,
+        schedule=None,
+        task_queue=None,
+        synchronous=False,
+        **job_kwargs,
+    ):
+        """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
+
+        Args:
+            job_model (Job): The Job to be enqueued for execution.
+            user (User): User object to link to the JobResult instance.
+            celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to `apply_async()`/`apply()` when job is run.
+            profile (bool, optional): If True, dump cProfile stats on the job execution.
+            schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult. Cannot be used with synchronous=True.
+            task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
+            synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
+            *job_args: positional args passed to the job task
+            **job_kwargs: keyword args passed to the job task
+
+        Returns:
+            JobResult instance
+        """
+        if schedule is not None and synchronous:
+            raise ValueError("Scheduled jobs cannot be run synchronously")
+
         job_result = cls.objects.create(
-            name=name,
-            obj_type=obj_type,
+            name=job_model.name,
+            job_model=job_model,
+            scheduled_job=schedule,
             user=user,
-            job_id=uuid.uuid4(),
-            schedule=schedule,
         )
 
-        kwargs["job_result_pk"] = job_result.pk
+        if task_queue is None:
+            task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
 
-        # Prepare kwargs that will be sent to Celery
-        if celery_kwargs is None:
-            celery_kwargs = {}
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": job_model.id,
+            "nautobot_job_profile": profile,
+            "nautobot_job_user_id": user.id,
+            "queue": task_queue,
+        }
 
-        if obj_type.app_label == "extras" and obj_type.model.lower() == "job":
-            try:
-                job_model = Job.objects.get_for_class_path(name)
-                if job_model.soft_time_limit > 0:
-                    celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-                if job_model.time_limit > 0:
-                    celery_kwargs["time_limit"] = job_model.time_limit
-                if not job_model.has_sensitive_variables:
-                    job_result.job_kwargs = job_result_kwargs
-                job_result.job_model = job_model
-                job_result.save()
-            except Job.DoesNotExist:
-                # 2.0 TODO: remove this fallback logic, database records should always exist
-                from nautobot.extras.jobs import get_job  # needed here to avoid a circular import issue
+        if schedule is not None:
+            job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
+        if job_model.soft_time_limit > 0:
+            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            job_celery_kwargs["time_limit"] = job_model.time_limit
 
-                job_class = get_job(name)
-                if job_class is not None:
-                    logger.error("No Job instance found in the database corresponding to %s", name)
-                    if hasattr(job_class.Meta, "soft_time_limit"):
-                        celery_kwargs["soft_time_limit"] = job_class.Meta.soft_time_limit
-                    if hasattr(job_class.Meta, "time_limit"):
-                        celery_kwargs["time_limit"] = job_class.Meta.time_limit
-                    if not job_class.has_sensitive_variables:
-                        job_result.job_kwargs = job_result_kwargs
-                        job_result.save()
-                else:
-                    logger.error("Neither a Job database record nor a Job source class were found for %s", name)
+        if celery_kwargs is not None:
+            job_celery_kwargs.update(celery_kwargs)
 
-        # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-        transaction.on_commit(
-            lambda: func.apply_async(args=args, kwargs=kwargs, task_id=str(job_result.job_id), **celery_kwargs)
-        )
+        if synchronous:
+            # synchronous tasks are run before the JobResult is saved, so any fields required by
+            # the job must be added before calling `apply()`
+            job_result.celery_kwargs = job_celery_kwargs
+            job_result.save()
+
+            # setup synchronous task logging
+            setup_nautobot_job_logging(None, None, app.conf)
+
+            # redirect stdout/stderr to logger and run task
+            redirect_logger = get_logger("celery.redirected")
+            proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
+            with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
+                eager_result = job_model.job_task.apply(
+                    args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                )
+
+            # copy fields from eager result to job result
+            job_result.refresh_from_db()
+            for field in ["status", "result", "traceback", "worker"]:
+                setattr(job_result, field, getattr(eager_result, field, None))
+            job_result.date_done = timezone.now()
+            job_result.save()
+        else:
+            # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
+            transaction.on_commit(
+                lambda: job_model.job_task.apply_async(
+                    args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                )
+            )
 
         return job_result
 
@@ -806,9 +684,8 @@ class JobResult(BaseModel, CustomFieldModel):
         self,
         message,
         obj=None,
-        level_choice=LogLevelChoices.LOG_DEFAULT,
+        level_choice=LogLevelChoices.LOG_INFO,
         grouping="main",
-        logger=None,  # pylint: disable=redefined-outer-name
     ):
         """
         General-purpose API for storing log messages in a JobResult's 'data' field.
@@ -817,34 +694,34 @@ class JobResult(BaseModel, CustomFieldModel):
         obj (object): Object associated with this message, if any
         level_choice (LogLevelChoices): Message severity level
         grouping (str): Grouping to store the log message under
-        logger (logging.logger): Optional logger to also output the message to
         """
         if level_choice not in LogLevelChoices.as_dict():
             raise ValueError(f"Unknown logging level: {level_choice}")
 
         message = sanitize(str(message))
 
-        obj_absolute_url = None
-        if obj is not None and hasattr(obj, "get_absolute_url"):
-            try:
-                absolute_url = obj.get_absolute_url()
-                # If absolute_url is longer than we can store, we discard it instead of truncating,
-                # since a truncated URL is pretty useless.
-                if len(absolute_url) <= JOB_LOG_MAX_ABSOLUTE_URL_LENGTH:
-                    obj_absolute_url = absolute_url
-            except Exception:
-                pass
-
-        log = JobLogEntry(
-            job_result=self,
-            log_level=level_choice,
-            grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
-            message=message,
-            created=timezone.now().isoformat(),
-            log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else None,
-            absolute_url=obj_absolute_url,
-        )
-
+        try:
+            log = JobLogEntry(
+                job_result=self,
+                log_level=level_choice,
+                grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
+                message=message,
+                created=timezone.now().isoformat(),
+                log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else "",
+                absolute_url=obj.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
+                if hasattr(obj, "get_absolute_url")
+                else "",
+            )
+        except NotImplementedError:
+            log = JobLogEntry(
+                job_result=self,
+                log_level=level_choice,
+                grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
+                message=message,
+                created=timezone.now().isoformat(),
+                log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else "",
+                absolute_url="",
+            )
         # If the override is provided, we want to use the default database(pass no using argument)
         # Otherwise we want to use a separate database here so that the logs are created immediately
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
@@ -853,17 +730,6 @@ class JobResult(BaseModel, CustomFieldModel):
             log.save()
         else:
             log.save(using=JOB_LOGS)
-
-        if logger:
-            if level_choice == LogLevelChoices.LOG_FAILURE:
-                log_level = logging.ERROR
-            elif level_choice == LogLevelChoices.LOG_WARNING:
-                log_level = logging.WARNING
-            else:
-                log_level = logging.INFO
-            logger.log(log_level, message)
-
-        return log
 
 
 #
@@ -887,7 +753,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(
         max_length=500,
-        help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Buttons which render as empty text will not be displayed.",
+        help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Buttons which render as empty text will not be displayed.",
     )
     job = models.ForeignKey(
         to="extras.Job",
@@ -911,14 +777,13 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         default=True,
     )
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobbutton.html"
+
     class Meta:
         ordering = ["group_name", "weight", "name"]
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:jobbutton", kwargs={"pk": self.pk})
 
 
 class ScheduledJobs(models.Model):
@@ -932,7 +797,7 @@ class ScheduledJobs(models.Model):
     ident = models.SmallIntegerField(default=1, primary_key=True, unique=True)
     last_update = models.DateTimeField(null=False)
 
-    objects = ExtendedManager()
+    objects = ScheduledJobsManager()
 
     @classmethod
     def changed(cls, instance, raw=False, **kwargs):
@@ -962,10 +827,12 @@ class ScheduledJob(BaseModel):
     """Model representing a periodic task."""
 
     name = models.CharField(
-        max_length=200, verbose_name="Name", help_text="Short Description For This Task", db_index=True
+        max_length=200, verbose_name="Name", help_text="Human-readable description of this scheduled task", unique=True
     )
     task = models.CharField(
-        max_length=200,
+        # JOB_MAX_NAME_LENGTH is the longest permitted module name as well as the longest permitted class name,
+        # so we need to permit a task name of MAX.MAX at a minimum:
+        max_length=JOB_MAX_NAME_LENGTH + 1 + JOB_MAX_NAME_LENGTH,
         verbose_name="Task Name",
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
         db_index=True,
@@ -976,22 +843,16 @@ class ScheduledJob(BaseModel):
     job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_jobs"
     )
-    job_class = models.CharField(
-        max_length=255,
-        verbose_name="Job Class",
-        help_text="Name of the fully qualified Nautobot Job class path",
-        db_index=True,
-    )
     interval = models.CharField(choices=JobExecutionType, max_length=255)
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
+    celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     queue = models.CharField(
         max_length=200,
         blank=True,
-        null=True,
-        default=None,
+        default="",
         verbose_name="Queue Override",
-        help_text="Queue defined in CELERY_TASK_QUEUES. Leave None for default queuing.",
+        help_text="Queue defined in CELERY_TASK_QUEUES. Leave empty for default queuing.",
         db_index=True,
     )
     one_off = models.BooleanField(
@@ -1065,19 +926,16 @@ class ScheduledJob(BaseModel):
         help_text="Cronjob syntax string for custom scheduling",
     )
 
-    objects = ScheduledJobExtendedQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ScheduledJobExtendedQuerySet)()
     no_changes = False
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"
 
     def __str__(self):
         return f"{self.name}: {self.interval}"
 
-    def get_absolute_url(self):
-        return reverse("extras:scheduledjob", kwargs={"pk": self.pk})
-
     def save(self, *args, **kwargs):
-        self.queue = self.queue or None
-        # pass pk to worker task in kwargs, celery doesn't provide the full object to the worker
-        self.kwargs["scheduled_job_pk"] = self.pk
+        self.queue = self.queue or ""
         # make sure non-valid crontab doesn't get saved
         if self.interval == JobExecutionType.TYPE_CUSTOM:
             try:

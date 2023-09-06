@@ -6,23 +6,27 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.db.models import Sum
-from django.urls import reverse
 from django.utils.functional import classproperty
 
+from nautobot.core.models.fields import ColorField
+from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
-
 from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.utils import (
     decompile_path_node,
     object_to_path_node,
     path_node_to_object,
 )
-from nautobot.extras.models import Status, StatusModel
+from nautobot.extras.models import Status, StatusField
 from nautobot.extras.utils import extras_features
+
+# TODO: There's an ugly circular-import pattern where if we move this import "up" to above, we get into an import loop
+# from dcim.models.cables to core.models.generics to extras.models.datasources to core.models.generics.
+# Deferring the update to here works for now; fixing so that core.models.generics doesn't depend on extras.models
+# would be the much more invasive but much more "correct" fix.
 from nautobot.core.models.generics import BaseModel, PrimaryModel
-from nautobot.utilities.fields import ColorField
-from nautobot.utilities.utils import to_meters
+
 from .devices import Device
 from .device_components import FrontPort, RearPort
 
@@ -40,16 +44,14 @@ logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
-class Cable(PrimaryModel, StatusModel):
+class Cable(PrimaryModel):
     """
     A physical connection between two endpoints.
     """
@@ -71,6 +73,7 @@ class Cable(PrimaryModel, StatusModel):
     termination_b_id = models.UUIDField()
     termination_b = GenericForeignKey(ct_field="termination_b_type", fk_field="termination_b_id")
     type = models.CharField(max_length=50, choices=CableTypeChoices, blank=True)
+    status = StatusField(blank=False, null=False)
     label = models.CharField(max_length=100, blank=True)
     color = ColorField(blank=True)
     length = models.PositiveSmallIntegerField(blank=True, null=True)
@@ -90,18 +93,7 @@ class Cable(PrimaryModel, StatusModel):
         to=Device, on_delete=models.CASCADE, related_name="+", blank=True, null=True
     )
 
-    csv_headers = [
-        "termination_a_type",
-        "termination_a_id",
-        "termination_b_type",
-        "termination_b_id",
-        "type",
-        "status",
-        "label",
-        "color",
-        "length",
-        "length_unit",
-    ]
+    natural_key_field_names = ["pk"]
 
     class Meta:
         ordering = [
@@ -131,15 +123,12 @@ class Cable(PrimaryModel, StatusModel):
         pk = self.pk or self._pk
         return self.label or f"#{pk}"
 
-    def get_absolute_url(self):
-        return reverse("dcim:cable", args=[self.pk])
-
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def STATUS_CONNECTED(cls):  # pylint: disable=no-self-argument
         """Return a cached "connected" `Status` object for later reference."""
         if getattr(cls, "__status_connected", None) is None:
             try:
-                cls.__status_connected = Status.objects.get_for_model(Cable).get(slug="connected")
+                cls.__status_connected = Status.objects.get_for_model(Cable).get(name="Connected")
             except Status.DoesNotExist:
                 logger.warning("Status 'connected' not found for dcim.cable")
                 return None
@@ -273,20 +262,6 @@ class Cable(PrimaryModel, StatusModel):
         # Update the private pk used in __str__ in case this is a new object (i.e. just got its pk)
         self._pk = self.pk
 
-    def to_csv(self):
-        return (
-            f"{self.termination_a_type.app_label}.{self.termination_a_type.model}",
-            self.termination_a_id,
-            f"{self.termination_b_type.app_label}.{self.termination_b_type.model}",
-            self.termination_b_id,
-            self.get_type_display(),
-            self.get_status_display(),
-            self.label,
-            self.color,
-            self.length,
-            self.length_unit,
-        )
-
     def get_compatible_types(self):
         """
         Return all termination types compatible with termination A.
@@ -338,6 +313,8 @@ class CablePath(BaseModel):
     path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
+
+    natural_key_field_names = ["pk"]
 
     class Meta:
         unique_together = ("origin_type", "origin_id")

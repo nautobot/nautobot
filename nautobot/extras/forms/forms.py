@@ -6,12 +6,9 @@ from django.core.exceptions import ValidationError
 from django.db.models.fields import TextField
 from django.forms import ModelMultipleChoiceField, inlineformset_factory
 from django.urls.base import reverse
-from django.utils.safestring import mark_safe
 
-from nautobot.dcim.models import DeviceRedundancyGroup, DeviceRole, DeviceType, Location, Platform, Region, Site
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.forms import (
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
     APISelectMultiple,
@@ -21,10 +18,7 @@ from nautobot.utilities.forms import (
     ColorSelect,
     CommentField,
     CSVContentTypeField,
-    CSVModelChoiceField,
     CSVModelForm,
-    CSVMultipleChoiceField,
-    CSVMultipleContentTypeField,
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -35,8 +29,8 @@ from nautobot.utilities.forms import (
     StaticSelect2Multiple,
     TagFilterField,
 )
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.virtualization.models import Cluster, ClusterGroup
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -66,6 +60,7 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -75,7 +70,9 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, TaggableClassesQuery
+from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 from .base import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -112,7 +109,6 @@ __all__ = (
     "ExportTemplateForm",
     "ExportTemplateFilterForm",
     "GitRepositoryForm",
-    "GitRepositoryCSVForm",
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
     "GraphQLQueryForm",
@@ -137,19 +133,18 @@ __all__ = (
     "RelationshipForm",
     "RelationshipFilterForm",
     "RelationshipAssociationFilterForm",
+    "RoleBulkEditForm",
+    "RoleForm",
     "ScheduledJobFilterForm",
     "SecretForm",
-    "SecretCSVForm",
     "SecretFilterForm",
     "SecretsGroupForm",
     "SecretsGroupFilterForm",
     "SecretsGroupAssociationFormSet",
     "StatusForm",
-    "StatusCSVForm",
     "StatusFilterForm",
     "StatusBulkEditForm",
     "TagForm",
-    "TagCSVForm",
     "TagFilterForm",
     "TagBulkEditForm",
     "WebhookForm",
@@ -168,7 +163,9 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         required=True,
         label="Content Type",
     )
-    slug = SlugField(
+    key = SlugField(
+        label="Key",
+        max_length=50,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
@@ -185,13 +182,19 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         fields = (
             "content_type",
             "label",
-            "slug",
+            "key",
             "description",
             "template",
             "fallback_value",
             "weight",
             "advanced_ui",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
 
 
 class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
@@ -210,10 +213,12 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 
 
 class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
-    regions = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), required=False)
-    sites = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), required=False)
     locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
-    roles = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), required=False)
+    roles = DynamicModelMultipleChoiceField(
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]),
+        query_params={"content_types": [Device._meta.label_lower, VirtualMachine._meta.label_lower]},
+        required=False,
+    )
     device_types = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), required=False)
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
     cluster_groups = DynamicModelMultipleChoiceField(queryset=ClusterGroup.objects.all(), required=False)
@@ -225,7 +230,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     )
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
     dynamic_groups = DynamicModelMultipleChoiceField(
-        queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+        queryset=DynamicGroup.objects.all(), to_field_name="name", required=False
     )
 
     # Conditional enablement of dynamic groups filtering
@@ -242,10 +247,8 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
             "name",
             "weight",
             "description",
-            "schema",
+            "config_context_schema",
             "is_active",
-            "regions",
-            "sites",
             "locations",
             "roles",
             "device_types",
@@ -263,7 +266,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
 
 class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContext.objects.all(), widget=forms.MultipleHiddenInput)
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
     is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
     description = forms.CharField(required=False, max_length=100)
@@ -271,33 +274,33 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
     class Meta:
         nullable_fields = [
             "description",
-            "schema",
+            "config_context_schema",
         ]
 
 
 class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
-    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False)
-    region = DynamicModelMultipleChoiceField(queryset=Region.objects.all(), to_field_name="slug", required=False)
-    site = DynamicModelMultipleChoiceField(queryset=Site.objects.all(), to_field_name="slug", required=False)
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="slug", required=False)
-    role = DynamicModelMultipleChoiceField(queryset=DeviceRole.objects.all(), to_field_name="slug", required=False)
-    type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="slug", required=False)
-    platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="slug", required=False)
+    schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="name", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    role = DynamicModelMultipleChoiceField(
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="name", required=False
+    )
+    type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="model", required=False)
+    platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
     cluster_group = DynamicModelMultipleChoiceField(
-        queryset=ClusterGroup.objects.all(), to_field_name="slug", required=False
+        queryset=ClusterGroup.objects.all(), to_field_name="name", required=False
     )
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     tenant_group = DynamicModelMultipleChoiceField(
-        queryset=TenantGroup.objects.all(), to_field_name="slug", required=False
+        queryset=TenantGroup.objects.all(), to_field_name="name", required=False
     )
-    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="slug", required=False)
+    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
     device_redundancy_group = DynamicModelMultipleChoiceField(
-        queryset=DeviceRedundancyGroup.objects.all(), to_field_name="slug", required=False
+        queryset=DeviceRedundancyGroup.objects.all(), to_field_name="name", required=False
     )
-    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="slug", required=False)
+    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="name", required=False)
     dynamic_groups = DynamicModelMultipleChoiceField(
-        queryset=DynamicGroup.objects.all(), to_field_name="slug", required=False
+        queryset=DynamicGroup.objects.all(), to_field_name="name", required=False
     )
 
     def __init__(self, *args, **kwargs):
@@ -314,13 +317,11 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
 
 class ConfigContextSchemaForm(NautobotModelForm):
     data_schema = JSONField(label="")
-    slug = SlugField()
 
     class Meta:
         model = ConfigContextSchema
         fields = (
             "name",
-            "slug",
             "description",
             "data_schema",
         )
@@ -362,7 +363,8 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
-    slug = SlugField(
+    key = SlugField(
+        label="Key",
         max_length=50,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
@@ -382,7 +384,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         fields = (
             "label",
             "grouping",
-            "slug",
+            "key",
             "type",
             "weight",
             "description",
@@ -396,14 +398,26 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             "validation_regex",
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
+
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
-    """Base class for CSV export of models that support custom fields."""
+    """
+    Base class for CSV/JSON/YAML import of models that support custom fields.
+
+    TODO: The class name is a misnomer; as of 2.0 this class is **not** used for any CSV imports,
+    as that's now handled by the REST API. However it is still used when importing component-templates as
+    part of a JSON/YAML DeviceType import.
+    """
 
     def _append_customfield_fields(self):
         # Append form fields
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = f"cf_{cf.slug}"
+            field_name = cf.add_prefix_to_cf_key()
             self.fields[field_name] = cf.to_form_field(for_csv_import=True)
 
             # Annotate the field in the list of CustomField form fields
@@ -459,7 +473,6 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 class DynamicGroupForm(NautobotModelForm):
     """DynamicGroup model form."""
 
-    slug = SlugField()
     content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
         label="Content Type",
@@ -469,7 +482,6 @@ class DynamicGroupForm(NautobotModelForm):
         model = DynamicGroup
         fields = [
             "name",
-            "slug",
             "description",
             "content_type",
         ]
@@ -588,19 +600,6 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
         help_text="Only http:// and https:// URLs are presently supported",
     )
 
-    _token = forms.CharField(
-        required=False,
-        label="Token",
-        widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-
-    username = forms.CharField(
-        required=False,
-        label="Username",
-        help_text="Username for token authentication.<br><em>Deprecated</em> - use a secrets group instead",
-    )
-
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     provided_contents = forms.MultipleChoiceField(
@@ -616,43 +615,29 @@ class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
             "slug",
             "remote_url",
             "branch",
-            "username",
-            "_token",
             "secrets_group",
             "provided_contents",
             "tags",
         ]
 
-    def clean(self):
-        super().clean()
-
-        # set dryrun after a successful clean
-        if "_dryrun_create" in self.data or "_dryrun_update" in self.data:
-            self.instance.set_dryrun()
-
-
-class GitRepositoryCSVForm(CSVModelForm):
-    secrets_group = CSVModelChoiceField(
-        queryset=SecretsGroup.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Secrets group for repository access (if any)",
-    )
-
-    class Meta:
-        model = GitRepository
-        fields = GitRepository.csv_headers
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["provided_contents"] = CSVMultipleChoiceField(
-            choices=get_git_datasource_content_choices(),
-            required=False,
-            help_text=mark_safe(
-                "The data types this repository provides. Multiple values must be comma-separated and wrapped in "
-                'double quotes (e.g. <code>"extras.job,extras.configcontext"</code>).'
-            ),
-        )
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["slug"].widget.attrs["readonly"] = True
+
+    def save(self, commit=True):
+        instance = super().save(commit=commit)
+
+        # TODO(jathan): Move sync() call out of the form and into the view. However, in v2 UI this
+        # probably just goes away since UI views will be making API calls. For now, the user is
+        # magically stored on the instance by the view code.
+        if commit:
+            # Set dryrun if that button was clicked in the UI, otherwise perform a normal sync.
+            dry_run = "_dryrun_create" in self.data or "_dryrun_update" in self.data
+            instance.sync(user=instance.user, dry_run=dry_run)
+
+        return instance
 
 
 class GitRepositoryBulkEditForm(NautobotBulkEditForm):
@@ -667,18 +652,6 @@ class GitRepositoryBulkEditForm(NautobotBulkEditForm):
     branch = forms.CharField(
         required=False,
     )
-    _token = forms.CharField(
-        required=False,
-        label="Token",
-        widget=PasswordInputWithPlaceholder(placeholder=GitRepository.TOKEN_PLACEHOLDER),
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-    username = forms.CharField(
-        required=False,
-        label="Username",
-        help_text="<em>Deprecated</em> - use a secrets group instead.",
-    )
-
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
 
     class Meta:
@@ -704,14 +677,12 @@ class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
 
 
 class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
-    slug = SlugField()
     query = TextField()
 
     class Meta:
         model = GraphQLQuery
         fields = (
             "name",
-            "slug",
             "query",
         )
 
@@ -749,12 +720,6 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
-    _commit = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="Commit changes",
-        help_text="Commit changes to the database (uncheck for a dry-run)",
-    )
     _profile = forms.BooleanField(
         required=False,
         initial=False,
@@ -771,25 +736,15 @@ class JobForm(BootstrapMixin, forms.Form):
         super().__init__(*args, **kwargs)
 
         # Move special fields to the end of the form
-        for field in ["_task_queue", "_commit", "_profile"]:
+        for field in ["_task_queue", "_profile"]:
             value = self.fields.pop(field)
             self.fields[field] = value
 
-    @property
-    def requires_input(self):
-        """
-        A boolean indicating whether the form requires user input (ignore the _commit field).
-        """
-        return bool(len(self.fields) > 1)
-
 
 class JobEditForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = Job
         fields = [
-            "slug",
             "enabled",
             "name_override",
             "name",
@@ -797,12 +752,10 @@ class JobEditForm(NautobotModelForm):
             "grouping",
             "description_override",
             "description",
-            "commit_default_override",
-            "commit_default",
+            "dryrun_default_override",
+            "dryrun_default",
             "hidden_override",
             "hidden",
-            "read_only_override",
-            "read_only",
             "approval_required_override",
             "approval_required",
             "soft_time_limit_override",
@@ -841,7 +794,7 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
     )
-    commit_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    dryrun_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(
         initial=False,
         required=False,
@@ -859,7 +812,7 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 class JobHookForm(BootstrapMixin, forms.ModelForm):
@@ -911,8 +864,8 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
-        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
+        to_field_name="name",
+        widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     type_create = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -986,8 +939,8 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
-        widget=APISelectMultiple(api_url="/api/extras/jobs/", api_version="1.3"),
+        to_field_name="name",
+        widget=APISelectMultiple(api_url="/api/extras/jobs/"),
     )
     # 2.0 TODO(glenn) filtering by obj_type should be solved by dynamic filter form generation
     name = forms.CharField(required=False)
@@ -1014,7 +967,7 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         label="Job",
         queryset=Job.objects.all(),
         required=False,
-        to_field_name="slug",
+        to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
@@ -1100,13 +1053,13 @@ class NoteForm(BootstrapMixin, forms.ModelForm):
 
 
 class LocalContextFilterForm(forms.Form):
-    local_context_data = forms.NullBooleanField(
+    local_config_context_data = forms.NullBooleanField(
         required=False,
         label="Has local config context data",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    local_context_schema = DynamicModelMultipleChoiceField(
-        queryset=ConfigContextSchema.objects.all(), to_field_name="slug", required=False
+    local_config_context_schema = DynamicModelMultipleChoiceField(
+        queryset=ConfigContextSchema.objects.all(), to_field_name="name", required=False
     )
 
 
@@ -1116,18 +1069,18 @@ class LocalContextFilterForm(forms.Form):
 
 
 class LocalContextModelForm(forms.ModelForm):
-    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
-    local_context_data = JSONField(required=False, label="")
+    local_config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    local_config_context_data = JSONField(required=False, label="")
 
 
 class LocalContextModelBulkEditForm(BulkEditForm):
-    local_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
+    local_config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # append nullable fields
-        self.nullable_fields.append("local_context_schema")
+        self.nullable_fields.append("local_config_context_schema")
 
 
 #
@@ -1169,7 +1122,12 @@ class ObjectChangeFilterForm(BootstrapMixin, forms.Form):
 
 
 class RelationshipForm(BootstrapMixin, forms.ModelForm):
-    slug = SlugField(help_text="Internal name of this relationship. Please use underscores rather than dashes.")
+    key = SlugField(
+        help_text="Internal name of this relationship. Please use underscores rather than dashes.",
+        label="Key",
+        max_length=50,
+        slug_source="label",
+    )
     source_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
         help_text="The source object type to which this relationship applies.",
@@ -1192,8 +1150,8 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = Relationship
         fields = [
-            "name",
-            "slug",
+            "label",
+            "key",
             "description",
             "type",
             "required_on",
@@ -1207,6 +1165,12 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
             "destination_hidden",
             "destination_filter",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.present_in_database:
+            self.fields["key"].widget.attrs["readonly"] = True
 
     def save(self, commit=True):
         # TODO add support for owner when a CR is created in the UI
@@ -1234,7 +1198,7 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
 
     relationship = DynamicModelMultipleChoiceField(
         queryset=Relationship.objects.all(),
-        to_field_name="slug",
+        to_field_name="key",
         required=False,
     )
 
@@ -1245,6 +1209,39 @@ class RelationshipAssociationFilterForm(BootstrapMixin, forms.Form):
     destination_type = MultipleContentTypeField(
         feature="relationships", choices_as_strings=True, required=False, label="Destination Type"
     )
+
+
+#
+# Role
+#
+
+
+class RoleForm(NautobotModelForm):
+    """Generic create/update form for `Role` objects."""
+
+    content_types = MultipleContentTypeField(
+        required=False,
+        label="Content Type(s)",
+        queryset=RoleModelsQuery().as_queryset(),
+    )
+
+    class Meta:
+        model = Role
+        widgets = {"color": ColorSelect()}
+        fields = ["name", "weight", "description", "content_types", "color"]
+
+
+class RoleBulkEditForm(NautobotBulkEditForm):
+    """Bulk edit/delete form for `Role` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), widget=forms.MultipleHiddenInput)
+    color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
+    content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
+    )
+
+    class Meta:
+        nullable_fields = ["weight"]
 
 
 #
@@ -1259,8 +1256,6 @@ def provider_choices():
 class SecretForm(NautobotModelForm):
     """Create/update form for `Secret` objects."""
 
-    slug = SlugField()
-
     provider = forms.ChoiceField(choices=provider_choices, widget=StaticSelect2())
 
     parameters = JSONField(help_text='Enter parameters in <a href="https://json.org/">JSON</a> format.')
@@ -1269,18 +1264,11 @@ class SecretForm(NautobotModelForm):
         model = Secret
         fields = [
             "name",
-            "slug",
             "description",
             "provider",
             "parameters",
             "tags",
         ]
-
-
-class SecretCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = Secret
-        fields = Secret.csv_headers
 
 
 def provider_choices_with_blank():
@@ -1293,7 +1281,7 @@ class SecretFilterForm(NautobotFilterForm):
     provider = forms.MultipleChoiceField(
         choices=provider_choices_with_blank, widget=StaticSelect2Multiple(), required=False
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 # Inline formset for use with providing dynamic rows when creating/editing assignments of Secrets to SecretsGroups.
@@ -1313,13 +1301,10 @@ SecretsGroupAssociationFormSet = inlineformset_factory(
 class SecretsGroupForm(NautobotModelForm):
     """Create/update form for `SecretsGroup` objects."""
 
-    slug = SlugField()
-
     class Meta:
         model = SecretsGroup
         fields = [
             "name",
-            "slug",
             "description",
         ]
 
@@ -1337,35 +1322,12 @@ class SecretsGroupFilterForm(NautobotFilterForm):
 class StatusForm(NautobotModelForm):
     """Generic create/update form for `Status` objects."""
 
-    slug = SlugField()
     content_types = MultipleContentTypeField(feature="statuses", label="Content Type(s)")
 
     class Meta:
         model = Status
         widgets = {"color": ColorSelect()}
-        fields = ["name", "slug", "description", "content_types", "color"]
-
-
-class StatusCSVForm(CustomFieldModelCSVForm):
-    """Generic CSV bulk import form for `Status` objects."""
-
-    content_types = CSVMultipleContentTypeField(
-        feature="statuses",
-        choices_as_strings=True,
-        help_text=mark_safe(
-            "The object types to which this status applies. Multiple values "
-            "must be comma-separated and wrapped in double quotes. (e.g. "
-            '<code>"dcim.device,dcim.rack"</code>)'
-        ),
-        label="Content type(s)",
-    )
-
-    class Meta:
-        model = Status
-        fields = Status.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
+        fields = ["name", "description", "content_types", "color"]
 
 
 class StatusFilterForm(NautobotFilterForm):
@@ -1396,7 +1358,6 @@ class StatusBulkEditForm(NautobotBulkEditForm):
 
 
 class TagForm(NautobotModelForm):
-    slug = SlugField()
     content_types = ModelMultipleChoiceField(
         label="Content Type(s)",
         queryset=TaggableClassesQuery().as_queryset(),
@@ -1404,31 +1365,20 @@ class TagForm(NautobotModelForm):
 
     class Meta:
         model = Tag
-        fields = ["name", "slug", "color", "description", "content_types"]
+        fields = ["name", "color", "description", "content_types"]
 
     def clean(self):
         data = super().clean()
 
         if self.instance.present_in_database:
             # check if tag is assigned to any of the removed content_types
-            content_types_id = [content_type.id for content_type in self.cleaned_data["content_types"]]
+            content_types_id = [content_type.id for content_type in self.cleaned_data.get("content_types", [])]
             errors = self.instance.validate_content_types_removal(content_types_id)
 
             if errors:
                 raise ValidationError(errors)
 
         return data
-
-
-class TagCSVForm(CustomFieldModelCSVForm):
-    slug = SlugField()
-
-    class Meta:
-        model = Tag
-        fields = Tag.csv_headers
-        help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
-        }
 
 
 class TagFilterForm(NautobotFilterForm):

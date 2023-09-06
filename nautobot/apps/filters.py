@@ -9,7 +9,7 @@ from nautobot.extras.filters import (
 )
 from nautobot.extras.plugins import FilterExtension
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     NaturalKeyOrPKMultipleChoiceFilter,

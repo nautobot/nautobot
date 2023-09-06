@@ -4,14 +4,14 @@
 {% block extra_buttons %}
         {% if perms.extras.change_gitrepository %}
             <form class="form-inline" style="display: inline-block"
-                  method="post" action="{% url 'extras:gitrepository_dryrun' slug=object.slug %}">
+                  method="post" action="{% url 'extras:gitrepository_dryrun' pk=object.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-info">
                     <i class="mdi mdi-book-refresh" aria-hidden="true"></i> Dry-Run
                 </button>
             </form>
             <form class="form-inline" style="display: inline-block"
-                  method="post" action="{% url 'extras:gitrepository_sync' slug=object.slug %}">
+                  method="post" action="{% url 'extras:gitrepository_sync' pk=object.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-primary">
                     <i class="mdi mdi-source-branch-sync" aria-hidden="true"></i> Sync
@@ -22,7 +22,7 @@
 
 {% block extra_nav_tabs %}
         <li role="presentation"{% if active_tab == 'result' %} class="active"{% endif %}>
-             <a href="{% url 'extras:gitrepository_result' slug=object.slug %}">Synchronization Status</a>
+             <a href="{% url 'extras:gitrepository_result' pk=object.pk %}">Synchronization Status</a>
         </li>
 {% endblock extra_nav_tabs %}
 
@@ -46,14 +46,6 @@
                                 (not locally checked out yet)
                             {% endif %}
                         </td>
-                    </tr>
-                    <tr>
-                        <td>Username <em>(deprecated)</em></td>
-                        <td>{{ object.username | placeholder }}</td>
-                    <tr>
-                    <tr>
-                        <td>Token <em>(deprecated)</em></td>
-                        <td>{{ object.token_rendered }}</td>
                     </tr>
                     <tr>
                         <td>Secrets Group</td>

@@ -36,7 +36,7 @@
                 <tr>
                     <td>Circuits</td>
                     <td>
-                        <a href="{% url 'circuits:circuit_list' %}?provider={{ object.slug }}">{{ circuits_table.rows|length }}</a>
+                        <a href="{% url 'circuits:circuit_list' %}?provider={{ object.pk }}">{{ circuits_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>

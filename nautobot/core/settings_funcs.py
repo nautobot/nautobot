@@ -1,9 +1,13 @@
 """Helper functions to detect settings after app initialization (AKA 'dynamic settings')."""
 
+from collections import namedtuple
+
 from django.conf import settings
 from functools import lru_cache
 import os
 
+
+ConstanceConfigItem = namedtuple("ConstanceConfigItem", ["default", "help_text", "field_type"], defaults=[str])
 
 #
 # X_auth_enabled checks to see if a backend has been specified, thus assuming it is enabled.

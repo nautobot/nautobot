@@ -2,9 +2,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import DynamicGroup
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 
@@ -42,7 +42,6 @@ class DynamicGroupTestCase(SeleniumTestCase):
         # Fill out the form.
         name = "devices-active"
         self.browser.fill("name", name)
-        # self.browser.fill("slug", name)  # slug should be auto-populated
         self.browser.select("content_type", ct_label)
 
         # Click that "Create" button
@@ -76,7 +75,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
         # And just a cursory check to make sure that the filter worked.
         group = DynamicGroup.objects.get(name=name)
         self.assertEqual(group.count, len(devices))
-        self.assertEqual(group.filter, {"status": ["active"]})
+        self.assertEqual(group.filter, {"status": ["Active"]})
 
         # Verify dynamic group shows up on device detail tab
         self.browser.visit(

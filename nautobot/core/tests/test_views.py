@@ -1,13 +1,17 @@
 import re
 import urllib.parse
 
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.core.testing import TestCase
+from nautobot.dcim.models.locations import Location
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
-from nautobot.utilities.testing import TestCase
 
 
 class HomeViewTestCase(TestCase):
@@ -104,12 +108,12 @@ class SearchFieldsTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_global_and_model_search_bar(self):
-        self.add_permissions("dcim.view_site", "dcim.view_device")
+        self.add_permissions("dcim.view_location", "dcim.view_device")
 
         # Assert model search bar present in list UI
-        response = self.client.get(reverse("dcim:site_list"))
+        response = self.client.get(reverse("dcim:location_list"))
         self.assertInHTML(
-            '<input type="text" name="q" class="form-control" required placeholder="Search Sites" id="id_q">',
+            '<input type="text" name="q" class="form-control" required placeholder="Search Locations" id="id_q">',
             response.content.decode(response.charset),
         )
 
@@ -128,7 +132,7 @@ class SearchFieldsTestCase(TestCase):
 
 class FilterFormsTestCase(TestCase):
     def test_support_for_both_default_and_dynamic_filter_form_in_ui(self):
-        self.add_permissions("dcim.view_site", "circuits.view_circuit")
+        self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
         filter_tabs = """
             <ul id="tabs" class="nav nav-tabs">
@@ -145,7 +149,7 @@ class FilterFormsTestCase(TestCase):
             </ul>
             """
 
-        response = self.client.get(reverse("dcim:site_list"))
+        response = self.client.get(reverse("dcim:location_list"))
         self.assertInHTML(
             filter_tabs,
             response.content.decode(response.charset),
@@ -156,6 +160,37 @@ class FilterFormsTestCase(TestCase):
             filter_tabs,
             response.content.decode(response.charset),
         )
+
+    def test_filtering_on_custom_select_filter_field(self):
+        """Assert CustomField select and multiple select fields can be filtered using multiple entries"""
+        self.add_permissions("dcim.view_location")
+
+        multi_select_cf = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT, label="Multiple Choice"
+        )
+        select_cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, label="choice")
+        choices = ["Foo", "Bar", "FooBar"]
+        for cf in [multi_select_cf, select_cf]:
+            cf.content_types.set([ContentType.objects.get_for_model(Location)])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[0])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[1])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[2])
+
+        locations = Location.objects.all()[:3]
+        for idx, location in enumerate(locations):
+            location.cf[multi_select_cf.key] = choices[:2]
+            location.cf[select_cf.key] = choices[idx]
+            location.save()
+
+        query_param = (
+            f"?cf_{multi_select_cf.key}={choices[0]}&cf_{multi_select_cf.key}={choices[1]}"
+            f"&cf_{select_cf.key}={choices[0]}&cf_{select_cf.key}={choices[1]}"
+        )
+        url = reverse("dcim:location_list") + query_param
+        response = self.client.get(url)
+        response_content = response.content.decode(response.charset).replace("\n", "")
+        self.assertInHTML(locations[0].name, response_content)
+        self.assertInHTML(locations[1].name, response_content)
 
 
 class ForceScriptNameTestcase(TestCase):
@@ -194,8 +229,8 @@ class NavRestrictedUI(TestCase):
         return response.content.decode(response.charset)
 
     @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_plugins_visible_to_staff_with_hide_restricted_ui_true(self):
-        """The "Installed Plugins" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
+    def test_installed_apps_visible_to_staff_with_hide_restricted_ui_true(self):
+        """The "Installed Apps" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
         # Make user admin
         self.user.is_staff = True
         self.user.save()
@@ -203,17 +238,17 @@ class NavRestrictedUI(TestCase):
         response_content = self.make_request()
         self.assertInHTML(
             f"""
-            <li>
-              <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
-            </li>
+            <a href="{self.url}"
+                data-item-weight="{self.item_weight}">
+                Installed Plugins
+            </a>
             """,
             response_content,
         )
 
     @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_plugins_visible_to_staff_with_hide_restricted_ui_false(self):
-        """The "Installed Plugins" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
+    def test_installed_apps_visible_to_staff_with_hide_restricted_ui_false(self):
+        """The "Installed Apps" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
         # Make user admin
         self.user.is_staff = True
         self.user.save()
@@ -221,32 +256,34 @@ class NavRestrictedUI(TestCase):
         response_content = self.make_request()
         self.assertInHTML(
             f"""
-            <li>
-              <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
-            </li>
+            <a href="{self.url}"
+                data-item-weight="{self.item_weight}">
+                Installed Plugins
+            </a>
             """,
             response_content,
         )
 
     @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_plugins_not_visible_to_non_staff_user_with_hide_restricted_ui_true(self):
-        """The "Installed Plugins" menu item should be hidden from a non-staff user when HIDE_RESTRICTED_UI=True."""
+    def test_installed_apps_not_visible_to_non_staff_user_with_hide_restricted_ui_true(self):
+        """The "Installed Apps" menu item should be hidden from a non-staff user when HIDE_RESTRICTED_UI=True."""
         response_content = self.make_request()
 
-        self.assertNotRegex(response_content, r"Installed\s+Plugins")
+        self.assertNotRegex(response_content, r"Installed\s+Apps")
 
     @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_plugins_disabled_to_non_staff_user_with_hide_restricted_ui_false(self):
-        """The "Installed Plugins" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
+    def test_installed_apps_disabled_to_non_staff_user_with_hide_restricted_ui_false(self):
+        """The "Installed Apps" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
         response_content = self.make_request()
+
+        # print(response_content)
 
         self.assertInHTML(
             f"""
-            <li class="disabled">
-              <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
-            </li>
+            <a href="{self.url}"
+                data-item-weight="{self.item_weight}">
+                Installed Plugins
+            </a>
             """,
             response_content,
         )

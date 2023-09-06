@@ -1,0 +1,42 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Namespace</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td>{{ object.name }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description }}</td>
+                </tr>
+                <tr>
+                    <td>Location</td>
+                    <td>{{ object.location | hyperlinked_object }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block extra_nav_tabs %}
+{% if perms.ipam.view_vrf %}
+    <li role="presentation"{% if active_tab == 'vrfs' %} class="active"{% endif %}>
+        <a href="{% url 'ipam:namespace_vrfs' pk=object.pk %}">VRFs <span class="badge">{{ vrf_count }}</span></a>
+    </li>
+{% endif %}
+{% if perms.ipam.view_prefix %}
+    <li role="presentation"{% if active_tab == 'prefixes' %} class="active"{% endif %}>
+        <a href="{% url 'ipam:namespace_prefixes' pk=object.pk %}">Prefixes <span class="badge">{{ prefix_count }}</span></a>
+    </li>
+{% endif %}
+{% if perms.ipam.view_ipaddress %}
+    <li role="presentation"{% if active_tab == 'ip-addresses' %} class="active"{% endif %}>
+        <a href="{% url 'ipam:namespace_ipaddresses' pk=object.pk %}">IP Addresses <span class="badge">{{ ip_address_count }}</span></a>
+    </li>
+{% endif %}
+{% endblock extra_nav_tabs %}

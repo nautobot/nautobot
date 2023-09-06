@@ -39,12 +39,12 @@
                                 {% elif field.type == 'json' and value is not None %}
                                     <p>
                                         <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
-                                                data-target="#cf_{{ field.slug }}" aria-expanded="false"
-                                                aria-controls="cf_{{ field.slug }}">
+                                                data-target="#cf_{{ field.key }}" aria-expanded="false"
+                                                aria-controls="cf_{{ field.key }}">
                                             Show/Hide
                                         </button>
                                     </p>
-                                    <pre class="collapse" id="cf_{{ field.slug }}"><code>{{ value|render_json }}</code></pre>
+                                    <pre class="collapse" id="cf_{{ field.key }}"><code>{{ value|render_json }}</code></pre>
                                 {% elif value or value == 0 %}
                                     {{ value }}
                                 {% elif field.required %}

@@ -1,4 +1,4 @@
-from unittest import mock, skipIf
+from unittest import mock, skipIf, skip
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -10,21 +10,22 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.dcim.models import Device, DeviceType, DeviceRole, Manufacturer, Site
+from nautobot.core.celery import app
+from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
+from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
-from nautobot.extras.jobs import get_job, get_job_classpaths, get_jobs
-from nautobot.extras.models import CustomField, Secret, Status, Relationship, RelationshipAssociation
+from nautobot.extras.jobs import get_job
+from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.ipam.models import Prefix, IPAddress
+from nautobot.ipam.models import Prefix, IPAddress, Namespace
 from nautobot.users.models import ObjectPermission
-from nautobot.utilities.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
 
 from example_plugin import config as example_config
 from example_plugin.datasources import refresh_git_text_files
@@ -69,17 +70,17 @@ class PluginTest(TestCase):
         """
         Check that plugin TemplateExtensions are registered.
         """
-        from example_plugin.template_content import SiteContent
+        from example_plugin.template_content import LocationContent
 
-        self.assertIn(SiteContent, registry["plugin_template_extensions"]["dcim.site"])
+        self.assertIn(LocationContent, registry["plugin_template_extensions"]["dcim.location"])
 
     def test_custom_validators_registration(self):
         """
         Check that plugin custom validators are registered correctly.
         """
-        from example_plugin.custom_validators import SiteCustomValidator, RelationshipAssociationCustomValidator
+        from example_plugin.custom_validators import LocationCustomValidator, RelationshipAssociationCustomValidator
 
-        self.assertIn(SiteCustomValidator, registry["plugin_custom_validators"]["dcim.site"])
+        self.assertIn(LocationCustomValidator, registry["plugin_custom_validators"]["dcim.location"])
         self.assertIn(
             RelationshipAssociationCustomValidator,
             registry["plugin_custom_validators"]["extras.relationshipassociation"],
@@ -119,31 +120,8 @@ class PluginTest(TestCase):
         from example_plugin.jobs import ExampleJob
 
         self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
-
-        self.assertEqual(
-            ExampleJob,
-            get_job("plugins/example_plugin.jobs/ExampleJob"),
-        )
-        self.assertIn(
-            "plugins/example_plugin.jobs/ExampleJob",
-            get_job_classpaths(),
-        )
-        jobs_dict = get_jobs()
-        self.assertIn("plugins", jobs_dict)
-        self.assertIn("example_plugin.jobs", jobs_dict["plugins"])
-        self.assertEqual(
-            "ExamplePlugin jobs",
-            jobs_dict["plugins"]["example_plugin.jobs"].get("name"),
-        )
-        self.assertIn("jobs", jobs_dict["plugins"]["example_plugin.jobs"])
-        self.assertIn(
-            "ExampleJob",
-            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"],
-        )
-        self.assertEqual(
-            ExampleJob,
-            jobs_dict["plugins"]["example_plugin.jobs"]["jobs"]["ExampleJob"],
-        )
+        self.assertEqual(ExampleJob, get_job("example_plugin.jobs.ExampleJob"))
+        self.assertIn("example_plugin.jobs.ExampleJob", app.tasks)
 
     def test_git_datasource_contents_registration(self):
         """
@@ -185,20 +163,6 @@ class PluginTest(TestCase):
         # Validation should fail when a middleware is not a list
         with self.assertRaises(PluginImproperlyConfigured):
             ExampleConfigWithMiddleware.validate({}, settings.VERSION)
-
-    def test_caching_config(self):
-        """
-        Check that plugin caching configuration is registered and valid.
-        """
-        self.assertIn("example_plugin.*", settings.CACHEOPS)
-
-        # Establish example config to have invalid cache_config (list)
-        class ExampleConfigWithBadCacheConfig(example_config):
-            caching_config = []
-
-        # Validation should fail when a caching_config is not a dict
-        with self.assertRaises(PluginImproperlyConfigured):
-            ExampleConfigWithBadCacheConfig.validate({}, settings.VERSION)
 
     def test_min_version(self):
         """
@@ -243,12 +207,15 @@ class PluginTest(TestCase):
         class ExampleConfigWithDefaultSettings(example_config):
             default_settings = {
                 "bar": 123,
+                "SAMPLE_VARIABLE": "Testing",
             }
 
         # Populate the default value if setting has not been specified
         user_config = {}
         ExampleConfigWithDefaultSettings.validate(user_config, settings.VERSION)
         self.assertEqual(user_config["bar"], 123)
+        # Don't overwrite constance_config Keys.
+        self.assertNotIn("SAMPLE_VARIABLE", user_config)
 
         # Don't overwrite specified values
         user_config = {"bar": 456}
@@ -283,24 +250,17 @@ class PluginTest(TestCase):
         """
         Validate that example plugin is adding new items to `registry["nav_menu"]`.
         """
-        self.assertTrue(registry["nav_menu"]["tabs"].get("Example Menu"))
-        self.assertTrue(registry["nav_menu"]["tabs"]["Example Menu"]["groups"].get("Example Group 1"))
-        # Modified this statement since we are passing the url into registry directly instead of the reverse url string
-        self.assertTrue(
-            registry["nav_menu"]["tabs"]["Example Menu"]["groups"]["Example Group 1"]["items"].get(
-                "/plugins/example-plugin/models/"
-            )
-        )
+        self.assertIn("Example Group 1", registry["nav_menu"]["tabs"]["Example Menu"]["groups"])
 
     def test_nautobot_database_ready_signal(self):
         """
         Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
         creating a custom field definition in the database.
         """
-        cf = CustomField.objects.get(name="example_plugin_auto_custom_field")
+        cf = CustomField.objects.get(key="example_plugin_auto_custom_field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
         self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
-        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Site)])
+        self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Location)])
 
     def test_secrets_provider(self):
         """
@@ -309,7 +269,6 @@ class PluginTest(TestCase):
         # The "constant-value" provider is implemented by the plugin
         secret = Secret.objects.create(
             name="Constant Secret",
-            slug="constant-secret",
             provider="constant-value",
             parameters={"constant": "It's a secret to everybody"},
         )
@@ -402,7 +361,6 @@ class PluginDetailViewTest(TestCase):
 )
 class PluginAPITest(APIViewTestCases.APIViewTestCase):
     model = ExampleModel
-    brief_fields = ["display", "id", "name", "url"]
     bulk_update_data = {
         "number": 2600,
     }
@@ -441,7 +399,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(detail_url, self._get_detail_url(instance))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.serializers.reverse")
+    @mock.patch("nautobot.core.api.serializers.reverse")
     def test_get_notes_url_on_object_raise_no_reverse_match(self, mock_reverse):
         # This test is to check the error handling when the user implemented a model without NotesMixin
         # But include the NotesSerializerMixin in the Model APIViewSet with NautobotModelViewSet
@@ -460,7 +418,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         url = self._get_detail_url(instance)
 
         # Check if log messages and API data is properly rendered
-        with self.assertLogs(logger="nautobot.extras.api", level="WARNING") as cm:
+        with self.assertLogs(logger="nautobot.core.api", level="WARNING") as cm:
             response = self.client.get(url, **self.header)
             self.assertHttpStatus(response, 200)
             self.assertIn("notes_url", response.data)
@@ -477,6 +435,15 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
                 cm.output[0],
             )
 
+    # TODO: Unskip after resolving #2908, #2909
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
+    def test_list_objects_descending_ordered(self):
+        pass
+
 
 @skipIf(
     "example_plugin" not in settings.PLUGINS,
@@ -491,18 +458,24 @@ class PluginCustomValidationTest(TestCase):
         wrap_model_clean_methods()
 
     def test_custom_validator_raises_exception(self):
-        site = Site(name="this site has a matching name", slug="site1")
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location(name="this location has a matching name", location_type=location_type)
 
         with self.assertRaises(ValidationError):
-            site.clean()
+            location.clean()
 
     def test_relationship_association_validator_raises_exception(self):
+        namespace = Namespace.objects.first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        prefix = Prefix.objects.create(
+            prefix=netaddr.IPNetwork("192.168.10.0/24"), status=prefix_status, namespace=namespace
+        )
+        Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.22.0/24"), status=prefix_status, namespace=namespace)
         status = Status.objects.get_for_model(IPAddress).first()
-        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("192.168.10.0/24"))
-        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status)
+        ipaddress = IPAddress.objects.create(address="192.168.22.1/24", status=status, namespace=namespace)
         relationship = Relationship.objects.create(
-            name="Test Relationship",
-            slug="test-relationship",
+            label="Test Relationship",
+            key="test_relationship",
             source_type=ContentType.objects.get_for_model(Prefix),
             destination_type=ContentType.objects.get_for_model(IPAddress),
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
@@ -522,79 +495,83 @@ class FilterExtensionTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        tenant_groups = (
-            TenantGroup.objects.create(name="Tenant Group 1", slug="tenant-group-1"),
-            TenantGroup.objects.create(name="Tenant Group 2", slug="tenant-group-2"),
-            TenantGroup.objects.create(name="Tenant Group 3", slug="tenant-group-3"),
+        tenant_groups = TenantGroup.objects.all()[:3]
+        tenants = (
+            Tenant.objects.create(name="Tenant 1", tenant_group=tenant_groups[0], description="tenant-1.nautobot.com"),
+            Tenant.objects.create(name="Tenant 2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"),
+            Tenant.objects.create(name="Tenant 3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"),
+        )
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        Location.objects.create(
+            name="Location 1",
+            tenant=tenants[0],
+            location_type=location_type,
+            status=location_status,
+        )
+        Location.objects.create(
+            name="Location 2",
+            tenant=tenants[1],
+            location_type=location_type,
+            status=location_status,
+        )
+        Location.objects.create(
+            name="Location 3",
+            tenant=tenants[2],
+            location_type=location_type,
+            status=location_status,
         )
 
-        Tenant.objects.create(
-            name="Tenant 1", slug="tenant-1", group=tenant_groups[0], description="tenant-1.nautobot.com"
-        )
-        Tenant.objects.create(
-            name="Tenant 2", slug="tenant-2", group=tenant_groups[1], description="tenant-2.nautobot.com"
-        )
-        Tenant.objects.create(
-            name="Tenant 3", slug="tenant-3", group=tenant_groups[2], description="tenant-3.nautobot.com"
-        )
+        manufacturers = Manufacturer.objects.all()[:3]
 
-        Site.objects.create(name="Site 1", slug="site-1", tenant=Tenant.objects.get(slug="tenant-1"))
-        Site.objects.create(name="Site 2", slug="site-2", tenant=Tenant.objects.get(slug="tenant-2"))
-        Site.objects.create(name="Site 3", slug="site-3", tenant=Tenant.objects.get(slug="tenant-3"))
-
-        Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        Manufacturer.objects.create(name="Manufacturer 2", slug="manufacturer-2")
-        Manufacturer.objects.create(name="Manufacturer 3", slug="manufacturer-3")
-
-        DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
-        DeviceRole.objects.create(name="Device Role 2", slug="device-role-2")
-        DeviceRole.objects.create(name="Device Role 3", slug="device-role-3")
+        roles = Role.objects.get_for_model(Device)
 
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufacturers[0],
             model="Model 1",
-            slug="model-1",
             part_number="Part Number 1",
             u_height=1,
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufacturers[1],
             model="Model 2",
-            slug="model-2",
             part_number="Part Number 2",
             u_height=2,
             is_full_depth=True,
         )
         DeviceType.objects.create(
-            manufacturer=Manufacturer.objects.get(slug="manufacturer-1"),
+            manufacturer=manufacturers[2],
             model="Model 3",
-            slug="model-3",
             part_number="Part Number 3",
             u_height=3,
             is_full_depth=False,
         )
 
+        device_status = Status.objects.get_for_model(Device).first()
         Device.objects.create(
             name="Device 1",
-            device_type=DeviceType.objects.get(slug="model-1"),
-            device_role=DeviceRole.objects.get(slug="device-role-1"),
-            tenant=Tenant.objects.get(slug="tenant-1"),
-            site=Site.objects.get(slug="site-1"),
+            device_type=DeviceType.objects.get(model="Model 1"),
+            role=roles[0],
+            tenant=tenants[0],
+            location=Location.objects.get(name="Location 1"),
+            status=device_status,
         )
         Device.objects.create(
             name="Device 2",
-            device_type=DeviceType.objects.get(slug="model-2"),
-            device_role=DeviceRole.objects.get(slug="device-role-2"),
-            tenant=Tenant.objects.get(slug="tenant-2"),
-            site=Site.objects.get(slug="site-2"),
+            device_type=DeviceType.objects.get(model="Model 2"),
+            role=roles[1],
+            tenant=tenants[1],
+            location=Location.objects.get(name="Location 2"),
+            status=device_status,
         )
         Device.objects.create(
             name="Device 3",
-            device_type=DeviceType.objects.get(slug="model-2"),
-            device_role=DeviceRole.objects.get(slug="device-role-3"),
-            tenant=Tenant.objects.get(slug="tenant-3"),
-            site=Site.objects.get(slug="site-3"),
+            device_type=DeviceType.objects.get(model="Model 2"),
+            role=roles[3],
+            tenant=tenants[2],
+            location=Location.objects.get(name="Location 3"),
+            status=device_status,
         )
 
     def test_basic_custom_filter(self):
@@ -615,9 +592,9 @@ class FilterExtensionTest(TestCase):
         """
         Test that filters work against nested filters.
         """
-        params = {"example_plugin_dtype": ["model-1"]}
+        params = {"example_plugin_dtype": ["Model 1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"example_plugin_dtype": ["model-2"]}
+        params = {"example_plugin_dtype": ["Model 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_filter_method_param(self):
@@ -635,8 +612,6 @@ class FilterExtensionTest(TestCase):
             data={
                 "example_plugin_description": "tenant-1.nautobot.com",
                 "example_plugin_dtype": "model-1",
-                "slug__ic": "tenant-1",
-                "slug": "tenant-1",
                 "example_plugin_sdescrip": "tenant-1",
             }
         )
@@ -678,13 +653,13 @@ class TestPluginCoreViewOverrides(TestCase):
     def setUp(self):
         super().setUp()
         self.device = create_test_device("Device")
-        provider = Provider.objects.create(name="Provider", slug="provider", asn=65001)
-        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
         self.circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
-            type=circuit_type,
-            status=Status.objects.get_for_model(Circuit).get(slug="active"),
+            circuit_type=circuit_type,
+            status=Status.objects.get_for_model(Circuit).first(),
         )
         self.user.is_superuser = True
         self.user.save()

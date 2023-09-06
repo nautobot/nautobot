@@ -1,22 +1,22 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.tenancy.tables import TenantColumn
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
     TagColumn,
     ToggleColumn,
 )
-from .models import Circuit, CircuitType, Provider, ProviderNetwork
+from nautobot.extras.tables import StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
+from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 CIRCUIT_TERMINATION_PARENT = """
 {% load helpers %}
 {% if value.provider_network %}
 {{ value.provider_network|hyperlinked_object }}
-{% elif value.site %}
-{{ value.site|hyperlinked_object }}
+{% elif value.location %}
+{{ value.location|hyperlinked_object }}
 {% else %}
 {{ None|placeholder }}
 {% endif %}
@@ -75,17 +75,16 @@ class CircuitTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     circuit_count = tables.Column(verbose_name="Circuits")
-    actions = ButtonsColumn(CircuitType, pk_field="slug")
+    actions = ButtonsColumn(CircuitType)
 
     class Meta(BaseTable.Meta):
         model = CircuitType
-        fields = ("pk", "name", "circuit_count", "description", "slug", "actions")
+        fields = ("pk", "name", "circuit_count", "description", "actions")
         default_columns = (
             "pk",
             "name",
             "circuit_count",
             "description",
-            "slug",
             "actions",
         )
 
@@ -98,19 +97,19 @@ class CircuitTypeTable(BaseTable):
 class CircuitTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     cid = tables.LinkColumn(verbose_name="ID")
-    provider = tables.LinkColumn(viewname="circuits:provider", args=[Accessor("provider__slug")])
+    provider = tables.Column(linkify=True)
     tenant = TenantColumn()
     tags = TagColumn(url_name="circuits:circuit_list")
 
-    termination_a = tables.TemplateColumn(
+    circuit_termination_a = tables.TemplateColumn(
         template_code=CIRCUIT_TERMINATION_PARENT,
-        accessor=Accessor("termination_a"),
+        accessor=Accessor("circuit_termination_a"),
         orderable=False,
         verbose_name="Side A",
     )
-    termination_z = tables.TemplateColumn(
+    circuit_termination_z = tables.TemplateColumn(
         template_code=CIRCUIT_TERMINATION_PARENT,
-        accessor=Accessor("termination_z"),
+        accessor=Accessor("circuit_termination_z"),
         orderable=False,
         verbose_name="Side Z",
     )
@@ -121,11 +120,11 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "pk",
             "cid",
             "provider",
-            "type",
+            "circuit_type",
             "status",
             "tenant",
-            "termination_a",
-            "termination_z",
+            "circuit_termination_a",
+            "circuit_termination_z",
             "install_date",
             "commit_rate",
             "description",
@@ -138,7 +137,45 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "type",
             "status",
             "tenant",
-            "termination_a",
-            "termination_z",
+            "circuit_termination_a",
+            "circuit_termination_z",
             "description",
+        )
+
+
+#
+# Circuit Terminations
+#
+
+
+class CircuitTerminationTable(BaseTable):
+    pk = ToggleColumn()
+    circuit = tables.Column(linkify=True)
+    term_side = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
+    provider_network = tables.Column(linkify=True)
+    cable = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = CircuitTermination
+        fields = (
+            "pk",
+            "circuit",
+            "term_side",
+            "location",
+            "provider_network",
+            "cable",
+            "port_speed",
+            "upstream_speed",
+            "xconnect_id",
+            "pp_info",
+            "description",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "circuit",
+            "term_side",
+            "location",
+            "provider_network",
         )

@@ -13,8 +13,8 @@ from django_celery_beat.models import (
 from social_django.models import Association, Nonce, UserSocialAuth
 from taggit.models import Tag
 
-from nautobot.utilities.forms import BootstrapMixin
-import nautobot.utilities.forms.widgets as widgets
+from nautobot.core.forms import BootstrapMixin
+import nautobot.core.forms.widgets as widgets
 
 
 # Override default AdminSite attributes so we can avoid creating and
