@@ -12,7 +12,7 @@ ALLOWED_HOSTS = ["nautobot.example.com"]
 
 # Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "tests", "example_jobs"
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "test_jobs"
 )
 
 # Enable both example plugins
@@ -28,8 +28,6 @@ SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
 CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
-CACHEOPS_REDIS = parse_redis_connection(redis_database=3)
-CACHEOPS_ENABLED = False  # 2.0 TODO(jathan): Remove me.
 
 # Testing storages within cli.py
 STORAGE_CONFIG = {
@@ -46,6 +44,12 @@ TEST_USE_FACTORIES = True
 TEST_FACTORY_SEED = "Nautobot"
 # File in which all performance-specifc test baselines are stored
 TEST_PERFORMANCE_BASELINE_FILE = "nautobot/core/tests/performance_baselines.yml"
+
+# Make Celery run synchronously (eager), to always store eager results, and run the broker in-memory.
+# NOTE: Celery does not honor the TASK_TRACK_STARTED config when running in eager mode, so the job result is not saved until after the task completes.
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_STORE_EAGER_RESULT = True
+CELERY_BROKER_URL = "memory://"
 
 # Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
 METRICS_ENABLED = True

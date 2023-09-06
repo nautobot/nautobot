@@ -9,9 +9,12 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        {% comment %}2.0 TODO: #824 remove name field{% endcomment %}
-                        <td>Name</td>
-                        <td><span>{{ object.name }}</span></td>
+                        <td>Label</td>
+                        <td><span>{{ object.label }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Key</td>
+                        <td><span>{{ object.key }}</span></td>
                     </tr>
                     <tr>
                         <td>Type</td>
@@ -20,10 +23,6 @@
                     <tr>
                         <td>Weight</td>
                         <td><span>{{ object.weight }}</span></td>
-                    </tr>
-                    <tr>
-                        <td>Label</td>
-                        <td><span>{{ object.label | placeholder }}</span></td>
                     </tr>
                     <tr>
                         <td>Grouping</td>
@@ -51,7 +50,7 @@
                     </tr>
                 </table>
             </div>
-            {% if object.choices.exists %}
+            {% if object.custom_field_choices.exists %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>Custom Field Choices</strong>
@@ -64,7 +63,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for choice in object.choices.all %}
+                    {% for choice in object.custom_field_choices.all %}
                         <tr>
                             <td>{{ choice.value }}</td>
                             <td>{{ choice.weight }}</td>

@@ -1,4 +1,5 @@
 [flake8]
+exclude = node_modules
 ignore =
     # E203 whitespace before ':' (per Black, this is actually correct in some cases)
     E203,

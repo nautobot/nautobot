@@ -3,7 +3,7 @@
 import django.core.serializers.json
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.core.fields
+import nautobot.core.models.fields
 import nautobot.extras.models.mixins
 import nautobot.extras.utils
 import uuid
@@ -35,7 +35,9 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100, unique=True)),
                 (
                     "slug",
-                    nautobot.core.fields.AutoSlugField(blank=True, max_length=100, populate_from="name", unique=True),
+                    nautobot.core.models.fields.AutoSlugField(
+                        blank=True, max_length=100, populate_from="name", unique=True
+                    ),
                 ),
                 ("type_create", models.BooleanField(default=False)),
                 ("type_delete", models.BooleanField(default=False)),

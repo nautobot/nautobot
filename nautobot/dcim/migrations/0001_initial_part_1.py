@@ -4,11 +4,11 @@ import django.core.serializers.json
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
+import nautobot.core.models.fields
+import nautobot.core.models.ordering
+import nautobot.core.models.query_functions
+import nautobot.core.models.validators
 import nautobot.dcim.fields
-import nautobot.utilities.fields
-import nautobot.utilities.ordering
-import nautobot.utilities.query_functions
-import nautobot.utilities.validators
 import timezone_field.fields
 import uuid
 
@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
                 ("termination_b_id", models.UUIDField()),
                 ("type", models.CharField(blank=True, max_length=50)),
                 ("label", models.CharField(blank=True, max_length=100)),
-                ("color", nautobot.utilities.fields.ColorField(blank=True, max_length=6)),
+                ("color", nautobot.core.models.fields.ColorField(blank=True, max_length=6)),
                 ("length", models.PositiveSmallIntegerField(blank=True, null=True)),
                 ("length_unit", models.CharField(blank=True, max_length=50)),
                 ("_abs_length", models.DecimalField(blank=True, decimal_places=4, max_digits=10, null=True)),
@@ -79,8 +79,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -108,8 +108,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -136,8 +136,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -165,8 +165,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -200,11 +200,11 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(blank=True, max_length=64, null=True)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
+                    nautobot.core.models.fields.NaturalOrderingField(
                         "name",
                         blank=True,
                         max_length=100,
-                        naturalize_function=nautobot.utilities.ordering.naturalize,
+                        naturalize_function=nautobot.core.models.ordering.naturalize,
                         null=True,
                     ),
                 ),
@@ -251,8 +251,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -278,8 +278,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -306,7 +306,7 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=100, unique=True)),
                 ("slug", models.SlugField(max_length=100, unique=True)),
-                ("color", nautobot.utilities.fields.ColorField(default="9e9e9e", max_length=6)),
+                ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("vm_role", models.BooleanField(default=True)),
                 ("description", models.CharField(blank=True, max_length=200)),
             ],
@@ -359,8 +359,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -398,8 +398,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -438,7 +438,7 @@ class Migration(migrations.Migration):
                 ("description", models.CharField(blank=True, max_length=200)),
                 ("_cable_peer_id", models.UUIDField(blank=True, null=True)),
                 ("enabled", models.BooleanField(default=True)),
-                ("mac_address", nautobot.dcim.fields.MACAddressCharField(blank=True, null=True)),
+                ("mac_address", nautobot.core.models.fields.MACAddressCharField(blank=True, null=True)),
                 (
                     "mtu",
                     models.PositiveIntegerField(
@@ -453,18 +453,18 @@ class Migration(migrations.Migration):
                 ("mode", models.CharField(blank=True, max_length=50)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
+                    nautobot.core.models.fields.NaturalOrderingField(
                         "name",
                         blank=True,
                         max_length=100,
-                        naturalize_function=nautobot.utilities.ordering.naturalize_interface,
+                        naturalize_function=nautobot.core.models.ordering.naturalize_interface,
                     ),
                 ),
                 ("type", models.CharField(max_length=50)),
                 ("mgmt_only", models.BooleanField(default=False)),
             ],
             options={
-                "ordering": ("device", nautobot.utilities.query_functions.CollateAsChar("_name")),
+                "ordering": ("device", nautobot.core.models.query_functions.CollateAsChar("_name")),
             },
         ),
         migrations.CreateModel(
@@ -485,11 +485,11 @@ class Migration(migrations.Migration):
                 ("description", models.CharField(blank=True, max_length=200)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
+                    nautobot.core.models.fields.NaturalOrderingField(
                         "name",
                         blank=True,
                         max_length=100,
-                        naturalize_function=nautobot.utilities.ordering.naturalize_interface,
+                        naturalize_function=nautobot.core.models.ordering.naturalize_interface,
                     ),
                 ),
                 ("type", models.CharField(max_length=50)),
@@ -515,8 +515,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -525,10 +525,10 @@ class Migration(migrations.Migration):
                 ("serial", models.CharField(blank=True, max_length=50)),
                 ("asset_tag", models.CharField(blank=True, max_length=50, null=True, unique=True)),
                 ("discovered", models.BooleanField(default=False)),
-                ("lft", models.PositiveIntegerField(editable=False)),
-                ("rght", models.PositiveIntegerField(editable=False)),
-                ("tree_id", models.PositiveIntegerField(db_index=True, editable=False)),
-                ("level", models.PositiveIntegerField(editable=False)),
+                ("lft", models.PositiveIntegerField(default=0, editable=False)),
+                ("rght", models.PositiveIntegerField(default=0, editable=False)),
+                ("tree_id", models.PositiveIntegerField(default=0, editable=False)),
+                ("level", models.PositiveIntegerField(default=0, editable=False)),
             ],
             options={
                 "ordering": ("device__id", "parent__id", "_name"),
@@ -608,7 +608,7 @@ class Migration(migrations.Migration):
                 (
                     "voltage",
                     models.SmallIntegerField(
-                        default=120, validators=[nautobot.utilities.validators.ExclusionValidator([0])]
+                        default=120, validators=[nautobot.core.models.validators.ExclusionValidator([0])]
                     ),
                 ),
                 (
@@ -650,8 +650,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -680,8 +680,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -730,8 +730,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -771,8 +771,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -813,8 +813,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("facility_id", models.CharField(blank=True, max_length=50, null=True)),
@@ -860,10 +860,10 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100)),
                 ("slug", models.SlugField(max_length=100)),
                 ("description", models.CharField(blank=True, max_length=200)),
-                ("lft", models.PositiveIntegerField(editable=False)),
-                ("rght", models.PositiveIntegerField(editable=False)),
-                ("tree_id", models.PositiveIntegerField(db_index=True, editable=False)),
-                ("level", models.PositiveIntegerField(editable=False)),
+                ("lft", models.PositiveIntegerField(default=0, editable=False)),
+                ("rght", models.PositiveIntegerField(default=0, editable=False)),
+                ("tree_id", models.PositiveIntegerField(default=0, editable=False)),
+                ("level", models.PositiveIntegerField(default=0, editable=False)),
             ],
             options={
                 "ordering": ["site", "name"],
@@ -884,7 +884,7 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("units", nautobot.utilities.fields.JSONArrayField(base_field=models.PositiveSmallIntegerField())),
+                ("units", nautobot.core.models.fields.JSONArrayField(base_field=models.PositiveSmallIntegerField())),
                 ("description", models.CharField(max_length=200)),
             ],
             options={
@@ -908,7 +908,7 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=100, unique=True)),
                 ("slug", models.SlugField(max_length=100, unique=True)),
-                ("color", nautobot.utilities.fields.ColorField(default="9e9e9e", max_length=6)),
+                ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("description", models.CharField(blank=True, max_length=200)),
             ],
             options={
@@ -931,8 +931,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -970,8 +970,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=64)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64)),
@@ -1010,10 +1010,10 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100, unique=True)),
                 ("slug", models.SlugField(max_length=100, unique=True)),
                 ("description", models.CharField(blank=True, max_length=200)),
-                ("lft", models.PositiveIntegerField(editable=False)),
-                ("rght", models.PositiveIntegerField(editable=False)),
-                ("tree_id", models.PositiveIntegerField(db_index=True, editable=False)),
-                ("level", models.PositiveIntegerField(editable=False)),
+                ("lft", models.PositiveIntegerField(default=0, editable=False)),
+                ("rght", models.PositiveIntegerField(default=0, editable=False)),
+                ("tree_id", models.PositiveIntegerField(default=0, editable=False)),
+                ("level", models.PositiveIntegerField(default=0, editable=False)),
             ],
             options={
                 "abstract": False,
@@ -1037,8 +1037,8 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=100, unique=True)),
                 (
                     "_name",
-                    nautobot.utilities.fields.NaturalOrderingField(
-                        "name", blank=True, max_length=100, naturalize_function=nautobot.utilities.ordering.naturalize
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "name", blank=True, max_length=100, naturalize_function=nautobot.core.models.ordering.naturalize
                     ),
                 ),
                 ("slug", models.SlugField(max_length=100, unique=True)),

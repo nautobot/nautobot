@@ -14,19 +14,14 @@
             <table class="table table-hover panel-body attr-table">
                 {% with rack=object.rack %}
                     <tr>
-                        <td>Site</td>
-                        <td>
-                            {% if rack.site.region %}
-                                {{ rack.site.region|hyperlinked_object }} /
-                            {% endif %}
-                            {{ rack.site|hyperlinked_object }}
-                        </td>
+                        <td>Location</td>
+                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                     </tr>
                     <tr>
                         <td>Group</td>
                         <td>
-                            {% if rack.group %}
-                                <a href="{% url 'dcim:rack_list' %}?site={{ rack.site.slug }}&group={{ rack.group.slug }}">{{ rack.group }}</a>
+                            {% if rack.rack_group %}
+                                <a href="{% url 'dcim:rack_list' %}?location={{ rack.location.pk }}&rack_group={{ rack.rack_group.pk }}">{{ rack.rack_group }}</a>
                             {% else %}
                                 <span class="text-muted">None</span>
                             {% endif %}
@@ -51,8 +46,8 @@
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant and object.tenant.group %}
-                            {{ object.tenant.group|hyperlinked_object }} /
+                        {% if object.tenant and object.tenant.tenant_group %}
+                            {{ object.tenant.tenant_group|hyperlinked_object }} /
                         {% endif %}
                         {{ object.tenant|hyperlinked_object }}
                     </td>

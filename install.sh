@@ -104,11 +104,6 @@ COMMAND="nautobot-server clearsessions"
 echo "Removing expired user sessions ($COMMAND)..."
 eval $COMMAND || exit 1
 
-# Clear all cached data
-COMMAND="nautobot-server invalidate all"
-echo "Clearing cache data ($COMMAND)..."
-eval $COMMAND || exit 1
-
 if [ -v WARN_MISSING_VENV ]; then
   echo "--------------------------------------------------------------------"
   echo "WARNING: No existing virtual environment was detected. A new one has"

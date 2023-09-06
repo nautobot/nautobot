@@ -1,37 +1,36 @@
 """Models for representing external data sources."""
+from importlib.util import find_spec
 import os
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
-from django.db import models, transaction
-from django.urls import reverse
-from django_cryptography.fields import encrypt
+from django.db import models
 
-from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.utils import extras_features, check_if_key_is_graphql_safe
 
 
 @extras_features(
     "config_context_owners",
-    "custom_fields",
     "export_template_owners",
     "job_results",
-    "relationships",
     "webhooks",
 )
 class GitRepository(PrimaryModel):
     """Representation of a Git repository used as an external data source."""
 
-    TOKEN_PLACEHOLDER = "********"
-
     name = models.CharField(
         max_length=100,
         unique=True,
     )
-    slug = AutoSlugField(populate_from="name")
+    slug = AutoSlugField(
+        populate_from="name",
+        help_text="Internal field name. Please use underscores rather than dashes in this key.",
+        slugify_function=slugify_dashes_to_underscores,
+    )
 
     remote_url = models.URLField(
         max_length=255,
@@ -51,34 +50,19 @@ class GitRepository(PrimaryModel):
         blank=True,
     )
 
-    # Mark field as private so that it doesn't get included in ChangeLogging records!
-    _token = encrypt(
-        models.CharField(
-            max_length=200,
-            blank=True,
-            default="",
-        )
-    )
-
-    username = models.CharField(
-        max_length=64,
-        blank=True,
-        default="",
-    )
-
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
         default=None,
         blank=True,
         null=True,
+        related_name="git_repositories",
     )
 
     # Data content types that this repo is a source of. Valid options are dynamically generated based on
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
 
-    csv_headers = ["name", "slug", "remote_url", "branch", "secrets_group", "provided_contents"]
     clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 
     class Meta:
@@ -87,19 +71,60 @@ class GitRepository(PrimaryModel):
         verbose_name_plural = "Git repositories"
 
     def __init__(self, *args, **kwargs):
-        # If instantiated from the REST API, the originating Request will be passed as a kwarg:
-        self.request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
 
-        # Store the initial repo slug and token so we can check for changes on save().
+        # Store the initial repo slug so we can check for changes on save().
         self.__initial_slug = self.slug
-        self.__initial_token = self._token
 
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("extras:gitrepository", kwargs={"slug": self.slug})
+    def clean(self):
+        super().clean()
+
+        # Autogenerate slug now, rather than in pre_save(), if not set already, as we need to check it below.
+        if self.slug == "":
+            self._meta.get_field("slug").create_slug(self, add=(not self.present_in_database))
+
+        if self.present_in_database and self.slug != self.__initial_slug:
+            raise ValidationError(
+                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
+                f"requested slug is {self.slug}"
+            )
+
+        if not self.present_in_database:
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
+            # Check on create whether the proposed slug conflicts with a module name already in the Python environment.
+            # Because we add GIT_ROOT to the end of sys.path, trying to import this repository will instead
+            # import the earlier-found Python module in its place, which would be undesirable.
+            if find_spec(self.slug) is not None:
+                raise ValidationError(
+                    f'Please choose a different slug, as "{self.slug}" is an installed Python package or module.'
+                )
+
+        if self.provided_contents:
+            q = models.Q()
+            for item in self.provided_contents:
+                q |= models.Q(provided_contents__contains=item)
+            duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id).filter(q)
+            if duplicate_repos.exists():
+                raise ValidationError(
+                    f"Another Git repository already configured for remote URL {self.remote_url} "
+                    "provides contents overlapping with this repository."
+                )
+
+    def get_latest_sync(self):
+        """
+        Return a `JobResult` for the latest sync operation.
+
+        Returns:
+            JobResult
+        """
+        from nautobot.extras.models import JobResult
+
+        # This will match all "GitRepository" jobs (pull/refresh, dry-run, etc.)
+        prefix = "nautobot.core.jobs.GitRepository"
+        return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
 
     def to_csv(self):
         return (
@@ -112,76 +137,25 @@ class GitRepository(PrimaryModel):
         )
 
     @property
-    def token_rendered(self):
-        if self._token:
-            return self.TOKEN_PLACEHOLDER
-        else:
-            return "—"
-
-    @property
     def filesystem_path(self):
         return os.path.join(settings.GIT_ROOT, self.slug)
 
-    def set_dryrun(self):
+    def sync(self, user, dry_run=False):
         """
-        Add _dryrun flag.
+        Enqueue a Job to pull the Git repository from the remote and return the sync result.
 
-        The existence of this flag indicates that the next sync of this repo (on save()) should be a dry-run only.
+        Args:
+            user (User): The User that will perform the sync.
+            dry_run (bool): If set, dry-run the Git sync.
+
+        Returns:
+            JobResult
         """
-        self._dryrun = True
+        from nautobot.extras.datasources import (
+            enqueue_pull_git_repository_and_refresh_data,
+            enqueue_git_repository_diff_origin_and_local,
+        )
 
-    def save(self, *args, trigger_resync=True, **kwargs):
-        if self.__initial_token and self._token == self.TOKEN_PLACEHOLDER:
-            # User edited the repo but did NOT specify a new token value. Make sure we keep the existing value.
-            self._token = self.__initial_token
-
-        super().save(*args, **kwargs)
-
-        def on_commit_callback():
-            if self.__initial_slug and self.slug != self.__initial_slug:
-                # Rename any previously existing repo directory to the new slug.
-                # TODO: In a distributed Nautobot deployment, each Django instance and/or worker instance may
-                # have its own clone of this repository on its own local filesystem; we need some way to ensure
-                # that all such clones are renamed.
-                # For now we just rename the one that we have locally and rely on other methods
-                # (notably get_jobs()) to clean up other clones as they're encountered.
-                if os.path.exists(os.path.join(settings.GIT_ROOT, self.__initial_slug)):
-                    os.rename(
-                        os.path.join(settings.GIT_ROOT, self.__initial_slug),
-                        self.filesystem_path,
-                    )
-
-            dry_run = hasattr(self, "_dryrun")
-            if trigger_resync or dry_run:
-                assert self.request is not None, "No HTTP request associated with this update!"
-                from nautobot.extras.datasources import (
-                    enqueue_pull_git_repository_and_refresh_data,
-                    enqueue_git_repository_diff_origin_and_local,
-                )
-
-                # NOTE: if dry_run is True, there would be no need to trigger a resync
-                # regardless of the trigger_resync value (True/False)
-                if dry_run:
-                    enqueue_git_repository_diff_origin_and_local(self, self.request)
-                else:
-                    enqueue_pull_git_repository_and_refresh_data(self, self.request)
-
-            # Update cached values
-            self.__initial_token = self._token
-            self.__initial_slug = self.slug
-
-        transaction.on_commit(on_commit_callback)
-
-    def clean(self):
-        """Overload clean to enforce a repo with duplicate url does not have duplicate provided_contents."""
-        if self.provided_contents:
-            q = models.Q()
-            for item in self.provided_contents:
-                q |= models.Q(provided_contents__contains=item)
-            duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id).filter(q)
-            if duplicate_repos.exists():
-                raise ValidationError(
-                    f"Another Git repository already configured for remote URL {self.remote_url} "
-                    "provides contents overlapping with this repository."
-                )
-        super().clean()
+        if dry_run:
+            return enqueue_git_repository_diff_origin_and_local(self, user)
+        return enqueue_pull_git_repository_and_refresh_data(self, user)

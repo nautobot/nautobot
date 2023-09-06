@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.utilities.tables import BaseTable, BooleanColumn
+from nautobot.core.tables import BaseTable, BooleanColumn
 from nautobot.dcim.models import ConsolePort, Interface, PowerPort
 from .cables import CableTable
 from .devices import (
@@ -19,7 +19,6 @@ from .devices import (
     DevicePowerOutletTable,
     DeviceRearPortTable,
     DeviceRedundancyGroupTable,
-    DeviceRoleTable,
     DeviceTable,
     FrontPortTable,
     InterfaceTable,
@@ -51,9 +50,7 @@ from .racks import (
     RackDetailTable,
     RackGroupTable,
     RackReservationTable,
-    RackRoleTable,
 )
-from .sites import RegionTable, SiteTable
 
 __all__ = (
     "CableTable",
@@ -75,7 +72,6 @@ __all__ = (
     "DevicePowerPortTable",
     "DeviceRearPortTable",
     "DeviceRedundancyGroupTable",
-    "DeviceRoleTable",
     "DeviceTable",
     "DeviceTypeTable",
     "FrontPortTable",
@@ -100,12 +96,9 @@ __all__ = (
     "RackDetailTable",
     "RackGroupTable",
     "RackReservationTable",
-    "RackRoleTable",
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
-    "RegionTable",
-    "SiteTable",
     "VirtualChassisTable",
 )
 

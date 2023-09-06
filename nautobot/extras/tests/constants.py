@@ -17,24 +17,19 @@ query ($device: [String!]) {
     }
     tags {
       name
-      slug
     }
-    device_role {
+    role {
       name
     }
     platform {
       name
-      slug
       manufacturer {
         name
       }
       napalm_driver
-      network_driver
-      network_driver_mappings
     }
-    site {
+    location {
       name
-      slug
       vlans {
         id
         name
@@ -78,7 +73,7 @@ query ($device: [String!]) {
         color
       }
       tagged_vlans {
-        site {
+        location {
           name
         }
         id
@@ -88,5 +83,4 @@ query ($device: [String!]) {
       }
     }
   }
-}
-"""
+}"""

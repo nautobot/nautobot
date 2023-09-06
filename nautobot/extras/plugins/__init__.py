@@ -12,21 +12,17 @@ from django.urls import get_resolver, URLPattern
 
 from nautobot.core.apps import (
     NautobotConfig,
-    NavMenuButton,
-    NavMenuGroup,
-    NavMenuItem,
     NavMenuTab,
     register_menu_items,
     register_homepage_panels,
 )
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.secrets import register_secrets_provider
-from nautobot.utilities.choices import ButtonColorChoices
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
 
 logger = getLogger(__name__)
 
@@ -76,10 +72,8 @@ class NautobotAppConfig(NautobotConfig):
     # along with the plugin.
     installed_apps = []
 
-    # Cacheops configuration. Cache all operations by default.
-    caching_config = {
-        "*": {"ops": "all"},
-    }
+    # Default constance configuration parameters
+    constance_config = {}
 
     # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure", "plugins:myplugin:docs"
     home_view_name = None
@@ -120,6 +114,7 @@ class NautobotAppConfig(NautobotConfig):
                 (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
                 key=lambda urlp: (urlp.name, str(urlp.pattern)),
             ),
+            "constance_config": self.constance_config,
         }
 
         # Register banner function (if defined)
@@ -240,7 +235,6 @@ class NautobotAppConfig(NautobotConfig):
         # TODO(jathan): This is fine for now, but as we expand the functionality
         # of plugins, we'll need to consider something like pydantic or attrs.
         setting_validations = {
-            "caching_config": dict,
             "default_settings": dict,
             "installed_apps": list,
             "middleware": list,
@@ -262,7 +256,9 @@ class NautobotAppConfig(NautobotConfig):
 
         # Apply default configuration values
         for setting, value in cls.default_settings.items():
-            if setting not in user_config:
+            # user_config and constance_config take precedence
+            # this is to support legacy apps that supply default_settings and constance_config
+            if setting not in user_config and setting not in cls.constance_config:
                 user_config[setting] = value
 
 
@@ -466,8 +462,8 @@ def register_filter_extensions(filter_extensions, plugin_name):
     """
     Register a list of FilterExtension classes
     """
-    from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
-    from nautobot.utilities.forms.utils import add_field_to_filter_form_class
+    from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
+    from nautobot.core.forms.utils import add_field_to_filter_form_class
 
     for filter_extension in filter_extensions:
         if not issubclass(filter_extension, FilterExtension):
@@ -509,124 +505,17 @@ def register_filter_extensions(filter_extensions, plugin_name):
 #
 
 
-# 2.2 TODO: remove in favor of NavMenuItem
-@class_deprecated_in_favor_of(NavMenuItem)
-class PluginMenuItem:
-    """
-    This class represents a navigation menu item. This constitutes primary link and its text, but also allows for
-    specifying additional link buttons that appear to the right of the item in the van menu.
-
-    Links are specified as Django reverse URL strings.
-    Buttons are each specified as a list of PluginMenuButton instances.
-    """
-
-    permissions = []
-    buttons = []
-
-    def __init__(self, link, link_text, permissions=None, buttons=None):
-        self.link = link
-        self.link_text = link_text
-        if permissions is not None:
-            if not isinstance(permissions, (list, tuple)):
-                raise TypeError("Permissions must be passed as a tuple or list.")
-            self.permissions = permissions
-        if buttons is not None:
-            if not isinstance(buttons, (list, tuple)):
-                raise TypeError("Buttons must be passed as a tuple or list.")
-            self.buttons = buttons
-
-
-# 2.2 TODO: remove in favor of NavMenuButton
-@class_deprecated_in_favor_of(NavMenuButton)
-class PluginMenuButton:
-    """
-    This class represents a button within a PluginMenuItem. Note that button colors should come from
-    ButtonColorChoices.
-    """
-
-    color = ButtonColorChoices.DEFAULT
-    permissions = []
-
-    def __init__(self, link, title, icon_class, color=None, permissions=None):
-        self.link = link
-        self.title = title
-        self.icon_class = icon_class
-        if permissions is not None:
-            if not isinstance(permissions, (list, tuple)):
-                raise TypeError("Permissions must be passed as a tuple or list.")
-            self.permissions = permissions
-        if color is not None:
-            if color not in ButtonColorChoices.values():
-                raise ValueError("Button color must be a choice within ButtonColorChoices.")
-            self.color = color
-
-
 def register_plugin_menu_items(section_name, menu_items):
     """
-    Register a list of PluginMenuItem instances for a given menu section (e.g. plugin name)
+    Register a list of NavMenuTab instances for a given menu section (e.g. plugin name)
     """
-    new_menu_items = []
-    new_menu_item_weight = 100
-
     nav_menu_items = set()
 
-    permissions = set()
-
     for menu_item in menu_items:
-        if isinstance(menu_item, PluginMenuItem):
-            # translate old-style plugin menu definitions into the new nav-menu items and buttons
-
-            new_menu_button_weight = 100
-            new_menu_buttons = []
-            for button in menu_item.buttons:
-                new_menu_buttons.append(
-                    NavMenuButton(
-                        link=button.link,
-                        title=button.title,
-                        icon_class=button.icon_class,
-                        button_class=button.color,
-                        permissions=button.permissions,
-                        weight=new_menu_button_weight,
-                    )
-                )
-                new_menu_button_weight += 100
-
-            new_menu_items.append(
-                NavMenuItem(
-                    link=menu_item.link,
-                    name=menu_item.link_text,
-                    permissions=menu_item.permissions,
-                    weight=new_menu_item_weight,
-                    buttons=new_menu_buttons,
-                )
-            )
-            new_menu_item_weight += 100
-            permissions = permissions.union(menu_item.permissions)
-        elif isinstance(menu_item, NavMenuTab):
+        if isinstance(menu_item, NavMenuTab):
             nav_menu_items.add(menu_item)
         else:
-            raise TypeError("Top level objects need to be an instance of NavMenuTab or PluginMenuItem: {menu_tab}")
-
-    if new_menu_items:
-        # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
-        if registry["nav_menu"]["tabs"].get("Plugins"):
-            weight = (
-                registry["nav_menu"]["tabs"]["Plugins"]["groups"][
-                    list(registry["nav_menu"]["tabs"]["Plugins"]["groups"])[-1]
-                ]["weight"]
-                + 100
-            )
-        else:
-            weight = 100
-        nav_menu_items.add(
-            NavMenuTab(
-                name="Plugins",
-                weight=5000,
-                # Permissions cast to tuple to match development pattern.
-                permissions=tuple(permissions),
-                groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
-            ),
-        )
+            raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {menu_item}")
 
     register_menu_items(nav_menu_items)
 

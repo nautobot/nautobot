@@ -1,12 +1,10 @@
-{% if result.status == 'failed' %}
+{% if result.status == 'FAILURE' %}
     <label class="label label-danger">Failed</label>
-{% elif result.status == 'errored' %}
-    <label class="label label-danger">Errored</label>
-{% elif result.status == 'pending' %}
+{% elif result.status == 'PENDING' %}
     <label class="label label-default">Pending</label>
-{% elif result.status == 'running' %}
+{% elif result.status == 'STARTED' %}
     <label class="label label-warning">Running</label>
-{% elif result.status == 'completed' %}
+{% elif result.status == 'SUCCESS' %}
     <label class="label label-success">Completed</label>
 {% else %}
     <label class="label label-default">N/A</label>

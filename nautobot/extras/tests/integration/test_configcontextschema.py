@@ -1,6 +1,8 @@
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Manufacturer, Site
-from nautobot.extras.models import ConfigContext, ConfigContextSchema, Status
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from django.contrib.contenttypes.models import ContentType
+
+from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
@@ -91,7 +93,6 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Schemas
         schema = ConfigContextSchema.objects.create(
             name="schema",
-            slug="schema",
             data_schema={
                 "type": "object",
                 "additionalProperties": False,
@@ -100,36 +101,44 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         )
 
         # ConfigContext
-        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, schema=schema)
+        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, config_context_schema=schema)
 
         # Device
-        site = Site.objects.create(name="site", slug="site", status=Status.objects.get_for_model(Site).first())
-        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
+        device_ct = ContentType.objects.get_for_model(Device)
+        location_type, _ = LocationType.objects.get_or_create(name="Campus")
+        location_type.content_types.add(device_ct)
+        location = Location.objects.create(
+            name="location",
+            status=Status.objects.get_for_model(Location).first(),
+            location_type=location_type,
+        )
+        manufacturer = Manufacturer.objects.create(name="Manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
-        device_role = DeviceRole.objects.create(name="device_role", slug="device-role", color="ffffff")
+        device_role, _ = Role.objects.get_or_create(name="Device Role")
+        device_role.content_types.add(device_ct)
         Device.objects.create(
             name="device",
-            site=site,
+            location=location,
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=Status.objects.get_for_model(Device).first(),
-            local_context_data=context_data,
-            local_context_schema=schema,
+            local_config_context_data=context_data,
+            local_config_context_schema=schema,
         )
 
         # Virtual Machine
-        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
-        cluster = Cluster.objects.create(name="cluster", type=cluster_type)
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         VirtualMachine.objects.create(
             name="virtual_machine",
             cluster=cluster,
             status=Status.objects.get_for_model(VirtualMachine).first(),
-            local_context_data=context_data,
-            local_context_schema=schema,
+            local_config_context_data=context_data,
+            local_config_context_schema=schema,
         )
 
         # Navigate to ConfigContextSchema Validation tab
-        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.slug}/")
+        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/")
         self.browser.links.find_by_text("Validation").click()
 
         # Assert Validation states
@@ -169,7 +178,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
             -1
         ].find_by_tag("a").click()
         # Update the property "a" to be a string
-        self.browser.fill("local_context_data", '{"a": "foo", "b": 456, "c": 777}')
+        self.browser.fill("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
         self.browser.find_by_text("Update").click()
 
         # Assert Validation states

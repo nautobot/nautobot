@@ -11,10 +11,10 @@ This will run the following management commands with default settings, in order:
 
 - migrate
 - trace_paths
+- build_ui --npm-install
 - collectstatic
 - remove_stale_contenttypes
 - clearsessions
-- invalidate all
 - send_installation_metrics
 """
 
@@ -30,6 +30,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            "--no-build-ui",
+            action="store_false",
+            dest="build_ui",
+            default=True,
+            help="Do not automatically build the user interface.",
+        )
+        parser.add_argument(
             "--no-clearsessions",
             action="store_false",
             dest="clearsessions",
@@ -42,13 +49,6 @@ class Command(BaseCommand):
             dest="collectstatic",
             default=True,
             help="Do not automatically collect static files into a single location.",
-        )
-        parser.add_argument(
-            "--no-invalidate-all",
-            action="store_false",
-            dest="invalidate_all",
-            default=True,
-            help="Do not automatically invalidate cache for entire application.",
         )
         parser.add_argument(
             "--no-migrate",
@@ -111,6 +111,12 @@ class Command(BaseCommand):
             call_command("trace_paths", no_input=True)
             self.stdout.write()
 
+        # Run build
+        if options.get("build_ui"):
+            self.stdout.write("Building user interface...")
+            call_command("build_ui", npm_install=True)
+            self.stdout.write()
+
         # Run collectstatic
         if options.get("collectstatic"):
             self.stdout.write("Collecting static files...")
@@ -127,12 +133,6 @@ class Command(BaseCommand):
         if options.get("clearsessions"):
             self.stdout.write("Removing expired sessions...")
             call_command("clearsessions")
-            self.stdout.write()
-
-        # Run invalidate all
-        if options.get("invalidate_all"):
-            self.stdout.write("Invalidating cache...")
-            call_command("invalidate", "all")
             self.stdout.write()
 
         # Send installation metrics

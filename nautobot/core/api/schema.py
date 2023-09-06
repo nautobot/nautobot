@@ -4,7 +4,8 @@ import re
 from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
-from drf_spectacular.plumbing import build_array_type, build_media_type_object, is_serializer
+from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer
+from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -53,6 +54,40 @@ class NautobotAutoSchema(AutoSchema):
             return None
         return super()._get_paginator()
 
+    def get_description(self):
+        """
+        Get the appropriate description for a given API endpoint.
+
+        By default, if a specific action doesn't have its own docstring, and neither does the view class,
+        drf-spectacular will walk up the MRO of the view class until it finds a docstring, and use that.
+        Most of our viewsets (for better or for worse) do not have docstrings, and so it'll find and use the generic
+        docstring of the `NautobotModelViewSet` class, which isn't very useful to the end user. Instead of doing that,
+        we only use the docstring of the view itself (ignoring its parent class docstrings), or if none exists, we
+        make an attempt at rendering a basically accurate default description.
+        """
+        action_or_method = getattr(self.view, getattr(self.view, "action", self.method.lower()), None)
+        action_doc = get_doc(action_or_method)
+        if action_doc:
+            return action_doc
+
+        if self.view.__doc__:
+            view_doc = get_doc(self.view.__class__)
+            if view_doc:
+                return view_doc
+
+        # Fall back to a generic default description
+        if hasattr(self.view, "queryset") and self.method.lower() in self.method_mapping:
+            action = self.method_mapping[self.method.lower()].replace("_", " ").capitalize()
+            model_name = self.view.queryset.model._meta.verbose_name
+            if action == "Create":
+                return f"{action} one or more {model_name} objects."
+            if "{id}" in self.path:
+                return f"{action} a {model_name} object."
+            return f"{action} a list of {model_name} objects."
+
+        # Give up
+        return super().get_description()
+
     def get_filter_backends(self):
         """Nautobot's custom bulk operations, even though they return a list of records, are NOT filterable."""
         if self.is_bulk_action:
@@ -78,6 +113,22 @@ class NautobotAutoSchema(AutoSchema):
                 "required": True,
             }
 
+        # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
+        if "parameters" in operation:
+            for param in operation["parameters"]:
+                if param["name"] == "id" and "description" not in param:
+                    param["description"] = "Unique object identifier, either a UUID primary key or a composite key."
+            if self.method == "GET":
+                if "depth" not in operation["parameters"]:
+                    operation["parameters"].append(
+                        {
+                            "in": "query",
+                            "name": "depth",
+                            "required": False,
+                            "description": "Serializer Depth",
+                            "schema": {"type": "integer", "minimum": 0, "maximum": 10, "default": 1},
+                        }
+                    )
         return operation
 
     def get_operation_id(self):
@@ -263,6 +314,14 @@ class NautobotFilterExtension(DjangoFilterExtension):
     target_class = "nautobot.core.api.filter_backends.NautobotFilterBackend"
 
 
+class NautobotPolymorphicProxySerializerExtension(PolymorphicProxySerializerExtension):
+    """
+    Extend the PolymorphicProxySerializerExtension to cover Nautobot's PolymorphicProxySerializer class.
+    """
+
+    target_class = "nautobot.core.api.serializers.PolymorphicProxySerializer"
+
+
 class ChoiceFieldFix(OpenApiSerializerFieldExtension):
     """
     Schema field fix for ChoiceField fields.
@@ -289,7 +348,7 @@ class ChoiceFieldFix(OpenApiSerializerFieldExtension):
         choices = self.target._choices
 
         value_type = "string"
-        # IPAddressFamilyChoices and RackWidthChoices are int values, not strings
+        # IPAddressVersionChoices and RackWidthChoices are int values, not strings
         if all(isinstance(x, int) for x in [c for c in list(choices.keys()) if c is not None]):
             value_type = "integer"
         # I don't think we have any of these left in the code base at present,
@@ -330,53 +389,3 @@ class SerializedPKRelatedFieldFix(OpenApiSerializerFieldExtension):
         On requests, require PK only; on responses, represent the entire nested serializer.
         """
         return auto_schema._map_serializer(self.target.serializer, direction)
-
-
-class StatusFieldFix(OpenApiSerializerFieldExtension):
-    """
-    Schema field fix for StatusSerializerField fields.
-
-    This is very similar to the fix for ChoiceFields (above), but the lists of choices are dynamic instead of static,
-    and the values are always strings (slugs).
-
-    Note that if we have two models/serializers with the same exact set of valid status choices, drf-spectacular will
-    likely complain about this with a warning like:
-
-        enum naming encountered a non-optimally resolvable collision for fields named "status"
-
-    In that case, the workaround will be to explicitly declare names for each colliding serializer field under
-    `settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`, for example:
-
-        "VLANStatusChoices": "nautobot.ipam.api.serializers.VLANSerializer.status_choices",
-
-    Since, unlike ChoiceField, the status choices are not predefined as a ChoiceSet class, we have provided a
-    `@classproperty status_choices` on the StatusModelSerializerMixin that allows for the choices to "look like" a
-    static list to make drf-spectacular happy.
-    """
-
-    target_class = "nautobot.extras.api.fields.StatusSerializerField"
-
-    def map_serializer_field(self, auto_schema, direction):
-        """
-        Define OpenAPI schema for a given StatusSerializerField (self.target) for the given request/response direction.
-        """
-        choices = self.target.get_choices()
-        if direction == "request":
-            return {
-                "type": "string",
-                "enum": list(choices.keys()),
-            }
-        else:
-            return {
-                "type": "object",
-                "properties": {
-                    "value": {
-                        "type": "string",
-                        "enum": list(choices.keys()),
-                    },
-                    "label": {
-                        "type": "string",
-                        "enum": list(choices.values()),
-                    },
-                },
-            }

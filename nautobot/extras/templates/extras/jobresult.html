@@ -11,7 +11,7 @@
     <li><a href="{% url 'extras:jobresult_list' %}">Job Results</a></li>
     {% if result.job_model is not None %}
         <li>{{ result.job_model.grouping }}</li>
-        <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.slug }}">
+        <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ result.job_model.name }}">
             {{ result.job_model }}
         </a></li>
     {% elif associated_record %}
@@ -34,19 +34,21 @@
 
 {% block buttons %}
     {% if perms.extras.run_job %}
-        {% if result.job_model and result.job_kwargs %}
-            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}?kwargs_from_job_result={{ result.pk }}"
+        {% if result.job_model and result.task_kwargs %}
+            <a href="{% url 'extras:job_run' pk=result.job_model.pk %}?kwargs_from_job_result={{ result.pk }}"
                class="btn btn-success">
                 <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
             </a>
         {% elif result.job_model is not None %}
-            <a href="{% url 'extras:job_run' slug=result.job_model.slug %}"
+            <a href="{% url 'extras:job_run' pk=result.job_model.pk %}"
                class="btn btn-primary">
                 <span class="mdi mdi-play" aria-hidden="true"></span> Run
             </a>
         {% endif %}
     {% endif %}
-    {% export_button %}
+    <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ result.pk }}&format=csv" class="btn btn-success">
+        <span class="mdi mdi-database-export" aria-hidden="true"></span> Export
+    </a>
     {{ block.super }}
 {% endblock buttons %}
 
@@ -84,20 +86,44 @@
             <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <strong>Job Inputs</strong>
+                        <strong>Job Positional Arguments</strong>
                     </div>
                     <div class="panel-body">
-                        {% include 'extras/inc/json_data.html' with data=result.job_kwargs format="json" %}
+                        {% include 'extras/inc/json_data.html' with data=result.task_args format="json" %}
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Job Keyword Arguments</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% include 'extras/inc/json_data.html' with data=result.task_kwargs format="json" %}
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Job Celery Keyword Arguments</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% include 'extras/inc/json_data.html' with data=result.celery_kwargs format="json" %}
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <strong>Output Data</strong>
+                        <strong>Return Data</strong>
                     </div>
                     <div class="panel-body">
-                        {% include 'extras/inc/json_data.html' with data=result.data format="json" %}
+                        {% include 'extras/inc/json_data.html' with data=result.result format="json" %}
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Traceback</strong>
+                    </div>
+                    <div class="panel-body">
+                        {% include 'extras/inc/json_data.html' with data=result.traceback format="python" %}
                     </div>
                 </div>
             </div>

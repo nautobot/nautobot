@@ -5,7 +5,7 @@ from nautobot.core.apps import HomePageGroup, HomePageItem, HomePagePanel
 from nautobot.dcim import models
 
 
-def _connected_consoleports_count(request):
+def _connected_console_ports_count(request):
     # Match queryset used in dcim.views.ConsoleConnectionsListView
     return models.ConsolePort.objects.restrict(request.user, "view").filter(_path__isnull=False).count()
 
@@ -23,7 +23,7 @@ def _connected_interfaces_count(request):
     )
 
 
-def _connected_powerports_count(request):
+def _connected_power_ports_count(request):
     # Match queryset used in dcim.views.PowerConnectionsListView
     return models.PowerPort.objects.restrict(request.user, "view").filter(_path__isnull=False).count()
 
@@ -33,14 +33,6 @@ layout = (
         name="Organization",
         weight=100,
         items=(
-            HomePageItem(
-                name="Sites",
-                link="dcim:site_list",
-                model=models.Site,
-                description="Geographic location",
-                permissions=["dcim.view_site"],
-                weight=100,
-            ),
             HomePageItem(
                 name="Locations",
                 link="dcim:location_list",
@@ -129,7 +121,7 @@ layout = (
                         name="Console",
                         custom_template="homepage_connections.html",
                         custom_data={
-                            "connections_count": _connected_consoleports_count,
+                            "connections_count": _connected_console_ports_count,
                             "connections_url": "dcim:console_connections_list",
                             "connections_label": "Console",
                         },
@@ -140,7 +132,7 @@ layout = (
                         name="Power",
                         custom_template="homepage_connections.html",
                         custom_data={
-                            "connections_count": _connected_powerports_count,
+                            "connections_count": _connected_power_ports_count,
                             "connections_url": "dcim:power_connections_list",
                             "connections_label": "Power",
                         },

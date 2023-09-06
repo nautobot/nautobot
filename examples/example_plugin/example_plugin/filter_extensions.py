@@ -2,7 +2,8 @@ from django import forms
 
 from nautobot.apps.filters import FilterExtension, MultiValueCharFilter
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.forms import DynamicModelMultipleChoiceField
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.core.forms.fields import DynamicModelMultipleChoiceField
 
 
 def suffix_search(queryset, name, value):
@@ -20,14 +21,14 @@ class TenantFilterExtension(FilterExtension):
             field_name="description", label="Description", method=suffix_search
         ),
         "example_plugin_dtype": MultiValueCharFilter(
-            field_name="sites__devices__device_type__slug", label="Device Type"
+            field_name="locations__devices__device_type__model", label="Device Type (model)"
         ),
     }
 
     filterform_fields = {
         "example_plugin_description": forms.CharField(required=False, label="Description"),
         "example_plugin_dtype": forms.CharField(required=False, label="Device Type"),
-        "slug__ic": forms.CharField(required=False, label="Slug Contains"),
+        "name__ic": forms.CharField(required=False, label="Name Contains"),
         "example_plugin_sdescrip": forms.CharField(required=False, label="Suffix Description"),
     }
 
@@ -44,7 +45,12 @@ class PrefixFilterExtension(FilterExtension):
     model = "ipam.prefix"
 
     filterset_fields = {
-        "example_plugin_prefix_tenant_name": MultiValueCharFilter(field_name="tenant__name", label="Tenant Name"),
+        "example_plugin_prefix_tenant_name": NaturalKeyOrPKMultipleChoiceFilter(
+            field_name="tenant",
+            queryset=Tenant.objects.all(),
+            to_field_name="name",
+            label="Tenant Name",
+        ),
     }
 
     filterform_fields = {

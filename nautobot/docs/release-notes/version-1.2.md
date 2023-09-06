@@ -3,7 +3,7 @@
 
 This document describes all new features and changes in Nautobot 1.2.
 
-If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation.
+If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../user-guide/administration/migration/migrating-from-netbox.md) documentation.
 
 ## Release Overview
 
@@ -11,7 +11,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Admin Configuration UI ([#370](https://github.com/nautobot/nautobot/issues/370))
 
-The Nautobot Admin UI now includes a "Configuration" page that can be used to dynamically customize a number of [optional settings](../configuration/optional-settings.md#administratively-configurable-settings) as an alternative to editing `nautobot_config.py` and restarting the Nautobot processes.
+The Nautobot Admin UI now includes a "Configuration" page that can be used to dynamically customize a number of [optional settings](../user-guide/administration/configuration/optional-settings.md#administratively-configurable-settings) as an alternative to editing `nautobot_config.py` and restarting the Nautobot processes.
 
 If upgrading from a previous Nautobot version where these settings were defined in your `nautobot_config.py`, you must remove those definitions in order to use this feature, as explicit configuration in `nautobot_config.py` takes precedence over values configured in the Admin UI.
 
@@ -31,7 +31,7 @@ Webhooks can now be triggered when creating/updating/deleting `CustomField` and 
 
 #### Database Ready Signal ([#13](https://github.com/nautobot/nautobot/issues/13))
 
-After running `nautobot-server migrate` or `nautobot-server post_upgrade`, Nautobot now emits a custom signal, `nautobot_database_ready`. This signal is designed for plugins to connect to in order to perform automatic database population (such as defining custom fields, relationships, webhooks, etc.) at install/upgrade time. For more details, refer to [the plugin development documentation](../plugins/development.md#populating-extensibility-features).
+After running `nautobot-server migrate` or `nautobot-server post_upgrade`, Nautobot now emits a custom signal, `nautobot_database_ready`. This signal is designed for plugins to connect to in order to perform automatic database population (such as defining custom fields, relationships, webhooks, etc.) at install/upgrade time. For more details, refer to [the plugin development documentation](../development/apps/api/platform-features/populating-extensibility-features.md).
 
 #### GraphQL Filters at All Levels ([#248](https://github.com/nautobot/nautobot/issues/248))
 
@@ -67,11 +67,11 @@ Additionally, when viewing this list, each plugin can now be clicked on for a de
 
 Additionally, plugins now have the option of registering specific "home" and/or "configuration" views, which will be linked and accessible directly from the installed-plugins list and detail views.
 
-Please refer to the [plugin development documentation](../plugins/development.md) for more details about this functionality.
+Please refer to the [plugin development documentation](../development/apps/index.md) for more details about this functionality.
 
 #### IPAM custom lookups for filtering ([#982](https://github.com/nautobot/nautobot/issues/982))
 
-Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, and `Aggregate` models, such as `address__net_contained`, `network__net_contains_or_equals`, etc. Refer to the [REST API filtering documentation](../rest-api/filtering.md#network-and-host-fields) for more specifics and examples.
+Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, and `Aggregate` models, such as `address__net_contained`, `network__net_contains_or_equals`, etc. Refer to the [REST API filtering documentation](../user-guide/platform-functionality/rest-api//filtering.md#network-and-host-fields) for more specifics and examples.
 
 #### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
 
@@ -84,40 +84,40 @@ Jobs can now be scheduled for execution at a future date and time (such as durin
 !!! note
     Execution of scheduled jobs is dependent on [Celery Beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html); enablement of this system service is a new requirement in Nautobot 1.2.
 
-Please see the documentation on enabling the [Celery Beat scheduler service](../installation/services.md#celery-beat-scheduler) to get started!
+Please see the documentation on enabling the [Celery Beat scheduler service](../user-guide/administration/installation/services.md#celery-beat-scheduler) to get started!
 
 #### Networking Template Filters ([#1082](https://github.com/nautobot/nautobot/issues/1082))
 
-Template rendering with Django and/or Jinja2 now supports by default all filters provided by the [`netutils`](https://netutils.readthedocs.io/en/latest/index.html) library. These filters can be used in page templates, computed fields, custom links, export templates, etc. For details, please refer to the [filters](../additional-features/template-filters.md) documentation.
+Template rendering with Django and/or Jinja2 now supports by default all filters provided by the [`netutils`](https://netutils.readthedocs.io/en/latest/index.html) library. These filters can be used in page templates, computed fields, custom links, export templates, etc. For details, please refer to the [filters](../user-guide/platform-functionality/template-filters.md) documentation.
 
 #### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
 
-Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
+Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../user-guide/administration/configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
 
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
 Each plugin is now able to optionally inject a custom banner into any of the Nautobot core views.
 
-Please refer to the [plugin development documentation](../plugins/development.md) for more details about this functionality.
+Please refer to the [plugin development documentation](../development/apps/index.md) for more details about this functionality.
 
 #### Same-Type and Symmetric Relationships ([#157](https://github.com/nautobot/nautobot/issues/157))
 
-The [Relationships](../models/extras/relationship.md) feature has been extended in two ways:
+The [Relationships](../user-guide/platform-functionality/relationship.md) feature has been extended in two ways:
 
 1. Relationships between the same object type (e.g. device-to-device) are now permitted and supported.
 2. For same-object-type relationships specifically, *symmetric* (peer-to-peer rather than source-to-destination) relationships are now an option.
 
-For more details, refer to the [Relationships](../models/extras/relationship.md) documentation.
+For more details, refer to the [Relationships](../user-guide/platform-functionality/relationship.md) documentation.
 
 #### Secrets Integration ([#541](https://github.com/nautobot/nautobot/issues/541))
 
-Nautobot can now read secret values (such as device or Git repository access credentials) on demand from a variety of external sources, including environment variables and text files, and extensible via plugins to support additional secrets providers such as Hashicorp Vault and AWS Secrets Manager. Both the [NAPALM device integration](../additional-features/napalm.md) and the [Git repository integration](../models/extras/gitrepository.md) can now make use of these secrets, and plugins and jobs can do so as well.
+Nautobot can now read secret values (such as device or Git repository access credentials) on demand from a variety of external sources, including environment variables and text files, and extensible via plugins to support additional secrets providers such as Hashicorp Vault and AWS Secrets Manager. Both the [NAPALM device integration](../user-guide/platform-functionality/napalm.md) and the [Git repository integration](../user-guide/platform-functionality/gitrepository.md) can now make use of these secrets, and plugins and jobs can do so as well.
 
-For more details, please refer to the [Secrets](../core-functionality/secrets.md) documentation.
+For more details, please refer to the [Secrets](../user-guide/platform-functionality/secret.md) documentation.
 
 #### Software-Defined Home Page ([#674](https://github.com/nautobot/nautobot/pull/674), [#716](https://github.com/nautobot/nautobot/pull/716))
 
-Nautobot core applications and plugins can now both define panels, groups, and items to populate the Nautobot home page. The home page now dynamically reflows to accommodate available content. Plugin developers can add to existing panels or groups or define entirely new panels as needed. For more details, see [Populating the Home Page](../development/homepage.md).
+Nautobot core applications and plugins can now both define panels, groups, and items to populate the Nautobot home page. The home page now dynamically reflows to accommodate available content. Plugin developers can add to existing panels or groups or define entirely new panels as needed. For more details, see [Populating the Home Page](../development/apps/api/ui-extensions/home-page.md).
 
 ### Changed
 
@@ -130,7 +130,7 @@ The Admin sub-site within Nautobot (`/admin/` and its child pages) has been reva
 Job log messages are now stored in a separate database table as a separate `JobLogEntry` data model, instead of being stored as JSON on the `JobResult` model/table. This provides faster and more robust rendering of `JobResult`-related views and lays groundwork for future enhancements of the Jobs feature.
 
 !!! note
-    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../additional-features/jobs.md#testing-jobs) for details.
+    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../user-guide/platform-functionality/jobs/index.md#testing-jobs) for details.
 
 !!! note
     Because `JobLogEntry` records reference their associated `JobResult`, the pattern `job.job_result = JobResult()` (creating only an in-memory `JobResult` object, rather than a database entry) will no longer work. Instead you will need to create a proper JobResult database object `job.job_result = JobResult.objects.create(...)`.
@@ -255,7 +255,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 - [#1283](https://github.com/nautobot/nautobot/pull/1283) - Update Sentinel docs to have 3 hosts (minimum per Redis docs), and change `CELERY_BROKER_URL` to a multiline string instead of a Tuple (tuple is invalid, and raises an exception when job completes).
 - [#1312](https://github.com/nautobot/nautobot/issues/1312) - Fixed a bug where a Prefix filter matching zero records would instead show all records in the UI.
 - [#1327](https://github.com/nautobot/nautobot/pull/1327) - Fixes the broken dependencies from the Release action.
-- [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../additional-features/jobs.md#jobs-and-class_path).
+- [#1328](https://github.com/nautobot/nautobot/pull/1328) - Fixed an error in the [Job class-path documentation](../user-guide/platform-functionality/jobs/index.md#jobs-and-class_path).
 - [#1332](https://github.com/nautobot/nautobot/pull/1332) - Fixed a regression in which the REST API did not default to pagination based on the configured `PAGINATE_COUNT` setting but instead defaulted to full unpaginated results.
 - [#1335](https://github.com/nautobot/nautobot/issues/1335) - Fixed an issue with the Secret create/edit form that caused problems when defining AWS secrets using the `nautobot-secrets-providers` plugin.
 - [#1346](https://github.com/nautobot/nautobot/issues/1346) - Fixed an error in the periodic execution of Celery's built-in `celery.backend_cleanup` task.
@@ -281,7 +281,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Added
 
-- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../additional-features/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
+- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../user-guide/administration/guides/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
 - [#1251](https://github.com/nautobot/nautobot/pull/1251) - Added `workflow_call` to the GitHub Actions CI workflow so that it may be called by other GHA workflows.
 
 ### Changed

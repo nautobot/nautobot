@@ -5,9 +5,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
-
-from nautobot.utilities.testing import TestCase
 from social_django.utils import load_strategy, load_backend
+
+from nautobot.core.testing import TestCase
 
 User = get_user_model()
 

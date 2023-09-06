@@ -3,7 +3,7 @@
 
 This document describes all new features and changes in Nautobot 1.3.
 
-If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation.
+If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../user-guide/administration/migration/migrating-from-netbox.md) documentation.
 
 ## Release Overview
 
@@ -11,7 +11,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Dynamic Group Model ([#896](https://github.com/nautobot/nautobot/issues/896))
 
-A new data model for representing [dynamic groups](../models/extras/dynamicgroup.md) of objects has been implemented. Dynamic groups can be used to organize objects together by matching criteria such as their site location or region, for example, and are dynamically updated whenever new matching objects are created, or existing objects are updated.
+A new data model for representing [dynamic groups](../user-guide/platform-functionality/dynamicgroup.md) of objects has been implemented. Dynamic groups can be used to organize objects together by matching criteria such as their site location or region, for example, and are dynamically updated whenever new matching objects are created, or existing objects are updated.
 
 For the initial release only dynamic groups of `Device` and `VirtualMachine` objects are supported.
 
@@ -19,11 +19,11 @@ For the initial release only dynamic groups of `Device` and `VirtualMachine` obj
 
 Plugins can now extend existing FilterSets and Filter Forms. This allows plugins to provide alternative lookup methods or custom queries in the UI or API that may not already exist today.
 
-You can refer to the [plugin development guide](../plugins/development.md#extending-filters) on how to create new filters and fields.
+You can refer to the [plugin development guide](../development/apps/api/platform-features/filter-extensions.md) on how to create new filters and fields.
 
 #### GraphQL Pagination ([#1109](https://github.com/nautobot/nautobot/issues/1109))
 
-GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [GraphQL user guide](../user-guides/graphql.md#filtering-queries) for examples.
+GraphQL list queries can now be paginated by specifying the filter parameters `limit` and `offset`. Refer to the [GraphQL user guide](../user-guide/feature-guides/graphql.md#filtering-queries) for examples.
 
 #### Job Database Model ([#1001](https://github.com/nautobot/nautobot/issues/1001))
 
@@ -39,11 +39,11 @@ Installed Jobs are now represented by a data model in the Nautobot database. Thi
 !!! note
     As a convenience measure, when initially upgrading to Nautobot 1.3.x, any existing Jobs that have been run or scheduled previously (i.e., have at least one associated JobResult and/or ScheduledJob record) will instead default to `enabled = True` so that they may continue to be run without requiring changes.
 
-For more details please refer to the [Jobs feature documentation](../additional-features/jobs.md) as well as the [Job data model documentation](../models/extras/job.md).
+For more details please refer to the [Jobs feature documentation](../user-guide/platform-functionality/jobs/index.md) as well as the [Job data model documentation](../user-guide/platform-functionality/jobs/models.md).
 
 #### Jobs With Sensitive Parameters ([#2091](https://github.com/nautobot/nautobot/issues/2091))
 
-Jobs model now includes a [`has_sensitive_variables`](../additional-features/jobs.md#has_sensitive_variables) field which by default prevents the job's input parameters from being saved to the database. Review whether each job's input parameters include sensitive data such as passwords or other user credentials before setting this to `False` for any given job.
+Jobs model now includes a [`has_sensitive_variables`](../user-guide/platform-functionality/jobs/index.md#has_sensitive_variables) field which by default prevents the job's input parameters from being saved to the database. Review whether each job's input parameters include sensitive data such as passwords or other user credentials before setting this to `False` for any given job.
 
 #### JSON Type for Custom Fields ([#897](https://github.com/nautobot/nautobot/issues/897))
 
@@ -67,7 +67,7 @@ A new version of the REST API `/api/ipam/ip-addresses/*` endpoints have been imp
 
 #### Provider Network Model ([#724](https://github.com/nautobot/nautobot/issues/724))
 
-A [data model](../models/circuits/providernetwork.md) has been added to support representing the termination of a circuit to an external provider's network.
+A [data model](../user-guide/core-data-model/circuits/providernetwork.md) has been added to support representing the termination of a circuit to an external provider's network.
 
 #### Python 3.10 Support ([#1255](https://github.com/nautobot/nautobot/pull/1255))
 
@@ -75,13 +75,13 @@ Python 3.10 is officially supported by Nautobot now, and we are building and pub
 
 #### Regular Expression Support in API Filtering ([#1525](https://github.com/nautobot/nautobot/issues/1525))
 
-[New lookup expressions for using regular expressions](../rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
+[New lookup expressions for using regular expressions](../user-guide/platform-functionality/rest-api/filtering.md#string-fields) to filter objects by string (char) fields in the API have been added to all core filters.
 
 The expressions `re` (regex), `nre` (negated regex), `ire` (case-insensitive regex), and `nire` (negated case-insensitive regex) lookup expressions are now dynamically-generated for filter fields inherited by subclasses of `nautobot.utilities.filters.BaseFilterSet`.
 
 #### Remove Stale Scheduled Jobs ([#2091](https://github.com/nautobot/nautobot/issues/2091))
 
-[remove_stale_scheduled_jobs](../administration/nautobot-server.md#remove_stale_scheduled_jobs) management command has been added to delete non-recurring scheduled jobs that were scheduled to run more than a specified days ago.
+[remove_stale_scheduled_jobs](../user-guide/administration/tools/nautobot-server.md#remove_stale_scheduled_jobs) management command has been added to delete non-recurring scheduled jobs that were scheduled to run more than a specified days ago.
 
 #### REST API Token Provisioning ([#1374](https://github.com/nautobot/nautobot/issues/1374))
 
@@ -98,7 +98,7 @@ This endpoint specifically supports Basic Authentication in addition to the othe
 
 #### REST API Versioning ([#1465](https://github.com/nautobot/nautobot/issues/1465))
 
-Nautobot's REST API now supports multiple versions, which may be requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../rest-api/overview.md#versioning), but in brief:
+Nautobot's REST API now supports multiple versions, which may be requested by modifying the HTTP Accept header on any requests sent by a REST API client. Details are in the [REST API documentation](../user-guide/platform-functionality/rest-api/overview.md#versioning), but in brief:
 
 - The REST API endpoints that are versioned in the 1.3.0 release are
     - `/api/extras/jobs/` listing endpoint
@@ -114,7 +114,7 @@ Nautobot's REST API now supports multiple versions, which may be requested by mo
 
 #### Webhook Pre/Post-change Data Added to Request Body ([#330](https://github.com/nautobot/nautobot/issues/330))
 
-Webhooks now provide a snapshot of data before and after a change, as well as the differences between the old and new data. See the default request body section in the [webhook docs](../models/extras/webhook.md#default-request-body).
+Webhooks now provide a snapshot of data before and after a change, as well as the differences between the old and new data. See the default request body section in the [webhook docs](../user-guide/platform-functionality/webhook.md#default-request-body).
 
 ### Changed
 
@@ -345,7 +345,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Security
 
-- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../configuration/optional-settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
+- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../user-guide/administration/configuration/optional-settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
 
 ## v1.3.3 (2022-05-02)
 
@@ -390,7 +390,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Fixed
 
-- [#1659](https://github.com/nautobot/nautobot/pull/1659) - Added some missing test/lint commands to the [development getting-started](../development/getting-started.md) documentation, and made `invoke cli` parameters match `invoke start/stop`.
+- [#1659](https://github.com/nautobot/nautobot/pull/1659) - Added some missing test/lint commands to the [development getting-started](../development/core/getting-started.md) documentation, and made `invoke cli` parameters match `invoke start/stop`.
 - [#1666](https://github.com/nautobot/nautobot/pull/1666) - Fixed errors in documentation with incomplete import statements.
 - [#1682](https://github.com/nautobot/nautobot/issues/1682) - Fixed Nautobot health checks failing if Redis Sentinel password is required.
 

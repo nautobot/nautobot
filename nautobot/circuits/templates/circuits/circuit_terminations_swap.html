@@ -7,16 +7,16 @@
     <ul>
         <li>
             <strong>A side:</strong>
-            {% if termination_a %}
-                {{ termination_a.site }} {% if termination_a.interface %}- {{ termination_a.interface.device }} {{ termination_a.interface }}{% endif %}
+            {% if circuit_termination_a %}
+                {{ circuit_termination_a.location }} {% if circuit_termination_a.interface %}- {{ circuit_termination_a.interface.device }} {{ circuit_termination_a.interface }}{% endif %}
             {% else %}
                 <span class="text-muted">None</span>
             {% endif %}
         </li>
         <li>
             <strong>Z side:</strong>
-            {% if termination_z %}
-                {{ termination_z.site }} {% if termination_z.interface %}- {{ termination_z.interface.device }} {{ termination_z.interface }}{% endif %}
+            {% if circuit_termination_z %}
+                {{ circuit_termination_z.location }} {% if circuit_termination_z.interface %}- {{ circuit_termination_z.interface.device }} {{ circuit_termination_z.interface }}{% endif %}
             {% else %}
                 <span class="text-muted">None</span>
             {% endif %}

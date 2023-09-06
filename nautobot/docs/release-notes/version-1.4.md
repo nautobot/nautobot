@@ -4,7 +4,7 @@
 
 This document describes all new features and changes in Nautobot 1.4.
 
-If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../installation/migrating-from-netbox.md) documentation.
+If you are a user migrating from NetBox to Nautobot, please refer to the ["Migrating from NetBox"](../user-guide/administration/migration/migrating-from-netbox.md) documentation.
 
 ## Release Overview
 
@@ -12,7 +12,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Custom Field Extended Filtering ([#1498](https://github.com/nautobot/nautobot/issues/1498))
 
-Objects with custom fields now support [filter lookup expressions](../rest-api/filtering.md#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
+Objects with custom fields now support [filter lookup expressions](../user-guide/platform-functionality/rest-api/filtering.md#lookup-expressions) for filtering by custom field values, such as `cf_date_field__gte=2022-08-11` to select objects whose `date_field` custom field has a date of 2022-08-11 or later.
 
 #### Custom Field Slugs ([#1962](https://github.com/nautobot/nautobot/issues/1962))
 
@@ -28,13 +28,13 @@ For technical reasons of backwards-compatibility, the database (ORM) and GraphQL
 
 A plugin may now define extra tabs which will be appended to the object view's list of tabs.
 
-You can refer to the [plugin development guide](../plugins/development.md#adding-extra-tabs) on how to add tabs to existing object detail views.
+You can refer to the [plugin development guide](../development/apps/api/ui-extensions/tabs.md) on how to add tabs to existing object detail views.
 
 #### Custom Template (CSS, HTML, JavaScript) on Job Forms ([#1865](https://github.com/nautobot/nautobot/issues/1865))
 
 Jobs can now specify a `template_name` property and provide a custom template with additional JavaScript and CSS to help with user input on the Job submission form.
 
-You can refer to the [Job class metadata attribute documentation](../additional-features/jobs.md#template_name) on how to build and define this template.
+You can refer to the [Job class metadata attribute documentation](../user-guide/platform-functionality/jobs/index.md#template_name) on how to build and define this template.
 
 #### Dynamic Groups Support Additional Models ([#2200](https://github.com/nautobot/nautobot/pull/2200))
 
@@ -53,13 +53,13 @@ The "Theme" link in the footer provides a modal popup to select the preferred th
 
 The DCIM, Virtualization FilterSets have been updated with over 150 new filters, including hybrid filters that support filtering on both `pk` and `slug` (or `pk` and `name` where `slug` is not available). A new filter class `NaturalKeyOrPKMultipleChoiceFilter` was added to `nautobot.utilities.filters` to support filtering on multiple fields of a related object.
 
-Please see the documentation on [best practices for mapping model fields to filters](../development/best-practices.md#mapping-model-fields-to-filters) for more information.
+Please see the documentation on [best practices for mapping model fields to filters](../development/core/best-practices.md#mapping-model-fields-to-filters) for more information.
 
 #### Job Hooks ([#1878](https://github.com/nautobot/nautobot/issues/1878))
 
 Jobs can now be configured to run automatically when a change event occurs on a Nautobot object. Job hooks associate jobs to content types and actions to run jobs when a create, update or delete action occurs on the selected content type. A new job base class `JobHookReceiver` was introduced that jobs must subclass to be associated with a job hook.
 
-Please see the documentation on [Job Hooks](../models/extras/jobhook.md) for more information.
+Please see the documentation on [Job Hooks](../user-guide/platform-functionality/jobs/models.md#jobhook) for more information.
 
 #### Job Re-Runs ([#1875](https://github.com/nautobot/nautobot/issues/1875))
 
@@ -96,7 +96,7 @@ Interface and VMInterface models now support a status. Default statuses that are
 
 A new version of the `/dcim/interfaces/*` REST API endpoints have been implemented. By default this endpoint continues to demonstrate the pre-1.4 behavior unless the REST API client explicitly requests API version=1.4. If you continue to use the pre-1.4 API endpoints, status is defaulted to "Active".
 
-Visit the documentation on [REST API versioning](../rest-api/overview.md#versioning) for more information on using the versioned APIs.
+Visit the documentation on [REST API versioning](../user-guide/platform-functionality/rest-api/overview.md#versioning) for more information on using the versioned APIs.
 
 #### NautobotUIViewSet ([#1812](https://github.com/nautobot/nautobot/issues/1812))
 
@@ -106,7 +106,7 @@ Note that this ViewSet is catered specifically to the UI, not the API.
 
 Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuits.views`.
 
-Please visit the [plugin development guide on `NautobotViewSet`](../plugins/development.md#nautobotuiviewset) for more information.
+Please visit the [plugin development guide on `NautobotViewSet`](../development/apps/api/views/nautobotuiviewset.md) for more information.
 
 #### Notes ([#767](https://github.com/nautobot/nautobot/issues/767))
 
@@ -120,7 +120,7 @@ Notes can also be used via the REST API at endpoint `/api/extras/notes/` or per 
 !!! info
     For implementers of REST API views (core and/or plugins), a new `nautobot.extras.api.views.NautobotModelViewSet` base class has been added. Use of this class ensures that all features from `PrimaryModel` or `OrganizationalModel` are accessible through the API. This includes custom fields and notes.
 
-Please see the on [plugin development guide on Notes](../plugins/development.md#note-url-endpoint) for more details.
+Please see the on [plugin development guide on Notes](../development/apps/api/views/nautobot-generic-views.md#note-url-endpoint) for more details.
 
 ### Changed
 
@@ -131,7 +131,7 @@ Dynamic Groups may now be nested in parent/child relationships. The Dynamic Grou
 !!! warning
     The default behavior of Dynamic Groups with an empty filter (`{}`) has been inverted to include all objects matching the content type by default instead of matching no objects. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters.
 
-Please see the greatly-expanded documentation on [Dynamic Groups](../models/extras/dynamicgroup.md) for more information.
+Please see the greatly-expanded documentation on [Dynamic Groups](../user-guide/platform-functionality/dynamicgroup.md) for more information.
 
 #### Renamed Mixin Classes ([#2135](https://github.com/nautobot/nautobot/issues/2135))
 
@@ -152,10 +152,10 @@ A number of mixin classes have been renamed for improved self-consistency and cl
 
 Filtering of object lists in the UI and in the REST API will now report an error if an unknown or unrecognized filter parameter is specified. _This is a behavior change from previous Nautobot releases, in which unknown filter parameters would be silently discarded and ignored._
 
-A new configuration setting, [`STRICT_FILTERING`](../configuration/optional-settings.md#strict_filtering) has been added. It defaults to `True`, enabling strict validation of filter parameters, but can be set to `False` to disable this validation.
+A new configuration setting, [`STRICT_FILTERING`](../user-guide/administration/configuration/optional-settings.md#strict_filtering) has been added. It defaults to `True`, enabling strict validation of filter parameters, but can be set to `False` to disable this validation.
 
 !!! warning
-    Setting [`STRICT_FILTERING`](../configuration/optional-settings.md#strict_filtering) to `False` can result in unexpected filtering results in the case of user error, for example a request to `/api/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+    Setting [`STRICT_FILTERING`](../user-guide/administration/configuration/optional-settings.md#strict_filtering) to `False` can result in unexpected filtering results in the case of user error, for example a request to `/api/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
 
 #### Moved Registry Template Context ([#1945](https://github.com/nautobot/nautobot/issues/1945))
 

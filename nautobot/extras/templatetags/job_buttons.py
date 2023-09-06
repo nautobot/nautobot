@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.models import JobButton
-from nautobot.utilities.utils import render_jinja2
+from nautobot.core.utils.data import render_jinja2
 
 
 register = template.Library()

@@ -1,4 +1,13 @@
-from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
+from nautobot.core.apps import (
+    NavContext,
+    NavGrouping,
+    NavItem,
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuImportButton,
+    NavMenuTab,
+)
 
 
 menu_items = (
@@ -53,6 +62,32 @@ menu_items = (
                                 ],
                             ),
                         ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
+navigation = (
+    NavContext(
+        name="Inventory",
+        groups=(
+            NavGrouping(
+                name="Tenancy",
+                weight=300,
+                items=(
+                    NavItem(
+                        name="Tenants",
+                        weight=100,
+                        link="tenancy:tenant_list",
+                        permissions=["tenancy.view_tenant"],
+                    ),
+                    NavItem(
+                        name="Tenant Groups",
+                        weight=200,
+                        link="tenancy:tenantgroup_list",
+                        permissions=["tenancy.view_tenantgroup"],
                     ),
                 ),
             ),

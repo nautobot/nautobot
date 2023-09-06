@@ -2,17 +2,16 @@
 
 from nautobot.core.api import (
     BaseModelSerializer,
-    OrderedDefaultRouter,
-    ValidatedModelSerializer,
-    WritableNestedSerializer,
-)
-from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
-from nautobot.extras.api.customfields import CustomFieldModelSerializerMixin
-from nautobot.extras.api.serializers import (
+    CustomFieldModelSerializerMixin,
     NautobotModelSerializer,
     NotesSerializerMixin,
     RelationshipModelSerializerMixin,
-    StatusModelSerializerMixin,
+    ValidatedModelSerializer,
+    WritableNestedSerializer,
+)
+from nautobot.core.api.routers import OrderedDefaultRouter
+from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
+from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.api.views import CustomFieldModelViewSet, NautobotModelViewSet, NotesViewSetMixin
@@ -29,7 +28,6 @@ __all__ = (
     "OrderedDefaultRouter",
     "ReadOnlyModelViewSet",
     "RelationshipModelSerializerMixin",
-    "StatusModelSerializerMixin",
     "TaggedModelSerializerMixin",
     "ValidatedModelSerializer",
     "WritableNestedSerializer",
