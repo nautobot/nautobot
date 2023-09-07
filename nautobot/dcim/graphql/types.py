@@ -1,5 +1,4 @@
 import graphene
-import graphene_django_optimizer as gql_optimizer
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
@@ -63,7 +62,7 @@ class DeviceType(OptimizedNautobotObjectType):
         return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
-class PlatformType(gql_optimizer.OptimizedDjangoObjectType):
+class PlatformType(OptimizedNautobotObjectType):
     """GraphQL type object for Platform model."""
 
     network_driver_mappings = graphene.types.generic.GenericScalar()

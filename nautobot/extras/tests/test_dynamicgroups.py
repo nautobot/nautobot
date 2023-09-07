@@ -205,7 +205,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             instance.content_type = self.dynamicgroup_ct
             instance.validated_save()
 
-    def test_clean_filter_not_dict(self):
+    def test_full_clean_filter_not_dict(self):
         """Test that invalid filter types raise errors."""
         instance = self.groups[0]
         with self.assertRaises(ValidationError):
@@ -220,14 +220,26 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             instance.filter = "location=ams01"
             instance.validated_save()
 
-    def test_clean_filter_not_valid(self):
+    def test_full_clean_filter_not_valid(self):
         """Test that an invalid filter dict raises an error."""
         instance = self.groups[0]
         with self.assertRaises(ValidationError):
             instance.filter = {"location": -42}
             instance.validated_save()
 
-    def test_clean_valid(self):
+    def test_clean_fields_exclude_filter(self):
+        """Test that filter validation is skipped when an appropriate `exclude` parameter is provided."""
+        instance = self.groups[0]
+        instance.filter = {"platform": -42}
+        instance.clean_fields(exclude=["filter"])
+        instance.full_clean(exclude=["filter"])
+
+        with self.assertRaises(ValidationError):
+            instance.clean_fields()
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_full_clean_valid(self):
         """Test a clean validation."""
         group = self.groups[0]
         group.refresh_from_db()
