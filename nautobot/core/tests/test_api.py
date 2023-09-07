@@ -922,3 +922,23 @@ class GetSettingsAPIViewTestCase(testing.APITestCase):
             self.assertEqual(response.status_code, 400)
             expected_response = {"error": "Invalid settings names specified: NAPALM_PASSWORD."}
             self.assertEqual(response.data, expected_response)
+
+
+class NewUIReadyRoutesAPIViewTestCase(testing.APITestCase):
+    def test_new_ui_ready_routes(self):
+        """Assert get settings value"""
+        url = reverse("ui-api:new-ui-ready-routes")
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, 200)
+        expected_response = [
+            "^$",
+            "^dcim\\/device\\-types\\/$",
+            "^dcim\\/device\\-types\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+            "^dcim\\/devices\\/$",
+            "^dcim\\/devices\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+            "^dcim\\/locations\\/$",
+            "^dcim\\/locations\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+            "^ipam\\/ip\\-addresses\\/$",
+            "^ipam\\/ip\\-addresses\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+        ]
+        self.assertEqual(sorted(response.data), sorted(expected_response))
