@@ -64,7 +64,6 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
     apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y curl && \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y
 
