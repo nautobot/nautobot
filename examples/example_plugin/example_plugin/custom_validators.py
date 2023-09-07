@@ -1,24 +1,24 @@
 from nautobot.apps.models import CustomValidator
 
 
-class SiteCustomValidator(CustomValidator):
+class LocationCustomValidator(CustomValidator):
     """
-    Example of a CustomValidator that checks if the name of a Site object is
-    "this site has a matching name" and if so, raises a ValidationError.
+    Example of a CustomValidator that checks if the name of a Location object is
+    "this location has a matching name" and if so, raises a ValidationError.
 
     This is a trivial case used in testing and is constructed to only apply to a
-    specific set of test cases, and not any others dealing with the Site model.
+    specific set of test cases, and not any others dealing with the Location model.
     """
 
-    model = "dcim.site"
+    model = "dcim.location"
 
     def clean(self):
         """
         Apply custom model validation logic
         """
         obj = self.context["object"]
-        if obj.name == "this site has a matching name":
-            self.validation_error({"name": "Site name must be something valid"})
+        if obj.name == "this location has a matching name":
+            self.validation_error({"name": "Location name must be something valid"})
 
 
 class RelationshipAssociationCustomValidator(CustomValidator):
@@ -30,7 +30,7 @@ class RelationshipAssociationCustomValidator(CustomValidator):
         within the host range of a Prefix(source)
         """
         obj = self.context["object"]
-        if obj.relationship.slug != "test-relationship":
+        if obj.relationship.key != "test_relationship":
             # Not a relationship we have an interest in validating
             return
         prefix_host_range = obj.source.prefix.iter_hosts()
@@ -40,4 +40,4 @@ class RelationshipAssociationCustomValidator(CustomValidator):
             )
 
 
-custom_validators = [SiteCustomValidator, RelationshipAssociationCustomValidator]
+custom_validators = [LocationCustomValidator, RelationshipAssociationCustomValidator]

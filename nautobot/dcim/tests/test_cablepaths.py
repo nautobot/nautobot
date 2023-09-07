@@ -9,21 +9,21 @@ from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
-    DeviceRole,
     DeviceType,
     FrontPort,
     Interface,
+    Location,
+    LocationType,
     Manufacturer,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
     PowerPort,
     RearPort,
-    Site,
 )
 
 from nautobot.dcim.utils import object_to_path_node
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 
 
 class CablePathTestCase(TestCase):
@@ -39,29 +39,34 @@ class CablePathTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Create a single device that will hold all components
-        cls.site = Site.objects.first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        manufacturer = Manufacturer.objects.create(name="Generic", slug="generic")
+        manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device")
-        device_role = DeviceRole.objects.create(name="Device Role", slug="device-role")
-        device_status = Status.objects.get_for_model(Device).get(slug="active")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
-            site=cls.site,
+            location=cls.location,
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             name="Test Device",
             status=device_status,
         )
 
-        cls.powerpanel = PowerPanel.objects.create(site=cls.site, name="Power Panel")
+        cls.powerpanel = PowerPanel.objects.create(location=cls.location, name="Power Panel")
 
-        provider = Provider.objects.create(name="Provider", slug="provider")
-        circuit_type = CircuitType.objects.create(name="Circuit Type", slug="circuit-type")
-        cls.circuit = Circuit.objects.create(provider=provider, type=circuit_type, cid="Circuit 1")
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+        cls.circuit = Circuit.objects.create(
+            provider=provider, circuit_type=circuit_type, cid="Circuit 1", status=circuit_status
+        )
+
+        cls.interface_status = Status.objects.get_for_model(Interface).first()
 
         cls.statuses = Status.objects.get_for_model(Cable)
-        cls.status = cls.statuses.get(slug="connected")
-        cls.status_planned = cls.statuses.get(slug="planned")
+        cls.status = cls.statuses.get(name="Connected")
+        cls.status_planned = cls.statuses.get(name="Planned")
 
         # create a Cable that is not contained in any CablePath
         cls.dneCable = Cable(status=cls.status)
@@ -141,8 +146,8 @@ class CablePathTestCase(TestCase):
         """
         [IF1] --C1-- [IF2]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
 
         # Create cable 1
         cable1 = Cable(termination_a=interface1, termination_b=interface2, status=self.status)
@@ -234,7 +239,8 @@ class CablePathTestCase(TestCase):
         [PP1] --C1-- [PF1]
         """
         powerport1 = PowerPort.objects.create(device=self.device, name="Power Port 1")
-        powerfeed1 = PowerFeed.objects.create(power_panel=self.powerpanel, name="Power Feed 1")
+        powerfeed_status = Status.objects.get_for_model(PowerFeed).first()
+        powerfeed1 = PowerFeed.objects.create(power_panel=self.powerpanel, name="Power Feed 1", status=powerfeed_status)
 
         # Create cable 1
         cable1 = Cable(termination_a=powerport1, termination_b=powerfeed1, status=self.status)
@@ -259,8 +265,10 @@ class CablePathTestCase(TestCase):
         """
         [IF1] --C1-- [CT1A]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="A"
+        )
 
         # Create cable 1
         cable1 = Cable(
@@ -299,8 +307,8 @@ class CablePathTestCase(TestCase):
         """
         [IF1] --C1-- [FP1] [RP1] --C2-- [IF2]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
         frontport1 = FrontPort.objects.create(
             device=self.device,
@@ -365,10 +373,10 @@ class CablePathTestCase(TestCase):
         [IF1] --C1-- [FP1:1] [RP1] --C3-- [RP2] [FP2:1] --C4-- [IF3]
         [IF2] --C2-- [FP1:2]                    [FP2:2] --C5-- [IF4]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        interface3 = Interface.objects.create(device=self.device, name="Interface 3")
-        interface4 = Interface.objects.create(device=self.device, name="Interface 4")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
+        interface3 = Interface.objects.create(device=self.device, name="Interface 3", status=self.interface_status)
+        interface4 = Interface.objects.create(device=self.device, name="Interface 4", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=4)
         rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=4)
         frontport1_1 = FrontPort.objects.create(
@@ -531,10 +539,10 @@ class CablePathTestCase(TestCase):
         [IF1] --C1-- [FP1:1] [RP1] --C3-- [FP2] [RP2] --C4-- [RP3] [FP3] --C5-- [RP4] [FP4:1] --C6-- [IF3]
         [IF2] --C2-- [FP1:2]                                                          [FP4:2] --C7-- [IF4]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        interface3 = Interface.objects.create(device=self.device, name="Interface 3")
-        interface4 = Interface.objects.create(device=self.device, name="Interface 4")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
+        interface3 = Interface.objects.create(device=self.device, name="Interface 3", status=self.interface_status)
+        interface4 = Interface.objects.create(device=self.device, name="Interface 4", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=4)
         rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=1)
         rearport3 = RearPort.objects.create(device=self.device, name="Rear Port 3", positions=1)
@@ -713,10 +721,10 @@ class CablePathTestCase(TestCase):
         [IF1] --C1-- [FP1:1] [RP1] --C3-- [RP2] [FP2:1] --C4-- [FP3:1] [RP3] --C6-- [RP4] [FP4:1] --C7-- [IF3]
         [IF2] --C2-- [FP1:2]                    [FP2:1] --C5-- [FP3:1]                    [FP4:2] --C8-- [IF4]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        interface3 = Interface.objects.create(device=self.device, name="Interface 3")
-        interface4 = Interface.objects.create(device=self.device, name="Interface 4")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
+        interface3 = Interface.objects.create(device=self.device, name="Interface 3", status=self.interface_status)
+        interface4 = Interface.objects.create(device=self.device, name="Interface 4", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=4)
         rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=4)
         rearport3 = RearPort.objects.create(device=self.device, name="Rear Port 3", positions=4)
@@ -909,10 +917,10 @@ class CablePathTestCase(TestCase):
         [IF1] --C1-- [FP1:1] [RP1] --C3-- [FP2] [RP2] --C4-- [RP3] [FP3:1] --C5-- [IF3]
         [IF2] --C2-- [FP1:2]                                       [FP3:2] --C6-- [IF4]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        interface3 = Interface.objects.create(device=self.device, name="Interface 3")
-        interface4 = Interface.objects.create(device=self.device, name="Interface 4")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
+        interface3 = Interface.objects.create(device=self.device, name="Interface 3", status=self.interface_status)
+        interface4 = Interface.objects.create(device=self.device, name="Interface 4", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=4)
         rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 5", positions=1)
         rearport3 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=4)
@@ -1064,9 +1072,9 @@ class CablePathTestCase(TestCase):
         [IF1] --C1-- [RP1] [FP1:1] --C2-- [IF2]
                            [FP1:2] --C3-- [IF3]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        interface3 = Interface.objects.create(device=self.device, name="Interface 3")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
+        interface3 = Interface.objects.create(device=self.device, name="Interface 3", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=4)
         frontport1_1 = FrontPort.objects.create(
             device=self.device,
@@ -1144,7 +1152,7 @@ class CablePathTestCase(TestCase):
         """
         [IF1] --C1-- [FP1] [RP1] --C2-- [RP2]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
         rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=1)
         frontport1 = FrontPort.objects.create(
@@ -1181,10 +1189,14 @@ class CablePathTestCase(TestCase):
         """
         [IF1] --C1-- [CT1A] [CT1Z] --C2-- [IF2]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
-        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
+        circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="A"
+        )
+        circuittermination2 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="Z"
+        )
 
         # Create cable 1
         cable1 = Cable(
@@ -1257,9 +1269,11 @@ class CablePathTestCase(TestCase):
         Tests case where a user might want to add a second termination to a circuit at a later time.
         [IF1] --C1-- [CT1A] then [IF1] --C1-- [CT1A][CT1Z] --C2-- [IF2]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
-        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
+        circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="A"
+        )
 
         # Create cable 1
         cable1 = Cable(
@@ -1276,7 +1290,9 @@ class CablePathTestCase(TestCase):
             is_active=True,
         )
 
-        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+        circuittermination2 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="Z"
+        )
 
         # Create cable 2
         cable2 = Cable(
@@ -1334,8 +1350,12 @@ class CablePathTestCase(TestCase):
         Tests case for circuit termination loop.
         [CT1A][CT1Z]
         """
-        circuittermination1 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="A")
-        circuittermination2 = CircuitTermination.objects.create(circuit=self.circuit, site=self.site, term_side="Z")
+        circuittermination1 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="A"
+        )
+        circuittermination2 = CircuitTermination.objects.create(
+            circuit=self.circuit, location=self.location, term_side="Z"
+        )
         cable1 = Cable(
             termination_a=circuittermination1,
             termination_b=circuittermination2,
@@ -1348,8 +1368,8 @@ class CablePathTestCase(TestCase):
         """
         [IF1] --C1-- [FP1] [RP2] --C2-- [RP2] [FP2] --C3-- [IF2]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
         rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=1)
         frontport1 = FrontPort.objects.create(
@@ -1414,8 +1434,8 @@ class CablePathTestCase(TestCase):
         """
         [IF1] --C1-- [FP1] [RP1] --C2-- [IF2]
         """
-        interface1 = Interface.objects.create(device=self.device, name="Interface 1")
-        interface2 = Interface.objects.create(device=self.device, name="Interface 2")
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        interface2 = Interface.objects.create(device=self.device, name="Interface 2", status=self.interface_status)
         rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
         frontport1 = FrontPort.objects.create(
             device=self.device,

@@ -1,4 +1,4 @@
-from nautobot.core.api import OrderedDefaultRouter
+from nautobot.core.api.routers import OrderedDefaultRouter
 from . import views
 
 
@@ -68,6 +68,9 @@ router.register("object-changes", views.ObjectChangeViewSet)
 router.register("relationships", views.RelationshipViewSet)
 router.register("relationship-associations", views.RelationshipAssociationViewSet)
 
+# Roles
+router.register("roles", views.RoleViewSet)
+
 # Secrets
 router.register("secrets", views.SecretsViewSet)
 router.register("secrets-groups", views.SecretsGroupViewSet)
@@ -81,6 +84,7 @@ router.register("tags", views.TagViewSet)
 
 # Webhooks
 router.register("webhooks", views.WebhooksViewSet)
+
 
 app_name = "extras-api"
 urlpatterns = router.urls

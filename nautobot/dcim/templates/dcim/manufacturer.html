@@ -14,7 +14,7 @@
                 <tr>
                     <td>Devices</td>
                     <td>
-                        <a href="{% url 'dcim:device_list' %}?manufacturer={{ object.slug }}">{{ device_table.rows|length }}</a>
+                        <a href="{% url 'dcim:device_list' %}?manufacturer={{ object.name }}">{{ device_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>

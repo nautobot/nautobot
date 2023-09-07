@@ -2,10 +2,10 @@ from unittest import mock
 
 from django.test import TestCase
 
-from nautobot.utilities.git import GitRepo, convert_git_diff_log_to_list
+from nautobot.core.utils.git import GitRepo, convert_git_diff_log_to_list
 
 
-@mock.patch("nautobot.utilities.git.Repo")
+@mock.patch("nautobot.core.utils.git.Repo")
 class GitRepoTest(TestCase):
     def test_git_repo(self, RepoMock):
         RepoMock.init.return_value = RepoMock

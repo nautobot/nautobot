@@ -16,6 +16,19 @@
                         </span>
                     </td>
                 </tr>
+                {% if object.composite_key %}
+                    <tr>
+                        <td>Composite Key</td>
+                        <td>
+                            <span class="hover_copy">
+                                <span id="composite_key_copy">{{ object.composite_key }}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#composite_key_copy">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        </td>
+                    </tr>
+                {% endif %}
                 {% if object.slug %}
                     <tr>
                         <td>Slug</td>

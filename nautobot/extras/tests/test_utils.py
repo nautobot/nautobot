@@ -1,7 +1,8 @@
 from unittest import mock
 
-from nautobot.extras.utils import get_celery_queues, get_worker_count
-from nautobot.utilities.testing import TestCase
+from nautobot.core.testing import TestCase
+from nautobot.extras.registry import registry
+from nautobot.extras.utils import get_celery_queues, get_worker_count, populate_model_features_registry
 
 
 class UtilsTestCase(TestCase):
@@ -47,3 +48,32 @@ class UtilsTestCase(TestCase):
             self.assertEqual(get_worker_count(queue="bulk"), 4)
         with self.subTest("Empty queue"):
             self.assertEqual(get_worker_count(queue="nobody"), 0)
+
+    def test_populate_model_features_registry(self):
+        original_custom_fields_registry = registry["model_features"]["custom_fields"].copy()
+
+        self.assertIn(
+            "circuit", registry["model_features"]["custom_fields"]["circuits"], "Registry should already be populated"
+        )
+
+        populate_model_features_registry()
+        self.assertDictEqual(
+            registry["model_features"]["custom_fields"],
+            original_custom_fields_registry,
+            "Registry should not be modified if refresh flag not set",
+        )
+
+        registry["model_features"]["custom_fields"].pop("circuits")
+        self.assertNotEqual(
+            registry["model_features"]["custom_fields"],
+            original_custom_fields_registry,
+            "Registry should be successfully modified",
+        )
+
+        # Make sure we return to the original state
+        populate_model_features_registry(refresh=True)
+        self.assertDictEqual(
+            registry["model_features"]["custom_fields"],
+            original_custom_fields_registry,
+            "Registry should be restored to original state",
+        )

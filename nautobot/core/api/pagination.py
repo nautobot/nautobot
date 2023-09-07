@@ -1,6 +1,6 @@
 from rest_framework.pagination import LimitOffsetPagination
 
-from nautobot.utilities.config import get_settings_or_config
+from nautobot.core.utils.config import get_settings_or_config
 
 
 class OptionalLimitOffsetPagination(LimitOffsetPagination):
@@ -11,6 +11,10 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
     """
 
     def paginate_queryset(self, queryset, request, view=None):
+        # No pagination when rendering to CSV
+        if "text/csv" in request.accepted_media_type:
+            return None
+
         self.count = self.get_count(queryset)
         self.limit = self.get_limit(request)
         self.offset = self.get_offset(request)

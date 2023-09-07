@@ -1,14 +1,14 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.dcim.models import Cable
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     ColorColumn,
     TagColumn,
     ToggleColumn,
 )
+from nautobot.dcim.models import Cable
+from nautobot.extras.tables import StatusTableMixin
 from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT
 
 __all__ = ("CableTable",)

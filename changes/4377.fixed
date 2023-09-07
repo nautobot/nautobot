@@ -1,0 +1,2 @@
+Fixed incorrect OpenAPI schema for filters available on Device and VirtualMachine REST API endpoints.
+Fixed incorrect logic for queryset annotation on Device and VirtualMachine REST API views.

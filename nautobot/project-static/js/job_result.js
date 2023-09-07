@@ -1,18 +1,18 @@
 var url = nautobot_api_path + "extras/job-results/";
 var timeout = 1000;
-var terminal_statuses = ['completed', 'failed', 'errored'];
+var terminal_statuses = ['FAILURE', 'REVOKED', 'SUCCESS'];
 var session_key = "ajax_table_current_page";
 
 function updatePendingStatusLabel(status) {
     // Updates "Status" label in "Summary of Results" table in JobResult detail view.
     var labelClass;
-    if (status.value === 'failed' || status.value === 'errored') {
+    if (status.value === 'FAILURE') {
         labelClass = 'danger';
     }
-    else if (status.value === 'running') {
+    else if (status.value === 'STARTED') {
         labelClass = 'warning';
     }
-    else if (status.value === 'completed') {
+    else if (status.value === 'SUCCESS') {
         labelClass = 'success';
     }
     else {

@@ -1,19 +1,16 @@
 from django import forms
 
+from nautobot.core.forms import (
+    CommentField,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    TagFilterField,
+)
 from nautobot.extras.forms import (
     NautobotFilterForm,
-    CustomFieldModelCSVForm,
     NautobotBulkEditForm,
     NautobotModelForm,
     TagsBulkEditFormMixin,
-)
-from nautobot.utilities.forms import (
-    CommentField,
-    CSVModelChoiceField,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-    SlugField,
-    TagFilterField,
 )
 from .models import Tenant, TenantGroup
 
@@ -25,29 +22,14 @@ from .models import Tenant, TenantGroup
 
 class TenantGroupForm(NautobotModelForm):
     parent = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
-    slug = SlugField()
 
     class Meta:
         model = TenantGroup
         fields = [
             "parent",
             "name",
-            "slug",
             "description",
         ]
-
-
-class TenantGroupCSVForm(CustomFieldModelCSVForm):
-    parent = CSVModelChoiceField(
-        queryset=TenantGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent group",
-    )
-
-    class Meta:
-        model = TenantGroup
-        fields = TenantGroup.csv_headers
 
 
 #
@@ -56,55 +38,40 @@ class TenantGroupCSVForm(CustomFieldModelCSVForm):
 
 
 class TenantForm(NautobotModelForm):
-    slug = SlugField()
-    group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
+    tenant_group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
         model = Tenant
         fields = (
             "name",
-            "slug",
-            "group",
+            "tenant_group",
             "description",
             "comments",
             "tags",
         )
 
 
-class TenantCSVForm(CustomFieldModelCSVForm):
-    group = CSVModelChoiceField(
-        queryset=TenantGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned group",
-    )
-
-    class Meta:
-        model = Tenant
-        fields = Tenant.csv_headers
-
-
 class TenantBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Tenant.objects.all(), widget=forms.MultipleHiddenInput())
-    group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
+    tenant_group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
-            "group",
+            "tenant_group",
         ]
 
 
 class TenantFilterForm(NautobotFilterForm):
     model = Tenant
     q = forms.CharField(required=False, label="Search")
-    group = DynamicModelMultipleChoiceField(
+    tenant_group = DynamicModelMultipleChoiceField(
         queryset=TenantGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -122,21 +89,21 @@ class TenancyForm(forms.Form):
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
-        query_params={"group_id": "$tenant_group"},
+        query_params={"tenant_group": "$tenant_group"},
     )
 
 
 class TenancyFilterForm(forms.Form):
     tenant_group = DynamicModelMultipleChoiceField(
         queryset=TenantGroup.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
     )
     tenant = DynamicModelMultipleChoiceField(
         queryset=Tenant.objects.all(),
-        to_field_name="slug",
+        to_field_name="name",
         required=False,
         null_option="None",
-        query_params={"group": "$tenant_group"},
+        query_params={"tenant_group": "$tenant_group"},
     )

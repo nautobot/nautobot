@@ -70,7 +70,7 @@
             <table class="table table-hover panel-body attr-table">
                 <tr>
                     <td>Secret</td>
-                    <td><span>{% if object.secret %} {{ object.secret }} {% else %} {{ None }} {% endif %}</span></td>
+                    <td>{{ object.secret | placeholder }}</td>
                 </tr>
                 <tr>
                     <td>SSL Verification</td>
@@ -78,7 +78,7 @@
                 </tr>
                 <tr>
                     <td>CA File Path</td>
-                    <td><span>{{ object.ca_file_path }}</span></td>
+                    <td><span>{{ object.ca_file_path | placeholder }}</span></td>
                 </tr>
             </table>
         </div>

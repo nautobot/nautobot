@@ -20,17 +20,17 @@
         <div class="col-md-6">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <strong>Local Context</strong>
+                    <strong>Local Config Context</strong>
                 </div>
                 <div class="panel-body">
-                    {% if object.local_context_data %}
-                        {% if object.local_context_schema %}
-                            <span>Schema {{ object.local_context_schema|hyperlinked_object }}</span>
+                    {% if object.local_config_context_data %}
+                        {% if object.local_config_context_schema %}
+                            <span>Schema {{ object.local_config_context_schema|hyperlinked_object }}</span>
                         {% endif %}
-                        {% if object.local_context_data_owner %}
-                            Owned by <strong>{{ object.local_context_data_owner|hyperlinked_object }}</strong>
+                        {% if object.local_config_context_data_owner %}
+                            Owned by <strong>{{ object.local_config_context_data_owner|hyperlinked_object }}</strong>
                         {% endif %}
-                        {% include 'extras/inc/json_data.html' with data=object.local_context_data format=format %}
+                        {% include 'extras/inc/json_data.html' with data=object.local_config_context_data format=format %}
                     {% else %}
                         <span class="text-muted">None</span>
                     {% endif %}

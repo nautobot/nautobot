@@ -5,14 +5,35 @@ from django.db import migrations
 import nautobot.extras.management
 
 
+def populate_status_choices(apps, schema_editor):
+    """Create/link default Status records for all of the Nautobot 1.0 models that support Statuses."""
+    nautobot.extras.management.populate_status_choices(
+        apps,
+        schema_editor,
+        models=[
+            "circuits.Circuit",
+            "dcim.Cable",
+            "dcim.Device",
+            "dcim.PowerFeed",
+            "dcim.Rack",
+            "ipam.IPAddress",
+            "ipam.Prefix",
+            "ipam.VLAN",
+            "virtualization.VirtualMachine",
+        ],
+    )
+
+
 class Migration(migrations.Migration):
     dependencies = [
+        ("circuits", "0002_initial_part_2"),
+        ("dcim", "0004_initial_part_4"),
         ("extras", "0003_initial_part_3"),
+        ("ipam", "0002_initial_part_2"),
+        ("tenancy", "0001_initial"),
+        ("virtualization", "0001_initial"),
     ]
 
     operations = [
-        migrations.RunPython(
-            nautobot.extras.management.populate_status_choices,
-            migrations.RunPython.noop,
-        ),
+        migrations.RunPython(populate_status_choices, migrations.RunPython.noop),
     ]

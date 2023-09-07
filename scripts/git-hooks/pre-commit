@@ -25,6 +25,9 @@ invoke flake8 || EXIT=1
 echo "Check that all files conform to Black..."
 invoke black || EXIT=1
 
+echo "Check that YAML files conform to best practices..."
+invoke yamllint || EXIT=1
+
 echo "Checking for missing migrations..."
 invoke check-migrations || EXIT=1
 

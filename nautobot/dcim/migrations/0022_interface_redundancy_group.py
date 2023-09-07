@@ -3,9 +3,9 @@
 import django.core.serializers.json
 from django.db import migrations, models
 import django.db.models.deletion
+import nautobot.core.models.fields
 import nautobot.extras.models.mixins
 import nautobot.extras.models.statuses
-import taggit.managers
 import uuid
 
 
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
                         default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
                     ),
                 ),
-                ("created", models.DateField(auto_now_add=True, null=True)),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
                 ("last_updated", models.DateTimeField(auto_now=True, null=True)),
                 ("priority", models.PositiveSmallIntegerField()),
                 (
@@ -105,16 +105,15 @@ class Migration(migrations.Migration):
             model_name="interfaceredundancygroup",
             name="status",
             field=nautobot.extras.models.statuses.StatusField(
-                null=True,
                 on_delete=django.db.models.deletion.PROTECT,
-                related_name="dcim_interfaceredundancygroup_related",
+                related_name="interface_redundancy_groups",
                 to="extras.status",
             ),
         ),
         migrations.AddField(
             model_name="interfaceredundancygroup",
             name="tags",
-            field=taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
+            field=nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AddField(
             model_name="interfaceredundancygroup",

@@ -1,10 +1,16 @@
 import datetime
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import make_aware
 
+from nautobot.core.testing import FilterTestCases
+from nautobot.dcim.factory import RackFactory, RackReservationFactory
+from nautobot.dcim.models import Location
+from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.models import ObjectChange
 from nautobot.users.filters import (
     GroupFilterSet,
     ObjectPermissionFilterSet,
@@ -12,7 +18,6 @@ from nautobot.users.filters import (
     UserFilterSet,
 )
 from nautobot.users.models import ObjectPermission, Token
-from nautobot.utilities.testing import FilterTestCases
 
 
 # Use the proper swappable User model
@@ -23,6 +28,19 @@ class UserTestCase(FilterTestCases.FilterTestCase):
     queryset = User.objects.all()
     filterset = UserFilterSet
 
+    generic_filter_tests = (
+        ["username"],
+        ["first_name"],
+        ["last_name"],
+        ["email"],
+        ["groups_id", "groups__id"],
+        ["groups", "groups__name"],
+        ["rack_reservations_id", "rack_reservations__id"],
+        ["object_changes", "object_changes__id"],
+        ["object_permissions", "object_permissions__id"],
+        ["object_permissions", "object_permissions__name"],
+    )
+
     @classmethod
     def setUpTestData(cls):
         groups = (
@@ -31,7 +49,7 @@ class UserTestCase(FilterTestCases.FilterTestCase):
             Group.objects.create(name="Group 3"),
         )
 
-        users = (
+        cls.users = (
             User.objects.create(
                 username="User1",
                 first_name="Hank",
@@ -65,25 +83,33 @@ class UserTestCase(FilterTestCases.FilterTestCase):
             ),
         )
 
-        users[0].groups.set([groups[0]])
-        users[1].groups.set([groups[1]])
-        users[2].groups.set([groups[2]])
+        cls.users[0].groups.set([groups[0]])
+        cls.users[1].groups.set([groups[1]])
+        cls.users[2].groups.set([groups[2]])
 
-    def test_username(self):
-        params = {"username": ["User1", "User2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        location = Location.objects.first()
+        cls.object_changes = [
+            ObjectChange.objects.create(
+                user=cls.users[num],
+                user_name=cls.users[num].username,
+                request_id=uuid.uuid4(),
+                action=ObjectChangeActionChoices.ACTION_CREATE,
+                changed_object=location,
+                object_repr=str(location),
+                object_data={"name": location.name},
+            )
+            for num in range(3)
+        ]
 
-    def test_first_name(self):
-        params = {"first_name": ["Hank", "Dale"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        cls.permissions = [
+            ObjectPermission.objects.create(name=f"Permission {num}", actions=["change"], enabled=False)
+            for num in range(3)
+        ]
+        cls.permissions[0].users.add(cls.users[0])
+        cls.permissions[1].users.add(cls.users[1])
 
-    def test_last_name(self):
-        params = {"last_name": ["Hill", "Gribble"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_email(self):
-        params = {"email": ["hank@stricklandpropane.com", "dale@dalesdeadbug.com"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        RackFactory.create_batch(10)
+        RackReservationFactory.create_batch(5)
 
     def test_is_staff(self):
         params = {"is_staff": True}
@@ -93,19 +119,6 @@ class UserTestCase(FilterTestCases.FilterTestCase):
         params = {"is_active": True}
         # 4 created active users in setUpTestData, plus one created active user in TestCase.setUp
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
-
-    def test_group(self):
-        groups = list(Group.objects.all()[:2])
-        filter_params = [
-            {"group_id": [groups[0].pk, groups[1].pk]},
-            {"group": [groups[0].name, groups[1].name]},
-        ]
-
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs.order_by("id"),
-                self.queryset.filter(groups__in=groups).order_by("id"),
-            )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -137,6 +150,15 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectPermission.objects.all()
     filterset = ObjectPermissionFilterSet
 
+    generic_filter_tests = (
+        ["users", "users__id"],
+        ["users", "users__username"],
+        ["groups_id", "groups__id"],
+        ["groups", "groups__name"],
+        ["description"],
+        ["name"],
+    )
+
     @classmethod
     def setUpTestData(cls):
         groups = (
@@ -152,14 +174,18 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
         )
 
         object_types = (
-            ContentType.objects.get(app_label="dcim", model="site"),
+            ContentType.objects.get(app_label="dcim", model="location"),
             ContentType.objects.get(app_label="dcim", model="rack"),
             ContentType.objects.get(app_label="dcim", model="device"),
         )
 
         permissions = (
-            ObjectPermission.objects.create(name="Permission 1", actions=["view", "add", "change", "delete"]),
-            ObjectPermission.objects.create(name="Permission 2", actions=["view", "add", "change", "delete"]),
+            ObjectPermission.objects.create(
+                name="Permission 1", actions=["view", "add", "change", "delete"], description="Description 1"
+            ),
+            ObjectPermission.objects.create(
+                name="Permission 2", actions=["view", "add", "change", "delete"], description="Description 2"
+            ),
             ObjectPermission.objects.create(name="Permission 3", actions=["view", "add", "change", "delete"]),
             ObjectPermission.objects.create(name="Permission 4", actions=["view"], enabled=False),
             ObjectPermission.objects.create(name="Permission 5", actions=["add"], enabled=False),
@@ -171,32 +197,12 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
             permissions[i].users.set([users[i]])
             permissions[i].object_types.set([object_types[i]])
 
-    def test_name(self):
-        params = {"name": ["Permission 1", "Permission 2"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_enabled(self):
         params = {"enabled": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
-    def test_group(self):
-        groups = list(Group.objects.filter(name__in=["Group 1", "Group 2"])[:2])
-        filter_params = [{"group_id": [groups[0].pk, groups[1].pk]}, {"group": [groups[0].name, groups[1].name]}]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(groups__in=groups).distinct()
-            )
-
-    def test_user(self):
-        users = list(User.objects.filter(username__in=["User1", "User2"])[:2])
-        filter_params = [{"user_id": [users[0].pk, users[1].pk]}, {"user": [users[0].pk, users[1].username]}]
-        for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(users__in=users)
-            )
-
     def test_object_types(self):
-        object_types = ContentType.objects.filter(model__in=["site", "rack"])
+        object_types = ContentType.objects.filter(model__in=["location", "rack"])
         params = {"object_types": [object_types[0].pk, object_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
@@ -204,6 +210,11 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
 class TokenTestCase(FilterTestCases.FilterTestCase):
     queryset = Token.objects.all()
     filterset = TokenFilterSet
+
+    generic_filter_tests = (
+        ["description"],
+        ["key"],
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -217,8 +228,20 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
         future_date = make_aware(datetime.datetime(3000, 1, 1))
         past_date = make_aware(datetime.datetime(2000, 1, 1))
         tokens = (
-            Token(user=users[0], key=Token.generate_key(), expires=future_date, write_enabled=True),
-            Token(user=users[1], key=Token.generate_key(), expires=future_date, write_enabled=True),
+            Token(
+                user=users[0],
+                key=Token.generate_key(),
+                expires=future_date,
+                write_enabled=True,
+                description="Description 1",
+            ),
+            Token(
+                user=users[1],
+                key=Token.generate_key(),
+                expires=future_date,
+                write_enabled=True,
+                description="Description 2",
+            ),
             Token(user=users[2], key=Token.generate_key(), expires=past_date, write_enabled=False),
         )
         Token.objects.bulk_create(tokens)
@@ -230,11 +253,6 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
         params = {"expires__lte": ["2021-01-01 00:00:00"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-    def test_key(self):
-        tokens = Token.objects.all()[:2]
-        params = {"key": [tokens[0].key, tokens[1].key]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_write_enabled(self):
         params = {"write_enabled": True}

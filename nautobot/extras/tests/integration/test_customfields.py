@@ -2,9 +2,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import CustomField, CustomFieldChoice
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from . import create_test_device
 
@@ -54,7 +54,6 @@ class CustomFieldTestCase(SeleniumTestCase):
         # Fill out form
         self.browser.select("type", field_type)
         self.browser.fill("label", field_label)
-        # Slug field should be auto-populated based on the provided label
 
         # Find the "content_types" dynamic multi-select and type into it.
         # See: https://splinter.readthedocs.io/en/latest/elements-in-the-page.html#interacting-with-forms
@@ -65,7 +64,7 @@ class CustomFieldTestCase(SeleniumTestCase):
 
         # Enumerate and set the choices (if any)
         for idx, choice in enumerate(choices):
-            self.browser.fill(f"choices-{idx}-value", choice)
+            self.browser.fill(f"custom_field_choices-{idx}-value", choice)
 
         # Do the pre-create stuff
         if callable(call_before_create):
@@ -114,16 +113,16 @@ class CustomFieldTestCase(SeleniumTestCase):
             table = self.browser.find_by_id("custom-field-choices")
 
             # Assert that there are 5 choice rows before
-            self.assertEqual(len(table.find_by_css(".formset_row-choices")), 5)
+            self.assertEqual(len(table.find_by_css(".formset_row-custom_field_choices")), 5)
 
             # And 6 after clicking "Add another..."
             self.browser.find_by_css(".add-row").click()
-            rows = table.find_by_css(".formset_row-choices")
+            rows = table.find_by_css(".formset_row-custom_field_choices")
             self.assertEqual(len(rows), 6)
-            self.browser.fill("choices-5-value", "choice3")
+            self.browser.fill("custom_field_choices-5-value", "choice3")
 
             # Make sure it the new row has default values while we're at it.
-            self.assertEqual(rows.last.find_by_name("choices-5-weight").value, "100")
+            self.assertEqual(rows.last.find_by_name("custom_field_choices-5-weight").value, "100")
 
         self._create_custom_field(
             field_label="Test Select", field_type="select", choices=choices, call_before_create=call_before_create
@@ -146,8 +145,8 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.assertIn("edit", self.browser.url)
 
         # Null out the first choice, click "Update", expect it to fail.
-        self.browser.fill("choices-0-value", "")
-        self.assertEqual(self.browser.find_by_name("choices-0-value").value, "")
+        self.browser.fill("custom_field_choices-0-value", "")
+        self.assertEqual(self.browser.find_by_name("custom_field_choices-0-value").value, "")
         self.browser.find_by_text("Update").click()
         self.assertTrue(self.browser.is_text_present("Errors encountered when saving custom field choices"))
 
@@ -156,7 +155,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         #
 
         # Fix it, save it, assert correctness.
-        self.browser.fill("choices-0-value", "new_choice")
+        self.browser.fill("custom_field_choices-0-value", "new_choice")
         self.browser.find_by_text("Update").click()
         self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
@@ -177,11 +176,11 @@ class CustomFieldTestCase(SeleniumTestCase):
         # Gather the rows, delete the first one, add a new one.
         table = self.browser.find_by_id("custom-field-choices")
         self.browser.find_by_css(".add-row").click()  # Add a new row
-        rows = table.find_by_css(".formset_row-choices")
+        rows = table.find_by_css(".formset_row-custom_field_choices")
         rows.first.find_by_css(".delete-row").click()  # Delete first row
 
         # Fill the new row, save it, assert correctness.
-        self.browser.fill("choices-5-value", "new_choice")  # Fill the last row
+        self.browser.fill("custom_field_choices-5-value", "new_choice")  # Fill the last row
         self.browser.find_by_text("Update").click()
         self.assertEqual(self.browser.url, detail_url)
         self.assertTrue(self.browser.is_text_present("Modified custom field"))
@@ -200,15 +199,13 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field = CustomField(
             type="text",
             label="Device Custom Field",
-            name="test_custom_field",
-            slug="test_custom_field",
+            key="test_custom_field",
             required=False,
         )
         custom_field.save()
         device_content_type = ContentType.objects.get_for_model(Device)
         custom_field.content_types.set([device_content_type])
-        # 2.0 TODO: #824 replace custom_field.name with custom_field.slug
-        device.cf[custom_field.name] = "This is some testing text"
+        device.cf[custom_field.key] = "This is some testing text"
         device.validated_save()
         # Visit the device detail page
         self.browser.visit(f'{self.live_server_url}{reverse("dcim:device", kwargs={"pk": device.pk})}')
@@ -241,8 +238,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field = CustomField(
             type="json",
             label="Device Valid JSON Field",
-            name="test_valid_json_field",
-            slug="test_valid_json_field",
+            key="test_valid_json_field",
             required=False,
         )
         custom_field.save()
@@ -268,8 +264,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field = CustomField(
             type="json",
             label="Device Invalid JSON Field",
-            name="test_invalid_json_field",
-            slug="test_invalid_json_field",
+            key="test_invalid_json_field",
             required=False,
         )
         custom_field.save()
@@ -297,13 +292,12 @@ class CustomFieldTestCase(SeleniumTestCase):
         custom_field = CustomField(
             type="select",
             label="Device Selection Field",
-            name="test_selection_field",
-            slug="test_selection_field",
+            key="test_selection_field",
             required=False,
         )
         custom_field.save()
         # Add a choice for the custom field selection
-        custom_field_choice = CustomFieldChoice(field=custom_field, value="SelectionChoice")
+        custom_field_choice = CustomFieldChoice(custom_field=custom_field, value="SelectionChoice")
         custom_field_choice.save()
         # Set content type of custom field
         device_content_type = ContentType.objects.get_for_model(Device)
@@ -322,6 +316,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present("SelectionChoice"))
 
         # Delete the custom field
+        # find_by_partial_text finds both Inventory > Platform as well as the desired top-level Platform menu
         self.browser.links.find_by_partial_text("Extensibility").click()
         self.browser.links.find_by_partial_text("Custom Fields").click()
         self.browser.links.find_by_partial_text("Device Selection Field").click()
