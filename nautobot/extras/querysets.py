@@ -127,10 +127,6 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
-            base_query.add((Q(locations=OuterRef("location")) | Q(locations=None)), Q.AND)
-
-        elif self.model._meta.model_name == "virtualmachine":
-            base_query.add((Q(locations=OuterRef("cluster__location")) | Q(locations=None)), Q.AND)
 
         return base_query
 
