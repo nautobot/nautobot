@@ -1002,7 +1002,7 @@ class NewUIReadyRoutesAPIView(NautobotAPIVersionMixin, APIView):
         pattern = pattern.replace("/", "\\/")
 
         # Replace `/Z` with `$`
-        pattern = pattern.replace("\Z", "$")  # noqa: W605; invalid escape sequence '\Z'
+        pattern = pattern.replace(r'\Z', "$")
 
         return pattern
 

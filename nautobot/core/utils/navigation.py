@@ -19,9 +19,7 @@ def get_only_new_ui_ready_routes(patterns, prefix=""):
     new_ui_routes = set()
     for pattern in patterns:
         if hasattr(pattern, "url_patterns"):
-            r_pattern = pattern.pattern.regex.pattern.lstrip("^").rstrip(
-                "\Z"  # noqa: W605; invalid escape sequence '\Z'
-            )
+            r_pattern = pattern.pattern.regex.pattern.lstrip("^").rstrip(r"\Z")
             combined_pattern = prefix + r_pattern
             new_ui_routes.update(get_only_new_ui_ready_routes(pattern.url_patterns, combined_pattern))
         else:
