@@ -2,6 +2,22 @@
 {% load static %}
 {% load form_helpers %}
 
+{% block form_errors %}
+    {% if form.non_field_errors %}
+        <div class="panel panel-danger">
+            <div class="panel-heading"><strong>Errors</strong></div>
+            <div class="panel-body">
+                {{ form.non_field_errors }}
+                {% for child in children.forms %}
+                    {% if child.errors %}
+                        {% for error in child.errors.values %}{{ error }}{% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
 {% block form %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Dynamic Group</strong></div>
