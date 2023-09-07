@@ -696,7 +696,8 @@ class DynamicFilterFormTest(TestCase):
             )
 
         with self.subTest(
-            "Assert that the `filterset_filters` property of DynamicFilterForm instance gets the accurate `filterset_class` filters"
+            "Assert that the `filterset_filters` property of DynamicFilterForm instance "
+            "gets the accurate `filterset_class` filters"
         ):
 
             def get_dict_of_field_and_value_class_from_filters(filters_dict):
