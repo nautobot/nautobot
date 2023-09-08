@@ -204,12 +204,12 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             # We append the missing parent location query here as a patch.
             if self._meta.model_name == "device":
                 location_config_context_queryset = ConfigContext.objects.filter(
-                    Q(locations__in=self.location.ancestors(include_self=True)) | Q(locations=None),
+                    Q(locations__in=self.location.ancestors(include_self=True))
                 ).distinct()
             else:
                 if self.cluster:
                     location_config_context_queryset = ConfigContext.objects.filter(
-                        Q(locations__in=self.cluster.location.ancestors(include_self=True)) | Q(locations=None),
+                        Q(locations__in=self.cluster.location.ancestors(include_self=True))
                     ).distinct()
 
             # Annotation has keys "weight" and "name" (used for ordering) and "data" (the actual config context data)

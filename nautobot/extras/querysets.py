@@ -127,6 +127,11 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
+            # This is necessary to prevent location related config context to be applied now.
+            base_query.add((Q(locations=None)), Q.AND)
+        elif self.model._meta.model_name == "virtualmachine":
+            # This is necessary to prevent location related config context to be applied now.
+            base_query.add((Q(locations=None)), Q.AND)
 
         return base_query
 
