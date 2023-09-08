@@ -104,7 +104,12 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         ).distinct()
 
     def _get_config_context_filters(self):
-        # Construct the set of Q objects for the specific object types
+        """
+        This method is constructing the set of Q objects for the specific object types.
+        NOTE that locations filters are not included in the method because the filter needs the
+        ability to query the ancestors for a particular tree node for subquery and we lost it since
+        moving from mptt to django-tree-queries https://github.com/matthiask/django-tree-queries/issues/54.
+        """
         tag_query_filters = {
             "object_id": OuterRef(OuterRef("pk")),
             "content_type__app_label": self.model._meta.app_label,
