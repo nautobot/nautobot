@@ -37,7 +37,7 @@ python = ">=3.8,<3.12"
 # Background task processing
 celery = "~5.3.1"
 # Fundamental web framework for Nautobot
-Django = "~3.2.20"
+Django = "~4.2.0"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -47,7 +47,7 @@ django-celery-beat = "~2.5.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.4.0"
 # Management of app configuration via the Django admin UI
-django-constance = {version = "~2.9.1", extras = ["database"]}
+django-constance = {version = "~3.1.0", extras = ["database"]}
 # Permit cross-domain API requests
 django-cors-headers = "~4.2.0"
 # Store files in the database for background tasks
@@ -72,7 +72,7 @@ django-tables2 = "~2.6.0"
 django-taggit = "~4.0.0"
 # Represent time zones in Django
 # NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
-django-timezone-field = "~5.1"
+django-timezone-field = "~6.0.0"
 # Tree database structures based on Common Table Expressions
 django-tree-queries = "~0.15.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
@@ -87,7 +87,7 @@ drf-spectacular = {version = "0.26.3", extras = ["sidecar"]}
 GitPython = "~3.1.32"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
-graphene-django = "~2.16.0"
+graphene-django = "~3.1.0"
 # Graphene Optimizer
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
@@ -170,7 +170,7 @@ markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
 # Allow Markdown files to include other files
-mkdocs-include-markdown-plugin = "~4.0.4"
+mkdocs-include-markdown-plugin = "~6.0.0"
 # Material for mkdocs theme
 mkdocs-material = "~9.1.18"
 # Automatically handle index pages for docs sections
