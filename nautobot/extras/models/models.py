@@ -202,12 +202,13 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             # we lost the ability to query the ancestors for a particular tree node for subquery https://github.com/matthiask/django-tree-queries/issues/54.
             # So instead of constructing the location related query in ConfigContextModelQueryset._get_config_context_filters(), which is complicated across databases
             # We append the missing parent location query here as a patch.
+            location_config_context_queryset = ConfigContext.objects.none()
             if self._meta.model_name == "device":
                 location_config_context_queryset = ConfigContext.objects.filter(
                     Q(locations__in=self.location.ancestors(include_self=True))
                 ).distinct()
             else:
-                if self.cluster:
+                if self.cluster and self.cluster.location:
                     location_config_context_queryset = ConfigContext.objects.filter(
                         Q(locations__in=self.cluster.location.ancestors(include_self=True))
                     ).distinct()

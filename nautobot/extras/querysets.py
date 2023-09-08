@@ -106,7 +106,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
     def _get_config_context_filters(self):
         """
         This method is constructing the set of Q objects for the specific object types.
-        NOTE that locations filters are not included in the method because the filter needs the
+        Note that locations filters are not included in the method because the filter needs the
         ability to query the ancestors for a particular tree node for subquery and we lost it since
         moving from mptt to django-tree-queries https://github.com/matthiask/django-tree-queries/issues/54.
         """
@@ -133,9 +133,11 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 Q.AND,
             )
             # This is necessary to prevent location related config context to be applied now.
+            # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
             base_query.add((Q(locations=None)), Q.AND)
         elif self.model._meta.model_name == "virtualmachine":
             # This is necessary to prevent location related config context to be applied now.
+            # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
             base_query.add((Q(locations=None)), Q.AND)
 
         return base_query
