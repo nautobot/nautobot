@@ -9,7 +9,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
 from django.http import HttpResponse
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
