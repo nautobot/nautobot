@@ -19,7 +19,7 @@
         "@rjsf/core": "^5.4.0",
         "@rjsf/utils": "^5.4.0",
         "@rjsf/validator-ajv8": "^5.4.0",
-        "@svgr/webpack": "^5.5.0",
+        "@svgr/webpack": "^8.1.0",
         "@testing-library/jest-dom": "^5.16.5",
         "@testing-library/react": "^13.4.0",
         "@testing-library/user-event": "^13.5.0",
