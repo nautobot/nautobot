@@ -1002,7 +1002,7 @@ class NewUIReadyRoutesAPIView(NautobotAPIVersionMixin, APIView):
         pattern = pattern.replace("/", "\\/")
 
         # Replace `/Z` with `$`
-        pattern = pattern.replace(r'\Z', "$")
+        pattern = pattern.replace(r"\Z", "$")
 
         return pattern
 
