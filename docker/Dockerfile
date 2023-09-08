@@ -49,25 +49,33 @@ ENV PYTHONUNBUFFERED=1 \
     NAUTOBOT_ROOT=/opt/nautobot \
     prometheus_multiproc_dir=/prom_cache
 
+ARG NODE_MAJOR=18
+
 # DL3008 - Require pinned dependencies for apt install
 # DL3009 - Delete the apt-get lists after installing something
-# DL3013 - pin all Python package versions
-# DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
 # DL4006 - Set the SHELL option -o pipefail before RUN with a pipe in
-# hadolint ignore=DL3008,DL3009,DL3013,DL3042,DL4006
-RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
+# hadolint ignore=DL3008,DL3009,DL4006
+RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
+    --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
+    apt-get update && \
+    apt-get install --no-install-recommends -y ca-certificates curl gnupg && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
     apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
-    apt-get autoremove -y && \
-    apt-get clean all && \
-    rm -rf /var/lib/apt/lists/* && \
-    npm install -g npm@latest && \
-    rm -rf /root/.npm && \
-    pip install --upgrade pip wheel && \
-    rm -rf /tmp/tmp*
+    apt-get autoremove -y
+
+RUN --mount=type=cache,target="/root/.npm",sharing=locked \
+    npm install -g npm@latest
+
+# DL3013 - pin all Python package versions
+# DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
+# hadolint ignore=DL3013,DL3042
+RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
+    --mount=type=cache,target="/tmp",sharing=locked \
+    pip install --upgrade pip wheel
 
 HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --fail http://localhost:8080/health/ || exit 1
 
