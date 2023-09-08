@@ -205,12 +205,12 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             location_config_context_queryset = ConfigContext.objects.none()
             if self._meta.model_name == "device":
                 location_config_context_queryset = ConfigContext.objects.filter(
-                    Q(locations__in=self.location.ancestors(include_self=True))
+                    locations__in=self.location.ancestors(include_self=True)
                 ).distinct()
             else:
                 if self.cluster and self.cluster.location:
                     location_config_context_queryset = ConfigContext.objects.filter(
-                        Q(locations__in=self.cluster.location.ancestors(include_self=True))
+                        locations__in=self.cluster.location.ancestors(include_self=True)
                     ).distinct()
 
             # Annotation has keys "weight" and "name" (used for ordering) and "data" (the actual config context data)

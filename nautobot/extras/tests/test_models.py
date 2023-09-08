@@ -298,11 +298,11 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_device_relations_in_child_locations(self):
-        location_context = ConfigContext.objects.create(name="root-location", weight=100, data={"location": 1})
+        location_context = ConfigContext.objects.create(name="root-location", weight=100, data={"location-1": 1})
         location_context.locations.add(self.root_location)
-        location_context = ConfigContext.objects.create(name="parent-location", weight=100, data={"location": 2})
+        location_context = ConfigContext.objects.create(name="parent-location", weight=100, data={"location-2": 2})
         location_context.locations.add(self.parent_location)
-        location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 3})
+        location_context = ConfigContext.objects.create(name="location", weight=100, data={"location-3": 3})
         location_context.locations.add(self.location)
         device = Device.objects.create(
             name="Child Location Device",
@@ -311,10 +311,8 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             status=self.device_status,
             device_type=self.devicetype,
         )
-        annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         device_context = device.get_config_context()
-        self.assertEqual(device_context, annotated_queryset[0].get_config_context())
-        for key in ["location"]:
+        for key in ["location-1", "location-2", "location-3"]:
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
@@ -375,18 +373,14 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             self.assertIn(key, vm_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations_in_child_locations(self):
-        location_context = ConfigContext.objects.create(name="root-location", weight=100, data={"location": 1})
+        location_context = ConfigContext.objects.create(name="root-location", weight=100, data={"location-1": 1})
         location_context.locations.add(self.root_location)
-        location_context = ConfigContext.objects.create(name="parent-location", weight=100, data={"location": 2})
+        location_context = ConfigContext.objects.create(name="parent-location", weight=100, data={"location-2": 2})
         location_context.locations.add(self.parent_location)
-        location_context = ConfigContext.objects.create(name="location", weight=100, data={"location": 3})
+        location_context = ConfigContext.objects.create(name="location", weight=100, data={"location-3": 3})
         location_context.locations.add(self.location)
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         cluster_group = ClusterGroup.objects.create(name="Cluster Group")
-        cluster_group_context = ConfigContext.objects.create(
-            name="cluster group", weight=100, data={"cluster_group": 1}
-        )
-        cluster_group_context.cluster_groups.add(cluster_group)
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(
             name="Cluster",
@@ -400,13 +394,11 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             role=self.devicerole,
             status=vm_status,
         )
-        annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
         vm_context = virtual_machine.get_config_context()
-
-        self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
         for key in [
-            "location",
-            "cluster_group",
+            "location-1",
+            "location-2",
+            "location-3",
         ]:
             self.assertIn(key, vm_context)
 

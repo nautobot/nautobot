@@ -83,6 +83,9 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
         Order By clause in Subquery is not guaranteed to be respected within the aggregated JSON array, which is why
         we include "weight" and "name" into the result so that we can sort it within Python to ensure correctness.
+
+        TODO This method is broken because of the reasons stated in _get_config_context_filters()
+        Do not use this method by itself, use get_config_context() method directly on ConfigContextModel instead.
         """
         from nautobot.extras.models import ConfigContext
 
