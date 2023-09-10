@@ -11,9 +11,7 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.routers import OrderedDefaultRouter
 from nautobot.core.api.views import ModelViewSet, ReadOnlyModelViewSet
-from nautobot.extras.api.mixins import (
-    TaggedModelSerializerMixin,
-)
+from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.extras.api.views import CustomFieldModelViewSet, NautobotModelViewSet, NotesViewSetMixin
 
 __all__ = (

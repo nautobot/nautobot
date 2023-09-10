@@ -1,0 +1,3 @@
+Fixed the documentation referring to NavMenu removal.
+Fixed a missing import of `NavMenuButton` into `nautobot.apps`.
+Fixed plugin template creation to point to `nautobot.apps`.

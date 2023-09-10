@@ -116,7 +116,7 @@ For models that have a strong use case for a `slug` or similar field (such as `G
 from django.db import models
 
 from nautobot.core.models.fields import AutoSlugField
-from nautobot.core.models.generics import PrimaryModel
+from nautobot.apps.models import PrimaryModel
 
 class ExampleModel(PrimaryModel):
     name = models.CharField(max_length=100, unique=True)
@@ -232,7 +232,7 @@ The following best practices must be considered when establishing new `FilterSet
 
 ### Mapping Model Fields to Filters
 
-- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
+- FilterSets **must** inherit from `nautobot.apps.filters.NautobotFilterSet`
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
 
@@ -267,7 +267,7 @@ class UserFilter(NautobotFilterSet):
 
 ```python
 # Typical usage
-from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.apps.filters import NaturalKeyOrPKMultipleChoiceFilter
 
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Provider.objects.all(),
@@ -278,7 +278,7 @@ from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 
 ```python
 # Optionally, using the to_field_name argument to look up by "slug" instead of by "name"
-from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.apps.filters import NaturalKeyOrPKMultipleChoiceFilter
 
     git_repository = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="slug",
@@ -291,7 +291,7 @@ from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
     - One exception to this naming convention may be made for Boolean filters for identity, which **may** be named `is_{name}` instead (e.g. `is_virtual_chassis_member` versus `has_virtual_chassis`). Although this is semantically identical to `has_` filters, there may be occasions where naming the filter `is_` would be more intuitive.
 
 ```python
-from nautobot.core.filters import RelatedMembershipBooleanFilter
+from nautobot.apps.filters import RelatedMembershipBooleanFilter
 
     has_interfaces = RelatedMembershipBooleanFilter(
         field_name="interfaces",

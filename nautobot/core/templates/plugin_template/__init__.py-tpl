@@ -1,6 +1,6 @@
 """{{ app_name }} Plugin Initilization."""
 
-from nautobot.extras.plugins import PluginConfig
+from nautobot.apps import NautobotAppConfig
 
 
 class {{ camel_case_app_name }}Config(PluginConfig):

@@ -7,6 +7,7 @@ from nautobot.core.apps import (
     NavGrouping,
     NavItem,
     NavMenuAddButton,
+    NavMenuButton,
     NavMenuGroup,
     NavMenuImportButton,
     NavMenuItem,
@@ -14,8 +15,7 @@ from nautobot.core.apps import (
 )
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.extras.choices import BannerClassChoices
-from nautobot.extras.plugins import Banner
-from nautobot.extras.plugins import TemplateExtension
+from nautobot.extras.plugins import Banner, TemplateExtension
 
 __all__ = (
     "Banner",
@@ -27,6 +27,7 @@ __all__ = (
     "NavGrouping",
     "NavItem",
     "NavMenuAddButton",
+    "NavMenuButton",
     "NavMenuGroup",
     "NavMenuImportButton",
     "NavMenuItem",
