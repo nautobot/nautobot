@@ -77,7 +77,7 @@ docker run \
     --name nautobot networktocode/nautobot
 ```
 
-Or if you are using docker-compose:
+Or if you are using docker compose:
 
 ```yaml
 services:

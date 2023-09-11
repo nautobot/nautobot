@@ -36,7 +36,7 @@ This will install:
 
 In this step you'll set up your database server, create a database and database user for use by Nautobot, and verify your connection to the database.
 
-You must select either MySQL or PostgreSQL. PostgreSQL is used by default with Nautobot, so if you just want to get started or don't have a preference, please stick with PostgreSQL.
+You must select either MySQL (MariaDB is **not** supported) or PostgreSQL. PostgreSQL is used by default with Nautobot, so if you just want to get started or don't have a preference, please stick with PostgreSQL.
 
 Please follow the steps for your selected database backend below.
 
@@ -110,6 +110,9 @@ Please follow the steps for your selected database backend below.
     ```no-highlight
     sudo apt install -y libmysqlclient-dev mysql-server
     ```
+
+    !!! note
+        In the Nautobot Docker image `libmariadb-dev` is installed due to licensing challenges with `libmysqlclient-dev`. 
 
     ### Create a MySQL Database
 
