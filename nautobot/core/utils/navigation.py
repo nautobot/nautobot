@@ -1,4 +1,5 @@
 import re
+
 from django.urls import get_resolver
 
 from nautobot.extras.registry import registry
