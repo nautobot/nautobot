@@ -932,6 +932,7 @@ class NewUIReadyRoutesAPIViewTestCase(testing.APITestCase):
         self.assertEqual(response.status_code, 200)
         expected_response = [
             "^$",
+            "^login\\/$",
             "^dcim\\/device\\-types\\/$",
             "^dcim\\/device\\-types\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
             "^dcim\\/devices\\/$",
