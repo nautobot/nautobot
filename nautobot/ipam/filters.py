@@ -87,7 +87,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         field_name="prefixes",
         queryset=Prefix.objects.all(),
         to_field_name="pk",  # TODO(jathan): Make this work with `prefix` "somehow"
-        label="Device (ID or name)",
+        label="Prefix (ID or name)",
     )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
@@ -437,6 +437,7 @@ class IPAddressToInterfaceFilterSet(NautobotFilterSet):
     )
     ip_address = django_filters.ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
+        label="IP Address (ID)",
     )
     vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
