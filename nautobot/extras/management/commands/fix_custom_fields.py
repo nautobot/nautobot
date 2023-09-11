@@ -33,14 +33,9 @@ class Command(BaseCommand):
             except ValueError:
                 raise CommandError(f"Invalid format: {name}. Models must be specified in the form app_label.ModelName.")
             try:
-                app_config = apps.get_app_config(app_label)
-            except LookupError as e:
-                raise CommandError(str(e))
-            try:
-                model = app_config.get_model(model_name)
-            except LookupError:
-                raise CommandError(f"Unknown model: {app_label}.{model_name}")
-            content_types.append(ContentType.objects.get_for_model(model).id)
+                content_types.append(ContentType.objects.get(app_label=app_label, model=model_name.lower()).id)
+            except ContentType.DoesNotExist:
+                raise CommandError(f"Unknown model: {name}")
 
         return ContentType.objects.filter(pk__in=content_types)
 
