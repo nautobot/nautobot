@@ -22,6 +22,7 @@ from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from .models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -427,6 +428,24 @@ class IPAddressFilterSet(
         for vm in virtual_machines:
             interface_ids.extend(vm.interfaces.values_list("id", flat=True))
         return queryset.filter(vm_interfaces__in=interface_ids)
+
+
+class IPAddressToInterfaceFilterSet(NautobotFilterSet):
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        label="Interface (name or ID)",
+    )
+    ip_address = django_filters.ModelMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(),
+    )
+    vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VMInterface.objects.all(),
+        label="VM Interface (name or ID)",
+    )
+
+    class Meta:
+        model = IPAddressToInterface
+        fields = "__all__"
 
 
 class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):

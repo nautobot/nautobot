@@ -9,10 +9,23 @@ from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.core.testing.api import APITransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam import choices
-from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, Service, VLAN, VLANGroup, VRF, Namespace
+from nautobot.ipam.models import (
+    IPAddress,
+    IPAddressToInterface,
+    Prefix,
+    RIR,
+    RouteTarget,
+    Service,
+    VLAN,
+    VLANGroup,
+    VRF,
+    Namespace,
+)
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
 class AppTest(APITestCase):
@@ -567,6 +580,67 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["nat_outside_list"][0]["address"], "192.168.0.19/24")
         self.assertEqual(response.data["nat_outside_list"][1]["address"], "192.168.0.20/24")
+
+
+class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
+    model = IPAddressToInterface
+    update_data = {"is_destination": True, "is_preferred": True}
+    bulk_update_data = {"is_default": True, "is_source": True}
+
+    @classmethod
+    def setUpTestData(cls):
+        ip_addresses = list(IPAddress.objects.all()[:6])
+        location = Location.objects.get_for_model(Device).first()
+        devicetype = DeviceType.objects.first()
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            name="Device 1",
+            location=location,
+            device_type=devicetype,
+            role=devicerole,
+            status=devicestatus,
+        )
+        int_status = Status.objects.get_for_model(Interface).first()
+        int_type = InterfaceTypeChoices.TYPE_1GE_FIXED
+        interfaces = [
+            Interface.objects.create(device=device, name="eth0", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth1", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth2", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth3", status=int_status, type=int_type),
+        ]
+
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
+        vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_interfaces = [
+            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
+            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
+        ]
+
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[0], interface=interfaces[0], vm_interface=None)
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[1], interface=interfaces[1], vm_interface=None)
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[2], interface=None, vm_interface=vm_interfaces[0])
+
+        cls.create_data = [
+            {
+                "ip_address": ip_addresses[3].pk,
+                "interface": interfaces[2].pk,
+                "vm_interface": None,
+            },
+            {
+                "ip_address": ip_addresses[4].pk,
+                "interface": interfaces[3].pk,
+                "vm_interface": None,
+            },
+            {
+                "ip_address": ip_addresses[5].pk,
+                "interface": None,
+                "vm_interface": vm_interfaces[1].pk,
+            },
+        ]
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
