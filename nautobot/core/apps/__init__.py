@@ -17,7 +17,7 @@ from graphene.types import generic, String
 
 from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.signals import nautobot_database_ready
-from nautobot.core.utils.navigation import get_all_new_ui_ready_route
+from nautobot.core.utils.navigation import get_all_new_ui_ready_routes
 from nautobot.extras.registry import registry
 
 
@@ -68,7 +68,7 @@ class NautobotConfig(AppConfig):
             pass
 
         try:
-            registry["new_ui_ready_routes"].update(get_all_new_ui_ready_route())
+            registry["new_ui_ready_routes"].update(get_all_new_ui_ready_routes())
         except NotRegistered:
             # NOTE: Catch this error: The "Tag" model is not registered, which may be related to the admin not registering Tags. Further research is needed on this.
             pass

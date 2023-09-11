@@ -41,7 +41,7 @@ def get_only_new_ui_ready_routes(patterns, prefix=""):
     return new_ui_routes
 
 
-def get_all_new_ui_ready_route():
+def get_all_new_ui_ready_routes():
     """"""
     resolver = get_resolver()
     url_patterns = resolver.url_patterns
