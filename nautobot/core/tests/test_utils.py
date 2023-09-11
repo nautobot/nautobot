@@ -21,6 +21,7 @@ from nautobot.dcim import tables
 from nautobot.extras import models as extras_models
 from nautobot.extras import utils as extras_utils
 from nautobot.extras.choices import RelationshipTypeChoices
+from nautobot.extras.registry import registry
 
 
 class DictToFilterParamsTest(TestCase):
@@ -695,3 +696,19 @@ class MergeDictsWithoutCollisionTest(TestCase):
         with self.assertRaises(ValueError) as err:
             data_utils.merge_dicts_without_collision({"a": 1}, {"a": 2})
         self.assertEqual(str(err.exception), 'Conflicting values for key "a": (1, 2)')
+
+
+class NavigationRelatedUtils(TestCase):
+    def get_all_new_ui_ready_route(self):
+        ui_ready_routes = [
+            "^\\Z",
+            "^dcim/device\\-types/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
+            "^dcim/device\\-types/\\Z",
+            "^dcim/devices/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
+            "^dcim/devices/\\Z",
+            "^dcim/locations/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
+            "^dcim/locations/\\Z",
+            "^ipam/ip\\-addresses/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
+            "^ipam/ip\\-addresses/\\Z",
+        ]
+        self.assertEqual(sorted(ui_ready_routes), sorted(list(registry["new_ui_ready_routes"])))

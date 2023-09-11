@@ -17,6 +17,7 @@ import yaml
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
+from nautobot.core.utils.navigation import is_route_new_ui_ready
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
@@ -714,3 +715,14 @@ def queryset_to_pks(obj):
     result = list(obj.values_list("pk", flat=True)) if obj else []
     result = [str(entry) for entry in result]
     return ",".join(result)
+
+
+#
+# Navigation
+#
+
+
+@register.filter()
+def is_new_ui_ready(url_path):
+    """Return True if url_path is NewUI Ready else False"""
+    return is_route_new_ui_ready(url_path)

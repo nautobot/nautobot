@@ -1,6 +1,7 @@
 from django.conf import settings as django_settings
 
 from nautobot.core.settings_funcs import sso_auth_enabled
+from nautobot.core.utils.navigation import is_route_new_ui_ready
 
 
 def get_saml_idp():
@@ -34,17 +35,7 @@ def settings(request):
     Expose Django settings in the template context. Example: {{ settings.DEBUG }}
     """
 
-    use_new_ui = request.COOKIES.get("newui", False)
-
-    try:
-        view_class = request.resolver_match.func.view_class
-        use_new_ui = use_new_ui and getattr(view_class, "use_new_ui", False)
-    except AttributeError:
-        # Use this method to import the view class views that inherits from
-        # NautobotUIViewSet, as this views do not have the 'view_class' attribute.
-        if hasattr(request, "accepted_renderer"):
-            use_new_ui = use_new_ui and getattr(request.accepted_renderer, "use_new_ui", False)
-
+    use_new_ui = request.COOKIES.get("newui", False) and is_route_new_ui_ready(request.path)
     return {
         "settings": django_settings,
         "root_template": "base_react.html" if use_new_ui else "base_django.html",
