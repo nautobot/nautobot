@@ -19,7 +19,7 @@
         "@rjsf/core": "^5.4.0",
         "@rjsf/utils": "^5.4.0",
         "@rjsf/validator-ajv8": "^5.4.0",
-        "@svgr/webpack": "^5.5.0",
+        "@svgr/webpack": "^8.1.0",
         "@testing-library/jest-dom": "^5.16.5",
         "@testing-library/react": "^13.4.0",
         "@testing-library/user-event": "^13.5.0",
@@ -68,7 +68,7 @@
     },
     "devDependencies": {
         "@babel/core": "^7.22.9",
-        "@chakra-ui/cli": "^2.3.0",
+        "@chakra-ui/cli": "^2.4.1",
         "@pmmmwh/react-refresh-webpack-plugin": "^0.5.10",
         "babel-jest": "^29.6.2",
         "babel-loader": "^9.1.3",

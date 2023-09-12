@@ -4,6 +4,7 @@ import {
     API_OBJECT_COUNTS,
     API_USER_SESSION_INFO,
     API_UI_MENU_INFO,
+    API_UI_READY_ROUTES,
     API_USER_AUTHENTICATE,
     AUTH_LOGOUT,
 } from "@constants/apiPath";
@@ -144,6 +145,12 @@ export const baseApi = createApi({
                 method: "GET",
             }),
         }),
+        getNewUIReadyRoutes: builder.query({
+            query: () => ({
+                url: API_UI_READY_ROUTES,
+                method: "GET",
+            }),
+        }),
     }),
 });
 
@@ -164,6 +171,7 @@ export const {
     useGetRESTAPIQuery,
     useGetObjectCountsQuery,
     useLazyGetFieldLookupChoicesQuery,
+    useGetNewUIReadyRoutesQuery,
     useLoginMutation,
     useLogoutMutation,
 } = baseApi;

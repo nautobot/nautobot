@@ -67,6 +67,9 @@ When the context data for a device at this location is rendered, the second, hig
 
 Data from the higher-weight context overwrites conflicting data from the lower-weight context, while the non-conflicting portion of the lower-weight context (the list of NTP servers) is preserved.
 
+!!! warning
+    ConfigContexts can be applied to parents and descendants of TreeModels such as Locations and RackGroups. The inheritance of ConfigContext will always be determined by the value of the weight attribute. You may see unexpected behavior if you have ConfigContexts of the same weight applied to TreeModel parents and their descendants.
+
 ## Local Context Data
 
 Devices and virtual machines may also have a local config context defined. This local context will _always_ take precedence over any separate config context objects which apply to the device/VM. This is useful in situations where we need to call out a specific deviation in the data for a particular object.

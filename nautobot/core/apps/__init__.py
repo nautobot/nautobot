@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from django.apps import AppConfig, apps as global_apps
+from django.contrib.admin.sites import NotRegistered
 from django.db.models import JSONField, BigIntegerField, BinaryField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
@@ -16,6 +17,7 @@ from graphene.types import generic, String
 
 from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.signals import nautobot_database_ready
+from nautobot.core.utils.navigation import get_all_new_ui_ready_routes
 from nautobot.extras.registry import registry
 
 
@@ -23,6 +25,7 @@ logger = logging.getLogger(__name__)
 registry["nav_menu"] = {"tabs": {}}
 registry["new_ui_nav_menu"] = {}
 registry["homepage_layout"] = {"panels": {}}
+registry["new_ui_ready_routes"] = set()
 NAV_CONTEXT_NAMES = ("Inventory", "Networks", "Security", "Automation", "Platform")
 
 
@@ -62,6 +65,12 @@ class NautobotConfig(AppConfig):
             navigation = import_string(f"{self.name}.{self.navigation}")
             register_new_ui_menu_items(navigation)
         except ModuleNotFoundError:
+            pass
+
+        try:
+            registry["new_ui_ready_routes"].update(get_all_new_ui_ready_routes())
+        except NotRegistered:
+            # NOTE: Catch this error: The "Tag" model is not registered, which may be related to the admin not registering Tags. Further research is needed on this.
             pass
 
 
