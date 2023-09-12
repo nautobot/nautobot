@@ -1,3 +1,3 @@
-Fixed the documentation referring to NavMenu removal.
-Fixed a missing import of `NavMenuButton` into `nautobot.apps`.
+Removed some incorrect content from the documentation about nav menu changes that were reverted during 2.0 development.
+Re-added `NavMenuButton` back into `nautobot.apps.ui` module.
 Fixed plugin template creation to point to `nautobot.apps`.

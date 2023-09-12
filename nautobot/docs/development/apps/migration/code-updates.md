@@ -2,12 +2,12 @@
 
 ## Update Code Import Locations
 
-Most changes in code location arise from the merging of the `nautobot.utilities` module into the `nautobot.core` module. Use the below table to understand where you code may have originally been and the table after to understand where to properly import from `nautobot.apps`.
+Most changes in code location arise from the merging of the `nautobot.utilities` module into the `nautobot.core` module. Note that in most cases, the recommended approach for Jobs and Apps is to import from `nautobot.apps` rather than `nautobot.core` (see below).
 
 ??? info "Full table of code location changes"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-location-changes.yaml}
 
-All imported (except for models) should be imported from `nautobot.apps.*` as described here.
+Other than modes, most other imports from Nautobot should be imported from `nautobot.apps.*` as described here.
 
 ??? info "Full table of nautobot.app code locations"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-nautobot-app-location.yaml}
