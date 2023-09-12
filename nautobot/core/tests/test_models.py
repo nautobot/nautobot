@@ -8,7 +8,7 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 
 from nautobot.core.models import BaseModel
-from nautobot.core.models.utils import construct_composite_key, deconstruct_composite_key
+from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import DeviceType, Manufacturer
 
@@ -58,6 +58,13 @@ class NaturalKeyTestCase(BaseModelTest):
         self.assertEqual(mfr.composite_key, construct_composite_key(mfr.natural_key()))
         dt = DeviceType.objects.first()
         self.assertEqual(dt.composite_key, construct_composite_key(dt.natural_key()))
+
+    def test_natural_slug(self):
+        """Test the natural_slug default implementation with some represenatitive models."""
+        mfr = Manufacturer.objects.first()
+        self.assertEqual(mfr.natural_slug, construct_natural_slug(mfr.natural_key()))
+        dt = DeviceType.objects.first()
+        self.assertEqual(dt.natural_slug, construct_natural_slug(dt.natural_key()))
 
     def test_natural_key_field_lookups(self):
         """Test the natural_key_field_lookups default implementation with some representative models."""
