@@ -116,7 +116,7 @@ For models that have a strong use case for a `slug` or similar field (such as `G
 from django.db import models
 
 from nautobot.core.models.fields import AutoSlugField
-from nautobot.apps.models import PrimaryModel
+from nautobot.core.models.generics import PrimaryModel
 
 class ExampleModel(PrimaryModel):
     name = models.CharField(max_length=100, unique=True)
