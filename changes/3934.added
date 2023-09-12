@@ -1,0 +1,1 @@
+Add `Namespace` column to VRFDeviceAssignmentTable and VRFPrefixAssignmentTable to display assigned vrfs' namespace property.

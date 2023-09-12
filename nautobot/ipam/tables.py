@@ -263,6 +263,11 @@ class VRFDeviceAssignmentTable(BaseTable):
     """Table for displaying VRF Device Assignments with RD."""
 
     vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    namespace = tables.Column(
+        verbose_name="Namespace",
+        linkify=lambda record: record.vrf.namespace.get_absolute_url(),
+        accessor="vrf.namespace.name",
+    )
     device = tables.Column(
         linkify=lambda record: record.device.get_absolute_url(), accessor="device.name", verbose_name="Device"
     )
@@ -277,20 +282,25 @@ class VRFDeviceAssignmentTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = VRFDeviceAssignment
         orderable = False
-        fields = ("vrf", "device", "virtual_machine", "rd", "tenant")
+        fields = ("vrf", "namespace", "device", "virtual_machine", "rd", "tenant")
 
 
 class VRFPrefixAssignmentTable(BaseTable):
     """Table for displaying VRF Prefix Assignments."""
 
     vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    namespace = tables.Column(
+        verbose_name="Namespace",
+        linkify=lambda record: record.vrf.namespace.get_absolute_url(),
+        accessor="vrf.namespace.name",
+    )
     prefix = tables.Column(linkify=True)
     rd = tables.Column(accessor="vrf.rd", verbose_name="RD")
     tenant = TenantColumn(accessor="vrf.tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFPrefixAssignment
-        fields = ("vrf", "prefix", "rd", "tenant")
+        fields = ("vrf", "namespace", "prefix", "rd", "tenant")
 
 
 #
