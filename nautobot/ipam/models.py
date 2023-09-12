@@ -1043,8 +1043,7 @@ class IPAddress(PrimaryModel):
     def __init__(self, *args, **kwargs):
         address = kwargs.pop("address", None)
         namespace = kwargs.pop("namespace", None)
-        # We don't want users providing their own parent since it will be derived automatically.
-        parent = kwargs.pop("parent", None)
+        parent = kwargs.get("parent", None)
         # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
         if namespace is None and parent is not None:
             namespace = parent.namespace
@@ -1079,30 +1078,32 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        # Force dns_name to lowercase
-        self.dns_name = self.dns_name.lower()
-
-    def save(self, *args, **kwargs):
-        if not self.present_in_database:
-            if self._namespace is None:
-                raise ValidationError({"parent": "Namespace could not be determined."})
-            namespace = self._namespace
-        else:
+        if self.present_in_database:
             namespace = self._namespace or self.parent.namespace
-
-        # Determine the closest parent automatically based on the Namespace.
-        self.parent = (
+        elif self._namespace is None:
+            raise ValidationError({"parent": "Namespace could not be determined."})
+        else:
+            namespace = self._namespace
+        closes_parent = (
             Prefix.objects.filter(namespace=namespace)
             # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
             # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
             .get_closest_parent(self.host, include_self=True)
         )
+        # Validate `parent` can be used as a parent for this ipaddress
+        if self.parent and self.parent != closes_parent:
+            raise ValidationError({"parent": f"{self.parent} cannot be assigned as a parent."})
+        else:
+            self.parent = closes_parent
 
+        # Force dns_name to lowercase
+        self.dns_name = self.dns_name.lower()
+
+    def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
-
         super().save(*args, **kwargs)
 
     @property

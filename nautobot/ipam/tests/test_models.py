@@ -954,6 +954,22 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             )
             IPAddress.objects.create(address="11.0.0.9/32", status=self.status, namespace=namespace)
 
+    def test_creating_ipaddress_with_an_invalid_parent(self):
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+        prefixes = (
+            Prefix.objects.create(
+                prefix="10.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            ),
+            Prefix.objects.create(
+                prefix="192.168.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            ),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            ipaddress = IPAddress(address="192.168.0.1/16", parent=prefixes[0], status=self.status)
+            ipaddress.validated_save()
+        self.assertEqual(f"{prefixes[0]} cannot be assigned as a parent.", err.exception.message_dict["parent"][0])
+
 
 class TestRIR(ModelTestCases.BaseModelTestCase):
     model = RIR
