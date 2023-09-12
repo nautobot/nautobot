@@ -7,6 +7,7 @@ import {
     API_USER_AUTHENTICATE,
     AUTH_LOGOUT,
 } from "@constants/apiPath";
+import { API_FIELD_LOOKUP_CHOICES } from "../constants/apiPath";
 
 /*
   The one true API!
@@ -74,6 +75,7 @@ export const baseApi = createApi({
                 limit = null,
                 offset = null,
                 depth = 1,
+                filters = null,
             }) => {
                 let url = `${API_BASE}/${
                     plugin ? "plugins/" : ""
@@ -93,6 +95,15 @@ export const baseApi = createApi({
                     if (offset) {
                         queryParams.append("offset", offset);
                     }
+                    if (filters) {
+                        [
+                            ...(filters instanceof URLSearchParams
+                                ? filters
+                                : new URLSearchParams(filters)),
+                        ].forEach(([param, value]) =>
+                            queryParams.append(param, value)
+                        );
+                    }
                 }
 
                 if (queryParams) {
@@ -102,6 +113,21 @@ export const baseApi = createApi({
                 return { url: url, method: method };
             },
             providesTags: ["APIData"],
+        }),
+        getFieldLookupChoices: builder.query({
+            query: ({ contentType, lookupField }) => {
+                const queryParams = new URLSearchParams({
+                    content_type: contentType,
+                    field_name: lookupField,
+                    limit: 50,
+                    offset: 0,
+                });
+
+                return {
+                    url: `${API_FIELD_LOOKUP_CHOICES}?${queryParams.toString()}`,
+                    method: "GET",
+                };
+            },
         }),
         /** The mutation to log in */
         login: builder.mutation({
@@ -137,6 +163,7 @@ export const {
     useGetUIMenuQuery,
     useGetRESTAPIQuery,
     useGetObjectCountsQuery,
+    useLazyGetFieldLookupChoicesQuery,
     useLoginMutation,
     useLogoutMutation,
 } = baseApi;
