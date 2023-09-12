@@ -34,7 +34,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { useLazyGetFieldLookupChoicesQuery } from "@utils/api";
 
-export const FILER_RESET_QUERY_PARAMS = ["offset"];
+export const FILTER_RESET_QUERY_PARAMS = ["offset"];
 export const NON_FILTER_QUERY_PARAMS = ["limit", "offset", "sort"];
 
 const FiltersPanel = forwardRef(
@@ -193,7 +193,7 @@ export const FiltersPanelContent = forwardRef(
                         [label, value],
                         ...[...searchParams].filter(
                             ([searchParamLabel]) =>
-                                !FILER_RESET_QUERY_PARAMS.includes(
+                                !FILTER_RESET_QUERY_PARAMS.includes(
                                     searchParamLabel
                                 )
                         ),
@@ -215,7 +215,7 @@ export const FiltersPanelContent = forwardRef(
                             )
                             .filter(
                                 ([searchParamLabel]) =>
-                                    !FILER_RESET_QUERY_PARAMS.includes(
+                                    !FILTER_RESET_QUERY_PARAMS.includes(
                                         searchParamLabel
                                     )
                             )
@@ -234,7 +234,7 @@ export const FiltersPanelContent = forwardRef(
                         )
                         .filter(
                             ([searchParamLabel]) =>
-                                !FILER_RESET_QUERY_PARAMS.includes(
+                                !FILTER_RESET_QUERY_PARAMS.includes(
                                     searchParamLabel
                                 )
                         )
