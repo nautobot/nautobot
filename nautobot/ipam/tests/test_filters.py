@@ -931,21 +931,23 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
 
         ip_association1 = IPAddressToInterface.objects.first()
         ip_association2 = IPAddressToInterface.objects.last()
-        for filter in filters:
-            setattr(ip_association1, filter, True)
-            setattr(ip_association2, filter, True)
+        for test_filter in filters:
+            setattr(ip_association1, test_filter, True)
+            setattr(ip_association2, test_filter, True)
         ip_association1.validated_save()
         ip_association2.validated_save()
 
-        for filter in filters:
-            with self.subTest(filter=filter):
-                params = {filter: True}
+        for test_filter in filters:
+            with self.subTest(filter=test_filter):
+                params = {test_filter: True}
                 self.assertQuerysetEqualAndNotEmpty(
-                    self.filterset(params, self.queryset).qs, self.queryset.filter(**{filter: True}), ordered=False
+                    self.filterset(params, self.queryset).qs, self.queryset.filter(**{test_filter: True}), ordered=False
                 )
-                params = {filter: False}
+                params = {test_filter: False}
                 self.assertQuerysetEqualAndNotEmpty(
-                    self.filterset(params, self.queryset).qs, self.queryset.filter(**{filter: False}), ordered=False
+                    self.filterset(params, self.queryset).qs,
+                    self.queryset.filter(**{test_filter: False}),
+                    ordered=False,
                 )
 
 

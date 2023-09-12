@@ -58,7 +58,7 @@
   Comments:
 - Model/Endpoint: "IPAddress"
   Removed Field: "assigned_object"
-  Comments: "Use `interfaces` and/or `vm_interfaces` instead."
+  Comments: "Changed to many-to-many field. Use `IPAddressToInterface`(/api/dcim/ip-address-to-interface/) instead."
 - Model/Endpoint: "IPAddress"
   Removed Field: "broadcast"
   Comments: "Use parent Prefix's broadcast instead"
