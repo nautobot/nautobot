@@ -157,7 +157,10 @@
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}
-                                            
+                                            {% if object.primary_ip4 %}
+                                                <span class="text-muted">from Namespace</span>
+                                                {{ object.primary_ip4.parent.namespace|hyperlinked_object }}
+                                            {% endif %}
                                         </td>
                                     </tr>
                                     <tr>
@@ -182,6 +185,10 @@
                                                 </span>
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                            {% if object.primary_ip6 %}
+                                                <span class="text-muted">from Namespace</span>
+                                                {{ object.primary_ip6.parent.namespace|hyperlinked_object }}
                                             {% endif %}
                                         </td>
                                     </tr>

@@ -203,6 +203,7 @@ class VMInterfaceTable(StatusTableMixin, BaseInterfaceTable):
             "description",
             "tags",
             "ip_addresses",
+            "namespaces",
             "untagged_vlan",
             "tagged_vlans",
         )
@@ -233,6 +234,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
             "description",
             "tags",
             "ip_addresses",
+            "namespaces",
             "untagged_vlan",
             "tagged_vlans",
             "actions",
@@ -248,6 +250,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
             "mode",
             "description",
             "ip_addresses",
+            "namespaces",
             "actions",
         )
         row_attrs = {

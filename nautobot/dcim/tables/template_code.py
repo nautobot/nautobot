@@ -67,6 +67,12 @@ INTERFACE_IPADDRESSES = """
 {% endfor %}
 """
 
+INTERFACE_IPADDRESSES_NAMESPACES = """
+{% for ip in record.ip_addresses.all %}
+    <a href="{{ ip.parent.namespace.get_absolute_url }}">{{ ip.parent.namespace }}</a><br />
+{% endfor %}
+"""
+
 INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
 <a href="{% url 'dcim:interface_list' %}?interface_redundancy_groups={{record}}">{{ record.interfaces.count }}</a>
 """
@@ -74,6 +80,12 @@ INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
 INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES = """
 {% for ip in record.interface.ip_addresses.all %}
     <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
+{% endfor %}
+"""
+
+INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES_NAMESPACES = """
+{% for ip in record.interface.ip_addresses.all %}
+    <a href="{{ ip.parent.namespace.get_absolute_url }}">{{ ip.parent.namespace }}</a><br />
 {% endfor %}
 """
 
