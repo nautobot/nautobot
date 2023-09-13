@@ -2872,7 +2872,6 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
             "interface__status",
             "interface__enabled",
             "interface__ip_addresses",
-            "interface__ip_addresses__namespaces",
             "interface__type",
             "interface__description",
             "interface__label",

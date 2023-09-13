@@ -40,10 +40,8 @@ from .template_code import (
     FRONTPORT_BUTTONS,
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
-    INTERFACE_IPADDRESSES_NAMESPACES,
     INTERFACE_REDUNDANCY_GROUP_INTERFACES,
     INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
-    INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES_NAMESPACES,
     INTERFACE_REDUNDANCY_GROUP_STATUS,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_REDUNDANCY_INTERFACE_STATUS,
@@ -533,11 +531,6 @@ class BaseInterfaceTable(BaseTable):
         orderable=False,
         verbose_name="IP Addresses",
     )
-    namespaces = tables.TemplateColumn(
-        template_code=INTERFACE_IPADDRESSES_NAMESPACES,
-        orderable=False,
-        verbose_name="Namespaces",
-    )
     untagged_vlan = tables.Column(linkify=True)
     tagged_vlans = tables.TemplateColumn(
         template_code=INTERFACE_TAGGED_VLANS,
@@ -572,7 +565,6 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
             "connection",
             "tags",
             "ip_addresses",
-            "namespaces",
             "untagged_vlan",
             "tagged_vlans",
         )
@@ -624,7 +616,6 @@ class DeviceInterfaceTable(InterfaceTable):
             "connection",
             "tags",
             "ip_addresses",
-            "namespaces",
             "untagged_vlan",
             "tagged_vlans",
             "actions",
@@ -643,7 +634,6 @@ class DeviceInterfaceTable(InterfaceTable):
             "mode",
             "description",
             "ip_addresses",
-            "namespaces",
             "cable",
             "connection",
             "actions",
@@ -1003,11 +993,6 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
         orderable=False,
         verbose_name="IP Addresses",
     )
-    interface__ip_addresses__namespaces = tables.TemplateColumn(
-        template_code=INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES_NAMESPACES,
-        orderable=False,
-        verbose_name="Namespaces",
-    )
     actions = ButtonsColumn(
         model=InterfaceRedundancyGroupAssociation,
         buttons=("edit", "delete"),
@@ -1034,7 +1019,6 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
             "interface__type",
             "interface__description",
             "interface__ip_addresses",
-            "interface__ip_addresses__namespaces",
         )
 
         default_columns = ("priority", "actions")
