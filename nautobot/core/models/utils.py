@@ -215,7 +215,8 @@ def construct_natural_slug(values):
     slug, and then they are joined with an underscore.
 
     - Spaces or repeated dashes are converted to single dashes.
-    - Remove characters that are not alphanumerics, underscores, or hyphens.
+    - Accents and ligatures from Unicode characters are reduced to ASCII.
+    - Remove remaining characters that are not alphanumerics, underscores, or hyphens.
     - Converted to lowercase.
     - Strips leading/trailing whitespace, dashes, and underscores.
     - Each natural key value in the list is separated by underscores.
