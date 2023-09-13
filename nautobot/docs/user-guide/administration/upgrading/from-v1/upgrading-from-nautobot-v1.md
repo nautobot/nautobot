@@ -224,7 +224,7 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 
 ### New Interface to IP Address Relationship Endpoint
 
-The through table (`ipam.IPAddressToInterface`) for the `IPAddress` to `Interface`/`VMInterface` many-to-many relationship has been exposed through the REST API at `/api/ipam/ip-address-to-interface`. This endpoint must be used to create or delete relationships between IP addresses and interfaces through the REST API. Each `ipam.IPAddressToInterface` object maps a single `ipam.IPAddress` object to a single `dcim.Interface` or `virtualization.VMInterface` object. When creating relationships through this endpoint, the `ip_address` field is required and one of `interface` or `vm_interface` is required. There are additional boolean fields (`is_primary`, `is_default`, etc.) exposed through the REST API that may be used if desired but are not currently implemented in the Nautobot UI.
+The through table (`ipam.IPAddressToInterface`) for the `IPAddress` to `Interface`/`VMInterface` many-to-many relationship has been exposed through the REST API at `/api/ipam/ip-address-to-interface/`. This endpoint must be used to create, retrieve, update, and delete relationships between IP addresses and interfaces through the REST API. Each `ipam.IPAddressToInterface` object maps a single `ipam.IPAddress` object to a single `dcim.Interface` or `virtualization.VMInterface` object. When creating relationships through this endpoint, the `ip_address` field is required and one of `interface` or `vm_interface` is required. There are additional boolean fields (`is_primary`, `is_default`, etc.) exposed through the REST API that may be used if desired but are not currently implemented in the Nautobot UI.
 
 ### API Query Parameters Changes
 
