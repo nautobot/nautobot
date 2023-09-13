@@ -1,15 +1,16 @@
-import json
-
 from itertools import count, groupby
+import json
+import unicodedata
 from urllib.parse import quote_plus, unquote_plus
 
 from django.apps import apps
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
 from django.utils.tree import Node
+import emoji
+from slugify import slugify
 
 from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
-from nautobot.core.models.fields import slugify_dots_to_dashes
 
 
 def array_to_string(array):
@@ -210,7 +211,7 @@ def construct_natural_slug(values):
     """
     Convert the given list of natural key values to a single human-readable string.
 
-    Django's built-in lossy `slugify()` function is used to convert each natural key value to a
+    A third-party lossy `slugify()` function is used to convert each natural key value to a
     slug, and then they are joined with an underscore.
 
     - Spaces or repeated dashes are converted to single dashes.
@@ -218,8 +219,10 @@ def construct_natural_slug(values):
     - Converted to lowercase.
     - Strips leading/trailing whitespace, dashes, and underscores.
     - Each natural key value in the list is separated by underscores.
+    - Emojis will be converted to their registered name.
 
     This value is not reversible, lossy, and is not guaranteed to be unique.
     """
     values = [str(value) if value is not None else "\0" for value in values]
-    return "_".join(slugify_dots_to_dashes(value) for value in values)
+    # This attempts to replace any emojis with their string name, and then slugify that.
+    return "_".join(slugify(emoji.replace_emoji(value, unicodedata.name)) for value in values)

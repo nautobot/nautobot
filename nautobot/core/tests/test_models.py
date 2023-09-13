@@ -39,6 +39,19 @@ class ModelUtilsTestCase(TestCase):
                 self.assertEqual(composite_key, expected_composite_key)
                 self.assertEqual(deconstruct_composite_key(composite_key), values)
 
+    def test_construct_natural_slug(self):
+        """Test that `construct_natural_slug()` works as expected."""
+        for values, expected_natural_slug in (
+            (["Alpha"], "alpha"),  # simplest case
+            (["alpha", "beta"], "alpha_beta"),  # multiple inputs
+            (["10.1.1.1/24", "fe80::1"], "10-1-1-1-24_fe80-1"),  # URL-safe ASCII characters, / is *not* path safe
+            ([None, "Hello", None], "_hello_"),  # Null values
+            (["💩", "Everyone's favorite!"], "pile-of-poo_everyone-s-favorite"),  # Emojis and unsafe ASCII
+        ):
+            with self.subTest(values=values):
+                natural_slug = construct_natural_slug(values)
+                self.assertEqual(natural_slug, expected_natural_slug)
+
 
 class NaturalKeyTestCase(BaseModelTest):
     """Test the various natural-key APIs for a few representative models."""
