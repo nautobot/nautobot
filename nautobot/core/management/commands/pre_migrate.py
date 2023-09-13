@@ -27,6 +27,8 @@ from nautobot.dcim.models import (
     RackRole,
     RearPort,
     RearPortTemplate,
+    Region,
+    Site,
     VirtualChassis,
 )
 from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, Service, VLAN
@@ -118,12 +120,14 @@ def check_configcontext_uniqueness():
 
 def check_permissions_constraints(command):
     """
-    Check for permission constraints that are referencing an object field
+    Check for permission constraints that are referencing an object or field
     that will be migrated to a different model/field/value in 2.0 migrations.
 
-    Objects that will be deleted in 2.0 are:
+    Objects that will be replaced in 2.0 are:
     - dcim.DeviceRole
     - dcim.RackRole
+    - dcim.Region
+    - dcim.Site
     - ipam.Aggregate
     - ipam.Role
 
@@ -180,11 +184,13 @@ def check_permissions_constraints(command):
     - virtualization.VirtualMachine
     """
 
-    deleted_models = [
+    replaced_models = [
         Aggregate,
         DeviceRole,
         RackRole,
+        Region,
         Role,
+        Site,
     ]
 
     pk_change_models = [
@@ -317,11 +323,11 @@ def check_permissions_constraints(command):
             for lookup in qs._query.where.children:
                 related_model = lookup.lhs.target.related_model or lookup.lhs.target.model
 
-                if related_model in deleted_models:
+                if related_model in replaced_models:
                     cls = f"{related_model.__module__}.{related_model.__name__}"
                     warnings.append(
                         f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
-                        f"a model ({cls}) that will be deleted by the Nautobot 2.0 migration."
+                        f"a model ({cls}) that will be migrated to a new model by the Nautobot 2.0 migration."
                         + json.dumps(perm.constraints, indent=4)
                     )
 
