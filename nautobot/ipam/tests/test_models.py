@@ -942,8 +942,11 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         # with self.assertRaises(Prefix.DoesNotExist, msg="IP Address parent cannot be a pool"):
         #     IPAddress.objects.create(address="12.0.0.1/32", status=self.status, namespace=namespace)
 
-        with self.assertRaises(Prefix.DoesNotExist, msg="IP Address must have a valid parent"):
+        with self.assertRaises(ValidationError) as err:
             IPAddress.objects.create(address="13.0.0.1/32", status=self.status, namespace=namespace)
+        self.assertEqual(
+            err.exception.message_dict["namespace"][0], "No suitable parent Prefix exists in this Namespace"
+        )
 
         with self.subTest("Test that IP address can be assigned to a valid parent"):
             IPAddress.objects.create(address="11.0.0.1/32", status=self.status, namespace=namespace)
