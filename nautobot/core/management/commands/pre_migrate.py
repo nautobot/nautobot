@@ -105,9 +105,7 @@ def check_permissions_constraints(command):
     - extras.GitRepository
     - extras.Job
     - extras.ObjectPermission
-    - extras.Relationship
     - extras.ScheduledJob
-    - extras.Status
     - extras.TaggedItem
     """
 
