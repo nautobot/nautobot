@@ -107,6 +107,13 @@ class CustomFieldModelFormMixin(forms.ModelForm):
             # Annotate the field in the list of CustomField form fields
             self.custom_fields.append(field_name)
 
+        try:
+            if self.Meta.fields == "__all__":
+                # Above we accounted for all cf_* data, so can safely remove _custom_field_data.
+                self.fields.pop("_custom_field_data", None)
+        except AttributeError:
+            pass
+
     def clean(self):
         # Save custom field data on instance
         for field_name in self.custom_fields:
