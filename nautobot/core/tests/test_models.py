@@ -73,7 +73,7 @@ class NaturalKeyTestCase(BaseModelTest):
         self.assertEqual(dt.composite_key, construct_composite_key(dt.natural_key()))
 
     def test_natural_slug(self):
-        """Test the natural_slug default implementation with some represenatitive models."""
+        """Test the natural_slug default implementation with some representative models."""
         mfr = Manufacturer.objects.first()
         self.assertEqual(mfr.natural_slug, construct_natural_slug(mfr.natural_key()))
         dt = DeviceType.objects.first()
