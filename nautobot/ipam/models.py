@@ -1065,6 +1065,25 @@ class IPAddress(PrimaryModel):
 
     natural_key_field_names = ["parent__namespace", "host"]
 
+    def _get_closest_parent(self):
+        if self.present_in_database:
+            namespace = self._namespace or self.parent.namespace
+        elif self._namespace is None:
+            raise ValidationError({"parent": "Namespace could not be determined."})
+        else:
+            namespace = self._namespace
+
+        try:
+            closes_parent = (
+                Prefix.objects.filter(namespace=namespace)
+                # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
+                # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
+                .get_closest_parent(self.host, include_self=True)
+            )
+            return closes_parent
+        except Prefix.DoesNotExist:
+            raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"})
+
     def clean(self):
         super().clean()
 
@@ -1078,22 +1097,11 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        if self.present_in_database:
-            namespace = self._namespace or self.parent.namespace
-        elif self._namespace is None:
-            raise ValidationError({"parent": "Namespace could not be determined."})
-        else:
-            namespace = self._namespace
-        closes_parent = (
-            Prefix.objects.filter(namespace=namespace)
-            # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
-            # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
-            .get_closest_parent(self.host, include_self=True)
-        )
         # Validate `parent` can be used as a parent for this ipaddress
-        if self.parent and self.parent != closes_parent:
-            raise ValidationError({"parent": f"{self.parent} cannot be assigned as a parent."})
-        else:
+        if self.address and self.parent:
+            closes_parent = self._get_closest_parent()
+            if self.parent != closes_parent:
+                raise ValidationError({"parent": f"{self.parent} cannot be assigned as a parent."})
             self.parent = closes_parent
 
         # Force dns_name to lowercase
@@ -1104,6 +1112,11 @@ class IPAddress(PrimaryModel):
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
+
+        # validated_save is not always called especially in Test environment;
+        # but we still need to set the self.parent attr in this cases
+        if self.address and not self.parent:
+            self.parent = self._get_closest_parent()
         super().save(*args, **kwargs)
 
     @property
