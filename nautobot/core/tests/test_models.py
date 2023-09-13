@@ -44,6 +44,7 @@ class ModelUtilsTestCase(TestCase):
         for values, expected_natural_slug in (
             (["Alpha"], "alpha"),  # simplest case
             (["alpha", "beta"], "alpha_beta"),  # multiple inputs
+            (["Über Ålpha"], "uber-alpha"),  # accents/ligatures
             (["10.1.1.1/24", "fe80::1"], "10-1-1-1-24_fe80-1"),  # URL-safe ASCII characters, / is *not* path safe
             ([None, "Hello", None], "_hello_"),  # Null values
             (["💩", "Everyone's favorite!"], "pile-of-poo_everyone-s-favorite"),  # Emojis and unsafe ASCII
