@@ -1097,7 +1097,7 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        # Validate `parent` can be used as a parent for this ipaddress
+        # Validate `parent` can be used as the parent for this ipaddress
         if self.address and self.parent:
             closes_parent = self._get_closest_parent()
             if self.parent != closes_parent:
@@ -1114,7 +1114,7 @@ class IPAddress(PrimaryModel):
         #     raise ValidationError({"address": err_msg})
 
         # validated_save is not always called especially in Test environment;
-        # but we still need to set the self.parent attr in this cases
+        # but we still need to set the `self.parent` attr in these cases
         if self.address and not self.parent:
             self.parent = self._get_closest_parent()
         super().save(*args, **kwargs)
