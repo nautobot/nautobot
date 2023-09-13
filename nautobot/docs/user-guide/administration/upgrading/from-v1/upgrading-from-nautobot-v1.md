@@ -38,7 +38,7 @@ All pre-migration checks passed.
 
 ## App Developer Interface
 
-All imports for app developers should now be sourced from `nautobot.apps.*` or provided models, as this is the supported public interface. This will help ensure proper SemVer is kept in tact and provide a place to add new features without breaking existing integrations.
+All imports for app developers should now be sourced from `nautobot.apps.*` or provided models, as this is the supported public interface. This will help ensure proper SemVer is kept intact and provide a place to add new features without breaking existing integrations.
 
 ## Database (ORM) Changes
 

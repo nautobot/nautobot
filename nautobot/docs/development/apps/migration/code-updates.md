@@ -7,7 +7,7 @@ Most changes in code location arise from the merging of the `nautobot.utilities`
 ??? info "Full table of code location changes"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-location-changes.yaml}
 
-Other than modes, most other imports from Nautobot should be imported from `nautobot.apps.*` as described here.
+Other than models, most other imports from Nautobot should be imported from `nautobot.apps.*` as described here.
 
 ??? info "Full table of nautobot.app code locations"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-nautobot-app-location.yaml}

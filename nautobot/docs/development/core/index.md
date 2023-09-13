@@ -73,20 +73,20 @@ For more information, please visit [SemVer.org](https://semver.org/).
 
 The guiding principals behind Nautobot's SemVer strategy is scoped to adhering to the prescribed public interface. This includes both the application operators and application developer. Anything not explicitly covered here is presumed to not be covered under SemVer.
 
-* The REST API interface within a Version, will not change, but may add to
+* Behavior of a given X.Y version of the REST API. New versions of the REST API may be added, which may introduce changes to
     * URL structures
     * Expected request and response formats
     * Behavior of each endpoint
     * Status and error codes
     * The HTTP verbs
-* Graphql data structures
+* GraphQL data structures
 * URL structures for primary navigation and feature access
 * Any Django model and their relationships for models provided by Nautobot
 * Functions, classes, and modules in `nautobot.apps.*` and their associated signature
 * Any management commands provided by Nautobot
 * Documented configuration options
 
-While anything not explicitly stated above should be not be considered scoped to SemVer, the following should be strictly avoided.
+While anything not explicitly stated above should be not be considered scoped to SemVer, the following should be strictly avoided when developing non-core Nautobot Apps and Jobs.
 
 * Functions or methods that start with an underscore (e.g., `_private_func`)
 * Any functions, classes, and modules **not** in `nautobot.apps.*`.
