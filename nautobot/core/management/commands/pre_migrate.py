@@ -3,23 +3,53 @@
 import argparse
 import json
 
-from django.db import models
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
+from django.db import models
 
-from nautobot.dcim.models import DeviceRole, RackRole, VirtualChassis
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, Role, Service
+from nautobot.circuits.models import Circuit
+from nautobot.dcim.models import (
+    CablePath,
+    Device,
+    DeviceRedundancyGroup,
+    DeviceRole,
+    DeviceType,
+    FrontPortTemplate,
+    InventoryItem,
+    Location,
+    PowerOutletTemplate,
+    PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
+    Rack,
+    RackGroup,
+    RackRole,
+    RearPort,
+    RearPortTemplate,
+    VirtualChassis,
+)
+from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, Service, VLAN
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     CustomField,
+    CustomFieldChoice,
     ExportTemplate,
     GitRepository,
     Job,
+    JobResult,
+    Relationship,
     ScheduledJob,
+    Secret,
+    SecretsGroup,
+    SecretsGroupAssociation,
+    Status,
     TaggedItem,
 )
-from nautobot.users.models import ObjectPermission
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.users.models import ObjectPermission, User
+from nautobot.virtualization.models import Cluster, VirtualMachine
 
 HELP_TEXT = """
 Performs pre-migration validation checks for Nautobot 2.0.
@@ -107,6 +137,47 @@ def check_permissions_constraints(command):
     - extras.ObjectPermission
     - extras.ScheduledJob
     - extras.TaggedItem
+
+    Objects that had fields renamed in 2.0 are:
+    - circuits.Circuit
+    - ContentType
+    - dcim.CablePath
+    - dcim.Device
+    - dcim.DeviceRedundancyGroup
+    - dcim.DeviceType
+    - dcim.FrontPortTemplate
+    - dcim.InventoryItem
+    - dcim.Location
+    - dcim.PowerOutletTemplate
+    - dcim.PowerPanel
+    - dcim.PowerPort
+    - dcim.PowerPortTemplate
+    - dcim.Rack
+    - dcim.RackGroup
+    - dcim.RearPort
+    - dcim.RearPortTemplate
+    - extras.ComputedField
+    - extras.ConfigContext
+    - extras.ConfigContextSchema
+    - extras.CustomField
+    - extras.CustomFieldChoice
+    - extras.Job
+    - extras.JobResult
+    - extras.Relationship
+    - extras.Secret
+    - extras.SecretsGroup
+    - extras.SecretsGroupAssociation
+    - extras.Status
+    - ipam.IPAddress
+    - ipam.Prefix
+    - ipam.RIR
+    - ipam.Service
+    - ipam.VLAN
+    - tenancy.Tenant
+    - tenancy.TenantGroup
+    - users.User
+    - virtualization.Cluster
+    - virtualization.VirtualMachine
     """
 
     deleted_models = [
@@ -124,12 +195,109 @@ def check_permissions_constraints(command):
     ]
 
     field_change_models = {
+        CablePath: [
+            "circuittermination",
+            "consoleport",
+            "consoleserverport",
+            "interface",
+            "powerfeed",
+            "poweroutlet",
+            "powerport",
+        ],
+        Circuit: ["termination_a", "termination_z", "terminations", "type"],
+        Cluster: ["group", "type"],
+        ConfigContext: ["schema"],
+        ConfigContextSchema: ["device_set", "virtualmachine_set"],
+        ContentType: [
+            "computedfield_set",
+            "configcontext_set",
+            "configcontextschema_set",
+            "customlink_set",
+            "dcim_device_related",
+            "dynamicgroup_set",
+            "exporttemplate_set",
+            "imageattachment_set",
+            "note_set",
+            "virtualization_virtualmachine_related",
+        ],
+        CustomField: ["choices", "label"],
+        CustomFieldChoice: ["field"],
+        Device: [
+            "consoleports",
+            "consoleserverports",
+            "devicebays",
+            "device_role",
+            "frontports",
+            "inventoryitems",
+            "local_context_data",
+            "local_context_data_owner_content_type",
+            "local_context_data_owner_object_id",
+            "local_context_schema",
+            "poweroutlets",
+            "powerports",
+            "rearports",
+        ],
+        DeviceRedundancyGroup: ["members"],
+        DeviceType: [
+            "consoleporttemplates",
+            "consoleserverporttemplates",
+            "devicebaytemplates",
+            "frontporttemplates",
+            "interfacetemplates",
+            "instances",
+            "poweroutlettemplates",
+            "powerporttemplates",
+            "rearporttemplates",
+        ],
+        FrontPortTemplate: ["rear_port"],
         GitRepository: ["slug"],
-        Job: ["commit_default", "name", "module_name", "source", "git_repository"],
-        CustomField: ["label"],
-        ScheduledJob: ["kwargs", "user", "queue", "job_class", "name"],
-        Service: ["name"],
+        InventoryItem: ["child_items", "level"],
+        IPAddress: ["family", "prefix_length"],
+        Job: ["commit_default", "job_hook", "name", "module_name", "result", "source", "git_repository"],
+        JobResult: ["created", "completed", "job_kwargs", "logs", "schedule"],
+        Location: ["powerpanels"],
         ObjectPermission: ["name"],
+        PowerOutletTemplate: ["power_port"],
+        PowerPanel: ["powerfeeds"],
+        PowerPort: ["poweroutlets"],
+        PowerPortTemplate: ["poweroutlet_templates"],
+        Prefix: ["family"],
+        Rack: ["group", "powerfeed_set", "reservations"],
+        RackGroup: ["level", "powerpanel_set"],
+        RearPort: ["frontports"],
+        RearPortTemplate: ["frontport_templates"],
+        Relationship: ["associations", "name"],
+        RIR: ["aggregates"],
+        ScheduledJob: ["kwargs", "user", "queue", "job_class", "name"],
+        Secret: ["groups", "secretsgroupassociation_set"],
+        SecretsGroup: ["device_set", "deviceredundancygroup_set", "gitrepository_set", "secretsgroupassociation_set"],
+        SecretsGroupAssociation: ["group"],
+        Service: ["ipaddresses", "name"],
+        Status: [
+            "circuits_circuit_related",
+            "dcim_cable_related",
+            "dcim_device_related",
+            "dcim_deviceredundancygroup_related",
+            "dcim_interface_related",
+            "dcim_location_related",
+            "dcim_powerfeed_related",
+            "dcim_rack_related",
+            "ipam_ipaddress_related",
+            "ipam_prefix_related",
+            "ipam_vlan_related",
+            "virtualization_virtualmachine_related",
+            "virtualization_vminterface_related",
+        ],
+        Tenant: ["group", "rackreservations"],
+        TenantGroup: ["level"],
+        User: ["changes", "note", "rackreservation_set"],
+        VirtualMachine: [
+            "local_context_data",
+            "local_context_data_owner_content_type",
+            "local_context_data_owner_object_id",
+            "local_context_schema",
+        ],
+        VLAN: ["group"],
     }
 
     command.stdout.write(command.style.WARNING(">>> Running permission constraint checks..."))
