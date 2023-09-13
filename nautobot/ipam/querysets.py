@@ -2,12 +2,10 @@ import re
 
 import netaddr
 from django.core.exceptions import ValidationError
-from django.db.models import F, ProtectedError, Q
-from django.db.models.functions import Length
+from django.db.models import ProtectedError, Q
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
-from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 
 
 class RIRQuerySet(RestrictedQuerySet):
