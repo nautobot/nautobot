@@ -65,7 +65,7 @@ Currently images are pushed for the following python versions:
 
 ## Getting Started
 
-Nautobot requires a MySQL or PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with `docker-compose`, which will install and configure PostgreSQL and Redis containers for you automatically.
+Nautobot requires a MySQL or PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with [Docker Compose](https://docs.docker.com/compose/), which will install and configure PostgreSQL and Redis containers for you automatically.
 
 ## Configuration
 
@@ -77,7 +77,7 @@ docker run \
     --name nautobot networktocode/nautobot
 ```
 
-Or if you are using docker-compose:
+Or if you are using docker compose:
 
 ```yaml
 services:
