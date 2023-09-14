@@ -222,6 +222,10 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | `/dcim/rack-roles/`   | `/extras/roles/` |
 | `/ipam/roles/`        | `/extras/roles/` |
 
+### New Interface to IP Address Relationship Endpoint
+
+The through table (`ipam.IPAddressToInterface`) for the `IPAddress` to `Interface`/`VMInterface` many-to-many relationship has been exposed through the REST API at `/api/ipam/ip-address-to-interface/`. This endpoint must be used to create, retrieve, update, and delete relationships between IP addresses and interfaces through the REST API. Each `ipam.IPAddressToInterface` object maps a single `ipam.IPAddress` object to a single `dcim.Interface` or `virtualization.VMInterface` object. When creating relationships through this endpoint, the `ip_address` field is required and one of `interface` or `vm_interface` is required. There are additional boolean fields (`is_primary`, `is_default`, etc.) exposed through the REST API that may be used if desired but are not currently implemented in the Nautobot UI.
+
 ### API Query Parameters Changes
 
 Nautobot 2.0 removes the `?brief` query parameter and adds support for the `?depth` query parameter. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are.
