@@ -329,7 +329,7 @@ def check_permissions_constraints(command):
                     cls = f"{related_model.__module__}.{related_model.__name__}"
                     warnings.append(
                         f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
-                        f"a model ({cls}) that will be migrated to a new model by the Nautobot 2.0 migration."
+                        f"a model ({cls}) that will be migrated to a new model by the Nautobot 2.0 migration.\n"
                         + json.dumps(perm.constraints, indent=4)
                     )
 
