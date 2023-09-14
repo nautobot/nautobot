@@ -1043,13 +1043,13 @@ class IPAddress(PrimaryModel):
     def __init__(self, *args, **kwargs):
         address = kwargs.pop("address", None)
         namespace = kwargs.pop("namespace", None)
-        parent = kwargs.get("parent", None)
+        super().__init__(*args, **kwargs)
+
         # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and parent is not None:
-            namespace = parent.namespace
+        if namespace is None and self.parent is not None:
+            namespace = self.parent.namespace
         self._namespace = namespace
 
-        super().__init__(*args, **kwargs)
         self._deconstruct_address(address)
 
     def __str__(self):
@@ -1066,23 +1066,15 @@ class IPAddress(PrimaryModel):
     natural_key_field_names = ["parent__namespace", "host"]
 
     def _get_closest_parent(self):
-        if self.present_in_database:
-            namespace = self._namespace or self.parent.namespace
-        elif self._namespace is None:
-            raise ValidationError({"parent": "Namespace could not be determined."})
-        else:
-            namespace = self._namespace
-
         try:
-            closest_parent = (
-                Prefix.objects.filter(namespace=namespace)
+            return (
+                Prefix.objects.filter(namespace=self._namespace)
                 # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
                 # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
                 .get_closest_parent(self.host, include_self=True)
             )
-            return closest_parent
-        except Prefix.DoesNotExist:
-            raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"})
+        except Prefix.DoesNotExist as e:
+            raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
 
     def clean(self):
         super().clean()
@@ -1097,15 +1089,16 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
+        # If neither `parent` or `namespace` was provided; raise this exception
+        if self._namespace is None:
+            raise ValidationError({"parent": "Namespace could not be determined."})
+
         # Validate `parent` can be used as the parent for this ipaddress
-        if self.address and self.parent:
+        if self.parent:
             closest_parent = self._get_closest_parent()
             if self.parent != closest_parent:
                 raise ValidationError({"parent": f"{self.parent} cannot be assigned as a parent."})
             self.parent = closest_parent
-
-        # Force dns_name to lowercase
-        self.dns_name = self.dns_name.lower()
 
     def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
@@ -1113,10 +1106,14 @@ class IPAddress(PrimaryModel):
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
 
-        # validated_save is not always called especially in Test environment;
-        # but we still need to set the `self.parent` attr in these cases
-        if self.address and not self.parent:
-            self.parent = self._get_closest_parent()
+        # Force dns_name to lowercase
+        if not self.dns_name.islower:
+            self.dns_name = self.dns_name.lower()
+
+        # validated_save is not always called, particularly in a test environment;
+        # # If validated_save is used in creation with an invalid parent specified, the clean method will throw an Exception;
+        # # however, if validated_save is not used and an invalid parent is specified, provided parent will be silently discarded.
+        self.parent = self._get_closest_parent()
         super().save(*args, **kwargs)
 
     @property

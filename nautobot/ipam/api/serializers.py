@@ -265,16 +265,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         if self.instance is None and not any([namespace, parent]):
             raise ValidationError({"__all__": "One of parent or namespace must be provided"})
 
-        # DRF does not call Model clean method by default; however, to avoid rewriting validation checks in Model clean, call clean method here.
-        instance = self.instance or self.Meta.model(**data)
-        try:
-            instance.clean()
-        except ValidationError as e:
-            raise serializers.ValidationError(e.args[0])
-
-        # `dns_name` and `parent` has been modified in the Model clean method, pass those modified data into `data`
-        data.update({"dns_name": instance.dns_name, "parent": instance.parent})
-
+        super().validate(data)
         return data
 
     def get_field_names(self, declared_fields, info):
