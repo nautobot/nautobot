@@ -140,7 +140,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             else:
                 # We would only need to run one additional query, making this a more efficient method of
                 # obtaining all the natural key values for this instance;
-                queryset = self.instance.__class__.objects.filter(pk=self.instance.pk)
+                queryset = self.Meta.model.objects.filter(pk=self.instance.pk)
             self.natural_keys_values = queryset.values(*related_fields_natural_key_field_lookups, "pk")
 
     def _get_related_fields_natural_key_field_lookups(self):
