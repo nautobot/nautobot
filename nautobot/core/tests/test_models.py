@@ -80,9 +80,9 @@ class NaturalKeyTestCase(BaseModelTest):
     def test_natural_slug(self):
         """Test the natural_slug default implementation with some representative models."""
         mfr = Manufacturer.objects.first()
-        self.assertEqual(mfr.natural_slug, construct_natural_slug(mfr.natural_key()))
+        self.assertEqual(mfr.natural_slug, construct_natural_slug(mfr.natural_key(), pk=mfr.pk))
         dt = DeviceType.objects.first()
-        self.assertEqual(dt.natural_slug, construct_natural_slug(dt.natural_key()))
+        self.assertEqual(dt.natural_slug, construct_natural_slug(dt.natural_key(), pk=dt.pk))
 
     def test_natural_key_field_lookups(self):
         """Test the natural_key_field_lookups default implementation with some representative models."""
