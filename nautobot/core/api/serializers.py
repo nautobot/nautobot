@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import uuid
 
@@ -7,7 +8,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.db.models import AutoField, ManyToManyField
+from django.db.models import AutoField, ManyToManyField, QuerySet
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -122,12 +123,49 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
     composite_key = serializers.SerializerMethodField()
+    natural_keys_values = []
+    related_model_fields_names = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
         if not self.is_nested:
             self.Meta.depth = self.context.get("depth", 0)
+
+        # Check if the request is related to CSV export;
+        if self._is_csv_request() and self.instance:
+            related_fields_natural_key_field_lookups = self._get_related_fields_natural_key_field_lookups()
+            if isinstance(self.instance, QuerySet):
+                queryset = self.instance
+            else:
+                # We would only need to run one additional query, making this a more efficient method of
+                # obtaining all the natural key values for this instance;
+                queryset = self.instance.__class__.objects.filter(pk=self.instance.pk)
+            self.natural_keys_values = queryset.values(*related_fields_natural_key_field_lookups, "pk")
+
+    def _get_related_fields_natural_key_field_lookups(self):
+        """Retrieve a list of field lookups for natural key fields of related models.
+
+        This method iterates through the related fields of the Serializer model,
+        retrieves the natural_key_field_lookups for each related model, and prepends the field name
+        to create a list of field lookups.
+        """
+        model = self.Meta.model
+        field_lookups = []
+        fields = [field for field in model._meta.get_fields() if field.is_relation]
+        self.related_model_fields_names = [field.name for field in fields]
+        for field in fields:
+            # Get each related field model's natural_key_fields and prepend field name
+            with contextlib.suppress(Exception):
+                field_lookups.extend(
+                    f"{field.name}__{lookup}" for lookup in field.related_model.natural_key_field_lookups
+                )
+        return field_lookups
+
+    def _is_csv_request(self):
+        """Return True if this a CSV export request"""
+        request = self.context.get("request")
+        return hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type
 
     @property
     def is_nested(self):
@@ -232,6 +270,39 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             return self.build_nested_field(field_name, relation_info, nested_depth)
 
         return super().build_field(field_name, info, model_class, nested_depth)
+
+    def _get_natural_key_field_lookups_for_field(self, field_name, natural_key_field_instance):
+        """Extract natural key field lookups for a specific field name.
+
+        Args:
+            field_name (str): The field name to extract lookups for.
+            natural_key_field_instance (dict): The dict containing natural key field values.
+        """
+        data = {}
+        for key, value in natural_key_field_instance.items():
+            if key.startswith(f"{field_name}__"):
+                if isinstance(value, uuid.UUID):
+                    value = str(value)
+                data[key] = value
+        return data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        altered_data = {}
+
+        # if `self.natural_keys_values` is not empty means that this is a csv request then add natural_kay key and values
+        if self.natural_keys_values:
+            natural_key_field_instance = [item for item in self.natural_keys_values if item["pk"] == instance.pk][0]
+            for key, value in data.items():
+                if natural_key_field_lookups_for_field := self._get_natural_key_field_lookups_for_field(
+                    key, natural_key_field_instance
+                ):
+                    altered_data |= natural_key_field_lookups_for_field
+                else:
+                    altered_data[key] = value
+        else:
+            altered_data = data
+        return altered_data
 
     def build_relational_field(self, field_name, relation_info):
         """Override DRF's default relational-field construction to be app-aware."""
