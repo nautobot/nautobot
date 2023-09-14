@@ -24,9 +24,9 @@ from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
-from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.models.constants import NATURAL_SLUG_SEPARATOR
 from nautobot.core.models.managers import TagsManager
-from nautobot.core.models.utils import construct_composite_key
+from nautobot.core.models.utils import construct_natural_slug
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
@@ -121,7 +121,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
-    composite_key = serializers.SerializerMethodField()
+    natural_slug = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -144,12 +144,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     @extend_schema_field(
         {
             "type": "string",
-            "example": COMPOSITE_KEY_SEPARATOR.join(["attribute1", "attribute2"]),
+            "example": NATURAL_SLUG_SEPARATOR.join(["attribute1", "attribute2"]),
         }
     )
-    def get_composite_key(self, instance):
+    def get_natural_slug(self, instance):
         try:
-            return getattr(instance, "composite_key", construct_composite_key(instance.natural_key()))
+            return getattr(instance, "natural_slug", construct_natural_slug(instance.natural_key(), pk=instance.pk))
         except (AttributeError, NotImplementedError):
             return "unknown"
 

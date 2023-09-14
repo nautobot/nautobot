@@ -1,4 +1,5 @@
 import time
+import uuid
 
 from unittest.mock import patch
 
@@ -41,6 +42,8 @@ class ModelUtilsTestCase(TestCase):
 
     def test_construct_natural_slug(self):
         """Test that `construct_natural_slug()` works as expected."""
+        pk = uuid.uuid4()
+        pk4 = str(pk)[:4]
         for values, expected_natural_slug in (
             (["Alpha"], "alpha"),  # simplest case
             (["alpha", "beta"], "alpha_beta"),  # multiple inputs
@@ -50,7 +53,8 @@ class ModelUtilsTestCase(TestCase):
             (["💩", "Everyone's favorite!"], "pile-of-poo_everyone-s-favorite"),  # Emojis and unsafe ASCII
         ):
             with self.subTest(values=values):
-                natural_slug = construct_natural_slug(values)
+                expected_natural_slug += f"_{pk4}"
+                natural_slug = construct_natural_slug(values, pk=pk)
                 self.assertEqual(natural_slug, expected_natural_slug)
 
 

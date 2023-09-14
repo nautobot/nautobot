@@ -20,6 +20,7 @@ __all__ = (
     "CompositeKeyQuerySetMixin",
     "RestrictedQuerySet",
     "construct_composite_key",
+    "construct_natural_key",
     "deconstruct_composite_key",
 )
 
@@ -153,9 +154,10 @@ class BaseModel(models.Model):
         """
         Automatic "slug" string derived from this model's natural key. This differs from composite
         key in that it must human-readable and therefore lossy. This value is not guaranteed to be
-        unique.
+        unique although a best effort is made by appending a fragment of the primary key to the
+        natural slug value.
         """
-        return construct_natural_slug(self.natural_key())
+        return construct_natural_slug(self.natural_key(), pk=self.pk)
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument

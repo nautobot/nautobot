@@ -10,7 +10,8 @@ from django.utils.tree import Node
 import emoji
 from slugify import slugify
 
-from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.models import constants
+from nautobot.core.utils.data import is_uuid
 
 
 def array_to_string(array):
@@ -189,7 +190,7 @@ def construct_composite_key(values):
     # . and : are generally "safe enough" to use in URL parameters, and are common in some natural key fields,
     # so we don't quote them by default (although `deconstruct_composite_key` will work just fine if you do!)
     # / is a bit trickier to handle in URL paths, so for now we *do* quote it, even though it appears in IPAddress, etc.
-    values = COMPOSITE_KEY_SEPARATOR.join(quote_plus(value, safe=".:") for value in values)
+    values = constants.COMPOSITE_KEY_SEPARATOR.join(quote_plus(value, safe=".:") for value in values)
     return values
 
 
@@ -202,14 +203,17 @@ def deconstruct_composite_key(composite_key):
 
     Inverse operation of `construct_composite_key()`.
     """
-    values = [unquote_plus(value) for value in composite_key.split(COMPOSITE_KEY_SEPARATOR)]
+    values = [unquote_plus(value) for value in composite_key.split(constants.COMPOSITE_KEY_SEPARATOR)]
     values = [value if value != "\0" else None for value in values]
     return values
 
 
-def construct_natural_slug(values):
+def construct_natural_slug(values, pk=None):
     """
-    Convert the given list of natural key values to a single human-readable string.
+    Convert the given list of natural key `values` to a single human-readable string.
+
+    If `pk` is provided, it will be appended to the end of the natural slug. If the PK is a UUID,
+    only the first four characters will be appended.
 
     A third-party lossy `slugify()` function is used to convert each natural key value to a
     slug, and then they are joined with an underscore.
@@ -224,6 +228,19 @@ def construct_natural_slug(values):
 
     This value is not reversible, lossy, and is not guaranteed to be unique.
     """
-    values = [str(value) if value is not None else "\0" for value in values]
-    # This attempts to replace any emojis with their string name, and then slugify that.
-    return "_".join(slugify(emoji.replace_emoji(value, unicodedata.name)) for value in values)
+    # In some cases the natural key might not be a list.
+    if isinstance(values, tuple):
+        values = list(values)
+
+    # If a pk is passed through, append it to the values.
+    if pk is not None:
+        pk = str(pk)
+        # Keep the first 4 characters of the UUID.
+        if is_uuid(pk):
+            pk = pk[:4]
+        values.append(pk)
+
+    values = (str(value) if value is not None else "\0" for value in values)
+    # Replace any emojis with their string name, and then slugify that.
+    values = (slugify(emoji.replace_emoji(value, unicodedata.name)) for value in values)
+    return constants.NATURAL_SLUG_SEPARATOR.join(values)
