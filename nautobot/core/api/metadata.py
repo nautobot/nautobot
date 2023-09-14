@@ -284,6 +284,10 @@ class NautobotMetadata(SimpleMetadata):
         """This is the metadata that gets returned on an `OPTIONS` request."""
         metadata = super().determine_metadata(request, view)
 
+        # Include the object type label for this model.
+        object_type = view.queryset.model._meta.label_lower if hasattr(view, "queryset") else "unknown"
+        metadata["object_type"] = object_type
+
         # If there's a serializer, do the needful to bind the schema/uiSchema.
         if hasattr(view, "get_serializer"):
             serializer = view.get_serializer()
