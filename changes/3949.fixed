@@ -1,2 +1,0 @@
-Fixed a ValueError when editing an existing DynamicGroup that has invalid `filter` data.
-Fixed `DynamicGroup.clean_fields()` so that it will respect an `exclude=["filter"]` kwarg by not validating the `filter` field.
