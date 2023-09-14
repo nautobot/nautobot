@@ -31,7 +31,6 @@ from nautobot.dcim.models import (
     Site,
     VirtualChassis,
 )
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, Service, VLAN
 from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
@@ -49,6 +48,7 @@ from nautobot.extras.models import (
     Status,
     TaggedItem,
 )
+from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, Role, Service, VLAN, VRF
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.models import ObjectPermission, User
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -142,7 +142,7 @@ def check_permissions_constraints(command):
     - extras.ScheduledJob
     - extras.TaggedItem
 
-    Objects that had fields renamed in 2.0 are:
+    Objects that had fields renamed or removed in 2.0 are:
     - circuits.Circuit
     - ContentType
     - dcim.CablePath
@@ -177,6 +177,7 @@ def check_permissions_constraints(command):
     - ipam.RIR
     - ipam.Service
     - ipam.VLAN
+    - ipam.VRF
     - tenancy.Tenant
     - tenancy.TenantGroup
     - users.User
@@ -226,7 +227,7 @@ def check_permissions_constraints(command):
             "note_set",
             "virtualization_virtualmachine_related",
         ],
-        CustomField: ["choices", "label"],
+        CustomField: ["choices", "label", "name"],
         CustomFieldChoice: ["field"],
         Device: [
             "consoleports",
@@ -256,25 +257,25 @@ def check_permissions_constraints(command):
             "rearporttemplates",
         ],
         FrontPortTemplate: ["rear_port"],
-        GitRepository: ["slug"],
-        InventoryItem: ["child_items", "level"],
-        IPAddress: ["family", "prefix_length"],
-        Job: ["commit_default", "job_hook", "name", "module_name", "result", "source", "git_repository"],
-        JobResult: ["created", "completed", "job_kwargs", "logs", "schedule"],
+        GitRepository: ["slug", "_token", "username"],
+        InventoryItem: ["child_items", "level", "lft", "rght", "tree_id"],
+        IPAddress: ["assigned_object", "broadcast", "family", "prefix_length", "vrf"],
+        Job: ["commit_default", "git_repository", "job_hook", "module_name", "name", "result", "source"],
+        JobResult: ["completed", "created", "job_id", "job_kwargs", "logs", "obj_type", "schedule"],
         Location: ["powerpanels"],
         ObjectPermission: ["name"],
         PowerOutletTemplate: ["power_port"],
         PowerPanel: ["powerfeeds"],
         PowerPort: ["poweroutlets"],
         PowerPortTemplate: ["poweroutlet_templates"],
-        Prefix: ["family"],
+        Prefix: ["family", "is_pool", "vrf"],
         Rack: ["group", "powerfeed_set", "reservations"],
-        RackGroup: ["level", "powerpanel_set"],
+        RackGroup: ["level", "lft", "powerpanel_set", "rght", "tree_id"],
         RearPort: ["frontports"],
         RearPortTemplate: ["frontport_templates"],
         Relationship: ["associations", "name"],
         RIR: ["aggregates"],
-        ScheduledJob: ["kwargs", "user", "queue", "job_class", "name"],
+        ScheduledJob: ["job_class"],
         Secret: ["groups", "secretsgroupassociation_set"],
         SecretsGroup: ["device_set", "deviceredundancygroup_set", "gitrepository_set", "secretsgroupassociation_set"],
         SecretsGroupAssociation: ["group"],
@@ -295,7 +296,7 @@ def check_permissions_constraints(command):
             "virtualization_vminterface_related",
         ],
         Tenant: ["group", "rackreservations"],
-        TenantGroup: ["level"],
+        TenantGroup: ["lft", "level", "rght", "tree_id"],
         User: ["changes", "note", "rackreservation_set"],
         VirtualMachine: [
             "local_context_data",
@@ -304,6 +305,7 @@ def check_permissions_constraints(command):
             "local_context_schema",
         ],
         VLAN: ["group"],
+        VRF: ["enforce_unique"],
     }
 
     command.stdout.write(command.style.WARNING(">>> Running permission constraint checks..."))
