@@ -58,6 +58,7 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
     InventoryItem,
+    PathEndpoint,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -173,8 +174,11 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_connected_endpoint_type(self, obj):
-        if obj._path is not None and obj._path.destination is not None:
-            return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
+        try:
+            if obj._path is not None and obj._path.destination is not None:
+                return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
+        except CablePath.DoesNotExist:
+            pass
         return None
 
     @extend_schema_field(serializers.DictField(allow_null=True))
@@ -182,16 +186,22 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         """
         Return the appropriate serializer for the type of connected object.
         """
-        if obj._path is not None and obj._path.destination is not None:
-            serializer = get_serializer_for_model(obj._path.destination, prefix="Nested")
-            context = {"request": self.context["request"]}
-            return serializer(obj._path.destination, context=context).data
+        try:
+            if obj._path is not None and obj._path.destination is not None:
+                serializer = get_serializer_for_model(obj._path.destination, prefix="Nested")
+                context = {"request": self.context["request"]}
+                return serializer(obj._path.destination, context=context).data
+        except CablePath.DoesNotExist:
+            pass
         return None
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
-        if obj._path is not None:
-            return obj._path.is_active
+        try:
+            if obj._path is not None:
+                return obj._path.is_active
+        except CablePath.DoesNotExist:
+            pass
         return None
 
 
