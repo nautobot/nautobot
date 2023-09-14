@@ -1074,13 +1074,13 @@ class IPAddress(PrimaryModel):
             namespace = self._namespace
 
         try:
-            closes_parent = (
+            closest_parent = (
                 Prefix.objects.filter(namespace=namespace)
                 # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
                 # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
                 .get_closest_parent(self.host, include_self=True)
             )
-            return closes_parent
+            return closest_parent
         except Prefix.DoesNotExist:
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"})
 
@@ -1099,10 +1099,10 @@ class IPAddress(PrimaryModel):
 
         # Validate `parent` can be used as the parent for this ipaddress
         if self.address and self.parent:
-            closes_parent = self._get_closest_parent()
-            if self.parent != closes_parent:
+            closest_parent = self._get_closest_parent()
+            if self.parent != closest_parent:
                 raise ValidationError({"parent": f"{self.parent} cannot be assigned as a parent."})
-            self.parent = closes_parent
+            self.parent = closest_parent
 
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
