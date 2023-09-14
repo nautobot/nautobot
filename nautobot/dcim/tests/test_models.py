@@ -47,10 +47,12 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     Site,
 )
+from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import User
 
 
 class CableLengthTestCase(TestCase):
@@ -1175,17 +1177,21 @@ class CableTestCase(TestCase):
             slug="test-device-type-1",
         )
         devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
+        device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.user = User.objects.create(username="User 1")
         self.device1 = Device.objects.create(
             device_type=devicetype,
             device_role=devicerole,
             name="TestDevice1",
             site=site,
+            status=device_status,
         )
         self.device2 = Device.objects.create(
             device_type=devicetype,
             device_role=devicerole,
             name="TestDevice2",
             site=site,
+            status=device_status,
         )
         self.interface1 = Interface.objects.create(device=self.device1, name="eth0")
         self.interface2 = Interface.objects.create(device=self.device2, name="eth0")
@@ -1422,6 +1428,61 @@ class CableTestCase(TestCase):
         )
 
         self.assertTrue(Cable.objects.filter(id=cable.pk).exists())
+
+    def test_deleting_device_with_multiple_types_of_connected_interfaces_successful(self):
+        Cable.objects.all().delete()
+        interface1 = Interface.objects.create(device=self.device1, name="ethernet1")
+        interface2 = Interface.objects.create(device=self.device2, name="ethernet2")
+        interface3 = Interface.objects.create(device=self.device1, name="ethernet3")
+        interface4 = Interface.objects.create(device=self.device2, name="ethernet4")
+        device1_power_ports = [
+            PowerPort.objects.create(device=self.device1, name="Power Port 1"),
+            PowerPort.objects.create(device=self.device1, name="Power Port 2"),
+        ]
+        device2_power_outlets = [
+            PowerOutlet.objects.create(name="Power Outlet 1", device=self.device2),
+            PowerOutlet.objects.create(name="Power Outlet 2", device=self.device2),
+        ]
+
+        cable_0 = Cable.objects.create(
+            termination_a=interface1,
+            termination_b=interface2,
+            length_unit="in",
+            length=1,
+            status=self.status,
+        )
+        cable_0.validated_save()
+        cable_1 = Cable.objects.create(
+            termination_a=interface3,
+            termination_b=interface4,
+            length_unit="in",
+            length=1,
+            status=self.status,
+        )
+        cable_1.validated_save()
+        cable_2 = Cable.objects.create(
+            termination_a=device2_power_outlets[0],
+            termination_b=device1_power_ports[0],
+            length_unit="in",
+            length=1,
+            status=self.status,
+        )
+        cable_2.validated_save()
+        cable_3 = Cable.objects.create(
+            termination_a=device2_power_outlets[1],
+            termination_b=device1_power_ports[1],
+            length_unit="in",
+            length=1,
+            status=self.status,
+        )
+        cable_3.validated_save()
+
+        self.device1.validated_save()
+        self.device2.validated_save()
+
+        # Enable change logging
+        with context_managers.web_request_context(self.user):
+            self.device1.delete()
 
 
 class PowerPanelTestCase(TestCase):
