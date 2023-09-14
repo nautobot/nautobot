@@ -8,6 +8,7 @@ from nautobot.core.api import (
     ChoiceField,
     NautobotHyperlinkedRelatedField,
     NautobotModelSerializer,
+    ValidatedModelSerializer,
 )
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam.api.fields import IPFieldSerializer
@@ -16,6 +17,7 @@ from nautobot.ipam import constants
 from nautobot.ipam.models import (
     get_default_namespace,
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -291,6 +293,17 @@ class AvailableIPSerializer(serializers.Serializer):
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
             ]
         )
+
+
+#
+# IP address to interface
+#
+
+
+class IPAddressToInterfaceSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = IPAddressToInterface
+        fields = "__all__"
 
 
 #
