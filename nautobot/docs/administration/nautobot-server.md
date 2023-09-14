@@ -408,6 +408,9 @@ Checking Citrix Platform 3...
 
 `nautobot-server pre_migrate`
 
++/- 1.6.2
+    Added permission constraint checks to the list of pre-migration checks.
+
 Performs pre-migration validation checks for Nautobot 2.0.
 
 If the Nautobot 1.X instance cannot be upgraded, this command will exit uncleanly making it suitable for use in continuous integration workflows.
