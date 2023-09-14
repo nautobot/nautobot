@@ -155,6 +155,8 @@ example-plugin-with-view-override = { path = "examples/example_plugin_with_view_
 factory-boy = "~3.2.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
+# Environment variable management
+python-dotenv = "^0.21.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
 rich = "~13.4.2"
 # Change log management and generation

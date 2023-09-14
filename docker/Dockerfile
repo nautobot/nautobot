@@ -80,9 +80,11 @@ RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
 HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --fail http://localhost:8080/health/ || exit 1
 
 # Generate nautobot user and its required dirs for later consumption
+ARG NAUTOBOT_UID=999
+ARG NAUTOBOT_GID=999
 RUN mkdir /opt/nautobot /opt/nautobot/.cache /prom_cache /source && \
-    groupadd --gid 999 --system nautobot && \
-    useradd --uid 999 --gid 999 --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot && \
+    groupadd --gid $NAUTOBOT_GID --system nautobot && \
+    useradd --uid $NAUTOBOT_UID --gid $NAUTOBOT_GID --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot && \
     chown -R nautobot:nautobot /opt/nautobot /prom_cache /source
 
 # Common entrypoint for all environments
@@ -210,6 +212,8 @@ COPY --from=build-nautobot --chown=nautobot:nautobot /source/nautobot/project-st
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-ansi --extras all && \
     rm -rf /tmp/tmp*
+
+USER nautobot
 
 ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
