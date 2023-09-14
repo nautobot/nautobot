@@ -1,0 +1,1 @@
+Changed class `NautobotTestRunner` to inherit from `XMLTestRunner`, exporting tests results to `NAUTOBOT_TEST_OUTPUT_DIR` environment variable.

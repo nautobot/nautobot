@@ -12,15 +12,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from contextlib import contextmanager
+import json
 import os
-from pathlib import Path
 import re
+import subprocess
 import sys
-from typing import Iterable
+import time
+from contextlib import contextmanager
+from enum import Enum
+from enum import auto
+from functools import partial
+from multiprocessing import Pool
+from pathlib import Path
+from typing import Iterable, List
 from typing import Mapping
 from typing import Optional
+from typing import Tuple
 from typing import Union
+from xml.etree import ElementTree
 
 from dotenv import dotenv_values
 from dotenv import load_dotenv
@@ -35,9 +44,54 @@ except ModuleNotFoundError:
     # Avoid typing error
     print = print
 
+# Regex to match ANSI escape sequences, to be able to remove them from the output
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 _DOCKER_NAUTOBOT_PATH = Path("/opt/nautobot")
 _DOCKER_SOURCE_PATH = Path("/source")
+# Magic constant for relativising tests times, to get some singinificant bits
+_MAGIC_CONSTANT = 420
+# Repository root path
 _ROOT_PATH = Path(__file__).parent.absolute().resolve()
+# Maximum worker count is limited by the number of Redist databases (16)
+_MAX_PARALLEL_WORKER_COUNT = 6
+# Path to the file containing tests modules with their execution times
+_TESTS_TIMES_PATH = _ROOT_PATH / "nautobot/core/tests/tests-times.json"
+# Name of the directory containing test results
+_TESTS_RESULTS_DIR_NAME = ".test-results"
+# List of names used for NAMES Distribution
+# One test group will be created for each item
+_NAMES_DISTRIBUTION = [
+    "circuits",
+    "core",
+    "dcim",
+    "dcim/tests/test_api.py",
+    "dcim/tests/test_views.py",
+    "extras",
+    "extras/tests/test_api.py",
+    "extras/tests/test_jobs.py",
+    "extras/tests/test_views.py",
+    "ipam",
+    "tenancy",
+    "users",
+    "utilities",
+    "virtualization",
+]
+# List of patterns to match tests files to skip, these are not used in parallelized unittests.
+# Django test discovery will skip these tests for `invoke unittests` without tags.
+# Unable to use Django discovery for parallelized tests, so we need to skip them manually.
+#     (First we need to distribute tests and then run them)
+_SKIP_TESTS_NAMES = [
+    "/example_jobs/",
+    "/integration/",
+    "nautobot/core/tests/test_cli.py",
+]
+
+
+class DistributionType(Enum):
+    NAMES = auto()
+    TIMES = auto()
+
+
 
 # Custom dotenv file, allows to override default values
 load_dotenv(_ROOT_PATH / ".env")
@@ -1031,6 +1085,9 @@ def check_schema(context, api_version=None):
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
+        "docker_action": "Specify, whether to use `local` or docker compose `exec` or `run` command. Defaults to None (autodetect).",
+        "group_index": "Parallel tests group index.",
+        "fixture_file": "Path to a fixture file to use for tests.",
     },
     iterable=["tag", "exclude_tag", "label"],
 )
@@ -1048,6 +1105,9 @@ def unittest(
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
+    docker_action=None,
+    group_index=None,
+    fixture_file=None,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -1063,6 +1123,8 @@ def unittest(
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
         command += " --cache-test-fixtures"
+    if fixture_file:
+        command += f" --fixture-file={fixture_file}"
     if keepdb:
         command += " --keepdb"
     if failfast:
@@ -1086,7 +1148,13 @@ def unittest(
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
 
-    _run(context, command)
+    docker_action = _resolve_docker_action(context, docker_action)
+    env = {"NAUTOBOT_TEST_OUTPUT_DIR": str(_get_tests_results_path(context, docker_action))}
+
+    if group_index is not None:
+        env["NAUTOBOT_TEST_GROUP_INDEX"] = str(group_index)
+
+    _run(context, command, env=env, docker_action=docker_action)
 
 
 @task
@@ -1319,6 +1387,342 @@ def tests(context, failfast=False, keepdb=False, lint_only=False):
     build_and_check_docs(context)
     if not lint_only:
         unittest(context, failfast, keepdb=keepdb)
+
+
+def _get_tests_results_path(context, docker_action: str) -> Path:
+    """Return the directory to store tests results in, different for docker and local runs."""
+    if _resolve_docker_action(context, docker_action) == "local":
+        return _ROOT_PATH / _TESTS_RESULTS_DIR_NAME
+    else:
+        return Path("/source") / _TESTS_RESULTS_DIR_NAME
+
+
+def _remove_ansi_escapes(text: str) -> str:
+    """Remove ANSI escape sequences from text."""
+    return _ANSI_ESCAPE_RE.sub("", text)
+
+
+def _print_tests_results(context, estimations, results, real_time):
+    """Print tests results summary."""
+
+    print()
+    print(50 * "=")
+    for result in results:
+        group_index, returncode, group_time = result
+        print(f"group {group_index:2}: {'SUCCESS' if returncode == 0 else 'FAILURE'}")
+        print(f"group {group_index:2}: relative time: {round(estimations[group_index])}")
+        print(f"group {group_index:2}: real time (s): {round(group_time)}")
+
+    print(50 * "=")
+
+    summary = {
+        "tests": 0,
+        "errors": 0,
+        "failures": 0,
+        "time": 0.0,
+    }
+
+    for file in _get_tests_results_path(context, "local").glob("*.xml"):
+        try:
+            tree = ElementTree.parse(file)
+        except ElementTree.ParseError:
+            print(50 * "=")
+            print(f"ERROR: Failed to parse {file}")
+            print(50 * "=")
+            continue
+        root = tree.getroot()
+        summary["tests"] += int(root.attrib.get("tests", 0))
+        summary["errors"] += int(root.attrib.get("errors", 0))
+        summary["failures"] += int(root.attrib.get("failures", 0))
+        summary["time"] += float(root.attrib.get("time", 0.0))
+
+    print("Tests Results Summary:")
+    print("---------------------")
+    print(f"Tests:    {summary['tests']}")
+    print(f"Errors:   {summary['errors']}")
+    print(f"Failures: {summary['failures']}")
+    print(f"Tests time (s): {round(summary['time'])}")
+    print(f"Real time (s):  {round(real_time)}")
+    print(50 * "=")
+
+    return summary
+
+
+def _distribute_tests(distribution: DistributionType, worker_count) -> Tuple[List[List[str]], List[float]]:
+    """Split tests into groups for parallelization.
+
+    Returns a list of groups of tests modules and a list of estimated times for each group.
+    Groups are sorted by the estimated times from the slowest to the fastest to start the slowest group first.
+
+    There are two ways to distribute tests:
+
+    `NAMES`:
+
+    - Uses `_NAMES_DISTRIBUTION` to group tests by module names.
+    - Each item in `_NAMES_DISTRIBUTION` results in one group of tests.
+    - `_TESTS_TIMES_PATH` is used when reducing groups to worker count.
+
+    `TIMES`:
+
+    - Uses `_TESTS_TIMES_PATH` to group tests by their times.
+    - `worker_count` define the number of groups to create.
+    - `_NAMES_DISTRIBUTION` is not used.
+    - modules in each group are sorted by their times from the fastest to the slowest to fail fast.
+
+    `TIMES` distribution is better, however randomly distributed tests can fail sometimes.
+    """
+
+    nautobot_path = _ROOT_PATH / "nautobot"
+    root_dir = f"{str(_ROOT_PATH)}/"
+
+    # Read all tests files removing the ones we want to skip
+    all_tests_files = [
+        str(path).replace(root_dir, "")
+        for path in nautobot_path.rglob("test_*.py")
+        if all(skip_name not in str(path) for skip_name in _SKIP_TESTS_NAMES)
+    ]
+
+    # Load stored tests times
+    tests_times = json.loads(_TESTS_TIMES_PATH.read_text(encoding="utf-8"))
+
+    # For NAMES distribution, group count is specified by the number of names in the distribution
+    group_count = len(_NAMES_DISTRIBUTION) if distribution == DistributionType.NAMES else worker_count
+
+    groups = [[] for _ in range(group_count)]
+    estimations = [0.0 for _ in range(group_count)]
+
+    obsoleted = []
+
+    def add_file(filename: str, estimation: float, group_index=None) -> None:
+        """Add file to the group and remove it from all_tests_files.
+
+        If group_index is not specified, add to the group with the lowest estimation.
+        """
+        if group_index is None:
+            group_index = estimations.index(min(estimations))
+        try:
+            all_tests_files.remove(filename)
+        except ValueError:
+            print(f"WARNING: {filename} was not found in all_tests_files, skipping.")
+            obsoleted.append(filename)
+            return
+        groups[group_index].append(filename[:-3].replace("/", "."))
+        estimations[group_index] += estimation
+
+    def sort_groups(groups, estimations) -> Tuple[List[List[str]], List[float]]:
+        sorted_groups = sorted(groups, key=lambda group: estimations[groups.index(group)], reverse=True)
+        sorted_estimations = [estimations[groups.index(group)] for group in sorted_groups]
+        return sorted_groups, sorted_estimations
+
+    if distribution == DistributionType.NAMES:
+        # Sort more specific items first
+        names = sorted(_NAMES_DISTRIBUTION, reverse=True)
+        tests_times_len = len(tests_times)
+        for index, name in enumerate(names):
+            for item in tests_times[:]:
+                if item["file"].startswith(f"nautobot/{name}"):
+                    add_file(item["file"], item["time"], index)
+                    tests_times.remove(item)
+
+        if tests_times:
+            raise ValueError(f"Tests not found in _NAMES_DISTRIBUTION: {tests_times}")
+
+        avg = sum(estimations) / tests_times_len
+
+        for index, name in enumerate(names):
+            for filename in all_tests_files[:]:
+                if filename.startswith(f"nautobot/{name}"):
+                    print(f"WARNING: Test not found in tests_times, adding: {filename}")
+                    obsoleted.append(filename)
+                    add_file(filename, avg, index)
+
+        if group_count > worker_count:
+            # Reduce number of groups to worker_count
+            sorted_groups, sorted_estimations = sort_groups(groups, estimations)
+
+            groups = [[] for _ in range(worker_count)]
+            estimations = [0.0 for _ in range(worker_count)]
+
+            for group_index, group in enumerate(sorted_groups):
+                fastest_group_index = estimations.index(min(estimations))
+                groups[fastest_group_index] += group
+                estimations[fastest_group_index] += sorted_estimations[group_index]
+    elif distribution == DistributionType.TIMES:
+        # Sort stored tests by time from slowest to fastest
+        tests_times.sort(key=lambda item: item["time"], reverse=True)
+        for file in tests_times:
+            # Add the next slowest test to the group with the lowest total times
+            add_file(file["file"], file["time"])
+
+        avg = sum(estimations) / len(tests_times)
+
+        for filename in all_tests_files[:]:
+            print(f"WARNING: Test not found in tests_times, adding: {filename}")
+            obsoleted.append(filename)
+            add_file(filename, avg)
+
+        # Run faster tests first to fail fast
+        for modules in groups:
+            modules.reverse()
+    else:
+        raise NotImplementedError("Only NAMES or TIMES distribution is supported at this time.")
+
+    if all_tests_files:
+        for filename in all_tests_files:
+            print(f"ERROR: Not distributed: {filename}")
+        raise RuntimeError("Not all tests were distributed, please check the logs for more information.")
+
+    if obsoleted:
+        print(f"WARNING: {_TESTS_TIMES_PATH} is obsolete, please update it by running `inv sum-tests-times`.")
+
+    return sort_groups(groups, estimations)
+
+
+def _invoke_unittest_group(docker_action, args):
+    start_time = time.time()
+    group_index, labels = args
+
+    command = [
+        "invoke",
+        "unittest",
+        "--failfast",
+        "--skip-docs-build",
+        "--cache-test-fixtures",
+        f"--fixture-file=development/factory_dump_{group_index}.json",
+        "--keepdb",
+        "--no-buffer",
+        f"--docker-action={docker_action}",
+        f"--group-index={group_index}",
+        *(f"--label={label}" for label in labels),
+    ]
+
+    with subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    ) as process:
+        for line in iter(process.stdout.readline, ""):  # type: ignore
+            print(f"group {group_index:2}: {_remove_ansi_escapes(line)}", end="")
+        for line in iter(process.stderr.readline, ""):  # type: ignore
+            print(f"group {group_index:2}: STDERR: {_remove_ansi_escapes(line)}", end="")
+
+        process.communicate()
+        if process.returncode != 0:
+            print(50 * "=")
+            print(f"group {group_index} FAILED with return code {process.returncode}")
+            print(50 * "=")
+
+        return group_index, process.returncode, time.time() - start_time
+
+
+@task(
+    name="unittest-parallel",
+    help={
+        "worker_count": "Number of parallel worker_count to use (default: 3)",
+        "docker-action": "Default docker compose execution method 'local', 'exec' or 'run' (default: 'exec')",
+        "distribution": "Distribution method `names` or `times` (default: `names`)",
+    },
+)
+def unittest_parallel(context, worker_count=3, docker_action=None, distribution="names"):
+    """Parallelize unit tests."""
+
+    if worker_count > _MAX_PARALLEL_WORKER_COUNT:
+        raise ValueError(f"Maximum value for worker_count is {_MAX_PARALLEL_WORKER_COUNT}.")
+
+    start_time = time.time()
+
+    docker_action = _resolve_docker_action(context, docker_action)
+    if docker_action != "local":
+        # Experienced conflicts with running containers in parallel, stopping them first
+        stop(context)
+        if docker_action == "exec":
+            start(context, service=["nautobot"])
+        elif docker_action == "run":
+            # Only start the required containers, nautobot does not need to be running
+            start(context, service=["db", "redis", "selenium"])
+
+    # Cleanup tests results
+    _run(context, f"rm -rf {_get_tests_results_path(context, docker_action)}", docker_action=docker_action)
+
+    groups, estimations = _distribute_tests(DistributionType[distribution.upper()], worker_count)
+    if worker_count > len(groups):
+        worker_count = len(groups)
+
+    print(f"Tests distribution by {distribution} with {worker_count} worker_count:")
+    for group_index, labels in enumerate(groups):
+        print(f"group {group_index:2}: relative time: {round(estimations[group_index])}, tests:")
+        print("\n".join(f"  {label}" for label in labels))
+
+    with Pool(worker_count) as pool:
+        results = pool.map(partial(_invoke_unittest_group, docker_action), enumerate(groups))
+
+    summary = _print_tests_results(context, estimations, results, time.time() - start_time)
+    if any(result[1] != 0 for result in results) or summary["errors"] > 0 or summary["failures"] > 0:
+        raise Exit("Some tests failed, please check the logs for more information.")
+
+
+@task
+def sum_tests_times(context):
+    """Summarize the time it takes to run each test file.
+
+    Use this to rebuild the file `_TESTS_TIMES_PATH` file after successfully running `invoke unittest-parallel`.
+    Resulting file contains tests time summary for each test file and should be committed to the repository.
+    See `_distribute_tests` docstring for more information.
+    `time` key for each test is relativised to avoid frequent changes.
+    """
+    files = []
+    sum_time = 0.0
+    for file in _get_tests_results_path(context, "local").glob("*.xml"):
+        try:
+            tree = ElementTree.parse(file)
+        except ElementTree.ParseError:
+            print(50 * "=")
+            print(f"ERROR: Failed to parse {file}")
+            print(50 * "=")
+            continue
+        root = tree.getroot()
+        filename = root.attrib.get("file")
+        if filename == "unittest/loader.py":
+            continue
+        try:
+            item = next(item for item in files if item["file"] == filename)
+        except StopIteration:
+            item = {"file": filename, "time": 0.0}
+            files.append(item)
+        item_time = float(root.attrib.get("time", 0.0))
+        item["time"] += item_time
+        sum_time += item_time
+
+    # Magic value other times will relate to, based on average time of all tests and a magic constant
+    relative_to = sum_time / len(files) / _MAGIC_CONSTANT
+
+    def relativise(value: float) -> int:
+        "Keep only 4 bits of precision relative to `relative_to` magic value"
+        if value == 0.0:
+            return 0
+        integer = round(value / relative_to)
+        if integer == 0:
+            return 1
+        shift_len = len(bin(integer)) - 4 - 2  # `- 2` for `0b` prefix
+        if shift_len > 0:
+            return (integer >> shift_len) << shift_len
+        else:
+            return integer
+
+    files.sort(key=lambda item: item["file"])
+
+    for item in files:
+        item["time"] = relativise(item["time"])
+
+    _TESTS_TIMES_PATH.write_text(json.dumps(files, indent=4), encoding="utf-8")
+
+    print(f"Tests times written to `{_TESTS_TIMES_PATH}`. Commit this file for later use.")
+
+    print("Top 10 slowest tests:")
+    files.sort(key=lambda item: item["time"], reverse=True)
+    for item in files[:10]:
+        print(f"{item['file']}: {item['time']}")
 
 
 @task(help={"version": "The version number or the rule to update the version."})

@@ -1,0 +1,4 @@
+Added `invoke unittest-parallel`, which runs unit tests in parallel with results written to `.test-results` directory.
+Added `invoke sum-tests-times` to update file for distributing parallel tests.
+Added `--docker-action`, `--group-index` and `--fixture-file` arguments to `invoke unittest`.
+Added `--fixture-file` argument to Nautobot test runner.
