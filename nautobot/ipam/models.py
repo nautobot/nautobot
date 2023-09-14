@@ -1130,6 +1130,10 @@ class IPAddress(PrimaryModel):
         """Display count of ancestors."""
         return self.ancestors().count()
 
+    @property
+    def namespace(self):
+        return self.parent.namespace
+
     def root(self):
         """
         Returns the root node (the parent of all of my ancestors).

@@ -289,18 +289,13 @@ class VRFPrefixAssignmentTable(BaseTable):
     """Table for displaying VRF Prefix Assignments."""
 
     vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
-    namespace = tables.Column(
-        verbose_name="Namespace",
-        linkify=lambda record: record.vrf.namespace.get_absolute_url(),
-        accessor="vrf.namespace.name",
-    )
     prefix = tables.Column(linkify=True)
     rd = tables.Column(accessor="vrf.rd", verbose_name="RD")
     tenant = TenantColumn(accessor="vrf.tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFPrefixAssignment
-        fields = ("vrf", "namespace", "prefix", "rd", "tenant")
+        fields = ("vrf", "prefix", "rd", "tenant")
 
 
 #
