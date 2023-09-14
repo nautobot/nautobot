@@ -58,7 +58,6 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
     InventoryItem,
-    PathEndpoint,
     Platform,
     PowerFeed,
     PowerOutlet,
