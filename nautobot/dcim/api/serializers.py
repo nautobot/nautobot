@@ -1,3 +1,5 @@
+import contextlib
+
 from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -173,11 +175,9 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_connected_endpoint_type(self, obj):
-        try:
+        with contextlib.suppress(CablePath.DoesNotExist):
             if obj._path is not None and obj._path.destination is not None:
                 return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
-        except CablePath.DoesNotExist:
-            pass
         return None
 
     @extend_schema_field(serializers.DictField(allow_null=True))
@@ -185,22 +185,18 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         """
         Return the appropriate serializer for the type of connected object.
         """
-        try:
+        with contextlib.suppress(CablePath.DoesNotExist):
             if obj._path is not None and obj._path.destination is not None:
                 serializer = get_serializer_for_model(obj._path.destination, prefix="Nested")
                 context = {"request": self.context["request"]}
                 return serializer(obj._path.destination, context=context).data
-        except CablePath.DoesNotExist:
-            pass
         return None
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
-        try:
+        with contextlib.suppress(CablePath.DoesNotExist):
             if obj._path is not None:
                 return obj._path.is_active
-        except CablePath.DoesNotExist:
-            pass
         return None
 
 
