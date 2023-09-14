@@ -20,7 +20,7 @@ __all__ = (
     "CompositeKeyQuerySetMixin",
     "RestrictedQuerySet",
     "construct_composite_key",
-    "construct_natural_key",
+    "construct_natural_slug",
     "deconstruct_composite_key",
 )
 
