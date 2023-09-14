@@ -35,7 +35,16 @@ import { useSearchParams } from "react-router-dom";
 import { useLazyGetFieldLookupChoicesQuery } from "@utils/api";
 
 export const FILTER_RESET_QUERY_PARAMS = ["offset"];
-export const NON_FILTER_QUERY_PARAMS = ["limit", "offset", "sort"];
+export const NON_FILTER_QUERY_PARAMS = [
+    // Copied from `nautobot/core/api/filter_backends.py`.
+    "api_version",
+    "depth",
+    "format",
+    "include",
+    "limit",
+    "offset",
+    "sort",
+];
 
 const FiltersPanel = forwardRef(
     (
