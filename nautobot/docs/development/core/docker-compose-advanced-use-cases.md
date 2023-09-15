@@ -44,7 +44,7 @@ In the `docker` directory you will find the following files:
 - `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
 - `uwsgi.ini` - The [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) ini file used in the production docker container
 
-## Docker-Compose Overrides
+## Docker Compose Overrides
 
 If you require changing any of the defaults found in `docker-compose.yml`, create a file inside the `development` directory called `docker-compose.override.yml` and add this file to the `compose_files` setting in your `invoke.yml` file, for example:
 
@@ -97,7 +97,7 @@ After these two files are created, you can use the `invoke` tasks to manage the 
 
 By default the Docker development environment is configured to use a PostgreSQL container as the database backend. For development or testing purposes, you might optionally choose to use MySQL instead. In order to do so, you need to make the following changes to your environment:
 
-- Set up `invoke.yml` as described above and use it to override the postgres docker-compose file:
+- Set up `invoke.yml` as described above and use it to override the postgres docker compose file:
 
 ```yaml
 ---
@@ -112,9 +112,9 @@ Then `invoke stop` (if you previously had the docker environment running with Po
 
 ### SSO Auth Backend with Keycloak
 
-Keycloak and its database are run in the same docker-compose project as Nautobot. A separate database is used to ensure you are able to have two separate instances of Postgres, one for Nautobot and one for Keycloak, and allows you to use a MySQL database for Nautobot but maintain Keycloaks required Postgres DB. This setup is meant for local development and testing, and should not be used as a reference for deploying Keycloak in production.
+Keycloak and its database are run in the same docker compose project as Nautobot. A separate database is used to ensure you are able to have two separate instances of Postgres, one for Nautobot and one for Keycloak, and allows you to use a MySQL database for Nautobot but maintain Keycloaks required Postgres DB. This setup is meant for local development and testing, and should not be used as a reference for deploying Keycloak in production.
 
-The `invoke.yml` file must be updated to add `development/docker-compose.keycloak.yml` to the docker-compose project and to enable OIDC. These setting are solely for local development inside the Nautobot repository and is not applicable to any other deployment. An example `invoke.yml` file:
+The `invoke.yml` file must be updated to add `development/docker-compose.keycloak.yml` to the docker compose project and to enable OIDC. These setting are solely for local development inside the Nautobot repository and is not applicable to any other deployment. An example `invoke.yml` file:
 
 ```yaml
 ---
@@ -163,7 +163,7 @@ To work with remote containers, after `invoke build` use `docker-compose` as fol
 
 ```no-highlight
 cd development
-docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
+docker compose -f docker-compose.yml -f docker-compose.debug.yml up
 ```
 
 - Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.

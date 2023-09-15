@@ -703,10 +703,12 @@ class IPAddressListView(generic.ObjectListView):
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
     template_name = "ipam/ipaddress_list.html"
+    use_new_ui = True
 
 
 class IPAddressView(generic.ObjectView):
     queryset = IPAddress.objects.select_related("tenant", "status", "role")
+    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
