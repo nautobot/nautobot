@@ -971,13 +971,17 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError) as err:
             ipaddress = IPAddress(address="192.168.0.1/16", parent=prefixes[0], status=self.status)
             ipaddress.validated_save()
-        self.assertEqual(f"{prefixes[0]} cannot be assigned as a parent.", err.exception.message_dict["parent"][0])
+        expected_err_msg = (
+            f"{prefixes[0]} cannot be assigned as the parent of {ipaddress}. "
+            f" In namespace {namespace}, the expected parent would be {prefixes[1]}."
+        )
+        self.assertEqual(expected_err_msg, err.exception.message_dict["parent"][0])
 
     def test_creating_an_ipaddress_without_namespace_or_parent(self):
         with self.assertRaises(ValidationError) as err:
             ip = IPAddress(address="1976:2023::1/128", status=self.status)
             ip.validated_save()
-        self.assertEqual(err.exception.message_dict["parent"][0], "Namespace could not be determined.")
+        self.assertEqual(err.exception.message_dict["parent"][0], "Either a parent or a namespace must be provided.")
 
 
 class TestRIR(ModelTestCases.BaseModelTestCase):

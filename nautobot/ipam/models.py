@@ -1091,13 +1091,20 @@ class IPAddress(PrimaryModel):
 
         # If neither `parent` or `namespace` was provided; raise this exception
         if self._namespace is None:
-            raise ValidationError({"parent": "Namespace could not be determined."})
+            raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
 
         # Validate `parent` can be used as the parent for this ipaddress
         if self.parent:
             closest_parent = self._get_closest_parent()
             if self.parent != closest_parent:
-                raise ValidationError({"parent": f"{self.parent} cannot be assigned as a parent."})
+                raise ValidationError(
+                    {
+                        "parent": (
+                            f"{self.parent} cannot be assigned as the parent of {self}. "
+                            f" In namespace {self._namespace}, the expected parent would be {closest_parent}."
+                        )
+                    }
+                )
             self.parent = closest_parent
 
     def save(self, *args, **kwargs):
@@ -1111,8 +1118,10 @@ class IPAddress(PrimaryModel):
             self.dns_name = self.dns_name.lower()
 
         # validated_save is not always called, particularly in a test environment;
-        # # If validated_save is used in creation with an invalid parent specified, the clean method will throw an Exception;
-        # # however, if validated_save is not used and an invalid parent is specified, provided parent will be silently discarded.
+        # If validated_save is used in creation with an invalid parent specified, the clean method will throw an Exception;
+        # however, if validated_save is not used and an invalid parent is specified, provided parent will be silently discarded.
+        # TODO(timizuo): Optimize the usage of `_get_closest_parent()` by adding a check to determine if it has already been invoked.
+        #   especially considering that it might have been called in the clean method.
         self.parent = self._get_closest_parent()
         super().save(*args, **kwargs)
 

@@ -572,7 +572,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("ipam.add_ipaddress")
         prefixes = (
             Prefix.objects.create(prefix="10.0.0.0/8", status=self.statuses[0], namespace=self.namespace),
-            Prefix.objects.create(prefix="192.168.0.0/16", status=self.statuses[0], namespace=self.namespace),
+            Prefix.objects.create(prefix="192.168.0.0/25", status=self.statuses[0], namespace=self.namespace),
         )
         nat_inside = IPAddress.objects.filter(nat_outside_list__isnull=True).first()
         data = {
@@ -585,7 +585,11 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
 
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["parent"], [f"{prefixes[0]} cannot be assigned as a parent."])
+        expected_err_msg = (
+            f"{prefixes[0]} cannot be assigned as the parent of {data['address']}. "
+            f" In namespace {self.namespace}, the expected parent would be {prefixes[1]}."
+        )
+        self.assertEqual(response.data["parent"], [expected_err_msg])
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
