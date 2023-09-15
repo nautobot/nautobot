@@ -77,6 +77,9 @@ We recommend taking inventory of any objects referenced by primary key in permis
 
 This is because the primary key for these objects may be changed during the migration. You will not be able to use the primary key value from the old object in the constraint to find the new object.
 
+!!! note
+    This pre-migration check only checks the last model referenced in a constraint filter. If you have nested filters (`device_role__devices`) they may not be reported by this check. You should review all of your permission constraints after the upgrade to ensure that they are still valid.
+
 #### Examples
 
 Primary keys for the migrated `Site` and `Region` objects were retained in the `Location` model, so you do not need to update the primary key value in any `Site` or `Region` constraints:
