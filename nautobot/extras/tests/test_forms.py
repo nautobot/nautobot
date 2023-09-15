@@ -1195,3 +1195,27 @@ class ConfigContextFilterFormTestCase(TestCase):
         """Asserts that `ConfigContextFilterForm.dynamic_group` is NOT present when feature flag is disabled."""
         context_filter_form = ConfigContextFilterForm()
         self.assertNotIn("dynamic_groups", context_filter_form.fields)
+
+
+class CustomFieldModelFormMixinTestCase(TestCase):
+    def test_custom_field_data_removed_in_all(self):
+        """Asserts that when `__all__` is set on a CustomFieldModelFormMixin, _custom_field_data is stripped."""
+
+        class TestForm(CustomFieldModelFormMixin):
+            class Meta:
+                model = dcim_models.InterfaceRedundancyGroup
+                fields = "__all__"
+
+        custom_field_form = TestForm()
+        self.assertNotIn("_custom_field_data", custom_field_form.fields)
+
+    def test_custom_field_data_kept_if_explicit(self):
+        """Asserts that _custom_field_data will still show up if explicitly set."""
+
+        class TestForm(CustomFieldModelFormMixin):
+            class Meta:
+                model = dcim_models.InterfaceRedundancyGroup
+                fields = ["_custom_field_data"]
+
+        custom_field_form = TestForm()
+        self.assertIn("_custom_field_data", custom_field_form.fields)
