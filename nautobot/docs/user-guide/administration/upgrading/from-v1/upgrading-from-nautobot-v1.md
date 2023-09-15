@@ -68,7 +68,6 @@ We recommend taking inventory of any objects referenced by primary key in permis
 
 - `dcim.DeviceRole`
 - `dcim.RackRole`
-- `extras.ObjectPermission`
 - `extras.TaggedItem`
 - `ipam.Aggregate`
 - `ipam.IPAddress`
