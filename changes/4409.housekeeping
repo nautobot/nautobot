@@ -1,1 +1,0 @@
-Updated upstream testing workflow for apps to test against LTM and 2.0 with `ltm-1.6` and `develop` branch tags respectively.
