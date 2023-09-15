@@ -226,7 +226,7 @@ def construct_natural_slug(values, pk=None):
     - Each natural key value in the list is separated by underscores.
     - Emojis will be converted to their registered name.
 
-    This value is not reversible, lossy, and is not guaranteed to be unique.
+    This value is not reversible, is lossy, and is not guaranteed to be unique.
     """
     # In some cases the natural key might not be a list.
     if isinstance(values, tuple):

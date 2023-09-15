@@ -153,7 +153,8 @@ class BaseModel(models.Model):
     def natural_slug(self) -> str:
         """
         Automatic "slug" string derived from this model's natural key. This differs from composite
-        key in that it must human-readable and therefore lossy. This value is not guaranteed to be
+        key in that it must be human-readable and comply with a very limited character set, and is therefore lossy.
+        This value is not guaranteed to be
         unique although a best effort is made by appending a fragment of the primary key to the
         natural slug value.
         """
