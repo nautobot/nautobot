@@ -1,4 +1,3 @@
-from cacheops import invalidate_obj
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Q
@@ -25,10 +24,10 @@ def rebuild_paths_circuits(obj):
         | Q(destination_type=termination_type, destination_id=obj.pk)
         | Q(origin_type=termination_type, origin_id=obj.pk)
     )
+    # pylint: enable=unsupported-binary-operation
 
     with transaction.atomic():
         for cp in cable_paths:
-            invalidate_obj(cp.origin)
             cp.delete()
             # Prevent looping back to rebuild_paths during the atomic transaction.
             create_cablepath(cp.origin, rebuild=False)
@@ -42,7 +41,7 @@ def update_circuit(instance, raw=False, **kwargs):
     if raw:
         return
     if instance.term_side in CircuitTerminationSideChoices.values():
-        termination_name = f"termination_{instance.term_side.lower()}"
+        termination_name = f"circuit_termination_{instance.term_side.lower()}"
         setattr(instance.circuit, termination_name, instance)
         setattr(instance.circuit, "last_updated", timezone.now())
         instance.circuit.save()

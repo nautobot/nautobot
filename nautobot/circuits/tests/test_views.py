@@ -9,8 +9,9 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
+from nautobot.core.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
+from nautobot.dcim.models import Location
 from nautobot.extras.models import Status, Tag
-from nautobot.utilities.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
 
 
 class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -18,14 +19,8 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001)
-        Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002)
-        Provider.objects.create(name="Provider 3", slug="provider-3", asn=65003)
-        Provider.objects.create(name="Provider 8", asn=65003)
-
         cls.form_data = {
             "name": "Provider X",
-            "slug": "provider-x",
             "asn": 65123,
             "account": "this-is-a-long-account-number-012345678901234567890123456789",
             "portal_url": "http://example.com/portal",
@@ -36,11 +31,11 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug",
-            "Provider 4,provider-4",
-            "Provider 5,provider-5",
-            "Provider 6,provider-6",
-            "Provider 7,",
+            "name,asn,comments",
+            "Provider 4,1234,A comment",
+            "Provider 5,1234,A comment",
+            "Provider 6,1234,A comment",
+            "Provider 7,1234,A comment",
         )
 
         cls.bulk_edit_data = {
@@ -52,36 +47,24 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "New comments",
         }
 
-        cls.slug_source = "name"
-        cls.slug_test_object = "Provider 8"
-
 
 class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = CircuitType
 
     @classmethod
     def setUpTestData(cls):
-        CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
-        CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2")
-        CircuitType.objects.create(name="Circuit Type 3", slug="circuit-type-3")
-        CircuitType.objects.create(name="Circuit Type 8")
-
         cls.form_data = {
             "name": "Circuit Type X",
-            "slug": "circuit-type-x",
             "description": "A new circuit type",
         }
 
         cls.csv_data = (
-            "name,slug",
-            "Circuit Type 4,circuit-type-4",
-            "Circuit Type 5,circuit-type-5",
-            "Circuit Type 6,circuit-type-6",
-            "Circuit Type 7,",
+            "name,description",
+            "Circuit Type 4,A circuit type",
+            "Circuit Type 5,A circuit type",
+            "Circuit Type 6,A circuit type",
+            "Circuit Type 7,A circuit type",
         )
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Circuit Type 8"
 
 
 class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -89,42 +72,36 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        providers = (
-            Provider.objects.create(name="Provider 1", slug="provider-1", asn=65001),
-            Provider.objects.create(name="Provider 2", slug="provider-2", asn=65002),
-        )
+        providers = Provider.objects.all()[:2]
 
-        circuittypes = (
-            CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1"),
-            CircuitType.objects.create(name="Circuit Type 2", slug="circuit-type-2"),
-        )
+        circuittypes = CircuitType.objects.all()[:2]
 
         statuses = Status.objects.get_for_model(Circuit)
 
         Circuit.objects.create(
             cid="Circuit 1",
             provider=providers[0],
-            type=circuittypes[0],
+            circuit_type=circuittypes[0],
             status=statuses[0],
         )
         Circuit.objects.create(
             cid="Circuit 2",
             provider=providers[0],
-            type=circuittypes[0],
+            circuit_type=circuittypes[0],
             status=statuses[0],
         )
         Circuit.objects.create(
             cid="Circuit 3",
             provider=providers[0],
-            type=circuittypes[0],
+            circuit_type=circuittypes[0],
             status=statuses[0],
         )
 
         cls.form_data = {
             "cid": "Circuit X",
             "provider": providers[1].pk,
-            "type": circuittypes[1].pk,
-            "status": statuses.get(slug="decommissioned").pk,
+            "circuit_type": circuittypes[1].pk,
+            "status": statuses.last().pk,
             "tenant": None,
             "install_date": datetime.date(2020, 1, 1),
             "commit_rate": 1000,
@@ -134,16 +111,16 @@ class CircuitTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "cid,provider,type,status",
-            "Circuit 4,Provider 1,Circuit Type 1,active",
-            "Circuit 5,Provider 1,Circuit Type 1,planned",
-            "Circuit 6,Provider 1,Circuit Type 1,decommissioned",
+            "cid,provider,circuit_type,status",
+            f'Circuit 4,"{providers[0].name}",{circuittypes[0].name},{statuses.first().name}',
+            f'Circuit 5,"{providers[0].name}",{circuittypes[1].name},{statuses.first().name}',
+            f'Circuit 6,"{providers[1].name}",{circuittypes[1].name},{statuses.first().name}',
         )
 
         cls.bulk_edit_data = {
             "provider": providers[1].pk,
-            "type": circuittypes[1].pk,
-            "status": statuses.get(slug="decommissioned").pk,
+            "circuit_type": circuittypes[1].pk,
+            "status": statuses.last().pk,
             "tenant": None,
             "commit_rate": 2000,
             "description": "New description",
@@ -156,24 +133,19 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        providers = (
-            Provider(name="Provider 1", slug="provider-1"),
-            Provider(name="Provider 2", slug="provider-2"),
-        )
-        Provider.objects.bulk_create(providers)
+        providers = Provider.objects.all()[:2]
 
         ProviderNetwork.objects.bulk_create(
             [
-                ProviderNetwork(name="Provider Network 1", slug="provider-network-1", provider=providers[0]),
-                ProviderNetwork(name="Provider Network 2", slug="provider-network-2", provider=providers[0]),
-                ProviderNetwork(name="Provider Network 3", slug="provider-network-3", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 1", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 2", provider=providers[0]),
+                ProviderNetwork(name="Provider Network 3", provider=providers[0]),
                 ProviderNetwork(name="Provider Network 8", provider=providers[0]),
             ]
         )
 
         cls.form_data = {
             "name": "ProviderNetwork X",
-            "slug": "provider-network-x",
             "provider": providers[1].pk,
             "description": "A new ProviderNetwork",
             "comments": "Longer description goes here",
@@ -181,11 +153,11 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,slug,provider,description",
-            "Provider Network 4,provider-network-4,Provider 1,Foo",
-            "Provider Network 5,provider-network-5,Provider 1,Bar",
-            "Provider Network 6,provider-network-6,Provider 1,Baz",
-            "Provider Network 7,,Provider 1,Baz",
+            "name,provider,description",
+            f'Provider Network 4,"{providers[0].name}",Foo',
+            f'Provider Network 5,"{providers[0].name}",Bar',
+            f'Provider Network 6,"{providers[0].name}",Baz',
+            f'Provider Network 7,"{providers[0].name}",Baz',
         )
 
         cls.bulk_edit_data = {
@@ -194,36 +166,53 @@ class ProviderNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "New comments",
         }
 
-        cls.slug_test_object = "Provider Network 8"
-        cls.slug_source = "name"
 
+class CircuitTerminationTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectNotesViewTestCase,
+    # create/edit views are special cases, not currently tested
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkImportObjectsViewTestCase,
+    # No bulk-edit support currently
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = CircuitTermination
 
-class CircuitTerminationTestCase(NautobotTestCase):
-    def setUp(self):
-        super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
+    @classmethod
+    def setUpTestData(cls):
+        circuit = Circuit.objects.filter(circuit_terminations__isnull=True).first()
+        provider_network = ProviderNetwork.objects.filter(circuit_terminations__isnull=True).first()
+        location = Location.objects.get_for_model(CircuitTermination).first()
+
+        cls.csv_data = (
+            "term_side,circuit,location,provider_network,port_speed",
+            f"A,{circuit.composite_key},{location.composite_key}",
+            f"Z,{circuit.composite_key},,{provider_network.composite_key},1000",
+        )
 
     def test_circuit_termination_detail_200(self):
         """
         This tests that a circuit termination's detail page (with a provider
         network instead of a site) returns a 200 response and doesn't contain the connect menu button.
         """
+        self.user.is_superuser = True
+        self.user.save()
 
         # Set up the required objects:
-        provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
+        provider = Provider.objects.first()
         provider_network = ProviderNetwork.objects.create(
             name="Test Provider Network",
-            slug="test-provider-network",
             provider=provider,
         )
-        circuit_type = CircuitType.objects.create(name="Test Circuit Type", slug="test-circuit-type")
-        active_status = Status.objects.get_for_model(Circuit).get(slug="active")
+        circuit_type = CircuitType.objects.first()
+        status = Status.objects.get_for_model(Circuit).first()
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
-            type=circuit_type,
-            status=active_status,
+            circuit_type=circuit_type,
+            status=status,
         )
         termination = CircuitTermination.objects.create(
             circuit=circuit, provider_network=provider_network, term_side=CircuitTerminationSideChoices.SIDE_A
@@ -248,26 +237,24 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
 
     def test_swap_circuit_termination(self):
         # Set up the required objects:
-        provider = Provider.objects.create(name="Test Provider", slug="test-provider", asn=12345)
+        provider = Provider.objects.first()
         provider_networks = (
             ProviderNetwork.objects.create(
                 name="Test Provider Network 1",
-                slug="test-provider-network-1",
                 provider=provider,
             ),
             ProviderNetwork.objects.create(
                 name="Test Provider Network 2",
-                slug="test-provider-network-2",
                 provider=provider,
             ),
         )
-        circuit_type = CircuitType.objects.create(name="Test Circuit Type", slug="test-circuit-type")
-        active_status = Status.objects.get_for_model(Circuit).get(slug="active")
+        circuit_type = CircuitType.objects.first()
+        status = Status.objects.get_for_model(Circuit).first()
         circuit = Circuit.objects.create(
             cid="Test Circuit",
             provider=provider,
-            type=circuit_type,
-            status=active_status,
+            circuit_type=circuit_type,
+            status=status,
         )
         CircuitTermination.objects.create(
             circuit=circuit,
@@ -286,9 +273,13 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
         response = self.client.post(**request)
         self.assertHttpStatus(response, 302)
 
-        termination_a = CircuitTermination.objects.get(circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A)
-        termination_z = CircuitTermination.objects.get(circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z)
+        circuit_termination_a = CircuitTermination.objects.get(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A
+        )
+        circuit_termination_z = CircuitTermination.objects.get(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z
+        )
 
         # Assert Swap
-        self.assertEqual(termination_a.provider_network, provider_networks[1])
-        self.assertEqual(termination_z.provider_network, provider_networks[0])
+        self.assertEqual(circuit_termination_a.provider_network, provider_networks[1])
+        self.assertEqual(circuit_termination_z.provider_network, provider_networks[0])

@@ -1,5 +1,5 @@
 """Utilities for implementing choices."""
 
-from nautobot.utilities.choices import ChoiceSet
+from nautobot.core.choices import ChoiceSet
 
 __all__ = ("ChoiceSet",)

@@ -51,6 +51,9 @@ class DatasourceContent:
         self.callback = callback
         self.weight = weight
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.content_identifier}>"
+
 
 def register_datasource_contents(datasource_contents_list):
     """

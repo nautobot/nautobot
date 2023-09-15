@@ -1,0 +1,4 @@
+Added `Namespace` column to `VRFDeviceAssignmentTable` and `VRFPrefixAssignmentTable` to display assigned VRFs' `namespace` property.
+Added `namespace` attribute to rendering of "IP Addresses" columns of relevant `Interface` and `InterfaceRedundancyGroup` tables.
+Added `namespace` attribute to rendering of `primary_ip` fields in `DeviceDetailView` and `VirtualMachineDetailView`.
+Added hover copy button and functionality to `primary_ip` field in `VirtualMachineDetailView`.

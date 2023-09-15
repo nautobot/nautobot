@@ -5,10 +5,10 @@ from django.db.models import Model, OuterRef, Subquery, Q, F
 from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
 
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.models.tags import TaggedItem
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.query_functions import EmptyGroupByJSONBAgg
-from nautobot.utilities.querysets import RestrictedQuerySet
 
 
 class ConfigContextQuerySet(RestrictedQuerySet):
@@ -17,27 +17,19 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         Return all applicable ConfigContexts for a given object. Only active ConfigContexts will be included.
         """
 
-        # `device_role` for Device; `role` for VirtualMachine
-        role = getattr(obj, "device_role", None) or obj.role
+        role = obj.role
 
         # `device_type` for Device; `type` for VirtualMachine
         device_type = getattr(obj, "device_type", None)
 
         # Virtualization cluster for VirtualMachine
         cluster = getattr(obj, "cluster", None)
-        cluster_group = getattr(cluster, "group", None)
+        cluster_group = getattr(cluster, "cluster_group", None)
 
         device_redundancy_group = getattr(obj, "device_redundancy_group", None)
 
         # Get the group of the assigned tenant, if any
-        tenant_group = obj.tenant.group if obj.tenant else None
-
-        # Match against the directly assigned region as well as any parent regions.
-        region = getattr(obj.site, "region", None)
-        if region:
-            regions = region.get_ancestors(include_self=True)
-        else:
-            regions = []
+        tenant_group = obj.tenant.tenant_group if obj.tenant else None
 
         # Match against the directly assigned location as well as any parent locations
         location = getattr(obj, "location", None)
@@ -47,8 +39,6 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             locations = []
 
         query = [
-            Q(regions__in=regions) | Q(regions=None),
-            Q(sites=obj.site) | Q(sites=None),
             Q(locations__in=locations) | Q(locations=None),
             Q(roles=role) | Q(roles=None),
             Q(device_types=device_type) | Q(device_types=None),
@@ -58,7 +48,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
             Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
             Q(tenants=obj.tenant) | Q(tenants=None),
-            Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
+            Q(tags__name__in=obj.tags.names()) | Q(tags=None),
         ]
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             query.append(Q(dynamic_groups__in=obj.dynamic_groups) | Q(dynamic_groups=None))
@@ -93,6 +83,9 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
         Order By clause in Subquery is not guaranteed to be respected within the aggregated JSON array, which is why
         we include "weight" and "name" into the result so that we can sort it within Python to ensure correctness.
+
+        TODO This method does not accurately reflect location inheritance because of the reasons stated in _get_config_context_filters()
+        Do not use this method by itself, use get_config_context() method directly on ConfigContextModel instead.
         """
         from nautobot.extras.models import ConfigContext
 
@@ -114,7 +107,12 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         ).distinct()
 
     def _get_config_context_filters(self):
-        # Construct the set of Q objects for the specific object types
+        """
+        This method is constructing the set of Q objects for the specific object types.
+        Note that locations filters are not included in the method because the filter needs the
+        ability to query the ancestors for a particular tree node for subquery and we lost it since
+        moving from mptt to django-tree-queries https://github.com/matthiask/django-tree-queries/issues/54.
+        """
         tag_query_filters = {
             "object_id": OuterRef(OuterRef("pk")),
             "content_type__app_label": self.model._meta.app_label,
@@ -122,42 +120,28 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         }
         base_query = Q(
             Q(platforms=OuterRef("platform")) | Q(platforms=None),
-            Q(cluster_groups=OuterRef("cluster__group")) | Q(cluster_groups=None),
+            Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None),
             Q(clusters=OuterRef("cluster")) | Q(clusters=None),
-            Q(tenant_groups=OuterRef("tenant__group")) | Q(tenant_groups=None),
+            Q(tenant_groups=OuterRef("tenant__tenant_group")) | Q(tenant_groups=None),
             Q(tenants=OuterRef("tenant")) | Q(tenants=None),
             Q(tags__pk__in=Subquery(TaggedItem.objects.filter(**tag_query_filters).values_list("tag_id", flat=True)))
             | Q(tags=None),
             is_active=True,
         )
-
+        base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
         if self.model._meta.model_name == "device":
-            base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add(
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
-            base_query.add((Q(sites=OuterRef("site")) | Q(sites=None)), Q.AND)
-            region_field = "site__region"
-
+            # This is necessary to prevent location related config context to be applied now.
+            # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
+            base_query.add((Q(locations=None)), Q.AND)
         elif self.model._meta.model_name == "virtualmachine":
-            base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
-            base_query.add((Q(sites=OuterRef("cluster__site")) | Q(sites=None)), Q.AND)
-            region_field = "cluster__site__region"
-
-        base_query.add(
-            (
-                Q(
-                    regions__tree_id=OuterRef(f"{region_field}__tree_id"),
-                    regions__level__lte=OuterRef(f"{region_field}__level"),
-                    regions__lft__lte=OuterRef(f"{region_field}__lft"),
-                    regions__rght__gte=OuterRef(f"{region_field}__rght"),
-                )
-                | Q(regions=None)
-            ),
-            Q.AND,
-        )
+            # This is necessary to prevent location related config context to be applied now.
+            # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
+            base_query.add((Q(locations=None)), Q.AND)
 
         return base_query
 
@@ -242,14 +226,6 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
 class DynamicGroupMembershipQuerySet(RestrictedQuerySet):
     """Queryset for `DynamicGroupMembership` objects."""
 
-    def get_by_natural_key(self, group_slug, parent_group_slug, operator, weight):
-        return self.get(
-            group__slug=group_slug,
-            parent_group__slug=parent_group_slug,
-            operator=operator,
-            weight=weight,
-        )
-
 
 class NotesQuerySet(RestrictedQuerySet):
     """Queryset for `Notes` objects that provides a `get_for_object` method."""
@@ -270,18 +246,12 @@ class JobQuerySet(RestrictedQuerySet):
 
     def get_for_class_path(self, class_path):
         try:
-            source, module_name, job_class_name = class_path.split("/")
-            repository_slug = None
-            if source.startswith("git."):
-                repository_slug = source[4:]
-                source = "git"
+            module_name, job_class_name = class_path.rsplit(".", 1)
         except ValueError:  # not a class_path perhaps?
             raise self.model.DoesNotExist()
         return self.get(
-            source=source,
             module_name=module_name,
             job_class_name=job_class_name,
-            git_repository__slug=repository_slug,
         )
 
 

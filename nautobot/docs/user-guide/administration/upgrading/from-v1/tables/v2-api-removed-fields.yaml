@@ -1,0 +1,175 @@
+---
+- Model/Endpoint: "/api/plugins/installed-plugins"
+  Removed Field: "verison"
+  Comments: "Use `version` instead"
+- Model/Endpoint: "/api/status/"
+  Removed Field: "rq-workers-running"
+  Comments: "Django-RQ is no longer supported"
+- Model/Endpoint: "CircuitTermination"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "CircuitType"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Cluster"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "ClusterGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "ClusterType"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "ConfigContext"
+  Removed Field: "regions"
+  Comments: "Use `locations` instead"
+- Model/Endpoint: "ConfigContext"
+  Removed Field: "sites"
+  Comments: "Use `locations` instead"
+- Model/Endpoint: "ConfigContextSchema"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "CustomLink"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Device"
+  Removed Field: "primary_ip"
+  Comments: "Use `primary_ip4` or `primary_ip6`instead"
+- Model/Endpoint: "Device"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "DeviceRedundancyGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "DeviceType"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "DynamicGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "GitRepository"
+  Removed Field: "token"
+  Comments: "Use Secrets instead"
+- Model/Endpoint: "GitRepository"
+  Removed Field: "username"
+  Comments: "Use Secrets instead"
+- Model/Endpoint: "GraphQLQuery"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "IPAddress"
+  Removed Field: "assigned_object"
+  Comments: "Changed to many-to-many field. Use the REST API view for `IPAddressToInterface`(/api/ipam/ip-address-to-interface/) to create/modify/delete associations or `interfaces`/`vm_interfaces` on this model to retrieve a list of associated interfaces."
+- Model/Endpoint: "IPAddress"
+  Removed Field: "broadcast"
+  Comments: "Use parent Prefix's broadcast instead"
+- Model/Endpoint: "IPAddress"
+  Removed Field: "vrf"
+  Comments: "VRF is now related to the assigned Interface(s), as well as the parent Prefix"
+- Model/Endpoint: "JobHook"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "JobResult"
+  Removed Field: "job_id"
+  Comments:
+- Model/Endpoint: "JobResult"
+  Removed Field: "obj_type"
+  Comments:
+- Model/Endpoint: "Location"
+  Removed Field: "site"
+  Comments: "Use `parent` instead"
+- Model/Endpoint: "Location"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "LocationType"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Manufacturer"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Note"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Platform"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "PowerFeed"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "PowerPanel"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "Prefix"
+  Removed Field: "is_pool"
+  Comments: "Use `type` instead"
+- Model/Endpoint: "Prefix"
+  Removed Field: "vrf"
+  Comments: "Prefixes are now assigned to a VRF in the same Namespace via a many-to-many relationship"
+- Model/Endpoint: "Prefix"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "Provider"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "ProviderNetwork"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Rack"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "RackGroup"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "RackGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "RelationshipAssociation"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "RIR"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Role"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "RouteTarget"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Secret"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "SecretsGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "SecretsGroupAssociation"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Status"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Tag"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "Tenant"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "TenantGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "VirtualMachine"
+  Removed Field: "primary_ip"
+  Comments: "Use `primary_ip4` or `primary_ip6`instead"
+- Model/Endpoint: "VLAN"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "VLANGroup"
+  Removed Field: "site"
+  Comments: "Use `location` instead"
+- Model/Endpoint: "VLANGroup"
+  Removed Field: "slug"
+  Comments:
+- Model/Endpoint: "VRF"
+  Removed Field: "enforce_unique"
+  Comments: "Uniqueness of Prefixes and IPAddresses is now enforced at the database level"
+- Model/Endpoint: "Webhook"
+  Removed Field: "slug"
+  Comments:

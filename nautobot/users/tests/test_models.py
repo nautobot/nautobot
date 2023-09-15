@@ -1,12 +1,35 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+
+from nautobot.core.testing.models import ModelTestCases
+from nautobot.users.models import ObjectPermission, Token
 
 
 # Use the proper swappable User model
 User = get_user_model()
 
 
-class UserConfigTest(TestCase):
+class ObjectPermissionTest(ModelTestCases.BaseModelTestCase):
+    model = ObjectPermission
+
+    def setUp(self):
+        ObjectPermission.objects.create(name="Test Permission", actions=["view", "add", "change", "delete"])
+
+
+class TokenTest(ModelTestCases.BaseModelTestCase):
+    model = Token
+
+    def setUp(self):
+        user = User.objects.create_user(username="testuser")
+        self.token = Token.objects.create(user=user)
+
+    def test_natural_key_does_not_expose_token_key(self):
+        self.assertNotEqual(self.token.key, "")
+        self.assertNotIn(self.token.key, self.token.natural_key())
+
+
+class UserConfigTest(ModelTestCases.BaseModelTestCase):
+    model = User
+
     def setUp(self):
         user = User.objects.create_user(username="testuser")
         user.config_data = {

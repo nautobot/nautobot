@@ -7,7 +7,7 @@ import django_tables2 as tables
 
 class InstalledPluginsTable(tables.Table):
     """
-    Custom table class based on nautobot.utilities.tables.BaseTable, but without a dependency on QuerySets.
+    Custom table class based on nautobot.core.tables.BaseTable, but without a dependency on QuerySets.
     """
 
     name = tables.Column(

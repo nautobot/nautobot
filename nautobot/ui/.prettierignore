@@ -1,0 +1,6 @@
+build
+# These files get rendered by `nautobot-server build_ui`
+generated
+
+# This is generated when running `npm run analyze`
+analyze_report.html

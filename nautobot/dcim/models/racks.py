@@ -7,22 +7,18 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Count, Sum, Q
-from django.urls import reverse
-from mptt.models import MPTTModel, TreeForeignKey
 
+from nautobot.core.models.fields import NaturalOrderingField, JSONArrayField
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.models.utils import array_to_string
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
-
 from nautobot.dcim.elevations import RackElevationSVG
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.utilities.choices import ColorChoices
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.fields import ColorField, NaturalOrderingField, JSONArrayField
-from nautobot.utilities.mptt import TreeManager
-from nautobot.utilities.utils import array_to_string, UtilizationData
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -31,7 +27,6 @@ __all__ = (
     "Rack",
     "RackGroup",
     "RackReservation",
-    "RackRole",
 )
 
 
@@ -41,169 +36,78 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
 )
-class RackGroup(MPTTModel, OrganizationalModel):
+class RackGroup(TreeModel, OrganizationalModel):
     """
-    Racks can be grouped as subsets within a Site or Location.
+    Racks can be grouped as subsets within a Location.
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="name", unique=None, db_index=True)
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.CASCADE, related_name="rack_groups")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.CASCADE,
         related_name="rack_groups",
-        blank=True,
-        null=True,
-    )
-    parent = TreeForeignKey(
-        to="self",
-        on_delete=models.CASCADE,
-        related_name="children",
-        blank=True,
-        null=True,
-        db_index=True,
     )
     description = models.CharField(max_length=200, blank=True)
 
-    objects = TreeManager()
-
-    csv_headers = ["site", "location", "parent", "name", "slug", "description"]
-
     class Meta:
-        ordering = ["site", "name"]
+        ordering = ("name",)
         unique_together = [
-            ["site", "name"],
-            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["site", "slug"],
+            ["location", "name"],
         ]
 
-    class MPTTMeta:
-        order_insertion_by = ["name"]
+    natural_key_field_names = ["name", "location"]  # location needs to be last since it's a variadic natural key
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:rackgroup", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.site,
-            self.location.name if self.location else None,
-            self.parent.name if self.parent else "",
-            self.name,
-            self.slug,
-            self.description,
-        )
-
-    def to_objectchange(self, action, object_data_exclude=None, **kwargs):
-        if object_data_exclude is None:
-            object_data_exclude = []
-        # Remove MPTT-internal fields
-        object_data_exclude += ["level", "lft", "rght", "tree_id"]
-        return super().to_objectchange(action, object_data_exclude=object_data_exclude, **kwargs)
 
     def clean(self):
         super().clean()
 
-        # Parent RackGroup (if any) must belong to the same Site
-        if self.parent and self.parent.site != self.site:
-            raise ValidationError(f"Parent rack group ({self.parent}) must belong to the same site ({self.site})")
-
         # Validate location
-        if self.location is not None:
-            if self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
+        if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+            raise ValidationError(
+                {"location": f'Rack groups may not associate to locations of type "{self.location.location_type}".'}
+            )
 
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'Rack groups may not associate to locations of type "{self.location.location_type}".'}
-                )
-
-            # Parent RackGroup (if any) must belong to the same or ancestor Location
-            if (
-                self.parent is not None
-                and self.parent.location is not None
-                and self.parent.location not in self.location.ancestors(include_self=True)
-            ):
-                raise ValidationError(
-                    {
-                        "location": f'Location "{self.location}" is not descended from '
-                        f'parent rack group "{self.parent}" location "{self.parent.location}".'
-                    }
-                )
+        # Parent RackGroup (if any) must belong to the same or ancestor Location
+        if (
+            self.parent is not None
+            and self.parent.location is not None
+            and self.parent.location not in self.location.ancestors(include_self=True)
+        ):
+            raise ValidationError(
+                {
+                    "location": f'Location "{self.location}" is not descended from '
+                    f'parent rack group "{self.parent}" location "{self.parent.location}".'
+                }
+            )
 
 
 @extras_features(
-    "custom_fields",
-    "custom_validators",
-    "graphql",
-    "relationships",
-)
-class RackRole(OrganizationalModel):
-    """
-    Racks can be organized by functional role, similar to Devices.
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
-    color = ColorField(default=ColorChoices.COLOR_GREY)
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-
-    csv_headers = ["name", "slug", "color", "description"]
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:rackrole", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.color,
-            self.description,
-        )
-
-
-@extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
-class Rack(PrimaryModel, StatusModel):
+class Rack(PrimaryModel):
     """
     Devices are housed within Racks. Each rack has a defined height measured in rack units, and a front and rear face.
-    Each Rack is assigned to a Site and (optionally) a RackGroup.
+    Each Rack is assigned to a Location and (optionally) a RackGroup.
     """
 
     name = models.CharField(max_length=100, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     facility_id = models.CharField(
         max_length=50,
         blank=True,
@@ -211,15 +115,12 @@ class Rack(PrimaryModel, StatusModel):
         verbose_name="Facility ID",
         help_text="Locally-assigned identifier",
     )
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="racks")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="racks",
-        blank=True,
-        null=True,
     )
-    group = models.ForeignKey(
+    rack_group = models.ForeignKey(
         to="dcim.RackGroup",
         on_delete=models.SET_NULL,
         related_name="racks",
@@ -233,14 +134,6 @@ class Rack(PrimaryModel, StatusModel):
         related_name="racks",
         blank=True,
         null=True,
-    )
-    role = models.ForeignKey(
-        to="dcim.RackRole",
-        on_delete=models.PROTECT,
-        related_name="racks",
-        blank=True,
-        null=True,
-        help_text="Functional role",
     )
     serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
@@ -279,30 +172,9 @@ class Rack(PrimaryModel, StatusModel):
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    csv_headers = [
-        "site",
-        "location",
-        "group",
-        "name",
-        "facility_id",
-        "tenant",
-        "status",
-        "role",
-        "type",
-        "serial",
-        "asset_tag",
-        "width",
-        "u_height",
-        "desc_units",
-        "outer_width",
-        "outer_depth",
-        "outer_unit",
-        "comments",
-    ]
     clone_fields = [
-        "site",
         "location",
-        "group",
+        "rack_group",
         "tenant",
         "status",
         "role",
@@ -314,56 +186,43 @@ class Rack(PrimaryModel, StatusModel):
         "outer_depth",
         "outer_unit",
     ]
-    dynamic_group_filter_fields = {
-        "group": "group_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
+    dynamic_group_filter_fields = {}
     dynamic_group_skip_missing_fields = True  # Poor widget selection for `outer_depth` (no validators, limit supplied)
 
     class Meta:
-        ordering = ("site", "group", "_name")  # (site, group, name) may be non-unique
+        ordering = ("location", "rack_group", "_name")  # (location, rack_group, name) may be non-unique
         unique_together = (
             # Name and facility_id must be unique *only* within a RackGroup
-            ("group", "name"),
-            ("group", "facility_id"),
+            ("rack_group", "name"),
+            ("rack_group", "facility_id"),
         )
+
+    natural_key_field_names = ["name", "rack_group"]  # rack_group is last since it uses Location as part of its key.
 
     def __str__(self):
         return self.display or super().__str__()
 
-    def get_absolute_url(self):
-        return reverse("dcim:rack", args=[self.pk])
-
     def clean(self):
         super().clean()
 
-        # Validate group/site assignment
-        if self.site and self.group and self.group.site != self.site:
-            raise ValidationError(f"Assigned rack group must belong to parent site ({self.site}).")
-
         # Validate location
-        if self.location is not None:
-            if self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
+        # Validate rack_group/location assignment
+        if (
+            self.rack_group is not None
+            and self.rack_group.location is not None
+            and self.rack_group.location not in self.location.ancestors(include_self=True)
+        ):
+            raise ValidationError(
+                {
+                    "rack_group": f'The assigned rack group "{self.rack_group}" belongs to a location '
+                    f'("{self.rack_group.location}") that does not include location "{self.location}".'
+                }
+            )
 
-            # Validate group/location assignment
-            if (
-                self.group is not None
-                and self.group.location is not None
-                and self.group.location not in self.location.ancestors(include_self=True)
-            ):
-                raise ValidationError(
-                    {
-                        "group": f'The assigned rack group "{self.group}" belongs to a location '
-                        f'("{self.group.location}") that does not include location "{self.location}".'
-                    }
-                )
-
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'Racks may not associate to locations of type "{self.location.location_type}".'}
-                )
+        if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+            raise ValidationError(
+                {"location": f'Racks may not associate to locations of type "{self.location.location_type}".'}
+            )
 
         # Validate outer dimensions and unit
         if (self.outer_width is not None or self.outer_depth is not None) and not self.outer_unit:
@@ -380,32 +239,6 @@ class Rack(PrimaryModel, StatusModel):
                     raise ValidationError(
                         {"u_height": f"Rack must be at least {min_height}U tall to house currently installed devices."}
                     )
-            # Validate that Rack was assigned a group of its same site, if applicable
-            if self.group:
-                if self.group.site != self.site:
-                    raise ValidationError({"group": f"Rack group must be from the same site, {self.site}."})
-
-    def to_csv(self):
-        return (
-            self.site.name,
-            self.location.name if self.location else None,
-            self.group.name if self.group else None,
-            self.name,
-            self.facility_id,
-            self.tenant.name if self.tenant else None,
-            self.get_status_display(),
-            self.role.name if self.role else None,
-            self.get_type_display() if self.type else None,
-            self.serial,
-            self.asset_tag,
-            self.width,
-            self.u_height,
-            str(self.desc_units),
-            self.outer_width,
-            self.outer_depth,
-            self.outer_unit,
-            self.comments,
-        )
 
     @property
     def units(self):
@@ -454,8 +287,8 @@ class Rack(PrimaryModel, StatusModel):
         if self.present_in_database:
             # Retrieve all devices installed within the rack
             queryset = (
-                Device.objects.select_related("device_type", "device_type__manufacturer", "device_role")
-                .annotate(devicebay_count=Count("devicebays"))
+                Device.objects.select_related("device_type", "device_type__manufacturer", "role")
+                .annotate(device_bay_count=Count("device_bays"))
                 .exclude(pk=exclude)
                 .filter(rack=self, position__gt=0, device_type__u_height__gt=0)
                 .filter(Q(face=face) | Q(device_type__is_full_depth=True))
@@ -526,7 +359,7 @@ class Rack(PrimaryModel, StatusModel):
         Return a dictionary mapping all reserved units within the rack to their reservation.
         """
         reserved_units = {}
-        for r in self.reservations.all():
+        for r in self.rack_reservations.all():
             for u in r.units:
                 reserved_units[u] = r
         return reserved_units
@@ -618,12 +451,10 @@ class Rack(PrimaryModel, StatusModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class RackReservation(PrimaryModel):
@@ -631,36 +462,25 @@ class RackReservation(PrimaryModel):
     One or more reserved units within a Rack.
     """
 
-    rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="reservations")
+    rack = models.ForeignKey(to="dcim.Rack", on_delete=models.CASCADE, related_name="rack_reservations")
     units = JSONArrayField(base_field=models.PositiveSmallIntegerField())
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="rackreservations",
+        related_name="rack_reservations",
         blank=True,
         null=True,
     )
-    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="rack_reservations")
     description = models.CharField(max_length=200)
-
-    csv_headers = [
-        "site",
-        "rack_group",
-        "rack",
-        "units",
-        "tenant",
-        "user",
-        "description",
-    ]
 
     class Meta:
         ordering = ["created"]
 
+    natural_key_field_names = ["units", "rack"]
+
     def __str__(self):
         return f"Reservation for rack {self.rack}"
-
-    def get_absolute_url(self):
-        return reverse("dcim:rackreservation", args=[self.pk])
 
     def clean(self):
         super().clean()
@@ -678,23 +498,12 @@ class RackReservation(PrimaryModel):
 
             # Check that none of the units has already been reserved for this Rack.
             reserved_units = []
-            for resv in self.rack.reservations.exclude(pk=self.pk):
+            for resv in self.rack.rack_reservations.exclude(pk=self.pk):
                 reserved_units += resv.units
             conflicting_units = [u for u in self.units if u in reserved_units]
             if conflicting_units:
                 error = ", ".join([str(u) for u in conflicting_units])
                 raise ValidationError({"units": f"The following units have already been reserved: {error}"})
-
-    def to_csv(self):
-        return (
-            self.rack.site.name,
-            self.rack.group if self.rack.group else None,
-            self.rack.name,
-            ",".join([str(u) for u in self.units]),
-            self.tenant.name if self.tenant else None,
-            self.user.username,
-            self.description,
-        )
 
     @property
     def unit_list(self):

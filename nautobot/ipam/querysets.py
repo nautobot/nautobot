@@ -1,22 +1,11 @@
 import re
-import uuid
 
 import netaddr
-from django.db.models import (
-    Count,
-    ExpressionWrapper,
-    IntegerField,
-    F,
-    OuterRef,
-    Subquery,
-    Q,
-    UUIDField,
-    Value,
-)
-from django.db.models.functions import Coalesce, Length
+from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError, Q
 
-from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
-from nautobot.utilities.querysets import RestrictedQuerySet
+from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.data import merge_dicts_without_collision
 
 
 class RIRQuerySet(RestrictedQuerySet):
@@ -28,11 +17,6 @@ class RIRQuerySet(RestrictedQuerySet):
 
 class BaseNetworkQuerySet(RestrictedQuerySet):
     """Base class for network-related querysets."""
-
-    ip_family_map = {
-        4: IPV4_BYTE_LENGTH,
-        6: IPV6_BYTE_LENGTH,
-    }
 
     # Match string with ending in "::"
     RE_COLON = re.compile(".*::$")
@@ -204,16 +188,8 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         return self.filter(the_filter)
 
 
-class NetworkQuerySet(BaseNetworkQuerySet):
-    """Base class for Prefix/Aggregate querysets."""
-
-    def ip_family(self, family):
-        try:
-            byte_len = self.ip_family_map[family]
-        except KeyError:
-            raise ValueError(f"invalid IP family {family}")
-
-        return self.annotate(address_len=Length(F("network"))).filter(address_len=byte_len)
+class PrefixQuerySet(BaseNetworkQuerySet):
+    """Queryset for `Prefix` objects."""
 
     def net_equals(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
@@ -256,104 +232,155 @@ class NetworkQuerySet(BaseNetworkQuerySet):
             broadcast__gte=last_ip,
         )
 
-    def get(self, *args, prefix=None, **kwargs):
+    def get(self, *args, **kwargs):
         """
         Provide a convenience for `.get(prefix=<prefix>)`
+
+        Only needed here (normally `get()` just redirects to `filter()` under the hood) because we specifically want
+        in the `get()` case (only) to *not* automatically convert `get(prefix="10.1.1.1/8")` to
+        `get(network="10.0.0.0", prefix_length=8)', i.e. discard the host bits.
+
+        TODO: why *shouldn't* we have similar enforcement on `filter()` and `exclude()`?
         """
+        kwargs = self.split_composite_key_into_kwargs(**kwargs)
+
+        prefix = kwargs.pop("prefix", None)
         if prefix:
             _prefix = netaddr.IPNetwork(prefix)
-            if str(_prefix) != prefix:
+            if str(_prefix) != str(prefix):
                 raise self.model.DoesNotExist()
             last_ip = self._get_last_ip(_prefix)
-            kwargs["prefix_length"] = _prefix.prefixlen
-            kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
-            kwargs["broadcast"] = last_ip
+            kwargs = merge_dicts_without_collision(
+                kwargs, {"prefix_length": _prefix.prefixlen, "network": _prefix.ip, "broadcast": last_ip}
+            )
         return super().get(*args, **kwargs)
 
-    def filter(self, *args, prefix=None, **kwargs):
+    def filter(self, *args, **kwargs):
         """
         Provide a convenience for `.filter(prefix=<prefix>)`
         """
+        # This needs to happen *before* we deconstruct 'prefix' since the composite-key includes prefix
+        kwargs = self.split_composite_key_into_kwargs(**kwargs)
+
+        prefix = kwargs.pop("prefix", None)
         if prefix:
             _prefix = netaddr.IPNetwork(prefix)
             last_ip = self._get_last_ip(_prefix)
-            kwargs["prefix_length"] = _prefix.prefixlen
-            kwargs["network"] = _prefix.ip  # Query based on the input, not the true network address
-            kwargs["broadcast"] = last_ip
+            kwargs = merge_dicts_without_collision(
+                kwargs, {"prefix_length": _prefix.prefixlen, "network": _prefix.ip, "broadcast": last_ip}
+            )
         return super().filter(*args, **kwargs)
 
-
-class AggregateQuerySet(NetworkQuerySet):
-    """Queryset for `Aggregate` objects."""
-
-
-class PrefixQuerySet(NetworkQuerySet):
-    """Queryset for `Prefix` objects."""
-
-    def annotate_tree(self):
+    def exclude(self, *args, **kwargs):
         """
-        Annotate the number of parent and child prefixes for each Prefix.
-
-        The UUID being used is fake for purposes of satisfying the COALESCE condition.
+        Provide a convenience for `.exclude(prefix=<prefix>)`
         """
-        # The COALESCE needs a valid, non-zero, non-null UUID value to do the comparison.
-        # The value itself has no meaning, so we just generate a random UUID for the query.
-        FAKE_UUID = uuid.uuid4()
+        # This needs to happen *before* we deconstruct 'prefix' since the composite-key includes prefix
+        kwargs = self.split_composite_key_into_kwargs(**kwargs)
 
-        from nautobot.ipam.models import Prefix
+        prefix = kwargs.pop("prefix", None)
+        if prefix:
+            _prefix = netaddr.IPNetwork(prefix)
+            last_ip = self._get_last_ip(_prefix)
+            kwargs = merge_dicts_without_collision(
+                kwargs, {"prefix_length": _prefix.prefixlen, "network": _prefix.ip, "broadcast": last_ip}
+            )
 
-        return self.annotate(
-            parents=Subquery(
-                Prefix.objects.annotate(
-                    maybe_vrf=ExpressionWrapper(
-                        Coalesce(F("vrf_id"), FAKE_UUID),
-                        output_field=UUIDField(),
-                    )
-                )
-                .filter(
-                    Q(prefix_length__lt=OuterRef("prefix_length"))
-                    & Q(network__lte=OuterRef("network"))
-                    & Q(broadcast__gte=OuterRef("broadcast"))
-                    & Q(
-                        maybe_vrf=ExpressionWrapper(
-                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
-                            output_field=UUIDField(),
-                        )
-                    )
-                )
-                .order_by()
-                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("fake_group_by")
-                .annotate(count=Count("*"))
-                .values("count")[:1],
-                output_field=IntegerField(),
-            ),
-            children=Subquery(
-                Prefix.objects.annotate(
-                    maybe_vrf=ExpressionWrapper(
-                        Coalesce(F("vrf_id"), FAKE_UUID),
-                        output_field=UUIDField(),
-                    )
-                )
-                .filter(
-                    Q(prefix_length__gt=OuterRef("prefix_length"))
-                    & Q(network__gte=OuterRef("network"))
-                    & Q(broadcast__lte=OuterRef("broadcast"))
-                    & Q(
-                        maybe_vrf=ExpressionWrapper(
-                            Coalesce(OuterRef("vrf_id"), FAKE_UUID),
-                            output_field=UUIDField(),
-                        )
-                    )
-                )
-                .order_by()
-                .annotate(fake_group_by=Value(1))  # This is an ORM hack to remove the unwanted GROUP BY clause
-                .values("fake_group_by")
-                .annotate(count=Count("*"))
-                .values("count")[:1],
-                output_field=IntegerField(),
-            ),
-        )
+        return super().exclude(*args, **kwargs)
+
+    # TODO(jathan): This was copied from `Prefix.delete()` but this won't work in the same way.
+    # Currently the issue is with `queryset.delete()` on bulk delete view from list view, how do we
+    # reference the "parent" that was deleted here? It's not in context on the `ProtectedError`.
+    # raised. This comment can be deleted after this has been successfully unit-tested.
+    def delete(self, *args, **kwargs):
+        """
+        A Prefix with children will be impossible to delete and raise a `ProtectedError`.
+
+        If a Prefix has children, this catch the error and explicitly update the
+        `protected_objects` from the exception setting their parent to the old parent of this
+        prefix, and then this prefix will be deleted.
+        """
+
+        try:
+            return super().delete(*args, **kwargs)
+        except ProtectedError as err:
+            # This will be either IPAddress or Prefix.
+            protected_instance = tuple(err.protected_objects)[0]
+            protected_model = protected_instance._meta.model
+            protected_parent = protected_instance.parent
+            new_parent = protected_parent.parent_id
+
+            # Prepare a queryset for the protected objects.
+            protected_pks = (po.pk for po in err.protected_objects)
+            protected_objects = protected_model.objects.filter(pk__in=protected_pks)
+
+            # IPAddress objects must have a parent.
+            if protected_model._meta.model_name == "ipaddress" and new_parent is None:
+                # If any of the child IPs would have a null parent after this change, raise an
+                # error.
+                raise ProtectedError(
+                    msg=(
+                        f"Cannot delete Prefix {protected_parent} because it has child IPAddress"
+                        " objects that would no longer have a parent."
+                    ),
+                    protected_objects=err.protected_objects,
+                ) from err
+
+            # Update protected objects to use grand-parent of the parent Prefix and delete the old
+            # parent. This should be equivalent at the row level of saying `parent=self.parent`.
+            protected_objects.update(parent=new_parent)
+            return super().delete(*args, **kwargs)
+
+    def _validate_cidr(self, value):
+        """
+        Validate whether `value` is a validr IPv4/IPv6 CIDR.
+
+        Args:
+            value (str): IP address
+        """
+        try:
+            return netaddr.IPNetwork(str(value))
+        except netaddr.AddrFormatError as err:
+            raise ValidationError({"cidr": f"{value} does not appear to be an IPv4 or IPv6 network."}) from err
+
+    def get_closest_parent(self, cidr, shortest_prefix_length=0, include_self=False):
+        """
+        Return the closest matching parent Prefix for a `cidr` even if it doesn't exist in the database.
+
+        Args:
+            cidr (str): IPv4/IPv6 CIDR string
+            shortest_prefix_length (int, optional): Shortest prefix length for closest parent lookup. Defaults to 0.
+            include_self (bool, optional): Include the provided `cidr` in the search. Defaults to False.
+        """
+        # Validate that it's a real CIDR
+        cidr = self._validate_cidr(cidr)
+        broadcast = str(cidr.broadcast or cidr.ip)
+        ip_version = cidr.version
+
+        try:
+            shortest_prefix_length = int(shortest_prefix_length)
+        except ValueError:
+            raise ValidationError({"shortest_prefix_length": f"Invalid prefix_length: {shortest_prefix_length}."})
+
+        # Prepare the queryset filter
+        lookup_kwargs = {
+            "network__lte": cidr.value,
+            "prefix_length__gte": shortest_prefix_length,
+            "broadcast__gte": broadcast,
+            "ip_version": ip_version,
+        }
+
+        # Search for possible ancestors by network/prefix, returning them in reverse order, so that
+        # we can choose the first one.
+        possible_ancestors = self.filter(**lookup_kwargs).order_by("-prefix_length")
+        if not include_self:
+            possible_ancestors = possible_ancestors.exclude(network=cidr.value, prefix_length=cidr.prefixlen)
+
+        # If we've got any matches, the first one is our closest parent.
+        try:
+            return possible_ancestors[0]
+        except IndexError:
+            raise self.model.DoesNotExist(f"Could not determine parent Prefix for {cidr}")
 
 
 class IPAddressQuerySet(BaseNetworkQuerySet):
@@ -368,14 +395,6 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         IP address as a /32 or /128.
         """
         return super().order_by("host")
-
-    def ip_family(self, family):
-        try:
-            byte_len = self.ip_family_map[family]
-        except KeyError:
-            raise ValueError(f"invalid IP family {family}")
-
-        return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
 
     def string_search(self, search):
         """
@@ -419,19 +438,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         masked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if "/" in val]
         masked_prefixes = [netaddr.IPNetwork(val).prefixlen for val in networks if "/" in val]
         unmasked_hosts = [bytes(netaddr.IPNetwork(val).ip) for val in networks if "/" not in val]
-        return self.filter(Q(host__in=masked_hosts, prefix_length__in=masked_prefixes) | Q(host__in=unmasked_hosts))
-
-    def get(self, *args, address=None, **kwargs):
-        """
-        Provide a convenience for `.get(address=<address>)`
-        """
-        if address:
-            address = netaddr.IPNetwork(address)
-            last_ip = self._get_last_ip(address)
-            kwargs["prefix_length"] = address.prefixlen
-            kwargs["host"] = address.ip
-            kwargs["broadcast"] = last_ip
-        return super().get(*args, **kwargs)
+        return self.filter(Q(host__in=masked_hosts, mask_length__in=masked_prefixes) | Q(host__in=unmasked_hosts))
 
     def filter(self, *args, address=None, **kwargs):
         """
@@ -439,11 +446,17 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         """
         if address:
             address = netaddr.IPNetwork(address)
-            last_ip = self._get_last_ip(address)
-            kwargs["prefix_length"] = address.prefixlen
-            kwargs["host"] = address.ip
-            kwargs["broadcast"] = last_ip
+            kwargs = merge_dicts_without_collision(kwargs, {"host": address.ip, "mask_length": address.prefixlen})
         return super().filter(*args, **kwargs)
+
+    def exclude(self, *args, address=None, **kwargs):
+        """
+        Provide a convenience for `.exclude(address=<address>)`
+        """
+        if address:
+            address = netaddr.IPNetwork(address)
+            kwargs = merge_dicts_without_collision(kwargs, {"host": address.ip, "mask_length": address.prefixlen})
+        return super().exclude(*args, **kwargs)
 
     def filter_address_or_pk_in(self, addresses, pk_values=None):
         """
@@ -454,11 +467,9 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         q = Q()
         for _address in addresses:
             _address = netaddr.IPNetwork(_address)
-            last_ip = self._get_last_ip(_address)
-            prefix_length = _address.prefixlen
+            mask_length = _address.prefixlen
             host = _address.ip
-            broadcast = last_ip
-            q |= Q(prefix_length=prefix_length, host=host, broadcast=broadcast)
+            q |= Q(mask_length=mask_length, host=host)
 
         if pk_values is not None:
             q |= Q(pk__in=pk_values)

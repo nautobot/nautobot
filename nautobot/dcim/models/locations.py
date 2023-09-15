@@ -1,29 +1,28 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import models
-from django.urls import reverse
+from django.utils.functional import classproperty
 
-from tree_queries.models import TreeNode
+from timezone_field import TimeZoneField
 
-from nautobot.core.fields import AutoSlugField
+from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.extras.models import StatusModel
+from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.fields import ASNField
+from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features, FeatureQuery
-from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
-class LocationType(TreeNode, OrganizationalModel):
+class LocationType(TreeModel, OrganizationalModel):
     """
     Definition of a category of Locations, including its hierarchical relationship to other LocationTypes.
 
@@ -33,7 +32,6 @@ class LocationType(TreeNode, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -47,28 +45,11 @@ class LocationType(TreeNode, OrganizationalModel):
         help_text="Allow Locations of this type to be parents/children of other Locations of this same type",
     )
 
-    objects = TreeManager()
-
-    csv_headers = ["name", "slug", "parent", "description", "nestable", "content_types"]
-
     class Meta:
         ordering = ("name",)
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:locationtype", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.parent.name if self.parent else None,
-            self.description,
-            self.nestable,
-            ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.order_by("app_label", "model")),
-        )
 
     def clean(self):
         """
@@ -97,10 +78,6 @@ class LocationType(TreeNode, OrganizationalModel):
                 )
 
         if self.name.lower() in [
-            "region",
-            "regions",
-            "site",
-            "sites",
             "rackgroup",
             "rackgroups",
             "rack group",
@@ -120,30 +97,6 @@ class LocationType(TreeNode, OrganizationalModel):
                 }
             )
 
-    @property
-    def display(self):
-        """
-        Include the parent type names as well in order to provide UI clarity.
-        `self.ancestors()` returns all the preceding nodes from the top down.
-        So if we are looking at node C and its node structure is the following:
-            A
-           /
-          B
-         /
-        C
-        This method will return "A → B → C".
-        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
-        """
-        display_str = ""
-        try:
-            for ancestor in self.ancestors():
-                display_str += ancestor.name + " → "
-        except ObjectDoesNotExist:
-            pass
-        finally:
-            display_str += self.name
-            return display_str  # pylint: disable=lost-exception
-
 
 class LocationQuerySet(TreeQuerySet):
     def get_for_model(self, model):
@@ -152,60 +105,48 @@ class LocationQuerySet(TreeQuerySet):
         return self.filter(location_type__content_types=content_type)
 
 
+class LocationManager(TreeManager.from_queryset(LocationQuerySet)):
+    pass
+
+
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
-class Location(TreeNode, StatusModel, PrimaryModel):
+class Location(TreeModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
 
-    As presently implemented, Location is an intermediary model between Site and RackGroup - more specific than a Site,
-    less specific (and more broadly applicable) than a RackGroup:
+    As presently implemented, Location is a model less specific (and more broadly applicable) than a RackGroup:
+    Location (location_type="Building")
+      Location (location_type="Room")
+        RackGroup
+          Rack
+            Device
+        Device
+        Prefix
+        etc.
+      VLANGroup
+      Prefix
+      etc.
 
-    Region
-      Region
-        Site
-          Location (location_type="Building")
-            Location (location_type="Room")
-              RackGroup
-                Rack
-                  Device
-              Device
-            Prefix
-            etc.
-          VLANGroup
-          Prefix
-          etc.
-
-    As such, as presently implemented, every Location either has a parent Location or a "parent" Site.
-
-    In the future, we plan to collapse Region and Site (and likely RackGroup as well) into the Location model.
+    As such, as presently implemented, every Location, depends on its LocationType, do/don't have a parent Location.
+    In the future, we plan to collapse RackGroup into the Location model.
     """
 
     # A Location's name is unique within context of its parent, not globally unique.
     name = models.CharField(max_length=100, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
-    # However a Location's slug *is* globally unique.
-    slug = AutoSlugField(populate_from=["parent__slug", "name"])
     location_type = models.ForeignKey(
         to="dcim.LocationType",
         on_delete=models.PROTECT,
         related_name="locations",
     )
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.CASCADE,
-        related_name="locations",
-        blank=True,
-        null=True,
-    )
+    status = StatusField(blank=False, null=False)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -214,28 +155,54 @@ class Location(TreeNode, StatusModel, PrimaryModel):
         null=True,
     )
     description = models.CharField(max_length=200, blank=True)
+    facility = models.CharField(max_length=50, blank=True, help_text="Local facility ID or description")
+    asn = ASNField(
+        blank=True,
+        null=True,
+        verbose_name="ASN",
+        help_text="32-bit autonomous system number",
+    )
+    time_zone = TimeZoneField(blank=True)
+    physical_address = models.TextField(blank=True)
+    shipping_address = models.TextField(blank=True)
+    latitude = models.DecimalField(
+        max_digits=8,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        help_text="GPS coordinate (latitude)",
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        help_text="GPS coordinate (longitude)",
+    )
+    contact_name = models.CharField(max_length=100, blank=True)
+    contact_phone = models.CharField(max_length=50, blank=True)
+    contact_email = models.EmailField(blank=True, verbose_name="Contact E-mail")
+    comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    objects = LocationQuerySet.as_manager(with_tree_fields=True)
-
-    csv_headers = [
-        "name",
-        "slug",
-        "location_type",
-        "site",
-        "status",
-        "parent",
-        "tenant",
-        "description",
-    ]
+    objects = LocationManager()
 
     clone_fields = [
         "location_type",
-        "site",
         "status",
         "parent",
         "tenant",
         "description",
+        "facility",
+        "asn",
+        "time_zone",
+        "physical_address",
+        "shipping_address",
+        "latitude",
+        "longitude",
+        "contact_name",
+        "contact_phone",
+        "contact_email",
     ]
 
     class Meta:
@@ -245,50 +212,40 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("dcim:location", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.location_type.name,
-            self.site.name if self.site else None,
-            self.get_status_display(),
-            self.parent.name if self.parent else None,
-            self.tenant.name if self.tenant else None,
-            self.description,
-        )
-
-    @property
-    def base_site(self):
-        """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
-        return self.site or self.ancestors().first().site
-
-    @property
-    def display(self):
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
         """
-        Location name is unique per parent but not globally unique, so include parent information as context.
-        `self.ancestors()` returns all the preceding nodes from the top down.
-        So if we are looking at node C and its node structure is the following:
-            A
-           /
-          B
-         /
-        C
-        This method will return "A → B → C".
+        Due to the recursive nature of Location's natural key, we need a custom implementation of this property.
 
-        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
+        When LOCATION_NAME_AS_NATURAL_KEY is set in settings or Constance, we use just the `name` for simplicity,
+        even though it's not technically guaranteed to be globally unique.
+
+        Otherwise, this returns a set of natural key lookups based on the current maximum depth of the Location tree.
+        For example if the tree is 2 layers deep, it will return ["name", "parent__name", "parent__parent__name"].
+
+        Without this custom implementation, the generic `natural_key_field_lookups` would recurse infinitely.
         """
-        display_str = ""
-        try:
-            for ancestor in self.ancestors():
-                display_str += ancestor.name + " → "
-        except ObjectDoesNotExist:
-            pass
-        finally:
-            display_str += self.name
-            return display_str  # pylint: disable=lost-exception
+        if get_settings_or_config("LOCATION_NAME_AS_NATURAL_KEY"):
+            # opt-in simplified "pseudo-natural-key"
+            return ["name"]
+
+        lookups = []
+        name = "name"
+        for _ in range(cls.objects.max_tree_depth() + 1):
+            lookups.append(name)
+            name = f"parent__{name}"
+        return lookups
+
+    @classmethod
+    def natural_key_args_to_kwargs(cls, args):
+        """Handle the possibility that more recursive "parent" lookups were specified than we initially expected."""
+        args = list(args)
+        natural_key_field_lookups = list(cls.natural_key_field_lookups)
+        while len(args) < len(natural_key_field_lookups):
+            args.append(None)
+        while len(args) > len(natural_key_field_lookups):
+            natural_key_field_lookups.append(f"parent__{natural_key_field_lookups[-1]}")
+        return dict(zip(natural_key_field_lookups, args))
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
@@ -330,30 +287,7 @@ class Location(TreeNode, StatusModel, PrimaryModel):
                         {"parent": f"A Location of type {self.location_type} must not have a parent Location."}
                     )
 
-                # In a future release, Site will become a kind of Location, and the resulting data migration will be
-                # much cleaner if it doesn't have to deal with Locations that have two "parents".
-                if self.site is not None:
-                    raise ValidationError(
-                        {"site": "A Location cannot have both a parent Location and an associated Site."}
-                    )
-
-            else:  # No parent, which is good, but then we must have a site.
-                if self.site is None:
-                    # Remove this in the future once Site and Region become special cases of Location;
-                    # at that point a "root" LocationType will correctly have no site associated.
-                    raise ValidationError(
-                        {"site": f"A Location of type {self.location_type} must have an associated Site."}
-                    )
-
         else:  # Our location type has a parent type of its own
-            # We must *not* have a site.
-            # In a future release, Site will become a kind of Location, and the resulting data migration will be
-            # much cleaner if it doesn't have to deal with Locations that have two "parents".
-            if self.site is not None:
-                raise ValidationError(
-                    {"site": f"A location of type {self.location_type} must not have an associated Site."}
-                )
-
             # We *must* have a parent location.
             if self.parent is None:
                 raise ValidationError(
@@ -377,3 +311,14 @@ class Location(TreeNode, StatusModel, PrimaryModel):
                             f"of type {self.location_type.parent} as its parent."
                         }
                     )
+
+    def clean_fields(self, exclude=None):
+        """Explicitly convert latitude/longitude to strings to avoid floating-point precision errors."""
+
+        if self.longitude is not None and isinstance(self.longitude, float):
+            decimal_places = self._meta.get_field("longitude").decimal_places
+            self.longitude = f"{self.longitude:.{decimal_places}f}"
+        if self.latitude is not None and isinstance(self.latitude, float):
+            decimal_places = self._meta.get_field("latitude").decimal_places
+            self.latitude = f"{self.latitude:.{decimal_places}f}"
+        super().clean_fields(exclude)

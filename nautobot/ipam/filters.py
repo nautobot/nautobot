@@ -4,27 +4,28 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from netaddr.core import AddrFormatError
 
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Interface
-from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     MultiValueCharFilter,
+    MultiValueNumberFilter,
     MultiValueUUIDFilter,
-    NameSlugSearchFilterSet,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     NumericArrayFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
-    TagFilter,
 )
+from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.models import Device, Interface
+from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+from nautobot.ipam import choices
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from .choices import IPAddressRoleChoices
 from .models import (
-    Aggregate,
     IPAddress,
+    IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
@@ -34,17 +35,28 @@ from .models import (
 
 
 __all__ = (
-    "AggregateFilterSet",
     "IPAddressFilterSet",
+    "NamespaceFilterSet",
     "PrefixFilterSet",
     "RIRFilterSet",
-    "RoleFilterSet",
     "RouteTargetFilterSet",
     "ServiceFilterSet",
     "VLANFilterSet",
     "VLANGroupFilterSet",
     "VRFFilterSet",
 )
+
+
+class NamespaceFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+        },
+    )
+
+    class Meta:
+        model = Namespace
+        fields = "__all__"
 
 
 class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
@@ -55,33 +67,37 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
             "description": "icontains",
         },
     )
-    import_target_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="import_targets",
-        queryset=RouteTarget.objects.all(),
-        label="Import target (ID) - Deprecated (use import_target filter)",
-    )
-    import_target = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="import_targets",
+    import_targets = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
         label="Import target (ID or name)",
     )
-    export_target_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="export_targets",
-        queryset=RouteTarget.objects.all(),
-        label="Export target (ID) - Deprecated (use export_target filter)",
-    )
-    export_target = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="export_targets",
+    export_targets = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
         label="Export target (ID or name)",
     )
-    tag = TagFilter()
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="devices",
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (ID or name)",
+    )
+    prefix = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="prefixes",
+        queryset=Prefix.objects.all(),
+        to_field_name="pk",  # TODO(jathan): Make this work with `prefix` "somehow"
+        label="Prefix (ID or name)",
+    )
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
 
     class Meta:
         model = VRF
-        fields = ["id", "name", "rd", "enforce_unique"]
+        fields = ["id", "name", "rd", "tags"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
@@ -91,39 +107,26 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
             "description": "icontains",
         },
     )
-    importing_vrf_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="importing_vrfs",
-        queryset=VRF.objects.all(),
-        label="Importing VRF (ID) - Deprecated (use import_vrf filter)",
-    )
-    importing_vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="importing_vrfs",
+    importing_vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="Import VRF (ID or RD)",
+        label="Import VRF(s) (ID or RD)",
     )
-    exporting_vrf_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="exporting_vrfs",
-        queryset=VRF.objects.all(),
-        label="Exporting VRF (ID) - Deprecated (use export_vrf filter)",
-    )
-    exporting_vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="exporting_vrfs",
+    exporting_vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="Export VRF (ID or RD)",
+        label="Export VRF(s) (ID or RD)",
     )
-    tag = TagFilter()
 
     class Meta:
         model = RouteTarget
-        fields = ["id", "name"]
+        fields = ["id", "name", "tags"]
 
 
-class RIRFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class RIRFilterSet(NautobotFilterSet, NameSearchFilterSet):
     class Meta:
         model = RIR
-        fields = ["id", "name", "slug", "is_private", "description"]
+        fields = ["id", "name", "is_private", "description"]
 
 
 class IPAMFilterSetMixin(django_filters.FilterSet):
@@ -132,10 +135,6 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
     q = django_filters.CharFilter(
         method="search",
         label="Search",
-    )
-    family = django_filters.NumberFilter(
-        method="filter_ip_family",
-        label="Family",
     )
 
     def search(self, qs, name, value):
@@ -146,43 +145,6 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
 
         return qs.string_search(value)
 
-    def filter_ip_family(self, qs, name, value):
-        return qs.ip_family(value)
-
-
-class AggregateFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilterSetMixin):
-    prefix = django_filters.CharFilter(
-        method="filter_prefix",
-        label="Prefix",
-    )
-    rir_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=RIR.objects.all(),
-        label="RIR (ID) - Deprecated (use rir filter)",
-    )
-    rir = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=RIR.objects.all(),
-        label="RIR (ID or slug)",
-    )
-    tag = TagFilter()
-
-    class Meta:
-        model = Aggregate
-        fields = ["id", "date_added"]
-
-    def filter_prefix(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        try:
-            return queryset.net_equals(netaddr.IPNetwork(value))
-        except (AddrFormatError, ValueError):
-            return queryset.none()
-
-
-class RoleFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
-    class Meta:
-        model = Role
-        fields = ["id", "name", "slug"]
-
 
 class PrefixFilterSet(
     NautobotFilterSet,
@@ -190,7 +152,12 @@ class PrefixFilterSet(
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
+    # Prefix doesn't have an appropriate single natural-key field for a NaturalKeyOrPKMultipleChoiceFilter
+    parent = django_filters.ModelMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+    )
     prefix = django_filters.CharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -207,54 +174,52 @@ class PrefixFilterSet(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
-    mask_length = django_filters.NumberFilter(label="mask_length", method="filter_prefix_length_eq")
-    mask_length__gte = django_filters.NumberFilter(label="mask_length__gte", method="filter_prefix_length_gte")
-    mask_length__lte = django_filters.NumberFilter(label="mask_length__lte", method="filter_prefix_length_lte")
-    vrf_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=VRF.objects.all(),
-        label="VRF (ID) - Deprecated (use vrf filter)",
-    )
-    vrf = NaturalKeyOrPKMultipleChoiceFilter(
+    vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
-        label="VRF (ID or RD)",
+        label="Assigned VRF (ID or RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        field_name="vrf",
+        field_name="vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
-        label="VRF",
+        label="Present in VRF",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
-        field_name="vrf__rd",
+        field_name="vrfs__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
-        label="VRF (RD)",
+        label="Present in VRF (RD)",
     )
     vlan_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
         label="VLAN (ID)",
     )
-    vlan_vid = django_filters.NumberFilter(
+    vlan_vid = MultiValueNumberFilter(
         field_name="vlan__vid",
         label="VLAN number (1-4095)",
     )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        label="Role (ID)",
+    rir = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=RIR.objects.all(),
+        label="RIR (name or ID)",
+        to_field_name="name",
     )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
+    has_rir = RelatedMembershipBooleanFilter(
+        field_name="rir",
+        label="Has RIR",
     )
-    tag = TagFilter()
+    type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
+    ip_version = django_filters.NumberFilter()
 
     class Meta:
         model = Prefix
-        fields = ["id", "is_pool", "prefix"]
+        fields = ["date_allocated", "id", "prefix_length", "tags"]
 
     def filter_prefix(self, queryset, name, value):
         value = value.strip()
@@ -265,15 +230,6 @@ class PrefixFilterSet(
             return queryset.net_equals(netaddr.IPNetwork(value))
         except (AddrFormatError, ValueError):
             return queryset.none()
-
-    def filter_prefix_length_eq(self, queryset, name, value):
-        return queryset.filter(prefix_length__exact=value)
-
-    def filter_prefix_length_lte(self, queryset, name, value):
-        return queryset.filter(prefix_length__lte=value)
-
-    def filter_prefix_length_gte(self, queryset, name, value):
-        return queryset.filter(prefix_length__gte=value)
 
     def search_within(self, queryset, name, value):
         value = value.strip()
@@ -318,47 +274,49 @@ class PrefixFilterSet(
         if isinstance(value, str):
             value = VRF.objects.get(pk=value)
 
-        # This stringification is done to make the `pretty_print_query()` output look human-readable,
-        # and nothing more. It would work as complex objects but looks bad in the web UI.
-        targets = [str(t) for t in value.import_targets.values_list("pk", flat=True)]
-        query = Q(vrf=str(value.pk)) | Q(vrf__export_targets__in=targets)
+        query = Q(vrfs=value) | Q(vrfs__export_targets__in=value.import_targets.all())
         return query
 
     def filter_present_in_vrf(self, queryset, name, value):
+        if value is None:
+            return queryset.none
         params = self.generate_query_filter_present_in_vrf(value)
-        return queryset.filter(params)
+        return queryset.filter(params).distinct()
 
 
-class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilterSetMixin, StatusModelFilterSetMixin):
-    parent = django_filters.CharFilter(
-        method="search_by_parent",
+class IPAddressFilterSet(
+    NautobotFilterSet,
+    IPAMFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+):
+    parent = django_filters.ModelMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
         label="Parent prefix",
+    )
+    prefix = django_filters.CharFilter(
+        method="search_by_prefix",
+        label="Contained in prefix",
     )
     address = MultiValueCharFilter(
         method="filter_address",
         label="Address",
     )
-    mask_length = django_filters.NumberFilter(
-        method="filter_mask_length",
-        label="Mask length",
-    )
-    vrf_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=VRF.objects.all(),
-        label="VRF (ID) - Deprecated (use vrf filter)",
-    )
-    vrf = NaturalKeyOrPKMultipleChoiceFilter(
+    vrfs = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="VRF (ID or RD)",
     )
     present_in_vrf_id = django_filters.ModelChoiceFilter(
-        field_name="vrf",
+        field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         label="VRF (ID)",
     )
     present_in_vrf = django_filters.ModelChoiceFilter(
-        field_name="vrf__rd",
+        field_name="parent__vrfs__rd",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         to_field_name="rd",
@@ -384,38 +342,47 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
         field_name="pk",
         label="Virtual machine (ID)",
     )
-    interface = NaturalKeyOrPKMultipleChoiceFilter(
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         to_field_name="name",
-        label="Interface (ID or name)",
+        label="Interfaces (ID or name)",
     )
-    interface_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="interface",
-        queryset=Interface.objects.all(),
-        label="Interface (ID) - Deprecated (use interface filter)",
-    )
-    vminterface = NaturalKeyOrPKMultipleChoiceFilter(
+    vm_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
         to_field_name="name",
-        label="VM interface (ID or name)",
+        label="VM interfaces (ID or name)",
     )
-    vminterface_id = django_filters.ModelMultipleChoiceFilter(
-        field_name="vminterface",
-        queryset=VMInterface.objects.all(),
-        label="VM interface (ID) - Deprecated (use vminterface filter)",
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        field_name="parent__namespace",
+        to_field_name="name",
+        label="Namespace (name or ID)",
     )
-    assigned_to_interface = django_filters.BooleanFilter(
-        method="_assigned_to_interface",
-        label="Is assigned to an interface",
+    has_interface_assignments = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        method="_has_interface_assignments",
+        label="Has Interface Assignments",
     )
-    role = django_filters.MultipleChoiceFilter(choices=IPAddressRoleChoices)
-    tag = TagFilter()
+    ip_version = django_filters.NumberFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name"]
+        fields = ["id", "dns_name", "type", "tags", "mask_length"]
 
-    def search_by_parent(self, queryset, name, value):
+    def generate_query__has_interface_assignments(self, value):
+        """Helper method used by DynamicGroups and by _assigned_to_interface method."""
+        if value is not None:
+            if value:
+                return Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False)
+            else:
+                return Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True)
+        return Q()
+
+    def _has_interface_assignments(self, queryset, name, value):
+        params = self.generate_query__has_interface_assignments(value)
+        return queryset.filter(params)
+
+    def search_by_prefix(self, queryset, name, value):
         value = value.strip()
         if not value:
             return queryset
@@ -431,15 +398,18 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
         except ValidationError:
             return queryset.none()
 
-    def filter_mask_length(self, queryset, name, value):
-        if not value:
-            return queryset
-        return queryset.filter(prefix_length=value)
+    def generate_query_filter_present_in_vrf(self, value):
+        if isinstance(value, str):
+            value = VRF.objects.get(pk=value)
+
+        query = Q(parent__vrfs=value) | Q(parent__vrfs__export_targets__in=value.import_targets.all())
+        return query
 
     def filter_present_in_vrf(self, queryset, name, value):
         if value is None:
             return queryset.none
-        return queryset.filter(Q(vrf=value) | Q(vrf__export_targets__in=value.import_targets.all()))
+        params = self.generate_query_filter_present_in_vrf(value)
+        return queryset.filter(params).distinct()
 
     def filter_device(self, queryset, name, value):
         devices = Device.objects.filter(**{f"{name}__in": value})
@@ -448,7 +418,7 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
         interface_ids = []
         for device in devices:
             interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
-        return queryset.filter(interface__in=interface_ids)
+        return queryset.filter(interfaces__in=interface_ids)
 
     def filter_virtual_machine(self, queryset, name, value):
         virtual_machines = VirtualMachine.objects.filter(**{f"{name}__in": value})
@@ -457,16 +427,32 @@ class IPAddressFilterSet(NautobotFilterSet, IPAMFilterSetMixin, TenancyModelFilt
         interface_ids = []
         for vm in virtual_machines:
             interface_ids.extend(vm.interfaces.values_list("id", flat=True))
-        return queryset.filter(vminterface__in=interface_ids)
-
-    def _assigned_to_interface(self, queryset, name, value):
-        return queryset.exclude(assigned_object_id__isnull=value)
+        return queryset.filter(vm_interfaces__in=interface_ids)
 
 
-class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSlugSearchFilterSet):
+class IPAddressToInterfaceFilterSet(NautobotFilterSet):
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        label="Interface (name or ID)",
+    )
+    ip_address = django_filters.ModelMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(),
+        label="IP Address (ID)",
+    )
+    vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VMInterface.objects.all(),
+        label="VM Interface (name or ID)",
+    )
+
+    class Meta:
+        model = IPAddressToInterface
+        fields = "__all__"
+
+
+class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):
     class Meta:
         model = VLANGroup
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class VLANFilterSet(
@@ -474,6 +460,7 @@ class VLANFilterSet(
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -485,42 +472,29 @@ class VLANFilterSet(
             },
         },
     )
-    available_on_device = django_filters.UUIDFilter(
+    available_on_device = MultiValueUUIDFilter(
         method="get_for_device",
         label="Device (ID)",
         field_name="pk",
     )
-    group_id = django_filters.ModelMultipleChoiceFilter(
+    vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="Group (ID) - Deprecated (use group filter)",
+        label="VLAN Group (name or ID)",
     )
-    group = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=VLANGroup.objects.all(),
-        label="Group (ID or slug)",
-    )
-    role_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        label="Role (ID)",
-    )
-    role = django_filters.ModelMultipleChoiceFilter(
-        field_name="role__slug",
-        queryset=Role.objects.all(),
-        to_field_name="slug",
-        label="Role (slug)",
-    )
-    tag = TagFilter()
 
     class Meta:
         model = VLAN
-        fields = ["id", "vid", "name"]
+        fields = ["id", "name", "tags", "vid"]
 
     def get_for_device(self, queryset, name, value):
+        # TODO: after Location model replaced Site, which was not a hierarchical model, should we consider to include
+        # VLANs that belong to the parent/child locations of the `device.location`?
         """Return all VLANs available to the specified Device(value)."""
-        try:
-            device = Device.objects.get(id=value)
-            return queryset.filter(Q(site__isnull=True) | Q(site=device.site))
-        except Device.DoesNotExist:
+        devices = Device.objects.select_related("location").filter(**{f"{name}__in": value})
+        if not devices.exists():
             return queryset.none()
+        location_ids = list(devices.values_list("location__id", flat=True))
+        return queryset.filter(Q(location__isnull=True) | Q(location__in=location_ids))
 
 
 class ServiceFilterSet(NautobotFilterSet):
@@ -530,27 +504,18 @@ class ServiceFilterSet(NautobotFilterSet):
             "description": "icontains",
         },
     )
-    device_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        label="Device (ID) - Deprecated (use device filter)",
-    )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Device (ID or name)",
-    )
-    virtual_machine_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=VirtualMachine.objects.all(),
-        label="Virtual machine (ID) - Deprecated (use virtual_machine filter)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
         label="Virtual machine (ID or name)",
     )
-    port = NumericArrayFilter(field_name="ports", lookup_expr="contains")
-    tag = TagFilter()
+    ports = NumericArrayFilter(field_name="ports", lookup_expr="contains")
 
     class Meta:
         model = Service
-        fields = ["id", "name", "protocol"]
+        fields = ["id", "name", "protocol", "tags"]

@@ -7,7 +7,7 @@ on:
 jobs:
   # Ensure CI has passed
   ci:
-    uses: nautobot/nautobot/.github/workflows/ci_integration.yml@main
+    uses: ./.github/workflows/ci_integration.yml
 
   # Publish to GitHub followed by pypi
   publish_python:
@@ -60,7 +60,7 @@ jobs:
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
-      - run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      - run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
         id: "gitbranch"
       - name: "Set up QEMU"
         uses: "docker/setup-qemu-action@v1"
@@ -103,7 +103,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_PARALLEL=true
+            POETRY_INSTALLER_PARALLEL=true
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
         uses: "docker/metadata-action@v3"
@@ -130,7 +130,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_PARALLEL=true
+            POETRY_INSTALLER_PARALLEL=true
 
   slack-notify:
     needs:

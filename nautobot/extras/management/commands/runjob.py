@@ -1,29 +1,20 @@
 import json
 import time
-import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.test.client import RequestFactory
 from django.utils import timezone
 
 from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
 from nautobot.extras.models import Job, JobLogEntry, JobResult
-from nautobot.extras.jobs import get_job, run_job
-from nautobot.extras.utils import get_job_content_type
-from nautobot.utilities.utils import copy_safe_request
+from nautobot.extras.jobs import get_job
 
 
 class Command(BaseCommand):
     help = "Run a job (script, report) to validate or update data in Nautobot"
 
     def add_arguments(self, parser):
-        parser.add_argument("job", help="Job in the class path form: `<grouping_name>/<module_name>/<JobClassName>`")
-        parser.add_argument(
-            "--commit",
-            action="store_true",
-            help="Commit changes to DB (defaults to dry-run if unset). --username is mandatory if using this argument",
-        )
+        parser.add_argument("job", help="Job in the Python module form: `<module_name>.<JobClassName>`")
         parser.add_argument(
             "--profile",
             action="store_true",
@@ -33,6 +24,7 @@ class Command(BaseCommand):
             "-u",
             "--username",
             help="User account to impersonate as the requester of this job",
+            required=True,
         )
         parser.add_argument(
             "-l",
@@ -43,30 +35,17 @@ class Command(BaseCommand):
         parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
 
     def handle(self, *args, **options):
-        if "/" not in options["job"]:
-            raise CommandError(
-                'Job must be specified in the class path form: "<grouping_name>/<module_name>/<JobClassName>"'
-            )
+        if "." not in options["job"]:
+            raise CommandError('Job must be specified in the Python module form: "<module_name>.<JobClassName>"')
         job_class = get_job(options["job"])
         if not job_class:
             raise CommandError(f'Job "{options["job"]}" not found')
 
-        user = None
-        request = None
-        if options["commit"] and not options["username"]:
-            # Job execution with commit=True uses change_logging(), which requires a user as the author of any changes
-            raise CommandError("--username is mandatory when --commit is used")
-
-        if options["username"]:
-            User = get_user_model()
-            try:
-                user = User.objects.get(username=options["username"])
-            except User.DoesNotExist as exc:
-                raise CommandError("No such user") from exc
-
-            request = RequestFactory().request(SERVER_NAME="nautobot_server_runjob")
-            request.id = uuid.uuid4()
-            request.user = user
+        User = get_user_model()
+        try:
+            user = User.objects.get(username=options["username"])
+        except User.DoesNotExist as exc:
+            raise CommandError("No such user") from exc
 
         data = {}
         try:
@@ -75,43 +54,18 @@ class Command(BaseCommand):
         except json.decoder.JSONDecodeError as error:
             raise CommandError(f"Invalid JSON data:\n{str(error)}")
 
-        job_content_type = get_job_content_type()
+        job_model = Job.objects.get_for_class_path(options["job"])
 
         # Run the job and create a new JobResult
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {job_class.class_path}...")
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {options['job']}...")
 
         if options["local"]:
-            job = Job.objects.get_for_class_path(job_class.class_path)
-            job_result = JobResult.objects.create(
-                name=job.class_path,
-                obj_type=job_content_type,
-                user=user,
-                job_model=job,
-                job_id=uuid.uuid4(),
-            )
-            run_job(
-                data=data,
-                request=copy_safe_request(request) if request else None,
-                commit=options["commit"],
-                profile=options["profile"],
-                job_result_pk=job_result.pk,
-            )
-            job_result.refresh_from_db()
-
+            job_result = JobResult.execute_job(job_model, user, profile=options["profile"], **data)
         else:
-            job_result = JobResult.enqueue_job(
-                run_job,
-                job_class.class_path,
-                job_content_type,
-                user,
-                data=data,
-                request=copy_safe_request(request) if request else None,
-                commit=options["commit"],
-                profile=options["profile"],
-            )
+            job_result = JobResult.enqueue_job(job_model, user, profile=options["profile"], **data)
 
             # Wait on the job to finish
-            while job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
+            while job_result.status not in JobResultStatusChoices.READY_STATES:
                 time.sleep(1)
                 job_result.refresh_from_db()
 
@@ -119,13 +73,14 @@ class Command(BaseCommand):
         groups = set(JobLogEntry.objects.filter(job_result=job_result).values_list("grouping", flat=True))
         for group in sorted(groups):
             logs = JobLogEntry.objects.filter(job_result__pk=job_result.pk, grouping=group)
-            success_count = logs.filter(log_level=LogLevelChoices.LOG_SUCCESS).count()
+            debug_count = logs.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
             info_count = logs.filter(log_level=LogLevelChoices.LOG_INFO).count()
             warning_count = logs.filter(log_level=LogLevelChoices.LOG_WARNING).count()
-            failure_count = logs.filter(log_level=LogLevelChoices.LOG_FAILURE).count()
+            error_count = logs.filter(log_level=LogLevelChoices.LOG_ERROR).count()
+            critical_count = logs.filter(log_level=LogLevelChoices.LOG_CRITICAL).count()
 
             self.stdout.write(
-                f"\t{group}: {success_count} success, {info_count} info, {warning_count} warning, {failure_count} failure"
+                f"\t{group}: {debug_count} debug, {info_count} info, {warning_count} warning, {error_count} error, {critical_count} critical"
             )
 
             for log_entry in logs:
@@ -144,17 +99,15 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(f"\t\t{status}: {log_entry.message}")
 
-        if job_result.data["output"]:
-            self.stdout.write(job_result.data["output"])
+        if job_result.result:
+            self.stdout.write(job_result.result)
 
-        if job_result.status == JobResultStatusChoices.STATUS_FAILED:
-            status = self.style.ERROR("FAILED")
-        elif job_result.status == JobResultStatusChoices.STATUS_ERRORED:
-            status = self.style.ERROR("ERRORED")
+        if job_result.status == JobResultStatusChoices.STATUS_FAILURE:
+            status = self.style.ERROR("FAILURE")
         else:
             status = self.style.SUCCESS("SUCCESS")
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {job_class.class_path}: {status}")
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {options['job']}: {status}")
 
         # Wrap things up
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {job_class.class_path}: Duration {job_result.duration}")
+        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {options['job']}: Duration {job_result.duration}")
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Finished")

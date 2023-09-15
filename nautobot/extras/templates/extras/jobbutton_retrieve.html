@@ -36,7 +36,7 @@
                 </tr>
                 <tr>
                     <td>Job</td>
-                    <td><a href="{% url 'extras:job' class_path=object.job.class_path %}">{{ object.job }}</a></td>
+                    <td><a href="{% url 'extras:job_run_by_class_path' class_path=object.job.class_path %}">{{ object.job }}</a></td>
                 </tr>
                 <tr>
                     <td>Button Class</td>

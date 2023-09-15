@@ -5,7 +5,7 @@
 
 {% block breadcrumbs %}
   <li><a href="{% url 'circuits:providernetwork_list' %}">Provider Networks</a></li>
-  <li><a href="{% url 'circuits:providernetwork_list' %}?provider_id={{ object.provider_id }}">{{ object.provider }}</a></li>
+  <li><a href="{% url 'circuits:providernetwork_list' %}?provider={{ object.provider_id }}">{{ object.provider }}</a></li>
   <li>{{ object }}</li>
 {% endblock %}
 

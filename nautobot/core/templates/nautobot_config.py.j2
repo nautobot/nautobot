@@ -17,8 +17,7 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
 
-# The django-redis cache is used to establish concurrent locks using Redis. The
-# django-rq settings will use the same instance/database by default.
+# The django-redis cache is used to establish concurrent locks using Redis.
 #
 # CACHES = {
 #     "default": {
@@ -26,7 +25,7 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #             "NAUTOBOT_CACHES_BACKEND",
 #             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
 #         ),
-#         "LOCATION": parse_redis_connection(redis_database=0),
+#         "LOCATION": parse_redis_connection(redis_database=1),
 #         "TIMEOUT": 300,
 #         "OPTIONS": {
 #             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -35,20 +34,12 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #     }
 # }
 
-# Redis connection to use for caching.
-#
-# CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
-
 # Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
 # CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
 
 # Celery broker URL used to tell workers where queues are located
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
-
-# Celery results backend URL to tell workers where to publish task results
-#
-# CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
 
 # Database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
@@ -72,24 +63,6 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
     DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
-
-# These defaults utilize the Django caches setting defined for django-redis.
-# See: https://github.com/rq/django-rq#support-for-django-redis-and-django-redis-cache
-#
-# RQ_QUEUES = {
-#     "default": {
-#         "USE_REDIS_CACHE": "default",
-#     },
-#     "check_releases": {
-#         "USE_REDIS_CACHE": "default",
-#     },
-#     "custom_fields": {
-#         "USE_REDIS_CACHE": "default",
-#     },
-#     "webhooks": {
-#         "USE_REDIS_CACHE": "default",
-#     },
-# }
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
 # For optimal security, SECRET_KEY should be at least 50 characters in length and contain a mix of letters, numbers, and
@@ -275,25 +248,9 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 # }
 
-# Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
-#
-# CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
-
-# Set to True to enable caching with cacheops. (Default: False)
-#
-# CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
-
-# Set to True to enable periodic health checks for the Redis server connection used by cacheops.
-#
-# CACHEOPS_HEALTH_CHECK_ENABLED = False
-
 # Options to pass to the Celery broker transport, for example when using Celery with Redis Sentinel.
 #
 # CELERY_BROKER_TRANSPORT_OPTIONS = {}
-
-# Options to pass to the Celery result backend transport, for example when using Celery with Redis Sentinel.
-#
-# CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {}
 
 # Default celery queue name that will be used by workers and tasks if no queue is specified
 # CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")
@@ -342,23 +299,23 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     r'^(https?://)?(\w+\.)?example\.com$',
 # ]
 
+# Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to True to use the device name alone as the natural key for Device objects.
+# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
+#
+# DEVICE_NAME_AS_NATURAL_KEY = False
+
 # Set to True to disable rendering of the IP prefix hierarchy in the the IPAM prefix list view.
 # Useful in case of poor performance when rendering this page.
 #
 # DISABLE_PREFIX_LIST_HIERARCHY = False
-
-# Enforcement of unique IP space can be toggled on a per-VRF basis. To enforce unique IP space
-# within the global table (all prefixes and IP addresses not assigned to a VRF), set ENFORCE_GLOBAL_UNIQUE to True.
-#
-# ENFORCE_GLOBAL_UNIQUE = is_truthy(os.getenv("NAUTOBOT_ENFORCE_GLOBAL_UNIQUE", "False"))
 
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
 # by anonymous users. List models in the form `<app>.<model>`. Add '*' to this list to exempt all models.
 # Defaults to [].
 #
 # EXEMPT_VIEW_PERMISSIONS = [
-#     'dcim.site',
-#     'dcim.region',
+#     'dcim.location',
 #     'ipam.prefix',
 # ]
 
@@ -366,6 +323,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # EXTERNAL_AUTH_DEFAULT_GROUPS = []
 # EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
+
+# Show feedback button on NewUI sidebar menu (defualt: True)
+#
+# FEEDBACK_BUTTON_ENABLED = True
 
 # Directory where cloned Git repositories will be stored.
 #
@@ -395,6 +356,12 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # Directory where Jobs can be discovered.
 #
 # JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+
+# Location names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to True to use the location name alone as the natural key for Location objects.
+# Set this to False to use the sequence (name, parent__name, parent__parent__name, ...) as the natural key instead.
+#
+# LOCATION_NAME_AS_NATURAL_KEY = False
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 #

@@ -18,15 +18,6 @@
                                 </div>
                                 <table class="table table-hover panel-body attr-table">
                                     <tr>
-                                        <td>Site</td>
-                                        <td>
-                                            {% if object.site.region %}
-                                                {{ object.site.region|hyperlinked_object }} /
-                                            {% endif %}
-                                            {{ object.site|hyperlinked_object }}
-                                        </td>
-                                    </tr>
-                                    <tr>
                                         <td>Location</td>
                                         <td>
                                             {% include 'dcim/inc/location_hierarchy.html' with location=object.location %}
@@ -35,8 +26,8 @@
                                     <tr>
                                         <td>Rack</td>
                                         <td>
-                                            {% if object.rack and object.rack_group %}
-                                                {{ object.rack.group|hyperlinked_object }} /
+                                            {% if object.rack and object.rack.rack_group %}
+                                                {{ object.rack.rack_group|hyperlinked_object }} /
                                             {% endif %}
                                             {{ object.rack|hyperlinked_object }}
                                         </td>
@@ -63,8 +54,8 @@
                                     <tr>
                                         <td>Tenant</td>
                                         <td>
-                                            {% if object.tenant and object.tenant.group %}
-                                                {{ object.tenant.group|hyperlinked_object }} /
+                                            {% if object.tenant and object.tenant.tenant_group %}
+                                                {{ object.tenant.tenant_group|hyperlinked_object }} /
                                             {% endif %}
                                             {{ object.tenant|hyperlinked_object }}
                                         </td>
@@ -129,7 +120,9 @@
                                 <table class="table table-hover panel-body attr-table">
                                     <tr>
                                         <td>Role</td>
-                                        <td>{{ object.device_role|hyperlinked_object }}</td>
+                                        <td>
+                                            {{ object.role | hyperlinked_object_with_color }}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td>Platform</td>
@@ -138,7 +131,7 @@
                                     <tr>
                                         <td>Status</td>
                                         <td>
-                                            <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                                            {{ object.status| hyperlinked_object_with_color }}
                                         </td>
                                     </tr>
                                     <tr>
@@ -146,11 +139,16 @@
                                         <td>
                                             {% if object.primary_ip4 %}
                                                 <span class="hover_copy">
-                                                    {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }}
+                                                    {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }} ({{ object.primary_ip4.parent.namespace|hyperlinked_object }})
                                                     {% if object.primary_ip4.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
-                                                    {% elif object.primary_ip4.nat_outside %}
-                                                        <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
+                                                    {% elif object.primary_ip4.nat_outside_list.exists %}
+                                                        <br /><span>NAT: </span>
+                                                        <ul>
+                                                            {% for nat in object.primary_ip4.nat_outside_list.all %}
+                                                                <li>{{ nat|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
                                                     {% endif %}
                                                     <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
                                                         <span class="mdi mdi-content-copy"></span>
@@ -159,7 +157,6 @@
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}
-                                            
                                         </td>
                                     </tr>
                                     <tr>
@@ -167,11 +164,16 @@
                                         <td>
                                             {% if object.primary_ip6 %}
                                                 <span class="hover_copy">
-                                                    {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }}
+                                                    {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }} ({{ object.primary_ip6.parent.namespace|hyperlinked_object }})
                                                     {% if object.primary_ip6.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
-                                                    {% elif object.primary_ip6.nat_outside %}
-                                                        <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
+                                                    {% elif object.primary_ip6.nat_outside_list.exists %}
+                                                        <br /><span>NAT: </span>
+                                                        <ul>
+                                                            {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                                                <li>{{ nat|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
                                                     {% endif %}
                                                     <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
                                                         <span class="mdi mdi-content-copy"></span>
@@ -272,6 +274,7 @@
                                     </table>
                                 </div>
                             {% endif %}
+                            {% include 'panel_table.html' with table=vrf_table heading="Assigned VRFs" %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Services</strong>

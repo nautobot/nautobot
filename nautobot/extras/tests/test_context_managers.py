@@ -3,12 +3,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.core.celery import app
-from nautobot.dcim.models import Site
+from nautobot.core.testing import TransactionTestCase
+from nautobot.core.utils.lookup import get_changes_for_model
+from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.models import Webhook
-from nautobot.utilities.testing import TransactionTestCase
-from nautobot.utilities.utils import get_changes_for_model
+from nautobot.extras.models import Status, Webhook
 
 
 # Use the proper swappable User model
@@ -19,14 +19,14 @@ class WebRequestContextTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="jacob", email="jacob@example.com", password="top_secret")
 
-        site_ct = ContentType.objects.get_for_model(Site)
+        location_ct = ContentType.objects.get_for_model(Location)
         MOCK_URL = "http://localhost/"
         MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
 
         webhooks = Webhook.objects.bulk_create(
             (
                 Webhook(
-                    name="Site Create Webhook",
+                    name="Location Create Webhook",
                     type_create=True,
                     payload_url=MOCK_URL,
                     secret=MOCK_SECRET,
@@ -34,7 +34,7 @@ class WebRequestContextTestCase(TestCase):
             )
         )
         for webhook in webhooks:
-            webhook.content_types.set([site_ct])
+            webhook.content_types.set([location_ct])
 
         app.control.purge()  # Begin each test with an empty queue
 
@@ -45,22 +45,26 @@ class WebRequestContextTestCase(TestCase):
 
     def test_change_log_created(self):
         with web_request_context(self.user):
-            site = Site(name="Test Site 1")
-            site.save()
+            location_type = LocationType.objects.get(name="Campus")
+            location_status = Status.objects.get_for_model(Location).first()
+            location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+            location.save()
 
-        site = Site.objects.get(name="Test Site 1")
-        oc_list = get_changes_for_model(site).order_by("pk")
+        location = Location.objects.get(name="Test Location 1")
+        oc_list = get_changes_for_model(location).order_by("pk")
         self.assertEqual(len(oc_list), 1)
-        self.assertEqual(oc_list[0].changed_object, site)
+        self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
     def test_change_log_context(self):
         with web_request_context(self.user, context_detail="test_change_log_context"):
-            site = Site(name="Test Site 1")
-            site.save()
+            location_type = LocationType.objects.get(name="Campus")
+            location_status = Status.objects.get_for_model(Location).first()
+            location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+            location.save()
 
-        site = Site.objects.get(name="Test Site 1")
-        oc_list = get_changes_for_model(site)
+        location = Location.objects.get(name="Test Location 1")
+        oc_list = get_changes_for_model(location)
         with self.subTest():
             self.assertEqual(oc_list[0].change_context, ObjectChangeEventContextChoices.CONTEXT_ORM)
         with self.subTest():
@@ -92,7 +96,7 @@ class WebRequestContextTransactionTestCase(TransactionTestCase):
         user = User.objects.create(username="test-user123")
         with web_request_context(user, context_detail="test_change_log_context"):
             with web_request_context(user, context_detail="test_change_log_context"):
-                Site.objects.create(name="Test Site 1")
-            Site.objects.create(name="Test Site 2")
+                Status.objects.create(name="Test Status 1")
+            Status.objects.create(name="Test Status 2")
 
-        self.assertEqual(get_changes_for_model(Site).count(), 2)
+        self.assertEqual(get_changes_for_model(Status).count(), 2)

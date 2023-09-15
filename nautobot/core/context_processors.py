@@ -1,6 +1,7 @@
 from django.conf import settings as django_settings
 
 from nautobot.core.settings_funcs import sso_auth_enabled
+from nautobot.core.utils.navigation import is_route_new_ui_ready
 
 
 def get_saml_idp():
@@ -34,8 +35,10 @@ def settings(request):
     Expose Django settings in the template context. Example: {{ settings.DEBUG }}
     """
 
+    use_new_ui = request.COOKIES.get("newui", False) and is_route_new_ui_ready(request.path)
     return {
         "settings": django_settings,
+        "root_template": "base_react.html" if use_new_ui else "base_django.html",
     }
 
 

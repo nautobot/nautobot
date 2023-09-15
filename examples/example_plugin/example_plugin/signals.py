@@ -1,6 +1,6 @@
 """Signal handlers for the example example_plugin."""
 EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT = "Default value"
-EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME = "example_plugin_auto_custom_field"
+EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME = "example_plugin_auto_custom_field"  # Note underscores rather than dashes!
 
 
 def nautobot_database_ready_callback(sender, *, apps, **kwargs):
@@ -22,20 +22,29 @@ def nautobot_database_ready_callback(sender, *, apps, **kwargs):
         apps (django.apps.apps.Apps): Use this to look up model classes as needed
         **kwargs: See https://docs.djangoproject.com/en/3.1/ref/signals/#post-migrate for additional args
     """
-    # Ensure that a desired custom field exists on the Site model
+    # Ensure that a desired custom field exists on the Location model
     ContentType = apps.get_model("contenttypes", "ContentType")
-    Site = apps.get_model("dcim", "Site")
+    Location = apps.get_model("dcim", "Location")
     CustomField = apps.get_model("extras", "CustomField")
 
     from nautobot.extras.choices import CustomFieldTypeChoices
 
-    field, _ = CustomField.objects.update_or_create(
-        name=EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME,  # Effectively a slug, will go away in a future Nautobot release
-        slug=EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME,  # Note underscores rather than dashes!
-        defaults={
-            "type": CustomFieldTypeChoices.TYPE_TEXT,
-            "label": "Example Plugin Automatically Added Custom Field",
-            "default": EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
-        },
-    )
-    field.content_types.set([ContentType.objects.get_for_model(Site)])
+    if hasattr(CustomField, "slug"):
+        field, _ = CustomField.objects.update_or_create(
+            slug=EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME,
+            defaults={
+                "type": CustomFieldTypeChoices.TYPE_TEXT,
+                "label": "Example Plugin Automatically Added Custom Field",
+                "default": EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
+            },
+        )
+    else:
+        field, _ = CustomField.objects.update_or_create(
+            key=EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME,
+            defaults={
+                "type": CustomFieldTypeChoices.TYPE_TEXT,
+                "label": "Example Plugin Automatically Added Custom Field",
+                "default": EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
+            },
+        )
+    field.content_types.set([ContentType.objects.get_for_model(Location)])

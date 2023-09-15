@@ -3,29 +3,25 @@ import logging
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-from django.urls import reverse
 
 from jinja2.exceptions import UndefinedError, TemplateSyntaxError
 
-from nautobot.core.fields import AutoSlugField
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretParametersError, SecretProviderError
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.utils import render_jinja2
 
 
 logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Secret(PrimaryModel):
@@ -37,18 +33,10 @@ class Secret(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     provider = models.CharField(max_length=100)
     parameters = models.JSONField(encoder=DjangoJSONEncoder, default=dict)
 
-    csv_headers = [
-        "name",
-        "slug",
-        "description",
-        "provider",
-        "parameters",
-    ]
     clone_fields = [
         "provider",
     ]
@@ -58,18 +46,6 @@ class Secret(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:secret", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.description,
-            self.provider,
-            self.parameters,
-        )
 
     def rendered_parameters(self, obj=None):
         """Render self.parameters as a Jinja2 template with the given object as context."""
@@ -109,40 +85,33 @@ class Secret(PrimaryModel):
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class SecretsGroup(OrganizationalModel):
     """A group of related Secrets."""
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name", unique=True)
     description = models.CharField(max_length=200, blank=True)
     secrets = models.ManyToManyField(
-        to=Secret, related_name="groups", through="extras.SecretsGroupAssociation", blank=True
+        to=Secret, related_name="secrets_groups", through="extras.SecretsGroupAssociation", blank=True
     )
 
-    csv_headers = ["name", "slug", "description"]
+    documentation_static_path = "docs/user-guide/platform-functionality/secret.html"
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:secretsgroup", args=[self.slug])
-
-    def to_csv(self):
-        return (self.name, self.slug, self.description)
 
     def get_secret_value(self, access_type, secret_type, obj=None, **kwargs):
         """Helper method to retrieve a specific secret from this group.
 
         May raise SecretError and/or Django ObjectDoesNotExist exceptions; it's up to the caller to handle those.
         """
-        secret = self.secrets.through.objects.get(group=self, access_type=access_type, secret_type=secret_type).secret
+        secret = self.secrets.through.objects.get(
+            secrets_group=self, access_type=access_type, secret_type=secret_type
+        ).secret
         return secret.get_value(obj=obj, **kwargs)
 
 
@@ -152,18 +121,22 @@ class SecretsGroup(OrganizationalModel):
 class SecretsGroupAssociation(BaseModel):
     """The intermediary model for associating Secret(s) to SecretsGroup(s)."""
 
-    group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE)
-    secret = models.ForeignKey(Secret, on_delete=models.CASCADE)
+    secrets_group = models.ForeignKey(SecretsGroup, on_delete=models.CASCADE, related_name="secrets_group_associations")
+    secret = models.ForeignKey(Secret, on_delete=models.CASCADE, related_name="secrets_group_associations")
 
     access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
     secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)
 
+    natural_key_field_names = ["secrets_group", "access_type", "secret_type", "secret"]
+
+    documentation_static_path = "docs/user-guide/platform-functionality/secret.html"
+
     class Meta:
         unique_together = (
             # Don't allow the same access-type/secret-type combination to be used more than once in the same group
-            ("group", "access_type", "secret_type"),
+            ("secrets_group", "access_type", "secret_type"),
         )
-        ordering = ("group", "access_type", "secret_type")
+        ordering = ("secrets_group", "access_type", "secret_type")
 
     def __str__(self):
-        return f"{self.group}: {self.access_type} {self.secret_type}: {self.secret}"
+        return f"{self.secrets_group}: {self.access_type} {self.secret_type}: {self.secret}"

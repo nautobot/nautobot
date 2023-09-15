@@ -39,6 +39,10 @@ inputs:
   tag-latest-for-py:
     description: "Whether To Tag As Latest For Python Version"
     required: true
+  platforms:
+    description: "Platforms To Build For"
+    required: false
+    default: "linux/amd64,linux/arm64"
   push:
     description: "Whether To Push"
     required: true
@@ -73,7 +77,7 @@ runs:
         push: "${{ inputs.push }}"
         target: "${{ inputs.target }}"
         file: "docker/Dockerfile"
-        platforms: "linux/amd64,linux/arm64"
+        platforms: "${{ inputs.platforms }}"
         tags: "${{ steps.metadata.outputs.tags }}"
         labels: "${{ steps.metadata.outputs.labels }}"
         cache-from: "type=gha,scope=nautobot-${{ inputs.branch }}-${{ inputs.python-version }}"
@@ -82,4 +86,4 @@ runs:
         build-args: |
           PYTHON_VER=${{ inputs.python-version }}
           DEPENDENCIES_BASE_BRANCH=${{ inputs.branch }}
-          POETRY_PARALLEL=true
+          POETRY_INSTALLER_PARALLEL=true

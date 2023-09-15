@@ -4,10 +4,13 @@ import os
 from nautobot.core.settings import *  # noqa: F403
 from nautobot.core.settings_funcs import is_truthy
 
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "012345678901234567890123456789012345678901234567890123456789")
+
 #
 # Debugging defaults to True rather than False for the development environment
 #
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "True"))
+
 
 # Django Debug Toolbar - enabled only when debugging
 if DEBUG:
@@ -38,6 +41,9 @@ PLUGINS = [
     "example_plugin",
 ]
 
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE = None
 
 #
 # Development Environment for SSO

@@ -3,12 +3,12 @@
 {% load static %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{% url 'dcim:rack_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
-                {% if object.group %}
-                    {% for group in object.group.get_ancestors %}
-                        <li>{{ group|hyperlinked_object }}</li>
+                <li><a href="{% url 'dcim:rack_list' %}?location={{ object.location.pk }}">{{ object.location }}</a></li>
+                {% if object.rack_group %}
+                    {% for rack_group in object.rack_group.ancestors %}
+                        <li>{{ rack_group|hyperlinked_object }}</li>
                     {% endfor %}
-                    <li>{{ object.group|hyperlinked_object }}</li>
+                    <li>{{ object.rack_group|hyperlinked_object }}</li>
                 {% endif %}
 {% endblock extra_breadcrumbs %}
 
@@ -39,27 +39,18 @@
             </div>
             <table class="table table-hover panel-body attr-table">
                 <tr>
-                    <td>Site</td>
-                    <td>
-                        {% if object.site.region %}
-                            {{ object.site.region|hyperlinked_object }} /
-                        {% endif %}
-                        {{ object.site|hyperlinked_object }}
-                    </td>
-                </tr>
-                <tr>
                     <td>Location</td>
                     <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                 </tr>
                 <tr>
-                    <td>Group</td>
+                    <td>Rack Group</td>
                     <td>
-                        {% if object.group %}
-                            {% for group in object.group.get_ancestors %}
-                                {{ group|hyperlinked_object }} /
+                        {% if object.rack_group %}
+                            {% for rack_group in object.rack_group.ancestors %}
+                                {{ rack_group|hyperlinked_object }} /
                             {% endfor %}
                         {% endif %}
-                        {{ object.group|hyperlinked_object }}
+                        {{ object.rack_group|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
@@ -69,8 +60,8 @@
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant and object.tenant.group %}
-                            {{ object.tenant.group|hyperlinked_object }} /
+                        {% if object.tenant and object.tenant.tenant_group %}
+                            {{ object.tenant.tenant_group|hyperlinked_object }} /
                         {% endif %}
                         {{ object.tenant|hyperlinked_object }}
                     </td>
@@ -78,12 +69,12 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                        {{ object.status| hyperlinked_object_with_color }}
                     </td>
                 </tr>
                 <tr>
                     <td>Role</td>
-                    <td>{{ object.role|hyperlinked_object }}</td>
+                    <td>{{ object.role | hyperlinked_object_with_color }}</td>
                 </tr>
                 <tr>
                     <td>Serial Number</td>
@@ -96,7 +87,7 @@
                 <tr>
                     <td>Devices</td>
                     <td>
-                        <a href="{% url 'dcim:device_list' %}?rack_id={{ object.id }}">{{ device_count }}</a>
+                        <a href="{% url 'dcim:device_list' %}?rack={{ object.id }}">{{ device_count }}</a>
                     </td>
                 </tr>
                 <tr>
@@ -320,7 +311,7 @@
             {% endif %}
             {% if perms.dcim.add_device %}
                 <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:device_add' %}?site={{ object.site.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-xs">
+                    <a href="{% url 'dcim:device_add' %}?location={{ object.location.pk }}&rack={{ object.pk }}" class="btn btn-primary btn-xs">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add a non-racked device
                     </a>

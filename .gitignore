@@ -11,6 +11,7 @@ gunicorn.py
 invoke.yml
 nautobot.log
 nautobot.pid
+nautobot.sql
 .DS_Store
 .idea
 .coverage
@@ -30,4 +31,4 @@ htmlcov/*
 /examples/example_plugin/example_plugin/static/example_plugin/docs/
 development/factory_dump.json
 node_modules
-nautobot/ui
+nautobot/ui/generated
