@@ -268,7 +268,7 @@ Note that if the provided parameters do not match exactly one object, a validati
 
 ### Generic Relations
 
-Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, a `Cable` can be terminated (connected) to an `Interface`, or a `FrontPort`, or a `RearPort`, etc. For such generic relations, when making this assignment via the REST API, we must specify two attributes, typically a `object_type` and an `object_id`, and by convention in Nautobot's API:
+Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, a `Cable` can be terminated (connected) to an `Interface`, or a `FrontPort`, or a `RearPort`, etc. For such generic relations, when making this assignment via the REST API, we must specify two attributes, typically an `object_type` and an `object_id`, and by convention in Nautobot's API:
 
 * the `object_type` is the type of assigned object, typically represented as `<app_label>.<model_name>`
 * the `object_id` is the UUID (primary key) of the assigned object.
@@ -306,6 +306,12 @@ On retrieval, the REST API will include the `object_type` and `object_id` fields
     ...
 }
 ```
+
+### Many-To-Many Relationships
+
++++ 2.0.0
+
+Many-to-many relationships differ from one-to-many and one-to-one relationships because they utilize a separate database table called a "through table" to track the relationships instead of a single field in an existing table. In Nautobot 2.0, some relationships such as `IPAddress` to `Interface`/`VMInterface`, `Prefix` to `VRF`, and `VRF` to `Device`/`VirtualMachine` are represented as many-to-many relationships. The REST API represents these relationships as nested objects for retrieval, but in order to create, update or delete these relationships, the through table endpoint must be used. Currently, the only through table endpoint available is the [`IPAddress` to `Interface`/`VMInterface` at `/api/ipam/ip-address-to-interface/`](../../administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#new-interface-to-ip-address-relationship-endpoint).
 
 ## Pagination
 
