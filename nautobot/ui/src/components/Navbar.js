@@ -3,6 +3,7 @@ import {
     Link as ReactRouterLink,
     NavLink as ReactRouterNavLink,
     useLocation,
+    useSearchParams,
 } from "react-router-dom";
 import {
     AutomationIcon,
@@ -32,7 +33,10 @@ import {
     isLoggedInSelector,
     getCurrentContextSelector,
 } from "@utils/store";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import debounce from "lodash.debounce";
+
+const FILTER_RESET_QUERY_PARAMS = ["offset"];
 
 export function Navbar() {
     const isLoggedIn = useSelector(isLoggedInSelector);
@@ -40,6 +44,35 @@ export function Navbar() {
     const currentUser = useSelector(currentUserSelector);
     const location = useLocation();
     const { data: readyRoutes } = useGetNewUIReadyRoutesQuery();
+
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const changeHandler = (event) => {
+        let filters = [];
+        if (event.target.value !== "") {
+            filters = [["q", event.target.value]];
+        }
+        setSearchParams([
+            ...filters,
+            ...[...searchParams].filter(
+                ([searchParamLabel]) =>
+                    !FILTER_RESET_QUERY_PARAMS.includes(searchParamLabel) &&
+                    searchParamLabel !== "q"
+            ),
+        ]);
+    };
+
+    const debouncedOnChangeSearchBox = useMemo(() => {
+        return debounce(changeHandler, 100);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps -- For some reason, eslint doesn't like this dependency array, but it's needed to prevent the debounce from being recreated on every render.
+
+    const SearchBox = (
+        <Input
+            placeholder="Search..."
+            defaultValue={searchParams.get("q")}
+            onChange={debouncedOnChangeSearchBox}
+        />
+    );
 
     // Check if current location is NewUIReady; if not redirect user back to legacy UI
     useEffect(() => {
@@ -101,7 +134,7 @@ export function Navbar() {
                 <InputLeftElement>
                     <SearchIcon />
                 </InputLeftElement>
-                <Input placeholder="Search..." />
+                {SearchBox}
             </InputGroup>
             {!isLoggedIn && <RouterButton to="/login/">Log In</RouterButton>}
             {isLoggedIn && (
