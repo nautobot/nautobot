@@ -83,6 +83,8 @@ djangorestframework = "~3.14.0"
 drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "0.26.3", extras = ["sidecar"]}
+# Emoji terminal output for Python.
+emoji = "~2.8.0"
 # Git integrations for Python
 GitPython = "~3.1.36"
 # GraphQL support
@@ -119,6 +121,8 @@ prometheus-client = "~0.17.1"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.6"
+# A Python slugify application that handles unicode.
+python-slugify = "~8.0.1"
 # The uWSGI WSGI HTTP server as a Python module
 pyuwsgi = "~2.0.21"
 # YAML parsing and rendering

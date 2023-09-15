@@ -30,6 +30,10 @@ Added the `?depth` query parameter in Nautobot v2.X to replace the `?brief` para
 
 Nautobot's `BaseModel` base class and related classes now implement automatic support for Django [natural keys](https://docs.djangoproject.com/en/3.2/topics/serialization/#natural-keys) for lookup and referencing, as well as supporting a `composite_key` concept similar to that introduced by `django-natural-keys`. (Nautobot does not depend on `django-natural-keys` but its implementation is heavily inspired by that project.) For example:
 
+<!-- TODO(jathan): Remove this admonition before v2.0.0 final release. -->
+!!! warning
+    Composite Key will be removed in the final release of Nautobot. Existing references may still exist in RC3.
+
 ```python
 >>> DeviceType.objects.first().natural_key()
 ['MegaCorp', 'Model 9000']

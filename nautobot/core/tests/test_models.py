@@ -1,4 +1,5 @@
 import time
+import uuid
 
 from unittest.mock import patch
 
@@ -8,7 +9,7 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 
 from nautobot.core.models import BaseModel
-from nautobot.core.models.utils import construct_composite_key, deconstruct_composite_key
+from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import DeviceType, Manufacturer
 
@@ -39,6 +40,23 @@ class ModelUtilsTestCase(TestCase):
                 self.assertEqual(composite_key, expected_composite_key)
                 self.assertEqual(deconstruct_composite_key(composite_key), values)
 
+    def test_construct_natural_slug(self):
+        """Test that `construct_natural_slug()` works as expected."""
+        pk = uuid.uuid4()
+        pk4 = str(pk)[:4]
+        for values, expected_natural_slug in (
+            (["Alpha"], "alpha"),  # simplest case
+            (["alpha", "beta"], "alpha_beta"),  # multiple inputs
+            (["Über Ålpha"], "uber-alpha"),  # accents/ligatures
+            (["10.1.1.1/24", "fe80::1"], "10-1-1-1-24_fe80-1"),  # URL-safe ASCII characters, / is *not* path safe
+            ([None, "Hello", None], "_hello_"),  # Null values
+            (["💩", "Everyone's favorite!"], "pile-of-poo_everyone-s-favorite"),  # Emojis and unsafe ASCII
+        ):
+            with self.subTest(values=values):
+                expected_natural_slug += f"_{pk4}"
+                natural_slug = construct_natural_slug(values, pk=pk)
+                self.assertEqual(natural_slug, expected_natural_slug)
+
 
 class NaturalKeyTestCase(BaseModelTest):
     """Test the various natural-key APIs for a few representative models."""
@@ -58,6 +76,13 @@ class NaturalKeyTestCase(BaseModelTest):
         self.assertEqual(mfr.composite_key, construct_composite_key(mfr.natural_key()))
         dt = DeviceType.objects.first()
         self.assertEqual(dt.composite_key, construct_composite_key(dt.natural_key()))
+
+    def test_natural_slug(self):
+        """Test the natural_slug default implementation with some representative models."""
+        mfr = Manufacturer.objects.first()
+        self.assertEqual(mfr.natural_slug, construct_natural_slug(mfr.natural_key(), pk=mfr.pk))
+        dt = DeviceType.objects.first()
+        self.assertEqual(dt.natural_slug, construct_natural_slug(dt.natural_key(), pk=dt.pk))
 
     def test_natural_key_field_lookups(self):
         """Test the natural_key_field_lookups default implementation with some representative models."""
