@@ -58,7 +58,7 @@
   Comments:
 - Model/Endpoint: "IPAddress"
   Removed Field: "assigned_object"
-  Comments: "Use `interfaces` and/or `vm_interfaces` instead."
+  Comments: "Changed to many-to-many field. Use the REST API view for `IPAddressToInterface`(/api/ipam/ip-address-to-interface/) to create/modify/delete associations or `interfaces`/`vm_interfaces` on this model to retrieve a list of associated interfaces."
 - Model/Endpoint: "IPAddress"
   Removed Field: "broadcast"
   Comments: "Use parent Prefix's broadcast instead"
