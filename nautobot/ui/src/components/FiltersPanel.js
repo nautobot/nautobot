@@ -163,13 +163,12 @@ export const FiltersPanelContainer = forwardRef(
 FiltersPanelContainer.displayName = "FiltersPanelContainer";
 
 export const FiltersPanelContent = forwardRef(
-    ({ contentType, lookupFields, onClose, onSave }, ref) => {
-        // FIXME(norbert-mieczkowski-codilime): this is a temporary hack until passed `contentType` is valid
-        contentType = "dcim.devicetype";
-
+    ({ lookupFields, objectType, onClose, onSave }, ref) => {
         const LAST_USED_FILTERS_LOCAL_STORAGE_KEY = "lastUsedFilters";
 
         const [searchParams, setSearchParams] = useSearchParams();
+
+        const previousObjectTypeRef = useRef(objectType);
 
         const isFilterAlreadyApplied = useCallback(
             (label, value) =>
@@ -251,20 +250,24 @@ export const FiltersPanelContent = forwardRef(
             [searchParams, setSearchParams]
         );
 
-        const [lastUsedFilters, setLastUsedFilters] = useState(() => {
+        const getInitialLastUsedFilters = useCallback(() => {
             try {
                 const lastUsedFiltersLocalStorage = window.localStorage.getItem(
                     LAST_USED_FILTERS_LOCAL_STORAGE_KEY
                 );
 
                 return lastUsedFiltersLocalStorage
-                    ? JSON.parse(lastUsedFiltersLocalStorage)?.[contentType] ??
+                    ? JSON.parse(lastUsedFiltersLocalStorage)?.[objectType] ??
                           []
                     : [];
             } catch (exception) {}
 
             return [];
-        });
+        }, [objectType]);
+
+        const [lastUsedFilters, setLastUsedFilters] = useState(
+            getInitialLastUsedFilters
+        );
 
         const [lookupField, setLookupField] = useState(null);
         const [lookupType, setLookupType] = useState(null);
@@ -353,13 +356,17 @@ export const FiltersPanelContent = forwardRef(
         }, [lookupField, setLookupType, setLookupValue]);
 
         useEffect(() => {
-            if (contentType && lookupField) {
-                triggerGetFieldLookupChoicesQuery({ contentType, lookupField });
+            if (lookupField && objectType) {
+                triggerGetFieldLookupChoicesQuery({ lookupField, objectType });
             }
-        }, [contentType, lookupField, triggerGetFieldLookupChoicesQuery]);
+        }, [lookupField, objectType, triggerGetFieldLookupChoicesQuery]);
 
         useEffect(() => {
-            if (typeof window !== "undefined" && window.localStorage) {
+            if (
+                typeof window !== "undefined" &&
+                window.localStorage &&
+                previousObjectTypeRef.current === objectType
+            ) {
                 try {
                     const lastUsedFiltersLocalStorage =
                         window.localStorage.getItem(
@@ -374,7 +381,7 @@ export const FiltersPanelContent = forwardRef(
                         LAST_USED_FILTERS_LOCAL_STORAGE_KEY,
                         JSON.stringify({
                             ...currentLastUsedFilters,
-                            [contentType]: lastUsedFilters,
+                            [objectType]: lastUsedFilters,
                         })
                     );
                 } catch (exception) {
@@ -385,7 +392,15 @@ export const FiltersPanelContent = forwardRef(
                     );
                 }
             }
-        }, [contentType, lastUsedFilters]);
+        }, [lastUsedFilters, objectType]);
+
+        useEffect(() => {
+            if (previousObjectTypeRef.current !== objectType) {
+                setLastUsedFilters(getInitialLastUsedFilters);
+            }
+
+            previousObjectTypeRef.current = objectType;
+        }, [getInitialLastUsedFilters, objectType, setLastUsedFilters]);
 
         return (
             <Box height="full" ref={ref}>

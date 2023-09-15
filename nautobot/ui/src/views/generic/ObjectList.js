@@ -119,7 +119,7 @@ export default function GenericObjectListView() {
                     <ObjectListTable
                         tableData={listData.results}
                         defaultHeaders={defaultHeaders}
-                        contentType={`${app_label}.${model_name}`}
+                        objectType={headerData.object_type}
                         tableHeaders={tableHeaders}
                         totalCount={listData.count}
                         active_page_number={active_page_number}

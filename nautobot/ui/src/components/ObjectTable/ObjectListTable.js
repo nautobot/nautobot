@@ -47,7 +47,7 @@ const getTableItemLink = (idx, obj) => {
 export default function ObjectListTable({
     tableData,
     defaultHeaders,
-    contentType,
+    objectType,
     tableHeaders,
     totalCount,
     active_page_number,
@@ -122,8 +122,9 @@ export default function ObjectListTable({
     const filtersPanel = useFiltersPanel({
         content: (
             <FiltersPanelContent
-                contentType={contentType}
+                // TODO(norbert-mieczkowski-codilime): use actual lookup fields rather than table headers
                 lookupFields={tableHeaders}
+                objectType={objectType}
             />
         ),
         id: "object-list-table-filters-panel",
@@ -151,11 +152,11 @@ export default function ObjectListTable({
 
     useEffect(() => {
         if (filtersPanel.isOpen) {
-            // This remounts the filters panel when it is already open and the
+            // This re-renders the filters panel when it is already open and the
             // current `ObjectList` view collection is changed to another.
             filtersPanel.open();
         } // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [contentType, tableHeaders]);
+    }, [objectType, tableHeaders]);
 
     useEffect(
         () => () => {

@@ -116,9 +116,9 @@ export const baseApi = createApi({
             providesTags: ["APIData"],
         }),
         getFieldLookupChoices: builder.query({
-            query: ({ contentType, lookupField }) => {
+            query: ({ lookupField, objectType }) => {
                 const queryParams = new URLSearchParams({
-                    content_type: contentType,
+                    content_type: objectType,
                     field_name: lookupField,
                     limit: 50,
                     offset: 0,
