@@ -1,1 +1,0 @@
-Added management command "nautobot-server populate_platform_network_driver" to help update the `Platform.network_driver` field in bulk.

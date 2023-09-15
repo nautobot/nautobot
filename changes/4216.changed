@@ -1,1 +1,0 @@
-Changed the rendering of `TagFilterField` to prevent very slow rendering of pages when large numbers of tags are defined.
