@@ -1209,7 +1209,7 @@ class CustomFieldModelFormMixinTestCase(TestCase):
         custom_field_form = TestForm()
         self.assertNotIn("_custom_field_data", custom_field_form.fields)
 
-    def test_custom_field_data_removed_in_kept(self):
+    def test_custom_field_data_kept_if_explicit(self):
         """Asserts that _custom_field_data will still show up if explicitly set."""
 
         class TestForm(CustomFieldModelFormMixin):
