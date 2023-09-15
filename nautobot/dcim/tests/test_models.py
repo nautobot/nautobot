@@ -1430,11 +1430,16 @@ class CableTestCase(TestCase):
         self.assertTrue(Cable.objects.filter(id=cable.pk).exists())
 
     def test_deleting_device_with_multiple_types_of_connected_interfaces_successful(self):
+        """
+        This is a test to make sure that the bug described in https://github.com/nautobot/nautobot/issues/4416 does not occur again.
+        We enabled change logging on device.delete() because the bug is derived from constructing
+        ObjectChange objects when we are deleting the device and its associated objects.
+        """
+
         Cable.objects.all().delete()
-        interface1 = Interface.objects.create(device=self.device1, name="ethernet1")
-        interface2 = Interface.objects.create(device=self.device2, name="ethernet2")
-        interface3 = Interface.objects.create(device=self.device1, name="ethernet3")
-        interface4 = Interface.objects.create(device=self.device2, name="ethernet4")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        Interface.objects.all().update(status=interface_status)
+        self.interface4 = Interface.objects.create(device=self.device2, name="eth4", status=interface_status)
         device1_power_ports = [
             PowerPort.objects.create(device=self.device1, name="Power Port 1"),
             PowerPort.objects.create(device=self.device1, name="Power Port 2"),
@@ -1445,16 +1450,16 @@ class CableTestCase(TestCase):
         ]
 
         cable_0 = Cable.objects.create(
-            termination_a=interface1,
-            termination_b=interface2,
+            termination_a=self.interface1,
+            termination_b=self.interface2,
             length_unit="in",
             length=1,
             status=self.status,
         )
         cable_0.validated_save()
         cable_1 = Cable.objects.create(
-            termination_a=interface3,
-            termination_b=interface4,
+            termination_a=self.interface3,
+            termination_b=self.interface4,
             length_unit="in",
             length=1,
             status=self.status,
