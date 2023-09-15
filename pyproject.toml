@@ -84,7 +84,7 @@ drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "0.26.3", extras = ["sidecar"]}
 # Git integrations for Python
-GitPython = "~3.1.32"
+GitPython = "~3.1.36"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"

@@ -2,12 +2,10 @@ import re
 
 import netaddr
 from django.core.exceptions import ValidationError
-from django.db.models import F, ProtectedError, Q
-from django.db.models.functions import Length
+from django.db.models import ProtectedError, Q
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
-from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 
 
 class RIRQuerySet(RestrictedQuerySet):
@@ -19,11 +17,6 @@ class RIRQuerySet(RestrictedQuerySet):
 
 class BaseNetworkQuerySet(RestrictedQuerySet):
     """Base class for network-related querysets."""
-
-    ip_family_map = {
-        4: IPV4_BYTE_LENGTH,
-        6: IPV6_BYTE_LENGTH,
-    }
 
     # Match string with ending in "::"
     RE_COLON = re.compile(".*::$")
@@ -197,14 +190,6 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
 
 class PrefixQuerySet(BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
-
-    def ip_family(self, family):
-        try:
-            byte_len = self.ip_family_map[family]
-        except KeyError:
-            raise ValueError(f"invalid IP family {family}")
-
-        return self.annotate(address_len=Length(F("network"))).filter(address_len=byte_len)
 
     def net_equals(self, prefix):
         prefix = netaddr.IPNetwork(prefix)
@@ -410,14 +395,6 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         IP address as a /32 or /128.
         """
         return super().order_by("host")
-
-    def ip_family(self, family):
-        try:
-            byte_len = self.ip_family_map[family]
-        except KeyError:
-            raise ValueError(f"invalid IP family {family}")
-
-        return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
 
     def string_search(self, search):
         """

@@ -29,7 +29,7 @@ This will result in a file named `nautobot_dump.json`.
 
 Create the MySQL database for Nautobot, ensuring that it is utilizing the default character set (`utf8mb4`) and default collation (`utf8mb4_0900_ai_ci`) settings for case-insensitivity. It is required that MySQL will be case-insensitive. Because these encodings are the defaults, if your MySQL installation has not been modified, there will be nothing for you to do other than make sure.
 
-In very rare cases, there may problems when importing your data from the case-sensitive PostgreSQL database dump that will need to be handled on a case-by-case basis. Please refer to the instructions for [CentOS/RHEL](../installation/centos.md) or [Ubuntu](../installation/ubuntu.md) as necessary if you are unsure how to set up MySQL and create the Nautobot database.
+In very rare cases, there may be problems when importing your data from the case-sensitive PostgreSQL database dump that will need to be handled on a case-by-case basis. Please refer to the [instructions](../installation/install_system.md#database-setup) as necessary if you are unsure how to set up MySQL and create the Nautobot database.
 
 ### Confirming database encoding
 
