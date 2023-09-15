@@ -1,5 +1,5 @@
 ---
-# Full CI for commits to the integration branches (main, develop, next and long-term maintenance branches)
+# Full CI for commits to the integration branches (main, develop, next)
 name: "CI - Integration Branch"
 on:  # yamllint disable
   push:
