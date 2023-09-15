@@ -410,7 +410,7 @@ export const FiltersPanelContent = forwardRef(
                     </Heading>
 
                     <FormControl>
-                        <FormLabel>Field</FormLabel>
+                        <FormLabel>Filter Field</FormLabel>
                         <ReactSelect
                             isSearchable
                             name="lookup_field"
@@ -425,7 +425,7 @@ export const FiltersPanelContent = forwardRef(
                     </FormControl>
 
                     <FormControl>
-                        <FormLabel>Lookup type</FormLabel>
+                        <FormLabel>Lookup Type</FormLabel>
                         <ReactSelect
                             isSearchable
                             name="lookup_type"
