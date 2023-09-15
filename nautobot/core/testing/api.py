@@ -139,6 +139,7 @@ class APIViewTestCases:
             self.assertEqual(str(response.data["id"]), str(instance1.pk))  # coerce to str to handle both int and uuid
             self.assertIn("url", response.data)
             self.assertIn("display", response.data)
+            self.assertIn("natural_slug", response.data)
             self.assertIsInstance(response.data["display"], str)
             # Fields that should be present in appropriate model serializers:
             if issubclass(self.model, extras_models.ChangeLoggedModel):

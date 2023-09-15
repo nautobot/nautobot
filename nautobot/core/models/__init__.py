@@ -11,7 +11,7 @@ from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
 from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, RestrictedQuerySet
-from nautobot.core.models.utils import construct_composite_key, deconstruct_composite_key
+from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.utils.lookup import get_route_for_model
 
 __all__ = (
@@ -20,6 +20,7 @@ __all__ = (
     "CompositeKeyQuerySetMixin",
     "RestrictedQuerySet",
     "construct_composite_key",
+    "construct_natural_slug",
     "deconstruct_composite_key",
 )
 
@@ -147,6 +148,17 @@ class BaseModel(models.Model):
         A less naïve implementation than django-natural-keys provides by default, based around URL percent-encoding.
         """
         return construct_composite_key(self.natural_key())
+
+    @property
+    def natural_slug(self) -> str:
+        """
+        Automatic "slug" string derived from this model's natural key. This differs from composite
+        key in that it must be human-readable and comply with a very limited character set, and is therefore lossy.
+        This value is not guaranteed to be
+        unique although a best effort is made by appending a fragment of the primary key to the
+        natural slug value.
+        """
+        return construct_natural_slug(self.natural_key(), pk=self.pk)
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
