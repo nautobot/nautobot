@@ -82,27 +82,15 @@ For additional features:
 
 ## Installing Nautobot Dependencies
 
-Nautobot was designed to be a cross-platform application that can run on nearly any system that is able to run the
-required dependencies. *Only the operating system platforms listed below are officially supported at this time*.
+Nautobot was designed to be a cross-platform application that can run on nearly any system that is able to run the required dependencies. *Only the operating system platforms listed below are officially supported at this time*.
 
-Nautobot has been tested and confirmed to work on the following platforms. Detailed install and deployment instructions
-can be found by following the link to each.
+- Red Hat flavors of Linux including CentOS 8.2+ and Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
+- Debian/Ubuntu flavors of Linux including Ubuntu 20.04+ and Debian 11+ are supported.
 
-### Installing Nautobot Dependencies on CentOS/RHEL
+!!! info
+    Nautobot should work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
 
-Red Hat flavors of Linux including CentOS 8.2+ or Red Hat Enterprise Linux (RHEL) 8.2+ are supported. The same installation instructions can be used on either.
-
-- [Installing Nautobot Dependencies on CentOS/RHEL](centos.md)
-
-### Installing Nautobot Dependencies on Ubuntu
-
-Ubuntu 20.04 or later is supported.
-
-- [Installing Nautobot Dependencies on Ubuntu](ubuntu.md)
-
-### Installing on Other Systems
-
-Nautobot should work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
+To begin with installing Nautobot dependencies on a supported platform, see [the next page of the documentation](install_system.md).
 
 ### Running Nautobot in Docker
 

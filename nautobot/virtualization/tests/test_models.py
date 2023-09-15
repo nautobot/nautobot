@@ -31,6 +31,7 @@ class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         self.cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=cluster_type)
         self.status = statuses[0]
+        self.int_status = Status.objects.get_for_model(VMInterface).first()
 
     def test_vm_duplicate_name_per_cluster(self):
         vm1 = VirtualMachine(
@@ -64,6 +65,35 @@ class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
         # Two VMs assigned to the same Cluster and different Tenants should pass validation
         vm2.full_clean()
         vm2.save()
+
+    def test_primary_ip_validation_logic(self):
+        vm1 = VirtualMachine(
+            cluster=self.cluster,
+            name="Test VM 1",
+            status=self.status,
+        )
+        vm1.save()
+        vm_interface = VMInterface.objects.create(name="Int1", virtual_machine=vm1, status=self.int_status)
+        ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
+        vm_interface.add_ip_addresses(ips)
+        vm1.primary_ip4 = vm_interface.ip_addresses.all().filter(ip_version=6).first()
+        with self.assertRaises(ValidationError) as cm:
+            vm1.validated_save()
+        self.assertIn(
+            f"{vm_interface.ip_addresses.all().filter(ip_version=6).first()} is not an IPv4 address",
+            str(cm.exception),
+        )
+        vm1.primary_ip4 = None
+        vm1.primary_ip6 = vm_interface.ip_addresses.all().filter(ip_version=4).first()
+        with self.assertRaises(ValidationError) as cm:
+            vm1.validated_save()
+        self.assertIn(
+            f"{vm_interface.ip_addresses.all().filter(ip_version=4).first()} is not an IPv6 address",
+            str(cm.exception),
+        )
+        vm1.primary_ip4 = vm_interface.ip_addresses.all().filter(ip_version=4).first()
+        vm1.primary_ip6 = vm_interface.ip_addresses.all().filter(ip_version=6).first()
+        vm1.validated_save()
 
 
 class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
@@ -142,8 +172,8 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
 
         # Test the pre_delete signal for IPAddressToInterface instances
         vm_interface.add_ip_addresses(ips)
-        self.virtualmachine.primary_ip4 = vm_interface.ip_addresses.all().filter(host__family=4).first()
-        self.virtualmachine.primary_ip6 = vm_interface.ip_addresses.all().filter(host__family=6).first()
+        self.virtualmachine.primary_ip4 = vm_interface.ip_addresses.all().filter(ip_version=4).first()
+        self.virtualmachine.primary_ip6 = vm_interface.ip_addresses.all().filter(ip_version=6).first()
         self.virtualmachine.save()
 
         vm_interface.remove_ip_addresses(self.virtualmachine.primary_ip4)
