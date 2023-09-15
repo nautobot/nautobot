@@ -82,16 +82,19 @@ The guiding principals behind Nautobot's SemVer strategy is scoped to adhering t
 * GraphQL data structures
 * URL structures for primary navigation and feature access
 * Any Django model and their relationships for models provided by Nautobot
-* Functions, classes, and modules in `nautobot.apps.*` and their associated signature
+* Functions, classes, and modules in `nautobot.apps.*` and there backwards-compatible signatures
 * Any management commands provided by Nautobot
 * Documented configuration options
+
+!!! info
+    The public interface may change the function signature but will not break backwards-compatibility between minor & patch versions in accordance with SemVer.
 
 While anything not explicitly stated above should be not be considered scoped to SemVer, the following should be strictly avoided when developing non-core Nautobot Apps and Jobs.
 
 * Functions or methods that start with an underscore (e.g., `_private_func`)
 * Any functions, classes, and modules **not** in `nautobot.apps.*`.
 * Any modules, classes, functions, or feature that are explicitly marked as "internal" or "experimental" in the documentation
-* Any features or functionalities that aren't part of the official documentation should not be relied upon.
+* Any features or functionalities that are not part of the official documentation should not be relied upon
 
 ### Release Schedule
 
