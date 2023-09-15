@@ -150,9 +150,10 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         """
         with contextlib.suppress(CablePath.DoesNotExist):
             if obj._path is not None and obj._path.destination is not None:
-                serializer = get_serializer_for_model(obj._path.destination, prefix="Nested")
-                context = {"request": self.context["request"]}
-                return serializer(obj._path.destination, context=context).data
+                depth = get_nested_serializer_depth(self)
+                return return_nested_serializer_data_based_on_depth(
+                    self, depth, obj, obj._path.destination, "connected_endpoint"
+                )
         return None
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
