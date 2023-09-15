@@ -57,6 +57,8 @@ HELP_TEXT = """
 Performs pre-migration validation checks for Nautobot 2.0.
 
 If the Nautobot 1.x instance cannot be upgraded, this command will exit uncleanly.
+
+Also emits informational messages to help identify permissions that may need to be manually updated after upgrading to Nautobot 2.0.
 """
 
 
@@ -197,7 +199,6 @@ def check_permissions_constraints(command):
     pk_change_models = [
         IPAddress,
         Prefix,
-        ObjectPermission,
         TaggedItem,
     ]
 
@@ -263,7 +264,7 @@ def check_permissions_constraints(command):
         Job: ["commit_default", "git_repository", "job_hook", "module_name", "name", "result", "source"],
         JobResult: ["completed", "created", "job_id", "job_kwargs", "logs", "obj_type", "schedule"],
         Location: ["powerpanels"],
-        ObjectPermission: ["name"],
+        ObjectPermission: ["name", "object_types"],
         PowerOutletTemplate: ["power_port"],
         PowerPanel: ["powerfeeds"],
         PowerPort: ["poweroutlets"],
@@ -362,10 +363,10 @@ def check_permissions_constraints(command):
     if warnings:
         msg = """
 One or more permission constraints may be affected by the Nautobot 2.0 migration.
-These permission constraints will have to be updated manually after upgrading to
-Nautobot 2.0 to reference new models and/or values. Please review the following
-warnings and make sure to document the objects referenced by these constraints
-before upgrading:
+These will not prevent the migration from running successfully, but they will have to be
+updated manually after upgrading to Nautobot 2.0 to reference new models and/or values.
+Please review the following warnings and make sure to document the objects referenced
+by these constraints before upgrading:
         """
         command.stdout.write(command.style.WARNING(msg))
         command.stdout.write("\n\n".join(warnings))

@@ -441,6 +441,8 @@ $ nautobot-server pre_migrate
 All pre-migration checks passed.
 ```
 
+This command also emits messages to help identify permissions that may need to be manually updated. These messages are informational and will not cause the command to exit uncleanly.
+
 ### `post_upgrade`
 
 `nautobot-server post_upgrade`
