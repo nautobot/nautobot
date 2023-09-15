@@ -1122,6 +1122,37 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         ):
             self.device.validated_save()
 
+    def test_primary_ip_validation_logic(self):
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+        device.validated_save()
+        interface = Interface.objects.create(name="Int1", device=device, status=self.device_status)
+        ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
+        interface.add_ip_addresses(ips)
+        device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=6).first()
+        with self.assertRaises(ValidationError) as cm:
+            device.validated_save()
+        self.assertIn(
+            f"{interface.ip_addresses.all().filter(ip_version=6).first()} is not an IPv4 address",
+            str(cm.exception),
+        )
+        device.primary_ip4 = None
+        device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=4).first()
+        with self.assertRaises(ValidationError) as cm:
+            device.validated_save()
+        self.assertIn(
+            f"{interface.ip_addresses.all().filter(ip_version=4).first()} is not an IPv6 address",
+            str(cm.exception),
+        )
+        device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=4).first()
+        device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
+        device.validated_save()
+
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):
     model = Cable
@@ -1554,8 +1585,8 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
 
         # Test the pre_delete signal for IPAddressToInterface instances
         interface.add_ip_addresses(ips)
-        self.device.primary_ip4 = interface.ip_addresses.all().filter(host__family=4).first()
-        self.device.primary_ip6 = interface.ip_addresses.all().filter(host__family=6).first()
+        self.device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=4).first()
+        self.device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         self.device.save()
         interface.remove_ip_addresses(self.device.primary_ip4)
         self.device.refresh_from_db()
