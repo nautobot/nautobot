@@ -1169,6 +1169,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         )
         devicerole = Role.objects.get_for_model(Device).first()
         devicestatus = Status.objects.get_for_model(Device).first()
+        cls.user = User.objects.create(username="Test User", is_active=True)
         cls.device1 = Device.objects.create(
             device_type=devicetype,
             role=devicerole,
