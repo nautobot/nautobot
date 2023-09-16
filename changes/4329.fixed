@@ -1,1 +1,0 @@
-Fixed an issue in `TreeNodeMultipleChoiceFilter` filtering that could result in incorrect inclusion of unrelated records with the same name located elsewhere in the tree.

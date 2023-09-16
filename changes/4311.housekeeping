@@ -1,1 +1,0 @@
-Updated CI pull request workflow for `next` branch to remove some redundant tests, run more tests in parallel and test the container build.
