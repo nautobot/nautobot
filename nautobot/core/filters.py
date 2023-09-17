@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
+from django.utils.module_loading import import_string
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
@@ -644,8 +645,12 @@ class BaseFilterSet(django_filters.FilterSet):
 
         field_type = None
         try:
-            if hasattr(cls._meta.model, field_name):
-                field_type = cls._meta.model._meta.get_field(field_name)
+            field_type = cls._meta.model._meta.get_field(field_name)
+            # TODO: This should not be needed, there seems to be some behavior changes with
+            # RoleFilter filters that haven't been migrated, which is beyond the scope of this change
+            # Working around it for now
+            if isinstance(filter_field, import_string("nautobot.extras.filters.mixins.RoleFilter")):
+                field_type = None
         except FieldDoesNotExist:
             # Will get error like:
             # `FieldDoesNotExist: RelationshipAssociation has no field named 'relationship__key'`
