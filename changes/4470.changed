@@ -1,0 +1,1 @@
+Changed `get_app_settings_or_config` to enforce upper on constance and lower on plugin values per standards.

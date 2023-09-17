@@ -40,21 +40,26 @@ class GetSettingsOrConfigTestCase(TestCase):
 class GetAppSettingsOrConfigTestCase(TestCase):
     """Test the get_app_settings_or_config() helper function."""
 
-    @override_settings(PLUGINS_CONFIG={"example_plugin": {"SAMPLE_VARIABLE": "Test Samples"}})
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"sample_variable": "Test Samples"}})
     def test_settings_if_no_config(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), "Test Samples")
 
-    @override_settings(PLUGINS_CONFIG={"example_plugin": {"SAMPLE_VARIABLE": "Test Samples"}})
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"sample_variable": "Test Samples"}})
     @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
     def test_settings_override_config(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), "Test Samples")
 
-    @override_settings(PLUGINS_CONFIG={"example_plugin": {"SAMPLE_VARIABLE": ""}})
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"sample_variable": "Test Samples"}})
+    @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
+    def test_settings_override_config_using_lower(self):
+        self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "sample_variable"), "Test Samples")
+
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"sample_variable": ""}})
     @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
     def test_empty_settings_override_config(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), "")
 
-    @override_settings(PLUGINS_CONFIG={"example_plugin": {"SAMPLE_VARIABLE": None}})
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"sample_variable": None}})
     @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
     def test_null_settings_override_config(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), None)
