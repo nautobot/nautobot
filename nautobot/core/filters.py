@@ -642,10 +642,14 @@ class BaseFilterSet(django_filters.FilterSet):
         if field is None:
             return magic_filters
 
+        field_type = None
         try:
-            field_type = cls._meta.model._meta.get_field(field_name)
+            if hasattr(cls._meta.model, field_name):
+                field_type = cls._meta.model._meta.get_field(field_name)
         except FieldDoesNotExist:
-            field_type = None
+            # Will get error like:
+            # `FieldDoesNotExist: RelationshipAssociation has no field named 'relationship__key'`
+            pass
 
         # If the field allows null values, add an `isnull`` check
         if field.null and isinstance(field_type, NULLABLE_CLASSES):
