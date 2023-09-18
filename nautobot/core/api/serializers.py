@@ -129,7 +129,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     object_type = ObjectTypeField()
     composite_key = serializers.SerializerMethodField()
     natural_keys_values = []
-    related_model_fields_names = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -159,12 +158,29 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     def _build_query_case_for_natural_key_field_lookup(self, lookups):
         """
         Build a query using Case expressions to handle natural key field instances that do not exist.
-    
-        This function constructs a database query with Case expressions to replace natural key lookup field instances that do not exist
-        with the value 'ObjectNotFound'. The purpose is to facilitate CSV Export by marking these fields as 'ObjectNotFound' so that
-        they can be safely ignored. This is crucial for CSV Import processes, as attempting to import missing instances can lead to
-        'Object Not Found' errors, potentially causing the import to fail.
-        
+
+        This function constructs a database query with Case expressions to handle natural key lookup fields
+        that may have missing instances. In cases where the natural key field instance does not exist
+        (i.e., is None), this function replaces it with the value 'ObjectNotFound'. This is particularly
+        useful for CSV Export processes, as it allows fields with missing instances to be safely ignored.
+        Such handling is essential for CSV Import processes, as attempting to import missing instances can
+        lead to 'Object Not Found' errors, potentially causing the import to fail.
+
+        Example:
+            Consider a Device model with a related field 'tenant' and a 'name' attribute. In this case, the
+            function can be used as follows:
+
+            Device.objects.annotate(
+                tenant__name=Case(
+                    When(tenant__isnull=False, then=F("tenant__name")),
+                    default="ObjectNotFound"
+                )
+            ).values("tenant__name")
+            
+        Explanation:
+            - If `device.tenant` is None, the 'tenant__name' field is set to "ObjectNotFound".
+            - If `device.tenant` is not None, the 'tenant__name' field is set to the actual tenant name.
+
         Args:
             lookups: List of natural key lookups
         """
@@ -189,9 +205,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """
         model = self.Meta.model
         field_lookups = []
-        # NOTE: M2M fields are ignored in csv export for now
+        # NOTE: M2M fields are ignored in csv export
         fields = [field for field in model._meta.get_fields() if field.is_relation and not field.many_to_many]
-        self.related_model_fields_names = [field.name for field in fields]
         for field in fields:
             # Get each related field model's natural_key_fields and prepend field name
             try:
@@ -358,7 +373,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                         altered_data[key] = value
         else:
             altered_data = data
-        return data
+        return altered_data
 
     def build_relational_field(self, field_name, relation_info):
         """Override DRF's default relational-field construction to be app-aware."""
