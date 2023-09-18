@@ -68,6 +68,8 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get autoremove -y
 
 RUN --mount=type=cache,target="/root/.npm",sharing=locked \
+    npm config set fetch-retry-maxtimeout 300000 && \
+    npm config set maxsockets 3 && \
     npm install -g npm@latest
 
 # DL3013 - pin all Python package versions
