@@ -2,14 +2,18 @@ import contextlib
 import logging
 import uuid
 
+from django.contrib.auth.models import Group
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
+    FieldDoesNotExist,
     FieldError,
     MultipleObjectsReturned,
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.db.models import AutoField, ManyToManyField, QuerySet
+from django.db.models import AutoField, CharField, Case, F, ManyToManyField, QuerySet, Value, When
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
+from django.db.models.functions import Cast
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
@@ -25,6 +29,7 @@ from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
+from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND
 from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key
@@ -134,14 +139,46 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
         # Check if the request is related to CSV export;
         if self._is_csv_request() and self.instance:
-            related_fields_natural_key_field_lookups = self._get_related_fields_natural_key_field_lookups()
+            # Retrieve the natural key values of related fields in an optimized way.
+            # This is done to ensure smooth CSV export and import processes:
+            #   1. Remove lookup fields that have no instance, e.g., if the Location Parent FK field is missing,
+            #    we remove 'location_parent*' from the CSV.
+            #   2. Replace fields with 'None' values with "NaN" to differentiate between empty and None values during import.
+            all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
+            case_query = self._build_query_case_for_natural_key_field_lookup(all_related_fields_natural_key_lookups)
             if isinstance(self.instance, QuerySet):
                 queryset = self.instance
             else:
                 # We would only need to run one additional query, making this a more efficient method of
                 # obtaining all the natural key values for this instance;
                 queryset = self.Meta.model.objects.filter(pk=self.instance.pk)
-            self.natural_keys_values = queryset.values(*related_fields_natural_key_field_lookups, "pk")
+            self.natural_keys_values = queryset.annotate(**case_query).values(
+                *all_related_fields_natural_key_lookups, "pk"
+            )
+
+    def _build_query_case_for_natural_key_field_lookup(self, lookups):
+        """
+        Build a query using Case expressions to handle natural key field instances that do not exist.
+    
+        This function constructs a database query with Case expressions to replace natural key lookup field instances that do not exist
+        with the value 'ObjectNotFound'. The purpose is to facilitate CSV Export by marking these fields as 'ObjectNotFound' so that
+        they can be safely ignored. This is crucial for CSV Import processes, as attempting to import missing instances can lead to
+        'Object Not Found' errors, potentially causing the import to fail.
+        
+        Args:
+            lookups: List of natural key lookups
+        """
+        case_query = {}
+        for lookup_field in lookups:
+            # Get the field name of the lookup, e.g the field_name for this lookup `location__parent__parent__name` is `location__parent__parent`
+            *field_name, _ = lookup_field.split("__")
+            field_name = "__".join(field_name)
+            default_value = Value(CSV_OBJECT_NOT_FOUND)
+            case_query[lookup_field] = Case(
+                When(**{f"{field_name}__isnull": False, "then": Cast(F(lookup_field), CharField())}),
+                default=default_value,
+            )
+        return case_query
 
     def _get_related_fields_natural_key_field_lookups(self):
         """Retrieve a list of field lookups for natural key fields of related models.
@@ -152,14 +189,21 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """
         model = self.Meta.model
         field_lookups = []
-        fields = [field for field in model._meta.get_fields() if field.is_relation]
+        # NOTE: M2M fields are ignored in csv export for now
+        fields = [field for field in model._meta.get_fields() if field.is_relation and not field.many_to_many]
         self.related_model_fields_names = [field.name for field in fields]
         for field in fields:
             # Get each related field model's natural_key_fields and prepend field name
-            with contextlib.suppress(Exception):
+            try:
                 field_lookups.extend(
                     f"{field.name}__{lookup}" for lookup in field.related_model.natural_key_field_lookups
                 )
+            except AttributeError:
+                # ContentType and Group are not Nautobot Model hence do not have the `natural_key_field_lookups` attr
+                if field.related_model == ContentType:
+                    field_lookups.extend([f"{field.name}__app_label", f"{field.name}__model"])
+                elif field.related_model == Group:
+                    field_lookups.extend([f"{field.name}__name"])
         return field_lookups
 
     def _is_csv_request(self):
@@ -238,6 +282,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             # These are expensive to look up, so we have decided not to include them on nested serializers
             if self.is_nested and isinstance(getattr(self.Meta.model, field, None), ManyToManyDescriptor):
                 return False
+
+            # Ignore M2M fields
+            with contextlib.suppress(FieldDoesNotExist):
+                if self.Meta.model._meta.get_field(field).many_to_many:
+                    return False
             return True
 
         fields = [field for field in fields if filter_field(field)]
@@ -283,7 +332,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             if key.startswith(f"{field_name}__"):
                 if isinstance(value, uuid.UUID):
                     value = str(value)
-                data[key] = value
+                elif value == "ObjectNotFound":
+                    continue
+                elif not value:
+                    data[key] = CSV_NON_TYPE
+                else:
+                    data[key] = value
         return data
 
     def to_representation(self, instance):
@@ -291,18 +345,20 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         altered_data = {}
 
         # if `self.natural_keys_values` is not empty means that this is a csv request then add natural_kay key and values
-        if self.natural_keys_values:
-            natural_key_field_instance = [item for item in self.natural_keys_values if item["pk"] == instance.pk][0]
-            for key, value in data.items():
-                if natural_key_field_lookups_for_field := self._get_natural_key_field_lookups_for_field(
-                    key, natural_key_field_instance
-                ):
-                    altered_data |= natural_key_field_lookups_for_field
-                else:
-                    altered_data[key] = value
+
+        if self._is_csv_request():
+            if natural_key_field_instance := [item for item in self.natural_keys_values if item["pk"] == instance.pk]:
+                cleaned_natural_key_field_instance = natural_key_field_instance[0]
+                for key, value in data.items():
+                    if natural_key_field_lookups_for_field := self._get_natural_key_field_lookups_for_field(
+                        key, cleaned_natural_key_field_instance
+                    ):
+                        altered_data.update(natural_key_field_lookups_for_field)
+                    else:
+                        altered_data[key] = value
         else:
             altered_data = data
-        return altered_data
+        return data
 
     def build_relational_field(self, field_name, relation_info):
         """Override DRF's default relational-field construction to be app-aware."""

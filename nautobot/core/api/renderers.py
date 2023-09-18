@@ -140,18 +140,22 @@ class NautobotCSVRenderer(BaseRenderer):
                 elif "value" in value and "label" in value:
                     # An enum type
                     value = value["value"]
+                elif "id" in value:
+                    value == str(value["id"])
                 else:
                     value = json.dumps(value)
             elif isinstance(value, (list, tuple, set)):
                 if isinstance(value, set):
                     value = sorted(value)
-                if value and isinstance(value[0], dict) and "composite_key" in value[0]:
+                if value and isinstance(value[0], dict) and ("composite_key" in value[0] or "id" in value[0]):
                     # Multiple nested related objects
                     if value[0].get("generic_foreign_key"):
                         # Multiple *generic* nested related obects
                         value = [COMPOSITE_KEY_SEPARATOR.join([v["object_type"], v["composite_key"]]) for v in value]
-                    else:
+                    elif value[0].get("composite_key"):
                         value = [v["composite_key"] for v in value]
+                    else:
+                        value = [v["id"] for v in value]
                 # The below makes for better UX than `json.dump()` for most current cases.
                 value = ",".join([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):

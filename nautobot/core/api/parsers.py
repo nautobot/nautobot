@@ -9,6 +9,8 @@ from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
+from nautobot.core.constants import CSV_NON_TYPE
+
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +93,7 @@ class NautobotCSVParser(BaseParser):
         def insert_nested_dict(keys, value, current_dict):
             key = keys[0]
             if len(keys) == 1:
-                current_dict[key] = value
+                current_dict[key] = None if value == CSV_NON_TYPE else value
             else:
                 current_dict[key] = current_dict.get(key, {})
                 insert_nested_dict(keys[1:], value, current_dict[key])
