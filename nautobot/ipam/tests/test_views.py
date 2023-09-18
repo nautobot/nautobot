@@ -1,5 +1,6 @@
 import datetime
 import random
+import unittest
 
 from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
@@ -94,6 +95,14 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenants[1].pk,
             "description": "New description",
         }
+
+    unittest.skip("TODO")
+    def test_bulk_edit_form_contains_all_filtered(self):
+        pass
+
+    unittest.skip("TODO")
+    def test_bulk_delete_form_contains_all_filtered(self):
+        pass
 
 
 class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):

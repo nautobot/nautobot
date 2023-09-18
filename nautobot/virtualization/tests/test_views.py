@@ -1,3 +1,4 @@
+import unittest
 from django.test import override_settings
 from django.contrib.contenttypes.models import ContentType
 from netaddr import EUI
@@ -375,3 +376,11 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "New Custom Field Data",
         }
+
+    unittest.skip("TODO")
+    def test_bulk_edit_form_contains_all_filtered(self):
+        pass
+
+    unittest.skip("TODO")
+    def test_bulk_delete_form_contains_all_filtered(self):
+        pass
