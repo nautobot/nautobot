@@ -218,13 +218,11 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "time_zone": pytz.timezone("US/Eastern"),
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -820,13 +818,11 @@ device-bays:
         self.assertHttpStatus(response, 200)
         self.assertIn("failed validation", response.content.decode(response.charset))
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -867,13 +863,11 @@ class ConsolePortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
             "type": ConsolePortTypeChoices.TYPE_RJ45,
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -909,13 +903,11 @@ class ConsoleServerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateVie
             "type": ConsolePortTypeChoices.TYPE_RJ45,
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -957,13 +949,11 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "allocated_draw": 50,
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -1003,13 +993,11 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -1050,13 +1038,11 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "mgmt_only": True,
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -1116,13 +1102,11 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "type": PortTypeChoices.TYPE_8P8C,
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -1160,13 +1144,11 @@ class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase
             "type": PortTypeChoices.TYPE_8P8C,
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -1208,13 +1190,11 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "description": "Foo bar",
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -2206,13 +2186,11 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             f"{device.composite_key},Inventory Item 6",
         )
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
@@ -2933,13 +2911,11 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[0].pk,
         }
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
-    unittest.skip("TODO")
-
+    @unittest.skip("TODO")
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
 
