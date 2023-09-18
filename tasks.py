@@ -615,8 +615,10 @@ def cli(
     """Launch a bash shell inside the running Nautobot (or other) Docker container.
 
     Examples:
-        >>> # To launch customized Nautobot server, you can update your `.env` file and run:
-        >>> inv cli -c='nautobot-server runserver 0.0.0.0:8080 --insecure' --docker-arg='--service-ports'
+        ```shell
+        # To launch customized Nautobot server, you can update your `.env` file and run:
+        invoke cli -c='nautobot-server runserver 0.0.0.0:8080 --insecure' --docker-arg='--service-ports'
+        ```
     """
     context.nautobot.local = False
 
@@ -636,6 +638,7 @@ def cli(
         root=root,
         docker_action="run" if run else None,
         docker_args=docker_arg,
+        pty=not(input_file or output_file),
     )
 
 
