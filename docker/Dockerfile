@@ -67,8 +67,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y
 
-RUN --mount=type=cache,target="/root/.npm",sharing=locked \
-    npm config set fetch-retry-maxtimeout 300000 && \
+RUN npm config set fetch-retry-maxtimeout 300000 && \
     npm config set maxsockets 3 && \
     npm install -g npm@latest
 
