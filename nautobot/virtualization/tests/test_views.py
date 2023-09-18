@@ -378,9 +378,11 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
     unittest.skip("TODO")
+
     def test_bulk_edit_form_contains_all_filtered(self):
         pass
 
     unittest.skip("TODO")
+
     def test_bulk_delete_form_contains_all_filtered(self):
         pass
