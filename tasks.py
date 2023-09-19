@@ -638,7 +638,7 @@ def cli(
         root=root,
         docker_action="run" if run else None,
         docker_args=docker_arg,
-        pty=not(input_file or output_file),
+        pty=not (input_file or output_file),
     )
 
 
@@ -1034,8 +1034,9 @@ def check_schema(context, api_version=None):
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
+        "pattern": "Specify a pattern to match test names against.",
     },
-    iterable=["tag", "exclude_tag", "label"],
+    iterable=["tag", "exclude_tag", "label", "pattern"],
 )
 def unittest(
     context,
@@ -1051,6 +1052,7 @@ def unittest(
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
+    pattern=None,
 ):
     """Run Nautobot unit tests."""
     if not skip_docs_build:
@@ -1060,36 +1062,39 @@ def unittest(
     if not label:
         label = ["nautobot"]
 
-    append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli test {' '.join(label)}"
-    command += " --config=nautobot/core/tests/nautobot_config.py"
-    # booleans
-    if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
-        command += " --cache-test-fixtures"
-    if keepdb:
-        command += " --keepdb"
-    if failfast:
-        command += " --failfast"
-    if buffer:
-        command += " --buffer"
-    if verbose:
-        command += " --verbosity 2"
-    if performance_report or (tag and "performance" in tag):
-        command += " --slowreport"
-    if performance_snapshot:
-        command += " --slowreport --slowreportpath report.yml"
-    # change the default testrunner only if performance testing is running
-    if "--slowreport" in command:
-        command += " --testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner"
-    # lists
-    if tag:
-        for individual_tag in tag:
-            command += f" --tag {individual_tag}"
-    if exclude_tag:
-        for individual_exclude_tag in exclude_tag:
-            command += f" --tag {individual_exclude_tag}"
+    def get_command():
+        yield "coverage run"
 
-    _run(context, command)
+        if append:
+            yield "--append"
+
+        yield "--module nautobot.core.cli test"
+
+        yield from label
+
+        yield "--config=nautobot/core/tests/nautobot_config.py"
+
+        if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
+            yield "--cache-test-fixtures"
+        if keepdb:
+            yield "--keepdb"
+        if failfast:
+            yield "--failfast"
+        if buffer:
+            yield "--buffer"
+        if verbose:
+            yield "--verbosity 2"
+        if performance_report or performance_snapshot or (tag and "performance" in tag):
+            yield "--testrunner nautobot.core.tests.runner.NautobotPerformanceTestRunner"
+            yield "--slowreport"
+            if performance_snapshot:
+                yield "--slowreportpath report.yml"
+
+        yield from (f"--tag='{item}'" for item in (tag or []))
+        yield from (f"--exclude-tag='{item}'" for item in (exclude_tag or []))
+        yield from (f"-k='{item}'" for item in (pattern or []))
+
+    _run(context, get_command())
 
 
 @task
@@ -1114,8 +1119,9 @@ def unittest_coverage(context):
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
+        "pattern": "Specify a pattern to match test names against.",
     },
-    iterable=["tag", "exclude_tag", "label"],
+    iterable=["tag", "exclude_tag", "label", "pattern"],
 )
 def integration_test(
     context,
@@ -1131,6 +1137,7 @@ def integration_test(
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
+    pattern=None,
 ):
     """Run Nautobot integration tests."""
 
@@ -1153,6 +1160,7 @@ def integration_test(
         skip_docs_build=skip_docs_build,
         performance_report=performance_report,
         performance_snapshot=performance_snapshot,
+        pattern=pattern,
     )
 
 
@@ -1204,8 +1212,9 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_snapshot": "Generate a new performance testing report to report.json. Set GENERATE_PERFORMANCE_REPORT=True in settings.py before using this flag",
+        "pattern": "Specify a pattern to match test names against.",
     },
-    iterable=["tag", "exclude_tag", "label"],
+    iterable=["tag", "exclude_tag", "label", "pattern"],
 )
 def performance_test(
     context,
@@ -1220,6 +1229,7 @@ def performance_test(
     append=False,
     skip_docs_build=False,
     performance_snapshot=False,
+    pattern=None,
 ):
     """
     Run Nautobot performance tests.
@@ -1245,6 +1255,7 @@ def performance_test(
         skip_docs_build=skip_docs_build,
         performance_report=True,
         performance_snapshot=performance_snapshot,
+        pattern=pattern,
     )
 
 
