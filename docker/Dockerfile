@@ -68,8 +68,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get autoremove -y
 
 RUN npm config set fetch-retry-maxtimeout 300000 && \
-    npm config set maxsockets 3 && \
-    npm install -g npm@latest
+    npm config set maxsockets 3
 
 # DL3013 - pin all Python package versions
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
