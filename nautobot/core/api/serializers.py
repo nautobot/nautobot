@@ -1,7 +1,6 @@
 import contextlib
 import logging
 import uuid
-
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
@@ -128,7 +127,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
     composite_key = serializers.SerializerMethodField()
-    natural_keys_values = []
+    natural_keys_values = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -176,7 +175,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                     default="ObjectNotFound"
                 )
             ).values("tenant__name")
-            
+
         Explanation:
             - If `device.tenant` is None, the 'tenant__name' field is set to "ObjectNotFound".
             - If `device.tenant` is not None, the 'tenant__name' field is set to the actual tenant name.
@@ -205,8 +204,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """
         model = self.Meta.model
         field_lookups = []
-        # NOTE: M2M fields are ignored in csv export
-        fields = [field for field in model._meta.get_fields() if field.is_relation and not field.many_to_many]
+        # NOTE: M2M and 12M fields field are ignored in csv export
+        fields = [
+            field
+            for field in model._meta.get_fields()
+            if field.is_relation and not field.many_to_many and not field.one_to_many
+        ]
         for field in fields:
             # Get each related field model's natural_key_fields and prepend field name
             try:
@@ -335,7 +338,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
         return super().build_field(field_name, info, model_class, nested_depth)
 
-    def _get_natural_key_field_lookups_for_field(self, field_name, natural_key_field_instance):
+    def _get_natural_key_lookups_value_for_field(self, field_name, natural_key_field_instance):
         """Extract natural key field lookups for a specific field name.
 
         Args:
@@ -359,18 +362,17 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         data = super().to_representation(instance)
         altered_data = {}
 
-        # if `self.natural_keys_values` is not empty means that this is a csv request then add natural_kay key and values
-
-        if self._is_csv_request():
+        if self._is_csv_request() and self.natural_keys_values:
             if natural_key_field_instance := [item for item in self.natural_keys_values if item["pk"] == instance.pk]:
                 cleaned_natural_key_field_instance = natural_key_field_instance[0]
                 for key, value in data.items():
-                    if natural_key_field_lookups_for_field := self._get_natural_key_field_lookups_for_field(
+                    if natural_key_field_lookups_for_field := self._get_natural_key_lookups_value_for_field(
                         key, cleaned_natural_key_field_instance
                     ):
                         altered_data.update(natural_key_field_lookups_for_field)
                     else:
-                        altered_data[key] = value
+                        # This key is either not an FK field or key is ObjectNotFound
+                        altered_data[key] = CSV_NON_TYPE if value is None else value
         else:
             altered_data = data
         return altered_data
