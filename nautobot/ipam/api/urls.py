@@ -23,6 +23,9 @@ router.register("prefixes", views.PrefixViewSet)
 # IP addresses
 router.register("ip-addresses", views.IPAddressViewSet)
 
+# IP address To interface
+router.register("ip-address-to-interface", views.IPAddressToInterfaceViewSet)
+
 # VLANs
 router.register("vlan-groups", views.VLANGroupViewSet)
 router.register("vlans", views.VLANViewSet)

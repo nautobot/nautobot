@@ -196,7 +196,7 @@ class NautobotMetadata(SimpleMetadata):
     """
 
     view_serializer = None
-    advanced_tab_fields = ["id", "url", "object_type", "composite_key", "created", "last_updated"]
+    advanced_tab_fields = ["id", "url", "object_type", "composite_key", "created", "last_updated", "natural_slug"]
 
     def determine_actions(self, request, view):
         """Generate the actions and return the names of the allowed methods."""

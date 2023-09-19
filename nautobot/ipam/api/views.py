@@ -13,6 +13,7 @@ from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -280,6 +281,17 @@ class IPAddressViewSet(NautobotModelViewSet):
     ).prefetch_related("tags", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
+
+
+#
+# IP address to interface
+#
+
+
+class IPAddressToInterfaceViewSet(NautobotModelViewSet):
+    queryset = IPAddressToInterface.objects.select_related("interface", "ip_address", "vm_interface")
+    serializer_class = serializers.IPAddressToInterfaceSerializer
+    filterset_class = filters.IPAddressToInterfaceFilterSet
 
 
 #
