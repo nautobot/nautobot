@@ -31,7 +31,7 @@ The installation and configuration guides have been revised to include MySQL. If
 
 A new `NAUTOBOT_DB_ENGINE` environment variable has been added to allow for specifying the desired database engine at runtime without needing to modify your `nautobot_config.py`. Please see the [configuration guide on `DATABASES`](../user-guide/administration/configuration/required-settings.md#databases) for more details on how to configure Nautobot to use MySQL.
 
-Please see the MySQL setup guides for [Ubuntu](../user-guide/administration/installation/ubuntu.md#mysql-setup) and [CentOS](../user-guide/administration/installation/centos.md#mysql-setup) to get started.
+Please see the MySQL [setup guides](../user-guide/administration/installation/install_system.md#database-setup) to get started.
 
 #### Plugin Defined Jinja2 Filters
 

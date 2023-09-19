@@ -459,7 +459,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                         "would conflict with same-named devices in this rack."
                     }
                 )
-        return cleaned_data
+        return super().clean()
 
 
 class RackBulkEditForm(

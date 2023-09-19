@@ -18,10 +18,8 @@ This document provides guidance on migrating code from version 1.x to version 2.
 - Steps to Migrate an App from V1
     - Preliminary Steps:
         - Add [`pylint-nautobot`](https://github.com/nautobot/pylint-nautobot) as a development dependency
-        - Temporarily disable `pylint-django` while your app is not running
-        - Run `pylint-nautobot` in order to parse your development environment code and generate recommendations for necessary changes to for your app to upgrade to v2.0
+        - Run `pylint -v --disable=all --enable=nautobot-code-location-changes,nautobot-replaced-models *` in order to parse your development environment for changes that need to be fixed before pylint-django can successfully run.
         - Specific steps to install and run `pylint-nautobot` in your development environment is available [here](https://docs.nautobot.com/projects/pylint-nautobot/en/latest/getting_started/)
-        - Once you make the recommended changes from `pylint-nautobot`, you can enable `pylint-django` and restart your app
     - [Dependency Updates](dependency-updates.md)
         - [Nautobot Version](dependency-updates.md#nautobot-version)
         - [Python Version](dependency-updates.md#python-version)

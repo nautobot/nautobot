@@ -90,6 +90,12 @@ class CustomFieldModelFormMixin(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self._append_customfield_fields()
+        try:
+            if self.Meta.fields == "__all__":
+                # Above we accounted for all cf_* data, so can safely remove _custom_field_data.
+                self.fields.pop("_custom_field_data", None)
+        except AttributeError:
+            pass
 
     def _append_customfield_fields(self):
         """

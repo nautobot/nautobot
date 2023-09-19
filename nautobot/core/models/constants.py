@@ -11,3 +11,6 @@
 # 3. Safe in a URL query string component (so that we can do URLs like "/dcim/devices/?location=<composite_key>"
 #    This rules out "&" and "="
 COMPOSITE_KEY_SEPARATOR = ";"
+
+# For the natural slug separator, it's much simpler and we can just go with "_".
+NATURAL_SLUG_SEPARATOR = "_"
