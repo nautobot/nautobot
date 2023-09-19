@@ -1,1 +1,0 @@
-Fixed an issues with ModelForm's that used `__all__`  on `Meta.fields` and `custom_fields` displayed a JSON blob.

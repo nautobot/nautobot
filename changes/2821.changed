@@ -1,4 +1,0 @@
-Adds navigation.footer to mkdocs features to enable navigation in the footer.
-Updates installation documentation into a single path, using tabs for MySQL/PostgeSQL & Ubuntu/Debian/RHEL.
-Removes centos.md and ubuntu.md as these are collapsed into single `install_system.md` file.
-Updates docker-compose standalone to docker compose plugin to assist in development environment.

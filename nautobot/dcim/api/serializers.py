@@ -1,3 +1,5 @@
+import contextlib
+
 from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -129,8 +131,9 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_connected_endpoint_type(self, obj):
-        if obj._path is not None and obj._path.destination is not None:
-            return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
+        with contextlib.suppress(CablePath.DoesNotExist):
+            if obj._path is not None and obj._path.destination is not None:
+                return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
         return None
 
     @extend_schema_field(
@@ -145,17 +148,19 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         """
         Return the appropriate serializer for the type of connected object.
         """
-        if obj._path is not None and obj._path.destination is not None:
-            depth = get_nested_serializer_depth(self)
-            return return_nested_serializer_data_based_on_depth(
-                self, depth, obj, obj._path.destination, "connected_endpoint"
-            )
+        with contextlib.suppress(CablePath.DoesNotExist):
+            if obj._path is not None and obj._path.destination is not None:
+                depth = get_nested_serializer_depth(self)
+                return return_nested_serializer_data_based_on_depth(
+                    self, depth, obj, obj._path.destination, "connected_endpoint"
+                )
         return None
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
-        if obj._path is not None:
-            return obj._path.is_active
+        with contextlib.suppress(CablePath.DoesNotExist):
+            if obj._path is not None:
+                return obj._path.is_active
         return None
 
 
