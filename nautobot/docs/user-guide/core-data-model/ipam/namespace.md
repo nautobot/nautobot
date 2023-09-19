@@ -12,3 +12,7 @@ Within a given namespace, only a single record may exist for each distinct VRF, 
     This is a change from the Nautobot 1.x data model, in which, for example, each instance of a virtual IP address would typically need to be stored as a distinct database record. On migrating existing data from Nautobot 1.x you may need to do some cleanup of your IPAM data to fit the new models.
 
 Namespaces exist in Nautobot to model the _exceptions_ to the above case, where a similarly-named VRF, or a prefix or IP address corresponding to the same subnet or host as another, is actually a distinct entity within your network and needs to be modeled as such. Another example where this might be necessary would be during a corporate merger, where perhaps the separate networks of each company might both use parts of the RFC 1918 `10.0.0.0/8` network space and need to coexist for a time as parallel network namespaces rather than parts of a single combined namespace.
+
+## Sample Namespace Implementation Diagram
+
+![IPAM Namespace Example](./media/ipam_namespace_documentation.drawio.svg)

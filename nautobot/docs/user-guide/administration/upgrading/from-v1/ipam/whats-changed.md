@@ -8,6 +8,10 @@ The new `Namespace` model expands on the functionality previously provided by `V
 
 For more details please refer to the [Namespace model documentation](../../../../core-data-model/ipam/namespace.md).
 
+### Sample Namespace Implementation Diagram
+
+![IPAM Namespace Example](../../../../core-data-model/ipam/media/ipam_namespace_documentation.drawio.svg)
+
 ### Default Namespace
 
 A default `Namespace` object named "Global" will be created for you. All objects that did not have duplicates found will be found in this Namespace. All new objects will default to this Namespace unless otherwise specified.
