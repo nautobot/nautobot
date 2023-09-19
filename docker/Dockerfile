@@ -125,14 +125,14 @@ COPY --chown=nautobot:nautobot nautobot/ui/package.json nautobot/ui/package-lock
 WORKDIR /opt/nautobot/ui
 
 # Install (non-development) Node dependencies of Nautobot UI
-RUN npm install --omit=dev --maxsockets 1
+RUN npm install --omit=dev --maxsockets=1
 
 ################################ Stage: node-dev-dependencies (intermediate build target)
 
 FROM node-dependencies AS node-dev-dependencies
 
 # Install development Node dependencies of Nautobot UI
-RUN npm install --include=dev --maxsockets 1
+RUN npm install --include=dev --maxsockets=1
 
 ################################ Stage: poetry (stub for poetry only)
 
