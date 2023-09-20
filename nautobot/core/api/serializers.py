@@ -28,10 +28,9 @@ from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
-from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND
-from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.models import constants
 from nautobot.core.models.managers import TagsManager
-from nautobot.core.models.utils import construct_composite_key
+from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
@@ -128,6 +127,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     object_type = ObjectTypeField()
     composite_key = serializers.SerializerMethodField()
     natural_keys_values = None
+    natural_slug = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -188,7 +188,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             # Get the field name of the lookup, e.g the field_name for this lookup `location__parent__parent__name` is `location__parent__parent`
             *field_name, _ = lookup_field.split("__")
             field_name = "__".join(field_name)
-            default_value = Value(CSV_OBJECT_NOT_FOUND)
+            default_value = Value(constants.CSV_OBJECT_NOT_FOUND)
             case_query[lookup_field] = Case(
                 When(**{f"{field_name}__isnull": False, "then": Cast(F(lookup_field), CharField())}),
                 default=default_value,
@@ -241,15 +241,29 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """
         return getattr(instance, "display", str(instance))
 
+    # TODO(jathan): Rip out composite key after natural key fields for import/export work has been
+    # completed (See: https://github.com/nautobot/nautobot/issues/4367)
     @extend_schema_field(
         {
             "type": "string",
-            "example": COMPOSITE_KEY_SEPARATOR.join(["attribute1", "attribute2"]),
+            "example": constants.COMPOSITE_KEY_SEPARATOR.join(["attribute1", "attribute2"]),
         }
     )
     def get_composite_key(self, instance):
         try:
             return getattr(instance, "composite_key", construct_composite_key(instance.natural_key()))
+        except (AttributeError, NotImplementedError):
+            return "unknown"
+
+    @extend_schema_field(
+        {
+            "type": "string",
+            "example": constants.NATURAL_SLUG_SEPARATOR.join(["attribute1", "attribute2"]),
+        }
+    )
+    def get_natural_slug(self, instance):
+        try:
+            return getattr(instance, "natural_slug", construct_natural_slug(instance.natural_key(), pk=instance.pk))
         except (AttributeError, NotImplementedError):
             return "unknown"
 
@@ -351,7 +365,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                 if isinstance(value, uuid.UUID):
                     value = str(value)
                 elif not value:
-                    data[key] = CSV_NON_TYPE
+                    data[key] = constants.CSV_NON_TYPE
                 else:
                     data[key] = value
         return data
@@ -371,7 +385,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                         altered_data.update(natural_key_field_lookups_for_field)
                     else:
                         # Not FK field
-                        altered_data[key] = CSV_NON_TYPE if value is None else value
+                        altered_data[key] = constants.CSV_NON_TYPE if value is None else value
         else:
             altered_data = data
         return altered_data
