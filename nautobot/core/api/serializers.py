@@ -374,7 +374,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         data = super().to_representation(instance)
         altered_data = {}
 
-        if self._is_csv_request() and self.natural_keys_values:
+        if self._is_csv_request() and self.natural_keys_values is not None:
             if natural_key_field_instance := [item for item in self.natural_keys_values if item["pk"] == instance.pk]:
                 cleaned_natural_key_field_instance = natural_key_field_instance[0]
                 for key, value in data.items():
