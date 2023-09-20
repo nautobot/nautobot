@@ -111,7 +111,7 @@ netaddr = "~0.8.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.5.0"
+netutils = "^1.6.0"
 # Handling of version numbers
 packaging = "~23.1"
 # Image processing library
