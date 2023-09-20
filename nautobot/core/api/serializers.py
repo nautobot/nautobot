@@ -350,8 +350,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             if key.startswith(f"{field_name}__"):
                 if isinstance(value, uuid.UUID):
                     value = str(value)
-                elif value == "ObjectNotFound":
-                    continue
                 elif not value:
                     data[key] = CSV_NON_TYPE
                 else:
@@ -366,12 +364,13 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             if natural_key_field_instance := [item for item in self.natural_keys_values if item["pk"] == instance.pk]:
                 cleaned_natural_key_field_instance = natural_key_field_instance[0]
                 for key, value in data.items():
+                    # FK field with natural_field_lookups
                     if natural_key_field_lookups_for_field := self._get_natural_key_lookups_value_for_field(
                         key, cleaned_natural_key_field_instance
                     ):
                         altered_data.update(natural_key_field_lookups_for_field)
                     else:
-                        # This key is either not an FK field or key is ObjectNotFound
+                        # Not FK field
                         altered_data[key] = CSV_NON_TYPE if value is None else value
         else:
             altered_data = data

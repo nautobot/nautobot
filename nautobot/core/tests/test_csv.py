@@ -10,16 +10,17 @@ from nautobot.dcim.models.locations import Location
 from nautobot.extras.models.roles import Role
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.models.tags import Tag
+from nautobot.tenancy.models import Tenant
 from nautobot.users.factory import UserFactory
 
 
 class CSVParsingRelatedTestCase(TestCase):
     def setUp(self):
-        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=True).first()
+        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=True)[1]
         devicetype = DeviceType.objects.first()
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
-        tags = Tag.objects.get_for_model(Device).all()[:2]
+        tags = Tag.objects.get_for_model(Device).all()[:3]
 
         self.device = Device.objects.create(
             device_type=devicetype,
@@ -30,12 +31,13 @@ class CSVParsingRelatedTestCase(TestCase):
         )
         self.device.tags.set(tags)
 
-        Device.objects.create(
+        self.device2 = Device.objects.create(
             device_type=devicetype,
             role=devicerole,
             name="TestDevice2",
             status=device_status,
             location=location,
+            tenant=Tenant.objects.create(name="Tenant"),
         )
 
     @override_settings(ALLOWED_HOSTS=["*"])
@@ -143,22 +145,39 @@ class CSVParsingRelatedTestCase(TestCase):
             location_lookup_value = serializer._get_natural_key_lookups_value_for_field("location", lookup_querysets[0])
             self.assertEqual(
                 location_lookup_value,
-                {"location__name": device.location.name, "location__parent__name": device.location.parent.name},
+                {
+                    "location__name": device.location.name,
+                    "location__parent__name": device.location.parent.name,
+                    "location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                    "location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                    "location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                },
             )
 
             # For Status
             status_lookup_value = serializer._get_natural_key_lookups_value_for_field("status", lookup_querysets[0])
             self.assertEqual(status_lookup_value, {"status__name": device.status.name})
 
-            # For Rack, it returns `{}` since rack has no instance/value
+            # For Rack, since `device.rack` does not exists, all rack natural_key_lookups should be `ObjectNotFound`
             rack_lookup_value = serializer._get_natural_key_lookups_value_for_field("rack", lookup_querysets[0])
-            self.assertEqual(rack_lookup_value, {})
+            self.assertEqual(
+                rack_lookup_value,
+                {
+                    "rack__name": CSV_OBJECT_NOT_FOUND,
+                    "rack__rack_group__location__name": CSV_OBJECT_NOT_FOUND,
+                    "rack__rack_group__location__parent__name": CSV_OBJECT_NOT_FOUND,
+                    "rack__rack_group__location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                    "rack__rack_group__location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                    "rack__rack_group__location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                    "rack__rack_group__name": CSV_OBJECT_NOT_FOUND,
+                },
+            )
 
         with self.subTest("To Serializer Representation"):
             expected_data = {
                 "id": str(device.pk),
                 "object_type": "dcim.device",
-                "display": device.name,
+                "display": device.display,
                 "url": f"http://testserver/api/dcim/devices/{device.pk}/",
                 "composite_key": device.composite_key,
                 "face": CSV_NON_TYPE,
@@ -172,24 +191,43 @@ class CSVParsingRelatedTestCase(TestCase):
                 "vc_position": CSV_NON_TYPE,
                 "vc_priority": CSV_NON_TYPE,
                 "comments": "",
-                "local_config_context_schema": CSV_NON_TYPE,
-                "local_config_context_data_owner_content_type": CSV_NON_TYPE,
+                "local_config_context_schema__name": CSV_OBJECT_NOT_FOUND,
+                "local_config_context_data_owner_content_type__app_label": CSV_OBJECT_NOT_FOUND,
+                "local_config_context_data_owner_content_type__model": CSV_OBJECT_NOT_FOUND,
                 "device_type__manufacturer__name": device.device_type.manufacturer.name,
                 "device_type__model": device.device_type.model,
                 "status__name": device.status.name,
                 "role__name": device.role.name,
-                "tenant": CSV_NON_TYPE,
-                "platform": CSV_NON_TYPE,
+                "tenant__name": CSV_OBJECT_NOT_FOUND,
+                "platform__name": CSV_OBJECT_NOT_FOUND,
                 "location__name": device.location.name,
                 "location__parent__name": device.location.parent.name,
-                "rack": CSV_NON_TYPE,
-                "primary_ip4": CSV_NON_TYPE,
-                "primary_ip6": CSV_NON_TYPE,
-                "cluster": CSV_NON_TYPE,
-                "virtual_chassis": CSV_NON_TYPE,
-                "device_redundancy_group": CSV_NON_TYPE,
-                "secrets_group": CSV_NON_TYPE,
-                "parent_bay": CSV_NON_TYPE,
+                "location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "rack__name": CSV_OBJECT_NOT_FOUND,
+                "rack__rack_group__name": CSV_OBJECT_NOT_FOUND,
+                "rack__rack_group__location__name": CSV_OBJECT_NOT_FOUND,
+                "rack__rack_group__location__parent__name": CSV_OBJECT_NOT_FOUND,
+                "rack__rack_group__location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "rack__rack_group__location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "rack__rack_group__location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "primary_ip4__parent__namespace__name": CSV_OBJECT_NOT_FOUND,
+                "primary_ip4__host": CSV_OBJECT_NOT_FOUND,
+                "primary_ip6__parent__namespace__name": CSV_OBJECT_NOT_FOUND,
+                "primary_ip6__host": CSV_OBJECT_NOT_FOUND,
+                "cluster__name": CSV_OBJECT_NOT_FOUND,
+                "virtual_chassis__name": CSV_OBJECT_NOT_FOUND,
+                "device_redundancy_group__name": CSV_OBJECT_NOT_FOUND,
+                "secrets_group__name": CSV_OBJECT_NOT_FOUND,
+                "parent_bay__name": CSV_OBJECT_NOT_FOUND,
+                "parent_bay__device__name": CSV_OBJECT_NOT_FOUND,
+                "parent_bay__device__tenant__name": CSV_OBJECT_NOT_FOUND,
+                "parent_bay__device__location__name": CSV_OBJECT_NOT_FOUND,
+                "parent_bay__device__location__parent__name": CSV_OBJECT_NOT_FOUND,
+                "parent_bay__device__location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "parent_bay__device__location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "parent_bay__device__location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
             }
             serializer_data = serializer.data
 
@@ -217,11 +255,32 @@ class CSVParsingRelatedTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         response_data = response.content.decode(response.charset)
 
-        import_data = response_data.replace("TestDevice1", "TestDevice3").replace("TestDevice2", "TestDevice4")
-        data = {
-            "csv_data": import_data,
-        }
+        # Replace Device Name
+        import_data = response_data.replace("TestDevice1", "TestDevice3").replace("TestDevice2", "")
+        data = {"csv_data": import_data}
         url = reverse("dcim:device_import")
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Device.objects.count(), 4)
+
+        # Assert TestDevice3 got created with the right fields
+        device3 = Device.objects.get(
+            name="TestDevice3",
+            location=self.device.location,
+            device_type=self.device.device_type,
+            role=self.device.role,
+            status=self.device.status,
+            tenant=None,
+        )
+        self.assertEqual(device3.tags.count(), self.device.tags.count())
+
+        # Assert device without name got created with the right fields
+        device4 = Device.objects.get(
+            name=None,
+            location=self.device2.location,
+            device_type=self.device2.device_type,
+            role=self.device2.role,
+            status=self.device2.status,
+            tenant=self.device2.tenant,
+        )
+        self.assertEqual(device4.tags.count(), 0)

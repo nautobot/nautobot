@@ -9,7 +9,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
-from nautobot.core.constants import CSV_NON_TYPE
+from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND
 
 
 logger = logging.getLogger(__name__)
@@ -76,24 +76,24 @@ class NautobotCSVParser(BaseParser):
                 }
 
             Output:
-            {
-                'type': 'virtual',
-                'name': 'Interface 4',
-                'device': {
-                    'name': 'Device 1',
-                    'location': 'Test+Location+1',
-                    "tenant":{
-                        "name": "",
-                    }
-                },
-                'status': 'Active'
-            }
+                {
+                    'type': 'virtual',
+                    'name': 'Interface 4',
+                    'device': {
+                        'name': 'Device 1',
+                        'location': 'Test+Location+1',
+                        "tenant":{
+                            "name": "",
+                        }
+                    },
+                    'status': 'Active'
+                }
         """
 
         def insert_nested_dict(keys, value, current_dict):
             key = keys[0]
             if len(keys) == 1:
-                current_dict[key] = None if value == CSV_NON_TYPE else value
+                current_dict[key] = value
             else:
                 current_dict[key] = current_dict.get(key, {})
                 insert_nested_dict(keys[1:], value, current_dict[key])
@@ -105,6 +105,34 @@ class NautobotCSVParser(BaseParser):
 
         return result_dict
 
+    def _remove_object_not_found_values(self, data):
+        """Remove all `ObjectNotFound` field lookups from the given data, and swap out 'NaN' and
+        'ObjectNotFound' values for `None`.
+
+        If all the lookups for a field are 'ObjectNotFound', it indicates that the field does not exist,
+        and it needs to be removed to prevent unnecessary database queries.
+
+        Args:
+            data (dict): A dictionary containing field natural key lookups and their corresponding values.
+
+        Returns:
+            dict: A modified dictionary with 'ObjectNotFound' values removed, and 'NaN' and 'ObjectNotFound' swapped for `None`.
+        """
+        grouped_data = {}
+        for lookup, lookup_value in data.items():
+            field_name = lookup.split("__", 1)[0]
+            grouped_data.setdefault(field_name, {}).update({lookup: lookup_value})
+
+        valid_data = {}
+
+        for lookup_group in grouped_data.values():
+            for lookup, lookup_value in lookup_group.items():
+                if any(value != CSV_OBJECT_NOT_FOUND for value in lookup_group.values()):
+                    value = None if lookup_value in [CSV_OBJECT_NOT_FOUND, CSV_NON_TYPE] else lookup_value
+                    valid_data[lookup] = value
+
+        return valid_data
+
     def row_elements_to_data(self, counter, row, serializer):
         """
         Parse a single row of CSV data (represented as a dict) into a dict suitable for consumption by the serializer.
@@ -113,7 +141,8 @@ class NautobotCSVParser(BaseParser):
         could we then literally have the parser just return list(reader) and not need this function at all?
         """
         data = {}
-        fields_value_mapping = self._group_data_by_field_name(row)
+        valid_row_data = self._remove_object_not_found_values(row)
+        fields_value_mapping = self._group_data_by_field_name(valid_row_data)
         for column, key in enumerate(fields_value_mapping.keys(), start=1):
             if not key:
                 raise ParseError(f"Row {counter}: Column {column}: missing/empty header for this column")
@@ -158,16 +187,17 @@ class NautobotCSVParser(BaseParser):
             elif isinstance(serializer_field, (serializers.DictField, serializers.JSONField)):
                 # We currently only store lists or dicts in JSONFields, never bare ints/strings.
                 # On the CSV write side, we only render dicts to JSON
-                if "{" in value or "[" in value:
-                    value = json.loads(value)
-                elif value:
-                    value = value.split(",")
-                    try:
-                        # We have some cases where it's a list of integers, such as in RackReservation.units
-                        value = [int(v) for v in value]
-                    except ValueError:
-                        # Guess not!
-                        pass
+                if value is not None:
+                    if "{" in value or "[" in value:
+                        value = json.loads(value)
+                    else:
+                        value = value.split(",")
+                        try:
+                            # We have some cases where it's a list of integers, such as in RackReservation.units
+                            value = [int(v) for v in value]
+                        except ValueError:
+                            # Guess not!
+                            pass
 
             # CSV doesn't provide a ready distinction between blank and null, so in this case we have to pick one.
             # This does mean that for a nullable AND blankable field, there's no way for CSV to set it to blank string.
