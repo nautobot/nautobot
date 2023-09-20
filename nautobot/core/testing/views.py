@@ -1061,10 +1061,8 @@ class ViewTestCases:
             # Prequisity is not to have `bulk_edit_data` values in objects created by `setUpTestData`.
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             self.assertTrue(len(pk_list) > 1)
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             post_data = testing.post_data(self.bulk_edit_data)
 
