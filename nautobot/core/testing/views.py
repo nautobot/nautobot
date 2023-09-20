@@ -1058,40 +1058,32 @@ class ViewTestCases:
         def test_bulk_edit_form_contains_all_filtered(self):
             # We are testing the intermediary step of bulk_edit with pagination applied and additional filter.
             # i.e. "_all" passed in the form and filter using query params.
-            # Prequisity is not to have `bulk_edit_data` values in objects created by `setUpTestData`.
-            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
-            self.assertTrue(len(pk_list) > 1)
-
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            pk_iter = iter(self._get_queryset().values_list("pk", flat=True))
+            first_pk = next(pk_iter)
+            second_pk = next(pk_iter)
+            third_pk = next(pk_iter)
 
             post_data = testing.post_data(self.bulk_edit_data)
 
-            # Update the first row with bulk_edit_data to be able to select it with filter.
-            update_data = {
-                "pk": pk_list[0:1],
-                "_apply": True,  # Form button
-                **post_data,
-            }
-            response = self.client.post(self._get_url("bulk_edit"), update_data)
-            self.assertHttpStatus(response, 302)
-
-            # Then we bulk update objects with filter applied.
-            #     We only pass in another pk to test the functionality of "_all" and filter,
-            #     which should grab instance updated in the previous step.
-            update_data = {
-                "pk": pk_list[1:2],
+            # Open bulk update form with first two objects
+            selected_data = {
+                "pk": third_pk,  # This is ignored when filtering with "_all"
                 "_all": "on",
                 **post_data,
             }
-            query_string = urlencode(post_data, doseq=True)
-            response = self.client.post(f"{self._get_url('bulk_edit')}?{query_string}", update_data)
+            query_string = urlencode({"id": (first_pk, second_pk)}, doseq=True)
+            response = self.client.post(f"{self._get_url('bulk_edit')}?{query_string}", selected_data)
             # Expect a 200 status cause we are only rendering the bulk edit table after pressing Edit Selected button.
             self.assertHttpStatus(response, 200)
             response_body = testing.extract_page_body(response.content.decode(response.charset))
-            # Check if the first pk is passed into the form.
-            self.assertIn(f'<input type="hidden" name="pk" value="{pk_list[0]}"', response_body)
-            # Check if the second pk is not passed into the form.
-            self.assertNotIn(f'<input type="hidden" name="pk" value="{pk_list[1]}"', response_body)
+            # Check if the first and second pk is passed into the form.
+            self.assertIn(f'<input type="hidden" name="pk" value="{first_pk}"', response_body)
+            self.assertIn(f'<input type="hidden" name="pk" value="{second_pk}"', response_body)
+            self.assertIn("<h1>Editing 2 ", response_body)
+            # Check if the third pk is not passed into the form.
+            self.assertNotIn(f'<input type="hidden" name="pk" value="{third_pk}"', response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_objects_with_constrained_permission(self):
