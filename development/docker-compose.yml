@@ -9,6 +9,7 @@ services:
       dockerfile: docker/Dockerfile
       target: dev
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    user: nautobot
     ports:
       - "8080:8080"
     depends_on:
@@ -33,6 +34,7 @@ services:
         - "http://localhost:8080/health/"
   celery_worker:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    user: nautobot
     ports:
       - "8081:8080"
     entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events"
@@ -54,6 +56,7 @@ services:
     tty: true
   celery_beat:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    user: nautobot
     entrypoint: "nautobot-server celery beat -l INFO"
     healthcheck:
       disable: true
@@ -86,6 +89,7 @@ services:
     profiles:
       - mkdocs
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    user: nautobot
     entrypoint: "mkdocs serve -a '0.0.0.0:8001'"
     healthcheck:
       disable: true
