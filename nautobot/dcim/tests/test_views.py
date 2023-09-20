@@ -2143,7 +2143,6 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
         )
 
 
-
 # TODO: Change base class to PrimaryObjectViewTestCase
 # Blocked by lack of common creation view for cables (termination A must be initialized)
 class CableTestCase(
