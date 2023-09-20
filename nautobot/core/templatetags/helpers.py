@@ -407,7 +407,7 @@ def get_docs_url(model):
     # Check to see if documentation exists in any of the static paths.
     if find(path):
         return static(path)
-    logger.debug("No documentation found for %s (expected to find it at %s)", model, path)
+    logger.debug("No documentation found for %s (expected to find it at %s)", type(model), path)
     return None
 
 
