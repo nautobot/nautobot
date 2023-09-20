@@ -148,7 +148,7 @@ Check out the [Region and Site Related Data Model Migration Guide](../user-guide
 
 #### CSV Import/Export Re-implementations ([#254](https://github.com/nautobot/nautobot/issues/254))
 
-<!-- TODO: This change is very siginifcant and impact both developers and users. CSVForm classes are no longer needed and export/import csv formats are alternated as well. -->
+<!-- TODO: This change is very significant and impacts both developers and users. CSVForm classes are no longer needed and export/import csv formats are altered as well. -->
 
 #### Job Overhaul ([#765](https://github.com/nautobot/nautobot/issues/765))
 
