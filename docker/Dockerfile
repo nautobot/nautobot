@@ -67,8 +67,8 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y
 
-RUN npm config set fetch-retry-maxtimeout 300000 && \
-    npm config set maxsockets 3
+RUN --mount=type=cache,target="/root/.npm",sharing=locked && \
+    npm config set fetch-retry-maxtimeout 300000
 
 # DL3013 - pin all Python package versions
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
@@ -124,14 +124,14 @@ COPY --chown=nautobot:nautobot nautobot/ui/package.json nautobot/ui/package-lock
 WORKDIR /opt/nautobot/ui
 
 # Install (non-development) Node dependencies of Nautobot UI
-RUN npm ci --omit=dev --maxsockets=1
+RUN npm ci --omit=dev
 
 ################################ Stage: node-dev-dependencies (intermediate build target)
 
 FROM node-dependencies AS node-dev-dependencies
 
 # Install development Node dependencies of Nautobot UI
-RUN npm ci --include=dev --maxsockets=1
+RUN npm ci --include=dev
 
 ################################ Stage: poetry (stub for poetry only)
 
