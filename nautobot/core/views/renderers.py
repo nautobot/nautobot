@@ -161,7 +161,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             if view.action == "list":
                 if view.filterset_class is not None:
-                    view.queryset = view.filter_queryset(view.get_queryset())
+                    view.queryset = view.filter_queryset(queryset)
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:
