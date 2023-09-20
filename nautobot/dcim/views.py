@@ -592,6 +592,7 @@ class ManufacturerBulkImportView(generic.BulkImportView):
 class ManufacturerBulkDeleteView(generic.BulkDeleteView):
     queryset = Manufacturer.objects.annotate(device_type_count=count_related(DeviceType, "manufacturer"))
     table = tables.ManufacturerTable
+    filterset = filters.ManufacturerFilterSet
 
 
 #
@@ -1091,6 +1092,7 @@ class PlatformBulkImportView(generic.BulkImportView):
 class PlatformBulkDeleteView(generic.BulkDeleteView):
     queryset = Platform.objects.all()
     table = tables.PlatformTable
+    filterset = filters.PlatformFilterSet
 
 
 #
@@ -2132,6 +2134,7 @@ class InventoryItemBulkDeleteView(generic.BulkDeleteView):
     queryset = InventoryItem.objects.select_related("device", "manufacturer")
     table = tables.InventoryItemTable
     template_name = "dcim/inventoryitem_bulk_delete.html"
+    filterset = filters.InventoryItemFilterSet
 
 
 #

@@ -75,6 +75,7 @@ class ClusterTypeBulkImportView(generic.BulkImportView):
 class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
     queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     table = tables.ClusterTypeTable
+    filterset = filters.ClusterTypeFilterSet
 
 
 #
@@ -133,6 +134,7 @@ class ClusterGroupBulkImportView(generic.BulkImportView):
 class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     table = tables.ClusterGroupTable
+    filterset = filters.ClusterGroupFilterSet
 
 
 #
