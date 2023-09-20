@@ -30,10 +30,6 @@ Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `
 
 Added the `?depth` query parameter in Nautobot v2.X to replace the `?brief` parameter in the REST API. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It allows users greater control of the API response data and it is available for both retrieving a single object and a list of objects. This parameter is a positive integer value that can range from 0 to 10. To learn more more, check out the [documentation on the `?depth` query parameter](../user-guide/platform-functionality/rest-api/overview.md/#depth-query-parameter).
 
-#### Added Default Nautobot API Version ([#2799](https://github.com/nautobot/nautobot/issues/2799))
-
-<!-- TODO: Describe its functionality and implications (the magic setting `latest` and its use cases). -->
-
 #### Natural Key Support Across Nautobot Models ([#2900](https://github.com/nautobot/nautobot/issues/2900))
 
 Nautobot's `BaseModel` base class and related classes now implement automatic support for Django [natural keys](https://docs.djangoproject.com/en/3.2/topics/serialization/#natural-keys) for lookup and referencing, as well as supporting a `composite_key` concept similar to that introduced by `django-natural-keys`. (Nautobot does not depend on `django-natural-keys` but its implementation is heavily inspired by that project.) For example:
@@ -60,7 +56,7 @@ Developers can refer to the [documentation on natural keys](../development/core/
 
 Two new configuration settings, [`DEVICE_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/optional-settings.md#device_name_as_natural_key) and [`LOCATION_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/optional-settings.md#location_name_as_natural_key), have been added to allow an administrator to customize the natural-key behavior of these two widely-used models.
 
-#### Nautobot UI 2.0 ([#3142](https://github.com/nautobot/nautobot/issues/3142))
+#### Nautobot UI 2.0 Alpha ([#3142](https://github.com/nautobot/nautobot/issues/3142))
 
 <!-- TODO: There should be a section dedicated to our New ReactJS-based UI, describing its capabilities and limitations. -->
 
@@ -152,7 +148,7 @@ Check out the [Region and Site Related Data Model Migration Guide](../user-guide
 
 #### CSV Import/Export Re-implementations ([#254](https://github.com/nautobot/nautobot/issues/254))
 
-<!-- TODO: Probably not gonna be any impact on the user end but should be worth mentioning for developers. -->
+<!-- TODO: This change is very siginifcant and impact both developers and users. CSVForm classes are no longer needed and export/import csv formats are alternated as well. -->
 
 #### Job Overhaul ([#765](https://github.com/nautobot/nautobot/issues/765))
 
