@@ -1,6 +1,5 @@
 import datetime
 import random
-import unittest
 
 from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType

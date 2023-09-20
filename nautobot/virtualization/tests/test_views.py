@@ -1,4 +1,3 @@
-import unittest
 from django.test import override_settings
 from django.contrib.contenttypes.models import ContentType
 from netaddr import EUI
