@@ -12,7 +12,6 @@ from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
-from rest_framework.filters import OrderingFilter
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,7 +19,6 @@ from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
-from nautobot.core.api.filter_backends import NautobotFilterBackend
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
@@ -131,22 +129,6 @@ class ComputedFieldViewSet(ModelViewSet, NotesViewSetMixin):
 #
 
 
-class ConfigContextFilterBackend(NautobotFilterBackend):
-    """
-    Used by views that work with config context models (device and virtual machine).
-
-    Recognizes that "exclude" is not a filterset parameter but rather a view parameter (see ConfigContextQuerySetMixin)
-    """
-
-    def get_filterset_kwargs(self, request, queryset, view):
-        kwargs = super().get_filterset_kwargs(request, queryset, view)
-        try:
-            kwargs["data"].pop("exclude")
-        except KeyError:
-            pass
-        return kwargs
-
-
 class ConfigContextQuerySetMixin:
     """
     Used by views that work with config context models (device and virtual machine).
@@ -154,22 +136,19 @@ class ConfigContextQuerySetMixin:
     data annotation or not.
     """
 
-    filter_backends = [ConfigContextFilterBackend, OrderingFilter]
-
     def get_queryset(self):
         """
         Build the proper queryset based on the request context
 
-        If the `exclude` query param
-        includes `config_context` as a value, return the base queryset.
+        If the `include` query param includes `config_context`, return the queryset annotated with config context.
 
-        Else, return the queryset annotated with config context data
+        Else, return the base queryset.
         """
         queryset = super().get_queryset()
         request = self.get_serializer_context()["request"]
-        if request is not None and "config_context" in request.query_params.get("exclude", []):
-            return queryset
-        return queryset.annotate_config_context_data()
+        if request is not None and "config_context" in request.query_params.get("include", []):
+            return queryset.annotate_config_context_data()
+        return queryset
 
 
 class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):

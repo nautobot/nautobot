@@ -146,15 +146,15 @@ def print_command(command, env=None):
 
 
 def docker_compose(context, command, **kwargs):
-    """Helper function for running a specific docker-compose command with all appropriate parameters and environment.
+    """Helper function for running a specific docker compose command with all appropriate parameters and environment.
 
     Args:
         context (obj): Used to run specific commands
-        command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
+        command (str): Command string to append to the "docker compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
     compose_command_tokens = [
-        "docker-compose",
+        "docker compose",
         f'--project-name "{context.nautobot.project_name}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
@@ -170,7 +170,7 @@ def docker_compose(context, command, **kwargs):
     if service is not None:
         compose_command_tokens.append(service)
 
-    print(f'Running docker-compose command "{command}"')
+    print(f'Running docker compose command "{command}"')
     compose_command = " ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
     env.update({"PYTHON_VER": context.nautobot.python_ver})
@@ -190,10 +190,12 @@ def run_command(context, command, service="nautobot", **kwargs):
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
+
+        root = kwargs.pop("root", False)
         if service in results.stdout:
-            compose_command = f"exec {service} {command}"
+            compose_command = f"exec {'--user=root ' if root else ''}{service} {command}"
         else:
-            compose_command = f"run --rm --entrypoint '{command}' {service}"
+            compose_command = f"run {'--user=root ' if root else ''}--rm --entrypoint '{command}' {service}"
 
         docker_compose(context, compose_command, pty=True)
 
@@ -207,9 +209,10 @@ def run_command(context, command, service="nautobot", **kwargs):
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
         "pull": "Whether to pull Docker images when building the image. (Default: disabled)",
+        "service": "If specified, only build this service.",
     }
 )
-def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False):
+def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False, service=None):
     """Build Nautobot docker image."""
     command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
 
@@ -218,13 +221,13 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False)
     if force_rm:
         command += " --force-rm"
     if poetry_parallel:
-        command += " --build-arg POETRY_PARALLEL=true"
+        command += " --build-arg POETRY_INSTALLER_PARALLEL=true"
     if pull:
         command += " --pull"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
 
-    docker_compose(context, command, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
+    docker_compose(context, command, service=service, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
 
 
 @task(
@@ -301,7 +304,7 @@ def buildx(
             f"--cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}",
         ]
     if poetry_parallel:
-        command_tokens.append("--build-arg POETRY_PARALLEL=true")
+        command_tokens.append("--build-arg POETRY_INSTALLER_PARALLEL=true")
 
     command = " ".join(command_tokens)
     env = {"PYTHON_VER": context.nautobot.python_ver}
@@ -439,13 +442,18 @@ def nbshell(context):
     run_command(context, command, pty=True)
 
 
-@task(help={"service": "Name of the service to shell into"})
-def cli(context, service="nautobot"):
+@task(
+    help={
+        "service": "Name of the service to shell into",
+        "root": "Launch shell as root",
+    }
+)
+def cli(context, service="nautobot", root=False):
     """Launch a bash shell inside the running Nautobot (or other) Docker container."""
     context.nautobot.local = False
     command = "bash"
 
-    run_command(context, command, service=service, pty=True)
+    run_command(context, command, service=service, pty=True, root=root)
 
 
 @task(

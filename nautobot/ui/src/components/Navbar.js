@@ -2,6 +2,7 @@ import { useSelector } from "react-redux";
 import {
     Link as ReactRouterLink,
     NavLink as ReactRouterNavLink,
+    useLocation,
 } from "react-router-dom";
 import {
     AutomationIcon,
@@ -24,19 +25,32 @@ import {
 } from "@nautobot/nautobot-ui";
 
 import RouterButton from "@components/RouterButton";
+import { useGetNewUIReadyRoutesQuery } from "@utils/api";
+import { isRouteNewUIReady } from "@utils/navigation";
 import {
     currentUserSelector,
     isLoggedInSelector,
     getCurrentContextSelector,
-    getMenuInfoSelector,
 } from "@utils/store";
-import { isEnabledContextRoute } from "@utils/navigation";
+import { useEffect } from "react";
 
 export function Navbar() {
     const isLoggedIn = useSelector(isLoggedInSelector);
     const currentContext = useSelector(getCurrentContextSelector);
     const currentUser = useSelector(currentUserSelector);
-    const menuInfo = useSelector(getMenuInfoSelector);
+    const location = useLocation();
+    const { data: readyRoutes } = useGetNewUIReadyRoutesQuery();
+
+    // Check if current location is NewUIReady; if not redirect user back to legacy UI
+    useEffect(() => {
+        if (readyRoutes) {
+            // Remove trailing `/`, as `isRouteNewUIReady` requires this.
+            const path = location.pathname.replace(/^\/+/, "");
+            if (!isRouteNewUIReady(path, readyRoutes)) {
+                window.location.reload();
+            }
+        }
+    }, [location, readyRoutes]);
 
     return (
         <UINavbar>
@@ -76,13 +90,6 @@ export function Navbar() {
                                     isActive || children === currentContext
                                 }
                                 children={children}
-                                disabled={
-                                    !isEnabledContextRoute(menuInfo, [children])
-                                }
-                                _disabled={{
-                                    color: "gray.400",
-                                    cursor: "not-allowed",
-                                }}
                                 {...rest}
                             />
                         )}

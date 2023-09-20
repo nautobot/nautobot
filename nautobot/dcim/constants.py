@@ -113,6 +113,7 @@ NETUTILS_NETWORK_DRIVER_MAPPING_NAMES = {
     "hier_config",
     "napalm",
     "netmiko",
+    "netutils_parser",
     "ntc_templates",
     "pyats",
     "pyntc",
