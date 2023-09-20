@@ -471,7 +471,7 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = VMInterface.objects.all()
     table = tables.VMInterfaceTable
-    template_name = "virtualization/virtual_machine_vminterface_delete.html"
+    template_name = "virtualization/virtual_machine_vminterface_bulk_delete.html"
     filterset = filters.VMInterfaceFilterSet
 
 
