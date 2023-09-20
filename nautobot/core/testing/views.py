@@ -1059,20 +1059,16 @@ class ViewTestCases:
             # We are testing the intermediary step of bulk_edit with pagination applied and additional filter.
             # i.e. "_all" passed in the form and filter using query params.
             # Prequisity is not to have `bulk_edit_data` values in objects created by `setUpTestData`.
-            pk_list = self._get_queryset().values_list("pk", flat=True)
+            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             self.assertTrue(len(pk_list) > 1)
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # TBD: Filter fields only available in the filter form.
-            #     More tests failed with that
-            # filterset = lookup.get_filterset_for_model(self.model)
-            # post_data = {key: value for key, value in testing.post_data(self.bulk_edit_data).items() if key in filterset.get_fields()}
             post_data = testing.post_data(self.bulk_edit_data)
 
-            # First we update first row with bulk_edit_data.
+            # Update the first row with bulk_edit_data to be able to select it with filter.
             update_data = {
                 "pk": pk_list[0:1],
                 "_apply": True,  # Form button
@@ -1080,7 +1076,6 @@ class ViewTestCases:
             }
             response = self.client.post(self._get_url("bulk_edit"), update_data)
             self.assertHttpStatus(response, 302)
-            # self.assertTrue(response.status_code in [200, 302])
 
             # Then we bulk update objects with filter applied.
             #     We only pass in another pk to test the functionality of "_all" and filter,
