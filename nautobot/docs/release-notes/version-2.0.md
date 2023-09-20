@@ -18,6 +18,10 @@ The new Namespace model expands on the functionality previously provided by `VRF
 
 DeviceRole, RackRole, IPAM Role, and IPAddressRoleChoices have all been merged into a single generic Role model. A role can now be created and associated to one or more of the content-types that previously implemented role as a field. These model content-types include dcim.device, dcim.rack, virtualization.virtualmachine, ipam.ipaddress, ipam.prefix, and ipam.vlan.
 
+#### Added Capability to Assign IP Address to Multiple Interfaces ([#2403](https://github.com/nautobot/nautobot/issues/2403))
+
+<!-- TODO: We should mention that we added this capability and its use cases. -->
+
 #### Added Site Fields to Location ([#2954](https://github.com/nautobot/nautobot/issues/2954))
 
 Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `contact_email`, `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
@@ -51,6 +55,10 @@ Nautobot's `BaseModel` base class and related classes now implement automatic su
 Developers can refer to the [documentation on natural keys](../development/core/natural-keys.md) for details on how to support and use this feature.
 
 Two new configuration settings, [`DEVICE_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/optional-settings.md#device_name_as_natural_key) and [`LOCATION_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/optional-settings.md#location_name_as_natural_key), have been added to allow an administrator to customize the natural-key behavior of these two widely-used models.
+
+#### Nautobot UI 2.0 Alpha ([#3142](https://github.com/nautobot/nautobot/issues/3142))
+
+<!-- TODO: There should be a section dedicated to our New ReactJS-based UI, describing its capabilities and limitations. -->
 
 ### Changed
 
@@ -137,6 +145,18 @@ Check out the [Region and Site Related Data Model Migration Guide](../user-guide
 #### Collapsed `nautobot.utilities` into `nautobot.core` ([#2721](https://github.com/nautobot/nautobot/issues/2721))
 
 `nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#python-code-location-changes).
+
+#### CSV Import/Export Re-implementations ([#254](https://github.com/nautobot/nautobot/issues/254))
+
+<!-- TODO: This change is very significant and impacts both developers and users. CSVForm classes are no longer needed and export/import csv formats are altered as well. -->
+
+#### Job Overhaul ([#765](https://github.com/nautobot/nautobot/issues/765))
+
+<!-- TODO: There should be a section dedicated to Job Overhaul and some subsections detailing the differnet parts of the change in 2.0.0 Release Overview. -->
+
+#### Changed DateField to DateTimeField for ChangeLoggedModel ([#2076](https://github.com/nautobot/nautobot/issues/2076))
+
+<!-- TODO: This change has a gloabl impact and should be mentioned in the release overview in my opinion. -->
 
 #### REST API Versioning Behavior ([#2799](https://github.com/nautobot/nautobot/issues/2799))
 
@@ -313,6 +333,14 @@ Check out the specific changes documented in the table at [UI and REST API Filte
 #### Removed RQ support ([#2523](https://github.com/nautobot/nautobot/issue/2523))
 
 Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully removed from Nautobot 2.0.
+
+#### Removed Legacy manage.py ([#1634](https://github.com/nautobot/nautobot/issues/1634))
+
+<!-- TODO: `manage.py` is something that every django app comes with. Removing it probably should be worth mentioning. -->
+
+#### Removed Slug Fields ([#2662](https://github.com/nautobot/nautobot/issues/2662))
+
+<!-- TODO: Slug field removal and its impact should be highlighted. -->
 
 <!-- towncrier release notes start -->
 ## v2.0.0-rc.3 (2023-09-15)
