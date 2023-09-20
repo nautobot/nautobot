@@ -67,7 +67,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y
 
-RUN --mount=type=cache,target="/root/.npm",sharing=locked && \
+RUN --mount=type=cache,target="/root/.npm",sharing=locked \
     npm config set fetch-retry-maxtimeout 300000
 
 # DL3013 - pin all Python package versions
