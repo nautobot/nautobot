@@ -93,7 +93,7 @@ class NautobotCSVParser(BaseParser):
         def insert_nested_dict(keys, value, current_dict):
             key = keys[0]
             if len(keys) == 1:
-                current_dict[key] = value
+                current_dict[key] = None if value in [CSV_OBJECT_NOT_FOUND, CSV_NON_TYPE] else value
             else:
                 current_dict[key] = current_dict.get(key, {})
                 insert_nested_dict(keys[1:], value, current_dict[key])
@@ -104,6 +104,10 @@ class NautobotCSVParser(BaseParser):
             insert_nested_dict(split_keys, original_value, result_dict)
 
         return result_dict
+    
+    def _field_lookups_not_empty(self, field_lookups):
+        """Check if all values of the field lookups dict are not all ObjectNotFound"""
+        return any(value != CSV_OBJECT_NOT_FOUND for value in field_lookups.values())
 
     def _remove_object_not_found_values(self, data):
         """Remove all `ObjectNotFound` field lookups from the given data, and swap out 'NaN' and
@@ -118,20 +122,21 @@ class NautobotCSVParser(BaseParser):
         Returns:
             dict: A modified dictionary with 'ObjectNotFound' values removed, and 'NaN' and 'ObjectNotFound' swapped for `None`.
         """
-        grouped_data = {}
+        lookup_grouped_by_field_name = {}
         for lookup, lookup_value in data.items():
             field_name = lookup.split("__", 1)[0]
-            grouped_data.setdefault(field_name, {}).update({lookup: lookup_value})
+            lookup_grouped_by_field_name.setdefault(field_name, {}).update({lookup: lookup_value})
 
-        valid_data = {}
-
-        for lookup_group in grouped_data.values():
-            for lookup, lookup_value in lookup_group.items():
-                if any(value != CSV_OBJECT_NOT_FOUND for value in lookup_group.values()):
-                    value = None if lookup_value in [CSV_OBJECT_NOT_FOUND, CSV_NON_TYPE] else lookup_value
-                    valid_data[lookup] = value
-
-        return valid_data
+        # Ignore lookup groups which has all its values set to ObjectNotFound
+        # These lookups fields do not exists
+        data_without_missing_field_lookups_values = {
+            lookup: lookup_value
+            for lookup_group in lookup_grouped_by_field_name.values()
+            for lookup, lookup_value in lookup_group.items()
+            if self._field_lookups_not_empty(lookup_group)
+        }
+        
+        return data_without_missing_field_lookups_values
 
     def row_elements_to_data(self, counter, row, serializer):
         """

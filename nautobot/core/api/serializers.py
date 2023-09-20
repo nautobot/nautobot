@@ -28,7 +28,7 @@ from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
-from nautobot.core.models import constants
+from nautobot.core import constants
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
 from nautobot.core.utils.lookup import get_route_for_model

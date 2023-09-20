@@ -19,7 +19,7 @@ from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.versioning import NautobotAPIVersioning
-from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices
