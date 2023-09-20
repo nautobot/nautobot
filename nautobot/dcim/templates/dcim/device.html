@@ -139,7 +139,7 @@
                                         <td>
                                             {% if object.primary_ip4 %}
                                                 <span class="hover_copy">
-                                                    {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }}
+                                                    {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }} ({{ object.primary_ip4.parent.namespace|hyperlinked_object }})
                                                     {% if object.primary_ip4.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
                                                     {% elif object.primary_ip4.nat_outside_list.exists %}
@@ -157,7 +157,6 @@
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}
-                                            
                                         </td>
                                     </tr>
                                     <tr>
@@ -165,7 +164,7 @@
                                         <td>
                                             {% if object.primary_ip6 %}
                                                 <span class="hover_copy">
-                                                    {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }}
+                                                    {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }} ({{ object.primary_ip6.parent.namespace|hyperlinked_object }})
                                                     {% if object.primary_ip6.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
                                                     {% elif object.primary_ip6.nat_outside_list.exists %}

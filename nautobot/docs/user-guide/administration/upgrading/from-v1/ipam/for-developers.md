@@ -101,7 +101,7 @@ Most removed database fields in Nautobot 2.0 fall into the following general cat
 
 | Model/Endpoint | Removed Field   | Comments                                                     |
 | :------------- | :-------------- | :----------------------------------------------------------- |
-| IPAddress      | assigned_object | Use `interfaces` and/or `vm_interfaces` instead.             |
+| IPAddress      | assigned_object | Changed to many-to-many field. Use the REST API view for `IPAddressToInterface`(/api/ipam/ip-address-to-interface/) to create/modify/delete associations or `interfaces`/`vm_interfaces` on this model to retrieve a list of associated interfaces. |
 | IPAddress      | broadcast       | Use parent Prefix's broadcast instead                        |
 | IPAddress      | vrf             | VRF is now related to the assigned Interface(s), as well as the parent Prefix |
 | Prefix         | is_pool         | Use `type` instead                                           |
