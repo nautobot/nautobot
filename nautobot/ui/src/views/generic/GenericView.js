@@ -2,9 +2,7 @@ import {
     Box,
     Breadcrumb,
     Breadcrumbs,
-    calc,
     Flex,
-    getCssVar,
     NautobotGrid,
 } from "@nautobot/nautobot-ui";
 import { FiltersPanelContainer } from "@components/FiltersPanel";
