@@ -104,7 +104,7 @@ class NautobotCSVParser(BaseParser):
             insert_nested_dict(split_keys, original_value, result_dict)
 
         return result_dict
-    
+
     def _field_lookups_not_empty(self, field_lookups):
         """Check if all values of the field lookups dict are not all ObjectNotFound"""
         return any(value != CSV_OBJECT_NOT_FOUND for value in field_lookups.values())
@@ -135,7 +135,7 @@ class NautobotCSVParser(BaseParser):
             for lookup, lookup_value in lookup_group.items()
             if self._field_lookups_not_empty(lookup_group)
         }
-        
+
         return data_without_missing_field_lookups_values
 
     def row_elements_to_data(self, counter, row, serializer):

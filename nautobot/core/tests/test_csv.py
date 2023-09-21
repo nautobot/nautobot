@@ -2,7 +2,7 @@ import re
 
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
-from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND
+from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND, VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND
 
 from nautobot.dcim.api.serializers import DeviceSerializer
 from nautobot.dcim.models.devices import Device, DeviceType
@@ -65,8 +65,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "parent_bay__device__location__parent__parent__parent__parent__name",
                 "vc_master_for__name",
                 "local_config_context_schema__name",
-                "local_config_context_data_owner_content_type__app_label",
-                "local_config_context_data_owner_content_type__model",
                 "device_type__manufacturer__name",
                 "device_type__model",
                 "status__name",
@@ -94,7 +92,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "device_redundancy_group__name",
                 "secrets_group__name",
             ]
-            # expected_related_natural_key_fields = sorted(lookup_fields_with_values + lookup_fields_without_values)
             self.assertEqual(
                 sorted(serializer._get_related_fields_natural_key_field_lookups()),
                 sorted(expected_related_natural_key_fields),
@@ -122,7 +119,7 @@ class CSVParsingRelatedTestCase(TestCase):
             for field_name in field_without_values:
                 field_lookups = Device._meta.get_field(field_name).related_model.natural_key_field_lookups
                 for lookup in field_lookups:
-                    self.assertEqual(lookup_querysets[0][f"{field_name}__{lookup}"], CSV_OBJECT_NOT_FOUND)
+                    self.assertIn(lookup_querysets[0][f"{field_name}__{lookup}"], [CSV_OBJECT_NOT_FOUND, VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND])
 
             # Assert FK Field lookups with an object
             self.assertEqual(device.device_type.model, lookup_querysets[0]["device_type__model"])
@@ -180,6 +177,7 @@ class CSVParsingRelatedTestCase(TestCase):
                 "display": device.display,
                 "url": f"http://testserver/api/dcim/devices/{device.pk}/",
                 "composite_key": device.composite_key,
+                "natural_slug": device.natural_slug,
                 "face": CSV_NON_TYPE,
                 "local_config_context_data": CSV_NON_TYPE,
                 "local_config_context_data_owner_object_id": CSV_NON_TYPE,
@@ -192,8 +190,7 @@ class CSVParsingRelatedTestCase(TestCase):
                 "vc_priority": CSV_NON_TYPE,
                 "comments": "",
                 "local_config_context_schema__name": CSV_OBJECT_NOT_FOUND,
-                "local_config_context_data_owner_content_type__app_label": CSV_OBJECT_NOT_FOUND,
-                "local_config_context_data_owner_content_type__model": CSV_OBJECT_NOT_FOUND,
+                "local_config_context_data_owner_content_type": CSV_NON_TYPE,
                 "device_type__manufacturer__name": device.device_type.manufacturer.name,
                 "device_type__model": device.device_type.model,
                 "status__name": device.status.name,

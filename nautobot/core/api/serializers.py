@@ -10,7 +10,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.db.models import AutoField, CharField, Case, F, ManyToManyField, QuerySet, Value, When
+from django.db import models
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.db.models.functions import Cast
 from django.urls import NoReverseMatch
@@ -37,6 +37,7 @@ from nautobot.extras.api.relationships import RelationshipsDataField
 from nautobot.extras.api.customfields import CustomFieldsDataField, CustomFieldDefaultValues
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation, Tag
+from nautobot.ipam.fields import VarbinaryIPField
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             #   2. Replace fields with 'None' values with "NaN" to differentiate between empty and None values during import.
             all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
             case_query = self._build_query_case_for_natural_key_field_lookup(all_related_fields_natural_key_lookups)
-            if isinstance(self.instance, QuerySet):
+            if isinstance(self.instance, models.QuerySet):
                 queryset = self.instance
             else:
                 # We would only need to run one additional query, making this a more efficient method of
@@ -153,6 +154,21 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             self.natural_keys_values = queryset.annotate(**case_query).values(
                 *all_related_fields_natural_key_lookups, "pk"
             )
+
+    def _get_lookup_field_name_and_output_field(self, lookup_field):
+        """"""
+        *field_names, lookup = lookup_field.split("__")
+        model = self.Meta.model
+        for field_component in field_names:
+            model = model._meta.get_field(field_component).remote_field.model
+
+        lookup = "id" if lookup == "pk" else lookup
+        field = model._meta.get_field(lookup)
+        # VarbinaryIPField needs to be handled specially in `_build_query_case_for_natural_key_field_lookup`
+        output_field = field.__class__ if field.__class__ is VarbinaryIPField else models.CharField
+
+        field_name = "__".join(field_names)
+        return field_name, output_field
 
     def _build_query_case_for_natural_key_field_lookup(self, lookups):
         """
@@ -185,13 +201,18 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """
         case_query = {}
         for lookup_field in lookups:
-            # Get the field name of the lookup, e.g the field_name for this lookup `location__parent__parent__name` is `location__parent__parent`
-            *field_name, _ = lookup_field.split("__")
-            field_name = "__".join(field_name)
-            default_value = Value(constants.CSV_OBJECT_NOT_FOUND)
-            case_query[lookup_field] = Case(
-                When(**{f"{field_name}__isnull": False, "then": Cast(F(lookup_field), CharField())}),
-                default=default_value,
+            field_name, output_field = self._get_lookup_field_name_and_output_field(lookup_field)
+
+            when_case = {f"{field_name}__isnull": False}
+            if output_field == VarbinaryIPField:
+                when_case["then"] = models.F(lookup_field)
+            else:
+                when_case["then"] = Cast(models.F(lookup_field), models.CharField())
+
+            case_query[lookup_field] = models.Case(
+                models.When(**when_case),
+                default=models.Value(constants.CSV_OBJECT_NOT_FOUND),
+                output_field=output_field(),
             )
         return case_query
 
@@ -210,18 +231,14 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             for field in model._meta.get_fields()
             if field.is_relation and not field.many_to_many and not field.one_to_many
         ]
+        # Get each related field model's natural_key_fields and prepend field name
         for field in fields:
-            # Get each related field model's natural_key_fields and prepend field name
-            try:
+            # ContentType and Group are not Nautobot Model hence do not have the `natural_key_field_lookups` attr.
+            # fallback to using default behavior for these fields
+            with contextlib.suppress(AttributeError):
                 field_lookups.extend(
-                    f"{field.name}__{lookup}" for lookup in field.related_model.natural_key_field_lookups
+                    f"{field.name}__{lookup}" for lookup in field.related_model.csv_natural_key_field_lookups()
                 )
-            except AttributeError:
-                # ContentType and Group are not Nautobot Model hence do not have the `natural_key_field_lookups` attr
-                if field.related_model == ContentType:
-                    field_lookups.extend([f"{field.name}__app_label", f"{field.name}__model"])
-                elif field.related_model == Group:
-                    field_lookups.extend([f"{field.name}__name"])
         return field_lookups
 
     def _is_csv_request(self):
@@ -317,8 +334,11 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
             # Ignore M2M fields
             with contextlib.suppress(FieldDoesNotExist):
-                if self.Meta.model._meta.get_field(field).many_to_many:
-                    return False
+                if self._is_csv_request():
+                    field = self.Meta.model._meta.get_field(field)
+                    # ContentType is ManyToMany Field that is specially handled, Hence it can be exported/imported
+                    if field.many_to_many and field.related_model is not ContentType:
+                        return False
             return True
 
         fields = [field for field in fields if filter_field(field)]
@@ -363,7 +383,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         for key, value in natural_key_field_instance.items():
             if key.startswith(f"{field_name}__"):
                 if isinstance(value, uuid.UUID):
-                    value = str(value)
+                    data[key] = str(value)
+                elif value == constants.VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND:
+                    data[key] = constants.CSV_OBJECT_NOT_FOUND
                 elif not value:
                     data[key] = constants.CSV_NON_TYPE
                 else:
@@ -388,6 +410,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                         altered_data[key] = constants.CSV_NON_TYPE if value is None else value
         else:
             altered_data = data
+
         return altered_data
 
     def build_relational_field(self, field_name, relation_info):
@@ -456,7 +479,7 @@ class ValidatedModelSerializer(BaseModelSerializer):
 
         # Skip ManyToManyFields
         for field in self.Meta.model._meta.get_fields():
-            if isinstance(field, ManyToManyField):
+            if isinstance(field, models.ManyToManyField):
                 attrs.pop(field.name, None)
 
         # Run clean() on an instance of the model
@@ -512,7 +535,7 @@ class WritableNestedSerializer(BaseModelSerializer):
         queryset = self.get_queryset()
         pk = None
 
-        if isinstance(self.Meta.model._meta.pk, AutoField):
+        if isinstance(self.Meta.model._meta.pk, models.AutoField):
             # PK is an int for this model. This is usually the User model
             try:
                 pk = int(data)

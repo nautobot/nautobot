@@ -531,6 +531,12 @@ class Prefix(PrimaryModel):
 
     natural_key_field_names = ["namespace", "prefix"]
 
+    @classmethod
+    def csv_natural_key_field_lookups(cls):
+        # Override method because Prefix has a python `@property` as part of its `natural_key_field_names`, and
+        # CSV expects only database field names
+        return cls._generate_field_lookups_from_natural_key_field_names(["namespace", "network", "prefix_length"])
+
     def _deconstruct_prefix(self, prefix):
         if prefix:
             if isinstance(prefix, str):
