@@ -5,6 +5,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { NautobotGridItem, Text } from "@nautobot/nautobot-ui";
 
 import { ObjectListTable } from "@components";
+import { NON_FILTER_QUERY_PARAMS } from "@components/FiltersPanel";
 import GenericView from "@views/generic/GenericView";
 import { useGetRESTAPIQuery } from "@utils/api";
 import {
@@ -49,6 +50,9 @@ export default function GenericObjectListView() {
         app_label: app_label,
         model_name: model_name,
         plugin: isPluginView,
+        filters: [...searchParams].filter(
+            ([param]) => !NON_FILTER_QUERY_PARAMS.includes(param)
+        ),
     };
     if (searchParams.get("limit")) {
         searchQuery.limit = searchParams.get("limit");
@@ -115,6 +119,7 @@ export default function GenericObjectListView() {
                     <ObjectListTable
                         tableData={listData.results}
                         defaultHeaders={defaultHeaders}
+                        objectType={headerData.object_type}
                         tableHeaders={tableHeaders}
                         totalCount={listData.count}
                         active_page_number={active_page_number}

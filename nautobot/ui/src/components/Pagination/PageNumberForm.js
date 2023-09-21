@@ -121,10 +121,14 @@ export default function PageNumberForm({
 
         setIsInputInvalid(false);
 
-        setSearchParams({
-            limit: limit ? limit : 50,
-            offset: pageSize * (newPageNumber - 1),
-        });
+        setSearchParams([
+            ...[...searchParams].filter(
+                ([searchParam]) =>
+                    searchParam !== "limit" && searchParam !== "offset"
+            ),
+            ["limit", limit ? limit : 50],
+            ["offset", pageSize * (newPageNumber - 1)],
+        ]);
     }
 
     return (

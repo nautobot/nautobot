@@ -11,6 +11,9 @@ import { updateAuthStateWithSession, updateNavigation } from "@utils/store";
 import NautobotRouter from "./router";
 
 const theme = {
+    // TODO(norbert-mieczkowski-codilime): This should be fixed in Nautobot UI.
+    components: { ReactSelect: { baseStyle: { menu: { zIndex: "docked" } } } },
+
     fonts: {
         heading: `'Ubuntu', sans-serif`,
         body: `'Ubuntu', sans-serif`,
