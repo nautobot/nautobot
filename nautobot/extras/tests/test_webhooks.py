@@ -293,8 +293,12 @@ class WebhookTest(APITestCase):
             self.assertEqual(args[7]["differences"]["added"]["name"], "Location 1")
 
     @patch("nautobot.extras.tasks.process_webhook.apply_async")
-    def test_enqueue_webhooks_m2m_update_with_pruned_object_changes(self, mock_async):
-        # https://github.com/nautobot/nautobot/issues/4327
+    def test_enqueue_webhooks_m2m_update(self, mock_async):
+        """
+        Make sure a webhook is enqueued if there's **only** an m2m change.
+
+        https://github.com/nautobot/nautobot/issues/4327
+        """
         request_id = uuid.uuid4()
         self.client.force_login(self.user)
         location_type = LocationType.objects.get(name="Campus")
@@ -318,4 +322,4 @@ class WebhookTest(APITestCase):
             self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_UPDATE)
             self.assertEqual(args[5], self.user.username)
             self.assertEqual(args[6], request_id)
-            self.assertEqual(args[7], {})
+            self.assertNotEqual(args[7], {})
