@@ -9,6 +9,7 @@ from nautobot.core.choices import (
     unpack_grouped_choices,
 )
 
+
 __all__ = (
     "ButtonActionColorChoices",
     "ButtonActionIconChoices",

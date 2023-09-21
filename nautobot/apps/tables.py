@@ -17,6 +17,7 @@ from nautobot.core.tables import (
 )
 from nautobot.extras.tables import StatusTableMixin
 
+
 __all__ = (
     "BaseTable",
     "BooleanColumn",

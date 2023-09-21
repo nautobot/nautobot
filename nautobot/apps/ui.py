@@ -25,6 +25,7 @@ from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner
 from nautobot.extras.plugins import TemplateExtension
 
+
 __all__ = (
     "Banner",
     "BannerClassChoices",

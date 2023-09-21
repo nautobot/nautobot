@@ -11,6 +11,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 
+
 __all__ = (
     "BaseModelFactory",
     "get_random_instances",
