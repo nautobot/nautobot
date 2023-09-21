@@ -146,10 +146,6 @@ Check out the [Region and Site Related Data Model Migration Guide](../user-guide
 
 `nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#python-code-location-changes).
 
-#### CSV Import/Export Re-implementations ([#254](https://github.com/nautobot/nautobot/issues/254))
-
-<!-- TODO: This change is very significant and impacts both developers and users. CSVForm classes are no longer needed and export/import csv formats are altered as well. -->
-
 #### Job Overhaul ([#765](https://github.com/nautobot/nautobot/issues/765))
 
 <!-- TODO: There should be a section dedicated to Job Overhaul and some subsections detailing the differnet parts of the change in 2.0.0 Release Overview. -->
@@ -162,13 +158,18 @@ Check out the [Region and Site Related Data Model Migration Guide](../user-guide
 
 In Nautobot 2.0 and later, the REST API defaults, when the caller doesn't request a specific API version, to using the latest available version of the REST API. This is a change from Nautobot 1.x, where the default behavior was to use the 1.2 version of the REST API even when newer versions were available.
 
-#### Revamped CSV Import and Export ([#2569](https://github.com/nautobot/nautobot/issues/2569), [#3715](https://github.com/nautobot/nautobot/issues/3715))
+#### Revamped CSV Import and Export ([#254](https://github.com/nautobot/nautobot/issues/254))
 
-Exporting objects and lists of objects to CSV format has been totally reimplemented in a new framework for ease of use and maintainability. Instead of accessing `http://nautobot/<app>/<model>/?export` you will now use the URL pattern `http://nautobot/api/<app>/<model>/?format=csv`, as the new CSV renderer is based on the REST API serializer definitions. This results in substantially more comprehensive CSV representations of many models.
+Exporting objects and lists of objects to CSV format has been totally reimplemented in a new framework for ease of use and maintainability. Instead of accessing `http://nautobot/<app>/<model>/?export` users can now use the URL pattern `http://nautobot/api/<app>/<model>/?format=csv` (the "Export" links in the UI have of course been updated accordingly), as the new CSV rendering for exports is based on the REST API serializer definitions. This results in substantially more comprehensive CSV representations of many models.
 
 Conversely, importing objects from CSV format has also been reimplemented in the same new framework. The REST API can now accept CSV files as well as the existing JSON support, and the UI for importing CSVs uses this same framework behind the scenes.
 
-An immediate benefit you can notice from this reimplementation is that CSVs should now **generally** be "round-trip" capable, meaning that you can export a set of records to CSV format and then import that CSV into a different Nautobot instance (or delete the records and use the CSV to recreate them) without needing to "massage" the CSV into a different set of columns or fields.
+!!! warning
+    The Nautobot 2.0 CSV formats for exports and imports are **not** backwards-compatible with the Nautobot 1.x CSV formats. In general, the CSV formats are subject to refinement in future releases, and should **not** be considered a stable API for data portability between differing Nautobot versions.
+
+An immediate benefit users can notice from this reimplementation is that CSVs should now **generally** be "round-trip" capable, meaning that you can export a set of records to CSV format and then import that CSV into a different Nautobot instance (or delete the records and use the CSV to recreate them) without needing to "massage" the CSV into a different set of columns or fields. One caveat to this is many-to-many fields (such as `VRF.import_targets` or `Interface.tagged_vlans`), which are not currently included in CSV exports or supported for CSV import, with the exception of object `tags` which are supported. Support for many-to-many export and import via CSV may be added in a future release.
+
+A benefit to App developers is that data models no longer need to define a `csv_headers` attribute or implement a `to_csv` method, because implementing the REST API for a model is now sufficient to enable CSV import/export support for that model. Similarly, there is no longer a need to implement a `CSVForm` for each model in order to support CSV import.
 
 In addition to the above improvements, you can now reference related objects in your CSV by using a combination of unique fields. For instance:
 
