@@ -1675,7 +1675,7 @@ class NoteDeleteView(generic.ObjectDeleteView):
 
 class ObjectNotesView(View):
     """
-    Present a history of changes made to a particular object.
+    Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 

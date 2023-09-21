@@ -1,5 +1,26 @@
 """Filterset base classes and mixins for app implementation."""
 
+from nautobot.core.filters import (
+    ContentTypeChoiceFilter,
+    ContentTypeFilter,
+    ContentTypeFilterMixin,
+    ContentTypeMultipleChoiceFilter,
+    MACAddressFilter,
+    MappedPredicatesFilterMixin,
+    multivalue_field_factory,
+    MultiValueBigNumberFilter,
+    MultiValueDateFilter,
+    MultiValueDateTimeFilter,
+    MultiValueDecimalFilter,
+    MultiValueFloatFilter,
+    MultiValueMACAddressFilter,
+    MultiValueNumberFilter,
+    MultiValueTimeFilter,
+    MultiValueUUIDFilter,
+    NameSearchFilterSet,
+    NumericArrayFilter,
+    TagFilter,
+)
 from nautobot.extras.filters import (
     CreatedUpdatedModelFilterSetMixin,
     CustomFieldModelFilterSetMixin,
@@ -7,6 +28,7 @@ from nautobot.extras.filters import (
     RelationshipModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
+from nautobot.extras.filters.mixins import LocalContextModelFilterSetMixin
 from nautobot.extras.plugins import FilterExtension
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.core.filters import (
@@ -20,16 +42,36 @@ from nautobot.core.filters import (
 
 __all__ = (
     "BaseFilterSet",
+    "ContentTypeChoiceFilter",
+    "ContentTypeFilter",
+    "ContentTypeFilterMixin",
+    "ContentTypeMultipleChoiceFilter",
     "CreatedUpdatedModelFilterSetMixin",
     "CustomFieldModelFilterSetMixin",
     "FilterExtension",
+    "LocalContextModelFilterSetMixin",
+    "MACAddressFilter",
+    "MappedPredicatesFilterMixin",
+    "multivalue_field_factory",
+    "MultiValueBigNumberFilter",
     "MultiValueCharFilter",
+    "MultiValueDateFilter",
+    "MultiValueDateTimeFilter",
+    "MultiValueDecimalFilter",
+    "MultiValueFloatFilter",
+    "MultiValueMACAddressFilter",
+    "MultiValueNumberFilter",
+    "MultiValueTimeFilter",
+    "MultiValueUUIDFilter",
+    "NameSearchFilterSet",
     "NaturalKeyOrPKMultipleChoiceFilter",
     "NautobotFilterSet",
+    "NumericArrayFilter",
     "RelatedMembershipBooleanFilter",
     "RelationshipModelFilterSetMixin",
     "SearchFilter",
     "StatusModelFilterSetMixin",
+    "TagFilter",
     "TenancyModelFilterSetMixin",
     "TreeNodeMultipleChoiceFilter",
 )

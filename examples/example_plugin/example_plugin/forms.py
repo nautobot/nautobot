@@ -1,7 +1,6 @@
 from django import forms
 
-from nautobot.apps.forms import BulkEditForm, NautobotModelForm
-from nautobot.core.forms import BootstrapMixin
+from nautobot.apps.forms import BootstrapMixin, BulkEditForm, NautobotModelForm
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
