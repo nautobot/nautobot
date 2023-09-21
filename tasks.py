@@ -14,6 +14,7 @@ limitations under the License.
 
 import os
 import re
+from shlex import quote
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
@@ -446,12 +447,12 @@ def nbshell(context):
     help={
         "service": "Name of the service to shell into",
         "root": "Launch shell as root",
+        "command": "Command to run in container. (Default: bash)",
     }
 )
-def cli(context, service="nautobot", root=False):
+def cli(context, service="nautobot", root=False, command="bash"):
     """Launch a bash shell inside the running Nautobot (or other) Docker container."""
     context.nautobot.local = False
-    command = "bash"
 
     run_command(context, command, service=service, pty=True, root=root)
 
