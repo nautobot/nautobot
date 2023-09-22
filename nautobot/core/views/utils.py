@@ -140,7 +140,9 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                 '<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>'
             )
         elif isinstance(field, serializers.ManyRelatedField):
-            if isinstance(field.child_relation, ContentTypeField):
+            if field.field_name == "tags":
+                field_info["format"] = mark_safe('<code>"name,name"</code> or <code>"UUID,UUID"</code>')
+            elif isinstance(field.child_relation, ContentTypeField):
                 field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')
             else:
                 field_info["format"] = mark_safe(
