@@ -474,14 +474,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Override the original `get_queryset()` to apply permission specific to the user and action.
         """
         queryset = super().get_queryset()
-        action_map = self.get_action_map()
-        return queryset.restrict(self.request.user, action_map[self.action])
+        return queryset.restrict(self.request.user, self.get_action())
 
-    def get_action_map(self):
-        """Provides the ability to define which permission is needed for a custom action."""
-        if self.custom_action_permission_map:
-            return {**PERMISSIONS_ACTION_MAP, **self.custom_action_permission_map}
-        return PERMISSIONS_ACTION_MAP
+    def get_action(self):
+        """Helper method for retrieving action and if action not set defaulting to action name."""
+        return PERMISSIONS_ACTION_MAP.get(self.action, self.action)
 
     def get_extra_context(self, request, instance=None):
         """

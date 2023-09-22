@@ -153,7 +153,7 @@ Since in many cases the `create` and `update` templates for a model will be iden
 
 DjangoRestFramework provides the ability to decorate a method on a ViewSet with `@action(detail=True)` to add the method as a view to the ViewSetRouter. This method must return a fully rendered HTML view.
 
-Below is an example of adding a custom view to the plugin ViewSet, a few considerations to keep in mind is the method name is the `action` and will be used for [template lookup](#template-naming-for-nautobotuiviewset) and URL naming. The expected template must be named `yourapp/yourappmodel_customview.html` and the reversible URL name will be `plugins:yourapp:yourappmodel_customview`.
+Below is an example of adding a custom view to the plugin ViewSet, a few considerations to keep in mind is the method name is the `action` and will be used for [template lookup](#template-naming-for-nautobotuiviewset) and URL naming. The expected template must be named `yourapp/yourappmodel_customview.html` and the reversible URL name will be `plugins:yourapp:yourappmodel_customview`. The new view will need an additional permission to be created, the permission action is the method name (e.g. in the below example the action will be `customview` and must be applied to a permission for `YourAppModel`).
 
 ```python
 from nautobot.apps.views import NautobotUIViewSet
@@ -172,8 +172,6 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
     queryset = models.YourAppModel.objects.all()
     serializer_class = serializers.YourAppModelSerializer
     table_class = tables.YourAppModelTable
-    custom_action_permission_map = {"customview": "my_cutom_action"}
-    # custom_action_permission_map = {"customview": "view"}  # Can also use built in actions
 
     @action(detail=True)
     def customview(self, request, *args, **kwargs):
