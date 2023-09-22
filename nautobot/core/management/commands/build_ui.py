@@ -265,7 +265,7 @@ class Command(BaseCommand):
 
         # Run `npm install` and keep it silent by default.
         if options["npm_install"]:
-            args = f"ci {loglevel} --no-progress"
+            args = f"install {loglevel} --no-progress"
             self.run_command(f"npm {args}", ">>> Installing Nautobot UI dependencies...")
 
         # Run `npm build` and keep it silent by default.
