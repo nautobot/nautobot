@@ -231,6 +231,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     serializer_class = None
     table_class = None
     notes_form_class = NoteForm
+    custom_action_permission_map = None
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -473,7 +474,14 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Override the original `get_queryset()` to apply permission specific to the user and action.
         """
         queryset = super().get_queryset()
-        return queryset.restrict(self.request.user, PERMISSIONS_ACTION_MAP[self.action])
+        action_map = self.get_action_map()
+        return queryset.restrict(self.request.user, action_map[self.action])
+
+    def get_action_map(self):
+        """Provides the ability to define which permission is needed for a custom action."""
+        if self.custom_action_permission_map:
+            return dict(**PERMISSIONS_ACTION_MAP, **self.custom_action_permission_map)
+        return PERMISSIONS_ACTION_MAP
 
     def get_extra_context(self, request, instance=None):
         """
