@@ -9,6 +9,9 @@ The platform model can be used to indicate which "network driver" Nautobot (and 
 +++ 1.6.0
     The `network_driver` database field and the `network_driver_mappings` derived property were added to the Platform data model. Support for the `NETWORK_DRIVERS` setting was added.
 
++++ 2.0.0
+    Support for `netutils_parser` key was added to `network_driver_mappings`.
+
 For historical reasons, the [NAPALM](https://github.com/napalm-automation/napalm/) driver (`napalm_driver` field) and any associated arguments (`napalm_args` field) Nautobot should use when connecting to a remote device via NAPALM can (and must) be configured directly rather than being derived from the network driver. The name of the NAPALM driver along with optional parameters are stored with the platform.
 
 Apps and Jobs should transition to using the `network_driver_mappings["napalm"]` property when connecting to a device via NAPALM. Nautobot may deprecate the use of the `napalm_driver` and `napalm_args` fields in a future release.

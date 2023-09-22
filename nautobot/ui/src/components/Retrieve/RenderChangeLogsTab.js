@@ -1,10 +1,5 @@
 import useSWR from "swr";
-import {
-    Heading,
-    NautobotGrid,
-    NautobotGridItem,
-    NtcThumbnailIcon,
-} from "@nautobot/nautobot-ui";
+import { Flex, Heading, NtcThumbnailIcon } from "@nautobot/nautobot-ui";
 import { SkeletonText } from "@chakra-ui/react";
 
 import { useGetRESTAPIQuery, fetcher } from "@utils/api";
@@ -48,17 +43,16 @@ export default function RenderChangeLogsTab({ object_id }) {
     const tableData = data?.results || [];
 
     return (
-        <NautobotGrid columns="4">
-            <NautobotGridItem>
-                <Heading display="flex" alignItems="center" gap="5px">
-                    <NtcThumbnailIcon width="25px" height="30px" /> Change Logs
-                </Heading>
-                <ObjectTable
-                    defaultHeaders={defaultHeaders}
-                    tableHeaders={tableHeaders}
-                    tableData={tableData}
-                />
-            </NautobotGridItem>
-        </NautobotGrid>
+        <Flex as="section" direction="column" gap="md">
+            <Heading alignItems="center" display="flex" gap="xs">
+                <NtcThumbnailIcon height="auto" width="24" />
+                Change Logs
+            </Heading>
+            <ObjectTable
+                defaultHeaders={defaultHeaders}
+                tableHeaders={tableHeaders}
+                tableData={tableData}
+            />
+        </Flex>
     );
 }

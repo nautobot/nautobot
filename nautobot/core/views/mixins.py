@@ -861,10 +861,13 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         model = queryset.model
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = self.filterset_class(request.POST, model.objects.only("pk")).qs
+            filter_params = self.get_filter_params(request)
+            if not filter_params:
+                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+            elif self.filterset_class is None:
+                raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = model.objects.all()
+                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
         else:
             self.pk_list = request.POST.getlist("pk")
         form_class = self.get_form_class(**kwargs)
@@ -1055,10 +1058,13 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = self.filterset_class(request.POST, model.objects.only("pk")).qs
+            filter_params = self.get_filter_params(request)
+            if not filter_params:
+                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+            elif self.filterset_class is None:
+                raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = model.objects.all()
+                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
         else:
             self.pk_list = request.POST.getlist("pk")
         data = {}
