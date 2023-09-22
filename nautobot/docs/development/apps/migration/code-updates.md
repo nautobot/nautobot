@@ -114,4 +114,4 @@ In addition, the `?brief=` API query parameter is replaced by `?depth=<0-10>`. A
 
 ## Revamp CSV Import and Export
 
-CSV Import for models are now done automatically via the Rest API. As a result of this change, `CSVForms` classes are no longer needed and should be deleted. In addition, `csv_headers` and `to_csv` attributes should be removed from your model definition. Check out our [release notes](../../../release-notes/version-2.0.md#revamped-csv-import-and-export-2569-3715) for this specific change.
+CSV Import for models are now done automatically via the Rest API. As a result of this change, `CSVForm` classes are no longer needed and should be deleted. In addition, the Model `csv_headers` attribute and `to_csv` method are no longer needed or used in CSV generation, and should be removed from your model definitions. Check out our [release notes](../../../release-notes/version-2.0.md#revamped-csv-import-and-export-254) for this specific change.
