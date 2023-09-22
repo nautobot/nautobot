@@ -1034,3 +1034,12 @@ http://nautobot/api/dcim/locations/ \
 
 !!! note
     The bulk deletion of objects is an all-or-none operation, meaning that if Nautobot fails to delete any of the specified objects (e.g. due a dependency by a related object), the entire operation will be aborted and none of the objects will be deleted.
+
+## CSV Format
+
++++ 2.0.0
+
+In addition to the standard JSON format for REST APIs, Nautobot's REST API also supports most (but not all) REST operations in CSV format when specifying a `?format=csv` query parameter or an `Accept: text/csv` header on requests, allowing Nautobot object data to be created, retrieved, and updated in this format as an alternative to JSON.
+
+!!! tip
+    Nautobot's JSON support in the REST API is more fully-featured than its CSV support; not all data can be populated, retrieved, or modified by CSV at this time due to limitations of the CSV format in describing certain types of data. When in doubt, prefer JSON over CSV when interacting with the REST API.
