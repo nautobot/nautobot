@@ -6,7 +6,6 @@
 * [`self.test_*` and `self.post_run()` methods were removed](#test_-and-post_run-methods)
 * [`read_only` no longer changes the behavior of Nautobot core](#read-only-meta-attribute)
 * [`self.job_result` should no longer be modified or saved from within a Job](#tracking-job-state)
-* [Jobs must be registered in the celery task registry](#job-registration)
 * [`self.failed` removed](#tracking-job-state)
 * [The job logging methods have been renamed and their signature changed](#job-logging)
 * [The `request` property has been changed to a celery request instead of a Django request](#request-property)

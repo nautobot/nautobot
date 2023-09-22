@@ -232,4 +232,3 @@ def register_job(job_class):
 # TODO: remove this function in Nautobot 3.0.0
 def register_jobs(*jobs):
     """Deprecated manual job registration function. Left here for backwards compatibility to Nautobot 2.0.0-beta.1"""
-    pass
