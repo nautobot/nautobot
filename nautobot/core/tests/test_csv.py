@@ -1,6 +1,7 @@
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND, VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.dcim.api.serializers import DeviceSerializer
 from nautobot.dcim.models.devices import Device, DeviceType
@@ -14,7 +15,12 @@ from nautobot.users.factory import UserFactory
 
 class CSVParsingRelatedTestCase(TestCase):
     def setUp(self):
-        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=True)[1]
+        location = Location.objects.filter(
+            parent__isnull=False,
+            parent__parent__isnull=True,
+            location_type__content_types__in=[ContentType.objects.get_for_model(Device)],
+        )[0]
+
         devicetype = DeviceType.objects.first()
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
