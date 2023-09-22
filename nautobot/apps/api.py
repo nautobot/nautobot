@@ -67,7 +67,10 @@ from nautobot.core.api.views import (
     ReadOnlyModelViewSet,
     StatusView,
 )
+from nautobot.extras.api.customfields import CustomFieldDefaultValues, CustomFieldsDataField
+from nautobot.extras.api.fields import MultipleChoiceJSONField
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
+from nautobot.extras.api.relationships import RelationshipsDataField
 from nautobot.extras.api.views import CustomFieldModelViewSet, NautobotModelViewSet, NotesViewSetMixin
 
 
@@ -82,8 +85,10 @@ __all__ = (
     "BulkUpdateModelMixin",
     "ChoiceField",
     "ContentTypeField",
+    "CustomFieldDefaultValues",
     "CustomFieldModelSerializerMixin",
     "CustomFieldModelViewSet",
+    "CustomFieldsDataField",
     "dict_to_filter_params",
     "dynamic_import",
     "FormlessBrowsableAPIRenderer",
@@ -102,6 +107,7 @@ __all__ = (
     "is_api_request",
     "ModelViewSet",
     "ModelViewSetMixin",
+    "MultipleChoiceJSONField",
     "NautobotAPIVersioning",
     "NautobotAPIVersionMixin",
     "NautobotAutoSchema",
@@ -124,6 +130,7 @@ __all__ = (
     "PolymorphicProxySerializer",
     "ReadOnlyModelViewSet",
     "RelationshipModelSerializerMixin",
+    "RelationshipsDataField",
     "rest_api_server_error",
     "return_nested_serializer_data_based_on_depth",
     "SerializedPKRelatedField",

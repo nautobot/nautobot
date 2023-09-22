@@ -66,6 +66,19 @@ from nautobot.core.templatetags.helpers import (
     viewname,
 )
 from nautobot.core.templatetags.perms import can_add, can_change, can_delete, can_view
+from nautobot.extras.templatetags.computed_fields import computed_fields, has_computed_fields
+from nautobot.extras.templatetags.custom_links import custom_links
+from nautobot.extras.templatetags.job_buttons import job_buttons
+from nautobot.extras.templatetags.log_levels import log_level
+from nautobot.extras.templatetags.plugins import (
+    plugin_banners,
+    plugin_buttons,
+    plugin_full_width_page,
+    plugin_left_page,
+    plugin_object_detail_tabs,
+    plugin_right_page,
+)
+from nautobot.extras.templatetags.registry import do_registry
 
 
 __all__ = (
@@ -79,10 +92,13 @@ __all__ = (
     "can_delete",
     "can_view",
     "clone_button",
+    "computed_fields",
     "custom_branding_or_static",
     "custom_field_rendering",
+    "custom_links",
     "delete_button",
     "divide",
+    "do_registry",
     "edit_button",
     "export_button",
     "fgcolor",
@@ -92,6 +108,7 @@ __all__ = (
     "get_attr",
     "get_docs_url",
     "get_item",
+    "has_computed_fields",
     "has_one_or_more_perms",
     "has_perms",
     "humanize_speed",
@@ -99,12 +116,20 @@ __all__ = (
     "hyperlinked_object",
     "import_button",
     "is_new_ui_ready",
+    "job_buttons",
     "language_selector",
+    "log_level",
     "meta",
     "meters_to_feet",
     "modal_form_as_dialog",
     "percentage",
     "placeholder",
+    "plugin_banners",
+    "plugin_buttons",
+    "plugin_full_width_page",
+    "plugin_left_page",
+    "plugin_object_detail_tabs",
+    "plugin_right_page",
     "queryset_to_pks",
     "querystring",
     "quote_string",

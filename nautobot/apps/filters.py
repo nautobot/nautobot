@@ -28,7 +28,27 @@ from nautobot.extras.filters import (
     RelationshipModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
-from nautobot.extras.filters.mixins import LocalContextModelFilterSetMixin
+from nautobot.extras.filters.customfields import (
+    CustomFieldBooleanFilter,
+    CustomFieldCharFilter,
+    CustomFieldDateFilter,
+    CustomFieldFilterMixin,
+    CustomFieldJSONFilter,
+    CustomFieldMultiSelectFilter,
+    CustomFieldMultiValueCharFilter,
+    CustomFieldMultiValueDateFilter,
+    CustomFieldMultiValueNumberFilter,
+    CustomFieldMultiValueSelectFilter,
+    CustomFieldNumberFilter,
+)
+from nautobot.extras.filters.mixins import (
+    ConfigContextRoleFilter,
+    LocalContextModelFilterSetMixin,
+    RelationshipFilter,
+    RoleFilter,
+    RoleModelFilterSetMixin,
+    StatusFilter,
+)
 from nautobot.extras.plugins import FilterExtension
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.core.filters import (
@@ -43,12 +63,24 @@ from nautobot.core.filters import (
 
 __all__ = (
     "BaseFilterSet",
+    "ConfigContextRoleFilter",
     "ContentTypeChoiceFilter",
     "ContentTypeFilter",
     "ContentTypeFilterMixin",
     "ContentTypeMultipleChoiceFilter",
     "CreatedUpdatedModelFilterSetMixin",
+    "CustomFieldBooleanFilter",
+    "CustomFieldCharFilter",
+    "CustomFieldDateFilter",
+    "CustomFieldFilterMixin",
+    "CustomFieldJSONFilter",
     "CustomFieldModelFilterSetMixin",
+    "CustomFieldMultiSelectFilter",
+    "CustomFieldMultiValueCharFilter",
+    "CustomFieldMultiValueDateFilter",
+    "CustomFieldMultiValueNumberFilter",
+    "CustomFieldMultiValueSelectFilter",
+    "CustomFieldNumberFilter",
     "FilterExtension",
     "LocalContextModelFilterSetMixin",
     "MACAddressFilter",
@@ -69,8 +101,12 @@ __all__ = (
     "NautobotFilterSet",
     "NumericArrayFilter",
     "RelatedMembershipBooleanFilter",
+    "RelationshipFilter",
     "RelationshipModelFilterSetMixin",
+    "RoleFilter",
+    "RoleModelFilterSetMixin",
     "SearchFilter",
+    "StatusFilter",
     "StatusModelFilterSetMixin",
     "TagFilter",
     "TenancyModelFilterSetMixin",

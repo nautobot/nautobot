@@ -41,6 +41,7 @@ from nautobot.core.forms.fields import (
     SlugField,
     TagFilterField,
 )
+from nautobot.core.forms.search import SearchForm
 from nautobot.core.forms.utils import (
     add_field_to_filter_form_class,
     expand_alphanumeric_pattern,
@@ -81,8 +82,14 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.forms.base import NautobotFilterForm
-from nautobot.extras.forms.forms import get_git_datasource_content_choices
+from nautobot.extras.forms.forms import (
+    get_git_datasource_content_choices,
+    provider_choices,
+    provider_choices_with_blank,
+)
 from nautobot.extras.forms.mixins import (
+    CustomFieldModelFilterFormMixin,
+    NoteFormBase,
     RelationshipModelFilterFormMixin,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
@@ -115,6 +122,7 @@ __all__ = (
     "CSVMultipleContentTypeField",
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelCSVForm",
+    "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
     "DatePicker",
     "DateTimePicker",
@@ -143,6 +151,7 @@ __all__ = (
     "NautobotBulkEditForm",
     "NautobotFilterForm",
     "NautobotModelForm",
+    "NoteFormBase",
     "NoteModelBulkEditFormMixin",
     "NoteModelFormMixin",
     "NullableDateField",
@@ -150,6 +159,8 @@ __all__ = (
     "parse_alphanumeric_range",
     "parse_numeric_range",
     "PrefixFieldMixin",
+    "provider_choices",
+    "provider_choices_with_blank",
     "RelationshipModelBulkEditFormMixin",
     "RelationshipModelFilterFormMixin",
     "RelationshipModelFormMixin",
@@ -157,6 +168,7 @@ __all__ = (
     "ReturnURLForm",
     "RoleModelBulkEditFormMixin",
     "RoleModelFilterFormMixin",
+    "SearchForm",
     "SelectWithDisabled",
     "SelectWithPK",
     "SlugField",

@@ -7,6 +7,7 @@ from nautobot.core.exceptions import (
     FilterSetFieldNotFound,
     ViewConfigException,
 )
+from nautobot.core.runner.importer import ConfigurationError
 from nautobot.extras.secrets.exceptions import (
     SecretError,
     SecretParametersError,
@@ -18,6 +19,7 @@ from nautobot.extras.secrets.exceptions import (
 __all__ = (
     "AbortTransaction",
     "CeleryWorkerNotRunningException",
+    "ConfigurationError",
     "FilterSetFieldNotFound",
     "SecretError",
     "SecretParametersError",

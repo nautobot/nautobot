@@ -15,7 +15,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.extras.tables import StatusTableMixin
+from nautobot.extras.tables import ConfigContextSchemaValidationStateColumn, RoleTableMixin, StatusTableMixin
 
 
 __all__ = (
@@ -26,10 +26,12 @@ __all__ = (
     "ColorColumn",
     "ColoredLabelColumn",
     "ComputedFieldColumn",
+    "ConfigContextSchemaValidationStateColumn",
     "ContentTypesColumn",
     "CustomFieldColumn",
     "LinkedCountColumn",
     "RelationshipColumn",
+    "RoleTableMixin",
     "StatusTableMixin",
     "TagColumn",
     "ToggleColumn",
