@@ -25,7 +25,6 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_tags,
     generate_query_mixin,
 )
-from nautobot.core.graphql.schema_init import Query
 from nautobot.core.graphql.types import ContentTypeType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import construct_resolver, get_filtering_args_from_filterset, str_to_var_name
 
@@ -58,6 +57,5 @@ __all__ = (
     "generate_single_item_resolver",
     "get_filtering_args_from_filterset",
     "OptimizedNautobotObjectType",
-    "Query",
     "str_to_var_name",
 )
