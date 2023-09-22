@@ -1,9 +1,10 @@
-import { ButtonGroup, Flex, SkeletonText, Spacer } from "@chakra-ui/react";
-import * as Icon from "react-icons/tb";
+import { ButtonGroup, SkeletonText, Spacer } from "@chakra-ui/react";
 import { useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
     Box,
+    Divider,
+    Flex,
     Heading,
     NtcThumbnailIcon,
     MeatballsIcon,
@@ -131,7 +132,7 @@ export default function ObjectListTable({
     return (
         <Box borderRadius="md" ref={topRef}>
             {!include_button ? null : (
-                <Flex align="center" height="60px">
+                <Flex align="center">
                     <Heading
                         as="h1"
                         size="H1"
@@ -139,7 +140,7 @@ export default function ObjectListTable({
                         alignItems="center"
                         gap="5px"
                     >
-                        <NtcThumbnailIcon width="25px" height="30px" />{" "}
+                        <NtcThumbnailIcon height="auto" width="24" />
                         {tableTitle}
                     </Heading>
                     <Spacer />
@@ -151,9 +152,8 @@ export default function ObjectListTable({
                         () => {}
                     )}
                     <Box>
-                        <ButtonGroup alignItems="center">
+                        <ButtonGroup alignItems="center" spacing="md">
                             <UIButton
-                                size="sm"
                                 variant="secondary"
                                 onClick={() =>
                                     filtersPanel.isOpen
@@ -164,16 +164,14 @@ export default function ObjectListTable({
                                 Filters
                             </UIButton>
                             <UIButton
-                                size="sm"
                                 variant="primary"
                                 leftIcon={<MeatballsIcon />}
                             >
                                 Actions
                             </UIButton>
-                            <Icon.TbMinusVertical />
+                            <Divider height={10} orientation="vertical" />
                             <UIButton
                                 to={`${location.pathname}add/`}
-                                size="sm"
                                 leftIcon={<PlusIcon />}
                                 onClick={(e) => {
                                     e.preventDefault();
@@ -198,7 +196,7 @@ export default function ObjectListTable({
                 noOfLines={parseInt(page_size)}
                 skeletonHeight="25"
                 spacing="3"
-                mt="3"
+                marginTop="md"
                 isLoaded={data_fetched}
             >
                 <TableRenderer

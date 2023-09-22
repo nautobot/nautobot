@@ -1,4 +1,11 @@
-import { Tab, Tabs, TabList, TabPanel, TabPanels } from "@nautobot/nautobot-ui";
+import {
+    negateCssVar,
+    Tab,
+    Tabs,
+    TabList,
+    TabPanel,
+    TabPanels,
+} from "@nautobot/nautobot-ui";
 
 import { RenderColumn, RenderNotesTab, RenderChangeLogsTab } from ".";
 
@@ -12,8 +19,8 @@ function RenderTabs({
     isPluginView,
 }) {
     return (
-        <Tabs>
-            <TabList pl="md">
+        <Tabs variant="outline">
+            <TabList marginX={negateCssVar("md")} paddingX="md">
                 {Object.entries(layoutSchema.tabs).map(([tabTitle], idx) => (
                     <Tab key={idx}>{tabTitle}</Tab>
                 ))}
@@ -22,7 +29,7 @@ function RenderTabs({
             </TabList>
             <TabPanels>
                 {Object.entries(layoutSchema.tabs).map(([_, tabData], idx) => (
-                    <TabPanel key={idx}>
+                    <TabPanel key={idx} paddingBottom={0} paddingX={0}>
                         <RenderColumn
                             tabData={tabData}
                             data={data}
@@ -30,7 +37,7 @@ function RenderTabs({
                         />
                     </TabPanel>
                 ))}
-                <TabPanel>
+                <TabPanel paddingBottom={0} paddingX={0}>
                     <RenderNotesTab
                         app_label={app_label}
                         model_name={model_name}
@@ -38,7 +45,7 @@ function RenderTabs({
                         isPluginView={isPluginView}
                     />
                 </TabPanel>
-                <TabPanel>
+                <TabPanel paddingBottom={0} paddingX={0}>
                     <RenderChangeLogsTab object_id={object_id} />
                 </TabPanel>
             </TabPanels>
