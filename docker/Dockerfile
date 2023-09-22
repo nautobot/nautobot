@@ -68,7 +68,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get autoremove -y
 
 # Ensure the npm install is cached, updated, and has a long timeout for slow connections
-# The Node.JS install aboce should install npm 9, but we pin it here just in case
+# The Node.JS install above should install npm 9, but we pin it here just in case
 # npm 10 has shown issues with slow CI environments
 RUN --mount=type=cache,target="/root/.npm",sharing=locked \
     npm config set fetch-retry-maxtimeout 300000 && \
