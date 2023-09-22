@@ -62,6 +62,7 @@ class TenantGroupBulkImportView(generic.BulkImportView):
 class TenantGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
     table = tables.TenantGroupTable
+    filterset = filters.TenantGroupFilterSet
 
 
 #

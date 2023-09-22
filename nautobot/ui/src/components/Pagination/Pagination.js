@@ -46,7 +46,7 @@ function Pagination(props) {
     }
 
     return (
-        <Flex paddingTop={10}>
+        <Flex paddingTop="md">
             <Box>
                 <PageNumberForm
                     firstPage={1}
