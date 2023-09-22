@@ -227,3 +227,8 @@ def register_job(job_class):
     # TODO: should we only register a job if it corresponds to a Job database record?
     logger.debug("Registering job %s.%s", job_class.__module__, job_class.__name__)
     app.register_task(job_class)
+
+
+def register_jobs(*jobs):
+    """Deprecated manual job registration function. Left in for backwards compatibility to Nautobot 2.0.0-alpha"""
+    pass
