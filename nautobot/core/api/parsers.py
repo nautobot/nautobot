@@ -193,7 +193,7 @@ class NautobotCSVParser(BaseParser):
                 # We currently only store lists or dicts in JSONFields, never bare ints/strings.
                 # On the CSV write side, we only render dicts to JSON
                 if value is not None:
-                    if "{" in value or "[" in value:
+                    if value.startswith(("{", "[")):
                         value = json.loads(value)
                     else:
                         value = value.split(",")

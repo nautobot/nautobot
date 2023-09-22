@@ -138,10 +138,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         # Check if the request is related to CSV export;
         if self._is_csv_request() and self.instance:
             # Retrieve the natural key values of related fields in an optimized way.
-            # This is done to ensure smooth CSV export and import processes:
-            #   1. Remove lookup fields that have no instance, e.g., if the Location Parent FK field is missing,
-            #    we remove 'location_parent*' from the CSV.
-            #   2. Replace fields with 'None' values with "NaN" to differentiate between empty and None values during import.
             all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
             case_query = self._build_query_case_for_natural_key_field_lookup(all_related_fields_natural_key_lookups)
             if isinstance(self.instance, models.QuerySet):
@@ -226,7 +222,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """
         model = self.Meta.model
         field_lookups = []
-        # NOTE: M2M and 12M fields field are ignored in csv export
+        # NOTE: M2M and One2M fields field are ignored in csv export
         fields = [
             field
             for field in model._meta.get_fields()
