@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, FileVar, get_task_logger
 
 
@@ -27,6 +26,3 @@ class TestFileUploadFail(Job):
         logger.warning("File contents: %s", contents)
 
         raise self.exception("Test failure")
-
-
-register_jobs(TestFileUploadFail)

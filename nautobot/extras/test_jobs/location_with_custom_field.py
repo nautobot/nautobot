@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
-from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.jobs import Job, get_task_logger
@@ -36,6 +35,3 @@ class TestCreateLocationWithCustomField(Job):
             logger.info("Created another new location", extra={"object": location_2})
 
             return "Job completed."
-
-
-register_jobs(TestCreateLocationWithCustomField)

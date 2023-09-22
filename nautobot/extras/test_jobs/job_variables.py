@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.extras.models import Role
 from nautobot.extras.jobs import (
     BooleanVar,
@@ -82,7 +81,3 @@ job_list = [
     StringVarJob,
     TextVarJob,
 ]
-
-# Avoid registering the jobs with Celery when this is imported directly as a file
-if __name__ == "test_job_variables":
-    register_jobs(*job_list)

@@ -2,7 +2,6 @@ import json
 
 from nautobot.extras.jobs import get_task_logger
 
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, IPAddressVar, IPAddressWithMaskVar
 
 
@@ -61,6 +60,3 @@ class TestIPAddresses(Job):
         logger.info("Job didn't crash!")
 
         return "Nice IPs, bro."
-
-
-register_jobs(TestIPAddresses)

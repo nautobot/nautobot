@@ -24,14 +24,10 @@ In any case, each module holds one or more Jobs (Python classes), each of which 
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
-+/- 2.0.0
-    All job classes must now be registered with `nautobot.core.celery.register_jobs` on module import. For plugins providing jobs, the `register_jobs` method must called from the plugin's `jobs.py` file/submodule at import time. The `register_jobs` method accepts one or more job classes as arguments.
-
 !!! warning
     Make sure you are *not* inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
 
 ```python
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job
 
 class CreateDevices(Job):
@@ -43,7 +39,6 @@ class DeviceConnectionsReport(Job):
 class DeviceIPsReport(Job):
     ...
 
-register_jobs(CreateDevices, DeviceConnectionsReport, DeviceIPsReport)
 ```
 
 Each job class will implement some or all of the following components:

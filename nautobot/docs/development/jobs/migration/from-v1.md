@@ -99,22 +99,6 @@ The Job `commit_default` property has been renamed to `dryrun_default` and the d
 
 The `read_only` Job field no longer forces an automatic database rollback at the end of the Job; it is informational only in v2.0.
 
-### Job Registration
-
-All Jobs must be registered in the Celery task registry to be available in Nautobot. This must be accomplished by calling `nautobot.core.celery.register_jobs(*job_classes)` at the top level of a Job module so that it is registered when the module is imported. The `register_jobs` method accepts one or more job classes as arguments.
-
-!!! example
-    ```py
-    from nautobot.core.celery import register_jobs
-    from nautobot.extras.jobs import Job
-
-    class MyJob(Job):
-        def run(self):
-            pass
-
-    register_jobs(MyJob)
-    ```
-
 ### Job Logging
 
 All of the custom `log` methods have been removed from the Job class. Instead, use either the Python logger from `nautobot.extras.jobs.get_task_logger` or use `self.logger` in the Job class.

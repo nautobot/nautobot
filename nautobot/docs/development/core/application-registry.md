@@ -198,7 +198,7 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 ```
 
 --- 2.0.0
-    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../../user-guide/platform-functionality/jobs/index.md#writing-jobs) which should be called at import time by any plugin that provides jobs.
+    The `plugin_jobs` registry has been replaced by the celery task registry at [`nautobot.core.celery.app.tasks`].
 
 ### `plugin_template_extensions`
 

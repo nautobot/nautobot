@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, RunJobTaskFailed, get_task_logger
 
 
@@ -18,6 +17,3 @@ class TestFail(Job):
         """
         logger.info("I'm a test job that fails!")
         raise RunJobTaskFailed("Test failure")
-
-
-register_jobs(TestFail)

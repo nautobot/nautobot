@@ -1,4 +1,4 @@
-from nautobot.core.celery import app, register_jobs
+from nautobot.core.celery import app
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
 from nautobot.extras.jobs import Job, ObjectVar
 from nautobot.extras.models import GitRepository
@@ -57,7 +57,3 @@ class GitRepositoryDryRun(Job):
             git_repository_dry_run(repository, logger=self.logger)
         finally:
             self.logger.info(f"Repository dry run completed in {job_result.duration}")
-
-
-jobs = [GitRepositorySync, GitRepositoryDryRun]
-register_jobs(*jobs)

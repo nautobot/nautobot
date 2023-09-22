@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import DryRunVar, Job, StringVar
 
 
@@ -10,6 +9,3 @@ class TestReadOnlyJob(Job):
 
     class Meta:
         read_only = True
-
-
-register_jobs(TestReadOnlyJob)

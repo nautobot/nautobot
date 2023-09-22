@@ -33,7 +33,7 @@ from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
-from nautobot.core.celery import app as celery_app
+from nautobot.core.celery import app as celery_app, register_job
 from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -85,7 +85,15 @@ class RunJobTaskFailed(Exception):
     """Celery task failed for some reason."""
 
 
-class BaseJob(Task):
+class JobMeta(type):
+    """Job metaclass to automatically register subclasses in celery."""
+
+    def __init__(cls, name, bases, dct):
+        if not cls.__dict__.get("abstract", False):
+            register_job(cls)
+
+
+class BaseJob(Task, metaclass=JobMeta):
     """Base model for jobs.
 
     Users can subclass this directly if they want to provide their own base class for implementing multiple jobs
@@ -93,6 +101,8 @@ class BaseJob(Task):
 
     Jobs must define at minimum a run method.
     """
+
+    abstract = True
 
     class Meta:
         """
@@ -823,6 +833,8 @@ class Job(BaseJob):
     Classes which inherit from this model will appear in the list of available jobs.
     """
 
+    abstract = True
+
 
 #
 # Script variables
@@ -1086,6 +1098,8 @@ class JobHookReceiver(Job):
     from object changes and are not intended to be run from the UI or API like standard jobs.
     """
 
+    abstract = True
+
     object_change = ObjectVar(model=ObjectChange)
 
     def run(self, object_change):
@@ -1112,6 +1126,8 @@ class JobButtonReceiver(Job):
     Base class for job button receivers. Job button receivers are jobs that are initiated
     from UI buttons and are not intended to be run from the job form UI or API like standard jobs.
     """
+
+    abstract = True
 
     object_pk = StringVar()
     object_model_name = StringVar()

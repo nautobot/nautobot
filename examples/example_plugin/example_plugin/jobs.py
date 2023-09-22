@@ -4,7 +4,6 @@ import time
 from django.conf import settings
 from django.db import transaction
 
-from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.jobs import DryRunVar, IntegerVar, Job, JobButtonReceiver, JobHookReceiver, get_task_logger
@@ -159,15 +158,3 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             else:
                 self._run_device_job(obj)
         logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
-
-
-jobs = (
-    ExampleDryRunJob,
-    ExampleJob,
-    ExampleHiddenJob,
-    ExampleLoggingJob,
-    ExampleJobHookReceiver,
-    ExampleSimpleJobButtonReceiver,
-    ExampleComplexJobButtonReceiver,
-)
-register_jobs(*jobs)

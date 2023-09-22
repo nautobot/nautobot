@@ -1,6 +1,5 @@
 from django.db import transaction
 
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import Job, BooleanVar, get_task_logger
 from nautobot.extras.models import Status
 
@@ -48,6 +47,3 @@ class TestAtomicContextManager(Job):
             logger.error("Job failed, all database changes have been rolled back.")
             raise err
         logger.info("Job succeeded.")
-
-
-register_jobs(TestAtomicContextManager, TestAtomicDecorator)

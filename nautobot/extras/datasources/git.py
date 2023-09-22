@@ -775,7 +775,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                 installed_jobs.append(job_model)
 
             if not found_jobs:
-                msg = "No jobs were registered on loading the `jobs` submodule. Did you miss a `register_jobs()` call?"
+                msg = "No jobs were registered on loading the `jobs` submodule."
                 logger.warning(msg)
                 job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_WARNING)
         except Exception as exc:
