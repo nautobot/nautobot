@@ -3,17 +3,10 @@
 #  only. It is not intended for production use.                   #
 ###################################################################
 
-import os
-
 from nautobot.core.settings import *  # noqa: F401,F403
 from nautobot.core.settings_funcs import parse_redis_connection
 
 ALLOWED_HOSTS = ["nautobot.example.com"]
-
-# Discover test jobs from within the Nautobot source code
-JOBS_ROOT = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "test_jobs"
-)
 
 # Enable both example plugins
 PLUGINS = [
