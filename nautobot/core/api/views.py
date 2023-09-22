@@ -2,6 +2,7 @@ import itertools
 import logging
 import platform
 from collections import OrderedDict
+import re
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
@@ -977,3 +978,35 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
         else:
             data = bound_field.as_widget()
         return Response(data)
+
+
+class NewUIReadyRoutesAPIView(NautobotAPIVersionMixin, APIView):
+    """API View that returns a list of new UI-ready routes."""
+
+    permission_classes = [IsAuthenticated]
+
+    def to_javascript_regex(self, regex_pattern):
+        """
+        Convert a Python regex pattern into JavaScript regex format.
+
+        Args:
+            regex_pattern (str): The Python regex pattern to convert.
+
+        Returns:
+            str: The JavaScript-compatible regex pattern.
+        """
+        # Remove named groups (?P<...>)
+        pattern = re.sub(r"\?P<[a-z]+>", "", regex_pattern)
+
+        # Escape `/` with `\`
+        pattern = pattern.replace("/", "\\/")
+
+        # Replace `/Z` with `$`
+        pattern = pattern.replace(r"\Z", "$")
+
+        return pattern
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        url_regex_patterns = registry["new_ui_ready_routes"]
+        return Response([self.to_javascript_regex(pattern) for pattern in url_regex_patterns])

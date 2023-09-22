@@ -32,6 +32,7 @@ class LoginView(View):
     """
 
     template_name = "login.html"
+    use_new_ui = True
 
     @method_decorator(sensitive_post_parameters("password"))
     def dispatch(self, *args, **kwargs):

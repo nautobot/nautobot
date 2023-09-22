@@ -135,6 +135,8 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
+    # NOTE: This is how `NautobotUIViewSet` would define use_new_ui attr
+    # use_new_ui = ["list", "retrieve"]
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

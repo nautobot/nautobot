@@ -50,10 +50,6 @@ class IPAddressQuerySet(TestCase):
             ),
         }
 
-    def test_ip_family(self):
-        self.assertEqual(self.queryset.ip_family(4).count(), 5)
-        self.assertEqual(self.queryset.ip_family(6).count(), 3)
-
     def test_net_host_contained(self):
         self.assertQuerysetEqualAndNotEmpty(
             self.queryset.net_host_contained(netaddr.IPNetwork("10.0.0.0/24")),

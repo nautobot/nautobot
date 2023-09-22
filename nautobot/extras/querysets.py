@@ -83,6 +83,9 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
         Order By clause in Subquery is not guaranteed to be respected within the aggregated JSON array, which is why
         we include "weight" and "name" into the result so that we can sort it within Python to ensure correctness.
+
+        TODO This method does not accurately reflect location inheritance because of the reasons stated in _get_config_context_filters()
+        Do not use this method by itself, use get_config_context() method directly on ConfigContextModel instead.
         """
         from nautobot.extras.models import ConfigContext
 
@@ -104,7 +107,12 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         ).distinct()
 
     def _get_config_context_filters(self):
-        # Construct the set of Q objects for the specific object types
+        """
+        This method is constructing the set of Q objects for the specific object types.
+        Note that locations filters are not included in the method because the filter needs the
+        ability to query the ancestors for a particular tree node for subquery and we lost it since
+        moving from mptt to django-tree-queries https://github.com/matthiask/django-tree-queries/issues/54.
+        """
         tag_query_filters = {
             "object_id": OuterRef(OuterRef("pk")),
             "content_type__app_label": self.model._meta.app_label,
@@ -127,10 +135,13 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
-            base_query.add((Q(locations=OuterRef("location")) | Q(locations=None)), Q.AND)
-
+            # This is necessary to prevent location related config context to be applied now.
+            # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
+            base_query.add((Q(locations=None)), Q.AND)
         elif self.model._meta.model_name == "virtualmachine":
-            base_query.add((Q(locations=OuterRef("cluster__location")) | Q(locations=None)), Q.AND)
+            # This is necessary to prevent location related config context to be applied now.
+            # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
+            base_query.add((Q(locations=None)), Q.AND)
 
         return base_query
 
