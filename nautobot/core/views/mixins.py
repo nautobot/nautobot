@@ -480,7 +480,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def get_action_map(self):
         """Provides the ability to define which permission is needed for a custom action."""
         if self.custom_action_permission_map:
-            return dict(**PERMISSIONS_ACTION_MAP, **self.custom_action_permission_map)
+            return {**PERMISSIONS_ACTION_MAP, **self.custom_action_permission_map}
         return PERMISSIONS_ACTION_MAP
 
     def get_extra_context(self, request, instance=None):
