@@ -88,8 +88,18 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
                 request_id=change_context_state.get().change_id,
             )
             m2m_changes = instance.to_objectchange(action)
-            related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
-            objectchange = related_changes.first() if related_changes.exists() else None
+            if related_changes.exists():
+                related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
+                objectchange = related_changes.first()
+            else:
+                objectchange = m2m_changes
+                objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
+                objectchange.request_id = change_context_state.get().change_id
+                objectchange.change_context = change_context_state.get().context
+                objectchange.change_context_detail = change_context_state.get().context_detail[
+                    :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+                ]
+                objectchange.save()
         else:
             objectchange = instance.to_objectchange(action)
             objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
@@ -104,8 +114,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         instance._state.fields_cache = original_cache
 
         # Enqueue job hooks
-        if objectchange is not None:
-            enqueue_job_hooks(objectchange)
+        enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
     enqueue_webhooks(instance, change_context_state.get().get_user(), change_context_state.get().change_id, action)
