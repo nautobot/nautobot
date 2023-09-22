@@ -1,5 +1,3 @@
-import re
-
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND, VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND
@@ -119,7 +117,10 @@ class CSVParsingRelatedTestCase(TestCase):
             for field_name in field_without_values:
                 field_lookups = Device._meta.get_field(field_name).related_model.natural_key_field_lookups
                 for lookup in field_lookups:
-                    self.assertIn(lookup_querysets[0][f"{field_name}__{lookup}"], [CSV_OBJECT_NOT_FOUND, VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND])
+                    self.assertIn(
+                        lookup_querysets[0][f"{field_name}__{lookup}"],
+                        [CSV_OBJECT_NOT_FOUND, VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND],
+                    )
 
             # Assert FK Field lookups with an object
             self.assertEqual(device.device_type.model, lookup_querysets[0]["device_type__model"])

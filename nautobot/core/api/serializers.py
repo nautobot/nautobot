@@ -1,7 +1,6 @@
 import contextlib
 import logging
 import uuid
-from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -156,7 +155,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             )
 
     def _get_lookup_field_name_and_output_field(self, lookup_field):
-        """"""
+        """Get lookup field name and its corresponding output_field which would be used in building this lookup Case in `_build_query_case_for_natural_key_field_lookup`"""
         *field_names, lookup = lookup_field.split("__")
         model = self.Meta.model
         for field_component in field_names:
@@ -203,12 +202,14 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         for lookup_field in lookups:
             field_name, output_field = self._get_lookup_field_name_and_output_field(lookup_field)
 
-            when_case = {f"{field_name}__isnull": False}
-            if output_field == VarbinaryIPField:
-                when_case["then"] = models.F(lookup_field)
-            else:
-                when_case["then"] = Cast(models.F(lookup_field), models.CharField())
-
+            # Since VarbinaryIPField cant be cast into CharField we would have to set the output_field as
+            # `VarbinaryIPField`
+            when_case = {
+                f"{field_name}__isnull": False,
+                "then": models.F(lookup_field)
+                if output_field == VarbinaryIPField
+                else Cast(models.F(lookup_field), models.CharField()),
+            }
             case_query[lookup_field] = models.Case(
                 models.When(**when_case),
                 default=models.Value(constants.CSV_OBJECT_NOT_FOUND),

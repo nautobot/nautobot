@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
+from rest_framework.relations import ManyRelatedField
 
 from nautobot.core import testing
 from nautobot.core.api.utils import get_serializer_for_model
@@ -689,6 +690,9 @@ class APIViewTestCases:
             new_serializer = serializer_class(new_instance, context={"request": None})
             new_data = new_serializer.data
             for field_name, field in new_serializer.fields.items():
+                # Skip M2M fields except for tags because M2M fields are not supported in CSV Export/Import;
+                if isinstance(field, ManyRelatedField) and field_name != "tags":
+                    continue
                 if field.read_only or field.write_only:
                     continue
                 if field_name in ["created", "last_updated"]:

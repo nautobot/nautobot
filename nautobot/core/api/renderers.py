@@ -141,7 +141,7 @@ class NautobotCSVRenderer(BaseRenderer):
                     # An enum type
                     value = value["value"]
                 elif "id" in value:
-                    value == str(value["id"])
+                    value = str(value["id"])
                 else:
                     value = json.dumps(value)
             elif isinstance(value, (list, tuple, set)):
