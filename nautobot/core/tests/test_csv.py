@@ -229,8 +229,8 @@ class CSVParsingRelatedTestCase(TestCase):
             }
             serializer_data = serializer.data
 
-            tags = sorted([str(tag["id"]) for tag in serializer_data.pop("tags")])
-            instance_tags_pk = sorted([str(tag_pk) for tag_pk in device.tags.values_list("pk", flat=True)])
+            tags = sorted(serializer_data.pop("tags"))
+            instance_tags_pk = sorted(device.tags.values_list("name", flat=True))
             self.assertEqual(tags, instance_tags_pk)
 
             serializer_data.pop("notes_url")
