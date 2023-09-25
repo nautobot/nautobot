@@ -67,7 +67,7 @@
                                 <strong>Job Data</strong>
                             </div>
                             <div class="panel-body">
-                                {% render_form job_form skip_over_fields=False %}
+                                {% render_form job_form skip_excluded_fields=False %}
                             </div>
                             {% if job_model.has_sensitive_variables %}
                                 <div class="panel-footer">
