@@ -39,8 +39,10 @@ def render_form(form, skip_over_fields=True):
     """
     Render an entire form from template and skip over `tags` and `object_note` fields.
     Setting `skip_over_fields` to True prevents skipping over `tags` and `object_note` fields
-    in `job_form` in case they are used as job variables.
+    in case they are used as Job variables or DynamicGroup filters.
+    See:
     https://github.com/nautobot/nautobot/issues/4473
+    https://github.com/nautobot/nautobot/issues/4503
     """
     return {
         "form": form,
