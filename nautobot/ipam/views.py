@@ -1111,6 +1111,29 @@ class IPAddressInterfacesView(generic.ObjectView):
 
 
 #
+# IPAddress to Interface (assignments
+#
+
+
+class IPAddressToInterfaceUIViewSet(
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectListViewMixin,
+    # view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+    # view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,
+    view_mixins.ObjectBulkDestroyViewMixin,
+    # view_mixins.ObjectNotesViewMixin,
+):
+    lookup_field = "pk"
+    # form_class = forms.NamespaceForm
+    filterset_class = filters.IPAddressToInterfaceFilterSet
+    queryset = IPAddressToInterface.objects.all()
+    serializer_class = serializers.IPAddressToInterfaceSerializer
+    table_class = tables.IPAddressToInterfaceTable
+
+
+#
 # VLAN groups
 #
 

@@ -20,6 +20,7 @@ from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
 from .models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -619,6 +620,37 @@ class IPAddressInterfaceTable(InterfaceTable):
             "style": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
+
+
+#
+# IPAddress to Interface
+#
+
+
+class IPAddressToInterfaceTable(BaseTable):
+    pk = ToggleColumn()
+    id = tables.Column(linkify=True, verbose_name="ID")
+    ip_address = tables.Column(linkify=True, verbose_name="IP Address")
+    interface = tables.Column(linkify=True)
+    vm_interface = tables.Column(linkify=True, verbose_name="VM Interface")
+
+    class Meta(BaseTable.Meta):
+        model = IPAddressToInterface
+        fields = (
+            "pk",
+            "id",
+            "ip_address",
+            "interface",
+            "vm_interface",
+            "is_source",
+            "is_destination",
+            "is_default",
+            "is_preferred",
+            "is_primary",
+            "is_secondary",
+            "is_standby",
+        )
+        default_columns = ("pk", "id", "ip_address", "interface", "vm_interface")
 
 
 #
