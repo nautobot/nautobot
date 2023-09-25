@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator
@@ -144,14 +145,19 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
+    children = serializers.SerializerMethodField(read_only=True)
+    utilization = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Prefix
         fields = "__all__"
         list_display_fields = [
             "prefix",
+            "namespace",
             "type",
             "status",
+            "children",
+            "utilization",
             "vrf",
             "tenant",
             "location",
@@ -164,6 +170,50 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
         }
+
+        detail_view_config = {
+            "layout": [
+                {
+                    "Prefix": {
+                        "fields": [
+                            "prefix",
+                            "parent",
+                            "namespace",
+                            "type",
+                            "network",
+                            "broadcast",
+                            "prefix_length",
+                            "ip_version",
+                            "description",
+                            "role",
+                            "vlan",
+                            "location",
+                            "tenant",
+                            "rir",
+                            "date_allocated",
+                        ]
+                    },
+                },
+            ],
+        }
+
+    @extend_schema_field(serializers.IntegerField)
+    def get_children(self, instance):
+        """
+        Return the child count of a prefix
+        """
+        return instance.descendants_count
+
+    @extend_schema_field(serializers.CharField)
+    def get_utilization(self, instance):
+        """
+        Return the child count of a prefix
+        """
+        utilization_data = instance.get_utilization()
+        numerator = utilization_data[0]
+        denominator = utilization_data[1]
+        utilization = round((numerator / denominator * 100), 1)
+        return str(utilization) + " %"
 
 
 class PrefixLengthSerializer(serializers.Serializer):
