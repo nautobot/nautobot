@@ -1,6 +1,6 @@
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
-from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND, VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND
+from nautobot.core.constants import CSV_NULL_TYPE, CSV_NO_OBJECT, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.dcim.api.serializers import DeviceSerializer
@@ -125,7 +125,7 @@ class CSVParsingRelatedTestCase(TestCase):
                 for lookup in field_lookups:
                     self.assertIn(
                         lookup_querysets[0][f"{field_name}__{lookup}"],
-                        [CSV_OBJECT_NOT_FOUND, VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND],
+                        [CSV_NO_OBJECT, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT],
                     )
 
             # Assert FK Field lookups with an object
@@ -138,11 +138,9 @@ class CSVParsingRelatedTestCase(TestCase):
 
             self.assertEqual(device.location.name, lookup_querysets[0]["location__name"])
             self.assertEqual(device.location.parent.name, lookup_querysets[0]["location__parent__name"])
-            self.assertEqual(lookup_querysets[0]["location__parent__parent__name"], CSV_OBJECT_NOT_FOUND)
-            self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__name"], CSV_OBJECT_NOT_FOUND)
-            self.assertEqual(
-                lookup_querysets[0]["location__parent__parent__parent__parent__name"], CSV_OBJECT_NOT_FOUND
-            )
+            self.assertEqual(lookup_querysets[0]["location__parent__parent__name"], CSV_NO_OBJECT)
+            self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__name"], CSV_NO_OBJECT)
+            self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__parent__name"], CSV_NO_OBJECT)
 
         with self.subTest("Get the natural lookup field and its value"):
             # For Location
@@ -152,9 +150,9 @@ class CSVParsingRelatedTestCase(TestCase):
                 {
                     "location__name": device.location.name,
                     "location__parent__name": device.location.parent.name,
-                    "location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                    "location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                    "location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                    "location__parent__parent__name": CSV_NO_OBJECT,
+                    "location__parent__parent__parent__name": CSV_NO_OBJECT,
+                    "location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
                 },
             )
 
@@ -162,18 +160,18 @@ class CSVParsingRelatedTestCase(TestCase):
             status_lookup_value = serializer._get_natural_key_lookups_value_for_field("status", lookup_querysets[0])
             self.assertEqual(status_lookup_value, {"status__name": device.status.name})
 
-            # For Rack, since `device.rack` does not exists, all rack natural_key_lookups should be `ObjectNotFound`
+            # For Rack, since `device.rack` does not exists, all rack natural_key_lookups should be `NoObject`
             rack_lookup_value = serializer._get_natural_key_lookups_value_for_field("rack", lookup_querysets[0])
             self.assertEqual(
                 rack_lookup_value,
                 {
-                    "rack__name": CSV_OBJECT_NOT_FOUND,
-                    "rack__rack_group__location__name": CSV_OBJECT_NOT_FOUND,
-                    "rack__rack_group__location__parent__name": CSV_OBJECT_NOT_FOUND,
-                    "rack__rack_group__location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                    "rack__rack_group__location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                    "rack__rack_group__location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                    "rack__rack_group__name": CSV_OBJECT_NOT_FOUND,
+                    "rack__name": CSV_NO_OBJECT,
+                    "rack__rack_group__location__name": CSV_NO_OBJECT,
+                    "rack__rack_group__location__parent__name": CSV_NO_OBJECT,
+                    "rack__rack_group__location__parent__parent__name": CSV_NO_OBJECT,
+                    "rack__rack_group__location__parent__parent__parent__name": CSV_NO_OBJECT,
+                    "rack__rack_group__location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
+                    "rack__rack_group__name": CSV_NO_OBJECT,
                 },
             )
 
@@ -185,53 +183,53 @@ class CSVParsingRelatedTestCase(TestCase):
                 "url": f"http://testserver/api/dcim/devices/{device.pk}/",
                 "composite_key": device.composite_key,
                 "natural_slug": device.natural_slug,
-                "face": CSV_NON_TYPE,
-                "local_config_context_data": CSV_NON_TYPE,
-                "local_config_context_data_owner_object_id": CSV_NON_TYPE,
+                "face": CSV_NULL_TYPE,
+                "local_config_context_data": CSV_NULL_TYPE,
+                "local_config_context_data_owner_object_id": CSV_NULL_TYPE,
                 "name": device.name,
                 "serial": "",
-                "asset_tag": CSV_NON_TYPE,
-                "position": CSV_NON_TYPE,
-                "device_redundancy_group_priority": CSV_NON_TYPE,
-                "vc_position": CSV_NON_TYPE,
-                "vc_priority": CSV_NON_TYPE,
+                "asset_tag": CSV_NULL_TYPE,
+                "position": CSV_NULL_TYPE,
+                "device_redundancy_group_priority": CSV_NULL_TYPE,
+                "vc_position": CSV_NULL_TYPE,
+                "vc_priority": CSV_NULL_TYPE,
                 "comments": "",
-                "local_config_context_schema__name": CSV_OBJECT_NOT_FOUND,
-                "local_config_context_data_owner_content_type": CSV_NON_TYPE,
+                "local_config_context_schema__name": CSV_NO_OBJECT,
+                "local_config_context_data_owner_content_type": CSV_NULL_TYPE,
                 "device_type__manufacturer__name": device.device_type.manufacturer.name,
                 "device_type__model": device.device_type.model,
                 "status__name": device.status.name,
                 "role__name": device.role.name,
-                "tenant__name": CSV_OBJECT_NOT_FOUND,
-                "platform__name": CSV_OBJECT_NOT_FOUND,
+                "tenant__name": CSV_NO_OBJECT,
+                "platform__name": CSV_NO_OBJECT,
                 "location__name": device.location.name,
                 "location__parent__name": device.location.parent.name,
-                "location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                "location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                "location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                "rack__name": CSV_OBJECT_NOT_FOUND,
-                "rack__rack_group__name": CSV_OBJECT_NOT_FOUND,
-                "rack__rack_group__location__name": CSV_OBJECT_NOT_FOUND,
-                "rack__rack_group__location__parent__name": CSV_OBJECT_NOT_FOUND,
-                "rack__rack_group__location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                "rack__rack_group__location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                "rack__rack_group__location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                "primary_ip4__parent__namespace__name": CSV_OBJECT_NOT_FOUND,
-                "primary_ip4__host": CSV_OBJECT_NOT_FOUND,
-                "primary_ip6__parent__namespace__name": CSV_OBJECT_NOT_FOUND,
-                "primary_ip6__host": CSV_OBJECT_NOT_FOUND,
-                "cluster__name": CSV_OBJECT_NOT_FOUND,
-                "virtual_chassis__name": CSV_OBJECT_NOT_FOUND,
-                "device_redundancy_group__name": CSV_OBJECT_NOT_FOUND,
-                "secrets_group__name": CSV_OBJECT_NOT_FOUND,
-                "parent_bay__name": CSV_OBJECT_NOT_FOUND,
-                "parent_bay__device__name": CSV_OBJECT_NOT_FOUND,
-                "parent_bay__device__tenant__name": CSV_OBJECT_NOT_FOUND,
-                "parent_bay__device__location__name": CSV_OBJECT_NOT_FOUND,
-                "parent_bay__device__location__parent__name": CSV_OBJECT_NOT_FOUND,
-                "parent_bay__device__location__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                "parent_bay__device__location__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
-                "parent_bay__device__location__parent__parent__parent__parent__name": CSV_OBJECT_NOT_FOUND,
+                "location__parent__parent__name": CSV_NO_OBJECT,
+                "location__parent__parent__parent__name": CSV_NO_OBJECT,
+                "location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
+                "rack__name": CSV_NO_OBJECT,
+                "rack__rack_group__name": CSV_NO_OBJECT,
+                "rack__rack_group__location__name": CSV_NO_OBJECT,
+                "rack__rack_group__location__parent__name": CSV_NO_OBJECT,
+                "rack__rack_group__location__parent__parent__name": CSV_NO_OBJECT,
+                "rack__rack_group__location__parent__parent__parent__name": CSV_NO_OBJECT,
+                "rack__rack_group__location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
+                "primary_ip4__parent__namespace__name": CSV_NO_OBJECT,
+                "primary_ip4__host": CSV_NO_OBJECT,
+                "primary_ip6__parent__namespace__name": CSV_NO_OBJECT,
+                "primary_ip6__host": CSV_NO_OBJECT,
+                "cluster__name": CSV_NO_OBJECT,
+                "virtual_chassis__name": CSV_NO_OBJECT,
+                "device_redundancy_group__name": CSV_NO_OBJECT,
+                "secrets_group__name": CSV_NO_OBJECT,
+                "parent_bay__name": CSV_NO_OBJECT,
+                "parent_bay__device__name": CSV_NO_OBJECT,
+                "parent_bay__device__tenant__name": CSV_NO_OBJECT,
+                "parent_bay__device__location__name": CSV_NO_OBJECT,
+                "parent_bay__device__location__parent__name": CSV_NO_OBJECT,
+                "parent_bay__device__location__parent__parent__name": CSV_NO_OBJECT,
+                "parent_bay__device__location__parent__parent__parent__name": CSV_NO_OBJECT,
+                "parent_bay__device__location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
             }
             serializer_data = serializer.data
 

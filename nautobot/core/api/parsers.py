@@ -9,7 +9,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
-from nautobot.core.constants import CSV_NON_TYPE, CSV_OBJECT_NOT_FOUND
+from nautobot.core.constants import CSV_NULL_TYPE, CSV_NO_OBJECT
 
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class NautobotCSVParser(BaseParser):
         def insert_nested_dict(keys, value, current_dict):
             key = keys[0]
             if len(keys) == 1:
-                current_dict[key] = None if value in [CSV_OBJECT_NOT_FOUND, CSV_NON_TYPE] else value
+                current_dict[key] = None if value in [CSV_NO_OBJECT, CSV_NULL_TYPE] else value
             else:
                 current_dict[key] = current_dict.get(key, {})
                 insert_nested_dict(keys[1:], value, current_dict[key])
@@ -106,28 +106,28 @@ class NautobotCSVParser(BaseParser):
         return result_dict
 
     def _field_lookups_not_empty(self, field_lookups):
-        """Check if all values of the field lookups dict are not all ObjectNotFound"""
-        return any(value != CSV_OBJECT_NOT_FOUND for value in field_lookups.values())
+        """Check if all values of the field lookups dict are not all NoObject"""
+        return any(value != CSV_NO_OBJECT for value in field_lookups.values())
 
     def _remove_object_not_found_values(self, data):
-        """Remove all `ObjectNotFound` field lookups from the given data, and swap out 'NaN' and
-        'ObjectNotFound' values for `None`.
+        """Remove all `CSV_OBJECT_NOT_FOUND` field lookups from the given data, and swap out `CSV_NULL_TYPE` and
+        'CSV_OBJECT_NOT_FOUND' values for `None`.
 
-        If all the lookups for a field are 'ObjectNotFound', it indicates that the field does not exist,
+        If all the lookups for a field are 'CSV_OBJECT_NOT_FOUND', it indicates that the field does not exist,
         and it needs to be removed to prevent unnecessary database queries.
 
         Args:
             data (dict): A dictionary containing field natural key lookups and their corresponding values.
 
         Returns:
-            dict: A modified dictionary with 'ObjectNotFound' values removed, and 'NaN' and 'ObjectNotFound' swapped for `None`.
+            dict: A modified dictionary with field lookups of 'CSV_OBJECT_NOT_FOUND' values removed, and 'CSV_NULL_TYPE' and 'CSV_OBJECT_NOT_FOUND' swapped for `None`.
         """
         lookup_grouped_by_field_name = {}
         for lookup, lookup_value in data.items():
             field_name = lookup.split("__", 1)[0]
             lookup_grouped_by_field_name.setdefault(field_name, {}).update({lookup: lookup_value})
 
-        # Ignore lookup groups which has all its values set to ObjectNotFound
+        # Ignore lookup groups which has all its values set to NoObject
         # These lookups fields do not exists
         data_without_missing_field_lookups_values = {
             lookup: lookup_value

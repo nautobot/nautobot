@@ -153,7 +153,16 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             )
 
     def _get_lookup_field_name_and_output_field(self, lookup_field):
-        """Get lookup field name and its corresponding output_field which would be used in building this lookup Case in `_build_query_case_for_natural_key_field_lookup`"""
+        """Get lookup field name and its corresponding output_field.
+
+        Used in building this lookup Case in `_build_query_case_for_natural_key_field_lookup`.
+
+        Example:
+            >>> self._get_lookup_field_name_and_output_field("device__location__name")
+            ("device__location", CharField)
+            >>> self._get_lookup_field_name_and_output_field("ipaddress__parent__network")
+            ("ipaddress__parent", VarbinaryIPField)
+        """
         *field_names, lookup = lookup_field.split("__")
         model = self.Meta.model
         for field_component in field_names:
@@ -173,7 +182,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
         This function constructs a database query with Case expressions to handle natural key lookup fields
         that may have missing instances. In cases where the natural key field instance does not exist
-        (i.e., is None), this function replaces it with the value 'ObjectNotFound'. This is particularly
+        (i.e., is None), this function replaces it with the value 'NoObject'. This is particularly
         useful for CSV Export processes, as it allows fields with missing instances to be safely ignored.
         Such handling is essential for CSV Import processes, as attempting to import missing instances can
         lead to 'Object Not Found' errors, potentially causing the import to fail.
@@ -185,12 +194,12 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             Device.objects.annotate(
                 tenant__name=Case(
                     When(tenant__isnull=False, then=F("tenant__name")),
-                    default="ObjectNotFound"
+                    default="NoObject"
                 )
             ).values("tenant__name")
 
         Explanation:
-            - If `device.tenant` is None, the 'tenant__name' field is set to "ObjectNotFound".
+            - If `device.tenant` is None, the 'tenant__name' field is set to "NoObject".
             - If `device.tenant` is not None, the 'tenant__name' field is set to the actual tenant name.
 
         Args:
@@ -210,7 +219,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             }
             case_query[lookup_field] = models.Case(
                 models.When(**when_case),
-                default=models.Value(constants.CSV_OBJECT_NOT_FOUND),
+                default=models.Value(constants.CSV_NO_OBJECT),
                 output_field=output_field(),
             )
         return case_query
@@ -221,6 +230,20 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         This method iterates through the related fields of the Serializer model,
         retrieves the natural_key_field_lookups for each related model, and prepends the field name
         to create a list of field lookups.
+
+        Examples:
+            >>> # Example usage on Device
+            >>> self._get_related_fields_natural_key_field_lookups()
+            [
+                "tenant__name",
+                "status__name",
+                "role__name",
+                "location__name",
+                "location__parent__name",
+                "location__parent__parent__name"
+                ...
+            ]
+
         """
         model = self.Meta.model
         field_lookups = []
@@ -379,16 +402,27 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         Args:
             field_name (str): The field name to extract lookups for.
             natural_key_field_instance (dict): The dict containing natural key field values.
+
+        Example:
+            >>> natural_key_field_instance = Device.objects.values("tenant__name", "location__name", "location__parent__name", ...)
+            >>> _get_natural_key_lookups_value_for_field("location", natural_key_field_instance)
+            {
+                "location__name": "Sample Location",
+                "location__parent__name": "Sample Location Parent Name",
+                "location__parent__parent__name": "NoObject"
+                ...
+            }
+
         """
         data = {}
         for key, value in natural_key_field_instance.items():
             if key.startswith(f"{field_name}__"):
                 if isinstance(value, uuid.UUID):
                     data[key] = str(value)
-                elif value == constants.VARBINARY_IP_FIELD_REPR_OF_OBJECT_NOT_FOUND:
-                    data[key] = constants.CSV_OBJECT_NOT_FOUND
+                elif value == constants.VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT:
+                    data[key] = constants.CSV_NO_OBJECT
                 elif not value:
-                    data[key] = constants.CSV_NON_TYPE
+                    data[key] = constants.CSV_NULL_TYPE
                 else:
                     data[key] = value
         return data
@@ -408,7 +442,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                         altered_data.update(natural_key_field_lookups_for_field)
                     else:
                         # Not FK field
-                        altered_data[key] = constants.CSV_NON_TYPE if value is None else value
+                        altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
         else:
             altered_data = data
 
