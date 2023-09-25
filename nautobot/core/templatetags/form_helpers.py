@@ -35,12 +35,16 @@ def render_relationships(form):
 
 
 @register.inclusion_tag("utilities/render_form.html")
-def render_form(form):
+def render_form(form, render_job_form=False):
     """
-    Render an entire form from template
+    Render an entire form from template and skip over `tags` and `object_note` fields.
+    Setting `render_job_form` to True prevents skipping over `tags` and `object_note` fields
+    in `job_form` in case they are used as job variables.
+    https://github.com/nautobot/nautobot/issues/4473
     """
     return {
         "form": form,
+        "render_job_form": render_job_form,
     }
 
 
