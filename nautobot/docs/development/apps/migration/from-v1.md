@@ -9,7 +9,7 @@ This document provides guidance on migrating code from version 1.x to version 2.
     - [Enhanced Filter Fields](../../../release-notes/version-2.0.md#enhanced-filter-fields-2804)
 - Changes to Nautobot in v2.0.0
     - [Database (ORM) Changes](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-orm-changes)
-        - [Database Field Behavior Chnages](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-field-behavior-changes)
+        - [Database Field Behavior Changes](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-field-behavior-changes)
         - [Renamed Database Fields](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields)
         - [Removed Database Fields](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-database-fields)
     - [Generic Role Model](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#generic-role-model)
