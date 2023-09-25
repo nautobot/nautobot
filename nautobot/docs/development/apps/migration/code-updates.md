@@ -111,7 +111,11 @@ If your REST API has any `FilterBackend` classes derived from `DjangoFilterBacke
 
 ## App Model Serializer Inheritance
 
-App Model Serializers for any models that could have a Generic Foreign Key or a Many to Many relationship from a Nautobot Core model **must** inherit from BaseModelSerializer at a minimum so that they have a properly generated `object_type` field. This also applies to the case where your model is a subclass of `ChangeLoggedModel` and you will have a Generic Foreign Key from `ObjectChange`'s `changed_object` field. Otherwise drf-spectacular schema generation will throw an error that looks like this: (drf_spectacular.E001) Schema generation threw exception "Field name `object_type` is not valid for model `YourAppModel`.
+App Model Serializers for any models that could have a Generic Foreign Key or a Many to Many relationship from a Nautobot Core model **must** inherit from BaseModelSerializer at a minimum so that they have a properly generated `object_type` field. This also applies to the case where your model is a subclass of `ChangeLoggedModel` and you will have a Generic Foreign Key from `ObjectChange`'s `changed_object` field. Otherwise drf-spectacular schema generation will throw an error: 
+
+```no-highlight
+(drf_spectacular.E001) Schema generation threw exception "Field name `object_type` is not valid for model `YourAppModel`.
+```
 
 ## Revamp Rest API Serializers
 
