@@ -3,14 +3,14 @@
 {% for field in form.visible_fields %}
     {% if not form.custom_fields or field.name not in form.custom_fields %}
         {% if not form.relationships or field.name not in form.relationships %}
-            {% if render_job_form %}
-                {% render_field field %}
-            {% else %}
+            {% if skip_over_fields %}
                 {% with 'tags object_note' as exclude_list %}
                     {% if field.name not in exclude_list.split %}
                         {% render_field field %}
                     {% endif %}
                 {% endwith %}
+            {% else %}
+                {% render_field field %}
             {% endif %}
         {% endif %}
     {% endif %}
