@@ -9,6 +9,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
+from django.contrib.contenttypes.fields import GenericRel
 from django.db import models
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.db.models.functions import Cast
@@ -21,6 +22,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
+
 
 from nautobot.core.api.fields import NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
@@ -227,6 +229,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             field
             for field in model._meta.get_fields()
             if field.is_relation and not field.many_to_many and not field.one_to_many
+            # Ignore GenericRel since its `fk` and `content_type` would be used.
+            and not isinstance(field, GenericRel)
         ]
         # Get each related field model's natural_key_fields and prepend field name
         for field in fields:
