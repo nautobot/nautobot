@@ -145,8 +145,6 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
-    children = serializers.SerializerMethodField(read_only=True)
-    utilization = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Prefix
@@ -156,8 +154,6 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "namespace",
             "type",
             "status",
-            "children",
-            "utilization",
             "vrf",
             "tenant",
             "location",
