@@ -8,7 +8,6 @@ import {
     API_USER_AUTHENTICATE,
     AUTH_LOGOUT,
 } from "@constants/apiPath";
-import { API_FIELD_LOOKUP_CHOICES } from "../constants/apiPath";
 
 /*
   The one true API!
@@ -115,21 +114,6 @@ export const baseApi = createApi({
             },
             providesTags: ["APIData"],
         }),
-        getFieldLookupChoices: builder.query({
-            query: ({ lookupField, objectType }) => {
-                const queryParams = new URLSearchParams({
-                    content_type: objectType,
-                    field_name: lookupField,
-                    limit: 50,
-                    offset: 0,
-                });
-
-                return {
-                    url: `${API_FIELD_LOOKUP_CHOICES}?${queryParams.toString()}`,
-                    method: "GET",
-                };
-            },
-        }),
         /** The mutation to log in */
         login: builder.mutation({
             query: ({ username, password }) => ({
@@ -170,7 +154,6 @@ export const {
     useGetUIMenuQuery,
     useGetRESTAPIQuery,
     useGetObjectCountsQuery,
-    useLazyGetFieldLookupChoicesQuery,
     useGetNewUIReadyRoutesQuery,
     useLoginMutation,
     useLogoutMutation,

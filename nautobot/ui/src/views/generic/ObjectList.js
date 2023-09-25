@@ -84,6 +84,7 @@ export default function GenericObjectListView() {
                             tableData={{}}
                             defaultHeaders={[]}
                             tableHeaders={[]}
+                            filterData={{}}
                             totalCount={0}
                             active_page_number={active_page_number}
                             page_size={page_size}
@@ -121,6 +122,7 @@ export default function GenericObjectListView() {
                         defaultHeaders={defaultHeaders}
                         objectType={headerData.object_type}
                         tableHeaders={tableHeaders}
+                        filterData={headerData.filters}
                         totalCount={listData.count}
                         active_page_number={active_page_number}
                         page_size={page_size}

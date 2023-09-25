@@ -49,6 +49,7 @@ export default function ObjectListTable({
     defaultHeaders,
     objectType,
     tableHeaders,
+    filterData,
     totalCount,
     active_page_number,
     page_size,
@@ -122,8 +123,7 @@ export default function ObjectListTable({
     const filtersPanel = useFiltersPanel({
         content: (
             <FiltersPanelContent
-                // TODO(norbert-mieczkowski-codilime): use actual lookup fields rather than table headers
-                lookupFields={tableHeaders}
+                lookupFields={filterData}
                 objectType={objectType}
             />
         ),
