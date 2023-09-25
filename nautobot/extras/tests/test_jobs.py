@@ -32,6 +32,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
 from nautobot.extras.jobs import get_job
+import nautobot.extras.test_jobs  # noqa: F401
 
 
 class JobTest(TestCase):
@@ -44,7 +45,7 @@ class JobTest(TestCase):
         Job test with field that is a default value that is falsey.
         https://github.com/nautobot/nautobot/issues/2039
         """
-        module = "field_default"
+        module = "nautobot.extras.test_jobs.field_default"
         name = "TestFieldDefault"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
@@ -63,7 +64,7 @@ class JobTest(TestCase):
         """
         Job test with field order.
         """
-        module = "field_order"
+        module = "nautobot.extras.test_jobs.field_order"
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
@@ -73,7 +74,7 @@ class JobTest(TestCase):
         """
         Job test without field_order.
         """
-        module = "no_field_order"
+        module = "nautobot.extras.test_jobs.no_field_order"
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
@@ -83,7 +84,7 @@ class JobTest(TestCase):
         """
         Job test without field_order with a variable inherited from the base class
         """
-        module = "no_field_order"
+        module = "nautobot.extras.test_jobs.no_field_order"
         name = "TestDefaultFieldOrderWithInheritance"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
@@ -94,7 +95,7 @@ class JobTest(TestCase):
 
     def test_dryrun_default(self):
         """Test that dryrun_default is reflected in job form."""
-        module = "dry_run"
+        module = "nautobot.extras.test_jobs.dry_run"
         name = "TestDryRun"
         job_class, job_model = get_job_class_and_model(module, name)
 
@@ -116,7 +117,7 @@ class JobTest(TestCase):
         """
         Test job form with custom task queues defined on the job class
         """
-        module = "task_queues"
+        module = "nautobot.extras.test_jobs.task_queues"
         name = "TestWorkerQueues"
         mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
         job_class, _ = get_job_class_and_model(module, name)
@@ -136,7 +137,7 @@ class JobTest(TestCase):
         """
         Test job form with custom task queues defined on the job class and overridden on the model
         """
-        module = "task_queues"
+        module = "nautobot.extras.test_jobs.task_queues"
         name = "TestWorkerQueues"
         mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
         job_class, job_model = get_job_class_and_model(module, name)
@@ -159,13 +160,13 @@ class JobTest(TestCase):
         Test job class supports_dryrun field and job model supports_dryrun field
         """
 
-        module = "dry_run"
+        module = "nautobot.extras.test_jobs.dry_run"
         name = "TestDryRun"
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertTrue(job_class.supports_dryrun)
         self.assertTrue(job_model.supports_dryrun)
 
-        module = "pass"
+        module = "nautobot.extras.test_jobs.success"
         name = "TestPass"
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
@@ -192,7 +193,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test which produces a warning log message because the time_limit is less than the soft_time_limit.
         """
-        module = "soft_time_limit_greater_than_time_limit"
+        module = "nautobot.extras.test_jobs.soft_time_limit_greater_than_time_limit"
         name = "TestSoftTimeLimitGreaterThanHardTimeLimit"
         job_result = create_job_result_and_run_job(module, name)
         log_warning = models.JobLogEntry.objects.filter(
@@ -209,7 +210,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test with pass result.
         """
-        module = "pass"
+        module = "nautobot.extras.test_jobs.success"
         name = "TestPass"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -218,7 +219,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test with JobResult Censored Sensitive Variables.
         """
-        module = "has_sensitive_variables"
+        module = "nautobot.extras.test_jobs.has_sensitive_variables"
         name = "TestHasSensitiveVariables"
         # This function create_job_result_and_run_job and the subsequent functions' arguments are very messy
         job_result = create_job_result_and_run_job(module, name, "local", 1, 2, "3", kwarg_1=1, kwarg_2="2")
@@ -230,7 +231,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test with fail result.
         """
-        module = "fail"
+        module = "nautobot.extras.test_jobs.fail"
         name = "TestFail"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -239,7 +240,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job with @transaction.atomic decorator test with pass result.
         """
-        module = "atomic_transaction"
+        module = "nautobot.extras.test_jobs.atomic_transaction"
         name = "TestAtomicDecorator"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -257,7 +258,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job with `with transaction.atomic()` context manager test with pass result.
         """
-        module = "atomic_transaction"
+        module = "nautobot.extras.test_jobs.atomic_transaction"
         name = "TestAtomicContextManager"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -275,7 +276,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job with @transaction.atomic decorator test with fail result.
         """
-        module = "atomic_transaction"
+        module = "nautobot.extras.test_jobs.atomic_transaction"
         name = "TestAtomicDecorator"
         job_result = create_job_result_and_run_job(module, name, fail=True)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -293,7 +294,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job with `with transaction.atomic()` context manager test with fail result.
         """
-        module = "atomic_transaction"
+        module = "nautobot.extras.test_jobs.atomic_transaction"
         name = "TestAtomicContextManager"
         job_result = create_job_result_and_run_job(module, name, fail=True)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -317,7 +318,7 @@ class JobTransactionTest(TransactionTestCase):
         - IPAddressWithMaskVar
         - IPNetworkVar
         """
-        module = "ipaddress_vars"
+        module = "nautobot.extras.test_jobs.ipaddress_vars"
         name = "TestIPAddresses"
         job_class, _job_model = get_job_class_and_model(module, name)
 
@@ -355,7 +356,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Test that an attempt is made at log redaction.
         """
-        module = "log_redaction"
+        module = "nautobot.extras.test_jobs.log_redaction"
         name = "TestLogRedaction"
         job_result = create_job_result_and_run_job(module, name)
 
@@ -369,7 +370,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Test that an attempt is made at log redaction.
         """
-        module = "log_skip_db_logging"
+        module = "nautobot.extras.test_jobs.log_skip_db_logging"
         name = "TestLogSkipDBLogging"
         job_result = create_job_result_and_run_job(module, name)
 
@@ -382,7 +383,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Test that Object variable fields behave as expected.
         """
-        module = "object_vars"
+        module = "nautobot.extras.test_jobs.object_vars"
         name = "TestObjectVars"
 
         # Prepare the job data
@@ -409,7 +410,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Test that an optional Object variable field behaves as expected.
         """
-        module = "object_var_optional"
+        module = "nautobot.extras.test_jobs.object_var_optional"
         name = "TestOptionalObjectVar"
         data = {"location": None}
         job_result = create_job_result_and_run_job(module, name, **data)
@@ -428,7 +429,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Test that a required Object variable field behaves as expected.
         """
-        module = "object_var_required"
+        module = "nautobot.extras.test_jobs.object_var_required"
         name = "TestRequiredObjectVar"
         data = {"location": None}
         job_result = create_job_result_and_run_job(module, name, **data)
@@ -441,7 +442,7 @@ class JobTransactionTest(TransactionTestCase):
         """
         Job test to see if the latest_result property is indeed returning the most recent job result
         """
-        module = "pass"
+        module = "nautobot.extras.test_jobs.success"
         name = "TestPass"
         job_result_1 = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -453,7 +454,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertEqual(job_result_2.date_done, latest_job_result.date_done)
 
     def test_job_profiling(self):
-        module = "profiling"
+        module = "nautobot.extras.test_jobs.profiling"
         name = "TestProfilingJob"
 
         # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
@@ -488,7 +489,7 @@ class JobFileUploadTest(TransactionTestCase):
 
     def test_run_job_pass(self):
         """Test that file upload succeeds; job SUCCEEDS; and files are deleted."""
-        module = "file_upload_pass"
+        module = "nautobot.extras.test_jobs.file_upload_pass"
         name = "TestFileUploadPass"
         job_class, _job_model = get_job_class_and_model(module, name)
 
@@ -518,7 +519,7 @@ class JobFileUploadTest(TransactionTestCase):
 
     def test_run_job_fail(self):
         """Test that file upload succeeds; job FAILS; files deleted."""
-        module = "file_upload_fail"
+        module = "nautobot.extras.test_jobs.file_upload_fail"
         name = "TestFileUploadFail"
         job_class, _job_model = get_job_class_and_model(module, name)
 
@@ -571,7 +572,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
     def test_runjob_nochange_successful(self):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
-        module = "pass"
+        module = "nautobot.extras.test_jobs.success"
         name = "TestPass"
         _job_class, job_model = get_job_class_and_model(module, name)
 
@@ -584,7 +585,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
     def test_runjob_wrong_username(self):
         """A job when run with a nonexistent username, is rejected."""
-        module = "modify_db"
+        module = "nautobot.extras.test_jobs.modify_db"
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
         with self.assertRaises(CommandError):
@@ -592,7 +593,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
     def test_runjob_db_change(self):
         """A job that changes the DB, successfully updates the DB."""
-        module = "modify_db"
+        module = "nautobot.extras.test_jobs.modify_db"
         name = "TestModifyDB"
         _job_class, job_model = get_job_class_and_model(module, name)
 
@@ -626,7 +627,7 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         self.request.user = self.user
 
     def test_run(self):
-        module = "location_with_custom_field"
+        module = "nautobot.extras.test_jobs.location_with_custom_field"
         name = "TestCreateLocationWithCustomField"
         job_result = create_job_result_and_run_job(module, name)
         job_result.refresh_from_db()
@@ -655,7 +656,7 @@ class JobButtonReceiverTest(TestCase):
     """
 
     def test_form_field(self):
-        module = "job_button_receiver"
+        module = "nautobot.extras.test_jobs.job_button_receiver"
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
@@ -664,20 +665,20 @@ class JobButtonReceiverTest(TestCase):
         )
 
     def test_hidden(self):
-        module = "job_button_receiver"
+        module = "nautobot.extras.test_jobs.job_button_receiver"
         name = "TestJobButtonReceiverSimple"
         _job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_model.hidden)
 
     def test_is_job_button(self):
         with self.subTest(expected=False):
-            module = "pass"
+            module = "nautobot.extras.test_jobs.success"
             name = "TestPass"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_button_receiver)
 
         with self.subTest(expected=True):
-            module = "job_button_receiver"
+            module = "nautobot.extras.test_jobs.job_button_receiver"
             name = "TestJobButtonReceiverSimple"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertTrue(job_model.is_job_button_receiver)
@@ -708,7 +709,7 @@ class JobButtonReceiverTransactionTest(TransactionTestCase):
         }
 
     def test_missing_receive_job_button_method(self):
-        module = "job_button_receiver"
+        module = "nautobot.extras.test_jobs.job_button_receiver"
         name = "TestJobButtonReceiverFail"
         job_result = create_job_result_and_run_job(module, name, **self.data)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -720,27 +721,27 @@ class JobHookReceiverTest(TestCase):
     """
 
     def test_form_field(self):
-        module = "job_hook_receiver"
+        module = "nautobot.extras.test_jobs.job_hook_receiver"
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
         self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_profile"])
 
     def test_hidden(self):
-        module = "job_hook_receiver"
+        module = "nautobot.extras.test_jobs.job_hook_receiver"
         name = "TestJobHookReceiverLog"
         _job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_model.hidden)
 
     def test_is_job_hook(self):
         with self.subTest(expected=False):
-            module = "pass"
+            module = "nautobot.extras.test_jobs.success"
             name = "TestPass"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_hook_receiver)
 
         with self.subTest(expected=True):
-            module = "job_hook_receiver"
+            module = "nautobot.extras.test_jobs.job_hook_receiver"
             name = "TestJobHookReceiverLog"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertTrue(job_model.is_job_hook_receiver)
@@ -770,7 +771,7 @@ class JobHookReceiverTransactionTest(TransactionTestCase):
         self.data = {"object_change": oc.id}
 
     def test_object_change_context(self):
-        module = "job_hook_receiver"
+        module = "nautobot.extras.test_jobs.job_hook_receiver"
         name = "TestJobHookReceiverChange"
         job_result = create_job_result_and_run_job(module, name, **self.data)
         test_location = Location.objects.get(name="test_jhr")
@@ -779,7 +780,7 @@ class JobHookReceiverTransactionTest(TransactionTestCase):
         self.assertEqual(oc.user_id, job_result.user.pk)
 
     def test_missing_receive_job_hook_method(self):
-        module = "job_hook_receiver"
+        module = "nautobot.extras.test_jobs.job_hook_receiver"
         name = "TestJobHookReceiverFail"
         job_result = create_job_result_and_run_job(module, name, **self.data)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -793,7 +794,7 @@ class JobHookTest(TestCase):
     def setUp(self):
         super().setUp()
 
-        module = "job_hook_receiver"
+        module = "nautobot.extras.test_jobs.job_hook_receiver"
         name = "TestJobHookReceiverLog"
         self.job_class, self.job_model = get_job_class_and_model(module, name)
         job_hook = models.JobHook(
@@ -824,7 +825,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
     def setUp(self):
         super().setUp()
 
-        module = "job_hook_receiver"
+        module = "nautobot.extras.test_jobs.job_hook_receiver"
         name = "TestJobHookReceiverLog"
         self.job_class, self.job_model = get_job_class_and_model(module, name)
         job_hook = models.JobHook(
@@ -887,7 +888,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         for i in range(1, 7):
             models.ScheduledJob.objects.create(
                 name=f"test{i}",
-                task="nautobot.extras.test_jobs.pass.TestPass",
+                task="nautobot.extras.test_jobs.success.TestPass",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
                 start_time=timezone.now() - datetime.timedelta(days=i * 30),
@@ -896,7 +897,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         models.ScheduledJob.objects.create(
             name="test7",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
             start_time=timezone.now() - datetime.timedelta(days=180),
@@ -924,7 +925,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = models.ScheduledJob.objects.create(
             name="weekly_interval",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,
             start_time=start_time,

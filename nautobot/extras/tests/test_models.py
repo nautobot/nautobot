@@ -882,7 +882,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.plugin_job.job_class, ExampleJob)
 
     def test_class_path(self):
-        self.assertEqual(self.local_job.class_path, "pass.TestPass")
+        self.assertEqual(self.local_job.class_path, "nautobot.extras.test_jobs.success.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
         self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
@@ -1587,7 +1587,7 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
     """
 
     def setUp(self):
-        module = "pass"
+        module = "nautobot.extras.test_jobs.success"
         name = "TestPass"
         job_class = get_job(f"{module}.{name}")
 

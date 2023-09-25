@@ -68,6 +68,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.jobs import JobHook, JobButton
+import nautobot.extras.test_jobs  # noqa: F401
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
@@ -1187,7 +1188,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         obj_perm = ObjectPermission(
             name="Test permission",
-            constraints={"module_name__in": ["pass", "fail"]},
+            constraints={"module_name__in": ["nautobot.extras.test_jobs.success", "nautobot.extras.test_jobs.fail"]},
             actions=["run"],
         )
         obj_perm.save()
@@ -1201,10 +1202,10 @@ class JobTest(
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
         # Try post to permitted job
-        job_model = Job.objects.get_for_class_path("nautobot.extras.test_jobs.pass.TestPass")
+        job_model = Job.objects.get_for_class_path("nautobot.extras.test_jobs.success.TestPass")
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("nautobot.extras.test_jobs.pass.TestPass")
+        url = self.get_run_url("nautobot.extras.test_jobs.success.TestPass")
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -1757,10 +1758,10 @@ class JobTest(
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
 
-        job_model = Job.objects.get_for_class_path("nautobot.extras.test_jobs.pass.TestPass")
+        job_model = Job.objects.get_for_class_path("nautobot.extras.test_jobs.success.TestPass")
         job_model.enabled = True
         job_model.validated_save()
-        url = self.get_run_url("nautobot.extras.test_jobs.pass.TestPass")
+        url = self.get_run_url("nautobot.extras.test_jobs.success.TestPass")
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
@@ -2011,10 +2012,10 @@ class ScheduledJobTest(
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        job_model = Job.objects.get_for_class_path("nautobot.extras.test_jobs.pass.TestPass")
+        job_model = Job.objects.get_for_class_path("nautobot.extras.test_jobs.success.TestPass")
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -2023,7 +2024,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -2032,7 +2033,7 @@ class ScheduledJobTest(
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
@@ -2054,12 +2055,12 @@ class JobApprovalTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.additional_user = User.objects.create(username="user1", is_active=True)
-        cls.job_model = Job.objects.get_for_class_path("nautobot.extras.test_jobs.pass.TestPass")
+        cls.job_model = Job.objects.get_for_class_path("nautobot.extras.test_jobs.success.TestPass")
         cls.job_model.enabled = True
         cls.job_model.save()
         cls.scheduled_job = ScheduledJob.objects.create(
             name="test pass",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             job_model=cls.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
@@ -2111,7 +2112,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -2134,7 +2135,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,
@@ -2151,7 +2152,7 @@ class JobApprovalTest(APITestCase):
         self.add_permissions("extras.approve_job", "extras.view_scheduledjob", "extras.change_scheduledjob")
         scheduled_job = ScheduledJob.objects.create(
             name="test",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_FUTURE,
             one_off=True,

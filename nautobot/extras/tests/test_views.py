@@ -50,6 +50,7 @@ from nautobot.extras.models import (
     Webhook,
     ComputedField,
 )
+import nautobot.extras.test_jobs  # noqa: F401
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
@@ -865,21 +866,21 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
             start_time=timezone.now(),
@@ -892,7 +893,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             start_time=timezone.now(),
@@ -909,7 +910,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="nautobot.extras.test_jobs.pass.TestPass",
+                task="nautobot.extras.test_jobs.success.TestPass",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -940,7 +941,7 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
             start_time=timezone.now(),
@@ -997,7 +998,7 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="nautobot.extras.test_jobs.pass.TestPass",
+            task="nautobot.extras.test_jobs.success.TestPass",
             job_model=self.job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
@@ -1090,6 +1091,8 @@ class ApprovalQueueTestCase(
         """A non-enabled job cannot be dry-run."""
         self.add_permissions("extras.view_scheduledjob")
         instance = self._get_queryset().first()
+        instance.job_model.enabled = False
+        instance.job_model.validated_save()
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
@@ -1104,8 +1107,6 @@ class ApprovalQueueTestCase(
         """A user without run_job permission cannot dry-run a job."""
         self.add_permissions("extras.view_scheduledjob")
         instance = self._get_queryset().first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
@@ -1125,10 +1126,6 @@ class ApprovalQueueTestCase(
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
-        instance1.job_model.enabled = True
-        instance1.job_model.save()
-        instance2.job_model.enabled = True
-        instance2.job_model.save()
 
         response = self.client.post(self._get_url("view", instance2), data)
         self.assertHttpStatus(response, 200)
@@ -1144,8 +1141,6 @@ class ApprovalQueueTestCase(
         """Request a dry run on a job that doesn't support dryrun."""
         self.add_permissions("extras.view_scheduledjob")
         instance = ScheduledJob.objects.filter(name="test2").first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
         obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -1164,8 +1159,6 @@ class ApprovalQueueTestCase(
         """Successfully request a dry run based on object-based run_job permissions."""
         self.add_permissions("extras.view_scheduledjob")
         instance = ScheduledJob.objects.filter(name="test1").first()
-        instance.job_model.enabled = True
-        instance.job_model.save()
         obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -1381,8 +1374,6 @@ class JobTestCase(
 
         # But we do need to make sure the ones we're testing are flagged appropriately
         cls.test_pass = Job.objects.get(job_class_name="TestPass")
-        cls.test_pass.enabled = True
-        cls.test_pass.save()
 
         cls.run_urls = (
             # Legacy URL (job class path based)
@@ -1392,8 +1383,6 @@ class JobTestCase(
         )
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
-        cls.test_required_args.enabled = True
-        cls.test_required_args.save()
 
         cls.extra_run_urls = (
             # Legacy URL (job class path based)
@@ -1566,10 +1555,13 @@ class JobTestCase(
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_not_enabled(self, _):
         self.add_permissions("extras.run_job")
+        test_job = Job.objects.get(job_class_name="TestFail")
+        test_job.enabled = False
+        test_job.validated_save()
 
         for run_url in (
-            reverse("extras:job_run_by_class_path", kwargs={"class_path": "fail.TestFail"}),
-            reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": test_job.class_path}),
+            reverse("extras:job_run", kwargs={"pk": test_job.pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)

@@ -158,3 +158,14 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             else:
                 self._run_device_job(obj)
         logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
+
+
+jobs = (
+    ExampleDryRunJob,
+    ExampleJob,
+    ExampleHiddenJob,
+    ExampleLoggingJob,
+    ExampleJobHookReceiver,
+    ExampleSimpleJobButtonReceiver,
+    ExampleComplexJobButtonReceiver,
+)

@@ -78,6 +78,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+import nautobot.extras.test_jobs  # noqa: F401
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
@@ -691,16 +692,43 @@ class JobFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
         Job.objects.last().tags.set(Tag.objects.get_for_model(Job)[:3])
 
     def test_grouping(self):
-        params = {"grouping": ["file_upload_pass", "file_upload_fail"]}
+        params = {
+            "grouping": ["nautobot.extras.test_jobs.file_upload_pass", "nautobot.extras.test_jobs.file_upload_fail"]
+        }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_installed(self):
-        params = {"job_class_name": "TestPass", "installed": True}
-        self.assertTrue(self.filterset(params, self.queryset).qs.exists())
+        for i in range(1, 4):
+            Job.objects.create(
+                module_name="uninstalled_module",
+                job_class_name=f"NoSuchJob{i}",
+                grouping="Uninstalled Module",
+                name=f"No such job {i}",
+                installed=False,
+                enabled=True,
+            )
+        with self.subTest(True):
+            params = {"installed": True}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Job.objects.filter(installed=True)
+            )
+        with self.subTest(False):
+            params = {"installed": False}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Job.objects.filter(installed=False)
+            )
 
     def test_enabled(self):
-        params = {"job_class_name": "TestPass", "enabled": False}
-        self.assertTrue(self.filterset(params, self.queryset).qs.exists())
+        with self.subTest(True):
+            params = {"enabled": True}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Job.objects.filter(enabled=True)
+            )
+        with self.subTest(False):
+            params = {"enabled": False}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, Job.objects.filter(enabled=False)
+            )
 
     def test_dryrun_default(self):
         params = {"dryrun_default": True}
