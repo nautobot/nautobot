@@ -91,7 +91,7 @@ class AppModelFilterSet(BaseFilterSet):
         fields = ["name", "number"]
 ```
 
-After `tag` filter is removed:
+After changing the base class to `NautobotFilterSet` the `tag` filter should be removed:
 
 ```py
 
