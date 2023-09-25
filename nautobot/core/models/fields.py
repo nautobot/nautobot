@@ -7,7 +7,6 @@ from django.core.validators import RegexValidator, MaxLengthValidator
 from django.db import models
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
-from django_jinja import library
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
 from taggit.managers import TaggableManager
 
@@ -65,7 +64,6 @@ def slugify_dots_to_dashes(content):
     return slugify(content.replace(".", "-"))
 
 
-@library.filter(name="slugify")
 def slugify_dashes_to_underscores(content):
     """
     Custom slugify_function - use underscores instead of dashes; resulting slug can be used as a variable name,
