@@ -2,10 +2,11 @@ import { faCalendarPlus, faPencil } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     BinIcon,
-    Box,
     Button as UIButton,
     ButtonGroup,
+    Divider,
     EditIcon,
+    Flex,
     Heading,
     MeatballsIcon,
     Menu,
@@ -21,47 +22,63 @@ import { humanFriendlyDate } from "@utils/date";
 
 export default function RenderHeader({ data }) {
     return (
-        <Box display="flex" justifyContent="space-between" padding="md">
-            <Heading display="flex" alignItems="center" gap="5px">
+        <Flex justify="space-between">
+            <Flex align="center" gap="md">
                 {/* TODO(Timizuo): Create a reusable component from <Heading><NtcThumbnailIcon /> {title}</Heading> */}
-                <NtcThumbnailIcon width="25px" height="30px" />{" "}
-                <Text size="H1" as="h1">
+                <Heading
+                    alignItems="center"
+                    as="h1"
+                    display="flex"
+                    gap="xs"
+                    size="H1"
+                >
+                    <NtcThumbnailIcon height="auto" width="24" />
                     {data.display}
-                </Text>
+                </Heading>
                 {data.status && (
-                    <Box p={2} flexGrow="1">
-                        <Text size="P2">
-                            <ReferenceDataTag
-                                model_name="statuses"
-                                id={data.status.id}
-                                variant="unknown"
-                                size="sm"
-                            />
-                        </Text>
-                    </Box>
+                    <Text size="P2">
+                        <ReferenceDataTag
+                            model_name="statuses"
+                            id={data.status.id}
+                            variant="unknown"
+                            size="sm"
+                        />
+                    </Text>
                 )}
+                <Divider height={10} orientation="vertical" />
                 {data.created && (
-                    <Box p={2} flexGrow="1">
-                        <Text size="P2" color="gray-2">
-                            <FontAwesomeIcon icon={faCalendarPlus} />
-                            {humanFriendlyDate(data.created)}
-                        </Text>
-                    </Box>
+                    <Text
+                        alignItems="center"
+                        color="gray-3"
+                        display="flex"
+                        gap="xs"
+                    >
+                        <FontAwesomeIcon
+                            icon={faCalendarPlus}
+                            style={{ height: 20, width: 20 }}
+                        />
+                        {humanFriendlyDate(data.created)}
+                    </Text>
                 )}
                 {data.last_updated && (
-                    <Box p={2} flexGrow="1">
-                        <Text size="P2" color="gray-2">
-                            <FontAwesomeIcon icon={faPencil} />
-                            {humanFriendlyDate(data.last_updated)}
-                        </Text>
-                    </Box>
+                    <Text
+                        alignItems="center"
+                        color="gray-3"
+                        display="flex"
+                        gap="xs"
+                    >
+                        <FontAwesomeIcon
+                            icon={faPencil}
+                            style={{ height: 20, width: 20 }}
+                        />
+                        {humanFriendlyDate(data.last_updated)}
+                    </Text>
                 )}
-            </Heading>
-            <ButtonGroup alignItems="center">
+            </Flex>
+            <ButtonGroup alignItems="center" spacing="md">
                 <Menu>
                     <MenuButton
                         as={UIButton}
-                        size="sm"
                         variant="primaryAction"
                         leftIcon={<MeatballsIcon />}
                     >
@@ -82,7 +99,6 @@ export default function RenderHeader({ data }) {
                                 }
                             }}
                         >
-                            {" "}
                             Edit
                         </MenuItem>
                         <MenuItem
@@ -99,12 +115,11 @@ export default function RenderHeader({ data }) {
                                 }
                             }}
                         >
-                            {" "}
                             Delete
                         </MenuItem>
                     </MenuList>
                 </Menu>
             </ButtonGroup>
-        </Box>
+        </Flex>
     );
 }

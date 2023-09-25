@@ -60,6 +60,15 @@ The signature of the `run()` method for Jobs must now accept keyword arguments f
             return a + b
     ```
 
+    ```py title="v2.0 Job - Easy Migration"
+    class AddJob(Job):
+        a = IntegerVar()
+        b = IntegerVar()
+
+        def run(self, **data):
+            return data["a"] + data["b"]
+    ```
+
 ### `test_*` and `post_run()` Methods
 
 The `test_*` and `post_run` methods, previously provided for backwards compatibility to NetBox scripts and reports, have been removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by Job authors to perform similar functions.

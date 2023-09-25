@@ -23,6 +23,7 @@ from nautobot.core.testing import (
 )
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Device, Location, LocationType
+from nautobot.extras import models
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
@@ -31,8 +32,6 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
 from nautobot.extras.jobs import get_job
-from nautobot.extras.models import CustomField, FileProxy, JobHook, JobResult, Role, ScheduledJob, Status
-from nautobot.extras.models.models import JobLogEntry
 
 
 class JobTest(TestCase):
@@ -196,7 +195,7 @@ class JobTransactionTest(TransactionTestCase):
         module = "soft_time_limit_greater_than_time_limit"
         name = "TestSoftTimeLimitGreaterThanHardTimeLimit"
         job_result = create_job_result_and_run_job(module, name)
-        log_warning = JobLogEntry.objects.filter(
+        log_warning = models.JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="initialization"
         ).first()
         self.assertEqual(
@@ -245,9 +244,9 @@ class JobTransactionTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         # Ensure DB transaction was not aborted
-        self.assertTrue(Status.objects.filter(name="Test database atomic rollback 1").exists())
+        self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
-        job_logs = JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
+        job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
         self.assertEqual(len(job_logs), 3)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job succeeded.", job_logs)
@@ -263,9 +262,9 @@ class JobTransactionTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         # Ensure DB transaction was not aborted
-        self.assertTrue(Status.objects.filter(name="Test database atomic rollback 2").exists())
+        self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
-        job_logs = JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
+        job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
         self.assertEqual(len(job_logs), 3)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job succeeded.", job_logs)
@@ -281,9 +280,9 @@ class JobTransactionTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name, fail=True)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         # Ensure DB transaction was aborted
-        self.assertFalse(Status.objects.filter(name="Test database atomic rollback 1").exists())
+        self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
-        job_logs = JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
+        job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
         self.assertEqual(len(job_logs), 3)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
@@ -299,9 +298,9 @@ class JobTransactionTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name, fail=True)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         # Ensure DB transaction was aborted
-        self.assertFalse(Status.objects.filter(name="Test database atomic rollback 2").exists())
+        self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
-        job_logs = JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
+        job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
         self.assertEqual(len(job_logs), 3)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
@@ -339,7 +338,7 @@ class JobTransactionTest(TransactionTestCase):
         # Need to pass a mock request object as execute_webhooks will be called with the creation of the objects.
         job_result = create_job_result_and_run_job(module, name, **data)
 
-        log_info = JobLogEntry.objects.filter(
+        log_info = models.JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
         ).first()
 
@@ -360,7 +359,7 @@ class JobTransactionTest(TransactionTestCase):
         name = "TestLogRedaction"
         job_result = create_job_result_and_run_job(module, name)
 
-        logs = JobLogEntry.objects.filter(job_result=job_result, grouping="run")
+        logs = models.JobLogEntry.objects.filter(job_result=job_result, grouping="run")
         self.assertGreater(logs.count(), 0)
         for log in logs:
             if log.message != "Job completed":
@@ -388,7 +387,7 @@ class JobTransactionTest(TransactionTestCase):
 
         # Prepare the job data
         device_ct = ContentType.objects.get_for_model(Device)
-        role = Role.objects.create(name="Device Role")
+        role = models.Role.objects.create(name="Device Role")
         role.content_types.add(device_ct)
         data = {
             "role": {"name": role.name},
@@ -396,7 +395,7 @@ class JobTransactionTest(TransactionTestCase):
         }
         job_result = create_job_result_and_run_job(module, name, **data)
 
-        info_log = JobLogEntry.objects.filter(
+        info_log = models.JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
         ).first()
 
@@ -415,7 +414,7 @@ class JobTransactionTest(TransactionTestCase):
         data = {"location": None}
         job_result = create_job_result_and_run_job(module, name, **data)
 
-        info_log = JobLogEntry.objects.filter(
+        info_log = models.JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
         ).first()
 
@@ -501,13 +500,13 @@ class JobFileUploadTest(TransactionTestCase):
 
         # Assert that the file was serialized to a FileProxy
         self.assertTrue(isinstance(serialized_data["file"], uuid.UUID))
-        self.assertEqual(serialized_data["file"], FileProxy.objects.latest().pk)
-        self.assertEqual(FileProxy.objects.count(), 1)
+        self.assertEqual(serialized_data["file"], models.FileProxy.objects.latest().pk)
+        self.assertEqual(models.FileProxy.objects.count(), 1)
 
         # Run the job
         job_result = create_job_result_and_run_job(module, name, **serialized_data)
 
-        warning_log = JobLogEntry.objects.filter(
+        warning_log = models.JobLogEntry.objects.filter(
             job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="run"
         ).first()
 
@@ -515,7 +514,7 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(warning_log.message, f"File contents: {self.file_contents}")  # "File contents: ..."
 
         # Assert that FileProxy was cleaned up
-        self.assertEqual(FileProxy.objects.count(), 0)
+        self.assertEqual(models.FileProxy.objects.count(), 0)
 
     def test_run_job_fail(self):
         """Test that file upload succeeds; job FAILS; files deleted."""
@@ -531,8 +530,8 @@ class JobFileUploadTest(TransactionTestCase):
 
         # Assert that the file was serialized to a FileProxy
         self.assertTrue(isinstance(serialized_data["file"], uuid.UUID))
-        self.assertEqual(serialized_data["file"], FileProxy.objects.latest().pk)
-        self.assertEqual(FileProxy.objects.count(), 1)
+        self.assertEqual(serialized_data["file"], models.FileProxy.objects.latest().pk)
+        self.assertEqual(models.FileProxy.objects.count(), 1)
 
         # Run the job
         job_result = create_job_result_and_run_job(module, name, **serialized_data)
@@ -543,14 +542,16 @@ class JobFileUploadTest(TransactionTestCase):
 
         # Assert that file contents were correctly read
         self.assertEqual(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="run")
+            models.JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_WARNING, grouping="run"
+            )
             .first()
             .message,
             f"File contents: {self.file_contents}",
         )
 
         # Assert that FileProxy was cleaned up
-        self.assertEqual(FileProxy.objects.count(), 0)
+        self.assertEqual(models.FileProxy.objects.count(), 0)
 
 
 class RunJobManagementCommandTest(TransactionTestCase):
@@ -602,13 +603,13 @@ class RunJobManagementCommandTest(TransactionTestCase):
         self.assertIn(f"{job_model.class_path}: SUCCESS", out)
         self.assertEqual("", err)
 
-        success_log = JobLogEntry.objects.filter(
+        success_log = models.JobLogEntry.objects.filter(
             log_level=LogLevelChoices.LOG_INFO, message="Status created successfully."
         )
         self.assertTrue(success_log.exists())
         self.assertEqual(success_log.count(), 1)
 
-        status = Status.objects.get(name="Test Status")
+        status = models.Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
 
 
@@ -636,7 +637,7 @@ class JobLocationCustomFieldTest(TransactionTestCase):
         location_1 = Location.objects.filter(name="Test Location One")
         self.assertEqual(location_1.count(), 1)
         location_1 = location_1.first()
-        self.assertEqual(CustomField.objects.filter(label="cf1").count(), 1)
+        self.assertEqual(models.CustomField.objects.filter(label="cf1").count(), 1)
         self.assertIn("cf1", location_1.cf)
         self.assertEqual(location_1.cf["cf1"], "some-value")
 
@@ -696,7 +697,7 @@ class JobButtonReceiverTransactionTest(TransactionTestCase):
         self.request.user = self.user
 
         self.location_type = LocationType.objects.create(name="Test Root Type 2")
-        status = Status.objects.get_for_model(Location).first()
+        status = models.Status.objects.get_for_model(Location).first()
         self.location = Location.objects.create(
             name="Test Job Button Location 1", location_type=self.location_type, status=status
         )
@@ -761,7 +762,7 @@ class JobHookReceiverTransactionTest(TransactionTestCase):
         # generate an ObjectChange by creating a new location
         with web_request_context(self.user):
             location_type = LocationType.objects.create(name="Test Root Type 1")
-            status = Status.objects.get_for_model(Location).first()
+            status = models.Status.objects.get_for_model(Location).first()
             location = Location(name="Test Location 1", location_type=location_type, status=status)
             location.save()
         location.refresh_from_db()
@@ -795,7 +796,7 @@ class JobHookTest(TestCase):
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         self.job_class, self.job_model = get_job_class_and_model(module, name)
-        job_hook = JobHook(
+        job_hook = models.JobHook(
             name="JobHookTest",
             type_create=True,
             job=self.job_model,
@@ -805,10 +806,10 @@ class JobHookTest(TestCase):
         job_hook.save()
         job_hook.content_types.set([obj_type])
 
-    @mock.patch.object(JobResult, "enqueue_job")
+    @mock.patch.object(models.JobResult, "enqueue_job")
     def test_enqueue_job_hook_skipped(self, mock_enqueue_job):
         change_context = JobHookChangeContext(user=self.user)
-        status = Status.objects.get_for_model(Location).first()
+        status = models.Status.objects.get_for_model(Location).first()
         with change_logging(change_context):
             Location.objects.create(name="Test Job Hook Location 2", location_type=self.location_type, status=status)
 
@@ -826,9 +827,10 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         self.job_class, self.job_model = get_job_class_and_model(module, name)
-        job_hook = JobHook(
+        job_hook = models.JobHook(
             name="JobHookTest",
             type_create=True,
+            type_update=True,
             job=self.job_model,
         )
         obj_type = ContentType.objects.get_for_model(Location)
@@ -837,11 +839,11 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         job_hook.content_types.set([obj_type])
 
     def test_enqueue_job_hook(self):
-        self.assertEqual(JobLogEntry.objects.count(), 0)
+        self.assertEqual(models.JobLogEntry.objects.count(), 0)
         with web_request_context(user=self.user):
-            status = Status.objects.get_for_model(Location).first()
+            status = models.Status.objects.get_for_model(Location).first()
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
-            job_result = JobResult.objects.get(job_model=self.job_model)
+            job_result = models.JobResult.objects.get(job_model=self.job_model)
             expected_log_messages = [
                 ("info", "Running job"),
                 ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
@@ -850,14 +852,40 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
                 ("info", "Test Job Hook Location 1"),
                 ("info", "Job completed"),
             ]
-            log_messages = JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
+            log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
+            self.assertSequenceEqual(log_messages, expected_log_messages)
+
+    def test_enqueue_job_hook_m2m(self):
+        """
+        Ensure that a change that's only M2M still triggers a JobHook.
+
+        https://github.com/nautobot/nautobot/issues/4327
+        """
+        self.assertEqual(models.JobLogEntry.objects.count(), 0)
+        status = models.Status.objects.get_for_model(Location).first()
+        loc = Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
+        models.ObjectChange.objects.all().delete()
+        tag = models.Tag.objects.create(name="A Test Tag")
+        tag.content_types.add(ContentType.objects.get_for_model(Location))
+        with web_request_context(user=self.user):
+            loc.tags.add(tag)
+            job_result = models.JobResult.objects.get(job_model=self.job_model)
+            expected_log_messages = [
+                ("info", "Running job"),
+                ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),
+                ("info", "action: update"),
+                ("info", f"jobresult.user: {self.user.username}"),
+                ("info", "Test Job Hook Location 1"),
+                ("info", "Job completed"),
+            ]
+            log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
             self.assertSequenceEqual(log_messages, expected_log_messages)
 
 
 class RemoveScheduledJobManagementCommandTestCase(TestCase):
     def test_remove_stale_scheduled_jobs(self):
         for i in range(1, 7):
-            ScheduledJob.objects.create(
+            models.ScheduledJob.objects.create(
                 name=f"test{i}",
                 task="pass.TestPass",
                 interval=JobExecutionType.TYPE_FUTURE,
@@ -866,7 +894,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
                 one_off=i % 2 == 0,  # True / False
             )
 
-        ScheduledJob.objects.create(
+        models.ScheduledJob.objects.create(
             name="test7",
             task="pass.TestPass",
             interval=JobExecutionType.TYPE_DAILY,
@@ -876,12 +904,12 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         out = StringIO()
         call_command("remove_stale_scheduled_jobs", 32, stdout=out)
-        self.assertEqual(ScheduledJob.objects.count(), 2)
+        self.assertEqual(models.ScheduledJob.objects.count(), 2)
         self.assertIn("Stale scheduled jobs deleted successfully", out.getvalue())
-        self.assertTrue(ScheduledJob.objects.filter(name="test7").exists())
-        self.assertTrue(ScheduledJob.objects.filter(name="test1").exists())
+        self.assertTrue(models.ScheduledJob.objects.filter(name="test7").exists())
+        self.assertTrue(models.ScheduledJob.objects.filter(name="test1").exists())
         for i in range(2, 7):
-            self.assertFalse(ScheduledJob.objects.filter(name=f"test{i}").exists())
+            self.assertFalse(models.ScheduledJob.objects.filter(name=f"test{i}").exists())
 
 
 class ScheduledJobIntervalTestCase(TestCase):
@@ -894,7 +922,7 @@ class ScheduledJobIntervalTestCase(TestCase):
 
     def test_weekly_interval(self):
         start_time = timezone.now() + datetime.timedelta(days=6)
-        scheduled_job = ScheduledJob.objects.create(
+        scheduled_job = models.ScheduledJob.objects.create(
             name="weekly_interval",
             task="pass.TestPass",
             interval=JobExecutionType.TYPE_WEEKLY,

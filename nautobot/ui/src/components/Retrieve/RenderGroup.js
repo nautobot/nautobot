@@ -1,24 +1,23 @@
-import { Card, CardHeader } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
 import {
+    Flex,
     Heading,
-    TableContainer,
     NtcThumbnailIcon,
+    TableContainer,
 } from "@nautobot/nautobot-ui";
 
 import RenderTable from "./RenderTable";
 
 function RenderGroup({ fields, title, schema, data }) {
     return (
-        <Card marginBottom="10">
-            <CardHeader marginBottom="3">
-                <Heading display="flex" alignItems="center" gap="5px">
-                    <NtcThumbnailIcon width="25px" height="30px" /> {title}
-                </Heading>
-            </CardHeader>
+        <Flex as="section" direction="column" gap="md">
+            <Heading alignItems="center" display="flex" gap="xs">
+                <NtcThumbnailIcon height="auto" width="24" />
+                {title}
+            </Heading>
             <TableContainer>
                 <RenderTable fields={fields} schema={schema} data={data} />
             </TableContainer>
-        </Card>
+        </Flex>
     );
 }
 

@@ -39,7 +39,7 @@ def enqueue_webhooks(instance, user, request_id, action):
         }
         serializer = serializer_class(instance, context=serializer_context)
         most_recent_change = get_changes_for_model(instance).first()
-        snapshots = most_recent_change.get_snapshots()
+        snapshots = most_recent_change.get_snapshots() if most_recent_change else {}
 
         # Enqueue the webhooks
         for webhook in webhooks:
