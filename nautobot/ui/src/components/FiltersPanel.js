@@ -522,7 +522,6 @@ export const FiltersPanelContent = forwardRef(
                                                 </Box>
                                                 {filter.value}
                                             </TagLabel>
-
                                             {filter.label !== "q" && (
                                                 <TagCloseButton
                                                     marginLeft="xs"
