@@ -6,7 +6,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
@@ -24,6 +24,8 @@ from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
     ModelViewSet,
+    ModelViewSetMixin,
+    NautobotAPIVersionMixin,
     ReadOnlyModelViewSet,
 )
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
@@ -85,11 +87,11 @@ class NotesViewSetMixin:
         responses={201: serializers.NoteSerializer(many=False)},
     )
     @action(detail=True, url_path="notes", methods=["get", "post"])
-    def notes(self, request, pk=None):
+    def notes(self, request, *args, **kwargs):
         """
         API methods for returning or creating notes on an object.
         """
-        obj = get_object_or_404(self.queryset, pk=pk)
+        obj = get_object_or_404(self.queryset, **{self.lookup_field: self.kwargs[self.lookup_url_kwarg]})
         if request.method == "POST":
             content_type = ContentType.objects.get_for_model(obj)
             data = request.data
@@ -428,16 +430,14 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
     return scheduled_job
 
 
-class JobViewSet(
-    # DRF mixins:
+class JobViewSetBase(
+    NautobotAPIVersionMixin,
     # note no CreateModelMixin
+    mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
-    # Nautobot mixins:
-    BulkUpdateModelMixin,
-    BulkDestroyModelMixin,
-    # Base class
-    ReadOnlyModelViewSet,
+    ModelViewSetMixin,
+    viewsets.GenericViewSet,
     NotesViewSetMixin,
 ):
     queryset = Job.objects.all()
@@ -446,7 +446,7 @@ class JobViewSet(
 
     @extend_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
     @action(detail=True, filterset_class=None)
-    def variables(self, request, pk):
+    def variables(self, request, *args, **kwargs):
         """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()
         job_class = job_model.job_class
@@ -506,7 +506,7 @@ class JobViewSet(
         permission_classes=[JobRunTokenPermissions],
         parser_classes=[JSONParser, MultiPartParser],
     )
-    def run(self, request, *args, pk, **kwargs):
+    def run(self, request, *args, **kwargs):
         """Run the specified Job."""
         job_model = self.get_object()
         if not request.user.has_perm("extras.run_job"):
@@ -653,6 +653,43 @@ class JobViewSet(
         if job_result:
             data["job_result"] = serializers.JobResultSerializer(job_result, context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
+
+
+class JobViewSet(
+    JobViewSetBase,
+    mixins.ListModelMixin,
+    BulkUpdateModelMixin,
+    BulkDestroyModelMixin,
+):
+    lookup_value_regex = r"[-0-9a-fA-F]+"
+
+
+@extend_schema_view(
+    destroy=extend_schema(operation_id="extras_jobs_destroy_by_name"),
+    partial_update=extend_schema(operation_id="extras_jobs_partial_update_by_name"),
+    notes=extend_schema(methods=["get"], operation_id="extras_jobs_notes_list_by_name"),
+    retrieve=extend_schema(operation_id="extras_jobs_retrieve_by_name"),
+    run=extend_schema(
+        methods=["post"],
+        operation_id="extras_jobs_run_create_by_name",
+        request={
+            "application/json": serializers.JobInputSerializer,
+            "multipart/form-data": serializers.JobMultiPartInputSerializer,
+        },
+        responses={"201": serializers.JobRunResponseSerializer},
+    ),
+    update=extend_schema(operation_id="extras_jobs_update_by_name"),
+    variables=extend_schema(operation_id="extras_jobs_variables_list_by_name"),
+)
+@extend_schema_view(
+    notes=extend_schema(methods=["post"], operation_id="extras_jobs_notes_create_by_name"),
+)
+class JobByNameViewSet(
+    JobViewSetBase,
+):
+    lookup_field = "name"
+    lookup_url_kwarg = "name"
+    lookup_value_regex = r"[^/]+"
 
 
 #
