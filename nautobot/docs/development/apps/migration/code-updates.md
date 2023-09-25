@@ -75,7 +75,7 @@ menu_items = (
 
 ### Remove Tag/Tags Filter from FilterSet Definitions
 
-In Nautobot 2.0, you can safely remove `tag = TagFilter(...)` from your filter set definitions as long as your filter sets inherit from `NautobotFilterSet` class and `tags` is added to the `class.Meta.fields`.
+In Nautobot 2.0, you can safely remove `tag = TagFilter(...)` from your filter set definitions as long as your filter sets inherit from `NautobotFilterSet` class and `tags` is added to the filter set class `Meta.fields`.
 
 For example, before the filter set could look like this:
 
@@ -91,7 +91,7 @@ class AppModelFilterSet(BaseFilterSet):
         fields = ["name", "number"]
 ```
 
-After `tag` filter is removed:
+After changing the base class to `NautobotFilterSet` the `tag` filter should be removed:
 
 ```py
 
