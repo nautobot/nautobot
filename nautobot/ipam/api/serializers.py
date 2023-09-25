@@ -162,7 +162,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "description",
         ]
         extra_kwargs = {
-            "ip_version": {"read_only": True},
+            "ip_version": {"read_only": True, "label": "IP Version"},
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
         }
@@ -192,24 +192,6 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 },
             ],
         }
-
-    @extend_schema_field(serializers.IntegerField)
-    def get_children(self, instance):
-        """
-        Return the child count of a prefix
-        """
-        return instance.descendants_count
-
-    @extend_schema_field(serializers.CharField)
-    def get_utilization(self, instance):
-        """
-        Return the child count of a prefix
-        """
-        utilization_data = instance.get_utilization()
-        numerator = utilization_data[0]
-        denominator = utilization_data[1]
-        utilization = round((numerator / denominator * 100), 1)
-        return str(utilization) + " %"
 
 
 class PrefixLengthSerializer(serializers.Serializer):

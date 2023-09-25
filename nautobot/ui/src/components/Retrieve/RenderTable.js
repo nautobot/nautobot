@@ -1,7 +1,6 @@
 import { Table, Tbody, Td, Tr } from "@nautobot/nautobot-ui";
 
 import { ObjectTableItem } from "@components";
-import { toTitleCase } from "@utils/string";
 
 function RenderTable({ fields, schema, data }) {
     return (
@@ -19,7 +18,7 @@ function RenderTable({ fields, schema, data }) {
                     }
                     return (
                         <Tr key={idx}>
-                            <Td>{toTitleCase(fieldSchema.title)}</Td>
+                            <Td>{fieldSchema.title}</Td>
                             <Td>
                                 <ObjectTableItem obj={fieldData} url={url} />
                             </Td>
