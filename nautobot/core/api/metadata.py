@@ -16,6 +16,7 @@ from nautobot.core.constants import RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA
 from nautobot.core.exceptions import ViewConfigException
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label
 
 
 # FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
@@ -308,8 +309,22 @@ class NautobotMetadata(SimpleMetadata):
             )
 
             metadata["view_options"] = self.determine_view_options(request, serializer)
+            metadata["filters"] = self.get_filter_info(view)
 
         return metadata
+
+    def get_filter_info(self, view):
+        """Get filter information for the view."""
+
+        if not getattr(view, "filterset_class", None):
+            return {}
+        filterset = view.filterset_class
+        filters = {}
+        for filter_name, filter in filterset.base_filters.items():
+            label = get_filter_field_label(filter)
+            lookup_label = build_lookup_label(filter_name, filter.lookup_expr)
+            filters.setdefault(label, []).append((filter_name, lookup_label))
+        return filters
 
     def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields):
         """Add fields from view serializer fields that are missing from view_config_layout."""
