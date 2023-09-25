@@ -126,7 +126,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Install NPM Dependencies"
         working-directory: ./nautobot/ui
-        run: "npm install"
+        run: "npm ci"
       - name: "Setup base aliases for tests"
         working-directory: ./nautobot/ui
         run: "mkdir generated && cp src/file_templates/jsconfig-base.json generated/jsconfig.paths.json"
