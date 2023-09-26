@@ -35,12 +35,21 @@ def render_relationships(form):
 
 
 @register.inclusion_tag("utilities/render_form.html")
-def render_form(form):
+def render_form(form, excluded_fields=None):
     """
-    Render an entire form from template
+    Render an entire form from template and default to skipping over `tags` and `object_note` fields.
+    Setting `excluded_fields` to [] prevents skipping over `tags` and `object_note` fields
+    in case they are used as Job variables or DynamicGroup filters.
+    See:
+    https://github.com/nautobot/nautobot/issues/4473
+    https://github.com/nautobot/nautobot/issues/4503
     """
+    if excluded_fields is None:
+        excluded_fields = ["tags", "object_note"]
+
     return {
         "form": form,
+        "excluded_fields": excluded_fields,
     }
 
 

@@ -77,12 +77,13 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
     filterset_class = filters.VirtualMachineFilterSet
 
 
-class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
+class VMInterfaceViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = VMInterface.objects.select_related(
         "virtual_machine",
         "parent_interface",
         "bridge",
         "status",
-    ).prefetch_related("tags", "tagged_vlans")
+        "untagged_vlan",
+    ).prefetch_related("tags", "ip_addresses", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet

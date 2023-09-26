@@ -18,6 +18,10 @@ The new Namespace model expands on the functionality previously provided by `VRF
 
 DeviceRole, RackRole, IPAM Role, and IPAddressRoleChoices have all been merged into a single generic Role model. A role can now be created and associated to one or more of the content-types that previously implemented role as a field. These model content-types include dcim.device, dcim.rack, virtualization.virtualmachine, ipam.ipaddress, ipam.prefix, and ipam.vlan.
 
+#### Added Capability to Assign IP Address to Multiple Interfaces ([#2403](https://github.com/nautobot/nautobot/issues/2403))
+
+<!-- TODO: We should mention that we added this capability and its use cases. -->
+
 #### Added Site Fields to Location ([#2954](https://github.com/nautobot/nautobot/issues/2954))
 
 Added Site Model Fields to Location. Location Model now has `asn`, `comments`, `contact_email`, `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
@@ -51,6 +55,10 @@ Nautobot's `BaseModel` base class and related classes now implement automatic su
 Developers can refer to the [documentation on natural keys](../development/core/natural-keys.md) for details on how to support and use this feature.
 
 Two new configuration settings, [`DEVICE_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/optional-settings.md#device_name_as_natural_key) and [`LOCATION_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/optional-settings.md#location_name_as_natural_key), have been added to allow an administrator to customize the natural-key behavior of these two widely-used models.
+
+#### Nautobot UI 2.0 Alpha ([#3142](https://github.com/nautobot/nautobot/issues/3142))
+
+<!-- TODO: There should be a section dedicated to our New ReactJS-based UI, describing its capabilities and limitations. -->
 
 ### Changed
 
@@ -138,17 +146,30 @@ Check out the [Region and Site Related Data Model Migration Guide](../user-guide
 
 `nautobot.utilities` no longer exists as a separate Python module or Django app. Its functionality has been collapsed into the `nautobot.core` app. See details at [Python Code Location Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#python-code-location-changes).
 
+#### Job Overhaul ([#765](https://github.com/nautobot/nautobot/issues/765))
+
+<!-- TODO: There should be a section dedicated to Job Overhaul and some subsections detailing the differnet parts of the change in 2.0.0 Release Overview. -->
+
+#### Changed DateField to DateTimeField for ChangeLoggedModel ([#2076](https://github.com/nautobot/nautobot/issues/2076))
+
+<!-- TODO: This change has a gloabl impact and should be mentioned in the release overview in my opinion. -->
+
 #### REST API Versioning Behavior ([#2799](https://github.com/nautobot/nautobot/issues/2799))
 
 In Nautobot 2.0 and later, the REST API defaults, when the caller doesn't request a specific API version, to using the latest available version of the REST API. This is a change from Nautobot 1.x, where the default behavior was to use the 1.2 version of the REST API even when newer versions were available.
 
-#### Revamped CSV Import and Export ([#2569](https://github.com/nautobot/nautobot/issues/2569), [#3715](https://github.com/nautobot/nautobot/issues/3715))
+#### Revamped CSV Import and Export ([#254](https://github.com/nautobot/nautobot/issues/254))
 
-Exporting objects and lists of objects to CSV format has been totally reimplemented in a new framework for ease of use and maintainability. Instead of accessing `http://nautobot/<app>/<model>/?export` you will now use the URL pattern `http://nautobot/api/<app>/<model>/?format=csv`, as the new CSV renderer is based on the REST API serializer definitions. This results in substantially more comprehensive CSV representations of many models.
+Exporting objects and lists of objects to CSV format has been totally reimplemented in a new framework for ease of use and maintainability. Instead of accessing `http://nautobot/<app>/<model>/?export` users can now use the URL pattern `http://nautobot/api/<app>/<model>/?format=csv` (the "Export" links in the UI have of course been updated accordingly), as the new CSV rendering for exports is based on the REST API serializer definitions. This results in substantially more comprehensive CSV representations of many models.
 
 Conversely, importing objects from CSV format has also been reimplemented in the same new framework. The REST API can now accept CSV files as well as the existing JSON support, and the UI for importing CSVs uses this same framework behind the scenes.
 
-An immediate benefit you can notice from this reimplementation is that CSVs should now **generally** be "round-trip" capable, meaning that you can export a set of records to CSV format and then import that CSV into a different Nautobot instance (or delete the records and use the CSV to recreate them) without needing to "massage" the CSV into a different set of columns or fields.
+!!! warning
+    The Nautobot 2.0 CSV formats for exports and imports are **not** backwards-compatible with the Nautobot 1.x CSV formats. In general, the CSV formats are subject to refinement in future releases, and should **not** be considered a stable API for data portability between differing Nautobot versions.
+
+An immediate benefit users can notice from this reimplementation is that CSVs should now **generally** be "round-trip" capable, meaning that you can export a set of records to CSV format and then import that CSV into a different Nautobot instance (or delete the records and use the CSV to recreate them) without needing to "massage" the CSV into a different set of columns or fields. One caveat to this is many-to-many fields (such as `VRF.import_targets` or `Interface.tagged_vlans`), which are not currently included in CSV exports or supported for CSV import, with the exception of object `tags` which are supported. Support for many-to-many export and import via CSV may be added in a future release.
+
+A benefit to App developers is that data models no longer need to define a `csv_headers` attribute or implement a `to_csv` method, because implementing the REST API for a model is now sufficient to enable CSV import/export support for that model. Similarly, there is no longer a need to implement a `CSVForm` for each model in order to support CSV import.
 
 In addition to the above improvements, you can now reference related objects in your CSV by using a combination of unique fields. For instance:
 
@@ -313,6 +334,14 @@ Check out the specific changes documented in the table at [UI and REST API Filte
 #### Removed RQ support ([#2523](https://github.com/nautobot/nautobot/issue/2523))
 
 Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully removed from Nautobot 2.0.
+
+#### Removed Legacy manage.py ([#1634](https://github.com/nautobot/nautobot/issues/1634))
+
+<!-- TODO: `manage.py` is something that every django app comes with. Removing it probably should be worth mentioning. -->
+
+#### Removed Slug Fields ([#2662](https://github.com/nautobot/nautobot/issues/2662))
+
+<!-- TODO: Slug field removal and its impact should be highlighted. -->
 
 <!-- towncrier release notes start -->
 ## v2.0.0-rc.3 (2023-09-15)
