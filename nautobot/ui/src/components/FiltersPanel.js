@@ -32,8 +32,6 @@ import React, {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { useLazyGetFieldLookupChoicesQuery } from "@utils/api";
-
 export const FILTER_RESET_QUERY_PARAMS = ["offset"];
 export const NON_FILTER_QUERY_PARAMS = [
     // Copied from `nautobot/core/api/filter_backends.py`.
@@ -273,13 +271,10 @@ export const FiltersPanelContent = forwardRef(
         const [lookupType, setLookupType] = useState(null);
         const [lookupValue, setLookupValue] = useState("");
 
-        const [triggerGetFieldLookupChoicesQuery, { data, error, isFetching }] =
-            useLazyGetFieldLookupChoicesQuery();
-
         const lookupFieldOptions = useMemo(
             () =>
-                lookupFields.map(({ key, title }) => ({
-                    label: title,
+                Object.entries(lookupFields).map(([key, value]) => ({
+                    label: value.label,
                     value: key,
                 })),
             [lookupFields]
@@ -287,13 +282,13 @@ export const FiltersPanelContent = forwardRef(
 
         const fieldLookupChoices = useMemo(
             () =>
-                error || isFetching
-                    ? []
-                    : data?.results?.map?.(({ id, name }) => ({
-                          label: name,
-                          value: id,
-                      })) ?? [],
-            [data, error, isFetching]
+                lookupField
+                    ? lookupFields[lookupField].lookup_types.map((filter) => ({
+                          value: filter.value,
+                          label: filter.label,
+                      }))
+                    : [],
+            [lookupField, lookupFields]
         );
 
         const onChangeLookupField = useCallback(
@@ -354,12 +349,6 @@ export const FiltersPanelContent = forwardRef(
             setLookupType(null);
             setLookupValue("");
         }, [lookupField, setLookupType, setLookupValue]);
-
-        useEffect(() => {
-            if (lookupField && objectType) {
-                triggerGetFieldLookupChoicesQuery({ lookupField, objectType });
-            }
-        }, [lookupField, objectType, triggerGetFieldLookupChoicesQuery]);
 
         useEffect(() => {
             if (

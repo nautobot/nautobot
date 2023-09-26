@@ -9,6 +9,5 @@ export const API_UI_READY_ROUTES = `${API_UI_BASE}/new-ui-ready-routes/`;
 export const API_OBJECT_COUNTS = `${API_UI_BASE}/get-object-counts/`;
 
 export const API_CORE_BASE = `${API_BASE}/core`;
-export const API_FIELD_LOOKUP_CHOICES = `${API_CORE_BASE}/filterset-fields/lookup-choices/`;
 
 export const AUTH_LOGOUT = "/logout/";
