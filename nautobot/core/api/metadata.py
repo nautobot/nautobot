@@ -333,7 +333,10 @@ class NautobotMetadata(SimpleMetadata):
             return {}
         filterset = view.filterset_class
         filters = {}
-        for filter_name, filter_class in filterset.base_filters.items():
+        for filter_name, filter_class in sorted(
+            filterset.base_filters.items(),
+            key=lambda x: get_filter_field_label(x[1]),
+        ):
             filter_key = filter_name.rsplit("__", 1)[0]
             label = get_filter_field_label(filter_class)
             lookup_label = build_lookup_label(filter_name, filter_class.lookup_expr)
