@@ -83,8 +83,10 @@ export default function GenericView({
     columns = "4",
     objectData,
     rows,
-    gridBackground = "",
+    gridBackground,
 }) {
+    const BREADCRUMB_KEY_HOME = "0_home";
+
     const { pathname } = useLocation();
     const { data: menu, isSuccess } = useGetUIMenuQuery();
 
@@ -99,7 +101,7 @@ export default function GenericView({
                 if (pathname === "/" || !isSuccess || !menu) {
                     return [
                         {
-                            key: `0_home`,
+                            key: BREADCRUMB_KEY_HOME,
                             type: "text",
                         },
                     ];
@@ -111,10 +113,14 @@ export default function GenericView({
 
     const currentState = useSelector((state) => state.appState);
 
+    const hasBreadcrumbs =
+        breadcrumbs.length > 0 && breadcrumbs[0].key !== BREADCRUMB_KEY_HOME;
+
     return (
         <Flex
-            direction="column"
             background="gray-0"
+            direction="column"
+            gap="md"
             height="full"
             paddingTop="md"
             width="full"
@@ -122,18 +128,18 @@ export default function GenericView({
             <Navbar appState={currentState} />
 
             <Flex flex="1" overflow="hidden">
-                <Box
-                    flex="1"
-                    overflow="auto"
-                    paddingX="md"
-                    paddingTop="sm"
-                    paddingBottom="md"
-                >
-                    <Breadcrumbs position="relative" zIndex="5">
-                        {breadcrumbs.map((props) => (
-                            <Breadcrumb {...props} />
-                        ))}
-                    </Breadcrumbs>
+                <Box flex="1" overflow="auto" paddingBottom="md" paddingX="md">
+                    {hasBreadcrumbs ? (
+                        <Breadcrumbs
+                            marginBottom="md"
+                            position="relative"
+                            zIndex="5"
+                        >
+                            {breadcrumbs.map((props) => (
+                                <Breadcrumb {...props} />
+                            ))}
+                        </Breadcrumbs>
+                    ) : null}
 
                     <NautobotGrid
                         alignItems="start"
@@ -141,7 +147,9 @@ export default function GenericView({
                         rows={rows}
                         background={gridBackground}
                         gridAutoRows="auto"
-                        marginTop="sm"
+                        {...(hasBreadcrumbs
+                            ? { minHeight: "auto" }
+                            : undefined)}
                     >
                         {typeof children === "function"
                             ? children(menuPath)
