@@ -311,7 +311,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         can override this to move additional serializer fields to this or other tabs.
 
         Returns:
-            dict: `{<tab label>: [{<panel label>: {"fields": [<list of fields>]}, ...}, ...], ...}`
+            (dict): `{<tab label>: [{<panel label>: {"fields": [<list of fields>]}, ...}, ...], ...}`
         """
         return {
             "Advanced": [{"Object Details": {"fields": self.advanced_tab_fields}}],
@@ -339,7 +339,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             }
 
         Returns:
-            A list representing the view config.
+            (list): A list representing the view config.
         """
         m2m_fields, other_fields = self._get_m2m_and_non_m2m_fields()
         # TODO(timizuo): How do we get verbose_name of not model serializers?
@@ -387,7 +387,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             detail_view_config (dict): `{"layout": [{<left-column>}, {<right-column}], "include_others": False}`
 
         Returns:
-            list: `[{"Panel 1 Name": {"fields": ["field1", "field2", ...]}, "Panel 2 Name": ...}, {...}]`
+            (list): `[{"Panel 1 Name": {"fields": ["field1", "field2", ...]}, "Panel 2 Name": ...}, {...}]`
         """
         fields_to_always_move_to_right_column = [
             "comments",
