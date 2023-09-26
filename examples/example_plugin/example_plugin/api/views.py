@@ -26,14 +26,6 @@ class ExampleModelViewSet(NautobotModelViewSet):
     serializer_class = ExampleModelSerializer
     filterset_class = ExampleModelFilterSet
 
-    @action(detail=False, methods=["get"], url_path="custom_action_get_all_example_model_names")
-    def custom_action_get_all_example_model_names(self, request):
-        """
-        Returns a list of all the example model names.
-        """
-        all_example_models = ExampleModel.objects.all()
-        return Response([model.name for model in all_example_models])
-
 
 #
 # Webhook Testing

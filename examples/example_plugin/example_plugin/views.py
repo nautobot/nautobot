@@ -1,5 +1,7 @@
 from django.shortcuts import HttpResponse, render
 from django.views.generic import View
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from nautobot.apps import views
 from nautobot.circuits.models import Circuit
@@ -76,6 +78,14 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+
+    @action(detail=False, methods=["get"], url_path="custom_action_get_all_example_model_names")
+    def custom_action_get_all_example_model_names(self, request):
+        """
+        Returns a list of all the example model names.
+        """
+        all_example_models = ExampleModel.objects.all()
+        return Response({"data": [model.name for model in all_example_models]})
 
 
 # Example excluding the BulkUpdateViewSet
