@@ -273,9 +273,9 @@ export const FiltersPanelContent = forwardRef(
 
         const lookupFieldOptions = useMemo(
             () =>
-                Object.keys(lookupFields).map((label) => ({
-                    label: label,
-                    value: label,
+                Object.entries(lookupFields).map(([key, value]) => ({
+                    label: value.label,
+                    value: key,
                 })),
             [lookupFields]
         );
@@ -283,9 +283,9 @@ export const FiltersPanelContent = forwardRef(
         const fieldLookupChoices = useMemo(
             () =>
                 lookupField
-                    ? lookupFields[lookupField].map(([value, label]) => ({
-                          value: value,
-                          label: label,
+                    ? lookupFields[lookupField].lookup_types.map((filter) => ({
+                          value: filter.value,
+                          label: filter.label,
                       }))
                     : [],
             [lookupField, lookupFields]

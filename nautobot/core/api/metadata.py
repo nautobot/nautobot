@@ -314,16 +314,31 @@ class NautobotMetadata(SimpleMetadata):
         return metadata
 
     def get_filter_info(self, view):
-        """Get filter information for the view."""
+        """Enumerate filterset information for the view. Returns a dictionary with the following format:
+
+        {
+            "filter_name": {
+                "label": "Filter Label",
+                "lookup_types": [
+                    {"value": "filter_name__n", "label": "not exact (n)"},
+                    {"value": "filter_name__re", "label": "matches regex (re)"},
+                    ...
+                ]
+            }
+        }
+
+        """
 
         if not getattr(view, "filterset_class", None):
             return {}
         filterset = view.filterset_class
         filters = {}
-        for filter_name, filter in filterset.base_filters.items():
-            label = get_filter_field_label(filter)
-            lookup_label = build_lookup_label(filter_name, filter.lookup_expr)
-            filters.setdefault(label, []).append((filter_name, lookup_label))
+        for filter_name, filter_class in filterset.base_filters.items():
+            filter_key = filter_name.rsplit("__", 1)[0]
+            label = get_filter_field_label(filter_class)
+            lookup_label = build_lookup_label(filter_name, filter_class.lookup_expr)
+            filters.setdefault(filter_key, {"label": label})
+            filters[filter_key].setdefault("lookup_types", []).append({"value": filter_name, "label": lookup_label})
         return filters
 
     def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields):
