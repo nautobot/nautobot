@@ -77,7 +77,7 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
     filterset_class = filters.VirtualMachineFilterSet
 
 
-class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
+class VMInterfaceViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = VMInterface.objects.select_related(
         "virtual_machine",
         "parent_interface",

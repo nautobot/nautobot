@@ -1052,6 +1052,7 @@ class JobTest(
     APIViewTestCases.ListObjectsViewTestCase,
     APIViewTestCases.UpdateObjectViewTestCase,
     APIViewTestCases.DeleteObjectViewTestCase,
+    APIViewTestCases.NotesURLViewTestCase,
 ):
     """Test cases for the Jobs REST API."""
 
