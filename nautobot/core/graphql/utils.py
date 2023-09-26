@@ -36,10 +36,10 @@ def get_filtering_args_from_filterset(filterset_class):
     if the filter field is a subclass of MultipleChoiceFilter, the argument will be converted as a list
 
     Args:
-        filterset_class(FilterSet): FilterSet class used to extract the argument
+        filterset_class (FilterSet): FilterSet class used to extract the argument
 
     Returns:
-        dict(graphene.Argument): Filter Arguments organized in a dictionary
+        (dict[graphene.Argument]): Filter Arguments organized in a dictionary
     """
 
     args = {}
