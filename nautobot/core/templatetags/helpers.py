@@ -9,6 +9,7 @@ from django.contrib.staticfiles.finders import find
 from django.templatetags.static import StaticNode, static
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
+from django.utils.text import slugify as django_slugify
 from django.utils.safestring import mark_safe
 from django_jinja import library
 from markdown import markdown
@@ -407,7 +408,7 @@ def get_docs_url(model):
     # Check to see if documentation exists in any of the static paths.
     if find(path):
         return static(path)
-    logger.debug("No documentation found for %s (expected to find it at %s)", model, path)
+    logger.debug("No documentation found for %s (expected to find it at %s)", type(model), path)
     return None
 
 
@@ -520,6 +521,12 @@ def quote_string(value):
     if isinstance(value, str):
         return f'"{value}"'
     return value
+
+
+@library.filter()
+def slugify(value):
+    """Return a slugified version of the value."""
+    return django_slugify(value)
 
 
 #

@@ -46,4 +46,4 @@ services:
       - "6006:6006"
     entrypoint: ""
     # TODO this needs to ensure the version of nautobot-ui remains in sync with package-lock.json
-    command: bash -c "git clone https://github.com/nautobot/nautobot-ui.git && cd nautobot-ui && npm install && npm run storybook|| npm run storybook"
+    command: bash -c "git clone https://github.com/nautobot/nautobot-ui.git && cd nautobot-ui && npm ci && npm run storybook|| npm run storybook"
