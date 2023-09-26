@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
+import django_filters
 from django.http import Http404
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
@@ -333,16 +334,22 @@ class NautobotMetadata(SimpleMetadata):
             return {}
         filterset = view.filterset_class
         filters = {}
-        for filter_name, filter_class in sorted(
+        for filter_name, filter_instance in sorted(
             filterset.base_filters.items(),
             key=lambda x: get_filter_field_label(x[1]),
         ):
             filter_key = filter_name.rsplit("__", 1)[0]
-            label = get_filter_field_label(filter_class)
-            lookup_label = build_lookup_label(filter_name, filter_class.lookup_expr)
+            label = get_filter_field_label(filter_instance)
+            lookup_label = self._filter_lookup_label(filter_name, filter_instance)
             filters.setdefault(filter_key, {"label": label})
             filters[filter_key].setdefault("lookup_types", []).append({"value": filter_name, "label": lookup_label})
         return filters
+
+    def _filter_lookup_label(self, filter_name, filter_instance):
+        """Fix confusing lookup labels for boolean filters."""
+        if isinstance(filter_instance, django_filters.BooleanFilter):
+            return "exact"
+        return build_lookup_label(filter_name, filter_instance.lookup_expr)
 
     def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields):
         """Add fields from view serializer fields that are missing from view_config_layout."""
