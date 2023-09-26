@@ -479,12 +479,13 @@ class NautobotMetadata(SimpleMetadata):
             if "Tags" in entry:
                 tags_field_included = True
                 break
-        if (
-            detail_view
-            and hasattr(model, "tags")
-            and not tags_field_included
-        ):
-            view_config["layout"].append({"Tags": {"fields": ["tags"]}})
+        if detail_view and hasattr(model, "tags") and not tags_field_included:
+            # Two columns already specified
+            if len(view_config["layout"]) == 2:
+                view_config["layout"][1].update({"Tags": {"fields": ["tags"]}})
+            # Only one column is specified
+            else:
+                view_config["layout"].append({"Tags": {"fields": ["tags"]}})
 
         # 2. Validate `Other Fields` is not part of a layout group name, as this is a nautobot reserver keyword for group names
         for col in view_config["layout"]:
