@@ -9,6 +9,7 @@ from django.contrib.staticfiles.finders import find
 from django.templatetags.static import StaticNode, static
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
+from django.utils.text import slugify as django_slugify
 from django.utils.safestring import mark_safe
 from django_jinja import library
 from markdown import markdown
@@ -520,6 +521,12 @@ def quote_string(value):
     if isinstance(value, str):
         return f'"{value}"'
     return value
+
+
+@library.filter()
+def slugify(value):
+    """Return a slugified version of the value."""
+    return django_slugify(value)
 
 
 #
