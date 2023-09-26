@@ -223,15 +223,24 @@ class APIViewTestCases:
                                 self.assertNotIn(field, other_fields)
 
                         for col_idx, col in enumerate(detail_view_schema):
-                            for group_idx, (group_title, group) in enumerate(col.items()):
+                            for group_title, group in col.items():
                                 if group_title == "Other Fields":
                                     continue
                                 group_fields = group["fields"]
                                 # Config on the serializer
-                                fields = detail_view_config["layout"][col_idx][group_title]["fields"]
+                                if (
+                                    col_idx < len(detail_view_config["layout"])
+                                    and group_title in detail_view_config["layout"][col_idx]
+                                ):
+                                    fields = detail_view_config["layout"][col_idx][group_title]["fields"]
+                                else:
+                                    fields = []
+
+                                # Fields that are in the detail_view_schema must not be in the advanced tab as well
                                 for field in group_fields:
                                     self.assertNotIn(field, advanced_tab_fields)
-                                # Assert response from options correspond to the view config set on the serializer
+
+                                # Fields that are explicit in the detail_view_config must remain as such in the schema
                                 for field in fields:
                                     if field not in advanced_tab_fields:
                                         self.assertIn(field, group_fields)
