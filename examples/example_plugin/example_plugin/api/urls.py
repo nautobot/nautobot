@@ -8,6 +8,7 @@ router = OrderedDefaultRouter()
 router.register("models", ExampleModelViewSet)
 router.register("other-models", AnotherExampleModelViewSet)
 
+print(router.urls)
 urlpatterns = [
     path(
         "webhook/", ExampleModelWebhook.as_view(), name="examplemodel_webhook"
