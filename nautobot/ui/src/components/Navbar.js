@@ -49,6 +49,7 @@ export function Navbar() {
     const location = useLocation();
     const navigate = useNavigate(); // For use in navigating to the list view with the search params in the URL
     const { data: readyRoutes } = useGetNewUIReadyRoutesQuery();
+    const isListOrDetailView = Boolean(app_label && model_name);
 
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -68,13 +69,14 @@ export function Navbar() {
         const changeHandler = (event) => {
             if (object_id) {
                 navigate(
-                    `/${app_label}/${model_name}/?q=${event.target.value}`
+                    `/${app_label}/${model_name}/?${new URLSearchParams([
+                        ["q", event.target.value],
+                    ])}`
                 );
             } else {
-                let filters = [];
-                if (event.target.value !== "") {
-                    filters = [["q", event.target.value]];
-                }
+                const filters = event.target.value
+                    ? [["q", event.target.value]]
+                    : [];
                 setSearchParams([
                     ...filters,
                     ...[...searchParams].filter(
@@ -101,7 +103,7 @@ export function Navbar() {
             placeholder="Search..."
             defaultValue={searchParams.get("q")}
             onChange={debouncedOnChangeSearchBox}
-            disabled={app_label && model_name ? false : true} // Disable search box if not on a list or detail view (global search is not yet implemented)
+            disabled={!isListOrDetailView} // Disable search box if not on a list or detail view (global search is not yet implemented)
         />
     );
 
@@ -163,7 +165,7 @@ export function Navbar() {
             <Tooltip
                 label="Global search is not yet implemented."
                 placement="bottom"
-                isDisabled={app_label && model_name ? true : false} // Disable tooltip if on a list or detail view (contextual search is implemented)
+                isDisabled={isListOrDetailView} // Disable tooltip if on a list or detail view (contextual search is implemented)
             >
                 <InputGroup flex="1" size="lg" variant="navbar">
                     <InputLeftElement>
