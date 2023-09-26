@@ -59,6 +59,12 @@ class NautobotUIViewSetRouter(SimpleRouter):
             detail=True,
             initkwargs={"suffix": "Detail"},
         ),
+        DynamicRoute(
+            url=r"^{prefix}/{url_path}{trailing_slash}$",
+            name="{basename}_{url_name}",
+            detail=False,
+            initkwargs={},
+        ),
         Route(
             url=r"^{prefix}/{lookup}/delete/$",
             mapping={

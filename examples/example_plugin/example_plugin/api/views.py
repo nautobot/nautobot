@@ -3,6 +3,7 @@ import os
 import tempfile
 
 from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,6 +25,14 @@ class ExampleModelViewSet(NautobotModelViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = ExampleModelSerializer
     filterset_class = ExampleModelFilterSet
+
+    @action(detail=False, methods=["get"], url_path="custom_action_get_all_example_model_names")
+    def custom_action_get_all_example_model_names(self, request):
+        """
+        Returns a list of all the example model names.
+        """
+        all_example_models = ExampleModel.objects.all()
+        return Response([model.name for model in all_example_models])
 
 
 #
