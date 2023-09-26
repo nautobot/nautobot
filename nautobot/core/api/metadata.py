@@ -342,7 +342,7 @@ class NautobotMetadata(SimpleMetadata):
             ]
         """
         if detail:
-            # TODO(timizuo): Add a standardized way of handling `tenant` fields, Possible should be on last items on second col.
+            # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
             fields_to_remove = [
                 "display",
                 "status",
@@ -450,7 +450,7 @@ class NautobotMetadata(SimpleMetadata):
     def determine_detail_view_schema(self, serializer):
         """Determine the layout option that would be used for the detail view"""
         if hasattr(serializer.Meta, "detail_view_config"):
-            view_config = self.validate_view_config(serializer, serializer.Meta.detail_view_config, detail_view=True)
+            view_config = self.validate_view_config(serializer.Meta.detail_view_config)
         else:
             view_config = self.get_default_detail_view_config(serializer)
         return self.restructure_view_config(serializer, view_config)
@@ -458,33 +458,17 @@ class NautobotMetadata(SimpleMetadata):
     def determine_advanced_view_schema(self, serializer):
         """Determine the layout option that would be used for the detail view advanced tab"""
         if hasattr(serializer.Meta, "advanced_view_config"):
-            view_config = self.validate_view_config(serializer, serializer.Meta.advanced_view_config)
+            view_config = self.validate_view_config(serializer.Meta.advanced_view_config)
         else:
             view_config = self.get_default_advanced_view_config()
-        return self.restructure_view_config(serializer, view_config, detail=False)
+        return self.restructure_view_config(view_config)
 
-    def validate_view_config(self, serializer, view_config, detail_view=False):
+    def validate_view_config(self, view_config):
         """Validate view config"""
 
         # 1. Validate key `layout` is in view_config; as this is a required key is creating a view config
         if not view_config["layout"]:
             raise ViewConfigException("`layout` is a required key in creating a custom view_config")
-
-        # Check if this is a tagged model and it is a detail_view_config,
-        # If so we add tags automatically to the right column of the detail view display.
-        model = serializer.Meta.model
-        tags_field_included = False
-        for entry in view_config["layout"]:
-            if "Tags" in entry:
-                tags_field_included = True
-                break
-        if detail_view and hasattr(model, "tags") and not tags_field_included:
-            # Two columns already specified
-            if len(view_config["layout"]) == 2:
-                view_config["layout"][1].update({"Tags": {"fields": ["tags"]}})
-            # Only one column is specified
-            else:
-                view_config["layout"].append({"Tags": {"fields": ["tags"]}})
 
         # 2. Validate `Other Fields` is not part of a layout group name, as this is a nautobot reserver keyword for group names
         for col in view_config["layout"]:

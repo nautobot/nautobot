@@ -219,9 +219,6 @@ class APIViewTestCases:
                 if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
                     detail_view_schema = response.data["view_options"]["retrieve"]
                     self.assertHttpStatus(response, status.HTTP_200_OK)
-                    # "Tags" and its field should be automatically added when the object has a `tags` attribute
-                    if hasattr(self._get_queryset().model, "tags"):
-                        self.assertIn({"Tags": {"fields": ["tags"]}}, detail_view_schema)
 
                     # According to convention, fields in the advanced tab fields should not exist in
                     # the `detail_view_schema`. Assert this is True.
