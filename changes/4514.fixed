@@ -1,1 +1,1 @@
-Fixed an issue with alter_queryset not being implemented when constructing a table.
+Fixed an issue with `alter_queryset` not being called when constructing a table.
