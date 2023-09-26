@@ -346,6 +346,7 @@ class NautobotMetadata(SimpleMetadata):
             fields_to_remove = [
                 "display",
                 "status",
+                "tags",
                 "custom_fields",
                 "relationships",
                 "computed_fields",
@@ -461,7 +462,7 @@ class NautobotMetadata(SimpleMetadata):
             view_config = self.validate_view_config(serializer.Meta.advanced_view_config)
         else:
             view_config = self.get_default_advanced_view_config()
-        return self.restructure_view_config(view_config)
+        return self.restructure_view_config(serializer, view_config, detail=False)
 
     def validate_view_config(self, view_config):
         """Validate view config"""
