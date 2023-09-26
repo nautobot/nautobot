@@ -41,7 +41,6 @@ from nautobot.core.forms.fields import (
     SlugField,
     TagFilterField,
 )
-from nautobot.core.forms.search import SearchForm
 from nautobot.core.forms.utils import (
     add_field_to_filter_form_class,
     expand_alphanumeric_pattern,
@@ -168,7 +167,6 @@ __all__ = (
     "ReturnURLForm",
     "RoleModelBulkEditFormMixin",
     "RoleModelFilterFormMixin",
-    "SearchForm",
     "SelectWithDisabled",
     "SelectWithPK",
     "SlugField",

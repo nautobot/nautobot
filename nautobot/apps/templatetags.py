@@ -70,14 +70,6 @@ from nautobot.extras.templatetags.computed_fields import computed_fields, has_co
 from nautobot.extras.templatetags.custom_links import custom_links
 from nautobot.extras.templatetags.job_buttons import job_buttons
 from nautobot.extras.templatetags.log_levels import log_level
-from nautobot.extras.templatetags.plugins import (
-    plugin_banners,
-    plugin_buttons,
-    plugin_full_width_page,
-    plugin_left_page,
-    plugin_object_detail_tabs,
-    plugin_right_page,
-)
 from nautobot.extras.templatetags.registry import do_registry
 
 
@@ -112,8 +104,8 @@ __all__ = (
     "has_one_or_more_perms",
     "has_perms",
     "humanize_speed",
-    "hyperlinked_object_with_color",
     "hyperlinked_object",
+    "hyperlinked_object_with_color",
     "import_button",
     "is_new_ui_ready",
     "job_buttons",
@@ -124,12 +116,6 @@ __all__ = (
     "modal_form_as_dialog",
     "percentage",
     "placeholder",
-    "plugin_banners",
-    "plugin_buttons",
-    "plugin_full_width_page",
-    "plugin_left_page",
-    "plugin_object_detail_tabs",
-    "plugin_right_page",
     "queryset_to_pks",
     "querystring",
     "quote_string",
@@ -150,8 +136,8 @@ __all__ = (
     "table_config_form",
     "tag",
     "tzoffset",
-    "utilization_graph_raw_data",
     "utilization_graph",
+    "utilization_graph_raw_data",
     "validated_viewname",
     "viewname",
     "widget_type",

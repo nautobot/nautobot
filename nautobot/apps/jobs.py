@@ -1,7 +1,5 @@
 """Nautobot Jobs API."""
 
-from celery.utils.log import get_task_logger
-
 from nautobot.core.celery import register_jobs
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.jobs import GitRepositoryDryRun, GitRepositorySync
@@ -42,7 +40,6 @@ __all__ = (
     "enqueue_job_hooks",
     "FileVar",
     "get_job",
-    "get_task_logger",
     "GitRepositoryDryRun",
     "GitRepositorySync",
     "IntegerVar",

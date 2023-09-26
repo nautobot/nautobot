@@ -16,9 +16,6 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
     PermissionsMixin,
-    register_homepage_panels,
-    register_menu_items,
-    register_new_ui_menu_items,
 )
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.extras.choices import BannerClassChoices
@@ -45,8 +42,5 @@ __all__ = (
     "NavMenuItem",
     "NavMenuTab",
     "PermissionsMixin",
-    "register_homepage_panels",
-    "register_menu_items",
-    "register_new_ui_menu_items",
     "TemplateExtension",
 )
