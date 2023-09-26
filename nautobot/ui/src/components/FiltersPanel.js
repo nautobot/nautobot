@@ -284,11 +284,11 @@ export const FiltersPanelContent = forwardRef(
             () =>
                 lookupField
                     ? lookupFields[lookupField].map(([value, label]) => ({
-                        value: value,
-                        label: label
-                    }))
+                          value: value,
+                          label: label,
+                      }))
                     : [],
-            [lookupField]
+            [lookupField, lookupFields]
         );
 
         const onChangeLookupField = useCallback(
