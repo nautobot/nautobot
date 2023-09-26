@@ -5,7 +5,7 @@ from typing import Optional, Sequence, Union
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import ForeignKey, ManyToManyField
+from django.db.models import ForeignKey, ManyToManyField, QuerySet
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.text import slugify
@@ -1032,23 +1032,62 @@ class APIViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_on_object(self):
-            notes = getattr(self.model, "notes", None)
-            if notes and isinstance(notes, ForeignKey):
-                instance1 = self._get_queryset().first()
-                # Add object-level permission
-                obj_perm = users_models.ObjectPermission(
-                    name="Test permission",
-                    constraints={"pk": instance1.pk},
-                    actions=["view"],
-                )
-                obj_perm.save()
-                obj_perm.users.add(self.user)
-                obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-                url = self._get_detail_url(instance1)
-                response = self.client.get(url, **self.header)
-                self.assertHttpStatus(response, status.HTTP_200_OK)
-                self.assertIn("notes_url", response.data)
-                self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+            if not hasattr(self.model, "notes"):
+                self.skipTest("Model doesn't appear to support Notes")
+            instance = self._get_queryset().first()
+            if not isinstance(instance.notes, QuerySet):
+                self.skipTest("Model has a notes field but it doesn't appear to be Notes")
+
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(
+                name="Test permission",
+                constraints={"pk": instance.pk},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            url = self._get_detail_url(instance)
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIn("notes_url", response.data)
+            self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+            self.assertIn(instance.get_notes_url(api=True), str(response.data["notes_url"]))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_notes_url_functionality(self):
+            if not hasattr(self.model, "notes"):
+                self.skipTest("Model doesn't appear to support Notes")
+            instance = self._get_queryset().first()
+            if not isinstance(instance.notes, QuerySet):
+                self.skipTest("Model has a notes field but it doesn't appear to be Notes")
+
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            self.add_permissions("extras.add_note")
+
+            # Add note via REST API
+            notes_url = instance.get_notes_url(api=True)
+            response = self.client.post(
+                notes_url,
+                {"note": f"This is a note for {instance}"},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertIsInstance(response.data, dict)
+            self.assertEqual(f"This is a note for {instance}", response.data["note"])
+            self.assertEqual(str(self.user.pk), str(response.data["user"]["id"]))
+            self.assertEqual(str(instance.pk), str(response.data["assigned_object_id"]))
+            self.assertEqual(str(instance.pk), str(response.data["assigned_object"]["id"]))
+
+            # Get note via REST API
+            response = self.client.get(notes_url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+            self.add_permissions("extras.view_note")
+            response = self.client.get(notes_url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(f"This is a note for {instance}", response.data["results"][0]["note"])
 
     class TreeModelAPIViewTestCaseMixin:
         """Test `?depth=2` query parameter for TreeModel"""
