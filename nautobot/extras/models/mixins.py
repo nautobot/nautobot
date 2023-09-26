@@ -124,9 +124,9 @@ class NotesMixin:
 
         return self._notes_queryset
 
-    def get_notes_url(self):
+    def get_notes_url(self, api=False):
         """Return the notes URL for a given instance."""
-        route = get_route_for_model(self, "notes")
+        route = get_route_for_model(self, "notes", api=api)
 
         # Iterate the pk-like fields and try to get a URL, or return None.
         fields = ["pk", "slug"]
