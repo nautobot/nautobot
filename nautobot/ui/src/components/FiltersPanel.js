@@ -511,14 +511,17 @@ export const FiltersPanelContent = forwardRef(
                                                 </Box>
                                                 {filter.value}
                                             </TagLabel>
-
-                                            <TagCloseButton
-                                                marginLeft="xs"
-                                                {...closeButton}
-                                                onClick={() =>
-                                                    closeButton.onClick(filter)
-                                                }
-                                            />
+                                            {filter.label !== "q" && (
+                                                <TagCloseButton
+                                                    marginLeft="xs"
+                                                    {...closeButton}
+                                                    onClick={() =>
+                                                        closeButton.onClick(
+                                                            filter
+                                                        )
+                                                    }
+                                                />
+                                            )}
                                         </Tag>
                                     ))}
                                 </Flex>
