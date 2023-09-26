@@ -70,9 +70,6 @@ class NautobotSchemaProcessor(NautobotProcessingMixin, schema.SchemaProcessor):
             "title": self._get_title(field, name),
         }
 
-        if field.label:
-            result["title"] = field.label
-
         if isinstance(field, drf_serializers.ListField):
             if field.allow_empty:
                 result["required"] = not getattr(field, "allow_empty", True)
