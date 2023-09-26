@@ -432,6 +432,7 @@ class Prefix(PrimaryModel):
         null=True,
         editable=False,
         db_index=True,
+        verbose_name="IP Version",
     )
     location = models.ForeignKey(
         to="dcim.Location",

@@ -161,7 +161,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "description",
         ]
         extra_kwargs = {
-            "ip_version": {"read_only": True, "label": "IP Version"},
+            "ip_version": {"read_only": True},
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
         }
