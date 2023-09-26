@@ -127,7 +127,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
-    composite_key = serializers.SerializerMethodField()
+    # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
     natural_keys_values = None
     natural_slug = serializers.SerializerMethodField()
 

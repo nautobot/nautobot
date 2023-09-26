@@ -181,7 +181,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "object_type": "dcim.device",
                 "display": device.display,
                 "url": f"http://testserver/api/dcim/devices/{device.pk}/",
-                "composite_key": device.composite_key,
                 "natural_slug": device.natural_slug,
                 "face": CSV_NULL_TYPE,
                 "local_config_context_data": CSV_NULL_TYPE,
