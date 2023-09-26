@@ -342,11 +342,10 @@ class NautobotMetadata(SimpleMetadata):
             ]
         """
         if detail:
-            # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
+            # TODO(timizuo): Add a standardized way of handling `tenant` fields, Possible should be on last items on second col.
             fields_to_remove = [
                 "display",
                 "status",
-                # "tags",
                 "custom_fields",
                 "relationships",
                 "computed_fields",
