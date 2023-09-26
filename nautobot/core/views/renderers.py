@@ -61,9 +61,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Helper function to construct and paginate the table for rendering used in the ObjectListView, ObjectBulkUpdateView and ObjectBulkDestroyView.
         """
         table_class = view.get_table_class()
+        queryset = view.get_queryset()
         if view.action in ["list", "notes", "changelog"]:
             request = kwargs.get("request", view.request)
-            queryset = view.alter_queryset(request)
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
                 table = table_class(queryset, user=request.user)
@@ -99,7 +99,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             return RequestConfig(request, paginate).configure(table)
         else:
             pk_list = kwargs.get("pk_list", [])
-            table = table_class(view.get_queryset().filter(pk__in=pk_list), orderable=False)
+            table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
             return table
 
     def validate_action_buttons(self, view, request):
