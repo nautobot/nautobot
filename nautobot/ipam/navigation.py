@@ -42,11 +42,11 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="ipam:ipaddresstointerface_list",
-                        name="IP Address to Interface Assignments",
+                        link="ipam:ipaddresstointerface_import",
+                        name="IP Address Assignments",
                         weight=200,
                         permissions=[
-                            "ipam.view_ipaddresstointerface",
+                            "ipam.add_ipaddresstointerface",
                         ],
                         buttons=(
                             NavMenuImportButton(

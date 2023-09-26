@@ -1205,6 +1205,8 @@ class IPAddressToInterface(BaseModel):
             ["ip_address", "interface"],
             ["ip_address", "vm_interface"],
         ]
+        verbose_name = "IP Address Assignment"
+        verbose_name_plural = "IP Address Assignments"
 
     def clean(self):
         super().clean()

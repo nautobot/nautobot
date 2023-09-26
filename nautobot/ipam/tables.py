@@ -629,8 +629,10 @@ class IPAddressInterfaceTable(InterfaceTable):
 
 class IPAddressToInterfaceTable(BaseTable):
     pk = ToggleColumn()
-    id = tables.Column(linkify=True, verbose_name="ID")
     ip_address = tables.Column(linkify=True, verbose_name="IP Address")
+    # TODO(jathan): Probably should crib from something like the CABLETERMINATION column template so
+    # that these columns show something like device1 > interface1 instead of just interface1 for
+    # usability?
     interface = tables.Column(linkify=True)
     vm_interface = tables.Column(linkify=True, verbose_name="VM Interface")
 
@@ -638,7 +640,6 @@ class IPAddressToInterfaceTable(BaseTable):
         model = IPAddressToInterface
         fields = (
             "pk",
-            "id",
             "ip_address",
             "interface",
             "vm_interface",
@@ -650,7 +651,7 @@ class IPAddressToInterfaceTable(BaseTable):
             "is_secondary",
             "is_standby",
         )
-        default_columns = ("pk", "id", "ip_address", "interface", "vm_interface")
+        default_columns = ("pk", "ip_address", "interface", "vm_interface")
 
 
 #
