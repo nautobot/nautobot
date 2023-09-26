@@ -83,6 +83,7 @@ class VMInterfaceViewSet(ModelViewSet, NotesViewSetMixin):
         "parent_interface",
         "bridge",
         "status",
-    ).prefetch_related("tags", "tagged_vlans")
+        "untagged_vlan",
+    ).prefetch_related("tags", "ip_addresses", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet

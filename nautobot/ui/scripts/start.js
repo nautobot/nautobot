@@ -98,7 +98,7 @@ checkBrowsers(paths.appPath, isInteractive)
             webpack,
         });
         // Load proxy config
-        const proxySetting = require(paths.appPackageJson).proxy;
+        const proxySetting = "http://nautobot:8080";
         const proxyConfig = prepareProxy(
             proxySetting,
             paths.appPublic,

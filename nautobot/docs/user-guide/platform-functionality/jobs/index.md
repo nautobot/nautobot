@@ -101,20 +101,26 @@ The `class_path` is often represented as a string in the format of `<module_name
 +/- 1.3.0
     With the addition of Job database models, it is now generally possible and preferable to refer to a job by its UUID primary key, similar to other Nautobot database models, rather than its `class_path`.
 
++/- 2.0.0
+    The Job database model `name` field is now enforced to be globally unique and so is also an option for uniquely identifying Job records.
+
 ### Via the Web UI
 
 Jobs can be run via the web UI by navigating to the job, completing any required form data (if any), and clicking the "Run Job" button.
 
 Once a job has been run, the latest [`JobResult`](./models.md#job-results) for that job will be summarized in the job list view.
 
-### Via the API
+### Via the REST API
 
 --- 2.0.0
     The `commit` parameter was removed. All job input should be provided via the `data` parameter.
 
-To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/`. You can optionally provide JSON data to specify any required user input `data`, optional `task_queue`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
+To run a job via the REST API, issue a POST request to the job's endpoint `/api/extras/jobs/<uuid>/run/` **or** `/api/extras/jobs/<name>/run/`. You can optionally provide JSON data to specify any required user input `data`, optional `task_queue`, and/or provide optional scheduling information as described in [the section on scheduling and approvals](./job-scheduling-and-approvals.md).
 
-For example, to run a job with no user inputs:
++++ 2.0.0
+    The `/api/extras/jobs/<name>/` REST API endpoints were added as an alternative to `/api/extras/jobs/<uuid>/`.
+
+For example, to run a job, by UUID, with no user inputs:
 
 ```no-highlight
 curl -X POST \
@@ -124,14 +130,14 @@ curl -X POST \
 http://nautobot/api/extras/jobs/$JOB_ID/run/
 ```
 
-Or to run a job that expects user inputs:
+Or to run a job, by name, that expects user inputs:
 
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=1.3; indent=4" \
-http://nautobot/api/extras/jobs/$JOB_ID/run/ \
+http://nautobot/api/extras/jobs/$JOB_NAME/run/ \
 --data '{"data": {"string_variable": "somevalue", "integer_variable": 123}}'
 ```
 
@@ -152,7 +158,7 @@ curl -X POST \
 -H 'Authorization: Token $TOKEN' \
 -H 'Content-Type: multipart/form-data' \
 -H "Accept: application/json; version=1.3; indent=4" \
-'http://nautobot/api/extras/jobs/$JOB_ID/run/' \
+'http://nautobot/api/extras/jobs/$JOB_NAME/run/' \
 -F '_schedule_interval="immediately"' \
 -F '_schedule_start_time="2022-10-18T17:31:23.698Z"' \
 -F 'interval="3"' \

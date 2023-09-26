@@ -1118,6 +1118,20 @@ class JobTest(
             {"name": "var4", "type": "ObjectVar", "required": True, "model": "extras.role"},
         )
 
+    def test_get_job_variables_by_name(self):
+        """Test the job/<name>/variables API endpoint."""
+        self.add_permissions("extras.view_job")
+        route = get_route_for_model(self.model, "variables", api=True)
+        response = self.client.get(reverse(route, kwargs={"name": self.job_model.name}), **self.header)
+        self.assertEqual(4, len(response.data))  # 4 variables, in order
+        self.assertEqual(response.data[0], {"name": "var1", "type": "StringVar", "required": True})
+        self.assertEqual(response.data[1], {"name": "var2", "type": "IntegerVar", "required": True})
+        self.assertEqual(response.data[2], {"name": "var3", "type": "BooleanVar", "required": False})
+        self.assertEqual(
+            response.data[3],
+            {"name": "var4", "type": "ObjectVar", "required": True, "model": "extras.role"},
+        )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_job_with_sensitive_variables_set_approval_required_to_true(self):
         job_model = Job.objects.get_for_class_path("api_test_job.APITestJob")
