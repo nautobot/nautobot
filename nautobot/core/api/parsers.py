@@ -110,17 +110,17 @@ class NautobotCSVParser(BaseParser):
         return any(value != CSV_NO_OBJECT for value in field_lookups.values())
 
     def _remove_object_not_found_values(self, data):
-        """Remove all `CSV_OBJECT_NOT_FOUND` field lookups from the given data, and swap out `CSV_NULL_TYPE` and
-        'CSV_OBJECT_NOT_FOUND' values for `None`.
+        """Remove all `CSV_NO_OBJECT` field lookups from the given data, and swap out `CSV_NULL_TYPE` and
+        'CSV_NO_OBJECT' values for `None`.
 
-        If all the lookups for a field are 'CSV_OBJECT_NOT_FOUND', it indicates that the field does not exist,
+        If all the lookups for a field are 'CSV_NO_OBJECT', it indicates that the field does not exist,
         and it needs to be removed to prevent unnecessary database queries.
 
         Args:
             data (dict): A dictionary containing field natural key lookups and their corresponding values.
 
         Returns:
-            dict: A modified dictionary with field lookups of 'CSV_OBJECT_NOT_FOUND' values removed, and 'CSV_NULL_TYPE' and 'CSV_OBJECT_NOT_FOUND' swapped for `None`.
+            dict: A modified dictionary with field lookups of 'CSV_NO_OBJECT' values removed, and 'CSV_NULL_TYPE' and 'CSV_NO_OBJECT' swapped for `None`.
         """
         lookup_grouped_by_field_name = {}
         for lookup, lookup_value in data.items():

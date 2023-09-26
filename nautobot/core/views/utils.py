@@ -145,9 +145,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             elif isinstance(field.child_relation, ContentTypeField):
                 field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')
             else:
-                field_info["format"] = mark_safe(
-                    '<code>"UUID,UUID"</code>'
-                )
+                field_info["format"] = mark_safe('<code>"UUID,UUID"</code>')
         elif isinstance(field, serializers.RelatedField):
             if isinstance(field, ContentTypeField):
                 field_info["format"] = mark_safe("<code>app_label.model</code>")
