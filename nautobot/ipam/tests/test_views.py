@@ -1015,7 +1015,7 @@ class IPAddressToInterfaceTestCase(ViewTestCases.BulkImportObjectsViewTestCase):
         namespace = Namespace.objects.create(name="ip2interface_namespace")
         ip_status = Status.objects.get_for_model(IPAddress).first()
         prefix_status = Status.objects.get_for_model(Prefix).first()
-        parent, _ = Prefix.objects.get_or_create(
+        Prefix.objects.get_or_create(
             prefix="192.0.2.0/24",
             defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
         )
@@ -1048,7 +1048,7 @@ class IPAddressToInterfaceTestCase(ViewTestCases.BulkImportObjectsViewTestCase):
         namespace = Namespace.objects.create(name="ip2vminterface_namespace")
         ip_status = Status.objects.get_for_model(IPAddress).first()
         prefix_status = Status.objects.get_for_model(Prefix).first()
-        parent, _ = Prefix.objects.get_or_create(
+        Prefix.objects.get_or_create(
             prefix="192.0.3.0/24",
             defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
         )
