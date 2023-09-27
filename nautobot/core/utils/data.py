@@ -75,7 +75,7 @@ def is_url(value):
         value (str): String to validate.
 
     Returns:
-        bool
+        (bool): True if the value is a valid URL, False otherwise.
     """
     try:
         return validators.URLValidator()(value) is None

@@ -1,4 +1,4 @@
-from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.apps.graphql import OptimizedNautobotObjectType
 
 from example_plugin.models import AnotherExampleModel
 

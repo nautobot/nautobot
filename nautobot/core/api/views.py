@@ -644,7 +644,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             request (HttpRequest): Request object from Django
 
         Returns:
-            dict: GraphQL query
+            (dict): GraphQL query
         """
         content_type = GraphQLView.get_content_type(request)
 
@@ -670,7 +670,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             operation_name (str): GraphQL operation name: query, mutations etc..
 
         Returns:
-            ExecutionResult: Execution result object from GraphQL with response or error message.
+            (ExecutionResult): Execution result object from GraphQL with response or error message.
         """
 
         self.init_graphql()
@@ -726,13 +726,13 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         Formats the menu data and removes hidden menu items based on user permissions.
 
         Args:
-            request: The request object.
+            request (HttpRequest): The request object.
             data (Union[dict, str]): The menu data to format and filter. Can be either a dictionary or a string.
             hide_restricted_ui (bool): Flag indicating whether to hide restricted menu items.
 
         Returns:
-            Union[dict, str]: The formatted menu data without hidden items. Returns a dict if `data` is a
-            `dict`, otherwise returns a string.
+            (Union[dict, str]): The formatted menu data without hidden items. Returns a dict if `data` is a
+                `dict`, otherwise returns a string.
 
         Example:
             Input:

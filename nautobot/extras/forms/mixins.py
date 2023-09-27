@@ -142,7 +142,7 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
 
 
 class NoteFormBase(forms.Form):
-    """Base fore the NoteModelFormMixin and NoteModelBulkEditFormMixin."""
+    """Base for the NoteModelFormMixin and NoteModelBulkEditFormMixin."""
 
     object_note = CommentField(label="Note")
 
