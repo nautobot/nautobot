@@ -1015,5 +1015,7 @@ class NewUIReadyRoutesAPIViewTestCase(testing.APITestCase):
             "^dcim\\/locations\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
             "^ipam\\/ip\\-addresses\\/$",
             "^ipam\\/ip\\-addresses\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+            "^ipam\\/prefixes\\/$",
+            "^ipam\\/prefixes\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
         ]
         self.assertEqual(sorted(response.data), sorted(expected_response))
