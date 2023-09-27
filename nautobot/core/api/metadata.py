@@ -2,6 +2,7 @@ import contextlib
 from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
+import django_filters
 from django.http import Http404
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
@@ -12,6 +13,7 @@ from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label
 
 
 # FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
@@ -220,6 +222,10 @@ class NautobotMetadata(SimpleMetadata):
         """This is the metadata that gets returned on an `OPTIONS` request."""
         metadata = super().determine_metadata(request, view)
 
+        # Include the object type label for this model.
+        object_type = view.queryset.model._meta.label_lower if getattr(view, "queryset", None) else "unknown"
+        metadata["object_type"] = object_type
+
         # If there's a serializer, do the needful to bind the schema/uiSchema.
         if hasattr(view, "get_serializer"):
             serializer = view.get_serializer()
@@ -237,7 +243,47 @@ class NautobotMetadata(SimpleMetadata):
                 }
             )
 
+            metadata["filters"] = self.get_filter_info(view)
+
             if hasattr(serializer, "determine_view_options"):
                 metadata["view_options"] = serializer.determine_view_options(request)
 
         return metadata
+
+    def get_filter_info(self, view):
+        """Enumerate filterset information for the view. Returns a dictionary with the following format:
+
+        {
+            "filter_name": {
+                "label": "Filter Label",
+                "lookup_types": [
+                    {"value": "filter_name__n", "label": "not exact (n)"},
+                    {"value": "filter_name__re", "label": "matches regex (re)"},
+                    ...
+                ]
+            }
+        }
+
+        """
+
+        if not getattr(view, "filterset_class", None):
+            return {}
+        filterset = view.filterset_class
+        filters = {}
+        for filter_name, filter_instance in sorted(
+            filterset.base_filters.items(),
+            key=lambda x: get_filter_field_label(x[1]),
+        ):
+            filter_key = filter_name.rsplit("__", 1)[0]
+            label = get_filter_field_label(filter_instance)
+            lookup_label = self._filter_lookup_label(filter_name, filter_instance)
+            filters.setdefault(filter_key, {"label": label})
+            filters[filter_key].setdefault("lookup_types", []).append({"value": filter_name, "label": lookup_label})
+        return filters
+
+    # TODO: move this into `build_lookup_label` when the legacy UI is removed
+    def _filter_lookup_label(self, filter_name, filter_instance):
+        """Fix confusing lookup labels for boolean filters."""
+        if isinstance(filter_instance, django_filters.BooleanFilter):
+            return "exact"
+        return build_lookup_label(filter_name, filter_instance.lookup_expr)
