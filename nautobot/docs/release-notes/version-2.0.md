@@ -26,7 +26,9 @@ As of Nautobot release 2.0.0, the new UI supports read-only access to Locations,
 
 #### Assign an IP Address to Multiple Interfaces ([#2403](https://github.com/nautobot/nautobot/issues/2403))
 
-<!-- TODO: We should mention that we added this capability and its use cases. -->
+Introduced the ability to assign one `IPAddress` to multiple `Interfaces`/`Devices` and `VMInterfaces`/`VirtualMachines` by creating a many to many relationship between `IPAddress` and `Interface`/`VMInterface` models represented as a through table model [`IPAddressToInterface`](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#new-interface-to-ip-address-relationship-endpoint). This feature allows you to model a network environment where you have anycast `IPAddresses` are shared extensively among a large number of `Devices`/`VirtualMachines`.
+
+As a result of this feature and associated changes, you can no longer assign `Interfaces`/`VMInterfaces` during bulk creation of `IPAddresses`, but a separate bulk-create endpoint has been [introduced](https://github.com/nautobot/nautobot/pull/4522) to allow the bulk import of `IPAddressToInterface` assignments.
 
 #### Generic Role Model ([#1063](https://github.com/nautobot/nautobot/issues/1063))
 
