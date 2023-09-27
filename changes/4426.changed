@@ -1,0 +1,1 @@
+Changed `fix_custom_fields` to skip models without any custom fields.

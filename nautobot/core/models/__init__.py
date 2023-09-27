@@ -160,49 +160,9 @@ class BaseModel(models.Model):
         """
         return construct_natural_slug(self.natural_key(), pk=self.pk)
 
-    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
-    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
-        """
-        List of lookups (possibly including nested lookups for related models) that make up this model's natural key.
-
-        BaseModel provides a "smart" implementation that tries to determine this automatically,
-        but you can also explicitly set `natural_key_field_names` on a given model subclass if desired.
-
-        This property is based on a consolidation of `django-natural-keys` `ForeignKeyModel.get_natural_key_info()`,
-        `ForeignKeyModel.get_natural_key_def()`, and `ForeignKeyModel.get_natural_key_fields()`.
-
-        Unlike `get_natural_key_def()`, this doesn't auto-exclude all AutoField and BigAutoField fields,
-        but instead explicitly discounts the `id` field (only) as a candidate.
-        """
-        # First, figure out which local fields comprise the natural key:
-        natural_key_field_names = []
-        if hasattr(cls, "natural_key_field_names"):
-            natural_key_field_names = cls.natural_key_field_names
-        else:
-            # Does this model have any new-style UniqueConstraints? If so, pick the first one
-            for constraint in cls._meta.constraints:
-                if isinstance(constraint, models.UniqueConstraint):
-                    natural_key_field_names = constraint.fields
-                    break
-            else:
-                # Else, does this model have any old-style unique_together? If so, pick the first one.
-                if cls._meta.unique_together:
-                    natural_key_field_names = cls._meta.unique_together[0]
-                else:
-                    # Else, do we have any individual unique=True fields? If so, pick the first one.
-                    unique_fields = [field for field in cls._meta.fields if field.unique and field.name != "id"]
-                    if unique_fields:
-                        natural_key_field_names = (unique_fields[0].name,)
-
-        if not natural_key_field_names:
-            raise AttributeError(
-                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
-                "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
-                "you probably need to explicitly declare the 'natural_key_field_names' for this model, "
-                "or potentially override the default 'natural_key_field_lookups' implementation for this model."
-            )
-
-        # Next, for any natural key fields that have related models, get the natural key for the related model if known
+    @classmethod
+    def _generate_field_lookups_from_natural_key_field_names(cls, natural_key_field_names):
+        """Generate field lookups based on natural key field names."""
         natural_key_field_lookups = []
         for field_name in natural_key_field_names:
             # field_name could be a related field that has its own natural key fields (`parent`),
@@ -250,6 +210,60 @@ class BaseModel(models.Model):
                 natural_key_field_lookups.append(f"{field_name}__{field_lookup}")
 
         return natural_key_field_lookups
+
+    @classmethod
+    def csv_natural_key_field_lookups(cls):
+        """Override this method for models with Python `@property` as part of their `natural_key_field_names`.
+
+        Since CSV export for `natural_key_field_names` relies on database fields, you can override this method
+        to provide custom handling for models with property-based natural keys.
+        """
+        return cls.natural_key_field_lookups
+
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
+        """
+        List of lookups (possibly including nested lookups for related models) that make up this model's natural key.
+
+        BaseModel provides a "smart" implementation that tries to determine this automatically,
+        but you can also explicitly set `natural_key_field_names` on a given model subclass if desired.
+
+        This property is based on a consolidation of `django-natural-keys` `ForeignKeyModel.get_natural_key_info()`,
+        `ForeignKeyModel.get_natural_key_def()`, and `ForeignKeyModel.get_natural_key_fields()`.
+
+        Unlike `get_natural_key_def()`, this doesn't auto-exclude all AutoField and BigAutoField fields,
+        but instead explicitly discounts the `id` field (only) as a candidate.
+        """
+        # First, figure out which local fields comprise the natural key:
+        natural_key_field_names = []
+        if hasattr(cls, "natural_key_field_names"):
+            natural_key_field_names = cls.natural_key_field_names
+        else:
+            # Does this model have any new-style UniqueConstraints? If so, pick the first one
+            for constraint in cls._meta.constraints:
+                if isinstance(constraint, models.UniqueConstraint):
+                    natural_key_field_names = constraint.fields
+                    break
+            else:
+                # Else, does this model have any old-style unique_together? If so, pick the first one.
+                if cls._meta.unique_together:
+                    natural_key_field_names = cls._meta.unique_together[0]
+                else:
+                    # Else, do we have any individual unique=True fields? If so, pick the first one.
+                    unique_fields = [field for field in cls._meta.fields if field.unique and field.name != "id"]
+                    if unique_fields:
+                        natural_key_field_names = (unique_fields[0].name,)
+
+        if not natural_key_field_names:
+            raise AttributeError(
+                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
+                "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
+                "you probably need to explicitly declare the 'natural_key_field_names' for this model, "
+                "or potentially override the default 'natural_key_field_lookups' implementation for this model."
+            )
+
+        # Next, for any natural key fields that have related models, get the natural key for the related model if known
+        return cls._generate_field_lookups_from_natural_key_field_names(natural_key_field_names)
 
     @classmethod
     def natural_key_args_to_kwargs(cls, args):
