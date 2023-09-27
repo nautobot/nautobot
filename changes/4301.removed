@@ -1,1 +1,0 @@
-Removed references to `RoleModelSerializerMixin`, `RoleRequiredRoleModelSerializerMixin` and `RoleSerializerField` from generic Role-related documentation.

@@ -1,1 +1,0 @@
-Added `/api/extras/jobs/<name>/...` REST API endpoints as an alternative option to the existing `/api/extras/jobs/<uuid>/...` endpoints.

@@ -1,1 +1,0 @@
-Removed unnecessary dependency on `semver` npm package.

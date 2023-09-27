@@ -1,2 +1,0 @@
-Added `test_notes_url_functionality` test case to `APIViewTestCases.NotesURLViewTestCase` generic test class.
-Added optional `api` parameter to `NotesMixin.get_notes_url()` model method.
