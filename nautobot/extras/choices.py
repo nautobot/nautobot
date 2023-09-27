@@ -228,7 +228,7 @@ class JobResultStatusChoices(ChoiceSet):
             state (str): One of the status choices.
 
         Returns:
-            int: Precedence value.
+            (int): Precedence value.
 
         Examples:
             >>> JobResultStatusChoices.precedence(JobResultStatusChoices.STATUS_SUCCESS)

@@ -1,9 +1,8 @@
 from django import forms
 
-from nautobot.apps.filters import FilterExtension, MultiValueCharFilter
+from nautobot.apps.filters import FilterExtension, MultiValueCharFilter, NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.apps.forms import DynamicModelMultipleChoiceField
 from nautobot.tenancy.models import Tenant
-from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
-from nautobot.core.forms.fields import DynamicModelMultipleChoiceField
 
 
 def suffix_search(queryset, name, value):

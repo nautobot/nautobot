@@ -270,7 +270,7 @@ def generate_single_item_resolver(schema_type, resolver_name):
         resolver_name (str): name of the resolver
 
     Returns:
-        callable: Resolver function for a single element
+        (func): Resolver function for a single element
     """
     model = schema_type._meta.model
 
@@ -299,7 +299,7 @@ def generate_list_resolver(schema_type, resolver_name):
         resolver_name (str): name of the resolver
 
     Returns:
-        callable: Resolver function for list of element
+        (func): Resolver function for list of element
     """
     model = schema_type._meta.model
 
@@ -343,7 +343,7 @@ def generate_attrs_for_schema_type(schema_type):
         schema_type (DjangoObjectType): DjangoObjectType for a given model
 
     Returns:
-        dict: Dict of attributes ready to merge into the QueryMixin class
+        (dict): Dict of attributes ready to merge into the QueryMixin class
     """
     attrs = {}
     model = schema_type._meta.model
