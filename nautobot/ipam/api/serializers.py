@@ -150,6 +150,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = [
             "prefix",
+            "namespace",
             "type",
             "status",
             "vrf",
@@ -163,6 +164,32 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "ip_version": {"read_only": True},
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
+        }
+
+        detail_view_config = {
+            "layout": [
+                {
+                    "Prefix": {
+                        "fields": [
+                            "prefix",
+                            "parent",
+                            "namespace",
+                            "type",
+                            "network",
+                            "broadcast",
+                            "prefix_length",
+                            "ip_version",
+                            "description",
+                            "role",
+                            "vlan",
+                            "location",
+                            "tenant",
+                            "rir",
+                            "date_allocated",
+                        ]
+                    },
+                },
+            ],
         }
 
 
@@ -305,6 +332,21 @@ class IPAddressToInterfaceSerializer(ValidatedModelSerializer):
     class Meta:
         model = IPAddressToInterface
         fields = "__all__"
+        validators = []
+
+    def validate(self, data):
+        # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.
+        if data.get("interface"):
+            validator = UniqueTogetherValidator(
+                queryset=IPAddressToInterface.objects.all(), fields=("interface", "ip_address")
+            )
+            validator(data, self)
+        if data.get("vm_interface"):
+            validator = UniqueTogetherValidator(
+                queryset=IPAddressToInterface.objects.all(), fields=("vm_interface", "ip_address")
+            )
+            validator(data, self)
+        return super().validate(data)
 
 
 #

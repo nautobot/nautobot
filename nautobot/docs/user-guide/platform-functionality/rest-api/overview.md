@@ -224,7 +224,7 @@ Here, the `role`, `status`, `vrf`, `tenant`, and `nat_outside` fields represent 
 +/- 2.0.0
     The representation of related objects on retrieval has changed from Nautobot 1.x. The `brief` query parameter has been removed, and distinct "nested" serializers no longer exist. Instead, the `depth` parameter controls whether related objects are represented by URLs or as nested objects. Please see [Depth Query Parameter](#depth-query-parameter) for more details.
 
-When performing write API actions (`POST`, `PUT`, and `PATCH`), related objects may be specified by either UUID (primary key), or by a set of attributes sufficiently unique to return the desired object, or by their [composite key](../../../development/core/natural-keys.md).
+When performing write API actions (`POST`, `PUT`, and `PATCH`), related objects may be specified by either UUID (primary key), or by a set of attributes sufficiently unique to return the desired object, or by their [natural key](../../../development/core/natural-keys.md).
 
 +++ 2.0.0
     Support for specifying a related object by composite-key was added.
@@ -254,7 +254,7 @@ Or by a set of nested attributes which uniquely identify the rack:
 }
 ```
 
-Or by the [composite key](../../../development/core/natural-keys.md) of the rack (for the Rack model, this is just its name, but this will vary by object type - you can always find this information under the Advanced tab of an object's detail view):
+Or by the [natural key](../../../development/core/natural-keys.md) of the rack (for the Rack model, this is just its name, but this will vary by object type - you can always find this information under the Advanced tab of an object's detail view):
 
 ```json
 {

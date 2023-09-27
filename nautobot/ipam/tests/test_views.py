@@ -26,6 +26,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -37,7 +38,7 @@ from nautobot.ipam.models import (
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
 class NamespaceTestCase(
@@ -984,6 +985,113 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                         relationship=sym_m2m, source_id=merged_ip.pk
                     ) | RelationshipAssociation.objects.filter(relationship=sym_m2m, destination_id=merged_ip.pk)
                     self.assertEqual(set(associations), set(correct_associations))
+
+
+class IPAddressToInterfaceTestCase(ViewTestCases.BulkImportObjectsViewTestCase):
+    model = IPAddressToInterface
+
+    @classmethod
+    def setUpTestData(cls):
+        # Device/Interface
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=False).first()
+        manufacturer = Manufacturer.objects.first()
+        tenant = Tenant.objects.first()
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            name="Device 1",
+            location=location,
+            device_type=devicetype,
+            role=devicerole,
+            tenant=tenant,
+            status=devicestatus,
+        )
+        intf_status = Status.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(device=device, name="Interface 1", status=intf_status)
+
+        # Namespace, Prefix, IPAddress
+        namespace = Namespace.objects.create(name="ip2interface_namespace")
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.get_or_create(
+            prefix="192.0.2.0/24",
+            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
+        )
+        ip_addresses = [
+            IPAddress.objects.create(
+                address="192.0.2.1/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+            IPAddress.objects.create(
+                address="192.0.2.2/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+            IPAddress.objects.create(
+                address="192.0.2.3/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+        ]
+        ip1, ip2, ip3 = ip_addresses
+
+        cls.csv_data = (
+            "ip_address__host,ip_address__parent__namespace__name,interface__name,interface__device__name,interface__device__tenant__name,interface__device__location__name,interface__device__location__parent__name,interface__device__location__parent__parent__name",
+            f'{ip1.host},{ip1.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
+            f'{ip2.host},{ip2.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
+            f'{ip3.host},{ip3.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
+        )
+
+    def test_vminterface_import(self):
+        """Explicitly tests that bulk import of VMInterface assignments also works."""
+        # Initialize any pre-existing assignments. There is no mercy in this dojo!!
+        self._get_queryset().all().delete()
+
+        # Namespace, Prefix, IPAddress
+        namespace = Namespace.objects.create(name="ip2vminterface_namespace")
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.get_or_create(
+            prefix="192.0.3.0/24",
+            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
+        )
+        ip_addresses = [
+            IPAddress.objects.create(
+                address="192.0.3.1/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+            IPAddress.objects.create(
+                address="192.0.3.2/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+            IPAddress.objects.create(
+                address="192.0.3.3/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+        ]
+        ip1, ip2, ip3 = ip_addresses
+
+        # VirtualMachine/VMInterface
+        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=False).first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 2")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=location)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        tenant = Tenant.objects.first()
+        virtual_machine = VirtualMachine.objects.create(cluster=cluster, name="VM 1", status=vm_status, tenant=tenant)
+        vm_intf_status = Status.objects.get_for_model(VMInterface).first()
+        vm_interface = VMInterface.objects.create(
+            virtual_machine=virtual_machine, name="VMInterface 1", status=vm_intf_status
+        )
+
+        csv_data = (
+            "ip_address__host,ip_address__parent__namespace__name,vm_interface__virtual_machine__cluster__name,vm_interface__virtual_machine__tenant__name,vm_interface__virtual_machine__name,vm_interface__name",
+            f'{ip1.host},{ip1.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
+            f'{ip2.host},{ip2.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
+            f'{ip3.host},{ip3.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
+        )
+
+        initial_count = self._get_queryset().count()
+        data = {
+            "csv_data": "\n".join(csv_data),
+        }
+
+        self.add_permissions("ipam.add_ipaddresstointerface")
+        self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
+        self.assertEqual(self._get_queryset().count(), initial_count + len(csv_data) - 1)
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
