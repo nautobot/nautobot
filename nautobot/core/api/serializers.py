@@ -398,6 +398,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             "display",
             "status",
             # not yet supported in the UI
+            "composite_key",
             "custom_fields",
             "relationships",
             "computed_fields",
