@@ -10,7 +10,7 @@ from django.utils.tree import Node
 import emoji
 from slugify import slugify
 
-from nautobot.core.models import constants
+from nautobot.core import constants
 from nautobot.core.utils.data import is_uuid
 
 
