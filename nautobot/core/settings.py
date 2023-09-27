@@ -240,6 +240,10 @@ SPECTACULAR_SETTINGS = {
     # use sidecar - locally packaged UI files, not CDN
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "displayOperationId": True,
+    },
     "REDOC_DIST": "SIDECAR",
     # Do not list all possible enum values in the description of filter fields and the like
     # In addition to being highly verbose, it's inaccurate for filter fields like *__ic and *__re

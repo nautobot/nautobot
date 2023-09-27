@@ -1,0 +1,1 @@
+Added the `slugify` Django template tag as a Jinja filter.
