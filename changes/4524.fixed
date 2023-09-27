@@ -1,3 +1,0 @@
-Fixed incorrect implementation of `test_notes_url_on_object` test case that never actually tested anything.
-Fixed incorrect permissions enforcement on REST API `/notes/` action endpoints.
-Fixed an exception in REST API `/notes/` action endpoints that was inadvertently introduced in #4517.
