@@ -1113,6 +1113,32 @@ class IPAddressInterfacesView(generic.ObjectView):
 
 
 #
+# IPAddress to Interface (assignments
+#
+
+
+class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):
+    """
+    ViewSet for IP Address (VM)Interface assignments.
+
+    This view intentionally only implements bulk import at this time. Accessing list view will
+    redirect to the import view.
+    """
+
+    lookup_field = "pk"
+    # form_class = forms.NamespaceForm
+    filterset_class = filters.IPAddressToInterfaceFilterSet
+    queryset = IPAddressToInterface.objects.all()
+    serializer_class = serializers.IPAddressToInterfaceSerializer
+    table_class = tables.IPAddressToInterfaceTable
+    action_buttons = ("import", "export")
+
+    def list(self, request, *args, **kwargs):
+        """Redirect list view to import view."""
+        return redirect(reverse("ipam:ipaddresstointerface_import"))
+
+
+#
 # VLAN groups
 #
 
