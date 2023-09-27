@@ -346,9 +346,11 @@ export const FiltersPanelContent = forwardRef(
         }, [lookupFields, setLookupField]);
 
         useEffect(() => {
-            setLookupType(null);
+            fieldLookupChoices.length === 1
+                ? setLookupType(fieldLookupChoices[0].value)
+                : setLookupType(null);
             setLookupValue("");
-        }, [lookupField, setLookupType, setLookupValue]);
+        }, [fieldLookupChoices, lookupField, setLookupType, setLookupValue]);
 
         useEffect(() => {
             if (
