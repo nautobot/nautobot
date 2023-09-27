@@ -233,9 +233,6 @@ class LocationSerializer(
                         ]
                     },
                 },
-                {
-                    "Comments": {"fields": ["comments"]},
-                },
             ],
         }
 
@@ -291,9 +288,6 @@ class RackSerializer(
                             "rack_group",
                         ]
                     },
-                },
-                {
-                    "Comments": {"fields": ["comments"]},
                 },
             ],
             "include_others": True,
@@ -405,11 +399,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                             "rear_image",
                             "device_count",
                         ]
-                    },
-                },
-                {
-                    "Comments": {
-                        "fields": ["comments"],
                     },
                 },
             ],
@@ -563,13 +552,17 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 {
                     "Device": {
                         "fields": [
+                            "name",
                             "location",
                             "rack",
+                            "face",
                             "position",
                             "tenant",
                             "device_type",
                             "serial",
                             "asset_tag",
+                            "cluster",
+                            "parent_bay",
                         ]
                     },
                     "Device Management": {
@@ -580,17 +573,21 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                             "primary_ip6",
                             "secrets_group",
                             "device_redundancy_group",
+                            "device_redundancy_group_priority",
                         ]
                     },
                 },
-                {
-                    "Comments": {
-                        "fields": ["comments"],
-                    },
-                },
             ],
-            "include_others": True,
+            "include_others": False,  # TODO: config_context, local_config_context_data, local_config_context_schema
         }
+
+    def get_additional_detail_view_tabs(self):
+        """Add "Virtual Chassis" as a separate detail tab."""
+        tabs = super().get_additional_detail_view_tabs()
+        tabs["Virtual Chassis"] = [
+            {"Virtual Chassis": {"fields": ["virtual_chassis", "vc_position", "vc_priority"]}},
+        ]
+        return tabs
 
     def get_field_names(self, declared_fields, info):
         """
