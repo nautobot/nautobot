@@ -56,7 +56,7 @@ class CSVDataField(django_forms.CharField):
     as that is now handled by the NautobotCSVParser class and the REST API serializers.
 
     Args:
-        required_field_names: List of field names representing required fields for this import.
+        required_field_names (list[str]): List of field names representing required fields for this import.
     """
 
     widget = django_forms.Textarea

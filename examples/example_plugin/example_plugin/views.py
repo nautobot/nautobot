@@ -16,7 +16,7 @@ class CircuitDetailPluginTabView(views.ObjectView):
     making it suitable to show as a tab on the circuit detail page.
 
     Views that are intended to be for an object detail tab's content rendering must
-    always inherit from nautobot.core.views.generic.ObjectView.
+    always inherit from nautobot.apps.views.ObjectView.
     """
 
     queryset = Circuit.objects.all()
@@ -29,7 +29,7 @@ class DeviceDetailPluginTabOneView(views.ObjectView):
     making it suitable to show as a tab on the device detail page.
 
     Views that are intended to be for an object detail tab's content rendering must
-    always inherit from nautobot.core.views.generic.ObjectView.
+    always inherit from nautobot.apps.views.ObjectView.
     """
 
     queryset = Device.objects.all()
