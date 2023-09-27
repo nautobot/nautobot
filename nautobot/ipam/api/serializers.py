@@ -305,6 +305,21 @@ class IPAddressToInterfaceSerializer(ValidatedModelSerializer):
     class Meta:
         model = IPAddressToInterface
         fields = "__all__"
+        validators = []
+
+    def validate(self, data):
+        # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.
+        if data.get("interface"):
+            validator = UniqueTogetherValidator(
+                queryset=IPAddressToInterface.objects.all(), fields=("interface", "ip_address")
+            )
+            validator(data, self)
+        if data.get("vm_interface"):
+            validator = UniqueTogetherValidator(
+                queryset=IPAddressToInterface.objects.all(), fields=("vm_interface", "ip_address")
+            )
+            validator(data, self)
+        return super().validate(data)
 
 
 #
