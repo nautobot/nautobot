@@ -239,7 +239,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         fields = [field for field in fields if filter_field(field)]
         return fields
 
-    def determine_view_options(self, request):
+    def determine_view_options(self, request=None):
         """
         Determine view options to use for rendering the list and detail views associated with this serializer.
         """
@@ -248,7 +248,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
         from nautobot.core.api.metadata import NautobotColumnProcessor  # avoid circular import
 
-        processor = NautobotColumnProcessor(self, request.parser_context)
+        processor = NautobotColumnProcessor(self, request.parser_context if request else {})
         field_map = dict(self.fields)
         all_fields = list(field_map)
 
