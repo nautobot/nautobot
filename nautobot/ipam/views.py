@@ -435,6 +435,7 @@ class PrefixListView(generic.ObjectListView):
         "ip_addresses",
         "children",
     )
+    use_new_ui = True
 
 
 class PrefixView(generic.ObjectView):
@@ -448,6 +449,7 @@ class PrefixView(generic.ObjectView):
         "vlan__vlan_group",
         "namespace",
     )
+    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
