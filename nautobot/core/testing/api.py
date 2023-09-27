@@ -17,6 +17,7 @@ from nautobot.core import testing
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -197,59 +198,50 @@ class APIViewTestCases:
                 # Namings Help
                 # 1. detail_view_config: This is the detail view config set in the serializer.Meta.detail_view_config
                 # 2. detail_view_schema: This is the retrieve schema generated from an OPTIONS request.
-                # 3. advanced_view_config: This is the advanced view config set in the serializer.Meta.advanced_view_config
-                # 4. advanced_view_schema: This is the advanced tab schema generated from an OPTIONS request.
+                # 3. advanced_view_schema: This is the advanced tab schema generated from an OPTIONS request.
                 serializer = get_serializer_for_model(self._get_queryset().model)
-                advanced_view_schema = response.data["view_options"]["advanced"]
+                advanced_view_schema = response.data["view_options"]["retrieve"]["tabs"]["Advanced"]
 
-                if getattr(serializer.Meta, "advanced_view_config", None):
-                    # Get all custom advanced tab fields
-                    advanced_view_config = serializer.Meta.advanced_view_config
-                    self.assertGreaterEqual(len(advanced_view_schema), 1)
-                    advanced_tab_fields = []
-                    advanced_view_layout = advanced_view_config["layout"]
-                    for section in advanced_view_layout:
-                        for value in section.values():
-                            advanced_tab_fields += value["fields"]
-                else:
-                    # Get default advanced tab fields
-                    self.assertEqual(len(advanced_view_schema), 1)
-                    self.assertIn("Object Details", advanced_view_schema[0])
-                    advanced_tab_fields = advanced_view_schema[0].get("Object Details")["fields"]
+                # Get default advanced tab fields
+                self.assertEqual(len(advanced_view_schema), 1)
+                self.assertIn("Object Details", advanced_view_schema[0])
+                advanced_tab_fields = advanced_view_schema[0].get("Object Details")["fields"]
 
                 if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
-                    detail_view_schema = response.data["view_options"]["retrieve"]
+                    detail_view_schema = response.data["view_options"]["retrieve"]["tabs"][
+                        bettertitle(self._get_queryset().model._meta.verbose_name)
+                    ]
                     self.assertHttpStatus(response, status.HTTP_200_OK)
 
                     # According to convention, fields in the advanced tab fields should not exist in
                     # the `detail_view_schema`. Assert this is True.
                     with self.subTest("Assert advanced tab fields should not exist in the detail_view_schema."):
                         if detail_view_config.get("include_others"):
-                            # Handle `Other Fields` specially as `Other Field` is dynamically added by nautobot and not part of the serializer view config
+                            # Handle "Other Fields" section specially as "Other Field" is dynamically added
+                            # by Nautobot and is not part of the serializer-defined detail_view_config
                             other_fields = detail_view_schema[0]["Other Fields"]["fields"]
                             for field in advanced_tab_fields:
                                 self.assertNotIn(field, other_fields)
 
                         for col_idx, col in enumerate(detail_view_schema):
-                            for group_idx, (group_title, group) in enumerate(col.items()):
+                            for group_title, group in col.items():
                                 if group_title == "Other Fields":
                                     continue
                                 group_fields = group["fields"]
                                 # Config on the serializer
-                                fields = detail_view_config["layout"][col_idx][group_title]["fields"]
-                                # According to convention, advanced_tab_fields should only exist at the end of the first col group and should be
-                                # deleted from any other places it may appear in the layout. Assert this is True.
-                                if group_idx == 0 == col_idx:
-                                    self.assertFalse(
-                                        any(
-                                            field in advanced_tab_fields
-                                            for field in group_fields[: -len(advanced_tab_fields)]
-                                        )
-                                    )
+                                if (
+                                    col_idx < len(detail_view_config["layout"])
+                                    and group_title in detail_view_config["layout"][col_idx]
+                                ):
+                                    fields = detail_view_config["layout"][col_idx][group_title]["fields"]
                                 else:
-                                    for field in group_fields:
-                                        self.assertNotIn(field, advanced_tab_fields)
-                                # Assert response from options correspond to the view config set on the serializer
+                                    fields = []
+
+                                # Fields that are in the detail_view_schema must not be in the advanced tab as well
+                                for field in group_fields:
+                                    self.assertNotIn(field, advanced_tab_fields)
+
+                                # Fields that are explicit in the detail_view_config must remain as such in the schema
                                 for field in fields:
                                     if field not in advanced_tab_fields:
                                         self.assertIn(field, group_fields)
