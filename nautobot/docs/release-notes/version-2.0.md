@@ -70,7 +70,9 @@ See the [upgrade guide](../user-guide/administration/upgrading/from-v1/upgrading
 
 #### Changed `created` Field to DateTimeField for ChangeLoggedModel ([#2076](https://github.com/nautobot/nautobot/issues/2076))
 
-<!-- TODO: This change has a gloabl impact and should be mentioned in the release overview in my opinion. -->
+The `created` field of all models that inherit from `ChangedLoggedModel`, which includes `OrganizationalModel` and `PrimaryModel` and therefore most objects in the core data model, has been changed from a `DateField` to a `DateTimeField` for added granularity. Preexisting records will show as created at midnight UTC on their original creation date.
+
+All such objects may now be filtered by date or time or a combination of both. All other date-based behavior such as filtering works as it did before.
 
 #### Collapsed `nautobot.utilities` into `nautobot.core` ([#2721](https://github.com/nautobot/nautobot/issues/2721))
 
@@ -311,9 +313,9 @@ Nautobot no longer uses `django-cacheops` for caching of database queries or oth
 
 The configuration settings `CACHEOPS`, `CACHEOPS_DEFAULTS`, `CACHEOPS_DEGRADE_ON_FAILURE`, `CACHEOPS_ENABLED`, `CACHEOPS_HEALTH_CHECK_ENABLED`, `CACHEOPS_REDIS`, etc. are now unused by Nautobot and may be removed from your configuration.
 
-#### Legacy `manage.py` ([#1634](https://github.com/nautobot/nautobot/issues/1634))
+#### Legacy `manage.py` Removed ([#1634](https://github.com/nautobot/nautobot/issues/1634))
 
-<!-- TODO: `manage.py` is something that every django app comes with. Removing it probably should be worth mentioning. -->
+When we launched Nautobot we introduced the `nautobot-server` command as the primary entrypoint to managing your application, replacing the legacy `manage.py` script that is common with Django-based applications. The original `manage.py` was left there initially in v1.0.0 as a fallback, however it is no longer needed, so we have removed it in Nautobot 2.0.
 
 #### Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
