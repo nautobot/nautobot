@@ -105,13 +105,13 @@ export default function Home() {
                                                     </TagLabel>
                                                 </Tag>
                                             </Tab>
-                                            <Tab>
+                                            <Tab hidden={true}>
                                                 Schedule{" "}
                                                 <Tag size="sm" variant="info">
                                                     <TagLabel>7</TagLabel>
                                                 </Tag>
                                             </Tab>
-                                            <Tab>
+                                            <Tab hidden={true}>
                                                 Approvals{" "}
                                                 <Tag size="sm" variant="info">
                                                     <TagLabel>3</TagLabel>
