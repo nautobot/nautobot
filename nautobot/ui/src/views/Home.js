@@ -105,18 +105,6 @@ export default function Home() {
                                                     </TagLabel>
                                                 </Tag>
                                             </Tab>
-                                            <Tab>
-                                                Schedule{" "}
-                                                <Tag size="sm" variant="info">
-                                                    <TagLabel>7</TagLabel>
-                                                </Tag>
-                                            </Tab>
-                                            <Tab>
-                                                Approvals{" "}
-                                                <Tag size="sm" variant="info">
-                                                    <TagLabel>3</TagLabel>
-                                                </Tag>
-                                            </Tab>
                                         </TabList>
                                         <TabPanels>
                                             <TabPanel>
