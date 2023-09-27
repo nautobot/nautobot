@@ -1,1 +1,0 @@
-Added the ability to specify one or more content types to the `fix_custom_fields` management command.

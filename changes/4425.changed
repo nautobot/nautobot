@@ -1,4 +1,0 @@
-Refined layout of new-UI Device detail view, including addition of "Virtual Chassis" tab.
-Moved logic deriving list and detail view schemas for new UI from a serializer from `nautobot.core.api.metadata` to `nautobot.core.api.serializers`.
-Changed new-UI detail-view schema construction to automatically include `comments` and `tags` fields (if present) in the appropriate location to avoid needing every serializer to specify these fields in its configuration.
-Refined the structure of new-UI detail-view and list-view schemas.

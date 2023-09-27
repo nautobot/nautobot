@@ -1,1 +1,0 @@
-Configured `npm` in Docker image to use 30s timeout, pinned `npm` to 9.X, and changed Docker build to use `npm ci` instead of `npm install` to improve builds.
