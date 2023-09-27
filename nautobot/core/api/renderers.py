@@ -147,13 +147,14 @@ class NautobotCSVRenderer(BaseRenderer):
             elif isinstance(value, (list, tuple, set)):
                 if isinstance(value, set):
                     value = sorted(value)
-                if value and isinstance(value[0], dict) and ("composite_key" in value[0] or "id" in value[0]):
+                if value and isinstance(value[0], dict) and ("id" in value[0]):
+                    # TODO: Potentially reintroduce "composite_key" above? ` or "composite_key" in value[0]`
                     # Multiple nested related objects
                     if value[0].get("generic_foreign_key"):
                         # Multiple *generic* nested related obects
                         value = [COMPOSITE_KEY_SEPARATOR.join([v["object_type"], v["composite_key"]]) for v in value]
-                    elif value[0].get("composite_key"):
-                        value = [v["composite_key"] for v in value]
+                    # elif value[0].get("composite_key"):  # TODO: Potentially reintroduce "composite_key"?
+                    #     value = [v["composite_key"] for v in value]
                     else:
                         value = [v["id"] for v in value]
                 # The below makes for better UX than `json.dump()` for most current cases.

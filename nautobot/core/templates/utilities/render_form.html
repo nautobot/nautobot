@@ -3,11 +3,9 @@
 {% for field in form.visible_fields %}
     {% if not form.custom_fields or field.name not in form.custom_fields %}
         {% if not form.relationships or field.name not in form.relationships %}
-            {% with 'tags object_note' as exclude_list %}
-                {% if field.name not in exclude_list.split %}
-                    {% render_field field %}
-                {% endif %}
-            {% endwith %}
+            {% if field.name not in excluded_fields %}
+                {% render_field field %}
+            {% endif %}
         {% endif %}
     {% endif %}
 {% endfor %}

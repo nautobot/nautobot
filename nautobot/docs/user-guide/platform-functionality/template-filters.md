@@ -246,6 +246,18 @@ Get a value from Django settings (if specified) or Constance configuration (othe
     {{ "SAMPLE_VARIABLE" | settings_or_config:"example_plugin" }}
     ```
 
+### slugify
+
+Slugify a string.
+
+```django
+# Django Template
+{{ string | slugify }}
+
+# Jinja
+{{ string | slugify }}
+```
+
 ### split
 
 Split a string by the given value (default: comma)

@@ -8,6 +8,10 @@ This document provides guidance on migrating code from version 1.x to version 2.
     - [New UI](../../core/react-ui.md)
     - [Enhanced Filter Fields](../../../release-notes/version-2.0.md#enhanced-filter-fields-2804)
 - Changes to Nautobot in v2.0.0
+    - [Database (ORM) Changes](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-orm-changes)
+        - [Database Field Behavior Changes](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-field-behavior-changes)
+        - [Renamed Database Fields](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields)
+        - [Removed Database Fields](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-database-fields)
     - [Generic Role Model](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#generic-role-model)
     - [Collapse Site and Region into Location](../migration/model-updates/dcim.md#replace-site-and-region-with-location-model)
     - [Aggregate model Migrated to Prefix](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#aggregate-migrated-to-prefix)
@@ -27,7 +31,9 @@ This document provides guidance on migrating code from version 1.x to version 2.
     - [Code Updates](code-updates.md)
         - [Update Code Import Locations](code-updates.md#update-code-import-locations)
         - [Replace PluginMenuItem with NavMenuItem](code-updates.md#replace-pluginmenuitem-with-navmenuitem)
+        - [Remove Tag/Tags Filter Field from FilterSet Definitions](code-updates.md#remove-tagtags-filter-from-filterset-definitions)
         - [Replace DjangoFilterBackend with NautobotFilterBackend](code-updates.md#replace-djangofilterbackend-with-nautobotfilterbackend)
+        - [App Model Serializer Inheritance](code-updates.md#app-model-serializer-inheritance)
         - [Revamp Rest API Serializers](code-updates.md#revamp-rest-api-serializers)
         - [Revamp CSV Import and Export](code-updates.md#revamp-csv-import-and-export)
     - Model Updates
