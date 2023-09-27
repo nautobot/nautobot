@@ -345,6 +345,7 @@ class NautobotMetadata(SimpleMetadata):
             filters[filter_key].setdefault("lookup_types", []).append({"value": filter_name, "label": lookup_label})
         return filters
 
+    # TODO: move this into `build_lookup_label` when the legacy UI is removed
     def _filter_lookup_label(self, filter_name, filter_instance):
         """Fix confusing lookup labels for boolean filters."""
         if isinstance(filter_instance, django_filters.BooleanFilter):
