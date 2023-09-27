@@ -231,7 +231,7 @@ One example of using this command would be to [export data from PostgreSQL](../m
 
 ### `fix_custom_fields`
 
-`nautobot-server fix_custom_fields`
+`nautobot-server fix_custom_fields [app_label.ModelName [app_label.ModelName ...]]`
 
 Adds/Removes any custom fields which should or should not exist on an object. This command should not be run unless a custom fields jobs has failed:
 
@@ -250,6 +250,19 @@ Processing ContentType dcim | power feed
 Processing ContentType circuits | circuit
 Processing ContentType ipam | prefix
 ... (truncated for brevity of documentation) ...
+```
+
+You may optionally specify one or more specific models (each prefixed with its app_label) to fix:
+
+```no-highlight
+nautobot-server fix_custom_fields circuits.Circuit dcim.Location
+```
+
+Example output:
+
+```no-highlight
+Processing ContentType circuits | circuit
+Processing ContentType dcim | location
 ```
 
 ### `generate_secret_key`
