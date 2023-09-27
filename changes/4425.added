@@ -1,3 +1,0 @@
-Added `BaseModelSerializer.determine_view_options()` API for use in new UI.
-Added option for individual model serializers to override the default contents of the Advanced tab in the new UI.
-Added option for individual model serializers to define additional tabs in the new UI and the fields included in such tabs.
