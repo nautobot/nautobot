@@ -1,2 +1,0 @@
-Added `tagged_vlans` and `untagged_vlan` as selected/prefetched in (VM)Interface API views.
-Added `ip_addresses` as prefetched in VMInterface API views.

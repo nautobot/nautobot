@@ -1,2 +1,0 @@
-Added documentation to Nautobot 2.0 release notes Release Overview for removal of `manage.py`.
-Added documentation to Nautobot 2.0 release notes Release Overview for change of `ChangedLoggedModel.created` field from `DateField` to `DateTimeField`.

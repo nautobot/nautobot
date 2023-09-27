@@ -15,14 +15,20 @@ import {
     PlusIcon,
     Button,
     EditIcon,
-    Text,
+    Tag,
+    TagLabel,
 } from "@nautobot/nautobot-ui";
 import { useCallback, useMemo } from "react";
 
+import {
+    FiltersPanelContent,
+    NON_FILTER_QUERY_PARAMS,
+    useFiltersPanel,
+} from "@components/FiltersPanel";
+import { Pagination } from "@components/Pagination";
+
 import LoadingWidget from "../LoadingWidget";
 import ObjectTableItem from "./ObjectTableItem";
-import { useFiltersPanel } from "@components/FiltersPanel";
-import { Pagination } from "@components/Pagination";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
@@ -42,7 +48,9 @@ const getTableItemLink = (idx, obj) => {
 export default function ObjectListTable({
     tableData,
     defaultHeaders,
+    objectType,
     tableHeaders,
+    filterData,
     totalCount,
     active_page_number,
     page_size,
@@ -114,7 +122,12 @@ export default function ObjectListTable({
     );
 
     const filtersPanel = useFiltersPanel({
-        content: <Text>You have successfully opened filters panel.</Text>,
+        content: (
+            <FiltersPanelContent
+                lookupFields={filterData}
+                objectType={objectType}
+            />
+        ),
         id: "object-list-table-filters-panel",
         title: "Filters",
     });
@@ -128,6 +141,35 @@ export default function ObjectListTable({
         onColumnVisibilityChange: setColumnVisibility,
         actionMenu: ActionMenu,
     });
+
+    const activeFiltersCount = useMemo(
+        () =>
+            [...new URLSearchParams(location.search)].filter(
+                ([searchParam]) =>
+                    !NON_FILTER_QUERY_PARAMS.includes(searchParam)
+            ).length,
+        [location]
+    );
+
+    useEffect(() => {
+        if (filtersPanel.isOpen) {
+            // This re-renders the filters panel when it is already open and the
+            // current `ObjectList` view collection is changed to another.
+            filtersPanel.open();
+        } // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [objectType, tableHeaders]);
+
+    useEffect(
+        () => () => {
+            // This closes the filters panel when users navigate away from the
+            // `ObjectList` view. Use `setTimeout` in order to delay the filters
+            // panel closing function by one cycle. Otherwise, if called
+            // immediately, some ancestor component lifecycle will mount it
+            // again, effectively cancelling the `filtersPanel.close()` call.
+            setTimeout(() => filtersPanel.close());
+        }, // eslint-disable-next-line react-hooks/exhaustive-deps
+        [] // Keep the dependency array empty to execute only on unmount.
+    );
 
     return (
         <Box borderRadius="md" ref={topRef}>
@@ -154,13 +196,31 @@ export default function ObjectListTable({
                     <Box>
                         <ButtonGroup alignItems="center" spacing="md">
                             <UIButton
-                                variant="secondary"
+                                size="sm"
+                                variant={
+                                    activeFiltersCount > 0
+                                        ? "primary"
+                                        : "secondary"
+                                }
                                 onClick={() =>
                                     filtersPanel.isOpen
                                         ? filtersPanel.close()
                                         : filtersPanel.open()
                                 }
                             >
+                                {activeFiltersCount > 0 ? (
+                                    <Tag
+                                        background="white-0"
+                                        boxShadow="none"
+                                        marginRight="xs"
+                                        size="sm"
+                                        variant="secondary"
+                                    >
+                                        <TagLabel>
+                                            {activeFiltersCount}
+                                        </TagLabel>
+                                    </Tag>
+                                ) : null}
                                 Filters
                             </UIButton>
                             <UIButton

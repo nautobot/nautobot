@@ -1,1 +1,0 @@
-Fixed a bug that raises `CablePath matching query does not exist` exception when deleting a device with multiple types of connected interfaces.
