@@ -331,7 +331,7 @@ Support for RQ and `django-rq`, deprecated since Nautobot 1.1.0, has been fully 
 
 #### Removed Slug Fields ([#2662](https://github.com/nautobot/nautobot/issues/2662))
 
-<!-- TODO: Slug field removal and its impact should be highlighted. -->
+The `slug` field has been removed from all core models except for `GitRepository`. Generally, Nautobot urls that referenced the `slug` field have been changed to use the primary key instead. For example, the url for `https://nautobot/dcim/locations/building-01` would change to a url similar to `https://nautobot/dcim/locations/e41f381a-a53b-485a-886f-9d36859b47a1`. There are a small number of urls that still reference a value that's not the primary key, including some urls related to secrets providers, cables and jobs. A `natural_slug` property has been added to all models that inherit from `BaseModel` to provide a human-readable value for use in tools that require a loose reference to a Nautobot object but this value is not equivalent to the `slug` field and is not guaranteed to be unique. A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
 ## v2.0.0-rc.3 (2023-09-15)
