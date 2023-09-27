@@ -38,8 +38,8 @@ export default function RenderChangeLogsTab({ object_id }) {
         return <div>Failed to load Change Log Data</div>;
     }
 
-    const defaultHeaders = schema.view_options.list_display_fields;
-    const tableHeaders = schema.view_options.fields;
+    const defaultHeaders = schema.view_options.list.default_fields;
+    const tableHeaders = schema.view_options.list.all_fields;
     const tableData = data?.results || [];
 
     return (

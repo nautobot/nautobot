@@ -569,6 +569,73 @@ class NautobotCSVRendererTest(TestCase):
         self.assertEqual(read_data["parent__name"], location_type.parent.name)
 
 
+class BaseModelSerializerTest(TestCase):
+    """
+    Some unit tests for BaseModelSerializer (using concrete subclasses, since BaseModelSerializer is abstract).
+    """
+
+    def test_advanced_tab_fields(self):
+        """Test the advanced_tab_fields classproperty."""
+        self.assertEqual(
+            dcim_serializers.DeviceSerializer().advanced_tab_fields,
+            ["id", "url", "object_type", "created", "last_updated", "natural_slug"],
+        )
+
+    def test_list_display_fields(self):
+        """Test the list_display_fields classproperty."""
+        self.assertEqual(
+            dcim_serializers.DeviceSerializer().list_display_fields,
+            dcim_serializers.DeviceSerializer().Meta.list_display_fields,
+        )
+
+    def test_determine_view_options(self):
+        """Test the determine_view_options API."""
+        view_options = dcim_serializers.DeviceSerializer().determine_view_options()
+        self.maxDiff = None
+
+        # assert base structure rather than exhaustively testing every single field
+
+        self.assertIn("list", view_options)
+
+        self.assertIn("all_fields", view_options["list"])
+        self.assertIn({"dataIndex": "name", "key": "name", "title": "Name"}, view_options["list"]["all_fields"])
+        self.assertIn(
+            {"dataIndex": "parent_bay", "key": "parent_bay", "title": "Parent bay"}, view_options["list"]["all_fields"]
+        )
+
+        self.assertIn("default_fields", view_options["list"])
+        self.assertIn({"dataIndex": "name", "key": "name", "title": "Name"}, view_options["list"]["default_fields"])
+        self.assertNotIn(
+            {"dataIndex": "parent_bay", "key": "parent_bay", "title": "Parent bay"},
+            view_options["list"]["default_fields"],
+        )
+
+        self.assertIn("retrieve", view_options)
+        self.assertIn("tabs", view_options["retrieve"])
+
+        self.assertIn("Advanced", view_options["retrieve"]["tabs"])
+        self.assertIn("Object Details", view_options["retrieve"]["tabs"]["Advanced"][0])
+        self.assertIn("fields", view_options["retrieve"]["tabs"]["Advanced"][0]["Object Details"])
+        self.assertIn("id", view_options["retrieve"]["tabs"]["Advanced"][0]["Object Details"]["fields"])
+
+        self.assertIn("Device", view_options["retrieve"]["tabs"])
+        self.assertIn("Device", view_options["retrieve"]["tabs"]["Device"][0])
+        self.assertIn("fields", view_options["retrieve"]["tabs"]["Device"][0]["Device"])
+        self.assertIn("location", view_options["retrieve"]["tabs"]["Device"][0]["Device"]["fields"])
+
+        self.assertIn("Tags", view_options["retrieve"]["tabs"]["Device"][1])
+        self.assertIn("fields", view_options["retrieve"]["tabs"]["Device"][1]["Tags"])
+        self.assertIn("tags", view_options["retrieve"]["tabs"]["Device"][1]["Tags"]["fields"])
+
+        # Custom tab added through DeviceSerializer.get_additional_detail_view_tabs()
+        self.assertIn("Virtual Chassis", view_options["retrieve"]["tabs"])
+        self.assertIn("Virtual Chassis", view_options["retrieve"]["tabs"]["Virtual Chassis"][0])
+        self.assertIn("fields", view_options["retrieve"]["tabs"]["Virtual Chassis"][0]["Virtual Chassis"])
+        self.assertIn(
+            "virtual_chassis", view_options["retrieve"]["tabs"]["Virtual Chassis"][0]["Virtual Chassis"]["fields"]
+        )
+
+
 class WritableNestedSerializerTest(testing.APITestCase):
     """
     Test the operation of WritableNestedSerializer using VLANSerializer as our test subject.
