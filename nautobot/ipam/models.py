@@ -529,8 +529,6 @@ class Prefix(PrimaryModel):
     def __str__(self):
         return str(self.prefix)
 
-    natural_key_field_names = ["namespace", "prefix"]
-
     def _deconstruct_prefix(self, prefix):
         if prefix:
             if isinstance(prefix, str):

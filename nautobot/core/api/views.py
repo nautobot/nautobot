@@ -209,8 +209,8 @@ class ModelViewSetMixin:
     def get_serializer_context(self):
         context = super().get_serializer_context()
         if "text/csv" in self.request.accepted_media_type:
-            # CSV rendering should always use depth 1
-            context["depth"] = 1
+            # CSV rendering should always use depth 0
+            context["depth"] = 0
         elif self.request.method == "GET":
             # Only allow the depth to be greater than 0 in GET requests
             depth = 0

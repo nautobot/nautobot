@@ -38,7 +38,7 @@ This document provides guidance on migrating code from version 1.x to version 2.
         - [Revamp CSV Import and Export](code-updates.md#revamp-csv-import-and-export)
     - Model Updates
         - [Global](model-updates/global.md)
-            - [Replace the Usage of Slugs with Composite Keys](model-updates/global.md#replace-the-usage-of-slugs-with-composite-keys)
+            - [Replace the Usage of Slugs](model-updates/global.md#replace-the-usage-of-slugs-with-composite-keys)
         - [DCIM](model-updates/dcim.md)
             - [Replace Site and Region with Location Model](model-updates/dcim.md#replace-site-and-region-with-location-model)
         - [Extras](model-updates/extras.md)
