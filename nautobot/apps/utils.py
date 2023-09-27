@@ -72,6 +72,7 @@ from nautobot.extras.utils import (
     task_queues_as_choices,
 )
 
+
 __all__ = (
     "BranchDoesNotExist",
     "build_lookup_label",
