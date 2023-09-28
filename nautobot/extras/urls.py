@@ -482,6 +482,7 @@ urlpatterns = [
     # Job Button Run
     path("job-button/<uuid:pk>/run/", views.JobButtonRunView.as_view(), name="jobbutton_run"),
     # Notes
+    path("notes/", views.NoteListView.as_view(), name="note_list"),
     path("notes/add/", views.NoteEditView.as_view(), name="note_add"),
     path("notes/<uuid:pk>/", views.NoteView.as_view(), name="note"),
     path(

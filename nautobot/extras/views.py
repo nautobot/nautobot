@@ -1667,6 +1667,18 @@ class NoteView(generic.ObjectView):
     queryset = Note.objects.all()
 
 
+class NoteListView(generic.ObjectListView):
+    """
+    List Notes
+    """
+
+    queryset = Note.objects.all()
+    filterset = filters.NoteFilterSet
+    filterset_form = forms.NoteFilterForm
+    table = tables.NoteTable
+    action_buttons = ()
+
+
 class NoteEditView(generic.ObjectEditView):
     queryset = Note.objects.all()
     model_form = forms.NoteForm
