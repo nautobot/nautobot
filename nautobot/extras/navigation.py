@@ -325,7 +325,7 @@ menu_items = (
                         permissions=[
                             "extras.view_note",
                         ],
-                    )
+                    ),
                 ),
             ),
             NavMenuGroup(
