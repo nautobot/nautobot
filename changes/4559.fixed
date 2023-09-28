@@ -1,0 +1,1 @@
+Fixed behavior of a `DynamicGroup` with an invalid `filter` to fail closed rather than failing open.
