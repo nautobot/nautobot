@@ -251,6 +251,10 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "namespace": "$namespace",
         },
     )
+    # It is required to add prefix_length here and set it to required=False and hidden input so that
+    # form validation doesn't complain and that it doesn't show in forms.
+    # Ref:  https://github.com/nautobot/nautobot/issues/4550
+    prefix_length = forms.IntegerField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = Prefix
