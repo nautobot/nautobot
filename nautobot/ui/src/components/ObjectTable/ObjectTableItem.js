@@ -1,6 +1,6 @@
 // import Badge from 'react-bootstrap/Badge';
 import { Link } from "@components/RouterLink";
-import { Button, CheckIcon, CloseIcon } from "@nautobot/nautobot-ui";
+import { Button, CheckIcon, CloseIcon, Flex } from "@nautobot/nautobot-ui";
 import { calculateLuminance } from "@utils/color";
 
 function TextOrButton({ obj }) {
@@ -21,7 +21,6 @@ function TextOrButton({ obj }) {
                 borderRadius="sm"
                 pl="xs"
                 pr="xs"
-                m="xs"
             >
                 {display}
             </Button>
@@ -38,11 +37,11 @@ function TableColumnDisplay({ obj }) {
     } else if (Array.isArray(obj)) {
         if (typeof obj[0] == "object") {
             return (
-                <>
+                <Flex gap="xs">
                     {obj.map((item, idx) => (
                         <TextOrButton obj={item} key={idx} />
                     ))}
-                </>
+                </Flex>
             );
         } else {
             return obj.join(", ");
