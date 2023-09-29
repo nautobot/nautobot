@@ -190,7 +190,7 @@ In addition, the `role` field of the `IPAddress` model has also been changed fro
 
 #### Job Overhaul ([#765](https://github.com/nautobot/nautobot/issues/765))
 
-<!-- TODO: There should be a section dedicated to Job Overhaul and some subsections detailing the differnet parts of the change in 2.0.0 Release Overview. -->
+Within Nautobot 2.0, Jobs has undergone significant changes within the overall functionality of Jobs along with migration for existing 1.x Jobs operation. Database changes for Jobs will affect DryRun functionality. Other significant changes to Jobs in 2.0 provide greater interoperability with Celery for registering, logging, and tracking however 2.0 will be moving away from previous backwards compatibility scripts. These improvements will simplify Job implementation and help reduce administration overhead for status tracking on completions and/or failures. For more details, refer to [Migrating Jobs from Nautobot v1.X to Nautobot v2.0](../development/jobs/migration/from-v1.md).
 
 #### Prefix `is_pool` Field and "Container" Status replaced by New Field `Prefix.type` ([#1362](https://github.com/nautobot/nautobot/issues/1362))
 
