@@ -1,5 +1,4 @@
 import {
-    Box,
     Breadcrumb,
     Breadcrumbs,
     calc,
@@ -138,9 +137,16 @@ export default function GenericView({
             <Navbar appState={currentState} />
 
             <Flex flex="1" overflow="hidden">
-                <Box flex="1" overflow="auto" paddingBottom="md" paddingX="md">
+                <Flex
+                    direction="column"
+                    flex="1"
+                    overflow="auto"
+                    paddingBottom="md"
+                    paddingX="md"
+                >
                     {hasBreadcrumbs ? (
                         <Breadcrumbs
+                            flex="none"
                             marginBottom="md"
                             position="relative"
                             zIndex="5"
@@ -159,7 +165,7 @@ export default function GenericView({
                         gridAutoRows="auto"
                         {...(hasBreadcrumbs
                             ? { minHeight: "auto" }
-                            : undefined)}
+                            : { flex: "1 0 auto" })}
                         {...(isListView
                             ? {
                                   gridAutoRows:
@@ -176,7 +182,7 @@ export default function GenericView({
                             ? children(menuPath)
                             : children}
                     </NautobotGrid>
-                </Box>
+                </Flex>
 
                 <FiltersPanelContainer />
             </Flex>
