@@ -1,15 +1,13 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.routers import APIRootView
 
+from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     NautobotModelViewSet,
     ModelViewSet,
     NotesViewSetMixin,
-    StatusViewSetMixin,
 )
-from nautobot.utilities.utils import count_related, SerializerForAPIVersions, versioned_serializer_selector
 from nautobot.virtualization import filters
 from nautobot.virtualization.models import (
     Cluster,
@@ -36,20 +34,20 @@ class VirtualizationRootView(APIRootView):
 
 
 class ClusterTypeViewSet(NautobotModelViewSet):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "type"))
+    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     serializer_class = serializers.ClusterTypeSerializer
     filterset_class = filters.ClusterTypeFilterSet
 
 
 class ClusterGroupViewSet(NautobotModelViewSet):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "group"))
+    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     serializer_class = serializers.ClusterGroupSerializer
     filterset_class = filters.ClusterGroupFilterSet
 
 
 class ClusterViewSet(NautobotModelViewSet):
     queryset = (
-        Cluster.objects.select_related("type", "group", "tenant", "site")
+        Cluster.objects.select_related("cluster_type", "cluster_group", "tenant", "location")
         .prefetch_related("tags")
         .annotate(
             device_count=count_related(Device, "cluster"),
@@ -65,9 +63,9 @@ class ClusterViewSet(NautobotModelViewSet):
 #
 
 
-class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, NautobotModelViewSet):
+class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
     queryset = VirtualMachine.objects.select_related(
-        "cluster__site",
+        "cluster__location",
         "platform",
         "primary_ip4",
         "primary_ip6",
@@ -75,64 +73,17 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, StatusViewSetMixin, Naut
         "role",
         "tenant",
     ).prefetch_related("tags")
+    serializer_class = serializers.VirtualMachineSerializer
     filterset_class = filters.VirtualMachineFilterSet
 
-    def get_serializer_class(self):
-        """
-        Select the specific serializer based on the request context.
 
-        If the `brief` query param equates to True, return the NestedVirtualMachineSerializer
-
-        If the `exclude` query param includes `config_context` as a value, return the VirtualMachineSerializer
-
-        Else, return the VirtualMachineWithConfigContextSerializer
-        """
-
-        request = self.get_serializer_context()["request"]
-        if request is not None and request.query_params.get("brief", False):
-            return serializers.NestedVirtualMachineSerializer
-
-        elif request is not None and "config_context" in request.query_params.get("exclude", []):
-            return serializers.VirtualMachineSerializer
-
-        return serializers.VirtualMachineWithConfigContextSerializer
-
-
-@extend_schema_view(
-    bulk_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    create=extend_schema(responses={"201": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-    list=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12(many=True)}, versions=["1.2", "1.3"]
-    ),
-    partial_update=extend_schema(
-        responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]
-    ),
-    retrieve=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-    update=extend_schema(responses={"200": serializers.VMInterfaceSerializerVersion12}, versions=["1.2", "1.3"]),
-)
-class VMInterfaceViewSet(StatusViewSetMixin, ModelViewSet, NotesViewSetMixin):
+class VMInterfaceViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = VMInterface.objects.select_related(
         "virtual_machine",
         "parent_interface",
         "bridge",
         "status",
-    ).prefetch_related("tags", "tagged_vlans")
+        "untagged_vlan",
+    ).prefetch_related("tags", "ip_addresses", "tagged_vlans")
     serializer_class = serializers.VMInterfaceSerializer
     filterset_class = filters.VMInterfaceFilterSet
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    brief_prefetch_fields = ["virtual_machine"]
-
-    def get_serializer_class(self):
-        serializer_choices = (
-            SerializerForAPIVersions(versions=["1.2", "1.3"], serializer=serializers.VMInterfaceSerializerVersion12),
-        )
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )

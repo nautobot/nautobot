@@ -1,5 +1,26 @@
 """Filterset base classes and mixins for app implementation."""
 
+from nautobot.core.filters import (
+    ContentTypeChoiceFilter,
+    ContentTypeFilter,
+    ContentTypeFilterMixin,
+    ContentTypeMultipleChoiceFilter,
+    MACAddressFilter,
+    MappedPredicatesFilterMixin,
+    multivalue_field_factory,
+    MultiValueBigNumberFilter,
+    MultiValueDateFilter,
+    MultiValueDateTimeFilter,
+    MultiValueDecimalFilter,
+    MultiValueFloatFilter,
+    MultiValueMACAddressFilter,
+    MultiValueNumberFilter,
+    MultiValueTimeFilter,
+    MultiValueUUIDFilter,
+    NameSearchFilterSet,
+    NumericArrayFilter,
+    TagFilter,
+)
 from nautobot.extras.filters import (
     CreatedUpdatedModelFilterSetMixin,
     CustomFieldModelFilterSetMixin,
@@ -7,9 +28,17 @@ from nautobot.extras.filters import (
     RelationshipModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
+from nautobot.extras.filters.mixins import (
+    ConfigContextRoleFilter,
+    LocalContextModelFilterSetMixin,
+    RelationshipFilter,
+    RoleFilter,
+    RoleModelFilterSetMixin,
+    StatusFilter,
+)
 from nautobot.extras.plugins import FilterExtension
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     BaseFilterSet,
     MultiValueCharFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -18,18 +47,44 @@ from nautobot.utilities.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 
+
 __all__ = (
     "BaseFilterSet",
+    "ConfigContextRoleFilter",
+    "ContentTypeChoiceFilter",
+    "ContentTypeFilter",
+    "ContentTypeFilterMixin",
+    "ContentTypeMultipleChoiceFilter",
     "CreatedUpdatedModelFilterSetMixin",
     "CustomFieldModelFilterSetMixin",
     "FilterExtension",
+    "LocalContextModelFilterSetMixin",
+    "MACAddressFilter",
+    "MappedPredicatesFilterMixin",
+    "multivalue_field_factory",
+    "MultiValueBigNumberFilter",
     "MultiValueCharFilter",
+    "MultiValueDateFilter",
+    "MultiValueDateTimeFilter",
+    "MultiValueDecimalFilter",
+    "MultiValueFloatFilter",
+    "MultiValueMACAddressFilter",
+    "MultiValueNumberFilter",
+    "MultiValueTimeFilter",
+    "MultiValueUUIDFilter",
+    "NameSearchFilterSet",
     "NaturalKeyOrPKMultipleChoiceFilter",
     "NautobotFilterSet",
+    "NumericArrayFilter",
     "RelatedMembershipBooleanFilter",
+    "RelationshipFilter",
     "RelationshipModelFilterSetMixin",
+    "RoleFilter",
+    "RoleModelFilterSetMixin",
     "SearchFilter",
+    "StatusFilter",
     "StatusModelFilterSetMixin",
+    "TagFilter",
     "TenancyModelFilterSetMixin",
     "TreeNodeMultipleChoiceFilter",
 )

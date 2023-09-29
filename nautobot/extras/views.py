@@ -1,4 +1,3 @@
-import inspect
 from datetime import timedelta
 import logging
 
@@ -7,41 +6,39 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.db.models import ProtectedError, Q
+from django.db.models import Count, ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import TemplateDoesNotExist, get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
-from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 
-from nautobot.core.views import generic
+from nautobot.core.forms import restrict_form_fields
+from nautobot.core.models.querysets import count_related
+from nautobot.core.models.utils import pretty_print_query
+from nautobot.core.tables import ButtonsColumn
+from nautobot.core.utils.lookup import get_table_for_model
+from nautobot.core.utils.requests import normalize_querydict
+from nautobot.core.views import generic, viewsets
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_base_template, get_job_content_type, get_worker_count
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.forms import restrict_form_fields
-from nautobot.utilities.utils import (
-    copy_safe_request,
-    count_related,
-    csv_format,
-    get_table_for_model,
-    prepare_cloned_fields,
-    pretty_print_query,
-)
-from nautobot.utilities.tables import ButtonsColumn
-from nautobot.utilities.views import ObjectPermissionRequiredMixin
-from nautobot.utilities.utils import normalize_querydict
+from nautobot.extras.utils import get_base_template, get_worker_count
+from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
+
 from . import filters, forms, tables
 from .api import serializers
 from .choices import JobExecutionType, JobResultStatusChoices
@@ -50,7 +47,9 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .jobs import get_job, run_job, Job as JobClass
+from .filters import RoleFilterSet
+from .forms import RoleBulkEditForm, RoleForm
+from .jobs import get_job
 from .models import (
     ComputedField,
     ConfigContext,
@@ -62,14 +61,14 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
-    Job as JobModel,
     JobButton,
     JobHook,
-    JobLogEntry,
-    ObjectChange,
     JobResult,
+    Note,
+    ObjectChange,
     Relationship,
     RelationshipAssociation,
+    Role,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -78,10 +77,10 @@ from .models import (
     Tag,
     TaggedItem,
     Webhook,
-    Note,
 )
+from .models import Job as JobModel
 from .registry import registry
-
+from .tables import RoleTable
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +115,7 @@ class ComputedFieldDeleteView(generic.ObjectDeleteView):
 class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = ComputedField.objects.all()
     table = tables.ComputedFieldTable
+    filterset = filters.ComputedFieldFilterSet
 
 
 #
@@ -173,6 +173,7 @@ class ConfigContextDeleteView(generic.ObjectDeleteView):
 class ConfigContextBulkDeleteView(generic.BulkDeleteView):
     queryset = ConfigContext.objects.all()
     table = tables.ConfigContextTable
+    filterset = filters.ConfigContextFilterSet
 
 
 class ObjectConfigContextView(generic.ObjectView):
@@ -255,7 +256,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Config context table
         config_context_table = tables.ConfigContextTable(
-            data=instance.configcontext_set.all(),
+            data=instance.config_contexts.all(),
             orderable=False,
             extra_columns=[
                 (
@@ -273,18 +274,20 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            data=instance.device_set.select_related(
+            data=instance.devices.select_related(
                 "tenant",
-                "site",
+                "location",
                 "rack",
                 "device_type",
-                "device_role",
+                "role",
             ).prefetch_related("primary_ip"),
             orderable=False,
             extra_columns=[
                 (
                     "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                    tables.ConfigContextSchemaValidationStateColumn(
+                        validator, "local_config_context_data", empty_values=()
+                    ),
                 ),
                 ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
             ],
@@ -297,7 +300,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
-            data=instance.virtualmachine_set.select_related(
+            data=instance.virtual_machines.select_related(
                 "cluster",
                 "role",
                 "tenant",
@@ -306,7 +309,9 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
             extra_columns=[
                 (
                     "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "local_context_data", empty_values=()),
+                    tables.ConfigContextSchemaValidationStateColumn(
+                        validator, "local_config_context_data", empty_values=()
+                    ),
                 ),
                 ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
             ],
@@ -345,6 +350,7 @@ class ConfigContextSchemaDeleteView(generic.ObjectDeleteView):
 class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
     queryset = ConfigContextSchema.objects.all()
     table = tables.ConfigContextSchemaTable
+    filterset = filters.ConfigContextSchemaFilterSet
 
 
 #
@@ -468,14 +474,14 @@ class CustomFieldDeleteView(generic.ObjectDeleteView):
 class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
+    filterset = filters.CustomFieldFilterSet
 
     def construct_custom_field_delete_tasks(self, queryset):
         """
         Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
         """
         tasks = [
-            # 2.0 TODO: #824 use obj.slug instead of obj.name
-            delete_custom_field_data.si(obj.name, set(obj.content_types.values_list("pk", flat=True)))
+            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)))
             for obj in queryset
         ]
         return tasks
@@ -704,6 +710,7 @@ class DynamicGroupDeleteView(generic.ObjectDeleteView):
 class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = DynamicGroup.objects.all()
     table = tables.DynamicGroupTable
+    filterset = filters.DynamicGroupFilterSet
 
 
 class ObjectDynamicGroupsView(View):
@@ -791,16 +798,16 @@ class GitRepositoryListView(generic.ObjectListView):
     template_name = "extras/gitrepository_list.html"
 
     def extra_context(self):
-        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
         # Get the newest results for each repository name
         results = {
-            r.name: r
+            r.task_kwargs["repository"]: r
             for r in JobResult.objects.filter(
-                obj_type=git_repository_content_type,
-                status__in=JobResultStatusChoices.TERMINAL_STATE_CHOICES,
+                task_name__startswith="nautobot.core.jobs.GitRepository",
+                task_kwargs__repository__isnull=False,
+                status__in=JobResultStatusChoices.READY_STATES,
             )
-            .order_by("completed")
-            .defer("data")
+            .order_by("date_done")
+            .defer("result")
         }
         return {
             "job_results": results,
@@ -822,14 +829,17 @@ class GitRepositoryEditView(generic.ObjectEditView):
     model_form = forms.GitRepositoryForm
     template_name = "extras/gitrepository_object_edit.html"
 
+    # TODO(jathan): Align with changes for v2 where we're not stashing the user on the instance for
+    # magical calls and instead discretely calling `repo.sync(user=user, dry_run=dry_run)`, but
+    # again, this will be moved to the API calls, so just something to keep in mind.
     def alter_obj(self, obj, request, url_args, url_kwargs):
         # A GitRepository needs to know the originating request when it's saved so that it can enqueue using it
-        obj.request = request
+        obj.user = request.user
         return super().alter_obj(obj, request, url_args, url_kwargs)
 
     def get_return_url(self, request, obj):
         if request.method == "POST":
-            return reverse("extras:gitrepository_result", kwargs={"slug": obj.slug})
+            return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
         return super().get_return_url(request, obj)
 
 
@@ -839,16 +849,7 @@ class GitRepositoryDeleteView(generic.ObjectDeleteView):
 
 class GitRepositoryBulkImportView(generic.BulkImportView):
     queryset = GitRepository.objects.all()
-    model_form = forms.GitRepositoryCSVForm
     table = tables.GitRepositoryBulkTable
-
-    def _save_obj(self, obj_form, request):
-        """Each GitRepository needs to know the originating request when it's saved so that it can enqueue using it."""
-        instance = obj_form.save(commit=False)
-        instance.request = request
-        instance.save()
-
-        return instance
 
 
 class GitRepositoryBulkEditView(generic.BulkEditView):
@@ -871,6 +872,7 @@ class GitRepositoryBulkEditView(generic.BulkEditView):
 class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
     queryset = GitRepository.objects.all()
     table = tables.GitRepositoryBulkTable
+    filterset = filters.GitRepositoryFilterSet
 
     def extra_context(self):
         return {
@@ -878,14 +880,15 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
         }
 
 
-def check_and_call_git_repository_function(request, slug, func):
+def check_and_call_git_repository_function(request, pk, func):
     """Helper for checking Git permissions and worker availability, then calling provided function if all is well
     Args:
-        request: request object.
-        slug (str): GitRepository slug value.
+        request (HttpRequest): request object.
+        pk (UUID): GitRepository pk value.
         func (function): Enqueue git repo function.
     Returns:
-        HttpResponseForbidden or a redirect
+        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
+            otherwise redirect to the job result page.
     """
     if not request.user.has_perm("extras.change_gitrepository"):
         return HttpResponseForbidden()
@@ -894,20 +897,20 @@ def check_and_call_git_repository_function(request, slug, func):
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
     else:
-        repository = get_object_or_404(GitRepository, slug=slug)
-        func(repository, request)
+        repository = get_object_or_404(GitRepository, pk=pk)
+        job_result = func(repository, request.user)
 
-    return redirect("extras:gitrepository_result", slug=slug)
+    return redirect(job_result.get_absolute_url())
 
 
 class GitRepositorySyncView(View):
-    def post(self, request, slug):
-        return check_and_call_git_repository_function(request, slug, enqueue_pull_git_repository_and_refresh_data)
+    def post(self, request, pk):
+        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
 
 
 class GitRepositoryDryRunView(View):
-    def post(self, request, slug):
-        return check_and_call_git_repository_function(request, slug, enqueue_git_repository_diff_origin_and_local)
+    def post(self, request, pk):
+        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
 
 class GitRepositoryResultView(generic.ObjectView):
@@ -922,12 +925,7 @@ class GitRepositoryResultView(generic.ObjectView):
         return "extras.view_gitrepository"
 
     def get_extra_context(self, request, instance):
-        git_repository_content_type = ContentType.objects.get(app_label="extras", model="gitrepository")
-        job_result = (
-            JobResult.objects.filter(obj_type=git_repository_content_type, name=instance.name)
-            .order_by("-created")
-            .first()
-        )
+        job_result = instance.get_latest_sync()
 
         return {
             "result": job_result,
@@ -1049,8 +1047,7 @@ class JobListView(generic.ObjectListView):
         }
 
 
-# 2.0 TODO: this should really be "JobRunView"
-class JobView(ObjectPermissionRequiredMixin, View):
+class JobRunView(ObjectPermissionRequiredMixin, View):
     """
     View the parameters of a Job and enqueue it if desired.
     """
@@ -1060,7 +1057,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
     def get_required_permission(self):
         return "extras.run_job"
 
-    def _get_job_model_or_404(self, class_path=None, slug=None):
+    def _get_job_model_or_404(self, class_path=None, pk=None):
         """Helper function for get() and post()."""
         if class_path:
             try:
@@ -1068,30 +1065,32 @@ class JobView(ObjectPermissionRequiredMixin, View):
             except JobModel.DoesNotExist:
                 raise Http404
         else:
-            job_model = get_object_or_404(self.queryset, slug=slug)
+            job_model = get_object_or_404(self.queryset, pk=pk)
 
         return job_model
 
-    def get(self, request, class_path=None, slug=None):
-        job_model = self._get_job_model_or_404(class_path, slug)
+    def get(self, request, class_path=None, pk=None):
+        job_model = self._get_job_model_or_404(class_path, pk)
 
         try:
-            job_class = job_model.job_class()
+            try:
+                job_class = job_model.job_class
+            except TypeError as exc:
+                # job_class may be None
+                raise RuntimeError("Job code for this job is not currently installed or loadable") from exc
             initial = normalize_querydict(request.GET, form_class=job_class.as_form_class())
             if "kwargs_from_job_result" in initial:
                 job_result_pk = initial.pop("kwargs_from_job_result")
                 try:
-                    job_result = job_model.results.get(pk=job_result_pk)
-                    # Allow explicitly specified arg values in request.GET to take precedence over the saved job_kwargs,
-                    # for example "?kwargs_from_job_result=<UUID>&integervar=22&_commit=False"
+                    job_result = job_model.job_results.get(pk=job_result_pk)
+                    # Allow explicitly specified arg values in request.GET to take precedence over the saved task_kwargs,
+                    # for example "?kwargs_from_job_result=<UUID>&integervar=22"
                     explicit_initial = initial
-                    initial = job_result.job_kwargs.get("data", {}).copy()
-                    commit = job_result.job_kwargs.get("commit")
-                    if commit is not None:
-                        initial.setdefault("_commit", commit)
-                    task_queue = job_result.job_kwargs.get("task_queue")
+                    initial = job_result.task_kwargs.copy()
+                    task_queue = job_result.celery_kwargs.get("queue", None)
                     if task_queue is not None:
-                        initial.setdefault("_task_queue", task_queue)
+                        initial["_task_queue"] = task_queue
+                    initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(
@@ -1123,12 +1122,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
             },
         )
 
-    def post(self, request, class_path=None, slug=None):
-        job_model = self._get_job_model_or_404(class_path, slug)
+    def post(self, request, class_path=None, pk=None):
+        job_model = self._get_job_model_or_404(class_path, pk)
 
-        job_form = (
-            job_model.job_class().as_form(request.POST, request.FILES) if job_model.job_class is not None else None
-        )
+        job_form = job_model.job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
         task_queue = request.POST.get("_task_queue")
 
@@ -1149,12 +1146,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
+            task_queue = job_form.cleaned_data.pop("_task_queue", None)
+            dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
-            commit = job_form.cleaned_data.pop("_commit")
             profile = job_form.cleaned_data.pop("_profile")
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
-            if job_model.approval_required or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
+            if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
                 crontab = ""
 
                 if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
@@ -1180,25 +1178,15 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     else:
                         schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
-                job_kwargs = {
-                    "data": job_model.job_class.serialize_data(job_form.cleaned_data),
-                    "request": copy_safe_request(request),
-                    "user": request.user.pk,
-                    "commit": commit,
-                    "name": job_model.class_path,
-                    "task_queue": job_form.cleaned_data.get("_task_queue", None),
-                }
-                if task_queue:
-                    job_kwargs["celery_kwargs"] = {"queue": task_queue}
-
+                celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
-                    task="nautobot.extras.jobs.scheduled_job_handler",
-                    job_class=job_model.class_path,
+                    task=job_model.job_class.registered_name,
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    kwargs=job_kwargs,
+                    kwargs=job_model.job_class.serialize_data(job_form.cleaned_data),
+                    celery_kwargs=celery_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
                     queue=task_queue,
@@ -1206,7 +1194,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     approval_required=job_model.approval_required,
                     crontab=crontab,
                 )
-                scheduled_job.save()
+                scheduled_job.validated_save()
 
                 if job_model.approval_required:
                     messages.success(request, f"Job {schedule_name} successfully submitted for approval")
@@ -1217,18 +1205,13 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_content_type = get_job_content_type()
+                job_kwargs = job_model.job_class.prepare_job_kwargs(job_form.cleaned_data)
                 job_result = JobResult.enqueue_job(
-                    run_job,
-                    job_model.class_path,
-                    job_content_type,
+                    job_model,
                     request.user,
-                    celery_kwargs={"queue": task_queue},
-                    data=job_model.job_class.serialize_data(job_form.cleaned_data),
-                    request=copy_safe_request(request),
-                    commit=commit,
                     profile=profile,
-                    task_queue=job_form.cleaned_data.get("_task_queue", None),
+                    task_queue=task_queue,
+                    **job_model.job_class.serialize_data(job_kwargs),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
@@ -1252,8 +1235,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
         )
 
 
-# 2.0 TODO: this should really be "JobView"
-class JobDetailView(generic.ObjectView):
+class JobView(generic.ObjectView):
     queryset = JobModel.objects.all()
     template_name = "extras/job_detail.html"
 
@@ -1276,7 +1258,7 @@ class JobApprovalRequestView(generic.ObjectView):
     job's execution, rather than initial job form input.
     """
 
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    queryset = ScheduledJob.objects.needs_approved()
     template_name = "extras/job_approval_request.html"
     additional_permissions = ("extras.view_job",)
 
@@ -1295,8 +1277,9 @@ class JobApprovalRequestView(generic.ObjectView):
 
         if job_class is not None:
             # Render the form with all fields disabled
-            initial = instance.kwargs.get("data", {})
-            initial["_commit"] = instance.kwargs.get("commit", True)
+            initial = instance.kwargs
+            initial["_task_queue"] = instance.queue
+            initial["_profile"] = instance.celery_kwargs.get("profile", False)
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
             job_form = None
@@ -1332,22 +1315,17 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job cannot be run at this time")
             elif not JobModel.objects.check_perms(self.request.user, instance=job_model, action="run"):
                 messages.error(request, "You do not have permission to run this job")
+            elif not job_model.supports_dryrun:
+                messages.error(request, "This job does not support dryrun")
             else:
-                # Immediately enqueue the job with commit=False and send the user to the normal JobResult view
-                job_content_type = get_job_content_type()
-                initial = scheduled_job.kwargs.get("data", {})
-                initial["_commit"] = False
-                celery_kwargs = scheduled_job.kwargs.get("celery_kwargs", {})
+                # Immediately enqueue the job and send the user to the normal JobResult view
+                job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
+                job_kwargs["dryrun"] = True
                 job_result = JobResult.enqueue_job(
-                    run_job,
-                    job_model.job_class.class_path,
-                    job_content_type,
+                    job_model,
                     request.user,
-                    celery_kwargs=celery_kwargs,
-                    data=job_model.job_class.serialize_data(initial),
-                    request=copy_safe_request(request),
-                    commit=False,  # force a dry-run
-                    task_queue=scheduled_job.kwargs.get("task_queue", None),
+                    celery_kwargs=scheduled_job.celery_kwargs,
+                    **job_model.job_class.serialize_data(job_kwargs),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
@@ -1402,7 +1380,7 @@ class JobApprovalRequestView(generic.ObjectView):
 
 
 class ScheduledJobListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").enabled()
+    queryset = ScheduledJob.objects.enabled()
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
@@ -1416,7 +1394,7 @@ class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.filter(task="nautobot.extras.jobs.scheduled_job_handler").needs_approved()
+    queryset = ScheduledJob.objects.needs_approved()
     table = tables.ScheduledJobApprovalQueueTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
@@ -1428,7 +1406,7 @@ class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
-        job_class = get_job(instance.job_class)
+        job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
@@ -1488,7 +1466,7 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("data").select_related("job_model", "obj_type", "user").prefetch_related("logs")
+    queryset = JobResult.objects.defer("result").select_related("job_model", "user").prefetch_related("logs")
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1500,8 +1478,9 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("data").all()
+    queryset = JobResult.objects.defer("result").all()
     table = tables.JobResultTable
+    filterset = filters.JobResultFilterSet
 
 
 class JobResultView(generic.ObjectView):
@@ -1509,49 +1488,14 @@ class JobResultView(generic.ObjectView):
     Display a JobResult and its Job data.
     """
 
-    queryset = JobResult.objects.prefetch_related("job_model", "obj_type", "user")
+    queryset = JobResult.objects.prefetch_related("job_model", "user")
     template_name = "extras/jobresult.html"
-
-    def instance_to_csv(self, instance):
-        """Format instance to csv."""
-        csv_data = []
-        headers = JobLogEntry.csv_headers.copy()
-        csv_data.append(",".join(headers))
-
-        for log_entry in instance.logs.all():
-            data = log_entry.to_csv()
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
-
-    def get(self, request, *args, **kwargs):
-        """
-        Generic GET handler for accessing an object by PK or slug
-        """
-        instance = get_object_or_404(self.queryset, **kwargs)
-
-        if "export" in request.GET:
-            response = HttpResponse(self.instance_to_csv(instance), content_type="text/csv")
-            underscore_filename = f"{instance.job_model.slug.replace('-', '_')}"
-            formated_completion_time = instance.completed.strftime("%Y-%m-%d_%H_%M")
-            filename = f"{underscore_filename}_{formated_completion_time}_logs.csv"
-            response["Content-Disposition"] = f"attachment; filename={filename}"
-            return response
-
-        return super().get(request, *args, **kwargs)
 
     def get_extra_context(self, request, instance):
         associated_record = None
         job_class = None
         if instance.job_model is not None:
             job_class = instance.job_model.job_class
-        # 2.0 TODO: remove JobResult.related_object entirely
-        related_object = instance.related_object
-        if inspect.isclass(related_object) and issubclass(related_object, JobClass):
-            if job_class is None:
-                job_class = related_object
-        elif related_object:
-            associated_record = related_object
 
         return {
             "job": job_class,
@@ -1569,7 +1513,7 @@ class JobLogEntryTableView(View):
 
     def get(self, request, pk=None):
         instance = self.queryset.get(pk=pk)
-        log_table = tables.JobLogEntryTable(data=instance.logs.all(), user=request.user)
+        log_table = tables.JobLogEntryTable(data=instance.job_log_entries.all(), user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
 
@@ -1584,7 +1528,6 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     filterset_class = filters.JobButtonFilterSet
     filterset_form_class = forms.JobButtonFilterForm
     form_class = forms.JobButtonForm
-    lookup_field = "pk"
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
@@ -1605,16 +1548,10 @@ class JobButtonRunView(ObjectPermissionRequiredMixin, View):
         job_button = JobButton.objects.get(pk=pk)
         job_model = job_button.job
         result = JobResult.enqueue_job(
-            func=run_job,
-            name=job_model.class_path,
-            obj_type=get_job_content_type(),
+            job_model=job_model,
             user=request.user,
-            data={
-                "object_pk": post_data["object_pk"],
-                "object_model_name": post_data["object_model_name"],
-            },
-            request=copy_safe_request(request),
-            commit=True,
+            object_pk=post_data["object_pk"],
+            object_model_name=post_data["object_model_name"],
         )
         msg = f'Job enqueued. <a href="{result.get_absolute_url()}">Click here for the results.</a>'
         messages.info(request=request, message=mark_safe(msg))
@@ -1746,7 +1683,7 @@ class NoteDeleteView(generic.ObjectDeleteView):
 
 class ObjectNotesView(View):
     """
-    Present a history of changes made to a particular object.
+    Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
@@ -1817,6 +1754,7 @@ class RelationshipEditView(generic.ObjectEditView):
 class RelationshipBulkDeleteView(generic.BulkDeleteView):
     queryset = Relationship.objects.all()
     table = tables.RelationshipTable
+    filterset = filters.RelationshipFilterSet
 
 
 class RelationshipDeleteView(generic.ObjectDeleteView):
@@ -1834,10 +1772,102 @@ class RelationshipAssociationListView(generic.ObjectListView):
 class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
     queryset = RelationshipAssociation.objects.all()
     table = tables.RelationshipAssociationTable
+    filterset = filters.RelationshipAssociationFilterSet
 
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
     queryset = RelationshipAssociation.objects.all()
+
+
+#
+# Roles
+#
+
+
+class RoleUIViewSet(viewsets.NautobotUIViewSet):
+    """`Roles` UIViewSet."""
+
+    queryset = Role.objects.all()
+    bulk_update_form_class = RoleBulkEditForm
+    filterset_class = RoleFilterSet
+    form_class = RoleForm
+    serializer_class = serializers.RoleSerializer
+    table_class = RoleTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["content_types"] = instance.content_types.order_by("app_label", "model")
+
+            devices = instance.devices.select_related(
+                "status",
+                "location",
+                "tenant",
+                "role",
+                "rack",
+                "device_type",
+            )
+            ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
+                interface_count=Count("interfaces"),
+                interface_parent_count=(Count("interfaces__device", distinct=True)),
+                vm_interface_count=Count("vm_interfaces"),
+                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                assigned_count=Count("interfaces") + Count("vm_interfaces"),
+            )
+            prefixes = instance.prefixes.select_related(
+                "location",
+                "status",
+                "tenant",
+                "vlan",
+                # "vrf",
+                "namespace",
+            )
+            virtual_machines = instance.virtual_machines.select_related(
+                "cluster",
+                "role",
+                "status",
+                "tenant",
+            )
+            vlans = instance.vlans.select_related(
+                "vlan_group",
+                "location",
+                "status",
+                "tenant",
+            )
+
+            device_table = DeviceTable(devices)
+            device_table.columns.hide("role")
+            ipaddress_table = IPAddressTable(ipaddress)
+            ipaddress_table.columns.hide("role")
+            prefix_table = PrefixTable(prefixes)
+            prefix_table.columns.hide("role")
+            virtual_machine_table = VirtualMachineTable(virtual_machines)
+            virtual_machine_table.columns.hide("role")
+            vlan_table = VLANTable(vlans)
+            vlan_table.columns.hide("role")
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+
+            RequestConfig(request, paginate).configure(device_table)
+            RequestConfig(request, paginate).configure(ipaddress_table)
+            RequestConfig(request, paginate).configure(prefix_table)
+            RequestConfig(request, paginate).configure(virtual_machine_table)
+            RequestConfig(request, paginate).configure(vlan_table)
+
+            context.update(
+                {
+                    "device_table": device_table,
+                    "ipaddress_table": ipaddress_table,
+                    "prefix_table": prefix_table,
+                    "virtual_machine_table": virtual_machine_table,
+                    "vlan_table": vlan_table,
+                }
+            )
+
+        return context
 
 
 #
@@ -1868,7 +1898,7 @@ class SecretView(generic.ObjectView):
 
         provider = registry["secrets_providers"].get(instance.provider)
 
-        groups = instance.groups.distinct()
+        groups = instance.secrets_groups.distinct()
         groups_table = tables.SecretsGroupTable(groups, orderable=False)
 
         return {
@@ -1906,7 +1936,6 @@ class SecretDeleteView(generic.ObjectDeleteView):
 
 class SecretBulkImportView(generic.BulkImportView):
     queryset = Secret.objects.all()
-    model_form = forms.SecretCSVForm
     table = tables.SecretTable
 
 
@@ -1928,7 +1957,7 @@ class SecretsGroupView(generic.ObjectView):
     queryset = SecretsGroup.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(group=instance)}
+        return {"secrets_group_associations": SecretsGroupAssociation.objects.filter(secrets_group=instance)}
 
 
 class SecretsGroupEditView(generic.ObjectEditView):
@@ -2081,7 +2110,6 @@ class StatusBulkImportView(generic.BulkImportView):
     """Bulk CSV import of multiple `Status` objects."""
 
     queryset = Status.objects.all()
-    model_form = forms.StatusCSVForm
     table = tables.StatusTable
 
 
@@ -2142,7 +2170,6 @@ class TagDeleteView(generic.ObjectDeleteView):
 
 class TagBulkImportView(generic.BulkImportView):
     queryset = Tag.objects.all()
-    model_form = forms.TagCSVForm
     table = tables.TagTable
 
 
@@ -2150,11 +2177,13 @@ class TagBulkEditView(generic.BulkEditView):
     queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
     form = forms.TagBulkEditForm
+    filterset = filters.TagFilterSet
 
 
 class TagBulkDeleteView(generic.BulkDeleteView):
     queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
+    filterset = filters.TagFilterSet
 
 
 #

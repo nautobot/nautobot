@@ -1,60 +1,45 @@
 from collections import OrderedDict
 
-from django.contrib.contenttypes.models import ContentType
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     ChoiceField,
-    ContentTypeField,
-    SerializedPKRelatedField,
-)
-from nautobot.dcim.api.nested_serializers import (
-    NestedDeviceSerializer,
-    NestedLocationSerializer,
-    NestedSiteSerializer,
-)
-from nautobot.extras.api.serializers import (
+    NautobotHyperlinkedRelatedField,
     NautobotModelSerializer,
-    StatusModelSerializerMixin,
-    TaggedModelSerializerMixin,
+    ValidatedModelSerializer,
 )
-from nautobot.ipam.choices import IPAddressFamilyChoices, IPAddressRoleChoices, ServiceProtocolChoices
+from nautobot.extras.api.mixins import TaggedModelSerializerMixin
+from nautobot.ipam.api.fields import IPFieldSerializer
+from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam import constants
 from nautobot.ipam.models import (
-    Aggregate,
+    get_default_namespace,
     IPAddress,
+    IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
     VRF,
 )
-from nautobot.tenancy.api.nested_serializers import NestedTenantSerializer
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.virtualization.api.nested_serializers import (
-    NestedVirtualMachineSerializer,
-)
 
-# Not all of these variable(s) are not actually used anywhere in this file, but required for the
-# automagically replacing a Serializer with its corresponding NestedSerializer.
-from .nested_serializers import (  # noqa: F401
-    IPFieldSerializer,
-    NestedAggregateSerializer,
-    NestedIPAddressSerializer,
-    NestedPrefixSerializer,
-    NestedRIRSerializer,
-    NestedRoleSerializer,
-    NestedRouteTargetSerializer,
-    NestedServiceSerializer,
-    NestedVLANGroupSerializer,
-    NestedVLANSerializer,
-    NestedVRFSerializer,
-)
+
+#
+# Namespaces
+#
+
+
+class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    class Meta:
+        model = Namespace
+        fields = "__all__"
+        list_display_fields = ["name", "description", "location"]
+
 
 #
 # VRFs
@@ -62,37 +47,14 @@ from .nested_serializers import (  # noqa: F401
 
 
 class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vrf-detail")
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    import_targets = SerializedPKRelatedField(
-        queryset=RouteTarget.objects.all(),
-        serializer=NestedRouteTargetSerializer,
-        required=False,
-        many=True,
-    )
-    export_targets = SerializedPKRelatedField(
-        queryset=RouteTarget.objects.all(),
-        serializer=NestedRouteTargetSerializer,
-        required=False,
-        many=True,
-    )
     ipaddress_count = serializers.IntegerField(read_only=True)
     prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = VRF
-        fields = [
-            "url",
-            "name",
-            "rd",
-            "tenant",
-            "enforce_unique",
-            "description",
-            "import_targets",
-            "export_targets",
-            "ipaddress_count",
-            "prefix_count",
-        ]
+        fields = "__all__"
+        list_display_fields = ["name", "rd", "tenant", "description"]
+        extra_kwargs = {"namespace": {"default": get_default_namespace}}
 
 
 #
@@ -101,59 +63,29 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:routetarget-detail")
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-
     class Meta:
         model = RouteTarget
-        fields = [
-            "url",
-            "name",
-            "tenant",
-            "description",
-        ]
+        fields = "__all__"
+        list_display_fields = ["name", "tenant", "description"]
 
 
 #
-# RIRs/aggregates
+# RIRs
 #
 
 
 class RIRSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:rir-detail")
-    aggregate_count = serializers.IntegerField(read_only=True)
+    assigned_prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = RIR
-        fields = [
-            "url",
+        fields = "__all__"
+        list_display_fields = [
             "name",
-            "slug",
             "is_private",
-            "description",
-            "aggregate_count",
-        ]
-
-
-class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:aggregate-detail")
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
-    prefix = IPFieldSerializer()
-    rir = NestedRIRSerializer()
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-
-    class Meta:
-        model = Aggregate
-        fields = [
-            "url",
-            "family",
-            "prefix",
-            "rir",
-            "tenant",
-            "date_added",
+            "assigned_prefix_count",
             "description",
         ]
-        read_only_fields = ["family"]
 
 
 #
@@ -161,89 +93,41 @@ class AggregateSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 #
 
 
-class RoleSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:role-detail")
-    prefix_count = serializers.IntegerField(read_only=True)
-    vlan_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Role
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "weight",
-            "description",
-            "prefix_count",
-            "vlan_count",
-        ]
-
-
 class VLANGroupSerializer(NautobotModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlangroup-detail")
-    site = NestedSiteSerializer(required=False, allow_null=True)
-    location = NestedLocationSerializer(required=False, allow_null=True)
     vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = VLANGroup
-        fields = [
-            "url",
-            "name",
-            "slug",
-            "site",
-            "location",
-            "description",
-            "vlan_count",
-        ]
-        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        validators = []
-
-    def validate(self, data):
-        # Validate uniqueness of name and slug if a site has been assigned.
-        # 2.0 TODO: Remove if/when slug is globally unique. This would be a breaking change.
-        if data.get("site", None):
-            for field in ["name", "slug"]:
-                validator = UniqueTogetherValidator(queryset=VLANGroup.objects.all(), fields=("site", field))
-                validator(data, self)
-
-        # Enforce model validation
-        super().validate(data)
-
-        return data
+        fields = "__all__"
+        list_display_fields = ["name", "location", "vlan_count", "description"]
 
 
-class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:vlan-detail")
-    site = NestedSiteSerializer(required=False, allow_null=True)
-    location = NestedLocationSerializer(required=False, allow_null=True)
-    group = NestedVLANGroupSerializer(required=False, allow_null=True)
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = NestedRoleSerializer(required=False, allow_null=True)
+class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = VLAN
-        fields = [
-            "url",
-            "site",
-            "location",
-            "group",
+        # TODO(jathan): These were taken from VLANDetailTable and not VLANTable. Let's make sure
+        # these are correct.
+        fields = "__all__"
+        list_display_fields = [
             "vid",
+            "location",
+            "vlan_group",
             "name",
+            "prefixes",
             "tenant",
             "status",
             "role",
             "description",
-            "prefix_count",
         ]
         validators = []
 
     def validate(self, data):
         # Validate uniqueness of vid and name if a group has been assigned.
-        if data.get("group", None):
+        if data.get("vlan_group", None):
             for field in ["vid", "name"]:
-                validator = UniqueTogetherValidator(queryset=VLAN.objects.all(), fields=("group", field))
+                validator = UniqueTogetherValidator(queryset=VLAN.objects.all(), fields=("vlan_group", field))
                 validator(data, self)
 
         # Enforce model validation
@@ -257,34 +141,56 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Status
 #
 
 
-class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:prefix-detail")
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
+class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix = IPFieldSerializer()
-    site = NestedSiteSerializer(required=False, allow_null=True)
-    location = NestedLocationSerializer(required=False, allow_null=True)
-    vrf = NestedVRFSerializer(required=False, allow_null=True)
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    vlan = NestedVLANSerializer(required=False, allow_null=True)
-    role = NestedRoleSerializer(required=False, allow_null=True)
+    type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
 
     class Meta:
         model = Prefix
-        fields = [
-            "url",
-            "family",
+        fields = "__all__"
+        list_display_fields = [
             "prefix",
-            "site",
-            "location",
+            "namespace",
+            "type",
+            "status",
             "vrf",
             "tenant",
+            "location",
             "vlan",
-            "status",
             "role",
-            "is_pool",
             "description",
         ]
-        read_only_fields = ["family"]
+        extra_kwargs = {
+            "ip_version": {"read_only": True},
+            "namespace": {"default": get_default_namespace},
+            "prefix_length": {"read_only": True},
+        }
+
+        detail_view_config = {
+            "layout": [
+                {
+                    "Prefix": {
+                        "fields": [
+                            "prefix",
+                            "parent",
+                            "namespace",
+                            "type",
+                            "network",
+                            "broadcast",
+                            "prefix_length",
+                            "ip_version",
+                            "description",
+                            "role",
+                            "vlan",
+                            "location",
+                            "tenant",
+                            "rir",
+                            "date_allocated",
+                        ]
+                    },
+                },
+            ],
+        }
 
 
 class PrefixLengthSerializer(serializers.Serializer):
@@ -298,9 +204,9 @@ class PrefixLengthSerializer(serializers.Serializer):
             raise serializers.ValidationError({"prefix_length": "this field must be int type"})
 
         prefix = self.context.get("prefix")
-        if prefix.family == 4 and requested_prefix > 32:
+        if prefix.ip_version == 4 and requested_prefix > 32:
             raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv4"})
-        elif prefix.family == 6 and requested_prefix > 128:
+        elif prefix.ip_version == 6 and requested_prefix > 128:
             raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv6"})
         return data
 
@@ -310,20 +216,14 @@ class AvailablePrefixSerializer(serializers.Serializer):
     Representation of a prefix which does not exist in the database.
     """
 
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     prefix = serializers.CharField(read_only=True)
-    vrf = NestedVRFSerializer(read_only=True)
 
     def to_representation(self, instance):
-        if self.context.get("vrf"):
-            vrf = NestedVRFSerializer(self.context["vrf"], context={"request": self.context["request"]}).data
-        else:
-            vrf = None
         return OrderedDict(
             [
-                ("family", instance.version),
+                ("ip_version", instance.version),
                 ("prefix", str(instance)),
-                ("vrf", vrf),
             ]
         )
 
@@ -333,54 +233,77 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:ipaddress-detail")
-    family = ChoiceField(choices=IPAddressFamilyChoices, read_only=True)
+class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     address = IPFieldSerializer()
-    vrf = NestedVRFSerializer(required=False, allow_null=True)
-    tenant = NestedTenantSerializer(required=False, allow_null=True)
-    role = ChoiceField(choices=IPAddressRoleChoices, allow_blank=True, required=False)
-    assigned_object_type = ContentTypeField(
-        queryset=ContentType.objects.filter(constants.IPADDRESS_ASSIGNMENT_MODELS),
-        required=False,
-        allow_null=True,
+    # namespace is not a model field, so we have to specify it explicitly
+    namespace = NautobotHyperlinkedRelatedField(
+        view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
     )
-    assigned_object = serializers.SerializerMethodField(read_only=True)
-    nat_inside = NestedIPAddressSerializer(required=False, allow_null=True)
-    nat_outside = NestedIPAddressSerializer(read_only=True, many=True, source="nat_outside_list")
 
     class Meta:
         model = IPAddress
-        fields = [
-            "url",
-            "family",
+        fields = "__all__"
+        list_display_fields = [
             "address",
+            "type",
             "vrf",
-            "tenant",
             "status",
             "role",
-            "assigned_object_type",
-            "assigned_object_id",
-            "assigned_object",
-            "nat_inside",
-            "nat_outside",
+            "tenant",
             "dns_name",
             "description",
         ]
-        read_only_fields = ["family"]
+        extra_kwargs = {
+            "ip_version": {"read_only": True},
+            "mask_length": {"read_only": True},
+            "nat_outside_list": {"read_only": True},
+            "parent": {"required": False},
+        }
 
-    @extend_schema_field(serializers.DictField(allow_null=True))
-    def get_assigned_object(self, obj):
-        if obj.assigned_object is None:
-            return None
-        serializer = get_serializer_for_model(obj.assigned_object, prefix="Nested")
-        context = {"request": self.context["request"]}
-        return serializer(obj.assigned_object, context=context).data
+        detail_view_config = {
+            "layout": [
+                {
+                    "IP Address": {
+                        "fields": [
+                            # FixMe(timizuo): Missing in new-ui; resolve when working on #4355
+                            "namespace",
+                            "ip_version",
+                            "type",
+                            "role",
+                            "dns_name",
+                            "description",
+                        ]
+                    },
+                    "Operational Details": {
+                        "fields": [
+                            "tenant",
+                            "assigned",  # FixMe(timizuo) Missing in new-ui; resolve when working on #4355
+                            "nat_inside",
+                            "nat_outside_list",
+                        ]
+                    },
+                },
+            ],
+        }
 
+    def validate(self, data):
+        namespace = data.get("namespace", None)
+        parent = data.get("parent", None)
 
-# 2.0 TODO: Remove in 2.0. Used to serialize against pre-1.3 behavior (nat_inside was one-to-one)
-class IPAddressSerializerLegacy(IPAddressSerializer):
-    nat_outside = NestedIPAddressSerializer(read_only=True)
+        # Only assert namespace/parent on create.
+        if self.instance is None and not any([namespace, parent]):
+            raise ValidationError({"__all__": "One of parent or namespace must be provided"})
+
+        super().validate(data)
+        return data
+
+    def get_field_names(self, declared_fields, info):
+        """Add reverse relations to the automatically discovered fields."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "nat_outside_list")
+        self.extend_field_names(fields, "interfaces")
+        self.extend_field_names(fields, "vm_interfaces")
+        return fields
 
 
 class AvailableIPSerializer(serializers.Serializer):
@@ -388,22 +311,42 @@ class AvailableIPSerializer(serializers.Serializer):
     Representation of an IP address which does not exist in the database.
     """
 
-    family = serializers.IntegerField(read_only=True)
+    ip_version = serializers.IntegerField(read_only=True)
     address = serializers.CharField(read_only=True)
-    vrf = NestedVRFSerializer(read_only=True)
 
     def to_representation(self, instance):
-        if self.context.get("vrf"):
-            vrf = NestedVRFSerializer(self.context["vrf"], context={"request": self.context["request"]}).data
-        else:
-            vrf = None
         return OrderedDict(
             [
-                ("family", self.context["prefix"].version),
+                ("ip_version", self.context["prefix"].version),
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
-                ("vrf", vrf),
             ]
         )
+
+
+#
+# IP address to interface
+#
+
+
+class IPAddressToInterfaceSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = IPAddressToInterface
+        fields = "__all__"
+        validators = []
+
+    def validate(self, data):
+        # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.
+        if data.get("interface"):
+            validator = UniqueTogetherValidator(
+                queryset=IPAddressToInterface.objects.all(), fields=("interface", "ip_address")
+            )
+            validator(data, self)
+        if data.get("vm_interface"):
+            validator = UniqueTogetherValidator(
+                queryset=IPAddressToInterface.objects.all(), fields=("vm_interface", "ip_address")
+            )
+            validator(data, self)
+        return super().validate(data)
 
 
 #
@@ -412,32 +355,24 @@ class AvailableIPSerializer(serializers.Serializer):
 
 
 class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    url = serializers.HyperlinkedIdentityField(view_name="ipam-api:service-detail")
-    device = NestedDeviceSerializer(required=False, allow_null=True)
-    virtual_machine = NestedVirtualMachineSerializer(required=False, allow_null=True)
+    # TODO #3024 make a backlog item to rip out the choice field.
     protocol = ChoiceField(choices=ServiceProtocolChoices, required=False)
-    ipaddresses = SerializedPKRelatedField(
-        queryset=IPAddress.objects.all(),
-        serializer=NestedIPAddressSerializer,
-        required=False,
-        many=True,
-    )
     ports = serializers.ListField(
         child=serializers.IntegerField(
             min_value=constants.SERVICE_PORT_MIN,
             max_value=constants.SERVICE_PORT_MAX,
-        )
+        ),
     )
 
     class Meta:
         model = Service
-        fields = [
-            "url",
-            "device",
-            "virtual_machine",
-            "name",
-            "ports",
-            "protocol",
-            "ipaddresses",
-            "description",
-        ]
+        fields = "__all__"
+        extra_kwargs = {
+            "device": {"help_text": "Required if no virtual_machine is specified"},
+            "virtual_machine": {"help_text": "Required if no device is specified"},
+        }
+        # TODO(jathan): We need to account for the "parent" field from the `ServiceTable` which is
+        # an either/or column for `device` or `virtual_machine`. For now it's hard-coded to
+        # `device`.
+        # list_display_fields = ["name", "parent", "protocol", "ports", "description"]
+        list_display_fields = ["name", "device", "protocol", "ports", "description"]

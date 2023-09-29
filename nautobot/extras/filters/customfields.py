@@ -2,13 +2,14 @@ from django.db.models import Q
 from django.forms import IntegerField
 import django_filters
 
-from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
-from nautobot.utilities.filters import (
+from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueDateFilter,
     MultiValueNumberFilter,
 )
-from nautobot.utilities.forms import NullableDateField
+from nautobot.core.forms import NullableDateField
+from nautobot.core.forms.widgets import StaticSelect2Multiple
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 
 
 EXACT_FILTER_TYPES = (
@@ -31,6 +32,7 @@ class CustomFieldFilterMixin:
         if custom_field.type not in EXACT_FILTER_TYPES:
             if custom_field.filter_logic == CustomFieldFilterLogicChoices.FILTER_LOOSE:
                 kwargs.setdefault("lookup_expr", "icontains")
+        kwargs["widget"] = custom_field.to_form_field(set_initial=False, enforce_required=False).widget
         super().__init__(*args, **kwargs)
         self.field_name = f"_custom_field_data__{self.field_name}"
 
@@ -47,7 +49,7 @@ class CustomFieldFilterMixin:
         # Return custom fields that don't match the value and null custom fields
         if self.exclude:
             qs_null_custom_fields = qs.filter(**{f"{self.field_name}__isnull": True}).distinct()
-            return super().filter(qs, value) | qs_null_custom_fields
+            return super().filter(qs, value).distinct() | qs_null_custom_fields
 
         return super().filter(qs, value)
 
@@ -70,11 +72,19 @@ class CustomFieldJSONFilter(CustomFieldFilterMixin, django_filters.Filter):
     """Custom field single value filter for backwards compatibility"""
 
 
-class CustomFieldMultiSelectFilter(CustomFieldFilterMixin, django_filters.Filter):
-    """Custom field single value filter for backwards compatibility"""
+class CustomFieldMultiSelectFilter(CustomFieldFilterMixin, MultiValueCharFilter):
+    """This provides functionality for filtering custom fields with multiple  select type"""
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("lookup_expr", "contains")
+        super().__init__(*args, **kwargs)
+
+
+class CustomFieldMultiValueSelectFilter(CustomFieldFilterMixin, django_filters.MultipleChoiceFilter):
+    """This provides functionality for filtering custom fields with select type"""
+
+    def __init__(self, *args, **kwargs):
+        self.field_class.widget = StaticSelect2Multiple
         super().__init__(*args, **kwargs)
 
 

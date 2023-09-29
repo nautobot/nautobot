@@ -3,9 +3,9 @@ from django.conf import settings
 from unittest import skipIf
 
 from nautobot.circuits.models import Circuit, Provider
-from nautobot.dcim.models import PowerFeed, PowerPanel, Site
+from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.dcim.models import Location, PowerFeed, PowerPanel
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing.integration import SeleniumTestCase
 
 from example_plugin.models import ExampleModel
 
@@ -20,7 +20,7 @@ class PluginHomeTestCase(SeleniumTestCase):
     fixtures = ["user-data.json"]  # bob/bob
     layout = {
         "Organization": {
-            "Sites": {"model": Site, "permission": "dcim.view_site"},
+            "Locations": {"model": Location, "permission": "dcim.view_location"},
             "Example Models": {"model": ExampleModel, "permission": "example_plugin.view_examplemodel"},
             "Tenants": {"model": Tenant, "permission": "tenancy.view_tenant"},
         },
@@ -123,7 +123,7 @@ class PluginHomeTestCase(SeleniumTestCase):
         """
         Render homepage with limited permissions.
         """
-        self.add_permissions("dcim.view_site")
+        self.add_permissions("dcim.view_location")
         self.add_permissions("circuits.view_circuit")
         self.add_permissions("example_plugin.view_examplemodel")
         user_permissions = self.user.get_all_permissions()

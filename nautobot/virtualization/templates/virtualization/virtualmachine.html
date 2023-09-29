@@ -16,7 +16,7 @@
             <li role="presentation"{% if active_tab == 'config-context' %} class="active"{% endif %}>
                 <a href="{% url 'virtualization:virtualmachine_configcontext' pk=object.pk %}">Config Context</a>
             </li>
-        {% endif %} 
+        {% endif %}
 {% endblock extra_nav_tabs %}
 
 
@@ -33,24 +33,20 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                        {{ object.status| hyperlinked_object_with_color }}
                     </td>
                 </tr>
                 <tr>
                     <td>Role</td>
                     <td>
-                        {% if object.role %}
-                            <a href="{% url 'virtualization:virtualmachine_list' %}?role={{ object.role.slug }}">{{ object.role }}</a>
-                        {% else %}
-                            <span class="text-muted">None</span>
-                        {% endif %}
+                        {{ object.role | hyperlinked_object_with_color }}
                     </td>
                 </tr>
                 <tr>
                     <td>Platform</td>
                     <td>
                         {% if object.platform %}
-                            <a href="{% url 'virtualization:virtualmachine_list' %}?platform={{ object.platform.slug }}">{{ object.platform }}</a>
+                            <a href="{% url 'virtualization:virtualmachine_list' %}?platform={{ object.platform.name }}">{{ object.platform }}</a>
                         {% else %}
                             <span class="text-muted">None</span>
                         {% endif %}
@@ -59,8 +55,8 @@
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        {% if object.tenant and object.tenant.group %}
-                            {{ object.tenant.group|hyperlinked_object }} /
+                        {% if object.tenant and object.tenant.tenant_group %}
+                            {{ object.tenant.tenant_group|hyperlinked_object }} /
                         {% endif %}
                         {{ object.tenant|hyperlinked_object }}
                     </td>
@@ -69,12 +65,22 @@
                     <td>Primary IPv4</td>
                     <td>
                         {% if object.primary_ip4 %}
-                            {{ object.primary_ip4|hyperlinked_object }}
-                            {% if object.primary_ip4.nat_inside %}
-                                <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
-                            {% elif object.primary_ip4.nat_outside_list.exists %}
-                                <span>(NAT: {% for nat in object.primary_ip4.nat_outside_list.all %}{{ nat }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
-                            {% endif %}
+                            <span class="hover_copy">
+                                {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }} ({{ object.primary_ip4.parent.namespace|hyperlinked_object }})
+                                {% if object.primary_ip4.nat_inside %}
+                                    <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
+                                {% elif object.primary_ip4.nat_outside_list.exists %}
+                                    <br /><span>NAT: </span>
+                                    <ul>
+                                        {% for nat in object.primary_ip4.nat_outside_list.all %}
+                                            <li>{{ nat|hyperlinked_object }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
                         {% else %}
                             <span class="text-muted">&mdash;</span>
                         {% endif %}
@@ -84,12 +90,22 @@
                     <td>Primary IPv6</td>
                     <td>
                         {% if object.primary_ip6 %}
-                            {{ object.primary_ip6|hyperlinked_object }}
-                            {% if object.primary_ip6.nat_inside %}
-                                <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
-                            {% elif object.primary_ip6.nat_outside_list.exists %}
-                                <span>(NAT: {% for nat in object.primary_ip6.nat_outside_list.all %}{{ nat }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
-                            {% endif %}
+                            <span class="hover_copy">
+                                {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }} ({{ object.primary_ip6.parent.namespace|hyperlinked_object }})
+                                {% if object.primary_ip6.nat_inside %}
+                                    <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
+                                {% elif object.primary_ip6.nat_outside_list.exists %}
+                                    <br /><span>NAT: </span>
+                                    <ul>
+                                        {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                            <li>{{ nat|hyperlinked_object }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
                         {% else %}
                             <span class="text-muted">&mdash;</span>
                         {% endif %}
@@ -112,6 +128,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
+        {% include 'panel_table.html' with table=vrf_table heading="Assigned VRFs" %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Cluster</strong>
@@ -120,15 +137,15 @@
                 <tr>
                     <td>Cluster</td>
                     <td>
-                        {% if object.cluster.group %}
-                            {{ object.cluster.group|hyperlinked_object }} /
+                        {% if object.cluster.cluster_group %}
+                            {{ object.cluster.cluster_group|hyperlinked_object }} /
                         {% endif %}
                         {{ object.cluster|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
                     <td>Cluster Type</td>
-                    <td>{{ object.cluster.type }}</td>
+                    <td>{{ object.cluster.cluster_type }}</td>
                 </tr>
             </table>
         </div>

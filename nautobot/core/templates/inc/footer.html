@@ -19,6 +19,11 @@
                 <div class="col-xs-4 text-right noprint">
                     {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
                     <p class="text-muted">
+                        {% if request.path|is_new_ui_ready %}
+                            <i class="mdi mdi-new-box text-primary"></i> <a href="#" onclick="viewNewUI();">View in New UI</a> &middot;
+                            {% else %}
+                            <i class="mdi mdi-new-box"></i> <span style="cursor:not-allowed">View in New UI</span> &middot;
+                        {% endif %}
                         <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> &middot;
                         <i class="mdi mdi-book-open-page-variant text-primary"></i>
                         {% if settings.BRANDING_URLS.docs %}

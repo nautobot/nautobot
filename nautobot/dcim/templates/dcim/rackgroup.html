@@ -17,22 +17,13 @@
                     <td>{{ object.parent|hyperlinked_object }}</td>
                 </tr>
                 <tr>
-                    <td>Site</td>
-                    <td>
-                        {% if object.site.region %}
-                            {{ object.site.region|hyperlinked_object }} /
-                        {% endif %}
-                        {{ object.site|hyperlinked_object }}
-                    </td>
-                </tr>
-                <tr>
                     <td>Location</td>
                     <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                 </tr>
                 <tr>
                     <td>Racks</td>
                     <td>
-                        <a href="{% url 'dcim:rack_list' %}?group={{ object.slug }}">{{ rack_table.rows|length }}</a>
+                        <a href="{% url 'dcim:rack_list' %}?rack_group={{ object.pk }}">{{ rack_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>
@@ -47,7 +38,7 @@
             {% include 'inc/table.html' with table=rack_table %}
             {% if perms.dcim.add_rack %}
                 <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:rack_add' %}?group={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <a href="{% url 'dcim:rack_add' %}?rack_group={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add rack
                     </a>
                 </div>

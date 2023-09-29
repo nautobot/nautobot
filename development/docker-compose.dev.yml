@@ -20,3 +20,30 @@ services:
   mkdocs:
     volumes:
       - ../:/source
+  nodejs:
+    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    environment:
+      PORT: "3000"
+      # DEBUG: "express:*" # nodejs web server debug logging
+    ports:
+      - "3000:3000"
+    working_dir: /opt/nautobot/ui
+    volumes:
+      - ../:/source
+      - ../nautobot/ui/lib:/opt/nautobot/ui/lib
+      - ../nautobot/ui/public:/opt/nautobot/ui/public
+      - ../nautobot/ui/src:/opt/nautobot/ui/src
+    entrypoint: >
+      bash -c "npm run start"
+  storybook:
+    profiles:
+      - storybook
+    # TODO: can we use a lighter-weight base image?
+    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    environment:
+      PORT: "6006"
+    ports:
+      - "6006:6006"
+    entrypoint: ""
+    # TODO this needs to ensure the version of nautobot-ui remains in sync with package-lock.json
+    command: bash -c "git clone https://github.com/nautobot/nautobot-ui.git && cd nautobot-ui && npm ci && npm run storybook|| npm run storybook"

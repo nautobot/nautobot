@@ -1,9 +1,9 @@
 from unittest import skipIf
 
 from django.conf import settings
+from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 
-from nautobot.utilities.choices import ButtonActionColorChoices, ButtonActionIconChoices
-from nautobot.utilities.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import SeleniumTestCase
 
 
 @skipIf(
@@ -114,13 +114,9 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
                 for button_name in item_details["buttons"]:
                     button = item.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
-                    # Ensure button has matching class for its name
-                    button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
-                    if button_class:
+                    if button_class := getattr(ButtonActionColorChoices, button_name.upper(), None):
                         self.assertIn(button_class, button["class"])
-                    # Ensure button has matching icon for its name
-                    button_icon = getattr(ButtonActionIconChoices, button_name.upper(), None)
-                    if button_icon:
+                    if button_icon := getattr(ButtonActionIconChoices, button_name.upper(), None):
                         icon = button.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
                         self.assertIn(button_icon, icon["class"])
 
@@ -148,12 +144,8 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
                 for button_name in item_details["buttons"]:
                     button = item.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
-                    # Ensure button has matching class for its name
-                    button_class = getattr(ButtonActionColorChoices, button_name.upper(), None)
-                    if button_class:
+                    if button_class := getattr(ButtonActionColorChoices, button_name.upper(), None):
                         self.assertIn(button_class, button.get_attribute("class"))
-                    # Ensure button has matching icon for its name
-                    button_icon = getattr(ButtonActionIconChoices, button_name.upper(), None)
-                    if button_icon:
+                    if button_icon := getattr(ButtonActionIconChoices, button_name.upper(), None):
                         icon = button.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
                         self.assertIn(button_icon, icon["class"])

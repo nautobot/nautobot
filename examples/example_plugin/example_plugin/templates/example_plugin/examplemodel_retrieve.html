@@ -38,6 +38,14 @@
                     <td>Number</td>
                     <td><span>{{ object.number }}</span></td>
                 </tr>
+                <tr>
+                    <td>Sample Variable</td>
+                    <td><span>{{ "SAMPLE_VARIABLE" | settings_or_config:"example_plugin" }}</span></td>
+                </tr>
+                <tr>
+                    <td>Lowercase Example Variable</td>
+                    <td><span>{{ "lowercase_example" | settings_or_config:"example_plugin" }}</span></td>
+                </tr>
             </table>
         </div>
 {% endblock content_left_page %}

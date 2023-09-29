@@ -7,85 +7,12 @@ on:  # yamllint disable
       - "main"
       - "develop"
       - "next"
-  workflow_call: {}
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
-  black:
-    runs-on: "ubuntu-22.04"
-    env:
-      INVOKE_NAUTOBOT_LOCAL: "True"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v3"
-      - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
-      - name: "Linting: black"
-        run: "poetry run invoke black"
-  flake8:
-    runs-on: "ubuntu-22.04"
-    env:
-      INVOKE_NAUTOBOT_LOCAL: "True"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v3"
-      - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
-      - name: "Linting: flake8"
-        run: "poetry run invoke flake8"
-  markdownlint:
-    runs-on: "ubuntu-22.04"
-    env:
-      INVOKE_NAUTOBOT_LOCAL: "True"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v3"
-      - name: "Linting: markdownlint"
-        uses: "nosborn/github-action-markdown-cli@v3.0.1"
-        with:
-          config_file: ".markdownlint.yml"
-          files: "nautobot examples *.md"
-          ignore_files: "nautobot/project-static"
-          rules: "scripts/use-relative-md-links.js"
-  hadolint:
-    runs-on: "ubuntu-22.04"
-    env:
-      INVOKE_NAUTOBOT_LOCAL: "True"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v3"
-      - name: "Run Hadolint"
-        uses: "hadolint/hadolint-action@v1.6.0"
-        with:
-          dockerfile: "docker/Dockerfile"
-  check-migrations:
-    runs-on: "ubuntu-22.04"
-    env:
-      INVOKE_NAUTOBOT_LOCAL: "True"
-      NAUTOBOT_DB_USER: "nautobot"
-      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
-      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
-    services:
-      postgres:
-        image: "postgres:13-alpine"
-        env:
-          POSTGRES_USER: "nautobot"
-          POSTGRES_PASSWORD: "decinablesprewad"
-          POSTGRES_DB: "nautobot"
-        ports:
-          - "5432:5432"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v3"
-      - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
-      - name: "Run check migrations"
-        run: "poetry run invoke check-migrations"
-    needs:
-      - "black"
-      - "flake8"
-      - "markdownlint"
-      - "hadolint"
   check-schema:
+    name: "Run REST API schema checks"
     runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -110,46 +37,9 @@ jobs:
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
-    needs:
-      - "black"
-      - "flake8"
-      - "markdownlint"
-      - "hadolint"
-
-  pylint:
-    runs-on: "ubuntu-22.04"
-    env:
-      INVOKE_NAUTOBOT_LOCAL: "True"
-      NAUTOBOT_DB_USER: "nautobot"
-      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
-      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
-      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
-    services:
-      postgres:
-        image: "postgres:13-alpine"
-        env:
-          POSTGRES_USER: "nautobot"
-          POSTGRES_PASSWORD: "decinablesprewad"
-          POSTGRES_DB: "nautobot"
-        ports:
-          - "5432:5432"
-    steps:
-      - name: "Check out repository code"
-        uses: "actions/checkout@v3"
-      - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
-      - name: "Run pylint"
-        run: "poetry run invoke pylint"
-    needs:
-      - "check-migrations"
-      - "check-schema"
-
   tests-postgres:
+    name: "Unit tests (PostgreSQL and Python 3.11)"
     runs-on: "ubuntu-22.04"
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "nautobot"
@@ -174,7 +64,7 @@ jobs:
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
-          python-version: "${{ matrix.python-version }}"
+          python-version: "3.11"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
         run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
       - name: "Reinstall Nautobot Local"
@@ -183,16 +73,9 @@ jobs:
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
-    needs:
-      - "check-migrations"
-      - "check-schema"
-
   tests-mysql:
+    name: "Unit tests (MySQL and Python 3.8)"
     runs-on: "ubuntu-22.04"
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
       NAUTOBOT_DB_USER: "root"
@@ -219,7 +102,7 @@ jobs:
       - name: "Setup environment"
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
         with:
-          python-version: "${{ matrix.python-version }}"
+          python-version: "3.8"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
         run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
       - name: "Reinstall Nautobot Local"
@@ -232,10 +115,98 @@ jobs:
         run: "poetry run invoke unittest --failfast --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
-    needs:
-      - "check-migrations"
-      - "check-schema"
-
+  tests-ui:
+    runs-on: "ubuntu-20.04"
+    env:
+      INVOKE_NAUTOBOT_LOCAL: "True"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+      - name: "Install NPM Dependencies"
+        working-directory: ./nautobot/ui
+        run: "npm ci"
+      - name: "Setup base aliases for tests"
+        working-directory: ./nautobot/ui
+        run: "mkdir generated && cp src/file_templates/jsconfig-base.json generated/jsconfig.paths.json"
+      - name: "Setup base app_imports for mock"
+        working-directory: ./nautobot/ui
+        run: "echo 'export const NautobotApps = {}; export default NautobotApps;' > generated/app_imports.js"
+      - name: "Run unittest-ui"
+        working-directory: ./nautobot/ui
+        run: "poetry run invoke unittest-ui"
+  migration-tests-mysql:
+    name: "Run migrations against test dataset (MySQL and Python 3.8)"
+    runs-on: "ubuntu-20.04"
+    env:
+      MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
+      NAUTOBOT_DB_USER: "root"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_HOST: "127.0.0.1"
+      NAUTOBOT_DB_PORT: "3306"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.mysql"
+    services:
+      mysql:
+        image: "mysql:8"
+        env:
+          MYSQL_ROOT_PASSWORD: "decinablesprewad"
+          MYSQL_PASSWORD: "decinablesprewad"
+          MYSQL_DATABASE: "nautobot"
+        ports:
+          - "3306:3306"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        with:
+          python-version: "3.8"
+      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
+        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
+      - name: "Reinstall Nautobot Local"
+        run: "poetry install"
+      - name: "Install Required Dependencies for MySql Client"
+        run: "sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev gcc"
+      - name: "Install MySql Dependencies"
+        run: "poetry install --no-interaction --no-root --extras mysql"
+      - name: "Run migration test"
+        run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
+  migration-tests-postgres:
+    name: "Run migrations against test dataset (PostgreSQL and Python 3.11)"
+    runs-on: "ubuntu-20.04"
+    env:
+      MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
+      INVOKE_NAUTOBOT_LOCAL: "True"
+      NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
+      NAUTOBOT_DB_USER: "nautobot"
+      NAUTOBOT_DB_PASSWORD: "decinablesprewad"
+      NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
+      PGPASSWORD: "decinablesprewad"
+    services:
+      postgres:
+        image: "postgres:13-alpine"
+        env:
+          POSTGRES_USER: "nautobot"
+          POSTGRES_PASSWORD: "decinablesprewad"
+          POSTGRES_DB: "nautobot"
+        ports:
+          - "5432:5432"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v2"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        with:
+          python-version: "3.11"
+      - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
+        run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
+      - name: "Reinstall Nautobot Local"
+        run: "poetry install"
+      - name: "Run migration test"
+        run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
   integration-test:
     runs-on: "ubuntu-22.04"
     env:
@@ -275,34 +246,39 @@ jobs:
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
       - name: "Run coverage"
         run: "poetry run invoke unittest-coverage"
-    needs:
-      - "pylint"
-      - "tests-postgres"
-      - "tests-mysql"
-
   container-build:
-    name: "Build Container Images (GHCR Only)"
+    name: "Build Container Images (amd64 on GHCR Only)"
     runs-on: "ubuntu-22.04"
     if: |
       github.event_name == 'push' &&
-      (github.ref_name == 'develop' || github.ref_name == 'next')
+      (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm/1.6')
     needs:
+      - "check-schema"
       - "integration-test"
+      - "migration-tests-mysql"
+      - "migration-tests-postgres"
+      - "tests-mysql"
+      - "tests-postgres"
+      - "tests-ui"
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
     steps:
       - name: "Configuration"
         id: "config"
         shell: "bash"
         run: |
-          export BRANCH="${{ github.ref_name }}"
+          if [[ "${{ github.ref_name }}" == "ltm/1.6" ]]; then
+            export BRANCH="ltm-1.6"
+          else
+            export BRANCH="${{ github.ref_name }}"
+          fi
           export TAG_LATEST="false"
           export TAG_LATEST_FOR_BRANCH="false"
           export TAG_LATEST_FOR_PY="false"
 
-          if [[ $BRANCH == "develop" ]]; then
+          if [[ $BRANCH == "ltm-1.6" ]]; then
             export TAG_LATEST_FOR_PY="true"
           fi
 
@@ -336,6 +312,7 @@ jobs:
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot"
+          platforms: "linux/amd64"
           push: "false"
           python-version: "${{ matrix.python-version }}"
           tag-latest: "${{ steps.config.outputs.tag-latest }}"
@@ -347,6 +324,7 @@ jobs:
         with:
           branch: "${{ steps.config.outputs.branch }}"
           image: "ghcr.io/nautobot/nautobot-dev"
+          platforms: "linux/amd64"
           push: "true"
           python-version: "${{ matrix.python-version }}"
           tag-latest: "${{ steps.config.outputs.tag-latest }}"

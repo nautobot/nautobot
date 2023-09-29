@@ -12,28 +12,12 @@
         }
     </style>
     <ul class="location-hierarchy">
-        {% for region in location.base_site.region.get_ancestors %}
-            <li>{{ region|hyperlinked_object }} (Region)
-                <ul>
-        {% endfor %}
-        {% if location.base_site.region %}
-            <li>{{ location.base_site.region|hyperlinked_object }} (Region)
-                <ul>
-        {% endif %}
-            <li>{{ location.base_site|hyperlinked_object }} (Site)
-                <ul>
         {% for ancestor in location.ancestors %}
             <li>{{ ancestor|hyperlinked_object:"name" }} ({{ ancestor.location_type|hyperlinked_object:"name" }})
                 <ul>
         {% endfor %}
         <li><strong>{{ location|hyperlinked_object:"name" }} ({{ location.location_type|hyperlinked_object:"name" }})</strong></li>
         {% for ancestor in location.ancestors %}
-                </ul>
-            </li>
-        {% endfor %}
-                </ul>
-            </li>
-        {% for region in location.base_site.region.get_ancestors %}
                 </ul>
             </li>
         {% endfor %}

@@ -4,6 +4,7 @@ from typing import Optional
 
 from django.utils.html import format_html
 
+from nautobot.apps.config import get_app_settings_or_config
 from nautobot.apps.ui import Banner, BannerClassChoices
 
 
@@ -39,13 +40,20 @@ def banner(context, *args, **kwargs) -> Optional[Banner]:
             # Object changelog view
             content += format_html("<div>Specifically, its changelog.</div>")
         return Banner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
-    elif "table" in context:
+    elif "table" in context and context["table"] is not None:
         # Table view
         content += format_html(
             "<div>You are viewing a table of {}</div>",
             context["table"].Meta.model._meta.verbose_name_plural,
         )
         return Banner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
+
+    content += format_html(
+        "<div>SAMPLE_VARIABLE is {}</div>", get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE")
+    )
+    content += format_html(
+        "<div>lowercase_example is {}</div>", get_app_settings_or_config("example_plugin", "lowercase_example")
+    )
 
     # Default banner rendering
     return Banner(content=content, banner_class=BannerClassChoices.CLASS_INFO)

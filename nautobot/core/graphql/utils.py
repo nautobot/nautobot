@@ -3,9 +3,14 @@ import logging
 from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFilter
 import graphene
 
+from nautobot.core.filters import (
+    MultiValueBigNumberFilter,
+    MultiValueDecimalFilter,
+    MultiValueFloatFilter,
+    MultiValueNumberFilter,
+)
 from nautobot.core.graphql import BigInteger
-from nautobot.utilities.filters import MultiValueBigNumberFilter, MultiValueNumberFilter
-from nautobot.utilities.utils import slugify_dashes_to_underscores
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 
 
 logger = logging.getLogger(__name__)
@@ -31,10 +36,10 @@ def get_filtering_args_from_filterset(filterset_class):
     if the filter field is a subclass of MultipleChoiceFilter, the argument will be converted as a list
 
     Args:
-        filterset_class(FilterSet): FilterSet class used to extract the argument
+        filterset_class (FilterSet): FilterSet class used to extract the argument
 
     Returns:
-        dict(graphene.Argument): Filter Arguments organized in a dictionary
+        (dict[graphene.Argument]): Filter Arguments organized in a dictionary
     """
 
     args = {}
@@ -57,6 +62,8 @@ def get_filtering_args_from_filterset(filterset_class):
 
         if issubclass(filter_field_class, MultiValueBigNumberFilter):
             field_type = graphene.List(BigInteger)
+        elif issubclass(filter_field_class, (MultiValueFloatFilter, MultiValueDecimalFilter)):
+            field_type = graphene.List(graphene.Float)
         elif issubclass(filter_field_class, MultiValueNumberFilter):
             field_type = graphene.List(graphene.Int)
         else:

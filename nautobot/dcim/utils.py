@@ -7,16 +7,17 @@ from netutils.lib_mapper import (
     HIERCONFIG_LIB_MAPPER_REVERSE,
     NAPALM_LIB_MAPPER_REVERSE,
     NETMIKO_LIB_MAPPER_REVERSE,
+    NETUTILSPARSER_LIB_MAPPER_REVERSE,
     NTCTEMPLATES_LIB_MAPPER_REVERSE,
     PYATS_LIB_MAPPER_REVERSE,
     PYNTC_LIB_MAPPER_REVERSE,
     SCRAPLI_LIB_MAPPER_REVERSE,
 )
 
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import hex_to_rgb, lighten_color, rgb_to_hex
 
 
 def compile_path_node(ct_id, object_id):
@@ -98,6 +99,7 @@ def get_all_network_driver_mappings():
         ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
         ("napalm", NAPALM_LIB_MAPPER_REVERSE),
         ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
+        ("netutils_parser", NETUTILSPARSER_LIB_MAPPER_REVERSE),
         ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
         ("pyats", PYATS_LIB_MAPPER_REVERSE),
         ("pyntc", PYNTC_LIB_MAPPER_REVERSE),
@@ -119,7 +121,7 @@ def get_all_network_driver_mappings():
 
 def validate_interface_tagged_vlans(instance, model, pk_set):
     """
-    Validate that the VLANs being added to the 'tagged_vlans' field of an Interface instance are all from the same site
+    Validate that the VLANs being added to the 'tagged_vlans' field of an Interface instance are all from the same location
     as the parent device or are global and that the mode of the Interface is set to `InterfaceModeChoices.MODE_TAGGED`.
 
     Args:
@@ -134,15 +136,19 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
         )
 
     # Filter the model objects based on the primary keys passed in kwargs and exclude the ones that have
-    # a site that is not the parent's site or None
-    tagged_vlans = model.objects.filter(pk__in=pk_set).exclude(site__isnull=True).exclude(site=instance.parent.site)
+    # a location that is not the parent's location or None
+    # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
+    # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
+    tagged_vlans = (
+        model.objects.filter(pk__in=pk_set).exclude(location__isnull=True).exclude(location=instance.parent.location)
+    )
 
     if tagged_vlans.count():
         raise ValidationError(
             {
                 "tagged_vlans": (
                     f"Tagged VLAN with names {list(tagged_vlans.values_list('name', flat=True))} must all belong to the "
-                    f"same site as the interface's parent device, or it must be global."
+                    f"same location as the interface's parent device, or it must be global."
                 )
             }
         )

@@ -1,9 +1,14 @@
+import hashlib
+import json
 import os
 
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.utils.crypto import get_random_string
+
+from nautobot.core.settings_funcs import is_truthy
 
 
 class Command(BaseCommand):
@@ -45,26 +50,32 @@ class Command(BaseCommand):
         try:
             import factory.random
 
+            from nautobot.circuits.factory import (
+                CircuitFactory,
+                CircuitTerminationFactory,
+                CircuitTypeFactory,
+                ProviderFactory,
+                ProviderNetworkFactory,
+            )
             from nautobot.dcim.factory import (
                 DeviceRedundancyGroupFactory,
-                DeviceRoleFactory,
                 DeviceTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
             )
-            from nautobot.extras.factory import StatusFactory, TagFactory
+            from nautobot.extras.factory import RoleFactory, StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.dcim.factory import (
-                RegionFactory,
-                SiteFactory,
                 LocationTypeFactory,
                 LocationFactory,
             )
             from nautobot.extras.utils import TaggableClassesQuery
+            from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
-                AggregateFactory,
+                IPAddressFactory,
+                NamespaceFactory,
+                PrefixFactory,
                 RIRFactory,
-                RoleFactory,
                 RouteTargetFactory,
                 VLANGroupFactory,
                 VLANFactory,
@@ -79,6 +90,8 @@ class Command(BaseCommand):
         self.stdout.write(f'Seeding the pseudo-random number generator with seed "{seed}"...')
         factory.random.reseed_random(seed)
 
+        self.stdout.write("Creating Roles...")
+        RoleFactory.create_batch(20)
         self.stdout.write("Creating Statuses...")
         populate_status_choices(verbosity=0, using=db_name)
         StatusFactory.create_batch(10, using=db_name)
@@ -91,45 +104,126 @@ class Command(BaseCommand):
         TenantGroupFactory.create_batch(10, has_parent=False, using=db_name)
         TenantGroupFactory.create_batch(10, has_parent=True, using=db_name)
         self.stdout.write("Creating Tenants...")
-        TenantFactory.create_batch(10, has_group=False, using=db_name)
-        TenantFactory.create_batch(10, has_group=True, using=db_name)
-        self.stdout.write("Creating Regions...")
-        RegionFactory.create_batch(15, has_parent=False, using=db_name)
-        RegionFactory.create_batch(5, has_parent=True, using=db_name)
-        self.stdout.write("Creating Sites...")
-        SiteFactory.create_batch(15, using=db_name)
+        TenantFactory.create_batch(10, has_tenant_group=False, using=db_name)
+        TenantFactory.create_batch(10, has_tenant_group=True, using=db_name)
         self.stdout.write("Creating LocationTypes...")
         LocationTypeFactory.create_batch(7, using=db_name)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
-        LocationFactory.create_batch(20, using=db_name)  # we need more locations with sites since it can be nested now.
+        # First 7 locations must be created in specific order so subsequent objects have valid parents to reference
+        LocationFactory.create_batch(7, has_parent=True, using=db_name)
+        LocationFactory.create_batch(40, using=db_name)
+        LocationFactory.create_batch(10, has_parent=False, using=db_name)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9, using=db_name)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
         RouteTargetFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Namespaces...")
+        NamespaceFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating VRFs...")
-        VRFFactory.create_batch(20, using=db_name)
-        self.stdout.write("Creating IP/VLAN Roles...")
-        RoleFactory.create_batch(10, using=db_name)
+        VRFFactory.create_batch(10, has_tenant=True, using=db_name)
+        VRFFactory.create_batch(10, has_tenant=False, using=db_name)
         self.stdout.write("Creating VLANGroups...")
         VLANGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating VLANs...")
         VLANFactory.create_batch(20, using=db_name)
-        self.stdout.write("Creating Aggregates, Prefixes and IP Addresses...")
-        AggregateFactory.create_batch(5, has_tenant_group=True, using=db_name)
-        AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True, using=db_name)
-        AggregateFactory.create_batch(10, using=db_name)
+        self.stdout.write("Creating Prefixes and IP Addresses...")
+        for i in range(30):
+            PrefixFactory.create(prefix=f"10.{i}.0.0/16", type=PrefixTypeChoices.TYPE_CONTAINER, using=db_name)
+            PrefixFactory.create(prefix=f"2001:db8:0:{i}::/64", type=PrefixTypeChoices.TYPE_CONTAINER, using=db_name)
+        self.stdout.write("Creating Empty Namespaces...")
+        NamespaceFactory.create_batch(5, using=db_name)
         self.stdout.write("Creating Manufacturers...")
-        ManufacturerFactory.create_batch(14, using=db_name)  # All 14 hard-coded Manufacturers for now.
+        ManufacturerFactory.create_batch(8, using=db_name)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
         PlatformFactory.create_batch(20, has_manufacturer=True, using=db_name)
         self.stdout.write("Creating Platforms (without manufacturers)...")
         PlatformFactory.create_batch(5, has_manufacturer=False, using=db_name)
+        self.stdout.write("Creating Manufacturers without Platforms...")
+        ManufacturerFactory.create_batch(4, using=db_name)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
-        DeviceTypeFactory.create_batch(20, using=db_name)
+        DeviceTypeFactory.create_batch(30, using=db_name)
+        self.stdout.write("Creating Manufacturers without DeviceTypes or Platforms...")
+        ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
-        DeviceRedundancyGroupFactory.create_batch(10, using=db_name)
-        self.stdout.write("Creating DeviceRoles...")
-        DeviceRoleFactory.create_batch(10, using=db_name)
+        DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating CircuitTypes...")
+        CircuitTypeFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Providers...")
+        ProviderFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating ProviderNetworks...")
+        ProviderNetworkFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Circuits...")
+        CircuitFactory.create_batch(40, using=db_name)
+        self.stdout.write("Creating Providers without Circuits...")
+        ProviderFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating CircuitTerminations...")
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="A", using=db_name)
+        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="Z", using=db_name)
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="A", using=db_name)
+        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="Z", using=db_name)
+        CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False, using=db_name)
+        CircuitTerminationFactory.create_batch(
+            size=2,
+            has_location=True,
+            has_port_speed=True,
+            has_upstream_speed=True,
+            has_xconnect_id=True,
+            has_pp_info=True,
+            has_description=True,
+            using=db_name,
+        )
+        # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
+        # UserFactory.create_batch(10)
+        # RackFactory.create_batch(10)
+        # RackReservationFactory.create_batch(10)
+        # ClusterTypeFactory.create_batch(10)
+        # ClusterGroupFactory.create_batch(10)
+        # ClusterFactory.create_batch(10)
+        # VirtualMachineFactory.create_batch(10)
+        # We need to remove them from there and enable them here instead, but that will require many test updates.
+
+        self._output_hash_for_factory_models(
+            factories=[
+                RoleFactory,
+                StatusFactory,
+                TagFactory,
+                TenantGroupFactory,
+                TenantFactory,
+                LocationTypeFactory,
+                LocationFactory,
+                RIRFactory,
+                RouteTargetFactory,
+                VRFFactory,
+                VLANGroupFactory,
+                VLANFactory,
+                PrefixFactory,
+                IPAddressFactory,
+                NamespaceFactory,
+                PlatformFactory,
+                DeviceTypeFactory,
+                ManufacturerFactory,
+                DeviceRedundancyGroupFactory,
+                CircuitTypeFactory,
+                ProviderNetworkFactory,
+                CircuitFactory,
+                ProviderFactory,
+                CircuitTerminationFactory,
+            ]
+        )
+
+    def _output_hash_for_factory_models(self, factories):
+        """Output a hash of the IDs of all objects in the given factories' model.
+
+        Used for identifying factory determinism problems in unit tests. Only prints if GITHUB_ACTIONS environment variable is set to "true".
+        """
+        if not is_truthy(os.environ.get("GITHUB_ACTIONS", "false")):
+            return
+
+        for factory in factories:
+            model = factory._meta.get_model_class()
+            model_ids = list(model.objects.order_by("id").values_list("id", flat=True))
+            sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
+            self.stdout.write(f"SHA256 hash for {model.__name__}: {sha256_hash}")
 
     def handle(self, *args, **options):
         if options["flush"]:
@@ -153,18 +247,19 @@ Type 'yes' to continue, or 'no' to cancel: """
             call_command("flush", "--no-input", "--database", options["database"])
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
+            self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
             call_command("loaddata", options["fixture_file"])
         else:
             self._generate_factory_data(options["seed"], options["database"])
 
             if options["cache_test_fixtures"]:
+                self.stdout.write(self.style.WARNING(f"Saving factory data to file {options['fixture_file']}"))
+
                 call_command(
                     "dumpdata",
-                    "--natural-foreign",
-                    "--natural-primary",
                     indent=2,
                     format="json",
-                    exclude=["contenttypes", "django_rq", "auth.permission", "extras.job", "extras.customfield"],
+                    exclude=["auth.permission", "extras.job", "extras.customfield"],
                     output=options["fixture_file"],
                 )
 

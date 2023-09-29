@@ -16,7 +16,7 @@ from django.utils.http import is_safe_url
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
-from nautobot.utilities.forms import ConfirmationForm
+from nautobot.core.forms import ConfirmationForm
 from .forms import LoginForm, PasswordChangeForm, TokenForm
 from .models import Token
 
@@ -32,6 +32,7 @@ class LoginView(View):
     """
 
     template_name = "login.html"
+    use_new_ui = True
 
     @method_decorator(sensitive_post_parameters("password"))
     def dispatch(self, *args, **kwargs):

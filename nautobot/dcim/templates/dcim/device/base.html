@@ -4,7 +4,7 @@
 
 {% block breadcrumbs %}
             <li><a href="{% url 'dcim:device_list' %}">Devices</a></li>
-            <li><a href="{% url 'dcim:device_list' %}?site={{ object.site.slug }}">{{ object.site }}</a></li>
+            <li><a href="{% url 'dcim:device_list' %}?location={{ object.location.pk }}">{{ object.location }}</a></li>
             {% if object.parent_bay %}
                 <li>{{ object.parent_bay.device|hyperlinked_object }}</li>
                 <li>{{ object.parent_bay }}</li>
@@ -70,56 +70,56 @@
                 </li>
             {% endif %}
         {% endwith %}
-        {% with frontport_count=object.frontports.count %}
+        {% with frontport_count=object.front_ports.count %}
             {% if frontport_count %}
                 <li role="presentation" {% if active_tab == 'front-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_frontports' pk=object.pk %}">Front Ports {% badge frontport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with rearport_count=object.rearports.count %}
+        {% with rearport_count=object.rear_ports.count %}
             {% if rearport_count %}
                 <li role="presentation" {% if active_tab == 'rear-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_rearports' pk=object.pk %}">Rear Ports {% badge rearport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with consoleport_count=object.consoleports.count %}
+        {% with consoleport_count=object.console_ports.count %}
             {% if consoleport_count %}
                 <li role="presentation" {% if active_tab == 'console-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_consoleports' pk=object.pk %}">Console Ports {% badge consoleport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with consoleserverport_count=object.consoleserverports.count %}
+        {% with consoleserverport_count=object.console_server_ports.count %}
             {% if consoleserverport_count %}
                 <li role="presentation" {% if active_tab == 'console-server-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_consoleserverports' pk=object.pk %}">Console Server Ports {% badge consoleserverport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with powerport_count=object.powerports.count %}
+        {% with powerport_count=object.power_ports.count %}
             {% if powerport_count %}
                 <li role="presentation" {% if active_tab == 'power-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_powerports' pk=object.pk %}">Power Ports {% badge powerport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with poweroutlet_count=object.poweroutlets.count %}
+        {% with poweroutlet_count=object.power_outlets.count %}
             {% if poweroutlet_count %}
                 <li role="presentation" {% if active_tab == 'power-outlets' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_poweroutlets' pk=object.pk %}">Power Outlets {% badge poweroutlet_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with devicebay_count=object.devicebays.count %}
+        {% with devicebay_count=object.device_bays.count %}
             {% if devicebay_count %}
                 <li role="presentation" {% if active_tab == 'device-bays' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_devicebays' pk=object.pk %}">Device Bays {% badge devicebay_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with inventoryitem_count=object.inventoryitems.count %}
+        {% with inventoryitem_count=object.inventory_items.count %}
             {% if inventoryitem_count %}
                 <li role="presentation" {% if active_tab == 'inventory' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_inventory' pk=object.pk %}">Inventory {% badge inventoryitem_count %}</a>
@@ -127,7 +127,7 @@
             {% endif %}
         {% endwith %}
         {% if perms.dcim.napalm_read_device %}
-            {% if object.status.slug != 'active' %}
+            {% if object.status.name != 'Active' %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='Device must be in active status' %}
             {% elif not object.platform %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No platform assigned to this device' %}

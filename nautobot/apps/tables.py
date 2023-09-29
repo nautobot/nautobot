@@ -1,22 +1,36 @@
 """Utilities for apps to implement data tables."""
 
-from nautobot.extras.tables import StatusTableMixin
-from nautobot.utilities.tables import (
+from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
+    ChoiceFieldColumn,
+    ColorColumn,
     ColoredLabelColumn,
+    ComputedFieldColumn,
     ContentTypesColumn,
+    CustomFieldColumn,
+    LinkedCountColumn,
+    RelationshipColumn,
     TagColumn,
     ToggleColumn,
 )
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
+
 
 __all__ = (
     "BaseTable",
     "BooleanColumn",
     "ButtonsColumn",
+    "ChoiceFieldColumn",
+    "ColorColumn",
     "ColoredLabelColumn",
+    "ComputedFieldColumn",
     "ContentTypesColumn",
+    "CustomFieldColumn",
+    "LinkedCountColumn",
+    "RelationshipColumn",
+    "RoleTableMixin",
     "StatusTableMixin",
     "TagColumn",
     "ToggleColumn",

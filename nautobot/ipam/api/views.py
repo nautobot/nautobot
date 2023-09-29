@@ -1,32 +1,27 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
-from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
+from nautobot.core.models.querysets import count_related
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
+    IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
-    Role,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
     VRF,
-)
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import (
-    count_related,
-    SerializerForAPIVersions,
-    versioned_serializer_selector,
 )
 from . import serializers
 
@@ -41,18 +36,29 @@ class IPAMRootView(APIRootView):
 
 
 #
+# Namespace
+#
+
+
+class NamespaceViewSet(NautobotModelViewSet):
+    queryset = Namespace.objects.all()
+    serializer_class = serializers.NamespaceSerializer
+    filterset_class = filters.NamespaceFilterSet
+
+
+#
 # VRFs
 #
 
 
 class VRFViewSet(NautobotModelViewSet):
     queryset = (
-        VRF.objects.select_related("tenant")
-        .prefetch_related("import_targets", "export_targets", "tags")
-        .annotate(
-            ipaddress_count=count_related(IPAddress, "vrf"),
-            prefix_count=count_related(Prefix, "vrf"),
-        )
+        VRF.objects.select_related("tenant").prefetch_related("import_targets", "export_targets", "tags")
+        # FIXME(jathan): See if we need to revise the counts for prefixes/ips, here?
+        # .annotate(
+        #     ipaddress_count=count_related(IPAddress, "vrf"),
+        #     prefix_count=count_related(Prefix, "vrf"),
+        # )
     )
     serializer_class = serializers.VRFSerializer
     filterset_class = filters.VRFFilterSet
@@ -75,34 +81,9 @@ class RouteTargetViewSet(NautobotModelViewSet):
 
 
 class RIRViewSet(NautobotModelViewSet):
-    queryset = RIR.objects.annotate(aggregate_count=count_related(Aggregate, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     serializer_class = serializers.RIRSerializer
     filterset_class = filters.RIRFilterSet
-
-
-#
-# Aggregates
-#
-
-
-class AggregateViewSet(NautobotModelViewSet):
-    queryset = Aggregate.objects.select_related("rir").prefetch_related("tags")
-    serializer_class = serializers.AggregateSerializer
-    filterset_class = filters.AggregateFilterSet
-
-
-#
-# Roles
-#
-
-
-class RoleViewSet(NautobotModelViewSet):
-    queryset = Role.objects.annotate(
-        prefix_count=count_related(Prefix, "role"),
-        vlan_count=count_related(VLAN, "role"),
-    )
-    serializer_class = serializers.RoleSerializer
-    filterset_class = filters.RoleFilterSet
 
 
 #
@@ -110,14 +91,14 @@ class RoleViewSet(NautobotModelViewSet):
 #
 
 
-class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class PrefixViewSet(NautobotModelViewSet):
     queryset = Prefix.objects.select_related(
         "role",
-        "site",
         "status",
+        "location",
         "tenant",
         "vlan",
-        "vrf__tenant",
+        "namespace",
     ).prefetch_related("tags")
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet
@@ -161,7 +142,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
                             requested_prefix["prefix"] = allocated_prefix
-                            requested_prefix["vrf"] = prefix.vrf.pk if prefix.vrf else None
+                            requested_prefix["namespace"] = prefix.namespace.pk
                             break
                     else:
                         return Response(
@@ -173,7 +154,7 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                     available_prefixes.remove(allocated_prefix)
 
                 # Initialize the serializer with a list or a single object depending on what was requested
-                context = {"request": request}
+                context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
                     serializer = serializers.PrefixSerializer(data=requested_prefixes, many=True, context=context)
                 else:
@@ -191,7 +172,6 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                 many=True,
                 context={
                     "request": request,
-                    "vrf": prefix.vrf,
                 },
             )
 
@@ -240,15 +220,15 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                         status=status.HTTP_204_NO_CONTENT,
                     )
 
-                # Assign addresses from the list of available IPs and copy VRF assignment from the parent prefix
+                # Assign addresses from the list of available IPs and copy Namespace assignment from the parent Prefix
                 available_ips = iter(available_ips)
                 prefix_length = prefix.prefix.prefixlen
                 for requested_ip in requested_ips:
                     requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
-                    requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
+                    requested_ip["namespace"] = prefix.namespace.pk
 
                 # Initialize the serializer with a list or a single object depending on what was requested
-                context = {"request": request}
+                context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
                     serializer = serializers.IPAddressSerializer(data=requested_ips, many=True, context=context)
                 else:
@@ -280,7 +260,6 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
                 context={
                     "request": request,
                     "prefix": prefix.prefix,
-                    "vrf": prefix.vrf,
                 },
             )
 
@@ -292,57 +271,27 @@ class PrefixViewSet(StatusViewSetMixin, NautobotModelViewSet):
 #
 
 
-@extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
-    bulk_partial_update=extend_schema(
-        responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]
-    ),
-    create=extend_schema(responses={"201": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    list=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy(many=True)}, versions=["1.2"]),
-    partial_update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    retrieve=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-    update=extend_schema(responses={"200": serializers.IPAddressSerializerLegacy}, versions=["1.2"]),
-)
-class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class IPAddressViewSet(NautobotModelViewSet):
     queryset = IPAddress.objects.select_related(
+        "parent",
         "nat_inside",
         "status",
+        "role",
         "tenant",
-        "vrf__tenant",
-    ).prefetch_related("tags", "assigned_object", "nat_outside_list")
+    ).prefetch_related("tags", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 
-    def get_serializer_class(self):
-        serializer_choices = (
-            SerializerForAPIVersions(versions=["1.2"], serializer=serializers.IPAddressSerializerLegacy),
-        )
-        return versioned_serializer_selector(
-            obj=self,
-            serializer_choices=serializer_choices,
-            default_serializer=super().get_serializer_class(),
-        )
 
-    # 2.0 TODO: Remove exception class and overloaded methods below
-    # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
-    class NATOutsideIncompatibleLegacyBehavior(APIException):
-        status_code = 412
-        default_detail = "This object does not conform to pre-1.3 behavior. Please correct data or use API version 1.3"
-        default_code = "precondition_failed"
+#
+# IP address to interface
+#
 
-    def retrieve(self, request, pk=None, *args, **kwargs):
-        try:
-            return super().retrieve(request, pk)
-        except IPAddress.NATOutsideMultipleObjectsReturned:
-            raise self.NATOutsideIncompatibleLegacyBehavior
 
-    def list(self, request, *args, **kwargs):
-        try:
-            return super().list(request)
-        except IPAddress.NATOutsideMultipleObjectsReturned as e:
-            raise self.NATOutsideIncompatibleLegacyBehavior(
-                f"At least one object in the resulting list does not conform to pre-1.3 behavior. Please use API version 1.3. Item: {e.obj}, PK: {e.obj.pk}"
-            )
+class IPAddressToInterfaceViewSet(NautobotModelViewSet):
+    queryset = IPAddressToInterface.objects.select_related("interface", "ip_address", "vm_interface")
+    serializer_class = serializers.IPAddressToInterfaceSerializer
+    filterset_class = filters.IPAddressToInterfaceFilterSet
 
 
 #
@@ -351,7 +300,7 @@ class IPAddressViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "group"))
+    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
@@ -361,11 +310,11 @@ class VLANGroupViewSet(NautobotModelViewSet):
 #
 
 
-class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
+class VLANViewSet(NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
-            "group",
-            "site",
+            "vlan_group",
+            "location",
             "status",
             "role",
             "tenant",
@@ -383,6 +332,6 @@ class VLANViewSet(StatusViewSetMixin, NautobotModelViewSet):
 
 
 class ServiceViewSet(NautobotModelViewSet):
-    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ipaddresses")
+    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ip_addresses")
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet

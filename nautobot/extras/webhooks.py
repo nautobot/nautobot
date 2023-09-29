@@ -2,11 +2,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
 
+from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.utils import get_changes_for_model
 from .choices import ObjectChangeActionChoices
 
 
@@ -35,10 +35,11 @@ def enqueue_webhooks(instance, user, request_id, action):
         serializer_class = get_serializer_for_model(instance.__class__)
         serializer_context = {
             "request": None,
+            "depth": 1,
         }
         serializer = serializer_class(instance, context=serializer_context)
         most_recent_change = get_changes_for_model(instance).first()
-        snapshots = most_recent_change.get_snapshots()
+        snapshots = most_recent_change.get_snapshots() if most_recent_change else {}
 
         # Enqueue the webhooks
         for webhook in webhooks:

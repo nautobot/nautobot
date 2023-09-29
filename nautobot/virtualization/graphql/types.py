@@ -1,5 +1,4 @@
 import graphene
-import graphene_django_optimizer as gql_optimizer
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import DynamicGroup
@@ -41,12 +40,6 @@ class VMInterfaceType(OptimizedNautobotObjectType):
         filterset_class = VMInterfaceFilterSet
         exclude = ["_name"]
 
-    ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
-
-    # VMInterface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
-    # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
-    @gql_optimizer.resolver_hints(
-        model_field="ip_addresses",
-    )
-    def resolve_ip_addresses(self, args):
-        return self.ip_addresses.all()
+    # At the DB level, mac_address is null=False, but empty strings are represented as null in the ORM and REST API,
+    # so for consistency, we'll keep that same representation in GraphQL.
+    mac_address = graphene.String(required=False)

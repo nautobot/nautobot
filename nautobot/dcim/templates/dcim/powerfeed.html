@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-                <li>{{ object.power_panel.site|hyperlinked_object }}</li>
+                <li>{{ object.power_panel.location|hyperlinked_object }}</li>
                 <li>{{ object.power_panel|hyperlinked_object }}</li>
                 {% if object.rack %}
                     <li>{{ object.rack|hyperlinked_object }}</li>
@@ -32,7 +32,7 @@
                 <tr>
                     <td>Status</td>
                     <td>
-                        <span class="label" style="color: {{ object.status.color|fgcolor }}; background-color: #{{ object.status.color }}">{{ object.get_status_display }}</span>
+                        {{ object.status| hyperlinked_object_with_color }}
                     </td>
                 </tr>
                 <tr>

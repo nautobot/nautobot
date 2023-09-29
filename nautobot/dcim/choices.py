@@ -1,34 +1,4 @@
-from nautobot.utilities.choices import ChoiceSet
-
-
-#
-# Sites
-#
-
-
-class SiteStatusChoices(ChoiceSet):
-    STATUS_PLANNED = "planned"
-    STATUS_STAGING = "staging"
-    STATUS_ACTIVE = "active"
-    STATUS_DECOMMISSIONING = "decommissioning"
-    STATUS_RETIRED = "retired"
-
-    CHOICES = (
-        (STATUS_PLANNED, "Planned"),
-        (STATUS_STAGING, "Staging"),
-        (STATUS_ACTIVE, "Active"),
-        (STATUS_DECOMMISSIONING, "Decommissioning"),
-        (STATUS_RETIRED, "Retired"),
-    )
-
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_PLANNED: "info",
-        STATUS_STAGING: "primary",
-        STATUS_ACTIVE: "success",
-        STATUS_DECOMMISSIONING: "warning",
-        STATUS_RETIRED: "danger",
-    }
+from nautobot.core.choices import ChoiceSet
 
 
 #
@@ -108,15 +78,6 @@ class RackStatusChoices(ChoiceSet):
         (STATUS_DEPRECATED, "Deprecated"),
     )
 
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_RESERVED: "warning",
-        STATUS_AVAILABLE: "success",
-        STATUS_PLANNED: "info",
-        STATUS_ACTIVE: "primary",
-        STATUS_DEPRECATED: "danger",
-    }
-
 
 class RackDimensionUnitChoices(ChoiceSet):
     UNIT_MILLIMETER = "mm"
@@ -183,17 +144,6 @@ class DeviceStatusChoices(ChoiceSet):
         (STATUS_INVENTORY, "Inventory"),
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
-
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_OFFLINE: "warning",
-        STATUS_ACTIVE: "success",
-        STATUS_PLANNED: "info",
-        STATUS_STAGED: "primary",
-        STATUS_FAILED: "danger",
-        STATUS_INVENTORY: "default",
-        STATUS_DECOMMISSIONING: "warning",
-    }
 
 
 #
@@ -1286,13 +1236,6 @@ class CableStatusChoices(ChoiceSet):
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
 
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_CONNECTED: "success",
-        STATUS_PLANNED: "info",
-        STATUS_DECOMMISSIONING: "warning",
-    }
-
 
 class CableLengthUnitChoices(ChoiceSet):
     # Metric
@@ -1332,14 +1275,6 @@ class PowerFeedStatusChoices(ChoiceSet):
         (STATUS_PLANNED, "Planned"),
         (STATUS_FAILED, "Failed"),
     )
-
-    # 2.0 TODO: No longer used (see extras.management.COLOR_MAP instead), remove in 2.0
-    CSS_CLASSES = {
-        STATUS_OFFLINE: "warning",
-        STATUS_ACTIVE: "success",
-        STATUS_PLANNED: "info",
-        STATUS_FAILED: "danger",
-    }
 
 
 class PowerFeedTypeChoices(ChoiceSet):
@@ -1399,10 +1334,12 @@ class DeviceRedundancyGroupStatusChoices(ChoiceSet):
 
 
 class DeviceRedundancyGroupFailoverStrategyChoices(ChoiceSet):
+    FAILOVER_UNSPECIFIED = ""
     FAILOVER_ACTIVE_ACTIVE = "active-active"
     FAILOVER_ACTIVE_PASSIVE = "active-passive"
 
     CHOICES = (
+        (FAILOVER_UNSPECIFIED, "(unspecified)"),
         (FAILOVER_ACTIVE_ACTIVE, "Active/Active"),
         (FAILOVER_ACTIVE_PASSIVE, "Active/Passive"),
     )

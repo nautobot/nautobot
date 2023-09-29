@@ -9,15 +9,15 @@ from rest_framework import status
 
 from constance.test import override_config
 
+from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
-    InterfaceStatusChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
     SubdeviceRoleChoices,
 )
-
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -28,7 +28,6 @@ from nautobot.dcim.models import (
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
-    DeviceRole,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -49,17 +48,13 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    RackRole,
     RearPort,
     RearPortTemplate,
-    Region,
-    Site,
     VirtualChassis,
 )
-from nautobot.extras.models import ConfigContextSchema, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
-from nautobot.utilities.testing import APITestCase, APIViewTestCases, generate_random_device_asset_tag_of_specified_size
 from nautobot.virtualization.models import Cluster, ClusterType
 
 
@@ -87,15 +82,23 @@ class Mixins:
             """
             obj = self.model.objects.first()
             peer_device = Device.objects.create(
-                site=Site.objects.first(),
+                location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
                 device_type=DeviceType.objects.first(),
-                device_role=DeviceRole.objects.first(),
+                role=Role.objects.get_for_model(Device).first(),
+                status=Status.objects.get_for_model(Device).first(),
                 name="Peer Device",
             )
             if self.peer_termination_type is None:
                 raise NotImplementedError("Test case must set peer_termination_type")
-            peer_obj = self.peer_termination_type.objects.create(device=peer_device, name="Peer Termination")
-            cable = Cable(termination_a=obj, termination_b=peer_obj, label="Cable 1")
+            if self.peer_termination_type is Interface:
+                intf_status = Status.objects.get_for_model(Interface).first()
+                peer_obj = self.peer_termination_type.objects.create(
+                    device=peer_device, name="Peer Termination", status=intf_status
+                )
+            else:
+                peer_obj = self.peer_termination_type.objects.create(device=peer_device, name="Peer Termination")
+            cable_status = Status.objects.get_for_model(Cable).first()
+            cable = Cable(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=cable_status)
             cable.save()
 
             self.add_permissions(f"dcim.view_{self.model._meta.model_name}")
@@ -113,7 +116,6 @@ class Mixins:
         """Mixin class for all `ComponentModel` model class tests."""
 
         model = None
-        brief_fields = ["device", "display", "id", "name", "url"]
         bulk_update_data = {
             "description": "New description",
         }
@@ -124,194 +126,33 @@ class Mixins:
             super().setUpTestData()
             cls.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
             cls.manufacturer = cls.device_type.manufacturer
-            cls.site = Site.objects.first()
-            cls.device_role = DeviceRole.objects.first()
+            cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+            cls.device_role = Role.objects.get_for_model(Device).first()
+            cls.device_status = Status.objects.get_for_model(Device).first()
             cls.device = Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+                device_type=cls.device_type,
+                role=cls.device_role,
+                name="Device 1",
+                location=cls.location,
+                status=cls.device_status,
             )
 
     class BasePortTestMixin(ComponentTraceMixin, BaseComponentTestMixin):
         """Mixin class for all `FooPort` tests."""
 
         peer_termination_type = None
-        brief_fields = ["cable", "device", "display", "id", "name", "url"]
 
     class BasePortTemplateTestMixin(BaseComponentTestMixin):
         """Mixin class for all `FooPortTemplate` tests."""
 
-        brief_fields = ["display", "id", "name", "url"]
 
-
-class RegionTest(APIViewTestCases.APIViewTestCase):
-    model = Region
-    brief_fields = ["_depth", "display", "id", "name", "site_count", "slug", "url"]
-    create_data = [
-        {
-            "name": "Region 4",
-            "slug": "region-4",
-        },
-        {
-            "name": "Region 5",
-            "slug": "region-5",
-        },
-        {
-            "name": "Region 6",
-            "slug": "region-6",
-        },
-        {"name": "Region 7"},
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-        Region.objects.create(name="Region 1", slug="region-1")
-        Region.objects.create(name="Region 2", slug="region-2")
-        Region.objects.create(name="Region 3", slug="region-3")
-
-
-class SiteTest(APIViewTestCases.APIViewTestCase):
-    model = Site
-    brief_fields = ["display", "id", "name", "slug", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["status"]
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-        regions = Region.objects.all()[:2]
-
-        # FIXME(jathan): The writable serializer for `Device.status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
-        cls.create_data = [
-            {
-                "name": "Site 4",
-                "slug": "site-4",
-                "region": regions[1].pk,
-                "status": "active",
-            },
-            {
-                "name": "Site 5",
-                "slug": "site-5",
-                "region": regions[1].pk,
-                "status": "active",
-            },
-            {
-                "name": "Site 6",
-                "slug": "site-6",
-                "region": regions[1].pk,
-                "status": "active",
-            },
-            {"name": "Site 7", "region": regions[1].pk, "status": "active"},
-        ]
-
-    def get_deletable_object_pks(self):
-        Sites = [
-            Site.objects.create(name="Deletable Site 1"),
-            Site.objects.create(name="Deletable Site 2"),
-            Site.objects.create(name="Deletable Site 3"),
-        ]
-        return [site.pk for site in Sites]
-
-    def test_time_zone_field_post_null(self):
-        """
-        Test allow_null to time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": None}
-
-        # Attempt to create new site with null time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()["time_zone"], None)
-
-    def test_time_zone_field_post_blank(self):
-        """
-        Test disallowed blank time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": ""}
-
-        # Attempt to create new site with blank time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
-
-    def test_time_zone_field_post_valid(self):
-        """
-        Test valid time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        time_zone = "UTC"
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
-
-        # Attempt to create new site with valid time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()["time_zone"], time_zone)
-
-    def test_time_zone_field_post_invalid(self):
-        """
-        Test invalid time_zone field on site.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-        self.add_permissions("dcim.add_site")
-        url = reverse("dcim-api:site-list")
-        time_zone = "IDONOTEXIST"
-        site = {"name": "foo", "slug": "foo", "status": "active", "time_zone": time_zone}
-
-        # Attempt to create new site with invalid time_zone attr.
-        response = self.client.post(url, **self.header, data=site, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json()["time_zone"],
-            ["A valid timezone is required."],
-        )
-
-    def test_time_zone_field_get_blank(self):
-        """
-        Test that a site's time_zone field defaults to null.
-
-        See: https://github.com/nautobot/nautobot/issues/342
-        """
-
-        self.add_permissions("dcim.view_site")
-        site = Site.objects.filter(time_zone="").first()
-        url = reverse("dcim-api:site-detail", kwargs={"pk": site.pk})
-        response = self.client.get(url, **self.header)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()["time_zone"], None)
-
-
-class LocationTypeTest(APIViewTestCases.APIViewTestCase):
+class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = LocationType
-    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
     bulk_update_data = {
         "description": "Some generic description of multiple types. Not very useful.",
         "nestable": True,
     }
     choices_fields = []  # TODO: what would we need to get ["content_types"] added as a choices field?
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -338,7 +179,6 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Closet",
-                "slug": "closet",
                 "parent": lt3.pk,
                 "content_types": ["dcim.device"],
                 "description": "An enclosed space smaller than a room",
@@ -346,62 +186,50 @@ class LocationTypeTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class LocationTest(APIViewTestCases.APIViewTestCase):
+class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = Location
-    brief_fields = ["display", "id", "name", "slug", "tree_depth", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["status"]
-    slug_source = ["parent__slug", "name"]
+    choices_fields = []
 
     @classmethod
     def setUpTestData(cls):
-        lt1 = LocationType.objects.get(name="Campus")
-        lt2 = LocationType.objects.get(name="Building")
-        lt3 = LocationType.objects.get(name="Floor")
-        lt4 = LocationType.objects.get(name="Room")
+        cls.lt1 = LocationType.objects.get(name="Campus")
+        cls.lt2 = LocationType.objects.get(name="Building")
+        cls.lt3 = LocationType.objects.get(name="Floor")
+        cls.lt4 = LocationType.objects.get(name="Room")
 
-        status_active = Status.objects.get(slug="active")
-        site = Site.objects.first()
-        tenant = Tenant.objects.create(name="Test Tenant")
+        cls.location_statuses = Status.objects.get_for_model(Location)
+        tenant = Tenant.objects.first()
 
-        loc1 = Location.objects.create(name="RTP", location_type=lt1, status=status_active, site=site)
-        loc2 = Location.objects.create(name="RTP4E", location_type=lt2, status=status_active, parent=loc1)
-        loc3 = Location.objects.create(name="RTP4E-3", location_type=lt3, status=status_active, parent=loc2)
-        loc4 = Location.objects.create(
-            name="RTP4E-3-0101", location_type=lt4, status=status_active, parent=loc3, tenant=tenant
+        cls.loc1 = Location.objects.create(name="RTP", location_type=cls.lt1, status=cls.location_statuses[0])
+        cls.loc2 = Location.objects.create(
+            name="RTP4E", location_type=cls.lt2, status=cls.location_statuses[0], parent=cls.loc1
         )
-        for loc in [loc1, loc2, loc3, loc4]:
+        cls.loc3 = Location.objects.create(
+            name="RTP4E-3", location_type=cls.lt3, status=cls.location_statuses[0], parent=cls.loc2
+        )
+        cls.loc4 = Location.objects.create(
+            name="RTP4E-3-0101", location_type=cls.lt4, status=cls.location_statuses[1], parent=cls.loc3, tenant=tenant
+        )
+        for loc in [cls.loc1, cls.loc2, cls.loc3, cls.loc4]:
             loc.validated_save()
-
-        # FIXME(jathan): The writable serializer for `Device.status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
 
         cls.create_data = [
             {
                 "name": "Downtown Durham",
-                "location_type": lt1.pk,
-                "site": site.pk,
-                "status": "active",
+                "location_type": cls.lt1.pk,
+                "status": cls.location_statuses[0].pk,
             },
             {
                 "name": "RTP12",
-                "slug": "rtp-12",
-                "location_type": lt2.pk,
-                "parent": loc1.pk,
-                "status": "active",
+                "location_type": cls.lt2.pk,
+                "parent": cls.loc1.pk,
+                "status": cls.location_statuses[0].pk,
             },
             {
                 "name": "RTP4E-2",
-                "location_type": lt3.pk,
-                "parent": loc2.pk,
-                "status": "active",
+                "location_type": cls.lt3.pk,
+                "parent": cls.loc2.pk,
+                "status": cls.location_statuses[0].pk,
                 "description": "Second floor of RTP4E",
                 "tenant": tenant.pk,
             },
@@ -410,128 +238,183 @@ class LocationTest(APIViewTestCases.APIViewTestCase):
         # Changing location_type of an existing instance is not permitted
         cls.update_data = {
             "name": "A revised location",
-            "slug": "a-different-slug",
-            "status": "planned",
+            "status": cls.location_statuses[1].pk,
+        }
+        cls.bulk_update_data = {
+            "status": cls.location_statuses[1].pk,
         }
 
+    def test_time_zone_field_post_null(self):
+        """
+        Test allow_null to time_zone field on locaton.
+        """
 
-class RackGroupTest(APIViewTestCases.APIViewTestCase):
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        location = {
+            "name": "foo",
+            "status": self.location_statuses[0].pk,
+            "time_zone": None,
+            "location_type": self.lt1.pk,
+        }
+
+        # Attempt to create new location with null time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], None)
+
+    def test_time_zone_field_post_blank(self):
+        """
+        Test disallowed blank time_zone field on location.
+        """
+
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        location = {
+            "name": "foo",
+            "status": self.location_statuses[0].pk,
+            "time_zone": "",
+            "location_type": self.lt1.pk,
+        }
+
+        # Attempt to create new location with blank time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
+
+    def test_time_zone_field_post_valid(self):
+        """
+        Test valid time_zone field on location.
+        """
+
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        time_zone = "UTC"
+        location = {
+            "name": "foo",
+            "status": self.location_statuses[0].pk,
+            "time_zone": time_zone,
+            "location_type": self.lt1.pk,
+        }
+
+        # Attempt to create new location with valid time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["time_zone"], time_zone)
+
+    def test_time_zone_field_post_invalid(self):
+        """
+        Test invalid time_zone field on location.
+        """
+
+        self.add_permissions("dcim.add_location")
+        url = reverse("dcim-api:location-list")
+        time_zone = "IDONOTEXIST"
+        location = {
+            "name": "foo",
+            "status": self.location_statuses[0].pk,
+            "time_zone": time_zone,
+            "location_type": self.lt1.pk,
+        }
+
+        # Attempt to create new location with invalid time_zone attr.
+        response = self.client.post(url, **self.header, data=location, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["time_zone"],
+            ["A valid timezone is required."],
+        )
+
+    def test_time_zone_field_get_blank(self):
+        """
+        Test that a location's time_zone field defaults to null.
+        """
+
+        self.add_permissions("dcim.view_location")
+        location = Location.objects.filter(time_zone="").first()
+        url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["time_zone"], None)
+
+
+class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = RackGroup
-    brief_fields = ["_depth", "display", "id", "name", "rack_count", "slug", "url"]
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
-        cls.active = Status.objects.get(slug="active")
-
-        cls.sites = Site.objects.all()[:2]
-
+        cls.status = Status.objects.get_for_model(Location).first()
+        location_type = LocationType.objects.create(name="Location Type 1")
+        cls.locations = (
+            Location.objects.create(name="Location 1", location_type=location_type, status=cls.status),
+            Location.objects.create(name="Location 2", location_type=location_type, status=cls.status),
+        )
         cls.parent_rack_groups = (
-            RackGroup.objects.create(site=cls.sites[0], name="Parent Rack Group 1", slug="parent-rack-group-1"),
-            RackGroup.objects.create(site=cls.sites[1], name="Parent Rack Group 2", slug="parent-rack-group-2"),
+            RackGroup.objects.create(location=cls.locations[0], name="Parent Rack Group 1"),
+            RackGroup.objects.create(location=cls.locations[1], name="Parent Rack Group 2"),
         )
 
-        location_type = LocationType.objects.create(name="Location Type 1")
         location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
-        cls.locations = (
-            Location.objects.create(
-                name="Location 1", location_type=location_type, site=cls.sites[0], status=cls.active
-            ),
-            Location.objects.create(
-                name="Location 2", location_type=location_type, site=cls.sites[1], status=cls.active
-            ),
-        )
-
         RackGroup.objects.create(
-            site=cls.sites[0],
+            location=cls.locations[0],
             name="Rack Group 1",
-            slug="rack-group-1",
             parent=cls.parent_rack_groups[0],
         )
         RackGroup.objects.create(
-            site=cls.sites[0],
+            location=cls.locations[0],
             name="Rack Group 2",
-            slug="rack-group-2",
             parent=cls.parent_rack_groups[0],
         )
         RackGroup.objects.create(
-            site=cls.sites[0],
             location=cls.locations[0],
             name="Rack Group 3",
-            slug="rack-group-3",
             parent=cls.parent_rack_groups[0],
         )
 
         cls.create_data = [
             {
                 "name": "Test Rack Group 4",
-                "slug": "test-rack-group-4",
-                "site": cls.sites[1].pk,
+                "location": cls.locations[1].pk,
                 "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 5",
-                "slug": "test-rack-group-5",
-                "site": cls.sites[1].pk,
+                "location": cls.locations[1].pk,
                 "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 6",
-                "slug": "test-rack-group-6",
-                "site": cls.sites[1].pk,
                 "location": cls.locations[1].pk,
                 "parent": cls.parent_rack_groups[1].pk,
             },
             {
                 "name": "Test Rack Group 7",
-                "site": cls.sites[1].pk,
+                "location": cls.locations[1].pk,
                 "parent": cls.parent_rack_groups[1].pk,
             },
         ]
-
-    def test_site_location_mismatch(self):
-        """The specified location (if any) must belong to the specified site."""
-        self.add_permissions("dcim.add_rackgroup")
-        url = reverse("dcim-api:rackgroup-list")
-        location = Location.objects.create(
-            name="Peer Location", location_type=LocationType.objects.first(), site=self.sites[0], status=self.active
-        )
-        data = {
-            "name": "Bad Group",
-            "parent": self.parent_rack_groups[1].pk,
-            "site": self.sites[1].pk,
-            "location": location.pk,
-        }
-
-        response = self.client.post(url, **self.header, data=data, format="json")
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("location", response.json())
-        self.assertEqual(
-            response.json()["location"], [f'Location "Peer Location" does not belong to site "{self.sites[1].name}".']
-        )
 
     def test_child_group_location_valid(self):
         """A child group with a location may fall within the parent group's location."""
         self.add_permissions("dcim.add_rackgroup")
         url = reverse("dcim-api:rackgroup-list")
 
-        parent_group = RackGroup.objects.filter(site=self.sites[0], location=self.locations[0]).first()
+        parent_group = RackGroup.objects.filter(location=self.locations[0]).first()
         child_location_type = LocationType.objects.create(
             name="Child Location Type", parent=self.locations[0].location_type
         )
         child_location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
         child_location = Location.objects.create(
-            name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.active
+            name="Child Location", location_type=child_location_type, parent=self.locations[0], status=self.status
         )
 
         data = {
             "name": "Good Group",
             "parent": parent_group.pk,
-            "site": self.sites[0].pk,
             "location": child_location.pk,
         }
         response = self.client.post(url, **self.header, data=data, format="json")
@@ -542,139 +425,91 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("dcim.add_rackgroup")
         url = reverse("dcim-api:rackgroup-list")
 
-        parent_group = RackGroup.objects.filter(site=self.sites[0], location=self.locations[0]).first()
-        # Same site, but a sibling of locations[0], not a child of it.
+        parent_group = RackGroup.objects.filter(location=self.locations[0]).first()
+        # A sibling of locations[0], not a child of it.
         sibling_location = Location.objects.create(
-            name="Location 1B", location_type=self.locations[0].location_type, site=self.sites[0], status=self.active
+            name="Location 1B", location_type=self.locations[0].location_type, status=self.status
         )
 
         data = {
             "name": "Good Group",
             "parent": parent_group.pk,
-            "site": self.sites[0].pk,
             "location": sibling_location.pk,
         }
         response = self.client.post(url, **self.header, data=data, format="json")
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.json()["location"],
-            ['Location "Location 1B" is not descended from parent rack group "Rack Group 3" location "Location 1".'],
+            [
+                f'Location "Location 1B" is not descended from parent rack group "{parent_group.name}" location "Location 1".'
+            ],
         )
-
-
-class RackRoleTest(APIViewTestCases.APIViewTestCase):
-    model = RackRole
-    brief_fields = ["display", "id", "name", "rack_count", "slug", "url"]
-    create_data = [
-        {
-            "name": "Rack Role 4",
-            "slug": "rack-role-4",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 5",
-            "slug": "rack-role-5",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 6",
-            "slug": "rack-role-6",
-            "color": "ffff00",
-        },
-        {
-            "name": "Rack Role 7",
-            "color": "ffff00",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-    @classmethod
-    def setUpTestData(cls):
-        RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
-        RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00")
-        RackRole.objects.create(name="Rack Role 3", slug="rack-role-3", color="0000ff")
 
 
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
-    brief_fields = ["device_count", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["outer_unit", "status", "type", "width"]
+    choices_fields = ["outer_unit", "type", "width"]
 
     @classmethod
     def setUpTestData(cls):
-        sites = Site.objects.all()[:2]
+        locations = Location.objects.all()[:2]
 
         rack_groups = (
-            RackGroup.objects.create(site=sites[0], name="Rack Group 1", slug="rack-group-1"),
-            RackGroup.objects.create(site=sites[1], name="Rack Group 2", slug="rack-group-2"),
+            RackGroup.objects.create(location=locations[0], name="Rack Group 1"),
+            RackGroup.objects.create(location=locations[1], name="Rack Group 2"),
         )
 
-        rack_roles = (
-            RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000"),
-            RackRole.objects.create(name="Rack Role 2", slug="rack-role-2", color="00ff00"),
-        )
-
+        rack_roles = Role.objects.get_for_model(Rack)
         statuses = Status.objects.get_for_model(Rack)
 
         Rack.objects.create(
-            site=sites[0],
-            group=rack_groups[0],
+            location=locations[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 1",
             status=statuses[0],
         )
         Rack.objects.create(
-            site=sites[0],
-            group=rack_groups[0],
+            location=locations[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 2",
             status=statuses[0],
         )
         Rack.objects.create(
-            site=sites[0],
-            group=rack_groups[0],
+            location=locations[0],
+            rack_group=rack_groups[0],
             role=rack_roles[0],
             name="Rack 3",
             status=statuses[0],
         )
 
-        # FIXME(jathan): The writable serializer for `Device.status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
         cls.create_data = [
             {
                 "name": "Test Rack 4",
-                "site": sites[1].pk,
-                "group": rack_groups[1].pk,
+                "location": locations[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
-                "status": "available",
+                "status": statuses[1].pk,
             },
             {
                 "name": "Test Rack 5",
-                "site": sites[1].pk,
-                "group": rack_groups[1].pk,
+                "location": locations[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
-                "status": "available",
+                "status": statuses[1].pk,
             },
             {
                 "name": "Test Rack 6",
-                "site": sites[1].pk,
-                "group": rack_groups[1].pk,
+                "location": locations[1].pk,
+                "rack_group": rack_groups[1].pk,
                 "role": rack_roles[1].pk,
-                "status": "available",
+                "status": statuses[1].pk,
             },
         ]
+        cls.bulk_update_data = {
+            "status": statuses[1].pk,
+        }
 
     def test_get_rack_elevation(self):
         """
@@ -705,7 +540,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         rack = Rack.objects.first()
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
-        params = {"brief": "true", "face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
+        params = {"face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
         response = self.client.get(url, params, **self.header)
         self.assertHttpStatus(response, 200)
 
@@ -754,10 +589,64 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'class="slot" height="19" width="190"', response.content)
 
+    def test_detail_view_schema(self):
+        url = self._get_detail_url(self._get_queryset().first())
+        response = self.client.options(url, **self.header)
+        detail_view_schema = response.data["view_options"]["retrieve"]
+
+        expected_schema = {
+            "tabs": {
+                "Rack": [
+                    {
+                        "Rack": {"fields": ["name", "location", "rack_group"]},
+                        "Other Fields": {
+                            "fields": [
+                                "asset_tag",
+                                "desc_units",
+                                "device_count",
+                                "facility_id",
+                                "outer_depth",
+                                "outer_unit",
+                                "outer_width",
+                                "power_feed_count",
+                                "role",
+                                "serial",
+                                "tenant",
+                                "type",
+                                "u_height",
+                                "width",
+                            ]
+                        },
+                    },
+                    {
+                        "Comments": {"fields": ["comments"]},
+                        "Tags": {"fields": ["tags"]},
+                    },
+                ],
+                "Advanced": [
+                    {
+                        "Object Details": {
+                            "fields": [
+                                "id",
+                                "url",
+                                "object_type",
+                                "created",
+                                "last_updated",
+                                "natural_slug",
+                            ]
+                        }
+                    },
+                ],
+            }
+        }
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.maxDiff = None
+        self.assertEqual(expected_schema, detail_view_schema)
+
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation
-    brief_fields = ["display", "id", "units", "url", "user"]
     bulk_update_data = {
         "description": "New description",
     }
@@ -765,38 +654,35 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        rack_status = Status.objects.get_for_model(Rack).first()
 
         cls.racks = (
-            Rack.objects.create(site=site, name="Rack 1"),
-            Rack.objects.create(site=site, name="Rack 2"),
+            Rack.objects.create(location=location, name="Rack 1", status=rack_status),
+            Rack.objects.create(location=location, name="Rack 2", status=rack_status),
         )
 
         RackReservation.objects.create(rack=cls.racks[0], units=[1, 2, 3], user=user, description="Reservation #1")
         RackReservation.objects.create(rack=cls.racks[0], units=[4, 5, 6], user=user, description="Reservation #2")
         RackReservation.objects.create(rack=cls.racks[0], units=[7, 8, 9], user=user, description="Reservation #3")
 
-    def setUp(self):
-        super().setUp()
-
-        # We have to set creation data under setUp() because we need access to the test user.
-        self.create_data = [
+        cls.create_data = [
             {
-                "rack": self.racks[1].pk,
+                "rack": cls.racks[1].pk,
                 "units": [10, 11, 12],
-                "user": self.user.pk,
+                "user": user.pk,
                 "description": "Reservation #4",
             },
             {
-                "rack": self.racks[1].pk,
+                "rack": cls.racks[1].pk,
                 "units": [13, 14, 15],
-                "user": self.user.pk,
+                "user": user.pk,
                 "description": "Reservation #5",
             },
             {
-                "rack": self.racks[1].pk,
+                "rack": cls.racks[1].pk,
                 "units": [16, 17, 18],
-                "user": self.user.pk,
+                "user": user.pk,
                 "description": "Reservation #6",
             },
         ]
@@ -804,19 +690,15 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
-    brief_fields = ["devicetype_count", "display", "id", "name", "slug", "url"]
     create_data = [
         {
             "name": "Test Manufacturer 4",
-            "slug": "test-manufacturer-4",
         },
         {
             "name": "Test Manufacturer 5",
-            "slug": "test-manufacturer-5",
         },
         {
             "name": "Test Manufacturer 6",
-            "slug": "test-manufacturer-6",
         },
         {
             "name": "Test Manufacturer 7",
@@ -825,7 +707,6 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-    slug_source = "name"
 
     @classmethod
     def setUpTestData(cls):
@@ -838,20 +719,10 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     model = DeviceType
-    brief_fields = [
-        "device_count",
-        "display",
-        "id",
-        "manufacturer",
-        "model",
-        "slug",
-        "url",
-    ]
     bulk_update_data = {
         "part_number": "ABC123",
     }
     choices_fields = ["subdevice_role"]
-    slug_source = "model"
 
     @classmethod
     def setUpTestData(cls):
@@ -861,17 +732,14 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
-                "slug": "device-type-4",
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
-                "slug": "device-type-5",
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 6",
-                "slug": "device-type-6",
             },
             {
                 "manufacturer": manufacturer_id,
@@ -1063,19 +931,19 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
             device_type=cls.device_type,
             name="Front Port Template 1",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[0],
+            rear_port_template=rear_port_templates[0],
         )
         FrontPortTemplate.objects.create(
             device_type=cls.device_type,
             name="Front Port Template 2",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[1],
+            rear_port_template=rear_port_templates[1],
         )
         FrontPortTemplate.objects.create(
             device_type=cls.device_type,
             name="Front Port Template 3",
             type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_port_templates[2],
+            rear_port_template=rear_port_templates[2],
         )
 
         cls.create_data = [
@@ -1083,21 +951,21 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 4",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[3].pk,
+                "rear_port_template": rear_port_templates[3].pk,
                 "rear_port_position": 1,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[4].pk,
+                "rear_port_template": rear_port_templates[4].pk,
                 "rear_port_position": 1,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_port_templates[5].pk,
+                "rear_port_template": rear_port_templates[5].pk,
                 "rear_port_position": 1,
             },
         ]
@@ -1174,52 +1042,18 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class DeviceRoleTest(APIViewTestCases.APIViewTestCase):
-    model = DeviceRole
-    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
-    create_data = [
-        {
-            "name": "Device Role 4",
-            "slug": "device-role-4",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 5",
-            "slug": "device-role-5",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 6",
-            "slug": "device-role-6",
-            "color": "ffff00",
-        },
-        {
-            "name": "Device Role 7",
-            "color": "ffff00",
-        },
-    ]
-    bulk_update_data = {
-        "description": "New description",
-    }
-    slug_source = "name"
-
-
 class PlatformTest(APIViewTestCases.APIViewTestCase):
     model = Platform
-    brief_fields = ["device_count", "display", "id", "name", "slug", "url", "virtualmachine_count"]
     create_data = [
         {
             "name": "Test Platform 4",
-            "slug": "test-platform-4",
             "network_driver": "cisco_ios",
         },
         {
             "name": "Test Platform 5",
-            "slug": "test-platform-5",
         },
         {
             "name": "Test Platform 6",
-            "slug": "test-platform-6",
         },
         {
             "name": "Test Platform 7",
@@ -1229,7 +1063,6 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
         "network_driver": "cisco_xe",
     }
-    slug_source = "name"
 
     @override_settings(
         NETWORK_DRIVERS={
@@ -1241,11 +1074,9 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         """
         Check that network_driver_mappings field is correctly exposed by the API
         """
-        platform1 = Platform.objects.create(
-            name="Test network driver mappings 1", slug="test-ndm-1", network_driver="cisco_ios"
-        )
+        platform1 = Platform.objects.create(name="Test network driver mappings 1", network_driver="cisco_ios")
         platform2 = Platform.objects.create(
-            name="Test network driver mappings 2", slug="test-ndm-2", network_driver="custom_network_driver"
+            name="Test network driver mappings 2", network_driver="custom_network_driver"
         )
         self.add_permissions("dcim.view_platform")
 
@@ -1262,147 +1093,140 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
-    brief_fields = ["display", "id", "name", "url"]
-    bulk_update_data = {
-        "status": "failed",
-    }
-    choices_fields = ["face", "status"]
+    choices_fields = ["face"]
 
     @classmethod
     def setUpTestData(cls):
-        sites = Site.objects.all()[:2]
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
+        rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
-            Rack.objects.create(name="Rack 1", site=sites[0]),
-            Rack.objects.create(name="Rack 2", site=sites[1]),
+            Rack.objects.create(name="Rack 1", location=locations[0], status=rack_status),
+            Rack.objects.create(name="Rack 2", location=locations[1], status=rack_status),
         )
 
         device_statuses = Status.objects.get_for_model(Device)
 
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
 
         clusters = (
-            Cluster.objects.create(name="Cluster 1", type=cluster_type),
-            Cluster.objects.create(name="Cluster 2", type=cluster_type),
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
         )
 
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         device_type = DeviceType.objects.first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
 
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 1",
-            site=sites[0],
+            location=locations[0],
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"A": 1},
+            local_config_context_data={"A": 1},
         )
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 2",
-            site=sites[0],
+            location=locations[0],
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"B": 2},
+            local_config_context_data={"B": 2},
         )
         Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
             status=device_statuses[0],
             name="Device 3",
-            site=sites[0],
+            location=locations[0],
             rack=racks[0],
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
-            local_context_data={"C": 3},
+            local_config_context_data={"C": 3},
         )
-
-        # FIXME(jathan): The writable serializer for `Device.status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
 
         cls.create_data = [
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
                 "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
-                "status": "offline",
+                "status": device_statuses[1].pk,
                 "name": "Test Device 4",
-                "site": sites[1].pk,
+                "location": locations[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
+                "status": device_statuses[1].pk,
                 "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
-                "status": "offline",
                 "name": "Test Device 5",
-                "site": sites[1].pk,
+                "location": locations[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
             {
                 "device_type": device_type.pk,
-                "device_role": device_role.pk,
+                "role": device_role.pk,
+                "status": device_statuses[1].pk,
                 "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
-                "status": "offline",
                 "name": "Test Device 6",
-                "site": sites[1].pk,
+                "location": locations[1].pk,
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
         ]
+        cls.bulk_update_data = {
+            "status": device_statuses[1].pk,
+        }
 
-    def test_config_context_included_by_default_in_list_view(self):
+    def test_config_context_excluded_by_default_in_list_view(self):
         """
-        Check that config context data is included by default in the devices list.
+        Check that config context data is excluded by default in the devices list.
         """
         self.add_permissions("dcim.view_device")
         url = reverse("dcim-api:device-list")
         response = self.client.get(url, **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["results"][0].get("config_context", {}).get("A"), 1)
+        self.assertNotIn("config_context", response.data["results"][0])
 
-    def test_config_context_excluded(self):
+    def test_config_context_included(self):
         """
-        Check that config context data can be excluded by passing ?exclude=config_context.
+        Check that config context data can be included by passing ?include=config_context.
         """
         self.add_permissions("dcim.view_device")
-        url = reverse("dcim-api:device-list") + "?exclude=config_context"
+        url = reverse("dcim-api:device-list") + "?include=config_context"
         response = self.client.get(url, **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertFalse("config_context" in response.data["results"][0])
+        self.assertIn("config_context", response.data["results"][0])
+        self.assertEqual(response.data["results"][0]["config_context"], {"A": 1})
 
-    def test_unique_name_per_site_constraint(self):
+    def test_unique_name_per_location_constraint(self):
         """
-        Check that creating a device with a duplicate name within a site fails.
+        Check that creating a device with a duplicate name within a location fails.
         """
         device = Device.objects.first()
         data = {
             "device_type": device.device_type.pk,
-            "device_role": device.device_role.pk,
-            "site": device.site.pk,
+            "role": device.role.pk,
+            "location": device.location.pk,
             "name": device.name,
         }
 
@@ -1412,38 +1236,38 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-    def test_local_context_schema_validation_pass(self):
+    def test_local_config_context_schema_validation_pass(self):
         """
         Given a config context schema
         And a device with local context that conforms to that schema
         Assert that the local context passes schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"A": {"type": "integer"}}}
         )
         self.add_permissions("dcim.change_device")
 
-        patch_data = {"local_context_schema": str(schema.pk)}
+        patch_data = {"local_config_context_schema": str(schema.pk)}
 
         response = self.client.patch(
             self._get_detail_url(Device.objects.get(name="Device 1")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.data["local_context_schema"]["id"], str(schema.pk))
+        self.assertEqual(str(response.data["local_config_context_schema"]["url"]), self.absolute_api_url(schema))
 
-    def test_local_context_schema_schema_validation_fails(self):
+    def test_local_config_context_schema_schema_validation_fails(self):
         """
         Given a config context schema
         And a device with local context that *does not* conform to that schema
         Assert that the local context fails schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
+            name="Schema 2", data_schema={"type": "object", "properties": {"B": {"type": "string"}}}
         )
         # Add object-level permission
         self.add_permissions("dcim.change_device")
 
-        patch_data = {"local_context_schema": str(schema.pk)}
+        patch_data = {"local_config_context_schema": str(schema.pk)}
 
         response = self.client.patch(
             self._get_detail_url(Device.objects.get(name="Device 2")), patch_data, format="json", **self.header
@@ -1458,8 +1282,14 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("dcim.change_device")
 
         dev = Device.objects.get(name="Device 3")
-        dev_intf = Interface.objects.create(name="Ethernet1", device=dev, type="1000base-t")
-        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24", assigned_object=dev_intf)
+        intf_status = Status.objects.get_for_model(Interface).first()
+        dev_intf = Interface.objects.create(name="Ethernet1", device=dev, type="1000base-t", status=intf_status)
+        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace, status=prefix_status)
+        dev_ip_addr = IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace, status=ipaddr_status)
+        dev_intf.add_ip_addresses(dev_ip_addr)
 
         patch_data = {"primary_ip4": dev_ip_addr.pk}
 
@@ -1467,6 +1297,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(Device.objects.get(name="Device 3")), patch_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        dev.refresh_from_db()
+        self.assertEqual(dev.primary_ip4, dev_ip_addr)
 
     def test_patching_device_redundancy_group(self):
         """
@@ -1626,24 +1458,31 @@ class PowerOutletTest(Mixins.BasePortTestMixin):
         ]
 
 
-class InterfaceTestVersion12(Mixins.BasePortTestMixin):
+class InterfaceTest(Mixins.BasePortTestMixin):
     model = Interface
     peer_termination_type = Interface
-    choices_fields = ["mode", "type", "status"]
+    choices_fields = ["mode", "type"]
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
+        interface_status = Status.objects.get_for_model(Interface).first()
 
         cls.devices = (
+            cls.device,
             Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+                device_type=cls.device_type,
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 2",
+                location=cls.location,
             ),
             Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 2", site=cls.site
-            ),
-            Device.objects.create(
-                device_type=cls.device_type, device_role=cls.device_role, name="Device 3", site=cls.site
+                device_type=cls.device_type,
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 3",
+                location=cls.location,
             ),
         )
 
@@ -1700,10 +1539,12 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             ),
         )
 
+        vlan_group = VLANGroup.objects.first()
+        vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
-            VLAN.objects.create(name="VLAN 1", vid=1),
-            VLAN.objects.create(name="VLAN 2", vid=2),
-            VLAN.objects.create(name="VLAN 3", vid=3),
+            VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(name="VLAN 2", vid=2, status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(name="VLAN 3", vid=3, status=vlan_status, vlan_group=vlan_group),
         )
 
         cls.create_data = [
@@ -1711,23 +1552,28 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "Interface 8",
                 "type": "1000base-t",
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
+                "mac_address": "00-01-02-03-04-05",
             },
             {
                 "device": cls.devices[0].pk,
                 "name": "Interface 9",
                 "type": "1000base-t",
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
+                "mac_address": None,
             },
             {
                 "device": cls.devices[0].pk,
                 "name": "Interface 10",
                 "type": "virtual",
+                "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1739,6 +1585,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             "device": cls.devices[0].pk,
             "name": "expected-to-fail",
             "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "status": interface_status.pk,
             "untagged_vlan": cls.vlans[0].pk,
         }
 
@@ -1747,6 +1594,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 1",
                 "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                "status": interface_status.pk,
                 "parent_interface": cls.interfaces[3].id,  # belongs to different device but same vc
                 "bridge": cls.interfaces[2].id,  # belongs to different device but same vc
             },
@@ -1754,6 +1602,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": cls.devices[0].pk,
                 "name": "interface test 2",
                 "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                "status": interface_status.pk,
                 "lag": cls.interfaces[4].id,  # belongs to different device but same vc
             },
         ]
@@ -1765,6 +1614,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                    "status": interface_status.pk,
                     "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
                 },
             ],
@@ -1774,6 +1624,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "status": interface_status.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
@@ -1783,35 +1634,11 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "status": interface_status.pk,
                     "lag": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
             ],
         ]
-
-    def test_active_status_not_found(self):
-        self.add_permissions("dcim.add_interface")
-
-        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
-        interface_ct = ContentType.objects.get_for_model(Interface)
-        status_active.content_types.remove(interface_ct)
-
-        data = {
-            "device": self.device.pk,
-            "name": "int-001",
-            "type": "1000base-t",
-            "mode": InterfaceModeChoices.MODE_TAGGED,
-        }
-
-        url = self._get_list_url()
-        response = self.client.post(url, data, format="json", **self.header)
-
-        self.assertHttpStatus(response, 400)
-        self.assertEqual(
-            response.data["status"],
-            [
-                "Interface default status 'active' does not exist, create 'active' status for Interface or use the latest api_version"
-            ],
-        )
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
@@ -1843,8 +1670,6 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
         self.assertEqual(queryset.bridge, self.interfaces[2])
 
         # Assert LAG
-        self.add_permissions("dcim.add_interface")
-
         response = self.client.post(
             self._get_list_url(), data=self.common_device_or_vc_data[1], format="json", **self.header
         )
@@ -1879,7 +1704,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 "device": self.devices[0].pk,
                 "name": "Tagged Interface",
                 "type": "1000base-t",
-                "status": "active",
+                "status": Status.objects.get_for_model(Interface)[0].pk,
                 "mode": InterfaceModeChoices.MODE_ACCESS,
                 "tagged_vlans": [self.vlans[0].pk, self.vlans[1].pk],
                 "untagged_vlan": self.vlans[2].pk,
@@ -1897,6 +1722,7 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
                 name="Tagged Interface",
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=Status.objects.get_for_model(Interface).first(),
             )
             interface.tagged_vlans.add(self.vlans[0])
             payload = {"mode": None, "tagged_vlans": [self.vlans[2].pk]}
@@ -1923,33 +1749,6 @@ class InterfaceTestVersion12(Mixins.BasePortTestMixin):
             payload = {"mode": InterfaceModeChoices.MODE_ACCESS, "tagged_vlans": []}
             response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
-
-
-class InterfaceTestVersion14(InterfaceTestVersion12):
-    api_version = "1.4"
-    validation_excluded_fields = ["status"]
-
-    @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-
-        # Add status to all payload because status is required in v1.4
-        # Since `active` status is special-cased for Interface API, make sure we have some other statuses in play
-        status_slug = Status.objects.get_for_model(Interface).exclude(name="Active").last().slug
-        for i, _ in enumerate(cls.create_data):
-            cls.create_data[i]["status"] = status_slug
-
-        cls.untagged_vlan_data["status"] = status_slug
-
-        for i, _ in enumerate(cls.common_device_or_vc_data):
-            cls.common_device_or_vc_data[i]["status"] = status_slug
-
-        for i, _ in enumerate(cls.interfaces_not_belonging_to_same_device_data):
-            cls.interfaces_not_belonging_to_same_device_data[i][1]["status"] = status_slug
-
-    @skip("Test not required in v1.4")
-    def test_active_status_not_found(self):
-        pass
 
 
 class FrontPortTest(Mixins.BasePortTestMixin):
@@ -2064,29 +1863,34 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         )
 
         devices = (
+            # "Device 1" was already created in super().setUpTestData
             Device.objects.create(
                 device_type=device_types[0],
-                device_role=cls.device_role,
-                name="Device 1",
-                site=cls.site,
-            ),
-            Device.objects.create(
-                device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
+                status=cls.device_status,
                 name="Device 2",
-                site=cls.site,
+                location=cls.location,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
+                status=cls.device_status,
                 name="Device 3",
-                site=cls.site,
+                location=cls.location,
             ),
             Device.objects.create(
                 device_type=device_types[1],
-                device_role=cls.device_role,
+                role=cls.device_role,
+                status=cls.device_status,
                 name="Device 4",
-                site=cls.site,
+                location=cls.location,
+            ),
+            Device.objects.create(
+                device_type=device_types[1],
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 5",
+                location=cls.location,
             ),
         )
 
@@ -2113,9 +1917,8 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         ]
 
 
-class InventoryItemTest(Mixins.BaseComponentTestMixin):
+class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = InventoryItem
-    brief_fields = ["_depth", "device", "display", "id", "name", "url"]
     choices_fields = []
 
     @classmethod
@@ -2144,15 +1947,23 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin):
             },
         ]
 
+    # TODO: Unskip after resolving #2908, #2909
+    @skip("DRF's built-in InventoryItem nautral_key is infinitely recursive")
+    def test_list_objects_ascending_ordered(self):
+        pass
+
+    @skip("DRF's built-in InventoryItem nautral_key is infinitely recursive")
+    def test_list_objects_descending_ordered(self):
+        pass
+
 
 class CableTest(Mixins.BaseComponentTestMixin):
     model = Cable
-    brief_fields = ["display", "id", "label", "url"]
     bulk_update_data = {
         "length": 100,
         "length_unit": "m",
     }
-    choices_fields = ["termination_a_type", "termination_b_type", "type", "status", "length_unit"]
+    choices_fields = ["termination_a_type", "termination_b_type", "type", "length_unit"]
 
     # TODO: Allow updating cable terminations
     test_update_object = None
@@ -2160,23 +1971,25 @@ class CableTest(Mixins.BaseComponentTestMixin):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
         devices = (
             Device.objects.create(
                 device_type=cls.device_type,
-                device_role=cls.device_role,
+                role=cls.device_role,
+                status=cls.device_status,
                 name="Device 2",
-                site=cls.site,
+                location=cls.location,
             ),
             Device.objects.create(
                 device_type=cls.device_type,
-                device_role=cls.device_role,
+                role=cls.device_role,
+                status=cls.device_status,
                 name="Device 3",
-                site=cls.site,
+                location=cls.location,
             ),
         )
 
         interfaces = []
+        interface_status = Status.objects.get_for_model(Interface).first()
         for device in devices:
             for i in range(0, 10):
                 interfaces.append(
@@ -2184,6 +1997,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                         device=device,
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         name=f"eth{i}",
+                        status=interface_status,
                     )
                 )
 
@@ -2208,21 +2022,13 @@ class CableTest(Mixins.BaseComponentTestMixin):
             status=statuses[0],
         )
 
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for utilities.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
-
         cls.create_data = [
             {
                 "termination_a_type": "dcim.interface",
                 "termination_a_id": interfaces[4].pk,
                 "termination_b_type": "dcim.interface",
                 "termination_b_id": interfaces[14].pk,
-                "status": "planned",
+                "status": statuses[1].pk,
                 "label": "Cable 4",
             },
             {
@@ -2230,7 +2036,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                 "termination_a_id": interfaces[5].pk,
                 "termination_b_type": "dcim.interface",
                 "termination_b_id": interfaces[15].pk,
-                "status": "planned",
+                "status": statuses[1].pk,
                 "label": "Cable 5",
             },
             {
@@ -2238,7 +2044,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                 "termination_a_id": interfaces[6].pk,
                 "termination_b_type": "dcim.interface",
                 "termination_b_id": interfaces[16].pk,
-                "status": "planned",
+                "status": statuses[1].pk,
                 "label": "Cable 6",
             },
         ]
@@ -2248,26 +2054,30 @@ class ConnectedDeviceTest(APITestCase):
     def setUp(self):
         super().setUp()
 
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
-        cable_status = Status.objects.get_for_model(Cable).get(slug="connected")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
 
         self.device1 = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
+            status=device_status,
             name="TestDevice1",
-            site=site,
+            location=location,
         )
         device2 = Device.objects.create(
             device_type=device_type,
-            device_role=device_role,
+            role=device_role,
+            status=device_status,
             name="TestDevice2",
-            site=site,
+            location=location,
         )
-        interface1 = Interface.objects.create(device=self.device1, name="eth0")
-        interface2 = Interface.objects.create(device=device2, name="eth0")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interface1 = Interface.objects.create(device=self.device1, name="eth0", status=interface_status)
+        interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
 
         cable = Cable(termination_a=interface1, termination_b=interface2, status=cable_status)
         cable.validated_save()
@@ -2282,90 +2092,103 @@ class ConnectedDeviceTest(APITestCase):
 
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
     model = VirtualChassis
-    brief_fields = ["display", "id", "master", "member_count", "name", "url"]
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
-        device_role = DeviceRole.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
 
         devices = (
             Device.objects.create(
                 name="Device 1",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 2",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 3",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 4",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 5",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 6",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 7",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 8",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 9",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 10",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 11",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
             Device.objects.create(
                 name="Device 12",
                 device_type=device_type,
-                device_role=device_role,
-                site=site,
+                role=device_role,
+                status=device_status,
+                location=location,
             ),
         )
 
         # Create 12 interfaces per device
+        interface_status = Status.objects.get_for_model(Interface).first()
         interfaces = []
         for i, device in enumerate(devices):
             for j in range(0, 13):
@@ -2375,6 +2198,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
                         device=device,
                         name=f"{i%3+1}/{j}",
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                        status=interface_status,
                     )
                 )
 
@@ -2450,16 +2274,17 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
         virtual_chassis_1 = response.json()["results"][0]
 
         # Make sure the master is set
-        self.assertNotEqual(virtual_chassis_1["master"], None)
+        self.assertIsNotNone(virtual_chassis_1["master"])
 
-        master_device = Device.objects.get(pk=virtual_chassis_1["master"]["id"])
+        # The `master` key will be a URL now, but it contains the PK
+        master_device = Device.objects.get(pk=virtual_chassis_1["master"]["url"].split("/")[-2])
 
         # Set the virtual_chassis of the master device to null
         url = reverse("dcim-api:device-detail", kwargs={"pk": master_device.id})
         payload = {
             "device_type": str(master_device.device_type.id),
-            "device_role": str(master_device.device_role.id),
-            "site": str(master_device.site.id),
+            "role": str(master_device.role.id),
+            "location": str(master_device.location.id),
             "status": "active",
             "virtual_chassis": None,
         }
@@ -2472,68 +2297,71 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
-    brief_fields = ["display", "id", "name", "powerfeed_count", "url"]
 
     @classmethod
     def setUpTestData(cls):
-        sites = Site.objects.all()[:2]
-
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
         rack_groups = (
-            RackGroup.objects.create(name="Rack Group 1", slug="rack-group-1", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 2", slug="rack-group-2", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 3", slug="rack-group-3", site=sites[0]),
-            RackGroup.objects.create(name="Rack Group 4", slug="rack-group-3", site=sites[1]),
+            RackGroup.objects.create(name="Rack Group 1", location=locations[0]),
+            RackGroup.objects.create(name="Rack Group 2", location=locations[0]),
+            RackGroup.objects.create(name="Rack Group 3", location=locations[0]),
+            RackGroup.objects.create(name="Rack Group 4", location=locations[1]),
         )
 
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[0], name="Power Panel 1")
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[1], name="Power Panel 2")
-        PowerPanel.objects.create(site=sites[0], rack_group=rack_groups[2], name="Power Panel 3")
+        PowerPanel.objects.create(location=locations[0], rack_group=rack_groups[0], name="Power Panel 1")
+        PowerPanel.objects.create(location=locations[0], rack_group=rack_groups[1], name="Power Panel 2")
+        PowerPanel.objects.create(location=locations[0], rack_group=rack_groups[2], name="Power Panel 3")
 
         cls.create_data = [
             {
                 "name": "Power Panel 4",
-                "site": sites[0].pk,
+                "location": locations[0].pk,
                 "rack_group": rack_groups[0].pk,
             },
             {
                 "name": "Power Panel 5",
-                "site": sites[0].pk,
+                "location": locations[0].pk,
                 "rack_group": rack_groups[1].pk,
             },
             {
                 "name": "Power Panel 6",
-                "site": sites[0].pk,
+                "location": locations[0].pk,
                 "rack_group": rack_groups[2].pk,
             },
         ]
 
-        cls.bulk_update_data = {"site": sites[1].pk, "rack_group": rack_groups[3].pk}
+        cls.bulk_update_data = {"location": locations[1].pk, "rack_group": rack_groups[3].pk}
 
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    brief_fields = ["cable", "display", "id", "name", "url"]
-    bulk_update_data = {
-        "status": "planned",
-    }
-    choices_fields = ["phase", "status", "supply", "type"]
+    choices_fields = ["phase", "supply", "type"]
 
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
-        rackgroup = RackGroup.objects.create(site=site, name="Rack Group 1", slug="rack-group-1")
-        rackrole = RackRole.objects.create(name="Rack Role 1", slug="rack-role-1", color="ff0000")
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        rackgroup = RackGroup.objects.create(location=location, name="Rack Group 1")
+        rackrole = Role.objects.get_for_model(Rack).first()
+        rackstatus = Status.objects.get_for_model(Rack).first()
 
         racks = (
-            Rack.objects.create(site=site, group=rackgroup, role=rackrole, name="Rack 1"),
-            Rack.objects.create(site=site, group=rackgroup, role=rackrole, name="Rack 2"),
-            Rack.objects.create(site=site, group=rackgroup, role=rackrole, name="Rack 3"),
-            Rack.objects.create(site=site, group=rackgroup, role=rackrole, name="Rack 4"),
+            Rack.objects.create(
+                location=location, rack_group=rackgroup, role=rackrole, name="Rack 1", status=rackstatus
+            ),
+            Rack.objects.create(
+                location=location, rack_group=rackgroup, role=rackrole, name="Rack 2", status=rackstatus
+            ),
+            Rack.objects.create(
+                location=location, rack_group=rackgroup, role=rackrole, name="Rack 3", status=rackstatus
+            ),
+            Rack.objects.create(
+                location=location, rack_group=rackgroup, role=rackrole, name="Rack 4", status=rackstatus
+            ),
         )
 
         power_panels = (
-            PowerPanel.objects.create(site=site, rack_group=rackgroup, name="Power Panel 1"),
-            PowerPanel.objects.create(site=site, rack_group=rackgroup, name="Power Panel 2"),
+            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 1"),
+            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 2"),
         )
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
@@ -2582,121 +2410,104 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             type=REDUNDANT,
         )
 
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
+        statuses = Status.objects.get_for_model(PowerFeed)
 
         cls.create_data = [
             {
                 "name": "Power Feed 4A",
                 "power_panel": power_panels[0].pk,
                 "rack": racks[3].pk,
-                "status": "active",
+                "status": statuses[0].pk,
                 "type": PRIMARY,
             },
             {
                 "name": "Power Feed 4B",
                 "power_panel": power_panels[1].pk,
                 "rack": racks[3].pk,
-                "status": "active",
+                "status": statuses[0].pk,
                 "type": REDUNDANT,
             },
         ]
+        cls.bulk_update_data = {
+            "status": statuses[1].pk,
+        }
 
 
 class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
     model = DeviceRedundancyGroup
-    brief_fields = ["display", "failover_strategy", "id", "name", "slug", "url"]
-    create_data = [
-        {
-            "name": "Device Redundancy Group 4",
-            "failover_strategy": "active-active",
-            "status": "active",
-        },
-        {
-            "name": "Device Redundancy Group 5",
-            "failover_strategy": "active-passive",
-            "status": "planned",
-        },
-        {
-            "name": "Device Redundancy Group 6",
-            "failover_strategy": "active-active",
-            "status": "staging",
-        },
-    ]
-    bulk_update_data = {
-        "failover_strategy": "active-passive",
-    }
-    choices_fields = ["status", "failover_strategy"]
+    choices_fields = ["failover_strategy"]
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME(jathan): The writable serializer for `status` takes the
-        # status `name` (str) and not the `pk` (int). Do not validate this
-        # field right now, since we are asserting that it does create correctly.
-        #
-        # The test code for `utilities.testing.views.TestCase.model_to_dict()`
-        # needs to be enhanced to use the actual API serializers when `api=True`
-        cls.validation_excluded_fields = ["status"]
+        statuses = Status.objects.get_for_model(DeviceRedundancyGroup)
+        cls.create_data = [
+            {
+                "name": "Device Redundancy Group 4",
+                "failover_strategy": "active-active",
+                "status": statuses[0].pk,
+            },
+            {
+                "name": "Device Redundancy Group 5",
+                "failover_strategy": "active-passive",
+                "status": statuses[0].pk,
+            },
+            {
+                "name": "Device Redundancy Group 6",
+                "failover_strategy": "active-active",
+                "status": statuses[0].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "failover_strategy": "active-passive",
+            "status": statuses[1].pk,
+        }
 
 
 class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = InterfaceRedundancyGroup
-    brief_fields = ["display", "id", "name", "protocol", "url"]
-    create_data = [
-        {
-            "name": "Interface Redundancy Group 4",
-            "protocol": "hsrp",
-            "status": "active",
-            "protocol_group_id": "1",
-        },
-        {
-            "name": "Interface Redundancy Group 5",
-            "protocol": "vrrp",
-            "status": "planned",
-            "protocol_group_id": "2",
-        },
-        {
-            "name": "Interface Redundancy Group 6",
-            "protocol": "glbp",
-            "status": "staging",
-            "protocol_group_id": "3",
-        },
-    ]
-    bulk_update_data = {
-        "protocol": "carp",
-        "status": "active",
-        "virtual_ip": None,
-    }
-    choices_fields = ["status", "protocol"]
-    # FIXME(jathan): The writable serializer for `status` takes the
-    # status `name` (str) and not the `pk` (int). Do not validate this
-    # field right now, since we are asserting that it does create correctly.
-    #
-    # The test code for `utilities.testing.views.TestCase.model_to_dict()`
-    # needs to be enhanced to use the actual API serializers when `api=True`
-    validation_excluded_fields = ["status"]
+    choices_fields = ["protocol"]
 
     @classmethod
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
         ips = IPAddress.objects.all()
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
-            SecretsGroup.objects.create(name="Secrets Group 3", slug="secrets-group-3"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+            SecretsGroup.objects.create(name="Secrets Group 3"),
         )
         # Populating the data secrets_group and virtual_ip here.
-        for i, data in enumerate(cls.create_data[:2]):
-            data["secrets_group"] = secrets_groups[i].pk
-        for i, data in enumerate(cls.create_data[1:]):
-            data["virtual_ip"] = ips[i].pk
-
-        cls.bulk_update_data["virtual_ip"] = ips[0].pk
+        cls.create_data = [
+            {
+                "name": "Interface Redundancy Group 4",
+                "protocol": "hsrp",
+                "status": statuses[0].pk,
+                "protocol_group_id": "1",
+                "secrets_group": secrets_groups[0].pk,
+                "virtual_ip": ips[0].pk,
+            },
+            {
+                "name": "Interface Redundancy Group 5",
+                "protocol": "vrrp",
+                "status": statuses[1].pk,
+                "protocol_group_id": "2",
+                "secrets_group": secrets_groups[1].pk,
+                "virtual_ip": None,
+            },
+            {
+                "name": "Interface Redundancy Group 6",
+                "protocol": "glbp",
+                "status": statuses[3].pk,
+                "protocol_group_id": "3",
+                "secrets_group": None,
+                "virtual_ip": ips[1].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "protocol": "carp",
+            "status": statuses[2].pk,
+            "virtual_ip": ips[0].pk,
+        }
 
         interface_redundancy_groups = (
             InterfaceRedundancyGroup(
@@ -2728,11 +2539,16 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         for group in interface_redundancy_groups:
             group.validated_save()
 
+        cls.device_status = Status.objects.get_for_model(Device).first()
         cls.device_type = DeviceType.objects.first()
-        cls.device_role = DeviceRole.objects.first()
-        cls.site = Site.objects.first()
+        cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.location = Location.objects.filter(location_type__name="Campus").first()
         cls.device = Device.objects.create(
-            device_type=cls.device_type, device_role=cls.device_role, name="Device 1", site=cls.site
+            device_type=cls.device_type,
+            role=cls.device_role,
+            name="Device 1",
+            location=cls.location,
+            status=cls.device_status,
         )
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
         cls.interfaces = (

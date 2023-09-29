@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.6.2"
+version = "2.0.0"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -42,18 +42,14 @@ Django = "~3.2.20"
 django-ajax-tables = "~1.1.1"
 # LDAP Support
 django-auth-ldap = {version = "~4.3.0", optional = true}
-# Caching with Redis
-# NOTE: django-cacheops 7.x is available but contains breaking changes; since we'll be dropping this entirely in 2.0
-#       it's not worth the effort to update at this time.
-django-cacheops = "~6.2"
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.5.0"
+# Provides a database backend & models for Celery task results
+django-celery-results = "~2.4.0"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.9.1", extras = ["database"]}
 # Permit cross-domain API requests
 django-cors-headers = "~4.2.0"
-# Support for encrypted database fields
-django-cryptography = "~1.1"
 # Store files in the database for background tasks
 django-db-file-storage = "~0.5.5"
 # AutoSlugField and shell_plus
@@ -64,15 +60,10 @@ django-filter = "~23.1"
 django-health-check = "~3.17.0"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.10.2"
-# Modified Pre-order Tree Traversal - tree structure for Region, RackGroup, etc.
-django-mptt = "~0.14.0"
 # Prometheus metrics for Django
 django-prometheus = "~2.3.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.3.0"
-# RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
-# NOTE: django-rq 2.8 is available but since we don't use this any more ourselves we don't care about updating it.
-django-rq = "~2.8.1"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.13.2", optional = true}
 # Advanced HTML tables
@@ -88,12 +79,14 @@ django-tree-queries = "~0.15.0"
 django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.14.0"
+# Adds JSON schema support to API endpoints for rendering JSON schema forms.
+drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.26.4", extras = ["sidecar"]}
-# 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
-drf-yasg = {version = "^1.20.0", extras = ["validation"]}
+drf-spectacular = {version = "0.26.3", extras = ["sidecar"]}
+# Emoji terminal output for Python.
+emoji = "~2.8.0"
 # Git integrations for Python
-GitPython = "~3.1.32"
+GitPython = "~3.1.36"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"
@@ -103,7 +96,7 @@ graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
 Jinja2 = "~3.1.2"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = ">=4.7.0,<4.18.0"
+jsonschema = ">=4.7.0,<4.19.0"
 # Rendering of markdown files to HTML
 # NOTE: Markdown 3.4.x is available but mkdocs 1.4.3 isn't yet compatible with it.
 Markdown = "~3.3.7"
@@ -118,16 +111,18 @@ netaddr = "~0.8.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.5.0"
+netutils = "^1.6.0"
 # Handling of version numbers
-packaging = ">=23.0,<23.2"
+packaging = "~23.1"
 # Image processing library
 Pillow = "~10.0.0"
 # Custom prometheus metrics
-prometheus-client = ">=0.14.1,<0.18"
+prometheus-client = "~0.17.1"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
 psycopg2-binary = "~2.9.6"
+# A Python slugify application that handles unicode.
+python-slugify = "~8.0.1"
 # The uWSGI WSGI HTTP server as a Python module
 pyuwsgi = "~2.0.21"
 # YAML parsing and rendering
@@ -138,9 +133,6 @@ social-auth-core = {version = "~4.4.2", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.2.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
-# Requirement for tests in some apps, added back for 1.6 can be removed in 2.0
-toml = "^0.10.2"
-
 
 [tool.poetry.extras]
 all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
@@ -157,6 +149,8 @@ sso = ["social-auth-core"]
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
 django-debug-toolbar = "~4.1.0"
+# DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
+django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
 example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
@@ -173,32 +167,38 @@ towncrier = "~23.6.0"
 watchdog = "~3.0.0"
 
 [tool.poetry.group.docs.dependencies]
-# Helper for parsing docstrings
-griffe = "~0.31.0"
 # Rendering docs to HTML
 mkdocs = "~1.4.3"
+# Embedding YAML files into Markdown documents as tables
+markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~4.0.4"
 # Material for mkdocs theme
 mkdocs-material = "~9.1.18"
+# Automatically handle index pages for docs sections
+mkdocs-section-index = "~0.3.5"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~0.22.0"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.2.0"
+mkdocstrings-python = "~1.3.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code style enforcement
 black = "~23.7.0"
 # Code style checking and limited static analysis
-flake8 = {version = "~6.0.0", python = "^3.8.1"}
+flake8 = {version = "~6.0.0", python = ">=3.8.1"}
+# Code style checking for python import statements
+isort = "~5.12.0"
 # Code static analysis
 pylint = "~2.17.4"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
+# YAML linting
+yamllint = "~1.30.0"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
@@ -206,10 +206,8 @@ coverage = "~7.2.7"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Integration Tests
-requests = ">=2.27.1,<2.32.0"
+requests = ">=2.28.0,<2.32.0"
 # Selenium web drivers for live integration testing
-# Selenium 4.10 is available but splinter is not yet compatible with it
-# https://github.com/cobrateam/splinter/issues/1173
 selenium = "~4.9.1"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.1"
@@ -238,9 +236,15 @@ exclude = '''
     | buck-out
     | build
     | dist
+    | node_modules
   )/
 )
 '''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+force_sort_within_sections = true
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
@@ -260,6 +264,7 @@ good-names = """_,i,j,k,pk"""
 # unused-import is already covered by flake8
 disable=""",
     abstract-method,
+    arguments-differ,
     arguments-renamed,
     attribute-defined-outside-init,
     broad-except,
@@ -336,7 +341,7 @@ signature-mutators=["unittest.mock.patch"]
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-1.6.md"
+filename = "nautobot/docs/release-notes/version-2.0.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

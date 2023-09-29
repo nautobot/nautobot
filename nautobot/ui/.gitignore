@@ -1,0 +1,7 @@
+build
+# These files get rendered by `nautobot-server build_ui`
+generated
+node_modules
+
+# The output of `npm run analyze`
+analyze_report.html

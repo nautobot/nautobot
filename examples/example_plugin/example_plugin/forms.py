@@ -1,7 +1,6 @@
 from django import forms
 
-from nautobot.apps.forms import BulkEditForm, CSVModelForm, NautobotModelForm
-from nautobot.utilities.forms import BootstrapMixin
+from nautobot.apps.forms import BootstrapMixin, BulkEditForm, NautobotModelForm
 
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
@@ -19,14 +18,6 @@ class ExampleModelForm(NautobotModelForm):
     class Meta:
         model = ExampleModel
         fields = ["name", "number"]
-
-
-class ExampleModelCSVForm(CSVModelForm):
-    """Generic CSV bulk import form for `ExampleModel` objects."""
-
-    class Meta:
-        model = ExampleModel
-        fields = ExampleModel.csv_headers
 
 
 class ExampleModelFilterForm(BootstrapMixin, forms.Form):

@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 from collections import OrderedDict
 
@@ -11,8 +10,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
-from django.utils.text import slugify
-from django.urls import reverse
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
@@ -21,9 +18,10 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     ButtonClassChoices,
     WebhookHttpMethodChoices,
@@ -34,11 +32,9 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
-from nautobot.utilities.utils import deepmerge, render_jinja2
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
 from .jobs import JOB_LOGS, Job, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401
-
 
 #
 # Config contexts
@@ -72,11 +68,11 @@ def limit_dynamic_group_choices():
 class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
-    qualifiers (region, site, etc.). For example, the data stored in a ConfigContext assigned to site A and tenant B
-    will be available to a Device in site A assigned to tenant B. Data is stored in JSON format.
+    qualifiers (location, tenant, etc.). For example, the data stored in a ConfigContext assigned to location A and tenant B
+    will be available to a Device in location A assigned to tenant B. Data is stored in JSON format.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=100, unique=True)
 
     # A ConfigContext *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
@@ -86,6 +82,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
         default=None,
         null=True,
         blank=True,
+        related_name="config_contexts",
     )
     owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     owner = GenericForeignKey(
@@ -98,17 +95,18 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     is_active = models.BooleanField(
         default=True,
     )
-    schema = models.ForeignKey(
+    config_context_schema = models.ForeignKey(
         to="extras.ConfigContextSchema",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         help_text="Optional schema to validate the structure of the data",
+        related_name="config_contexts",
     )
-    regions = models.ManyToManyField(to="dcim.Region", related_name="+", blank=True)
-    sites = models.ManyToManyField(to="dcim.Site", related_name="+", blank=True)
     locations = models.ManyToManyField(to="dcim.Location", related_name="+", blank=True)
-    roles = models.ManyToManyField(to="dcim.DeviceRole", related_name="+", blank=True)
+    # TODO(timizuo): Find a way to limit role choices to Device; as of now using
+    #  limit_choices_to=Role.objects.get_for_model(Device), causes a partial import error
+    roles = models.ManyToManyField(to="extras.Role", related_name="+", blank=True)
     device_types = models.ManyToManyField(to="dcim.DeviceType", related_name="+", blank=True)
     device_redundancy_groups = models.ManyToManyField(to="dcim.DeviceRedundancyGroup", related_name="+", blank=True)
     platforms = models.ManyToManyField(to="dcim.Platform", related_name="+", blank=True)
@@ -124,19 +122,17 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
     data = models.JSONField(encoder=DjangoJSONEncoder)
 
-    objects = ConfigContextQuerySet.as_manager()
+    objects = BaseManager.from_queryset(ConfigContextQuerySet)()
+
+    documentation_static_path = "docs/user-guide/core-data-model/extras/configcontext.html"
 
     class Meta:
         ordering = ["weight", "name"]
-        unique_together = [["name", "owner_content_type", "owner_object_id"]]
 
     def __str__(self):
         if self.owner:
             return f"[{self.owner}] {self.name}"
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:configcontext", kwargs={"pk": self.pk})
 
     def clean(self):
         super().clean()
@@ -146,16 +142,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
             raise ValidationError({"data": 'JSON data must be in object form. Example: {"foo": 123}'})
 
         # Validate data against schema
-        self._validate_with_schema("data", "schema")
-
-        # Check for a duplicated `name`. This is necessary because Django does not consider two NULL fields to be equal,
-        # and thus if the `owner` is NULL, a duplicate `name` will not otherwise automatically raise an exception.
-        if (
-            ConfigContext.objects.exclude(pk=self.pk)
-            .filter(name=self.name, owner_content_type=self.owner_content_type, owner_object_id=self.owner_object_id)
-            .exists()
-        ):
-            raise ValidationError({"name": "A ConfigContext with this name already exists."})
+        self._validate_with_schema("data", "config_context_schema")
 
 
 class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
@@ -164,12 +151,12 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
     ConfigContexts.
     """
 
-    local_context_data = models.JSONField(
+    local_config_context_data = models.JSONField(
         encoder=DjangoJSONEncoder,
         blank=True,
         null=True,
     )
-    local_context_schema = models.ForeignKey(
+    local_config_context_schema = ForeignKeyWithAutoRelatedName(
         to="extras.ConfigContextSchema",
         on_delete=models.SET_NULL,
         null=True,
@@ -177,7 +164,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         help_text="Optional schema to validate the structure of the data",
     )
     # The local context data *may* be owned by another model, such as a GitRepository, or it may be un-owned
-    local_context_data_owner_content_type = models.ForeignKey(
+    local_config_context_data_owner_content_type = ForeignKeyWithAutoRelatedName(
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("config_context_owners"),
@@ -185,16 +172,18 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         null=True,
         blank=True,
     )
-    local_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
-    local_context_data_owner = GenericForeignKey(
-        ct_field="local_context_data_owner_content_type",
-        fk_field="local_context_data_owner_object_id",
+    local_config_context_data_owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    local_config_context_data_owner = GenericForeignKey(
+        ct_field="local_config_context_data_owner_content_type",
+        fk_field="local_config_context_data_owner_object_id",
     )
 
     class Meta:
         abstract = True
         indexes = [
-            models.Index(fields=("local_context_data_owner_content_type", "local_context_data_owner_object_id")),
+            models.Index(
+                fields=("local_config_context_data_owner_content_type", "local_config_context_data_owner_object_id")
+            ),
         ]
 
     def get_config_context(self):
@@ -207,7 +196,25 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
         else:
             config_context_data = self.config_context_data or []
+            # Device and VirtualMachine's Location has its own ConfigContext and its parent Locations' ConfigContext, if any, should
+            # also be applied. However, since moving from mptt to django-tree-queries https://github.com/nautobot/nautobot/issues/510,
+            # we lost the ability to query the ancestors for a particular tree node for subquery https://github.com/matthiask/django-tree-queries/issues/54.
+            # So instead of constructing the location related query in ConfigContextModelQueryset._get_config_context_filters(), which is complicated across databases
+            # We append the missing parent location query here as a patch.
+            location_config_context_queryset = ConfigContext.objects.none()
+            if self._meta.model_name == "device":
+                location_config_context_queryset = ConfigContext.objects.filter(
+                    locations__in=self.location.ancestors(include_self=True)
+                ).distinct()
+            else:
+                if self.cluster and self.cluster.location:
+                    location_config_context_queryset = ConfigContext.objects.filter(
+                        locations__in=self.cluster.location.ancestors(include_self=True)
+                    ).distinct()
+
             # Annotation has keys "weight" and "name" (used for ordering) and "data" (the actual config context data)
+            for cc in location_config_context_queryset:
+                config_context_data.append({"data": cc.data, "name": cc.name, "weight": cc.weight})
             config_context_data = [
                 c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))
             ]
@@ -218,8 +225,8 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             data = deepmerge(data, context)
 
         # If the object has local config context data defined, merge it last
-        if self.local_context_data:
-            data = deepmerge(data, self.local_context_data)
+        if self.local_config_context_data:
+            data = deepmerge(data, self.local_config_context_data)
 
         return data
 
@@ -227,30 +234,31 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         super().clean()
 
         # Verify that JSON data is provided as an object
-        if self.local_context_data and not isinstance(self.local_context_data, dict):
-            raise ValidationError({"local_context_data": 'JSON data must be in object form. Example: {"foo": 123}'})
+        if self.local_config_context_data and not isinstance(self.local_config_context_data, dict):
+            raise ValidationError(
+                {"local_config_context_data": 'JSON data must be in object form. Example: {"foo": 123}'}
+            )
 
-        if self.local_context_schema and not self.local_context_data:
-            raise ValidationError({"local_context_schema": "Local context data must exist for a schema to be applied."})
+        if self.local_config_context_schema and not self.local_config_context_data:
+            raise ValidationError(
+                {"local_config_context_schema": "Local config context data must exist for a schema to be applied."}
+            )
 
         # Validate data against schema
-        self._validate_with_schema("local_context_data", "local_context_schema")
+        self._validate_with_schema("local_config_context_data", "local_config_context_schema")
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "graphql",
-    "relationships",
 )
 class ConfigContextSchema(OrganizationalModel):
     """
     This model stores jsonschema documents where are used to optionally validate config context data payloads.
     """
 
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, unique=True)
     description = models.CharField(max_length=200, blank=True)
-    slug = AutoSlugField(populate_from="name", max_length=200, unique=None, db_index=True)
     data_schema = models.JSONField(
         help_text="A JSON Schema document which is used to validate a config context object."
     )
@@ -262,6 +270,7 @@ class ConfigContextSchema(OrganizationalModel):
         default=None,
         null=True,
         blank=True,
+        related_name="config_context_schemas",
     )
     owner_object_id = models.UUIDField(default=None, null=True, blank=True)
     owner = GenericForeignKey(
@@ -269,18 +278,12 @@ class ConfigContextSchema(OrganizationalModel):
         fk_field="owner_object_id",
     )
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["name", "owner_content_type", "owner_object_id"], name="unique_name_owner"),
-        ]
+    documentation_static_path = "docs/user-guide/core-data-model/extras/configcontextschema.html"
 
     def __str__(self):
         if self.owner:
             return f"[{self.owner}] {self.name}"
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("extras:configcontextschema", args=[self.slug])
 
     def clean(self):
         """
@@ -322,16 +325,17 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("custom_links"),
+        related_name="custom_links",
     )
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(
         max_length=500,
-        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>. Links which render as empty text will not be displayed.",
+        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Links which render as empty text will not be displayed.",
     )
     target_url = models.CharField(
         max_length=500,
         verbose_name="URL",
-        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.slug }}</code>.",
+        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
@@ -353,9 +357,6 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("extras:customlink", kwargs={"pk": self.pk})
-
 
 #
 # Export templates
@@ -364,7 +365,6 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 
 @extras_features(
     "graphql",
-    "relationships",
 )
 class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
@@ -386,6 +386,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         to=ContentType,
         on_delete=models.CASCADE,
         limit_choices_to=FeatureQuery("export_templates"),
+        related_name="export_templates",
     )
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=200, blank=True)
@@ -406,7 +407,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
 
     class Meta:
         ordering = ["content_type", "name"]
-        unique_together = [["content_type", "name", "owner_content_type", "owner_object_id"]]
+        unique_together = [["content_type", "name"]]
 
     def __str__(self):
         if self.owner:
@@ -440,28 +441,10 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
 
         return response
 
-    def get_absolute_url(self):
-        return reverse("extras:exporttemplate", kwargs={"pk": self.pk})
-
     def clean(self):
         super().clean()
         if self.file_extension.startswith("."):
             self.file_extension = self.file_extension[1:]
-
-        # Don't allow two ExportTemplates with the same name, content_type, and owner.
-        # This is necessary because Django doesn't consider NULL=NULL, and so if owner is NULL the unique_together
-        # condition will never be matched even if name and content_type are the same.
-        if (
-            ExportTemplate.objects.exclude(pk=self.pk)
-            .filter(
-                name=self.name,
-                content_type=self.content_type,
-                owner_content_type=self.owner_content_type,
-                owner_object_id=self.owner_object_id,
-            )
-            .exists()
-        ):
-            raise ValidationError({"name": "An ExportTemplate with this name and content type already exists."})
 
 
 #
@@ -479,6 +462,8 @@ class FileAttachment(BaseModel):
     bytes = models.BinaryField()
     filename = models.CharField(max_length=255)
     mimetype = models.CharField(max_length=255)
+
+    natural_key_field_names = ["pk"]
 
     def __str__(self):
         return self.filename
@@ -518,7 +503,12 @@ class FileProxy(BaseModel):
     class Meta:
         get_latest_by = "uploaded_at"
         ordering = ["name"]
+        # TODO: unique_together = [["name", "uploaded_at"]]
         verbose_name_plural = "file proxies"
+
+    # TODO: This isn't a guaranteed natural key for this model (see lack of a `unique_together` above), but in practice
+    # it is "nearly" unique. Once a proper unique_together is added and accounted for, this can be removed as redundant
+    natural_key_field_names = ["name", "uploaded_at"]
 
     def save(self, *args, **kwargs):
         delete_file_if_needed(self, "file")
@@ -537,17 +527,13 @@ class FileProxy(BaseModel):
 @extras_features("graphql")
 class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
     class Meta:
-        ordering = ("slug",)
+        ordering = ("name",)
         verbose_name = "GraphQL query"
         verbose_name_plural = "GraphQL queries"
-
-    def get_absolute_url(self):
-        return reverse("extras:graphqlquery", kwargs={"slug": self.slug})
 
     def save(self, *args, **kwargs):
         variables = {}
@@ -604,7 +590,7 @@ class ImageAttachment(BaseModel):
     An uploaded image which is associated with an object.
     """
 
-    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="image_attachments")
     object_id = models.UUIDField(db_index=True)
     parent = GenericForeignKey(ct_field="content_type", fk_field="object_id")
     image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
@@ -612,6 +598,8 @@ class ImageAttachment(BaseModel):
     image_width = models.PositiveSmallIntegerField()
     name = models.CharField(max_length=50, blank=True, db_index=True)
     created = models.DateTimeField(auto_now_add=True)
+
+    natural_key_field_names = ["pk"]
 
     class Meta:
         ordering = ("name",)  # name may be non-unique
@@ -666,30 +654,27 @@ class Note(BaseModel, ChangeLoggedModel):
     Notes allow anyone with proper permissions to add a note to an object.
     """
 
-    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE)
+    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="notes")
     assigned_object_id = models.UUIDField(db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="note",
+        related_name="notes",
         blank=True,
         null=True,
     )
     user_name = models.CharField(max_length=150, editable=False)
 
-    slug = AutoSlugField(populate_from="assigned_object")
     note = models.TextField()
-    objects = NotesQuerySet.as_manager()
+    objects = BaseManager.from_queryset(NotesQuerySet)()
 
     class Meta:
         ordering = ["created"]
-
-    def slugify_function(self, content):
-        return slugify(f"{str(content)[:50]}-{datetime.now().isoformat()}")
+        unique_together = [["assigned_object_type", "assigned_object_id", "user_name", "created"]]
 
     def __str__(self):
-        return str(self.slug)
+        return f"{self.assigned_object} - {self.created.isoformat()}"
 
     def save(self, *args, **kwargs):
         # Record the user's name as static strings
@@ -767,11 +752,11 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     ca_file_path = models.CharField(
         max_length=4096,
-        null=True,
         blank=True,
         verbose_name="CA File Path",
         help_text="The specific CA certificate file to use for SSL verification. "
         "Leave blank to use the system defaults.",
+        default="",
     )
 
     class Meta:
@@ -814,9 +799,6 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
             return render_jinja2(self.body_template, context)
         else:
             return json.dumps(context, cls=JSONEncoder, ensure_ascii=False)
-
-    def get_absolute_url(self):
-        return reverse("extras:webhook", kwargs={"pk": self.pk})
 
     @classmethod
     def check_for_conflicts(

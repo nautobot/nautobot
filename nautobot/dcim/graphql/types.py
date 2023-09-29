@@ -1,13 +1,29 @@
 import graphene
-import graphene_django_optimizer as gql_optimizer
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import construct_resolver
+from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
+from nautobot.dcim.models import (
+    Cable,
+    CablePath,
+    ConsolePort,
+    ConsoleServerPort,
+    Device,
+    FrontPort,
+    Location,
+    Interface,
+    Platform,
+    PowerFeed,
+    PowerOutlet,
+    PowerPort,
+    Rack,
+    RearPort,
+)
 from nautobot.dcim.filters import (
     CableFilterSet,
-    ConsolePortFilterSet,
     ConsoleServerPortFilterSet,
+    ConsolePortFilterSet,
     DeviceFilterSet,
     FrontPortFilterSet,
     InterfaceFilterSet,
@@ -17,35 +33,18 @@ from nautobot.dcim.filters import (
     PowerPortFilterSet,
     RackFilterSet,
     RearPortFilterSet,
-    SiteFilterSet,
-)
-from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
-from nautobot.dcim.models import (
-    Cable,
-    CablePath,
-    ConsolePort,
-    ConsoleServerPort,
-    Device,
-    FrontPort,
-    Interface,
-    Platform,
-    PowerFeed,
-    PowerOutlet,
-    PowerPort,
-    Rack,
-    RearPort,
-    Site,
+    LocationFilterSet,
 )
 from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.extras.models import DynamicGroup
 
 
-class SiteType(OptimizedNautobotObjectType):
-    """Graphql Type Object for Site model."""
+class LocationType(OptimizedNautobotObjectType):
+    """Graphql Type Object for Location model."""
 
     class Meta:
-        model = Site
-        filterset_class = SiteFilterSet
+        model = Location
+        filterset_class = LocationFilterSet
         exclude = ["images", "_name"]
 
 
@@ -126,6 +125,10 @@ class InterfaceType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndp
         filterset_class = InterfaceFilterSet
         exclude = ["_name"]
 
+    # At the DB level, mac_address is null=False, but empty strings are represented as null in the ORM and REST API,
+    # so for consistency, we'll keep that same representation in GraphQL.
+    mac_address = graphene.String(required=False)
+
     # Field Definitions
     cable_peer_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
     cable_peer_front_port = graphene.Field("nautobot.dcim.graphql.types.FrontPortType")
@@ -133,7 +136,6 @@ class InterfaceType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndp
     cable_peer_rear_port = graphene.Field("nautobot.dcim.graphql.types.RearPortType")
     connected_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
     connected_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
-    ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
     # Resolver Definitions
     resolve_cable_peer_circuit_termination = construct_resolver("CircuitTermination", "cable_peer")
@@ -142,14 +144,6 @@ class InterfaceType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndp
     resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
     resolve_connected_circuit_termination = construct_resolver("CircuitTermination", "connected_endpoint")
     resolve_connected_interface = construct_resolver("Interface", "connected_endpoint")
-
-    # Interface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
-    # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
-    @gql_optimizer.resolver_hints(
-        model_field="ip_addresses",
-    )
-    def resolve_ip_addresses(self, args):
-        return self.ip_addresses.all()
 
 
 class ConsolePortType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):

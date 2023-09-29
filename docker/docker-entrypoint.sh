@@ -14,7 +14,7 @@ NAUTOBOT_DOCKER_SKIP_INIT=${NAUTOBOT_DOCKER_SKIP_INIT-false}
 # lowercase NAUTOBOT_DOCKER_SKIP_INIT:
 NAUTOBOT_DOCKER_SKIP_INIT=$(echo $NAUTOBOT_DOCKER_SKIP_INIT | tr '[:upper:]' '[:lower:]')
 if [[ "$NAUTOBOT_DOCKER_SKIP_INIT" == "false" ]]; then
-  while ! nautobot-server post_upgrade --no-invalidate-all 2>&1 && [ "${CUR_DB_WAIT_TIME}" -lt "${MAX_DB_WAIT_TIME}" ]; do
+  while ! nautobot-server post_upgrade 2>&1 && [ "${CUR_DB_WAIT_TIME}" -lt "${MAX_DB_WAIT_TIME}" ]; do
     echo "⏳ Waiting on DB... (${CUR_DB_WAIT_TIME}s / ${MAX_DB_WAIT_TIME}s)"
     sleep "${DB_WAIT_TIMEOUT}"
     CUR_DB_WAIT_TIME=$(( CUR_DB_WAIT_TIME + DB_WAIT_TIMEOUT ))

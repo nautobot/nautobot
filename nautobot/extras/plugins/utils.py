@@ -10,10 +10,11 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 
 from .exceptions import PluginNotFound, PluginImproperlyConfigured
+from nautobot.core.settings_funcs import ConstanceConfigItem
 
 
 # Logging object
-logger = logging.getLogger("nautobot.plugins")
+logger = logging.getLogger(__name__)
 
 
 def import_object(module_and_object):
@@ -102,8 +103,20 @@ def load_plugin(plugin_name, settings):
         if middleware not in settings.MIDDLEWARE:
             settings.MIDDLEWARE.append(middleware)
 
-    # Update caching configg
-    settings.CACHEOPS.update({f"{plugin_name}.{key}": value for key, value in plugin_config.caching_config.items()})
+    # Update Constance Config and Constance Fieldset
+    if plugin_config.constance_config:
+        app_config = {}
+        for key, value in plugin_config.constance_config.items():
+            config_item = value
+            # Enforce ConstanceConfigItem namedtuple
+            if not isinstance(value, ConstanceConfigItem):
+                config_item = ConstanceConfigItem(*value)
+                plugin_config.constance_config[key] = config_item
+
+            app_config[f"{plugin_name}__{key}"] = config_item
+
+        settings.CONSTANCE_CONFIG.update(app_config)
+        settings.CONSTANCE_CONFIG_FIELDSETS.update({f"{plugin_config.verbose_name}": app_config.keys()})
 
 
 def get_sso_backend_name(social_auth_module):

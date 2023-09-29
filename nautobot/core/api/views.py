@@ -1,6 +1,8 @@
+import itertools
 import logging
 import platform
 from collections import OrderedDict
+import re
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
@@ -9,8 +11,8 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
-from django.shortcuts import redirect
-from django_rq.queues import get_connection as get_rq_connection
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import NoReverseMatch, reverse as django_reverse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -23,7 +25,6 @@ from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
-from rq.worker import Worker as RQWorker
 
 from graphql import get_default_backend
 from graphql.execution import ExecutionResult
@@ -32,18 +33,16 @@ from graphql.execution.middleware import MiddlewareManager
 from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 
-from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
-from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.utils import (
-    get_all_lookup_expr_for_field,
-    get_filterset_parameter_form_field,
-    FilterSetFieldNotFound,
-    ensure_content_type_and_field_name_inquery_params,
-    get_form_for_model,
-)
+from nautobot.core.celery import app as celery_app
+from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
+from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
+from nautobot.extras.registry import registry
 from . import serializers
 
 HTTP_ACTIONS = {
@@ -55,7 +54,6 @@ HTTP_ACTIONS = {
     "PATCH": "change",
     "DELETE": "delete",
 }
-
 
 #
 # Mixins
@@ -82,7 +80,7 @@ class BulkUpdateModelMixin:
     or more JSON objects, each specifying the UUID of an object to be updated as well as the attributes to be set.
     For example:
 
-    PATCH /api/dcim/sites/
+    PATCH /api/dcim/locations/
     [
         {
             "id": "1f554d07-d099-437d-8d48-7d6e35ec8fa3",
@@ -134,7 +132,7 @@ class BulkDestroyModelMixin:
     Support bulk deletion of objects using the list endpoint for a model. Accepts a DELETE action with a list of one
     or more JSON objects, each specifying the UUID of an object to be deleted. For example:
 
-    DELETE /api/dcim/sites/
+    DELETE /api/dcim/locations/
     [
         {"id": "3f01f169-49b9-42d5-a526-df9118635d62"},
         {"id": "c27d6c5b-7ea8-41e7-b9dd-c065efd5d9cd"}
@@ -167,10 +165,39 @@ class BulkDestroyModelMixin:
 
 
 class ModelViewSetMixin:
-    brief = False
-    # v2 TODO(jathan): Revisit whether this is still valid post-cacheops. Re: prefetch_related vs.
-    # select_related
-    brief_prefetch_fields = []
+    logger = logging.getLogger(__name__ + ".ModelViewSet")
+
+    # TODO: can't set lookup_value_regex globally; some models/viewsets (ContentType, Group) have integer rather than
+    #       UUID PKs and also do NOT support composite-keys.
+    #       The impact of NOT setting this is that per the OpenAPI schema, only UUIDs are permitted for most ViewSets;
+    #       however, "secretly" due to our custom get_object() implementation below, you can actually also specify a
+    #       composite_key value instead of a UUID. We're not currently documenting/using this feature, so OK for now
+    # lookup_value_regex = r"[^/]+"
+
+    def get_object(self):
+        """Extend rest_framework.generics.GenericAPIView.get_object to allow "pk" lookups to use a composite-key."""
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+
+        assert lookup_url_kwarg in self.kwargs, (
+            f"Expected view {self.__class__.__name__} to be called with a URL keyword argument named "
+            f'"{lookup_url_kwarg}". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.'
+        )
+
+        if lookup_url_kwarg == "pk" and hasattr(queryset.model, "composite_key"):
+            # Support lookup by either PK (UUID) or composite_key
+            lookup_value = self.kwargs["pk"]
+            if is_uuid(lookup_value):
+                obj = get_object_or_404(queryset, pk=lookup_value)
+            else:
+                obj = get_object_or_404(queryset, composite_key=lookup_value)
+        else:
+            # Default DRF lookup behavior, just in case a viewset has overridden `lookup_url_kwarg` for its own needs
+            obj = get_object_or_404(queryset, **{self.lookup_field: self.kwargs[lookup_url_kwarg]})
+
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
     def get_serializer(self, *args, **kwargs):
         # If a list of objects has been provided, initialize the serializer with many=True
@@ -179,36 +206,25 @@ class ModelViewSetMixin:
 
         return super().get_serializer(*args, **kwargs)
 
-    def get_serializer_class(self):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-
-        # If using 'brief' mode, find and return the nested serializer for this model, if one exists
-        if self.brief:
-            logger.debug("Request is for 'brief' format; initializing nested serializer")
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if "text/csv" in self.request.accepted_media_type:
+            # CSV rendering should always use depth 0
+            context["depth"] = 0
+        elif self.request.method == "GET":
+            # Only allow the depth to be greater than 0 in GET requests
+            depth = 0
             try:
-                serializer = get_serializer_for_model(self.queryset.model, prefix="Nested")
-                logger.debug(f"Using serializer {serializer}")
-                return serializer
-            except SerializerNotFound:
-                logger.debug(f"Nested serializer for {self.queryset.model} not found!")
+                depth = int(self.request.query_params.get("depth", 0))
+            except ValueError:
+                self.logger.warning("The depth parameter must be an integer between 0 and 10")
 
-        # Fall back to the hard-coded serializer class
-        return self.serializer_class
+            context["depth"] = depth
+        else:
+            # Use depth=0 in all write type requests.
+            context["depth"] = 0
 
-    def get_queryset(self):
-        # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
-        if self.brief:
-            # v2 TODO(jathan): Replace prefetch_related with select_related
-            return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
-
-        return super().get_queryset()
-
-    def initialize_request(self, request, *args, **kwargs):
-        # Check if brief=True has been passed
-        if request.method == "GET" and request.GET.get("brief"):
-            self.brief = True
-
-        return super().initialize_request(request, *args, **kwargs)
+        return context
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
@@ -220,9 +236,9 @@ class ModelViewSetMixin:
         """
         # Restrict the view's QuerySet to allow only the permitted objects for the given user, if applicable
         if request.user.is_authenticated:
-            action = HTTP_ACTIONS[request.method]
-            if action:
-                self.queryset = self.queryset.restrict(request.user, action)
+            http_action = HTTP_ACTIONS[request.method]
+            if http_action:
+                self.queryset = self.queryset.restrict(request.user, http_action)
 
     def initial(self, request, *args, **kwargs):
         """
@@ -241,16 +257,21 @@ class ModelViewSetMixin:
         self.restrict_queryset(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-
         try:
             return super().dispatch(request, *args, **kwargs)
         except ProtectedError as e:
             protected_objects = list(e.protected_objects)
             msg = f"Unable to delete object. {len(protected_objects)} dependent objects were found: "
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
-            logger.warning(msg)
+            self.logger.warning(msg)
             return self.finalize_response(request, Response({"detail": msg}, status=409), *args, **kwargs)
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        # In the case of certain errors, we might not even get to the point of setting request.accepted_media_type
+        if hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type:
+            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model.__name__.lower()}_data.csv"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return super().finalize_response(request, response, *args, **kwargs)
 
 
 class ModelViewSet(
@@ -263,6 +284,8 @@ class ModelViewSet(
     """
     Extend DRF's ModelViewSet to support bulk update and delete functions.
     """
+
+    logger = logging.getLogger(__name__ + ".ModelViewSet")
 
     def _validate_objects(self, instance):
         """
@@ -280,8 +303,7 @@ class ModelViewSet(
 
     def perform_create(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Creating new {model._meta.verbose_name}")
+        self.logger.info(f"Creating new {model._meta.verbose_name}")
 
         # Enforce object-level permissions on save()
         try:
@@ -293,8 +315,7 @@ class ModelViewSet(
 
     def perform_update(self, serializer):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
+        self.logger.info(f"Updating {model._meta.verbose_name} {serializer.instance} (PK: {serializer.instance.pk})")
 
         # Enforce object-level permissions on save()
         try:
@@ -306,8 +327,7 @@ class ModelViewSet(
 
     def perform_destroy(self, instance):
         model = self.queryset.model
-        logger = logging.getLogger("nautobot.core.api.views.ModelViewSet")
-        logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
+        self.logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
 
         return super().perform_destroy(instance)
 
@@ -325,7 +345,7 @@ class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyM
 
 class APIRootView(NautobotAPIVersionMixin, APIView):
     """
-    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
+    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
     """
 
     _ignore_model_permissions = True
@@ -398,8 +418,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "nautobot-version": {"type": "string"},
                     "plugins": {"type": "object"},
                     "python-version": {"type": "string"},
-                    # 2.0 TODO: remove rq-workers-running property
-                    "rq-workers-running": {"type": "integer"},
                     "celery-workers-running": {"type": "integer"},
                 },
             }
@@ -436,8 +454,6 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "nautobot-version": settings.VERSION,
                 "plugins": plugins,
                 "python-version": platform.python_version(),
-                # 2.0 TODO: remove rq-workers-running
-                "rq-workers-running": RQWorker.count(get_rq_connection("default")),
                 "celery-workers-running": worker_count,
             }
         )
@@ -628,7 +644,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             request (HttpRequest): Request object from Django
 
         Returns:
-            dict: GraphQL query
+            (dict): GraphQL query
         """
         content_type = GraphQLView.get_content_type(request)
 
@@ -654,7 +670,7 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             operation_name (str): GraphQL operation name: query, mutations etc..
 
         Returns:
-            ExecutionResult: Execution result object from GraphQL with response or error message.
+            (ExecutionResult): Execution result object from GraphQL with response or error message.
         """
 
         self.init_graphql()
@@ -696,6 +712,195 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 
 
 #
+# UI Views
+#
+
+
+class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
+    """API View that returns the nav-menu content applicable to the requesting user."""
+
+    permission_classes = [IsAuthenticated]
+
+    def format_and_remove_hidden_menu(self, request, data, hide_restricted_ui):
+        """
+        Formats the menu data and removes hidden menu items based on user permissions.
+
+        Args:
+            request (HttpRequest): The request object.
+            data (Union[dict, str]): The menu data to format and filter. Can be either a dictionary or a string.
+            hide_restricted_ui (bool): Flag indicating whether to hide restricted menu items.
+
+        Returns:
+            (Union[dict, str]): The formatted menu data without hidden items. Returns a dict if `data` is a
+                `dict`, otherwise returns a string.
+
+        Example:
+            Input:
+            {
+                "Devices": {
+                    "permission": [...],
+                    "weight": "",
+                    "data": "data value"
+                },
+            }
+
+            Output:
+            {"Devices": "data value"}
+        """
+        if isinstance(data, dict):
+            return_value = {}
+            for name, value in data.items():
+                if not hide_restricted_ui or any(
+                    request.user.has_perm(permission) for permission in value["permissions"]
+                ):
+                    return_value[name] = self.format_and_remove_hidden_menu(request, value["data"], hide_restricted_ui)
+            return return_value
+        return data
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        """Get the menu data for the requesting user.
+
+        Returns the following data-structure (as not all context in registry["nav_menu"] is relevant to the UI):
+
+        {
+            "Inventory": {
+                "Devices": {
+                    "Devices": "/dcim/devices/",
+                    "Device Types": "/dcim/device-types/",
+                    ...
+                    "Connections": {
+                        "Cables": "/dcim/cables/",
+                        "Console Connections": "/dcim/console-connections/",
+                        ...
+                    },
+                    ...
+                },
+                "Organization": {
+                    ...
+                },
+                ...
+            },
+            "Networks": {
+                ...
+            },
+            "Security": {
+                ...
+            },
+            "Automation": {
+                ...
+            },
+            "Platform": {
+                ...
+            },
+        }
+        """
+        base_menu = registry["new_ui_nav_menu"]
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+        formatted_data = self.format_and_remove_hidden_menu(request, base_menu, HIDE_RESTRICTED_UI)
+        return Response(formatted_data)
+
+
+class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
+    """
+    Enumerate the models listed on the Nautobot home page and return data structure
+    containing verbose_name_plural, url and count.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        object_counts = {
+            "Inventory": [
+                {"model": "dcim.rack"},
+                {"model": "dcim.devicetype"},
+                {"model": "dcim.device"},
+                {"model": "dcim.virtualchassis"},
+                {"model": "dcim.deviceredundancygroup"},
+                {"model": "dcim.cable"},
+            ],
+            "Networks": [
+                {"model": "ipam.vrf"},
+                {"model": "ipam.prefix"},
+                {"model": "ipam.ipaddress"},
+                {"model": "ipam.vlan"},
+            ],
+            "Security": [{"model": "extras.secret"}],
+            "Platform": [
+                {"model": "extras.gitrepository"},
+                {"model": "extras.relationship"},
+                {"model": "extras.computedfield"},
+                {"model": "extras.customfield"},
+                {"model": "extras.customlink"},
+                {"model": "extras.tag"},
+                {"model": "extras.status"},
+                {"model": "extras.role"},
+            ],
+        }
+        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
+
+        for entry in itertools.chain(*object_counts.values()):
+            app_label, model_name = entry["model"].split(".")
+            model = apps.get_model(app_label, model_name)
+            permission = get_permission_for_model(model, "view")
+            if HIDE_RESTRICTED_UI and not request.user.has_perm(permission):
+                continue
+            data = {"name": model._meta.verbose_name_plural}
+            try:
+                data["url"] = django_reverse(get_route_for_model(model, "list"))
+            except NoReverseMatch:
+                logger = logging.getLogger(__name__)
+                route = get_route_for_model(model, "list")
+                logger.warning(f"Handled expected exception when generating filter field: {route}")
+            manager = model.objects
+            if request.user.has_perm(permission):
+                if hasattr(manager, "restrict"):
+                    data["count"] = model.objects.restrict(request.user).count()
+                else:
+                    data["count"] = model.objects.count()
+            entry.update(data)
+
+        return Response(object_counts)
+
+
+class GetSettingsView(NautobotAPIVersionMixin, APIView):
+    """
+    This view exposes Nautobot settings.
+
+    Get settings by providing one or more `name` in the query parameters.
+
+    Example:
+
+    - /api/settings/?name=FOO            # Returns the setting with name 'FOO'
+    - /api/settings/?name=FOO&name=BAR   # Returns the setting with these names 'FOO' and 'BAR
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        # As of now, we just have `allowed_settings` settings. Because the purpose of this API is limited for the time being,
+        # we may need more access to serializable and non-serializable settings data as the new UI expands. As a result,
+        # exposing all settings data would be desirable in the future.
+        # NOTE: When exposing all settings, include a way to limit settings which can be exposed for security concerns
+        # e.g `SECRET_KEY`, `NAPALM_PASSWORD` e.t.c. also `allowed_settings` can be moved into settings.py
+        allowed_settings = ["FEEDBACK_BUTTON_ENABLED"]
+        # Filter out settings_names not allowed to be exposed to the API
+        valid_settings = [name for name in request.GET.getlist("name") if name in allowed_settings]
+
+        invalid_settings = [name for name in request.GET.getlist("name") if name not in allowed_settings]
+        if invalid_settings:
+            return Response(
+                {"error": f"Invalid settings names specified: {', '.join(invalid_settings)}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        res = {settings_name: get_settings_or_config(settings_name) for settings_name in valid_settings}
+        return Response(res)
+
+
+#
 # Lookup Expr
 #
 
@@ -708,7 +913,7 @@ class GetFilterSetFieldLookupExpressionChoicesAPIView(NautobotAPIVersionMixin, A
     @extend_schema(exclude=True)
     def get(self, request):
         try:
-            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+            field_name, model = ensure_content_type_and_field_name_in_query_params(request.GET)
             data = get_all_lookup_expr_for_field(model, field_name)
         except FilterSetFieldNotFound:
             return Response("field_name not found", status=404)
@@ -735,7 +940,7 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
     @extend_schema(exclude=True)
     def get(self, request):
         try:
-            field_name, model = ensure_content_type_and_field_name_inquery_params(request.GET)
+            field_name, model = ensure_content_type_and_field_name_in_query_params(request.GET)
         except ValidationError as err:
             return Response(err.args[0], status=err.code)
         try:
@@ -759,4 +964,49 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
             model_form_instance = TempForm(auto_id="id_for_%s")
 
         bound_field = form_field.get_bound_field(model_form_instance, field_name)
-        return Response({"dom_element": bound_field.as_widget()})
+        if request.META.get("HTTP_ACCEPT") == "application/json":
+            data = {
+                "field_type": form_field.__class__.__name__,
+                "attrs": bound_field.field.widget.attrs,
+                # `is_required` is redundant here as it's not used in filterset;
+                # Just leaving it here because this would help when building create/edit form for new UI,
+                # This logic(as_json representation) should be extracted into a helper function at that time
+                "is_required": bound_field.field.widget.is_required,
+            }
+            if hasattr(bound_field.field.widget, "choices"):
+                data["choices"] = list(bound_field.field.widget.choices)
+        else:
+            data = bound_field.as_widget()
+        return Response(data)
+
+
+class NewUIReadyRoutesAPIView(NautobotAPIVersionMixin, APIView):
+    """API View that returns a list of new UI-ready routes."""
+
+    permission_classes = [IsAuthenticated]
+
+    def to_javascript_regex(self, regex_pattern):
+        """
+        Convert a Python regex pattern into JavaScript regex format.
+
+        Args:
+            regex_pattern (str): The Python regex pattern to convert.
+
+        Returns:
+            str: The JavaScript-compatible regex pattern.
+        """
+        # Remove named groups (?P<...>)
+        pattern = re.sub(r"\?P<[a-z]+>", "", regex_pattern)
+
+        # Escape `/` with `\`
+        pattern = pattern.replace("/", "\\/")
+
+        # Replace `/Z` with `$`
+        pattern = pattern.replace(r"\Z", "$")
+
+        return pattern
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        url_regex_patterns = registry["new_ui_ready_routes"]
+        return Response([self.to_javascript_regex(pattern) for pattern in url_regex_patterns])

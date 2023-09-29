@@ -1,4 +1,6 @@
 {% extends 'generic/object_detail.html' %}
+{% load buttons %}
+{% load plugins %}
 {% load helpers %}
 
 {% block extra_styles %}
@@ -20,6 +22,19 @@
         <li>{{ ancestor|hyperlinked_object:"name" }}</li>
     {% endfor %}
 {% endblock %}
+
+{% block buttons %}
+        {% plugin_buttons object %}
+        {% if perms.dcim.add_locationtype %}
+            {% clone_button object %}
+        {% endif %}
+        {% if perms.dcim.change_locationtype %}
+            {% edit_button object key="pk" %}
+        {% endif %}
+        {% if perms.dcim.delete_locationtype %}
+            {% delete_button object key="pk" %}
+        {% endif %}
+{% endblock buttons %}
 
 {% block content_left_page %}
     <div class="panel panel-default">
@@ -67,13 +82,13 @@
             <tr>
                 <td>Child Location Type(s)</td>
                 <td>
-                    <a href="{% url 'dcim:locationtype_list' %}?parent={{ object.slug }}">{{ children_table.rows|length }}</a>
+                    <a href="{% url 'dcim:locationtype_list' %}?parent={{ object.name }}">{{ children_table.rows|length }}</a>
                 </td>
             </tr>
             <tr>
                 <td>Locations</td>
                 <td>
-                    <a href="{% url 'dcim:location_list' %}?location_type={{ object.slug }}">{{ locations_table.rows|length }}</a>
+                    <a href="{% url 'dcim:location_list' %}?location_type={{ object.name }}">{{ locations_table.rows|length }}</a>
                 </td>
             </tr>
         </table>

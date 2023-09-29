@@ -2,30 +2,30 @@ from django.test import TestCase
 
 from nautobot.dcim.models import (
     Device,
-    DeviceRole,
     DeviceType,
     Interface,
+    Location,
+    LocationType,
     Manufacturer,
-    Site,
 )
+from nautobot.extras.models import Role, Status
 
 
 class NaturalOrderingTestCase(TestCase):
-    def setUp(self):
-        site = Site.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
-            slug="test-device-type-1",
         )
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        self.device = Device.objects.create(
-            device_type=devicetype,
-            device_role=devicerole,
-            name="Test Device 1",
-            site=site,
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            device_type=devicetype, role=devicerole, name="Test Device 1", location=location, status=devicestatus
         )
+        cls.interface_status = Status.objects.get_for_model(Interface).first()
 
     def test_interface_ordering_numeric(self):
         INTERFACES = [
@@ -64,7 +64,7 @@ class NaturalOrderingTestCase(TestCase):
         ]
 
         for name in INTERFACES:
-            iface = Interface(device=self.device, name=name)
+            iface = Interface(device=self.device, name=name, status=self.interface_status)
             iface.save()
 
         self.assertListEqual(
@@ -87,7 +87,7 @@ class NaturalOrderingTestCase(TestCase):
         ]
 
         for name in INTERFACES:
-            iface = Interface(device=self.device, name=name)
+            iface = Interface(device=self.device, name=name, status=self.interface_status)
             iface.save()
 
         self.assertListEqual(
@@ -139,7 +139,7 @@ class NaturalOrderingTestCase(TestCase):
         ]
 
         for name in INTERFACES:
-            iface = Interface(device=self.device, name=name)
+            iface = Interface(device=self.device, name=name, status=self.interface_status)
             iface.save()
 
         self.assertListEqual(
@@ -165,7 +165,7 @@ class NaturalOrderingTestCase(TestCase):
         ]
 
         for name in INTERFACES:
-            iface = Interface(device=self.device, name=name)
+            iface = Interface(device=self.device, name=name, status=self.interface_status)
             iface.save()
 
         self.assertListEqual(

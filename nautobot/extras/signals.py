@@ -2,11 +2,9 @@ import contextvars
 import os
 import random
 import shutil
-import uuid
 import logging
 from datetime import timedelta
 
-from cacheops.signals import cache_invalidated, cache_read
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -15,11 +13,11 @@ from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_sav
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
-from prometheus_client import Counter
 
+from nautobot.core.celery import app, import_jobs_as_celery_tasks
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.utilities.config import get_settings_or_config
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
@@ -28,7 +26,7 @@ from .webhooks import enqueue_webhooks
 
 # thread safe change context state variable
 change_context_state = contextvars.ContextVar("change_context_state", default=None)
-logger = logging.getLogger("nautobot.extras.signals")
+logger = logging.getLogger(__name__)
 
 
 #
@@ -90,8 +88,18 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
                 request_id=change_context_state.get().change_id,
             )
             m2m_changes = instance.to_objectchange(action)
-            related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
-            objectchange = related_changes.first() if related_changes.exists() else None
+            if related_changes.exists():
+                related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
+                objectchange = related_changes.first()
+            else:
+                objectchange = m2m_changes
+                objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
+                objectchange.request_id = change_context_state.get().change_id
+                objectchange.change_context = change_context_state.get().context
+                objectchange.change_context_detail = change_context_state.get().context_detail[
+                    :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+                ]
+                objectchange.save()
         else:
             objectchange = instance.to_objectchange(action)
             objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
@@ -106,8 +114,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         instance._state.fields_cache = original_cache
 
         # Enqueue job hooks
-        if objectchange is not None:
-            enqueue_job_hooks(objectchange)
+        enqueue_job_hooks(objectchange)
 
     # Enqueue webhooks
     enqueue_webhooks(instance, change_context_state.get().get_user(), change_context_state.get().change_id, action)
@@ -178,8 +185,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        # 2.0 TODO: #824 instance.slug rather than instance.name
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.name, pk_set))
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
@@ -187,30 +193,6 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
-
-
-#
-# Caching
-#
-
-cacheops_cache_hit = Counter("cacheops_cache_hit", "Number of cache hits")
-cacheops_cache_miss = Counter("cacheops_cache_miss", "Number of cache misses")
-cacheops_cache_invalidated = Counter("cacheops_cache_invalidated", "Number of cache invalidations")
-
-
-def cache_read_collector(sender, func, hit, **kwargs):
-    if hit:
-        cacheops_cache_hit.inc()
-    else:
-        cacheops_cache_miss.inc()
-
-
-def cache_invalidated_collector(sender, obj_dict, **kwargs):
-    cacheops_cache_invalidated.inc()
-
-
-cache_read.connect(cache_read_collector)
-cache_invalidated.connect(cache_invalidated_collector)
 
 
 #
@@ -229,12 +211,13 @@ def git_repository_pre_delete(instance, **kwargs):
     """
     from nautobot.extras.datasources import refresh_datasource_content
 
+    # FIXME(jathan): In light of jobs overhaul and Git syncs as jobs, we need to rethink this. We
+    # might instead make "delete" another Job class and call it here, but also think about how
+    # worker events will be such as firing the worker event here.
     job_result = JobResult.objects.create(
         name=instance.name,
-        obj_type=ContentType.objects.get_for_model(instance),
         user=None,
-        job_id=uuid.uuid4(),
-        status=JobResultStatusChoices.STATUS_RUNNING,
+        status=JobResultStatusChoices.STATUS_STARTED,
     )
 
     # This isn't running in the context of a Job execution transaction,
@@ -244,13 +227,13 @@ def git_repository_pre_delete(instance, **kwargs):
 
     refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    if job_result.status not in JobResultStatusChoices.TERMINAL_STATE_CHOICES:
-        job_result.set_status(JobResultStatusChoices.STATUS_COMPLETED)
-    job_result.save()
-
-    # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
+    # In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
     # of this repository; we need some way to ensure that all such clones are deleted.
-    # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
+    # In the Celery worker case, we can broadcast a control message to all workers to do so:
+    app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
+    # But we don't have an equivalent way to broadcast to any other Django instances.
+    # For now we just delete the one that we have locally and rely on other methods,
+    # such as the import_jobs_as_celery_tasks() signal that runs on server startup,
     # to clean up other clones as they're encountered.
     if os.path.isdir(instance.filesystem_path):
         shutil.rmtree(instance.filesystem_path)
@@ -356,41 +339,31 @@ def refresh_job_models(sender, *, apps, **kwargs):
     """
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
+    from nautobot.extras.jobs import Job as JobClass  # avoid circular import
+
     Job = apps.get_model("extras", "Job")
-    GitRepository = apps.get_model("extras", "GitRepository")  # pylint: disable=redefined-outer-name
 
     # To make reverse migrations safe
-    if not hasattr(Job, "job_class_name") or not hasattr(Job, "git_repository"):
+    if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
-    from nautobot.extras.jobs import get_jobs
+    import_jobs_as_celery_tasks(app)
 
-    # TODO(Glenn): eventually this should be inverted so that get_jobs() relies on the database models...
-    job_classes = get_jobs()
     job_models = []
-    for source, modules in job_classes.items():
-        git_repository = None
-        if source.startswith("git."):
-            try:
-                git_repository = GitRepository.objects.get(slug=source[4:])
-            except GitRepository.DoesNotExist:
-                logger.warning('GitRepository "%s" not found?', source[4:])
-            source = "git"
+    for task in app.tasks.values():
+        # Skip Celery tasks that aren't Jobs
+        if not isinstance(task, JobClass):
+            continue
 
-        for module_details in modules.values():
-            for job_class in module_details["jobs"].values():
-                # TODO(Glenn): catch DB error in case where multiple Jobs have the same grouping + name
-                job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
-                if job_model is not None:
-                    job_models.append(job_model)
+        job_model, _ = refresh_job_model_from_job_class(Job, task.__class__)
+        if job_model is not None:
+            job_models.append(job_model)
 
-    for job_model in Job.objects.all():
-        if job_model.installed and job_model not in job_models:
+    for job_model in Job.objects.filter(installed=True):
+        if job_model not in job_models:
             logger.info(
-                "Job %s%s/%s/%s is no longer installed",
-                job_model.source,
-                f"/{job_model.git_repository.slug}" if job_model.git_repository is not None else "",
+                "Job %s/%s is no longer installed",
                 job_model.module_name,
                 job_model.job_class_name,
             )

@@ -1,0 +1,12 @@
+---
+extends: "default"
+rules:
+  comments: "enable"
+  empty-values: "disable"
+  indentation:
+    indent-sequences: "consistent"
+  line-length: "disable"
+  quoted-strings:
+    quote-type: "double"
+ignore: |
+  .venv/

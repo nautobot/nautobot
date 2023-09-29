@@ -6,23 +6,23 @@ from django.db.models import Q
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
-from nautobot.core.forms import SearchForm
-from nautobot.core.utilities import check_filter_for_display
-from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
-from nautobot.extras.utils import get_base_template
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
+    SearchForm,
     TableConfigForm,
     restrict_form_fields,
 )
-from nautobot.utilities.forms.forms import DynamicFilterFormSet
-from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.utilities.permissions import get_permission_for_model
-from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.utilities.utils import (
+from nautobot.core.forms.forms import DynamicFilterFormSet
+from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     normalize_querydict,
 )
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
+from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.utils import get_base_template
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -61,9 +61,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Helper function to construct and paginate the table for rendering used in the ObjectListView, ObjectBulkUpdateView and ObjectBulkDestroyView.
         """
         table_class = view.get_table_class()
-        queryset = view.get_queryset()
+        request = kwargs.get("request", view.request)
+        queryset = view.alter_queryset(request)
         if view.action in ["list", "notes", "changelog"]:
-            request = kwargs.get("request", view.request)
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
                 table = table_class(queryset, user=request.user)
@@ -104,7 +104,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     def validate_action_buttons(self, view, request):
         """Verify actions in self.action_buttons are valid view actions."""
-        queryset = view.get_queryset()
+        queryset = view.alter_queryset(request)
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
@@ -135,26 +135,22 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             return {}
         view = renderer_context["view"]
         request = renderer_context["request"]
-        # Check if queryset attribute is set before doing anything.
-        queryset = view.get_queryset()
+        # Check if queryset attribute is set before doing anything
+        queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
         content_type = ContentType.objects.get_for_model(model)
         form = None
         table = None
         search_form = None
-        changelog_url = None
         instance = None
         filter_form = None
-        queryset = view.alter_queryset(request)
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
         if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
-            if isinstance(instance, ChangeLoggedModel):
-                changelog_url = instance.get_changelog_url()
         else:
             return_url = view.get_return_url(request)
         # Get form for context rendering according to view.action unless it is previously set.
@@ -164,7 +160,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             if view.action == "list":
                 if view.filterset_class is not None:
-                    view.queryset = view.filter_queryset(view.get_queryset())
+                    view.queryset = view.filter_queryset(queryset)
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:
@@ -215,7 +211,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, object=instance, content_type=content_type)
 
         context = {
-            "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
             "content_type": content_type,
             "form": form,
             "filter_form": filter_form,
@@ -256,7 +251,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 context.update(
                     {
                         "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
-                        "fields": view.bulk_create_form_class().fields if view.bulk_create_form_class else None,
+                        "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
                     }
                 )
             elif view.action in ["changelog", "notes"]:
@@ -277,4 +272,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
+
+        # NautobotUIViewSets pass "use_new_ui" in context as they share the same class and are just different methods
+        self.use_new_ui = data.get("use_new_ui", False)
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

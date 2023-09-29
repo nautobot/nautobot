@@ -4,12 +4,12 @@ import django.core.serializers.json
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
-import django_cryptography.fields
+
+import nautobot.core.models.fields
+import nautobot.core.models.validators
 import nautobot.extras.models.customfields
 import nautobot.extras.models.relationships
 import nautobot.extras.utils
-import nautobot.utilities.fields
-import nautobot.utilities.validators
 import uuid
 
 
@@ -77,7 +77,7 @@ class Migration(migrations.Migration):
                 (
                     "validation_regex",
                     models.CharField(
-                        blank=True, max_length=500, validators=[nautobot.utilities.validators.validate_regex]
+                        blank=True, max_length=500, validators=[nautobot.core.models.validators.validate_regex]
                     ),
                 ),
             ],
@@ -174,10 +174,7 @@ class Migration(migrations.Migration):
                 ),
                 ("branch", models.CharField(default="main", max_length=64)),
                 ("current_head", models.CharField(blank=True, default="", max_length=48)),
-                (
-                    "_token",
-                    django_cryptography.fields.encrypt(models.CharField(blank=True, default="", max_length=200)),
-                ),
+                ("_token", models.CharField(blank=True, default="", max_length=200)),
                 ("username", models.CharField(blank=True, default="", max_length=64)),
                 (
                     "provided_contents",
@@ -310,7 +307,7 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("color", nautobot.utilities.fields.ColorField(default="9e9e9e", max_length=6)),
+                ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("description", models.CharField(blank=True, max_length=200)),
             ],
             options={
@@ -398,7 +395,7 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("name", models.CharField(max_length=50, unique=True)),
-                ("color", nautobot.utilities.fields.ColorField(default="9e9e9e", max_length=6)),
+                ("color", nautobot.core.models.fields.ColorField(default="9e9e9e", max_length=6)),
                 ("slug", models.SlugField(unique=True)),
                 ("description", models.CharField(blank=True, max_length=200)),
                 (

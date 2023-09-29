@@ -3,6 +3,16 @@ from django.db.models import Q
 import django_filters
 from django_filters.utils import verbose_lookup_expr
 
+from nautobot.core.constants import (
+    FILTER_CHAR_BASED_LOOKUP_MAP,
+    FILTER_NEGATION_LOOKUP_MAP,
+    FILTER_NUMERIC_BASED_LOOKUP_MAP,
+)
+from nautobot.core.filters import (
+    MultiValueDateTimeFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
+)
+from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
@@ -24,13 +34,22 @@ from nautobot.extras.models import (
     CustomField,
     Relationship,
     RelationshipAssociation,
+    Role,
     Status,
 )
-from nautobot.utilities.constants import (
-    FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NUMERIC_BASED_LOOKUP_MAP,
-)
-from nautobot.utilities.filters import NaturalKeyOrPKMultipleChoiceFilter
+from nautobot.virtualization.models import VirtualMachine
+
+
+class ConfigContextRoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for Device and VM"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("field_name", "roles")
+        kwargs.setdefault("queryset", Role.objects.get_for_models([Device, VirtualMachine]))
+        kwargs.setdefault("label", "Role (name or ID)")
+        kwargs.setdefault("to_field_name", "name")
+
+        super().__init__(*args, **kwargs)
 
 
 class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
@@ -48,21 +67,20 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldNumberFilter,
             CustomFieldTypeChoices.TYPE_JSON: CustomFieldJSONFilter,
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
         }
 
         custom_fields = CustomField.objects.filter(
             content_types=ContentType.objects.get_for_model(self._meta.model)
         ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
         for cf in custom_fields:
-            # Determine filter class for this CustomField type, default to CustomFieldBaseFilter
-            # 2.0 TODO: #824 use cf.slug instead
-            new_filter_name = f"cf_{cf.name}"
+            # Determine filter class for this CustomField type, default to CustomFieldCharFilter
+            new_filter_name = cf.add_prefix_to_cf_key()
             filter_class = custom_field_filter_classes.get(cf.type, CustomFieldCharFilter)
-            new_filter_field = filter_class(field_name=cf.name, custom_field=cf)
-            new_filter_field.label = f"{cf.label}"
-
+            new_filter = filter_class(field_name=cf.key, custom_field=cf)
+            new_filter.label = f"{cf.label}"
             # Create base filter (cf_customfieldname)
-            self.filters[new_filter_name] = new_filter_field
+            self.filters[new_filter_name] = new_filter
 
             # Create extra lookup expression filters (cf_customfieldname__lookup_expr)
             self.filters.update(
@@ -73,19 +91,19 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
     def _get_custom_field_filter_lookup_dict(filter_type):
         # Choose the lookup expression map based on the filter type
         if issubclass(filter_type, (CustomFieldMultiValueNumberFilter, CustomFieldMultiValueDateFilter)):
-            lookup_map = FILTER_NUMERIC_BASED_LOOKUP_MAP
+            return FILTER_NUMERIC_BASED_LOOKUP_MAP
+        elif issubclass(filter_type, CustomFieldMultiSelectFilter):
+            return FILTER_NEGATION_LOOKUP_MAP
         else:
-            lookup_map = FILTER_CHAR_BASED_LOOKUP_MAP
+            return FILTER_CHAR_BASED_LOOKUP_MAP
 
-        return lookup_map
-
-    # TODO 2.0: Transition CustomField filters to nautobot.utilities.filters.MultiValue* filters and
+    # TODO 2.0: Transition CustomField filters to nautobot.core.filters.MultiValue* filters and
     # leverage BaseFilterSet to add dynamic lookup expression filters. Remove CustomField.filter_logic field
     @classmethod
     def _generate_custom_field_lookup_expression_filters(cls, filter_name, custom_field):
         """
         For specific filter types, new filters are created based on defined lookup expressions in
-        the form `<field_name>__<lookup_expr>`. Copied from nautobot.utilities.filters.BaseFilterSet
+        the form `<field_name>__<lookup_expr>`. Copied from nautobot.core.filters.BaseFilterSet
         and updated to work with custom fields.
         """
         magic_filters = {}
@@ -93,6 +111,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldMultiValueDateFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldMultiValueNumberFilter,
             CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiValueCharFilter,
+            CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
             CustomFieldTypeChoices.TYPE_TEXT: CustomFieldMultiValueCharFilter,
             CustomFieldTypeChoices.TYPE_URL: CustomFieldMultiValueCharFilter,
         }
@@ -109,7 +128,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         for lookup_name, lookup_expr in lookup_map.items():
             new_filter_name = f"{filter_name}__{lookup_name}"
             new_filter = filter_type(
-                field_name=custom_field.name,
+                field_name=custom_field.key,
                 lookup_expr=lookup_expr,
                 custom_field=custom_field,
                 label=f"{custom_field.label} ({verbose_lookup_expr(lookup_expr)})",
@@ -122,30 +141,27 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
 
 
 class CreatedUpdatedModelFilterSetMixin(django_filters.FilterSet):
-    created = django_filters.DateFilter()
-    created__gte = django_filters.DateFilter(field_name="created", lookup_expr="gte")
-    created__lte = django_filters.DateFilter(field_name="created", lookup_expr="lte")
-    last_updated = django_filters.DateTimeFilter()
-    last_updated__gte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="gte")
-    last_updated__lte = django_filters.DateTimeFilter(field_name="last_updated", lookup_expr="lte")
+    created = MultiValueDateTimeFilter()
+    last_updated = MultiValueDateTimeFilter()
 
 
 class LocalContextModelFilterSetMixin(django_filters.FilterSet):
-    local_context_data = django_filters.BooleanFilter(
-        method="_local_context_data",
+    local_config_context_data = django_filters.BooleanFilter(
+        method="_local_config_context_data",
         label="Has local config context data",
     )
-    local_context_schema_id = django_filters.ModelMultipleChoiceFilter(
+    local_config_context_schema_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
         label="Schema (ID) - Deprecated (use local_context_schema filter)",
     )
-    local_context_schema = NaturalKeyOrPKMultipleChoiceFilter(
+    local_config_context_schema = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ConfigContextSchema.objects.all(),
-        label="Schema (ID or slug)",
+        to_field_name="name",
+        label="Schema (ID or name)",
     )
 
-    def _local_context_data(self, queryset, name, value):
-        return queryset.exclude(local_context_data__isnull=value)
+    def _local_config_context_data(self, queryset, name, value):
+        return queryset.exclude(local_config_context_data__isnull=value)
 
 
 class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
@@ -242,10 +258,10 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
-            field_name = f"cr_{relationship.slug}__{peer_side}"
+            # "cr_<relationship_key>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship_key>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship_key>__peer"
+            field_name = f"cr_{relationship.key}__{peer_side}"
 
             if field_name in self.relationships:
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".
@@ -269,6 +285,34 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
             self.relationships.append(field_name)
 
 
+#
+# Role
+#
+
+
+class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
+    """Limit role choices to the available role choices for self.model"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("field_name", "role")
+        kwargs.setdefault("queryset", Role.objects.all())
+        kwargs.setdefault("to_field_name", "name")
+        kwargs.setdefault("label", "Role (name or ID)")
+
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self, request):
+        return self.queryset.get_for_model(self.model)
+
+
+class RoleModelFilterSetMixin(django_filters.FilterSet):
+    """
+    Mixin to add a `role` filter field to a FilterSet.
+    """
+
+    role = RoleFilter()
+
+
 class StatusFilter(django_filters.ModelMultipleChoiceFilter):
     """
     Filter field used for filtering Status fields.
@@ -279,7 +323,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs["to_field_name"] = "slug"
+        kwargs["to_field_name"] = "name"
         super().__init__(*args, **kwargs)
 
     def get_queryset(self, request):
@@ -288,7 +332,7 @@ class StatusFilter(django_filters.ModelMultipleChoiceFilter):
 
     def get_filter_predicate(self, value):
         """Always use the field's name and the `to_field_name` attribute as predicate."""
-        # e.g. `status__slug`
+        # e.g. `status__name`
         to_field_name = self.field.to_field_name
         name = f"{self.field_name}__{to_field_name}"
         # Sometimes the incoming value is an instance. This block of logic comes from the base

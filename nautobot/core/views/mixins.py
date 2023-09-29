@@ -1,3 +1,4 @@
+from io import BytesIO
 import logging
 
 from django.contrib import messages
@@ -5,15 +6,18 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import (
     FieldDoesNotExist,
+    ImproperlyConfigured,
     ObjectDoesNotExist,
     ValidationError,
 )
 from django.db import transaction
 from django.db.models import ManyToManyField, ProtectedError
-from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
+from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
+from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
@@ -27,25 +31,27 @@ from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
 
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
-from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.forms import NoteForm
-from nautobot.extras.tables import ObjectChangeTable, NoteTable
-from nautobot.utilities.error_handlers import handle_protectederror
-from nautobot.utilities.forms import (
+from nautobot.core.forms import (
     BootstrapMixin,
     ConfirmationForm,
     CSVDataField,
     CSVFileField,
     restrict_form_fields,
 )
+from nautobot.core.utils import lookup, permissions
 from nautobot.core.views.renderers import NautobotHTMLRenderer
-from nautobot.utilities.utils import (
-    csv_format,
-    get_filterable_params_from_filter_params,
+from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.core.views.utils import (
+    get_csv_form_fields_from_serializer_class,
+    handle_protectederror,
     prepare_cloned_fields,
 )
-from nautobot.utilities.views import GetReturnURLMixin
+from nautobot.extras.models import ExportTemplate
+from nautobot.extras.forms import NoteForm
+from nautobot.extras.tables import ObjectChangeTable, NoteTable
+from nautobot.extras.utils import remove_prefix_from_cf_key
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -61,6 +67,147 @@ PERMISSIONS_ACTION_MAP = {
 }
 
 
+class ContentTypePermissionRequiredMixin(AccessMixin):
+    """
+    Similar to Django's built-in PermissionRequiredMixin, but extended to check model-level permission assignments.
+    This is related to ObjectPermissionRequiredMixin, except that is does not enforce object-level permissions,
+    and fits within Nautobot's custom permission enforcement system.
+
+    additional_permissions: An optional iterable of statically declared permissions to evaluate in addition to those
+                            derived from the object type
+    """
+
+    additional_permissions = []
+
+    def get_required_permission(self):
+        """
+        Return the specific permission necessary to perform the requested action on an object.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} must implement get_required_permission()")
+
+    def has_permission(self):
+        user = self.request.user
+        permission_required = self.get_required_permission()
+
+        # Check that the user has been granted the required permission(s).
+        if user.has_perms((permission_required, *self.additional_permissions)):
+            return True
+
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        if not self.has_permission():
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+class AdminRequiredMixin(AccessMixin):
+    """
+    Allows access only to admin users.
+    """
+
+    def has_permission(self):
+        return bool(
+            self.request.user
+            and self.request.user.is_active
+            and (self.request.user.is_staff or self.request.user.is_superuser)
+        )
+
+    def dispatch(self, request, *args, **kwargs):
+        if not self.has_permission():
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ObjectPermissionRequiredMixin(AccessMixin):
+    """
+    Similar to Django's built-in PermissionRequiredMixin, but extended to check for both model-level and object-level
+    permission assignments. If the user has only object-level permissions assigned, the view's queryset is filtered
+    to return only those objects on which the user is permitted to perform the specified action.
+
+    additional_permissions: An optional iterable of statically declared permissions to evaluate in addition to those
+                            derived from the object type
+    """
+
+    additional_permissions = []
+
+    def get_required_permission(self):
+        """
+        Return the specific permission necessary to perform the requested action on an object.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} must implement get_required_permission()")
+
+    def has_permission(self):
+        user = self.request.user
+        permission_required = self.get_required_permission()
+
+        # Check that the user has been granted the required permission(s).
+        if user.has_perms((permission_required, *self.additional_permissions)):
+            # Update the view's QuerySet to filter only the permitted objects
+            action = permissions.resolve_permission(permission_required)[1]
+            self.queryset = self.queryset.restrict(user, action)
+
+            return True
+
+        return False
+
+    def dispatch(self, request, *args, **kwargs):
+        if not hasattr(self, "queryset"):
+            raise ImproperlyConfigured(
+                (
+                    f"{self.__class__.__name__} has no queryset defined. "
+                    "ObjectPermissionRequiredMixin may only be used on views which define a base queryset"
+                )
+            )
+
+        if not self.has_permission():
+            return self.handle_no_permission()
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+class GetReturnURLMixin:
+    """
+    Provides logic for determining where a user should be redirected after processing a form.
+    """
+
+    default_return_url = None
+
+    def get_return_url(self, request, obj=None):
+        # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
+        # considered safe.
+        query_param = request.GET.get("return_url") or request.POST.get("return_url")
+        if query_param and is_safe_url(url=query_param, allowed_hosts=request.get_host()):
+            return query_param
+
+        # Next, check if the object being modified (if any) has an absolute URL.
+        # Note that the use of both `obj.present_in_database` and `obj.pk` is correct here because this conditional
+        # handles all three of the create, update, and delete operations. When Django deletes an instance
+        # from the DB, it sets the instance's PK field to None, regardless of the use of a UUID.
+        try:
+            if obj is not None and obj.present_in_database and obj.pk:
+                return obj.get_absolute_url()
+        except AttributeError:
+            # Model has no get_absolute_url() method or no reverse match
+            pass
+
+        # Fall back to the default URL (if specified) for the view.
+        if self.default_return_url is not None:
+            return reverse(self.default_return_url)
+
+        # Attempt to dynamically resolve the list view for the object
+        if hasattr(self, "queryset"):
+            try:
+                return reverse(lookup.get_route_for_model(self.queryset.model, "list"))
+            except NoReverseMatch:
+                pass
+
+        # If all else fails, return home. Ideally this should never happen.
+        return reverse("home")
+
+
 @extend_schema(exclude=True)
 class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormView):
     """
@@ -69,7 +216,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     renderer_classes = [NautobotHTMLRenderer]
     logger = logging.getLogger(__name__)
-    lookup_field = "slug"
     # Attributes that need to be specified: form_class, queryset, serializer_class, table_class for most mixins.
     # filterset and filter_params will be initialized in filter_queryset() in ObjectListViewMixin
     filter_params = None
@@ -93,12 +239,12 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         :param model: A model or instance
         :param actions: A list of actions to perform on the model
         """
-        permissions = []
+        model_permissions = []
         for action in actions:
             if action not in ("view", "add", "change", "delete"):
                 raise ValueError(f"Unsupported action: {action}")
-            permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
-        return permissions
+            model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
+        return model_permissions
 
     def get_required_permission(self):
         """
@@ -106,13 +252,13 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         queryset = self.get_queryset()
         try:
-            permissions = [PERMISSIONS_ACTION_MAP[self.action]]
+            actions = [PERMISSIONS_ACTION_MAP[self.action]]
         except KeyError:
             messages.error(
                 self.request,
                 "This action is not permitted. Please use the buttons at the bottom of the table for Bulk Delete and Bulk Update",
             )
-        return self.get_permissions_for_model(queryset.model, permissions)
+        return self.get_permissions_for_model(queryset.model, actions)
 
     def check_permissions(self, request):
         """
@@ -391,12 +537,15 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             else:
                 form_class = getattr(self, "form_class", None)
         elif self.action == "bulk_create":
+            required_field_names = [
+                field["name"]
+                for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
+                if field["required"]
+            ]
 
             class BulkCreateForm(BootstrapMixin, Form):
-                csv_data = CSVDataField(
-                    from_form=self.bulk_create_form_class, widget=Textarea(attrs=self.bulk_create_widget_attrs)
-                )
-                csv_file = CSVFileField(from_form=self.bulk_create_form_class)
+                csv_data = CSVDataField(required_field_names=required_field_names)
+                csv_file = CSVFileField()
 
             form_class = BulkCreateForm
         else:
@@ -434,6 +583,17 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     """
     UI mixin to retrieve a model instance.
     """
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve a model instance.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        context = serializer.data
+        context["use_new_ui"] = True
+        return Response(context)
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
@@ -491,13 +651,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
-        # Fall back to built-in CSV formatting if export requested but no template specified
-        elif "export" in request.GET and hasattr(model, "to_csv"):
-            response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = f"nautobot_{queryset.model._meta.verbose_name_plural}.csv"
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
         return None
 
     def queryset_to_yaml(self):
@@ -509,40 +662,11 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
         return "---\n".join(yaml_data)
 
-    def queryset_to_csv(self):
-        """
-        Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
-        """
-        queryset = self.filter_queryset(self.get_queryset())
-        csv_data = []
-        custom_fields = []
-        # Start with the column headers
-        headers = queryset.model.csv_headers.copy()
-
-        # Add custom field headers, if any
-        if hasattr(queryset.model, "_custom_field_data"):
-            for custom_field in CustomField.objects.get_for_model(queryset.model):
-                headers.append("cf_" + custom_field.slug)
-                custom_fields.append(custom_field.name)
-
-        csv_data.append(",".join(headers))
-
-        # Iterate through the queryset appending each object
-        for obj in queryset:
-            data = obj.to_csv()
-
-            for custom_field in custom_fields:
-                data += (obj.cf.get(custom_field, ""),)
-
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
-
     def list(self, request, *args, **kwargs):
         """
         List the model instances.
         """
-        context = {}
+        context = {"use_new_ui": True}
         if "export" in request.GET:
             queryset = self.get_queryset()
             model = queryset.model
@@ -737,10 +861,13 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         model = queryset.model
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = [obj.pk for obj in self.filterset_class(request.POST, model.objects.only("pk")).qs]
+            filter_params = self.get_filter_params(request)
+            if not filter_params:
+                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+            elif self.filterset_class is None:
+                raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = model.objects.values_list("pk", flat=True)
+                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
         else:
             self.pk_list = request.POST.getlist("pk")
         form_class = self.get_form_class(**kwargs)
@@ -770,8 +897,6 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
     """
 
     bulk_create_active_tab = "csv-data"
-    bulk_create_form_class = None
-    bulk_create_widget_attrs = {}
 
     def _process_bulk_create_form(self, form):
         # Iterate through CSV data and bind each row to a new model form instance.
@@ -787,18 +912,24 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
                 self.bulk_create_active_tab = "csv-file"
             else:
                 field_name = "csv_data"
-            headers, records = form.cleaned_data[field_name]
-            for row, data in enumerate(records, start=1):
-                obj_form = self.bulk_create_form_class(data, headers=headers)
-                restrict_form_fields(obj_form, request.user)
 
-                if obj_form.is_valid():
-                    obj = self.form_save(obj_form)
-                    new_objs.append(obj)
+            csvtext = form.cleaned_data[field_name]
+            try:
+                data = NautobotCSVParser().parse(
+                    stream=BytesIO(csvtext.encode("utf-8")),
+                    parser_context={"request": request, "serializer_class": self.serializer_class},
+                )
+                serializer = self.serializer_class(data=data, context={"request": request}, many=True)
+                if serializer.is_valid():
+                    new_objs = serializer.save()
                 else:
-                    for field, err in obj_form.errors.items():
-                        form.add_error(field_name, f"Row {row} {field}: {err[0]}")
+                    for row, errors in enumerate(serializer.errors, start=1):
+                        for field, err in errors.items():
+                            form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
                     raise ValidationError("")
+            except exceptions.ParseError as exc:
+                form.add_error(None, str(exc))
+                raise ValidationError("")
 
             # Enforce object-level permissions
             if queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
@@ -851,7 +982,6 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
         nullified_fields = request.POST.getlist("_nullify")
-        form_cf_to_key = {f"cf_{cf.slug}": cf.name for cf in CustomField.objects.get_for_model(model)}
         with transaction.atomic():
             updated_objects = []
             for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
@@ -879,9 +1009,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 # Update custom fields
                 for field_name in form_custom_fields:
                     if field_name in form.nullable_fields and field_name in nullified_fields:
-                        obj.cf[form_cf_to_key[field_name]] = None
+                        obj.cf[remove_prefix_from_cf_key(field_name)] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
-                        obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
+                        obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
 
                 obj.validated_save()
                 updated_objects.append(obj)
@@ -928,10 +1058,13 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = [obj.pk for obj in self.filterset_class(request.POST, model.objects.only("pk")).qs]
+            filter_params = self.get_filter_params(request)
+            if not filter_params:
+                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+            elif self.filterset_class is None:
+                raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = model.objects.values_list("pk", flat=True)
+                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
         else:
             self.pk_list = request.POST.getlist("pk")
         data = {}

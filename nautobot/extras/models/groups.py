@@ -10,44 +10,41 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-from django.urls import reverse
 from django.utils.functional import cached_property
 
-from nautobot.core.fields import AutoSlugField
-from nautobot.core.models import BaseModel
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.fields import DynamicModelChoiceField
+from nautobot.core.forms.widgets import StaticSelect2
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
 from nautobot.extras.utils import extras_features
-from nautobot.utilities.config import get_settings_or_config
-from nautobot.utilities.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
-from nautobot.utilities.forms.widgets import StaticSelect2
-from nautobot.utilities.utils import get_filterset_for_model, get_form_for_model
 
 
 logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class DynamicGroup(OrganizationalModel):
     """Dynamic Group Model."""
 
     name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
-    slug = AutoSlugField(max_length=100, unique=True, help_text="Unique slug", populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
         verbose_name="Object Type",
         help_text="The type of object for this Dynamic Group.",
+        related_name="dynamic_groups",
     )
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
@@ -63,7 +60,7 @@ class DynamicGroup(OrganizationalModel):
         related_name="parents",
     )
 
-    objects = DynamicGroupQuerySet.as_manager()
+    objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
 
     clone_fields = ["content_type", "filter"]
 
@@ -91,9 +88,6 @@ class DynamicGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def natural_key(self):
-        return (self.slug,)
 
     @property
     def model(self):
@@ -234,6 +228,9 @@ class DynamicGroup(OrganizationalModel):
             if isinstance(modelform_field, forms.NullBooleanField):
                 modelform_field.widget = StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
 
+            if isinstance(modelform_field, DynamicModelChoiceField):
+                modelform_field = filterset_field.field
+
             # Filter fields should never be required!
             modelform_field.required = False
             modelform_field.widget.attrs.pop("required", None)
@@ -305,6 +302,10 @@ class DynamicGroup(OrganizationalModel):
             raise RuntimeError(f"Could not determine queryset for model '{model}'")
 
         filterset = self.filterset_class(self.filter, model.objects.all())
+        if not filterset.is_valid():
+            logger.warning('Filter for DynamicGroup "%s" is not valid', self)
+            return model.objects.none()
+
         qs = filterset.qs
 
         # Make sure that this instance can't be a member of its own group.
@@ -391,9 +392,6 @@ class DynamicGroup(OrganizationalModel):
     def count(self):
         """Return the number of member objects in this group."""
         return self.members.count()
-
-    def get_absolute_url(self):
-        return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
 
     def get_group_members_url(self):
         """Get URL to group members."""
@@ -557,6 +555,11 @@ class DynamicGroup(OrganizationalModel):
             field_name = f"{field_name}__{to_field_name}"
 
         lookup = f"{field_name}__{filter_field.lookup_expr}"
+        # has_{field_name} boolean filters uses `isnull` lookup expressions
+        # so when we generate queries for those filters we need to negate the value entered
+        # e.g (has_interfaces: True) == (interfaces__isnull: False)
+        if filter_field.lookup_expr == "isnull":
+            value = not value
 
         # Explicitly call generate_query_{filter_method} for a method filter.
         if filter_field.method is not None and hasattr(filter_field.parent, "generate_query_" + filter_field.method):
@@ -567,8 +570,8 @@ class DynamicGroup(OrganizationalModel):
         elif hasattr(filter_field, "generate_query"):
             # Is this a list of strings? Well let's resolve it to related model objects so we can
             # pass it to `generate_query` to get a correct Q object back out. When values are being
-            # reconstructed from saved filters, lists of slugs are common e.g. (`{"site": ["ams01",
-            # "ams02"]}`, the value being a list of site slugs (`["ams01", "ams02"]`).
+            # reconstructed from saved filters, lists of names are common e.g. (`{"location": ["ams01",
+            # "ams02"]}`, the value being a list of location names (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model
@@ -938,7 +941,9 @@ class DynamicGroupMembership(BaseModel):
     operator = models.CharField(choices=DynamicGroupOperatorChoices.CHOICES, max_length=12)
     weight = models.PositiveSmallIntegerField()
 
-    objects = DynamicGroupMembershipQuerySet.as_manager()
+    objects = BaseManager.from_queryset(DynamicGroupMembershipQuerySet)()
+
+    documentation_static_path = "docs/user-guide/platform-functionality/dynamicgroup.html"
 
     class Meta:
         unique_together = ["group", "parent_group", "operator", "weight"]
@@ -947,20 +952,10 @@ class DynamicGroupMembership(BaseModel):
     def __str__(self):
         return f"{self.parent_group} > {self.operator} ({self.weight}) > {self.group}"
 
-    def natural_key(self):
-        return self.group.natural_key() + self.parent_group.natural_key() + (self.operator, self.weight)
-
-    natural_key.dependencies = ["extras.dynamicgroup"]
-
     @property
     def name(self):
         """Return the group name."""
         return self.group.name
-
-    @property
-    def slug(self):
-        """Return the group slug."""
-        return self.group.slug
 
     @property
     def filter(self):
@@ -977,9 +972,12 @@ class DynamicGroupMembership(BaseModel):
         """Return the group count."""
         return self.group.count
 
-    def get_absolute_url(self):
+    def get_absolute_url(self, api=False):
         """Return the group's absolute URL."""
-        return self.group.get_absolute_url()
+        # TODO: we should be able to have an absolute UI URL for this model in the new UI
+        if not api:
+            return self.group.get_absolute_url(api=api)
+        return super().get_absolute_url(api=api)
 
     def get_group_members_url(self):
         """Return the group members URL."""

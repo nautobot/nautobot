@@ -1,7 +1,6 @@
 """Schema module for GraphQL."""
 from collections import OrderedDict
 import logging
-import warnings
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -32,22 +31,22 @@ from nautobot.dcim.graphql.types import (
     DeviceType,
     FrontPortType,
     InterfaceType,
+    LocationType,
     PlatformType,
     PowerFeedType,
     PowerOutletType,
     PowerPortType,
     RackType,
     RearPortType,
-    SiteType,
 )
 from nautobot.extras.registry import registry
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType, DynamicGroupType
-from nautobot.ipam.graphql.types import AggregateType, IPAddressType, PrefixType
+from nautobot.ipam.graphql.types import IPAddressType, PrefixType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
-logger = logging.getLogger("nautobot.graphql.schema")
+logger = logging.getLogger(__name__)
 
 registry["graphql_types"] = OrderedDict()
 registry["graphql_types"]["circuits.circuittermination"] = CircuitTerminationType
@@ -65,10 +64,9 @@ registry["graphql_types"]["dcim.poweroutlet"] = PowerOutletType
 registry["graphql_types"]["dcim.powerport"] = PowerPortType
 registry["graphql_types"]["dcim.rack"] = RackType
 registry["graphql_types"]["dcim.rearport"] = RearPortType
-registry["graphql_types"]["dcim.site"] = SiteType
+registry["graphql_types"]["dcim.location"] = LocationType
 registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
-registry["graphql_types"]["ipam.aggregate"] = AggregateType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
 registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType
@@ -155,7 +153,7 @@ def extend_schema_type_null_field_choice(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
     # This is a workaround implemented for https://github.com/nautobot/nautobot/issues/466#issuecomment-877991184
     # We want to iterate over fields and see if they meet the criteria: null=False, blank=True, and choices defined
@@ -193,7 +191,7 @@ def extend_schema_type_filter(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
     for field in model._meta.get_fields():
         # Check attribute is a ManyToOne field
@@ -222,7 +220,7 @@ def extend_schema_type_custom_field(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     cfs = CustomField.objects.get_for_model(model)
@@ -231,18 +229,11 @@ def extend_schema_type_custom_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_CUSTOM_FIELD_PREFIX}_"
 
     for field in cfs:
-        # 2.0 TODO: #824 replace field.name with field.slug
-        field_name = f"{prefix}{str_to_var_name(field.name)}"
-        if str_to_var_name(field.name) != field.name:
-            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
-            # In 2.0 we should simply omit fields whose names/slugs are invalid in GraphQL, instead of mapping them.
-            warnings.warn(
-                f'Custom field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe name '
-                f'("{field.name}"); for now it will be mapped to the GraphQL name "{field_name}", '
-                "but in a future release this field may fail to appear in GraphQL.",
-                FutureWarning,
-            )
-        resolver_name = f"resolve_{field_name}"
+        # Since we guaranteed cf.key's uniqueness in CustomField data migration
+        # We can safely field_key this in our GraphQL without duplication
+        # For new CustomField instances, we also make sure that duplicate key does not exist.
+        field_key = f"{prefix}{field.key}"
+        resolver_name = f"resolve_{field_key}"
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
@@ -250,21 +241,20 @@ def extend_schema_type_custom_field(schema_type, model):
                 'because there is already an attribute mapped to the same name ("%s")',
                 field,
                 schema_type._meta.name,
-                field_name,
+                field_key,
             )
             continue
 
         setattr(
             schema_type,
             resolver_name,
-            # 2.0 TODO: #824 field.slug
-            generate_custom_field_resolver(field.name, resolver_name),
+            generate_custom_field_resolver(field.key, resolver_name),
         )
 
         if field.type in CUSTOM_FIELD_MAPPING:
-            schema_type._meta.fields[field_name] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
+            schema_type._meta.fields[field_key] = graphene.Field.mounted(CUSTOM_FIELD_MAPPING[field.type])
         else:
-            schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
+            schema_type._meta.fields[field_key] = graphene.Field.mounted(graphene.String())
 
     return schema_type
 
@@ -278,7 +268,7 @@ def extend_schema_type_computed_field(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     cfs = ComputedField.objects.get_for_model(model)
@@ -287,16 +277,7 @@ def extend_schema_type_computed_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
 
     for field in cfs:
-        field_name = f"{prefix}{str_to_var_name(field.slug)}"
-        if str_to_var_name(field.slug) != field.slug:
-            # 2.0 TODO: str_to_var_name is lossy, it may cause different fields to map to the same field_name
-            # In 2.0 we should simply omit fields whose slugs are invalid in GraphQL, instead of mapping them.
-            warnings.warn(
-                f'Computed field "{field}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
-                f'("{field.slug}"); for now it will be mapped to the GraphQL name "{field_name}", '
-                "but in a future release this field may fail to appear in GraphQL.",
-                FutureWarning,
-            )
+        field_name = f"{prefix}{field.key}"
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
@@ -312,7 +293,7 @@ def extend_schema_type_computed_field(schema_type, model):
         setattr(
             schema_type,
             resolver_name,
-            generate_computed_field_resolver(field.slug, resolver_name),
+            generate_computed_field_resolver(field.key, resolver_name),
         )
 
         schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.String())
@@ -328,7 +309,7 @@ def extend_schema_type_tags(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     fields_name = [field.name for field in model._meta.get_fields()]
@@ -351,11 +332,11 @@ def extend_schema_type_config_context(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     fields_name = [field.name for field in model._meta.get_fields()]
-    if "local_context_data" not in fields_name:
+    if "local_config_context_data" not in fields_name:
         return schema_type
 
     def resolve_config_context(self, args):
@@ -385,22 +366,13 @@ def extend_schema_type_relationships(schema_type, model):
         for relationship in relationships:
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
-            # Generate the name of the attribute and the name of the resolver based on the slug of the relationship
+            # Generate the name of the attribute and the name of the resolver based on the key of the relationship
             # and based on the prefix
-            rel_name = f"{prefix}{str_to_var_name(relationship.slug)}"
+            rel_name = f"{prefix}{relationship.key}"
             # Handle non-symmetric relationships where the model can be either source or destination
             if not relationship.symmetric and relationship.source_type == relationship.destination_type:
                 rel_name = f"{rel_name}_{peer_side}"
             resolver_name = f"resolve_{rel_name}"
-            if str_to_var_name(relationship.slug) != relationship.slug:
-                # 2.0 TODO: str_to_var_name is lossy, it may cause different relationships to map to the same rel_name
-                # In 2.0 we should simply omit relations whose slugs are invalid in GraphQL, instead of mapping them.
-                warnings.warn(
-                    f'Relationship "{relationship}" on {model._meta.verbose_name} does not have a GraphQL-safe slug '
-                    f'("{relationship.slug}"); for now it will be mapped to the GraphQL name "{rel_name}", '
-                    "but in a future release this relationship may fail to appear in GraphQL.",
-                    FutureWarning,
-                )
 
             if hasattr(schema_type, resolver_name):
                 # If a symmetric relationship, and this is destination side, we already added source side, expected

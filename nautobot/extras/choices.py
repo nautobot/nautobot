@@ -1,5 +1,8 @@
-from nautobot.utilities.choices import ChoiceSet
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
+from celery import states
+
+from nautobot.core.choices import ChoiceSet
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+
 
 #
 # Banners (currently plugin-specific)
@@ -131,11 +134,13 @@ class JobSourceChoices(ChoiceSet):
     SOURCE_LOCAL = "local"
     SOURCE_GIT = "git"
     SOURCE_PLUGIN = "plugins"
+    SOURCE_SYSTEM = "system"
 
     CHOICES = (
         (SOURCE_LOCAL, "Installed in $JOBS_ROOT"),
         (SOURCE_GIT, "Provided by a Git repository"),
         (SOURCE_PLUGIN, "Part of a plugin"),
+        (SOURCE_SYSTEM, "Provided by Nautobot"),
     )
 
 
@@ -184,25 +189,53 @@ class JobExecutionType(ChoiceSet):
 
 
 class JobResultStatusChoices(ChoiceSet):
-    STATUS_PENDING = "pending"
-    STATUS_RUNNING = "running"
-    STATUS_COMPLETED = "completed"
-    STATUS_ERRORED = "errored"
-    STATUS_FAILED = "failed"
+    """
+    These status choices are using the same taxonomy as within Celery core. A Nautobot Job status
+    is equivalent to a Celery task state.
+    """
 
-    CHOICES = (
-        (STATUS_PENDING, "Pending"),
-        (STATUS_RUNNING, "Running"),
-        (STATUS_COMPLETED, "Completed"),
-        (STATUS_ERRORED, "Errored"),
-        (STATUS_FAILED, "Failed"),
-    )
+    STATUS_FAILURE = states.FAILURE
+    STATUS_PENDING = states.PENDING
+    STATUS_RECEIVED = states.RECEIVED
+    STATUS_RETRY = states.RETRY
+    STATUS_REVOKED = states.REVOKED
+    STATUS_STARTED = states.STARTED
+    STATUS_SUCCESS = states.SUCCESS
 
-    TERMINAL_STATE_CHOICES = (
-        STATUS_COMPLETED,
-        STATUS_ERRORED,
-        STATUS_FAILED,
-    )
+    CHOICES = sorted(zip(states.ALL_STATES, states.ALL_STATES))
+
+    #: Set of all possible states.
+    ALL_STATES = states.ALL_STATES
+    #: Set of states meaning the task returned an exception.
+    EXCEPTION_STATES = states.EXCEPTION_STATES
+    #: State precedence.
+    #: None represents the precedence of an unknown state.
+    #: Lower index means higher precedence.
+    PRECEDENCE = states.PRECEDENCE
+    #: Set of exception states that should propagate exceptions to the user.
+    PROPAGATE_STATES = states.PROPAGATE_STATES
+    #: Set of states meaning the task result is ready (has been executed).
+    READY_STATES = states.READY_STATES
+    #: Set of states meaning the task result is not ready (hasn't been executed).
+    UNREADY_STATES = states.UNREADY_STATES
+
+    @staticmethod
+    def precedence(state):
+        """
+        Get the precedence for a state. Lower index means higher precedence.
+
+        Args:
+            state (str): One of the status choices.
+
+        Returns:
+            (int): Precedence value.
+
+        Examples:
+            >>> JobResultStatusChoices.precedence(JobResultStatusChoices.STATUS_SUCCESS)
+            0
+
+        """
+        return states.precedence(state)
 
 
 #
@@ -211,26 +244,26 @@ class JobResultStatusChoices(ChoiceSet):
 
 
 class LogLevelChoices(ChoiceSet):
-    LOG_DEFAULT = "default"
-    LOG_SUCCESS = "success"
+    LOG_DEBUG = "debug"
     LOG_INFO = "info"
     LOG_WARNING = "warning"
-    LOG_FAILURE = "failure"
+    LOG_ERROR = "error"
+    LOG_CRITICAL = "critical"
 
     CHOICES = (
-        (LOG_DEFAULT, "Default"),
-        (LOG_SUCCESS, "Success"),
+        (LOG_DEBUG, "Debug"),
         (LOG_INFO, "Info"),
         (LOG_WARNING, "Warning"),
-        (LOG_FAILURE, "Failure"),
+        (LOG_ERROR, "Error"),
+        (LOG_CRITICAL, "Critical"),
     )
 
     CSS_CLASSES = {
-        LOG_DEFAULT: "default",
-        LOG_SUCCESS: "success",
+        LOG_DEBUG: "debug",
         LOG_INFO: "info",
         LOG_WARNING: "warning",
-        LOG_FAILURE: "danger",
+        LOG_ERROR: "error",
+        LOG_CRITICAL: "critical",
     }
 
 

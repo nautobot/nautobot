@@ -8,6 +8,10 @@
             </div>
             <table class="table table-hover panel-body attr-table">
                 <tr>
+                    <td>Namespace</td>
+                    <td>{{ object.namespace|hyperlinked_object }}</td>
+                </tr>
+                <tr>
                     <td>Route Distinguisher</td>
                     <td>{{ object.rd }}</td>
                 </tr>
@@ -16,17 +20,13 @@
                     <td>{{ object.tenant|hyperlinked_object }}</td>
                 </tr>
                 <tr>
-                    <td>Unique IP Space</td>
-                    <td>{{ object.enforce_unique | render_boolean }}</td>
-                </tr>
-                <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }}</td>
                 </tr>
                 <tr>
                     <td>Prefixes</td>
                     <td>
-                        <a href="{% url 'ipam:prefix_list' %}?vrf_id={{ object.pk }}">{{ prefix_count }}</a>
+                        <a href="{% url 'ipam:prefix_list' %}?vrf={{ object.pk }}">{{ prefix_count }}</a>
                     </td>
                 </tr>
             </table>
@@ -36,4 +36,6 @@
 {% block content_right_page %}
         {% include 'panel_table.html' with table=import_targets_table heading="Import Route Targets" %}
         {% include 'panel_table.html' with table=export_targets_table heading="Export Route Targets" %}
+	{% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
+	{% include 'panel_table.html' with table=device_table heading="Assigned Devices" %}
 {% endblock content_right_page %}

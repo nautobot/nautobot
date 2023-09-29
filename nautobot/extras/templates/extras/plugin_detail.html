@@ -89,6 +89,22 @@
                     <table class="table table-hover panel-body attr-table">
                         {% with object.features as features %}
                             <tr>
+                                <td>Constance Config</td>
+                                <td>
+                                    {% if features.constance_config %}
+                                        <ul class="list-unstyled">
+                                            {% for name in features.constance_config %}
+                                                {% with options=features.constance_config|get_item:name %}
+                                                    <li><code>{{ name | bettertitle }}</code> {{ options.help_text }}</li>
+                                                {% endwith %}
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.constance_config %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Data Models</td>
                                 <td>
                                     {% if features.models %}
@@ -185,7 +201,7 @@
                                     {% if features.jobs %}
                                         <ul class="list-unstyled">
                                             {% for job in features.jobs %}
-                                            <li><a href="{% url 'extras:job' class_path=job.class_path %}">{{ job }}</a></li>
+                                            <li><a href="{% url 'extras:job_run_by_class_path' class_path=job.class_path %}">{{ job }}</a></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}

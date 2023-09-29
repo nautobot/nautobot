@@ -3,11 +3,19 @@
 {% load form_helpers %}
 {% load helpers %}
 
+{% block title %}Assign an IP address{% endblock %}
+
 {% block content %}
-    <form action="{% querystring request %}" method="post" class="form form-horizontal">
-        {% csrf_token %}
+    <form action="#" method="get" class="form form-horizontal">
         {% for field in form.hidden_fields %}
             {{ field }}
+        {% endfor %}
+        {% for field_name, field_values in request.GET.lists %}
+            {% if field_name != 'q' %}
+                {% for field_value in field_values %}
+                    <input type="hidden" name="{{ field_name }}" value="{{ field_value }}" />
+                {% endfor %}
+            {% endif %}
         {% endfor %}
         <div class="row">
             <div class="col-md-6 col-md-offset-3">
@@ -24,7 +32,6 @@
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>Select IP Address</strong></div>
                 <div class="panel-body">
-                    {% render_field form.vrf_id %}
                     {% render_field form.q %}
                 </div>
             </div>
@@ -39,10 +46,31 @@
     </form>
     {% if table %}
         <div class="row">
-            <div class="col-md-12" style="margin-top: 20px">
-                <h3>Search Results</h3>
-                {% include 'utilities/obj_table.html' with table_template='panel_table.html' %}
-            </div>
+            <form action="{% querystring request %}" method="post" class="form form-horizontal">
+                {% csrf_token %}
+                <div class="col-md-12" style="margin-top: 20px">
+                    <h3>Search Results</h3>
+                    {% include 'utilities/obj_table.html' with table_template='panel_table.html' disable_pagination=True %}
+                    <div class="pull-left noprint">
+                        {% if perms.dcim.change_interface %}
+                            <button type="submit" name="_edit" formaction="#" class="btn btn-primary btn-sm">
+                                <span class="mdi mdi-clipboard-tick" aria-hidden="true"></span> Assign Selected IPAddresses to Interface
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+            {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
         </div>
     {% endif %}
+{% endblock %}
+
+{% block javascript %}
+<script>
+    var clipboard = new ClipboardJS('.btn');
+
+    clipboard.on('success', function (e) {console.log("success")});
+
+    clipboard.on('error', function (e) {console.log("failed")});
+</script>
 {% endblock %}

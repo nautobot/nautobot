@@ -14,17 +14,13 @@
                     <td>{{ object.description|placeholder }}</td>
                 </tr>
                 <tr>
-                    <td>Site</td>
-                    <td>{{ object.site|hyperlinked_object }}</td>
-                </tr>
-                <tr>
                     <td>Location</td>
                     <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                 </tr>
                 <tr>
                     <td>VLANs</td>
                     <td>
-                        <a href="{% url 'ipam:vlan_list' %}?group_id={{ object.pk }}">{{ vlans_count }}</a>
+                        <a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.pk }}">{{ vlans_count }}</a>
                     </td>
                 </tr>
             </table>

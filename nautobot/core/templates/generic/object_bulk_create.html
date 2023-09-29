@@ -80,37 +80,29 @@
                         <tr>
                             <th>Field</th>
                             <th>Required</th>
-                            <th>Accessor</th>
                             <th>Description</th>
                         </tr>
-                        {% for name, field in fields.items %}
+                        {% for field in fields %}
                             <tr>
                                 <td>
-                                    <code>{{ name }}</code>
+                                    <code>{{ field.name }}</code>
                                 </td>
                                 <td>{{ field.required | render_boolean }}</td>
                                 <td>
-                                    {% if field.to_field_name %}
-                                        <code>{{ field.to_field_name }}</code>
-                                    {% else %}
-                                        <span class="text-muted">&mdash;</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if field.STATIC_CHOICES %}
-                                        <button type="button" class="btn btn-link btn-xs pull-right" data-toggle="modal" data-target="#{{ name }}_choices">
+                                    {% if field.choices %}
+                                        <button type="button" class="btn btn-link btn-xs pull-right" data-toggle="modal" data-target="#{{ field.name }}_choices">
                                             <i class="mdi mdi-help-circle"></i>
                                         </button>
-                                        <div class="modal fade" id="{{ name }}_choices" tabindex="-1" role="dialog">
+                                        <div class="modal fade" id="{{ field.name }}_choices" tabindex="-1" role="dialog">
                                             <div class="modal-dialog" role="document">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
                                                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                                        <h4 class="modal-title"><code>{{ name }}</code> Choices</h4>
+                                                        <h4 class="modal-title"><code>{{ field.name }}</code> Choices</h4>
                                                     </div>
                                                     <table class="table table-striped modal-body">
                                                         <tr><th>Import Value</th><th>Label</th></tr>
-                                                        {% for value, label in field.choices %}
+                                                        {% for value, label in field.choices.items %}
                                                             {% if value %}<tr><td><samp>{{ value }}</samp></td><td>{{ label }}</td></tr>{% endif %}
                                                         {% endfor %}
                                                     </table>
@@ -123,10 +115,8 @@
                                     {% elif field.label %}
                                         {{ field.label }}<br />
                                     {% endif %}
-                                    {% if field|widget_type == 'dateinput' %}
-                                        <small class="text-muted">Format: YYYY-MM-DD</small>
-                                    {% elif field|widget_type == 'checkboxinput' %}
-                                        <small class="text-muted">Specify "true" or "false"</small>
+                                    {% if field.format %}
+                                        <small class="text-muted">Format: {{ field.format }}</small>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -138,8 +128,7 @@
                     objects.
                 </p>
                 <p class="small text-muted">
-                    <i class="mdi mdi-information-outline"></i> Related objects may be referenced by any unique attribute.
-                    For example, <code>vrf.rd</code> would identify a VRF by its route distinguisher.
+                    <i class="mdi mdi-information-outline"></i> Related objects may be referenced by their UUID and/or by their natural key unique field combinations. e.g `location__name`, `location__parent__name`. You can find this information in the "Advanced" tab of any object's detail view.
                 </p>
             {% endif %}
         </div>

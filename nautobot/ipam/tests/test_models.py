@@ -3,26 +3,180 @@ from unittest import skipIf
 import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import connection
-from django.test import TestCase, override_settings
+from django.db import connection, IntegrityError
+from django.db.models import ProtectedError
+from django.test import TestCase
 
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Location, LocationType, Manufacturer, Site
-from nautobot.extras.models import Status
-from nautobot.ipam.choices import IPAddressRoleChoices, IPAddressStatusChoices
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RIR, VLAN, VLANGroup, VRF
+from nautobot.core.testing.models import ModelTestCases
+from nautobot.dcim import choices as dcim_choices
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
+from nautobot.extras.models import Role, Status
+from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
+from nautobot.ipam.models import (
+    IPAddress,
+    IPAddressToInterface,
+    Namespace,
+    Prefix,
+    RIR,
+    RouteTarget,
+    Service,
+    VLAN,
+    VLANGroup,
+    VRF,
+)
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
+
+
+class IPAddressToInterfaceTest(TestCase):
+    """Tests for `nautobot.ipam.models.IPAddressToInterface`."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.namespace = Namespace.objects.first()
+        cls.status = Status.objects.get(name="Active")
+        cls.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=cls.status, namespace=cls.namespace)
+        cls.test_device = Device.objects.create(
+            name="device1",
+            role=Role.objects.get_for_model(Device).first(),
+            device_type=DeviceType.objects.first(),
+            location=Location.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        int_status = Status.objects.get_for_model(Interface).first()
+        cls.test_int1 = Interface.objects.create(
+            device=cls.test_device,
+            name="int1",
+            status=int_status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        cls.test_int2 = Interface.objects.create(
+            device=cls.test_device,
+            name="int2",
+            status=int_status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(name="cluster1", cluster_type=cluster_type)
+        vmint_status = Status.objects.get_for_model(VMInterface).first()
+        cls.test_vm = VirtualMachine.objects.create(
+            name="vm1",
+            cluster=cluster,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+        )
+        cls.test_vmint1 = VMInterface.objects.create(
+            name="vmint1",
+            virtual_machine=cls.test_vm,
+            status=vmint_status,
+        )
+        cls.test_vmint2 = VMInterface.objects.create(
+            name="vmint2",
+            virtual_machine=cls.test_vm,
+            status=vmint_status,
+        )
+
+    def test_removing_ip_addresses_containing_host_device_primary_ip_nullifies_host_device_primary_ip(self):
+        """
+        Test that removing IPAddress from an Interface that is the host Device's primary ip nullifies the primary_ip field.
+        """
+        dev_ip_addr = IPAddress.objects.last()
+        self.test_int1.add_ip_addresses(dev_ip_addr)
+        self.test_int2.add_ip_addresses(dev_ip_addr)
+        ip_to_interface_1 = IPAddressToInterface.objects.get(interface=self.test_int1, ip_address=dev_ip_addr)
+        ip_to_interface_2 = IPAddressToInterface.objects.get(interface=self.test_int2, ip_address=dev_ip_addr)
+        self.assertIsNotNone(ip_to_interface_1)
+        self.assertIsNotNone(ip_to_interface_2)
+        if dev_ip_addr.ip_version == 4:
+            self.test_device.primary_ip4 = dev_ip_addr
+        else:
+            self.test_device.primary_ip6 = dev_ip_addr
+        self.test_device.save()
+        # You can delete IPAddress from the first Interface without nullifying primary_ip field
+        # Since the second Interface still contains that IPAddress
+        self.test_int1.remove_ip_addresses(dev_ip_addr)
+        self.test_device.refresh_from_db()
+        if dev_ip_addr.ip_version == 4:
+            self.assertEqual(self.test_device.primary_ip4, dev_ip_addr)
+        else:
+            self.assertEqual(self.test_device.primary_ip6, dev_ip_addr)
+        # This operation should nullify the device's primary_ip field since test_int2 is the only Interface
+        # that contains the primary ip
+        self.test_int2.remove_ip_addresses(dev_ip_addr)
+        self.test_device.refresh_from_db()
+        if dev_ip_addr.ip_version == 4:
+            self.assertEqual(self.test_device.primary_ip4, None)
+        else:
+            self.assertEqual(self.test_device.primary_ip6, None)
+
+    def test_removing_ip_addresses_containing_host_vm_primary_ip_nullifies_host_vm_primary_ip(self):
+        """
+        Test that removing IPAddress from an Interface that is the host Virtual Machine's primary ip nullifies the primary_ip field.
+        """
+        vm_ip_addr = IPAddress.objects.last()
+        self.test_vmint1.add_ip_addresses(vm_ip_addr)
+        self.test_vmint2.add_ip_addresses(vm_ip_addr)
+        ip_to_vminterface_1 = IPAddressToInterface.objects.get(vm_interface=self.test_vmint1, ip_address=vm_ip_addr)
+        ip_to_vminterface_2 = IPAddressToInterface.objects.get(vm_interface=self.test_vmint2, ip_address=vm_ip_addr)
+        self.assertIsNotNone(ip_to_vminterface_1)
+        self.assertIsNotNone(ip_to_vminterface_2)
+        if vm_ip_addr.ip_version == 4:
+            self.test_vm.primary_ip4 = vm_ip_addr
+        else:
+            self.test_vm.primary_ip6 = vm_ip_addr
+        self.test_vm.save()
+        # You can delete IPAddress from the first Interface without nullifying primary_ip field
+        # Since the second Interface still contains that IPAddress
+        self.test_vmint1.remove_ip_addresses(vm_ip_addr)
+        self.test_vm.refresh_from_db()
+        if vm_ip_addr.ip_version == 4:
+            self.assertEqual(self.test_vm.primary_ip4, vm_ip_addr)
+        else:
+            self.assertEqual(self.test_vm.primary_ip6, vm_ip_addr)
+        # This operation should nullify the device's primary_ip field since test_int2 is the only Interface
+        # that contains the primary ip
+        self.test_vmint2.remove_ip_addresses(vm_ip_addr)
+        self.test_vm.refresh_from_db()
+        if vm_ip_addr.ip_version == 4:
+            self.assertEqual(self.test_vm.primary_ip4, None)
+        else:
+            self.assertEqual(self.test_vm.primary_ip6, None)
+
+    def test_ip_address_to_interface_uniqueness_constraint(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_addr)
+        with self.assertRaises(ValidationError):
+            IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, interface=self.test_int1, ip_address=ip_addr
+            )
+        IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=ip_addr)
+        with self.assertRaises(ValidationError):
+            IPAddressToInterface.objects.create(vm_interface=self.test_vmint1, ip_address=ip_addr)
+
+    def test_pre_save_signal_invoked_on_ip_address_to_interface_manual_creation(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(ValidationError) as cm:
+            IPAddressToInterface.objects.create(
+                vm_interface=self.test_vmint1, interface=self.test_int1, ip_address=ip_addr
+            )
+        self.assertIn(
+            "Cannot use a single instance to associate to both an Interface and a VMInterface.", str(cm.exception)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            IPAddressToInterface.objects.create(vm_interface=None, interface=None, ip_address=ip_addr)
+        self.assertIn("Must associate to either an Interface or a VMInterface.", str(cm.exception))
 
 
 class TestVarbinaryIPField(TestCase):
     """Tests for `nautobot.ipam.fields.VarbinaryIPField`."""
 
-    def setUp(self):
-        super().setUp()
-
+    @classmethod
+    def setUpTestData(cls):
         # Field is a VarbinaryIPField we'll use to test.
-        self.prefix = Prefix.objects.create(prefix="10.0.0.0/24")
-        self.field = self.prefix._meta.get_field("network")
-        self.network = self.prefix.network
-        self.network_packed = bytes(self.prefix.prefix.network)
+        cls.namespace = Namespace.objects.first()
+        cls.status = Status.objects.get(name="Active")
+        cls.prefix = Prefix.objects.create(prefix="10.0.0.0/24", status=cls.status, namespace=cls.namespace)
+        cls.field = cls.prefix._meta.get_field("network")
+        cls.network = cls.prefix.network
+        cls.network_packed = bytes(cls.prefix.prefix.network)
 
     def test_db_type(self):
         """Test `VarbinaryIPField.db_type`."""
@@ -112,140 +266,220 @@ class TestVarbinaryIPField(TestCase):
         self.assertEqual(prepped, manual)
 
 
-class TestAggregate(TestCase):
-    def test_get_utilization(self):
-        aggregate = Aggregate(prefix=netaddr.IPNetwork("22.0.0.0/8"), rir=RIR.objects.first())
-        aggregate.save()
-
-        # 25% utilization
-        Prefix.objects.bulk_create(
-            (
-                Prefix(prefix=netaddr.IPNetwork("22.0.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.16.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.32.0.0/12")),
-                Prefix(prefix=netaddr.IPNetwork("22.48.0.0/12")),
-            )
-        )
-        self.assertEqual(aggregate.get_utilization(), (4194304, 16777216))
-
-        # 50% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.64.0.0/10")),))
-        self.assertEqual(aggregate.get_utilization(), (8388608, 16777216))
-
-        # 100% utilization
-        Prefix.objects.bulk_create((Prefix(prefix=netaddr.IPNetwork("22.128.0.0/9")),))
-        self.assertEqual(aggregate.get_utilization(), (16777216, 16777216))
-
-        # TODO: equivalent IPv6 tests for thoroughness?
+class TestNamespace(ModelTestCases.BaseModelTestCase):
+    model = Namespace
 
 
-class TestPrefix(TestCase):
+class TestPrefix(ModelTestCases.BaseModelTestCase):
+    model = Prefix
+
     def setUp(self):
         super().setUp()
+        # With advent of `Prefix.parent`, Prefixes can't just be bulk deleted without clearing their
+        # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
+        IPAddress.objects.update(parent=None)
+        IPAddress.objects.all().delete()
+        Prefix.objects.update(parent=None)
+        Prefix.objects.all().delete()
+        self.namespace = Namespace.objects.first()
         self.statuses = Status.objects.get_for_model(Prefix)
+        self.status = self.statuses.first()
+        self.status.content_types.add(ContentType.objects.get_for_model(IPAddress))
+        self.root = Prefix.objects.create(
+            prefix="101.102.0.0/24", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        self.parent = Prefix.objects.create(
+            prefix="101.102.0.0/25", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
+        self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
 
     def test_prefix_validation(self):
         location_type = LocationType.objects.get(name="Room")
         location = Location.objects.filter(location_type=location_type).first()
-        prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"), location=location)
-        prefix.status = self.statuses.get(slug="active")
+        prefix = Prefix(prefix="192.0.2.0/24", location=location, status=self.statuses[0])
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
-        location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
-        site_2 = Site.objects.exclude(pk=location.base_site.pk).last()
-        prefix.site = site_2
-        with self.assertRaises(ValidationError) as cm:
-            prefix.validated_save()
-        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
+    def test_tree_methods(self):
+        """Test the various tree methods work as expected."""
 
-    def test_get_duplicates(self):
-        prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24")),
+        # supernets()
+        self.assertEqual(list(self.root.supernets()), [])
+        self.assertEqual(list(self.child1.supernets()), [self.root, self.parent])
+        self.assertEqual(list(self.child1.supernets(include_self=True)), [self.root, self.parent, self.child1])
+        self.assertEqual(list(self.child1.supernets(direct=True)), [self.parent])
+
+        # subnets()
+        self.assertEqual(list(self.root.subnets()), [self.parent, self.child1, self.child2])
+        self.assertEqual(list(self.root.subnets(direct=True)), [self.parent])
+        self.assertEqual(list(self.root.subnets(include_self=True)), [self.root, self.parent, self.child1, self.child2])
+
+        # is_child_node()
+        self.assertFalse(self.root.is_child_node())
+        self.assertTrue(self.parent.is_child_node())
+        self.assertTrue(self.child1.is_child_node())
+
+        # is_leaf_node()
+        self.assertFalse(self.root.is_leaf_node())
+        self.assertFalse(self.parent.is_leaf_node())
+        self.assertTrue(self.child1.is_leaf_node())
+
+        # is_root_node()
+        self.assertTrue(self.root.is_root_node())
+        self.assertFalse(self.parent.is_leaf_node())
+        self.assertFalse(self.child1.is_root_node())
+
+        # ancestors()
+        self.assertEqual(list(self.child1.ancestors()), [self.root, self.parent])
+        self.assertEqual(list(self.child1.ancestors(ascending=True)), [self.parent, self.root])
+        self.assertEqual(list(self.child1.ancestors(include_self=True)), [self.root, self.parent, self.child1])
+
+        # children.all()
+        self.assertEqual(list(self.parent.children.all()), [self.child1, self.child2])
+
+        # descendants()
+        self.assertEqual(list(self.root.descendants()), [self.parent, self.child1, self.child2])
+        self.assertEqual(
+            list(self.root.descendants(include_self=True)), [self.root, self.parent, self.child1, self.child2]
         )
-        duplicate_prefix_pks = [p.pk for p in prefixes[0].get_duplicates()]
 
-        self.assertSetEqual(set(duplicate_prefix_pks), {prefixes[1].pk, prefixes[2].pk})
+        # root()
+        self.assertEqual(self.child1.root(), self.root)
+        self.assertIsNone(self.root.root())
 
-    def test_get_child_prefixes(self):
-        vrfs = VRF.objects.all()[:3]
-        prefixes = (
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=Prefix.STATUS_CONTAINER),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), vrf=None),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.1.0/24"), vrf=vrfs[0]),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.2.0/24"), vrf=vrfs[1]),
-            Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.3.0/24"), vrf=vrfs[2]),
+        # siblings()
+        self.assertEqual(list(self.child1.siblings()), [self.child2])
+        self.assertEqual(list(self.child1.siblings(include_self=True)), [self.child1, self.child2])
+        parent2 = Prefix.objects.create(prefix="101.102.0.128/25", status=self.status, namespace=self.namespace)
+        self.assertEqual(list(self.parent.siblings()), [parent2])
+        self.assertEqual(list(self.parent.siblings(include_self=True)), [self.parent, parent2])
+
+    def test_reparenting(self):
+        """Test that reparenting algorithm works in its most basic form."""
+        # tree hierarchy
+        self.assertIsNone(self.root.parent)
+        self.assertEqual(self.parent.parent, self.root)
+        self.assertEqual(self.child1.parent, self.parent)
+
+        # Delete the parent (/25); child1/child2 now have root (/24) as their parent.
+        num_deleted, _ = self.parent.delete()
+        self.assertEqual(num_deleted, 1)
+
+        self.assertEqual(list(self.root.children.all()), [self.child1, self.child2])
+        self.child1.refresh_from_db()
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child1.parent, self.root)
+        self.assertEqual(self.child2.parent, self.root)
+        self.assertEqual(list(self.child1.ancestors()), [self.root])
+
+        # Add /25 back in as a parent and assert that child1/child2 now have it as their parent, and
+        # /24 is its parent.
+        self.parent.save()  # This creates another Prefix using the same instance.
+        self.child1.refresh_from_db()
+        self.child2.refresh_from_db()
+        self.assertEqual(self.child1.parent, self.parent)
+        self.assertEqual(self.child2.parent, self.parent)
+        self.assertEqual(list(self.child1.ancestors()), [self.root, self.parent])
+
+        # Now let's create some duplicates in another Namespace and perform the same tests.
+
+        namespace = Namespace.objects.exclude(id=self.namespace.id).first()
+        root = Prefix.objects.create(
+            prefix="101.102.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
         )
-        child_prefix_pks = {p.pk for p in prefixes[0].get_child_prefixes()}
+        parent = Prefix.objects.create(
+            prefix="101.102.0.0/25", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=namespace)
+        child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=namespace)
+
+        # tree hierarchy
+        self.assertIsNone(root.parent)
+        self.assertEqual(parent.parent, root)
+        self.assertEqual(child1.parent, parent)
+
+        # Delete the parent (/25); child1/child2 now have root (/24) as their parent.
+        num_deleted, _ = parent.delete()
+        self.assertEqual(num_deleted, 1)
+
+        self.assertEqual(list(root.children.all()), [child1, child2])
+        child1.refresh_from_db()
+        child2.refresh_from_db()
+        self.assertEqual(child1.parent, root)
+        self.assertEqual(child2.parent, root)
+        self.assertEqual(list(child1.ancestors()), [root])
+
+        # Add /25 back in as a parent and assert that child1/child2 now have it as their parent, and
+        # /24 is its parent.
+        parent.save()  # This creates another Prefix using the same instance.
+        child1.refresh_from_db()
+        child2.refresh_from_db()
+        self.assertEqual(child1.parent, parent)
+        self.assertEqual(child2.parent, parent)
+        self.assertEqual(list(child1.ancestors()), [root, parent])
+
+    def test_descendants(self):
+        prefixes = (
+            Prefix.objects.create(
+                prefix="10.0.0.0/16",
+                type=PrefixTypeChoices.TYPE_CONTAINER,
+                status=self.status,
+                namespace=self.namespace,
+            ),
+            Prefix.objects.create(prefix="10.0.0.0/24", status=self.status, namespace=self.namespace),
+            Prefix.objects.create(prefix="10.0.1.0/24", status=self.status, namespace=self.namespace),
+            Prefix.objects.create(prefix="10.0.2.0/24", status=self.status, namespace=self.namespace),
+            Prefix.objects.create(prefix="10.0.3.0/24", status=self.status, namespace=self.namespace),
+        )
+        prefix_pks = {p.pk for p in prefixes[1:]}
+        child_prefix_pks = {p.pk for p in prefixes[0].descendants()}
 
         # Global container should return all children
-        self.assertSetEqual(
-            child_prefix_pks,
-            {prefixes[1].pk, prefixes[2].pk, prefixes[3].pk, prefixes[4].pk},
-        )
+        self.assertSetEqual(child_prefix_pks, prefix_pks)
 
-        prefixes[0].vrf = vrfs[0]
-        prefixes[0].save()
-        child_prefix_pks = {p.pk for p in prefixes[0].get_child_prefixes()}
-
-        # VRF container is limited to its own VRF
-        self.assertSetEqual(child_prefix_pks, {prefixes[2].pk})
-
-    def test_get_child_ips(self):
-        vrfs = VRF.objects.all()[:3]
-        parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/16"), status=Prefix.STATUS_CONTAINER)
+    def test_child_ip_addresses(self):
+        parent_prefix = Prefix.objects.create(prefix="10.0.0.0/16", status=self.status, namespace=self.namespace)
         ips = (
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.0.1/24"), vrf=None),
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.1.1/24"), vrf=vrfs[0]),
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.2.1/24"), vrf=vrfs[1]),
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.3.1/24"), vrf=vrfs[2]),
+            IPAddress.objects.create(address="10.0.0.1/24", status=self.status, namespace=self.namespace),
+            IPAddress.objects.create(address="10.0.1.1/24", status=self.status, namespace=self.namespace),
+            IPAddress.objects.create(address="10.0.2.1/24", status=self.status, namespace=self.namespace),
+            IPAddress.objects.create(address="10.0.3.1/24", status=self.status, namespace=self.namespace),
         )
-        # Eliminate randomly generated IPs that can be contained in the child_ips and would not be accounted for in the assertSetEqual below.
-        child_ip_pks = {p.pk for p in parent_prefix.get_child_ips()}
-        ip_pks = {ip.pk for ip in ips}
-        # Intersection of the two lists
-        child_ip_pks = set(child_ip_pks) & set(ip_pks)
+        child_ip_pks = {p.pk for p in parent_prefix.ip_addresses.all()}
 
         # Global container should return all children
         self.assertSetEqual(child_ip_pks, {ips[0].pk, ips[1].pk, ips[2].pk, ips[3].pk})
 
-        parent_prefix.vrf = vrfs[0]
-        parent_prefix.save()
-        child_ip_pks = {p.pk for p in parent_prefix.get_child_ips()}
-
-        # VRF container is limited to its own VRF
-        self.assertSetEqual(child_ip_pks, {ips[1].pk})
-
         # Make sure /31 is handled correctly
-        parent_prefix_31 = Prefix.objects.create(
-            prefix=netaddr.IPNetwork("10.0.4.0/31"), status=Prefix.STATUS_CONTAINER
-        )
+        parent_prefix_31 = Prefix.objects.create(prefix="20.0.4.0/31", status=self.status, namespace=self.namespace)
         ips_31 = (
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.0/31"), vrf=None),
-            IPAddress.objects.create(address=netaddr.IPNetwork("10.0.4.1/31"), vrf=None),
+            IPAddress.objects.create(address="20.0.4.0/31", status=self.status, namespace=self.namespace),
+            IPAddress.objects.create(address="20.0.4.1/31", status=self.status, namespace=self.namespace),
         )
-
-        child_ip_pks = {p.pk for p in parent_prefix_31.get_child_ips()}
+        child_ip_pks = {p.pk for p in parent_prefix_31.ip_addresses.all()}
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
     def test_get_available_prefixes(self):
-        prefixes = Prefix.objects.bulk_create(
-            (
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/20")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.32.0/20")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.128.0/18")),
-            )
-        )
+        prefixes = [
+            Prefix(
+                prefix="10.0.0.0/16",
+                status=self.status,
+                namespace=self.namespace,
+                type=PrefixTypeChoices.TYPE_CONTAINER,
+            ),  # Parent prefix
+            Prefix(prefix="10.0.0.0/20", status=self.status, namespace=self.namespace),
+            Prefix(prefix="10.0.32.0/20", status=self.status, namespace=self.namespace),
+            Prefix(prefix="10.0.128.0/18", status=self.status, namespace=self.namespace),
+        ]
+        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
         missing_prefixes = netaddr.IPSet(
             [
-                netaddr.IPNetwork("10.0.16.0/20"),
-                netaddr.IPNetwork("10.0.48.0/20"),
-                netaddr.IPNetwork("10.0.64.0/18"),
-                netaddr.IPNetwork("10.0.192.0/18"),
+                "10.0.16.0/20",
+                "10.0.48.0/20",
+                "10.0.64.0/18",
+                "10.0.192.0/18",
             ]
         )
         available_prefixes = prefixes[0].get_available_prefixes()
@@ -253,18 +487,17 @@ class TestPrefix(TestCase):
         self.assertEqual(available_prefixes, missing_prefixes)
 
     def test_get_available_ips(self):
-        parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/28"))
-        IPAddress.objects.bulk_create(
-            (
-                IPAddress(address=netaddr.IPNetwork("10.0.0.1/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.3/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.5/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.7/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.9/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.11/26")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.13/26")),
-            )
-        )
+        parent_prefix = Prefix.objects.create(prefix="10.0.0.0/28", status=self.status, namespace=self.namespace)
+        ip_list = [
+            IPAddress(address="10.0.0.1/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.3/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.5/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.7/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.9/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.11/26", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.13/26", status=self.status, namespace=self.namespace),
+        ]
+        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
         missing_ips = netaddr.IPSet(
             [
                 "10.0.0.2/32",
@@ -277,246 +510,511 @@ class TestPrefix(TestCase):
             ]
         )
         available_ips = parent_prefix.get_available_ips()
-
         self.assertEqual(available_ips, missing_ips)
 
     def test_get_first_available_prefix(self):
-        prefixes = Prefix.objects.bulk_create(
-            (
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/16")),  # Parent prefix
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/24")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.1.0/24")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.2.0/24")),
-            )
-        )
+        prefixes = [
+            Prefix(
+                prefix="10.0.0.0/16",
+                status=self.status,
+                namespace=self.namespace,
+                type=PrefixTypeChoices.TYPE_CONTAINER,
+            ),  # Parent prefix
+            Prefix(prefix="10.0.0.0/24", status=self.status, namespace=self.namespace),
+            Prefix(prefix="10.0.1.0/24", status=self.status, namespace=self.namespace),
+            Prefix(prefix="10.0.2.0/24", status=self.status, namespace=self.namespace),
+        ]
+        [p.save() for p in prefixes]  # pylint: disable=expression-not-assigned
         self.assertEqual(prefixes[0].get_first_available_prefix(), netaddr.IPNetwork("10.0.3.0/24"))
 
-        Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.3.0/24"))
+        Prefix.objects.create(prefix="10.0.3.0/24", status=self.status, namespace=self.namespace)
         self.assertEqual(prefixes[0].get_first_available_prefix(), netaddr.IPNetwork("10.0.4.0/22"))
 
     def test_get_first_available_ip(self):
-        parent_prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"))
-        IPAddress.objects.bulk_create(
-            (
-                IPAddress(address=netaddr.IPNetwork("10.0.0.1/24")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.2/24")),
-                IPAddress(address=netaddr.IPNetwork("10.0.0.3/24")),
-            )
-        )
+        parent_prefix = Prefix.objects.create(prefix="10.0.0.0/24", status=self.status, namespace=self.namespace)
+        ip_list = [
+            IPAddress(address="10.0.0.1/24", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.2/24", status=self.status, namespace=self.namespace),
+            IPAddress(address="10.0.0.3/24", status=self.status, namespace=self.namespace),
+        ]
+        [i.save() for i in ip_list]  # pylint: disable=expression-not-assigned
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.4/24")
 
-        IPAddress.objects.create(address=netaddr.IPNetwork("10.0.0.4/24"))
+        IPAddress.objects.create(address="10.0.0.4/24", status=self.status, namespace=self.namespace)
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.5/24")
 
     def test_get_utilization(self):
         # Container Prefix
-        prefix = Prefix.objects.create(prefix=netaddr.IPNetwork("10.0.0.0/24"), status=Prefix.STATUS_CONTAINER)
-        Prefix.objects.bulk_create(
-            (
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.0/26")),
-                Prefix(prefix=netaddr.IPNetwork("10.0.0.128/26")),
-            )
+        prefix = Prefix.objects.create(
+            prefix="10.0.0.0/24", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace
         )
-        self.assertEqual(prefix.get_utilization(), (128, 256))
+        slash26 = Prefix.objects.create(prefix="10.0.0.0/26", status=self.status, namespace=self.namespace)
+        slash25 = Prefix.objects.create(prefix="10.0.0.128/25", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (192, 256))
 
-        # IPv4 Non-container Prefix /24
-        prefix.status = self.statuses.get(slug="active")
-        prefix.save()
-        IPAddress.objects.bulk_create(
-            # Create 32 IPAddresses within the Prefix
-            [IPAddress(address=netaddr.IPNetwork(f"10.0.0.{i}/24")) for i in range(1, 33)]
-        )
+        # Create 32 IPAddresses within the Prefix
+        for i in range(1, 33):
+            IPAddress.objects.create(address=f"10.0.0.{i}/32", status=self.status, namespace=self.namespace)
+
+        # The parent prefix utilization does not change because the ip addresses are parented to the child /26 prefix.
+        self.assertEqual(prefix.get_utilization(), (192, 256))
+
+        # The /26 will have 32 IPs
+        self.assertEqual(slash26.get_utilization(), (32, 62))
+
         # Create IPAddress objects for network and broadcast addresses
-        IPAddress.objects.bulk_create(
-            (IPAddress(address=netaddr.IPNetwork("10.0.0.0/32")), IPAddress(address=netaddr.IPNetwork("10.0.0.255/32")))
-        )
-        self.assertEqual(prefix.get_utilization(), (32, 254))
+        IPAddress.objects.create(address="10.0.0.0/32", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="10.0.0.63/32", status=self.status, namespace=self.namespace)
 
-        # Change prefix to a pool, network and broadcast address will count toward numerator and denominator in utilization
-        prefix.is_pool = True
-        prefix.save()
-        self.assertEqual(prefix.get_utilization(), (34, 256))
+        # The /26 denominator will change to 64
+        self.assertEqual(slash26.get_utilization(), (34, 64))
+
+        # Add a pool, entire pool will count toward numerator in utilization
+        pool = Prefix.objects.create(
+            prefix="10.0.0.128/30", type=PrefixTypeChoices.TYPE_POOL, status=self.status, namespace=self.namespace
+        )
+        self.assertEqual(slash25.get_utilization(), (4, 128))
+
+        # When the pool does not overlap with broadcast or network address, the denominator decrements by 2
+        pool.network = "10.0.0.132"
+        pool.save()
+        self.assertEqual(slash25.get_utilization(), (4, 126))
 
         # IPv4 Non-container Prefix /31, network and broadcast addresses count toward utilization
-        prefix = Prefix.objects.create(prefix="10.0.1.0/31")
-        IPAddress.objects.bulk_create(
-            (IPAddress(address=netaddr.IPNetwork("10.0.1.0/32")), IPAddress(address=netaddr.IPNetwork("10.0.1.1/32")))
-        )
+        prefix = Prefix.objects.create(prefix="10.0.1.0/31", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="10.0.1.0/32", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="10.0.1.1/32", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (2, 2))
 
-        # IPv6 Non-container Prefix, network and broadcast addresses count toward utilization
-        prefix = Prefix.objects.create(prefix="aaaa::/124")
-        IPAddress.objects.bulk_create(
-            (IPAddress(address=netaddr.IPNetwork("aaaa::0/128")), IPAddress(address=netaddr.IPNetwork("aaaa::f/128")))
-        )
+        # IPv6 Non-container Prefix, first and last addresses count toward utilization
+        prefix = Prefix.objects.create(prefix="aaab::/124", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaab::1/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaab::2/128", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (2, 16))
 
+        prefix = Prefix.objects.create(prefix="aaaa::/124", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaaa::0/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="aaaa::f/128", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (2, 16))
+
+        # single address prefixes
+        prefix = Prefix.objects.create(prefix="cccc::1/128", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="cccc::1/128", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (1, 1))
+        prefix = Prefix.objects.create(prefix="1.1.1.1/32", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="1.1.1.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(prefix.get_utilization(), (1, 1))
+
+        # Large Prefix
+        large_prefix = Prefix.objects.create(
+            prefix="22.0.0.0/8", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace
+        )
+
+        # 25% utilization
+        Prefix.objects.create(prefix="22.0.0.0/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="22.16.0.0/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="22.32.0.0/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="22.48.0.0/12", status=self.status, namespace=self.namespace)
+        self.assertEqual(large_prefix.get_utilization(), (4194304, 16777216))
+
+        # 50% utilization
+        Prefix.objects.create(prefix="22.64.0.0/10", status=self.status, namespace=self.namespace)
+        self.assertEqual(large_prefix.get_utilization(), (8388608, 16777216))
+
+        # 100% utilization
+        Prefix.objects.create(prefix="22.128.0.0/9", status=self.status, namespace=self.namespace)
+        self.assertEqual(large_prefix.get_utilization(), (16777216, 16777216))
+
+        # IPv6 Large Prefix
+        large_prefix_v6 = Prefix.objects.create(
+            prefix="ab00::/8", type=PrefixTypeChoices.TYPE_CONTAINER, status=self.status, namespace=self.namespace
+        )
+
+        # 25% utilization
+        Prefix.objects.create(prefix="ab00::/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="ab10::/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="ab20::/12", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="ab30::/12", status=self.status, namespace=self.namespace)
+        self.assertEqual(large_prefix_v6.get_utilization(), (2**118, 2**120))
+
+        # 50% utilization
+        Prefix.objects.create(prefix="ab40::/10", status=self.status, namespace=self.namespace)
+        self.assertEqual(large_prefix_v6.get_utilization(), (2**119, 2**120))
+
+        # 100% utilization
+        Prefix.objects.create(prefix="ab80::/9", status=self.status, namespace=self.namespace)
+        self.assertEqual(large_prefix_v6.get_utilization(), (2**120, 2**120))
+
     #
     # Uniqueness enforcement tests
     #
 
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=False)
-    def test_duplicate_global(self):
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertIsNone(duplicate_prefix.clean())
-
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_global_unique(self):
-        Prefix.objects.create(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertRaises(ValidationError, duplicate_prefix.clean)
+        """Test that duplicate Prefixes in the same Namespace raises an error."""
+        Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
+        duplicate_prefix = Prefix(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
+        self.assertRaises(ValidationError, duplicate_prefix.full_clean)
 
-    def test_duplicate_vrf(self):
-        vrf = VRF.objects.filter(enforce_unique=False).first()
-        Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertIsNone(duplicate_prefix.clean())
+    def test_parenting_constraints_on_save(self):
+        """Test that Prefix parenting correctly raises validation errors when saving a prefix would create an invalid parent/child relationship."""
 
-    def test_duplicate_vrf_unique(self):
-        vrf = VRF.objects.filter(enforce_unique=True).first()
-        Prefix.objects.create(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        duplicate_prefix = Prefix(vrf=vrf, prefix=netaddr.IPNetwork("192.0.2.0/24"))
-        self.assertRaises(ValidationError, duplicate_prefix.clean)
-
-
-class TestIPAddress(TestCase):
-    def test_get_duplicates(self):
-        ips = (
-            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
-            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
-            IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+        Prefix.objects.create(
+            prefix="10.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
         )
-        duplicate_ip_pks = [p.pk for p in ips[0].get_duplicates()]
+        Prefix.objects.create(
+            prefix="11.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        # 3.0 TODO: replace with the commented below once type enforcement is enabled
+        # pool_prefix = Prefix.objects.create(
+        Prefix.objects.create(
+            prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        )
 
-        self.assertSetEqual(set(duplicate_ip_pks), {ips[1].pk, ips[2].pk})
+        # 3.0 TODO: uncomment the below tests once type enforcement is enabled
+
+        # with self.assertRaises(ValidationError, msg="Network prefix parent cannot be a network"):
+        #     Prefix.objects.create(
+        #         prefix="11.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        #     )
+
+        # with self.assertRaises(ValidationError, msg="Network prefix parent cannot be a pool"):
+        #     Prefix.objects.create(
+        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        #     )
+
+        # with self.assertRaises(ValidationError, msg="Container prefix parent cannot be a network"):
+        #     Prefix.objects.create(
+        #         prefix="11.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        #     )
+
+        # with self.assertRaises(ValidationError, msg="Container prefix parent cannot be a pool"):
+        #     Prefix.objects.create(
+        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        #     )
+
+        # with self.assertRaises(ValidationError, msg="Pool prefix parent cannot be a container"):
+        #     Prefix.objects.create(
+        #         prefix="10.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        #     )
+
+        # with self.assertRaises(ValidationError, msg="Pool prefix parent cannot be a pool"):
+        #     Prefix.objects.create(
+        #         prefix="12.0.0.0/30", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        #     )
+
+        # with self.assertRaises(
+        #     ValidationError, msg="Test that an invalid parent cannot be created (network parenting container)"
+        # ):
+        #     Prefix.objects.create(
+        #         prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        #     )
+
+        # with self.assertRaises(
+        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting container)"
+        # ):
+        #     Prefix.objects.create(
+        #         prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        #     )
+
+        # with self.assertRaises(
+        #     ValidationError, msg="Test that an invalid parent cannot be created (network parenting network)"
+        # ):
+        #     Prefix.objects.create(
+        #         prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        #     )
+
+        # with self.assertRaises(
+        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting network)"
+        # ):
+        #     Prefix.objects.create(
+        #         prefix="11.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        #     )
+
+        # with self.assertRaises(
+        #     ValidationError, msg="Test that an invalid parent cannot be created (container parenting pool)"
+        # ):
+        #     Prefix.objects.create(
+        #         prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        #     )
+
+        # with self.assertRaises(
+        #     ValidationError, msg="Test that an invalid parent cannot be created (pool parenting pool)"
+        # ):
+        #     Prefix.objects.create(
+        #         prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        #     )
+
+        with self.subTest("Test that valid parents can be created"):
+            Prefix.objects.create(
+                prefix="12.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+            Prefix.objects.create(
+                prefix="12.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+            Prefix.objects.create(
+                prefix="12.0.0.0/7", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        with self.subTest("Test that valid children can be created"):
+            Prefix.objects.create(
+                prefix="10.0.0.0/25", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+            Prefix.objects.create(
+                prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+            )
+
+        # 3.0 TODO: uncomment once type enforcement is enabled
+        # with self.assertRaises(
+        #     ValidationError,
+        #     msg="Test that modifying a prefix's type fails if it would result in an invalid parent/child relationship",
+        # ):
+        #     pool_prefix.type = PrefixTypeChoices.TYPE_NETWORK
+        #     pool_prefix.validated_save()
+
+        with self.subTest(
+            "Test that modifying a prefix's type is allowed if it does not create an invalid relationship"
+        ):
+            child = Prefix.objects.create(
+                prefix="10.0.0.0/28", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            )
+            child.type = PrefixTypeChoices.TYPE_CONTAINER
+            child.validated_save()
+
+    def test_parenting_constraints_on_delete(self):
+        """Test that Prefix parenting correctly raises validation errors when deleting a prefix would create an invalid parent/child relationship."""
+
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+        root = Prefix.objects.create(
+            prefix="10.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        container = Prefix.objects.create(
+            prefix="10.0.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        network = Prefix.objects.create(
+            prefix="10.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        pool = Prefix.objects.create(
+            prefix="10.0.0.0/26", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        )
+
+        # 3.0 TODO: uncomment once type enforcement is enabled
+        # with self.assertRaises(
+        #     ProtectedError,
+        #     msg="Test that deleting a network prefix that would make a pool prefix's parent a container raises a ProtectedError",
+        # ):
+        #     network.delete()
+
+        with self.subTest("Test that deleting a parent prefix properly reparents the child prefixes"):
+            container.delete()
+            root.refresh_from_db()
+            network.refresh_from_db()
+            pool.refresh_from_db()
+            self.assertIsNone(root.parent)
+            self.assertEqual(network.parent, root)
+            self.assertEqual(pool.parent, network)
+
+        ip = IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.subTest("Test that deleting a pool prefix containing IPs succeeds"):
+            self.assertEqual(ip.parent, pool)  # 3.0 TODO: change this to ", network)" once IP-to-pool is disallowed
+            pool.delete()
+            ip.refresh_from_db()
+            self.assertEqual(ip.parent, network)
+
+        # 3.0 TODO: uncomment once type enforcement is enabled
+        # with self.assertRaises(
+        #     ProtectedError,
+        #     msg="Test that deleting a network prefix that would make an IP's parent a container raises a ProtectedError",
+        # ):
+        #     network.delete()
+
+        with self.subTest("Test that deleting the root prefix succeeds"):
+            root.delete()
+            network.refresh_from_db()
+            self.assertIsNone(network.parent)
+
+        with self.assertRaises(
+            ProtectedError,
+            msg="Test that deleting a network prefix that would orphan an IP raises a ProtectedError",
+        ):
+            network.delete()
+
+        with self.subTest("Test that deleting all child IPs of a network prefix allows the prefix to be deleted"):
+            ip.delete()
+            network.delete()
+
+
+class TestIPAddress(ModelTestCases.BaseModelTestCase):
+    model = IPAddress
+
+    def setUp(self):
+        super().setUp()
+        self.namespace = Namespace.objects.first()
+        self.status = Status.objects.get(name="Active")
+        self.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
 
     #
     # Uniqueness enforcement tests
     #
 
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=False)
-    def test_duplicate_global(self):
-        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
-        self.assertIsNone(duplicate_ip.clean())
-
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
     def test_duplicate_global_unique(self):
-        IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(address=netaddr.IPNetwork("192.0.2.1/24"))
-        self.assertRaises(ValidationError, duplicate_ip.clean)
+        """Test that duplicate IPs in the same Namespace raises an error."""
+        IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(IntegrityError):
+            IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
 
-    def test_duplicate_vrf(self):
-        vrf = VRF.objects.filter(enforce_unique=False).first()
-        IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        self.assertIsNone(duplicate_ip.clean())
-
-    def test_duplicate_vrf_unique(self):
-        vrf = VRF.objects.filter(enforce_unique=True).first()
-        IPAddress.objects.create(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        duplicate_ip = IPAddress(vrf=vrf, address=netaddr.IPNetwork("192.0.2.1/24"))
-        self.assertRaises(ValidationError, duplicate_ip.clean)
-
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
-    def test_duplicate_nonunique_role(self):
-        IPAddress.objects.create(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=IPAddressRoleChoices.ROLE_VIP,
-        )
-        IPAddress.objects.create(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=IPAddressRoleChoices.ROLE_VIP,
-        )
-
-    def test_multiple_nat_outside(self):
+    def test_multiple_nat_outside_list(self):
         """
-        Test suite to test supporing multiple nat_inside related fields.
-
-        Includes tests for legacy getter/setter for nat_outside.
+        Test suite to test supporing nat_outside_list.
         """
-
-        # Setup mimicked legacy data model relationships: 1-to-1
-        nat_inside = IPAddress.objects.create(address=netaddr.IPNetwork("192.168.0.1/24"))
-        nat_outside1 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24"), nat_inside=nat_inside)
-        nat_inside.refresh_from_db()
-
-        # Assert legacy getter behaves as expected for backwards compatibility, and that FK relationship works
-        self.assertEqual(nat_inside.nat_outside, nat_outside1)
-        self.assertEqual(nat_inside.nat_outside_list.count(), 1)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside1)
-
-        # Create unassigned IPAddress
-        nat_outside2 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.2/24"))
-        nat_inside.nat_outside = nat_outside2
-        nat_inside.refresh_from_db()
-
-        # Test legacy setter behaves as expected for backwards compatibility and that previous FK relationship removed
-        self.assertEqual(nat_inside.nat_outside, nat_outside2)
-        self.assertEqual(nat_inside.nat_outside_list.count(), 1)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside2)
-
-        # Create IPAddress with nat_inside assigned, setting up current 1-to-many relationship
-        nat_outside3 = IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.3/24"), nat_inside=nat_inside)
-        nat_inside.refresh_from_db()
-
-        # Now ensure safeguards are in place when using legacy methods with 1-to-many relationships
-        with self.assertRaises(IPAddress.NATOutsideMultipleObjectsReturned):
-            nat_inside.nat_outside
-        with self.assertRaises(IPAddress.NATOutsideMultipleObjectsReturned):
-            nat_inside.nat_outside = nat_outside1
-
-        # Assert FK relationship behaves as expected
-        self.assertEqual(nat_inside.nat_outside_list.count(), 2)
-        self.assertEqual(nat_inside.nat_outside_list.first(), nat_outside2)
-        self.assertEqual(nat_inside.nat_outside_list.last(), nat_outside3)
-
-    @override_settings(ENFORCE_GLOBAL_UNIQUE=True)
-    def test_not_null_assigned_object_type_and_null_assigned_object_id(self):
-        site = Site.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
-        devicetype = DeviceType.objects.create(
-            manufacturer=manufacturer,
-            model="Test Device Type 1",
-            slug="test-device-type-1",
+        Prefix.objects.create(prefix="192.168.0.0/24", status=self.status, namespace=self.namespace)
+        nat_inside = IPAddress.objects.create(address="192.168.0.1/24", status=self.status, namespace=self.namespace)
+        nat_outside1 = IPAddress.objects.create(
+            address="192.0.2.1/24", nat_inside=nat_inside, status=self.status, namespace=self.namespace
         )
-        devicerole = DeviceRole.objects.create(name="Test Device Role 1", slug="test-device-role-1", color="ff0000")
-        device_status = Status.objects.get_for_model(Device).get(slug="active")
+        nat_outside2 = IPAddress.objects.create(
+            address="192.0.2.2/24", nat_inside=nat_inside, status=self.status, namespace=self.namespace
+        )
+        nat_outside3 = IPAddress.objects.create(
+            address="192.0.2.3/24", nat_inside=nat_inside, status=self.status, namespace=self.namespace
+        )
+        nat_inside.refresh_from_db()
+        self.assertEqual(nat_inside.nat_outside_list.count(), 3)
+        self.assertEqual(nat_inside.nat_outside_list.all()[0], nat_outside1)
+        self.assertEqual(nat_inside.nat_outside_list.all()[1], nat_outside2)
+        self.assertEqual(nat_inside.nat_outside_list.all()[2], nat_outside3)
+
+    def test_create_ip_address_with_slaac_type(self):
+        """Assert that SLAAC can only be set on IPv6 addresses."""
+        # IPv6 be cool.
+        Prefix.objects.create(prefix="1976:2023::/40", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(
+            address="1976:2023::1/128",
+            status=self.status,
+            type=IPAddressTypeChoices.TYPE_SLAAC,
+            namespace=self.namespace,
+        )
+        self.assertTrue(IPAddress.objects.filter(address="1976:2023::1/128").exists())
+
+        # IPv4 be uncool.
+        with self.assertRaises(ValidationError):
+            ip = IPAddress(
+                address="192.0.2.17/32",
+                status=self.status,
+                namespace=self.namespace,
+                type=IPAddressTypeChoices.TYPE_SLAAC,
+            )
+            ip.validated_save()
+
+    def test_get_closest_parent(self):
+        for ip in IPAddress.objects.all():
+            with self.subTest(ip=ip):
+                ip.save()
+                ip.refresh_from_db()
+                self.assertIsNotNone(ip.parent)
+                self.assertEqual(
+                    ip.parent,
+                    Prefix.objects.filter(network__lte=ip.host, broadcast__gte=ip.host)
+                    .order_by("-prefix_length")
+                    .first(),
+                )
+
+    def test_parenting_constraints(self):
+        """Test that IPAddress parenting correctly raises validation errors when unable to assign a valid parent prefix."""
+
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+
+        Prefix.objects.create(
+            prefix="10.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        Prefix.objects.create(
+            prefix="11.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        Prefix.objects.create(
+            prefix="12.0.0.0/24", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+        )
+
+        # 3.0 TODO: uncomment once type enforcement is enabled
+        # with self.assertRaises(ValidationError, msg="IP Address parent cannot be a container"):
+        #     IPAddress.objects.create(address="10.0.0.1/32", status=self.status, namespace=namespace)
+
+        # with self.assertRaises(Prefix.DoesNotExist, msg="IP Address parent cannot be a pool"):
+        #     IPAddress.objects.create(address="12.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.assertRaises(ValidationError) as err:
+            IPAddress.objects.create(address="13.0.0.1/32", status=self.status, namespace=namespace)
+        self.assertEqual(
+            err.exception.message_dict["namespace"][0], "No suitable parent Prefix exists in this Namespace"
+        )
+
+        with self.subTest("Test that IP address can be assigned to a valid parent"):
+            IPAddress.objects.create(address="11.0.0.1/32", status=self.status, namespace=namespace)
+
+        with self.subTest("Test that IP address can be assigned to a pool that is a child of a network"):
+            Prefix.objects.create(
+                prefix="11.0.0.8/29", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_POOL
+            )
+            IPAddress.objects.create(address="11.0.0.9/32", status=self.status, namespace=namespace)
+
+    def test_creating_ipaddress_with_an_invalid_parent(self):
+        namespace = Namespace.objects.create(name="test_parenting_constraints")
+        prefixes = (
+            Prefix.objects.create(
+                prefix="10.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            ),
+            Prefix.objects.create(
+                prefix="192.168.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+            ),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            ipaddress = IPAddress(address="192.168.0.1/16", parent=prefixes[0], status=self.status)
+            ipaddress.validated_save()
+        expected_err_msg = (
+            f"{prefixes[0]} cannot be assigned as the parent of {ipaddress}. "
+            f" In namespace {namespace}, the expected parent would be {prefixes[1]}."
+        )
+        self.assertEqual(expected_err_msg, err.exception.message_dict["parent"][0])
+
+    def test_creating_an_ipaddress_without_namespace_or_parent(self):
+        with self.assertRaises(ValidationError) as err:
+            ip = IPAddress(address="1976:2023::1/128", status=self.status)
+            ip.validated_save()
+        self.assertEqual(err.exception.message_dict["parent"][0], "Either a parent or a namespace must be provided.")
+
+
+class TestRIR(ModelTestCases.BaseModelTestCase):
+    model = RIR
+
+
+class TestRouteTarget(ModelTestCases.BaseModelTestCase):
+    model = RouteTarget
+
+
+class TestService(ModelTestCases.BaseModelTestCase):
+    model = Service
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devicetype = DeviceType.objects.first()
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
         device = Device.objects.create(
-            device_type=devicetype,
-            device_role=devicerole,
-            name="TestDevice1",
-            site=site,
-            status=device_status,
+            name="Device 1", location=location, device_type=devicetype, role=devicerole, status=devicestatus
         )
-        interface = Interface.objects.create(device=device, name="eth0")
-        ipaddress_1 = IPAddress(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=IPAddressRoleChoices.ROLE_VIP,
-            assigned_object_id=interface.id,
+        Service.objects.create(
+            device=device,
+            name="Service 1",
+            protocol=ServiceProtocolChoices.PROTOCOL_TCP,
+            ports=[101],
         )
 
-        self.assertRaises(ValidationError, ipaddress_1.clean)
 
-        # Test IPAddress.clean() raises no exception if assigned_object_id and assigned_object_type
-        # are both provided
-        ipaddress_2 = IPAddress(
-            address=netaddr.IPNetwork("192.0.2.1/24"),
-            role=IPAddressRoleChoices.ROLE_VIP,
-            assigned_object_id=interface.id,
-            assigned_object_type=ContentType.objects.get_for_model(Interface),
-        )
-        self.assertIsNone(ipaddress_2.clean())
+class TestVLANGroup(ModelTestCases.BaseModelTestCase):
+    model = VLANGroup
 
-    def test_create_ip_address_without_slaac_status(self):
-        IPAddress.objects.filter(status__slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
-        Status.objects.get(slug=IPAddressStatusChoices.STATUS_SLAAC).delete()
-        IPAddress.objects.create(address="1.1.1.1/32")
-        self.assertTrue(IPAddress.objects.filter(address="1.1.1.1/32").exists())
-
-
-class TestVLANGroup(TestCase):
     def test_vlan_group_validation(self):
         location_type = LocationType.objects.get(name="Elevator")
         location = Location.objects.filter(location_type=location_type).first()
@@ -525,57 +1023,42 @@ class TestVLANGroup(TestCase):
             group.validated_save()
         self.assertIn(f'VLAN groups may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
-        location_type.content_types.add(ContentType.objects.get_for_model(VLANGroup))
-        site_2 = Site.objects.exclude(pk=location.base_site.pk).last()
-        group.site = site_2
-        with self.assertRaises(ValidationError) as cm:
-            group.validated_save()
-        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
-
     def test_get_next_available_vid(self):
-        vlangroup = VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1")
+        vlangroup = VLANGroup.objects.create(name="VLAN Group 1")
+        status = Status.objects.get_for_model(VLAN).first()
         VLAN.objects.bulk_create(
             (
-                VLAN(name="VLAN 1", vid=1, group=vlangroup),
-                VLAN(name="VLAN 2", vid=2, group=vlangroup),
-                VLAN(name="VLAN 3", vid=3, group=vlangroup),
-                VLAN(name="VLAN 5", vid=5, group=vlangroup),
+                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 5", vid=5, vlan_group=vlangroup, status=status),
             )
         )
         self.assertEqual(vlangroup.get_next_available_vid(), 4)
 
-        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, group=vlangroup),))
+        VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup, status=status),))
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
 
 
-class VLANTestCase(TestCase):
+class TestVLAN(ModelTestCases.BaseModelTestCase):
+    model = VLAN
+
     def test_vlan_validation(self):
         location_type = LocationType.objects.get(name="Root")
         location_type.content_types.set([])
         location_type.validated_save()
         location = Location.objects.filter(location_type=location_type).first()
         vlan = VLAN(name="Group 1", vid=1, location=location)
-        vlan.status = Status.objects.get_for_model(VLAN).get(slug="active")
+        vlan.status = Status.objects.get_for_model(VLAN).first()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
         self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(VLAN))
-        site_2 = Site.objects.exclude(pk=location.site.pk).first()
-        vlan.site = site_2
-        with self.assertRaises(ValidationError) as cm:
-            vlan.validated_save()
-        self.assertIn(f'Location "{location.name}" does not belong to site "{site_2.name}"', str(cm.exception))
-
-        vlan.site = location.site
-        group = VLANGroup.objects.create(name="Group 1", site=site_2)
-        vlan.group = group
-        with self.assertRaises(ValidationError) as cm:
-            vlan.validated_save()
-        self.assertIn(f"VLAN group must belong to the assigned site ({location.site.name})", str(cm.exception))
-
-        group.site = location.site
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type, site=location.site)
+        group = VLANGroup.objects.create(name="Group 1")
+        vlan.vlan_group = group
+        location_status = Status.objects.get_for_model(Location).first()
+        location_2 = Location.objects.create(name="Location 2", location_type=location_type, status=location_status)
         group.location = location_2
         group.save()
         with self.assertRaises(ValidationError) as cm:
@@ -584,3 +1067,8 @@ class VLANTestCase(TestCase):
             f'The assigned group belongs to a location that does not include location "{location.name}"',
             str(cm.exception),
         )
+
+
+class TestVRF(ModelTestCases.BaseModelTestCase):
+    model = VRF
+    # TODO(jathan): Add VRF model tests.

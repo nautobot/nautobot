@@ -5,6 +5,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
+from nautobot.core.forms import (
+    BulkEditForm,
+    CommentField,
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+)
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     RelationshipSideChoices,
@@ -15,18 +22,11 @@ from nautobot.extras.models import (
     Note,
     Relationship,
     RelationshipAssociation,
+    Role,
     Status,
     Tag,
 )
-from nautobot.utilities.deprecation import class_deprecated_in_favor_of
-from nautobot.utilities.forms import (
-    BulkEditForm,
-    CommentField,
-    CSVModelChoiceField,
-    CSVModelForm,
-    DynamicModelChoiceField,
-    DynamicModelMultipleChoiceField,
-)
+from nautobot.extras.utils import remove_prefix_from_cf_key
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,6 @@ __all__ = (
     "RelationshipModelFormMixin",
     "StatusModelBulkEditFormMixin",
     "StatusModelFilterFormMixin",
-    "StatusModelCSVFormMixin",
     "TagsBulkEditFormMixin",
     # 2.0 TODO: remove the below deprecated aliases
     "AddRemoveTagsForm",
@@ -50,6 +49,8 @@ __all__ = (
     "CustomFieldFilterForm",
     "CustomFieldModelForm",
     "RelationshipModelForm",
+    "RoleModelBulkEditFormMixin",
+    "RoleModelFilterFormMixin",
     "StatusBulkEditFormMixin",
     "StatusFilterFormMixin",
 )
@@ -71,14 +72,13 @@ class CustomFieldModelFilterFormMixin(forms.Form):
         )
         self.custom_fields = []
         for cf in custom_fields:
-            # 2.0 TODO: #824 cf.name to cf.slug throughout
-            field_name = f"cf_{cf.name}"
+            field_name = cf.add_prefix_to_cf_key()
             if cf.type == "json":
                 self.fields[field_name] = cf.to_form_field(
                     set_initial=False, enforce_required=False, simple_json_filter=True
                 )
             else:
-                self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
+                self.fields[field_name] = cf.to_filter_form_field(set_initial=False, enforce_required=False)
             self.custom_fields.append(field_name)
 
 
@@ -90,6 +90,12 @@ class CustomFieldModelFormMixin(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self._append_customfield_fields()
+        try:
+            if self.Meta.fields == "__all__":
+                # Above we accounted for all cf_* data, so can safely remove _custom_field_data.
+                self.fields.pop("_custom_field_data", None)
+        except AttributeError:
+            pass
 
     def _append_customfield_fields(self):
         """
@@ -97,11 +103,10 @@ class CustomFieldModelFormMixin(forms.ModelForm):
         """
         # Append form fields; assign initial values if modifying and existing object
         for cf in CustomField.objects.filter(content_types=self.obj_type):
-            field_name = f"cf_{cf.slug}"
+            field_name = cf.add_prefix_to_cf_key()
             if self.instance.present_in_database:
                 self.fields[field_name] = cf.to_form_field(set_initial=False)
-                # 2.0 TODO: #824 self.instance.cf.get(cf.slug)
-                self.fields[field_name].initial = self.instance.cf.get(cf.name)
+                self.fields[field_name].initial = self.instance.cf.get(cf.key)
             else:
                 self.fields[field_name] = cf.to_form_field()
 
@@ -111,11 +116,7 @@ class CustomFieldModelFormMixin(forms.ModelForm):
     def clean(self):
         # Save custom field data on instance
         for field_name in self.custom_fields:
-            # 2.0 TODO: #824 will let us just do:
-            # self.instance.cf[field_name[3:]] = self.cleaned_data.get(field_name)
-            # but for now we need:
-            cf = CustomField.objects.get(slug=field_name[3:])
-            self.instance.cf[cf.name] = self.cleaned_data.get(field_name)
+            self.instance.cf[remove_prefix_from_cf_key(field_name)] = self.cleaned_data.get(field_name)
 
         return super().clean()
 
@@ -131,7 +132,7 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
         # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type)
         for cf in custom_fields:
-            field_name = f"cf_{cf.slug}"
+            field_name = cf.add_prefix_to_cf_key()
             # Annotate non-required custom fields as nullable
             if not cf.required:
                 self.nullable_fields.append(field_name)
@@ -141,7 +142,7 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
 
 
 class NoteFormBase(forms.Form):
-    """Base fore the NoteModelFormMixin and NoteModelBulkEditFormMixin."""
+    """Base for the NoteModelFormMixin and NoteModelBulkEditFormMixin."""
 
     object_note = CommentField(label="Note")
 
@@ -214,10 +215,10 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
-            field_name = f"cr_{relationship.slug}__{peer_side}"
+            # "cr_<relationship_key>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship_key>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship_key>__peer"
+            field_name = f"cr_{relationship.key}__{peer_side}"
 
             if field_name in self.relationships:
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".
@@ -257,7 +258,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         for side, relationships_data in instance_relationships.items():
             peer_side = RelationshipSideChoices.OPPOSITE[side]
             for relationship, relationshipassociation_queryset in relationships_data.items():
-                field_name = f"cr_{relationship.slug}__{peer_side}"
+                field_name = f"cr_{relationship.key}__{peer_side}"
                 logger.debug(
                     "Processing relationship %s %s (field %s) for instance %s",
                     relationship,
@@ -347,22 +348,25 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
     def clean(self):
         # Get any initial required relationship objects errors (i.e. non-existent required objects)
         required_objects_errors = self.model.required_related_objects_errors(output_for="ui")
-        already_invalidated_slugs = []
+        already_invalidated_keys = []
         for field, errors in required_objects_errors.items():
             self.add_error(None, errors)
-            relationship_slug = field.split("__")[0][3:]
-            already_invalidated_slugs.append(relationship_slug)
+            # rindex() find the last occurrence of "__" which is
+            # guaranteed to be cr_{key}__source, cr_{key}__destination, or cr_{key}__peer
+            # regardless of how {key} is formatted
+            relationship_key = field[: field.rindex("__")][3:]
+            already_invalidated_keys.append(relationship_key)
 
         required_relationships = []
         # The following query excludes already invalidated relationships (this happened above
         # by checking for the existence of required objects
         # with the call to self.Meta().model.required_related_objects_errors(output_for="ui"))
         for relationship in Relationship.objects.get_required_for_model(self.model).exclude(
-            slug__in=already_invalidated_slugs
+            key__in=already_invalidated_keys
         ):
             required_relationships.append(
                 {
-                    "slug": relationship.slug,
+                    "key": relationship.key,
                     "required_side": RelationshipSideChoices.OPPOSITE[relationship.required_on],
                     "relationship": relationship,
                 }
@@ -371,7 +375,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
         # Get difference of add/remove objects for each required relationship:
         required_relationships_to_check = []
         for required_relationship in required_relationships:
-            required_field = f"cr_{required_relationship['slug']}__{required_relationship['required_side']}"
+            required_field = f"cr_{required_relationship['key']}__{required_relationship['required_side']}"
 
             add_list = []
             if f"add_{required_field}" in self.cleaned_data:
@@ -456,10 +460,10 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for relationship, queryset in relationships.items():
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
                 # If this model is on the "source" side of the relationship, then the field will be named
-                # cr_<relationship-slug>__destination since it's used to pick the destination object(s).
-                # If we're on the "destination" side, the field will be cr_<relationship-slug>__source.
-                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship-slug>__peer
-                field_name = f"cr_{relationship.slug}__{peer_side}"
+                # cr_<relationship_key>__destination since it's used to pick the destination object(s).
+                # If we're on the "destination" side, the field will be cr_<relationship_key>__source.
+                # For a symmetric relationship, both sides are "peer", so the field will be cr_<relationship_key>__peer
+                field_name = f"cr_{relationship.key}__{peer_side}"
                 self.fields[field_name] = relationship.to_form_field(side=side)
 
                 # HTML5 validation for required relationship field:
@@ -501,7 +505,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for relationship in relationships:
                 # The form field name reflects what it provides, i.e. the peer object(s) to link via this relationship.
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
-                field_name = f"cr_{relationship.slug}__{peer_side}"
+                field_name = f"cr_{relationship.key}__{peer_side}"
 
                 # Is the form trying to set this field (create/update a RelationshipAssociation(s))?
                 # If not (that is, clearing the field / deleting RelationshipAssociation(s)), we don't need to check.
@@ -672,10 +676,10 @@ class RelationshipModelFilterFormMixin(forms.Form):
             peer_side = RelationshipSideChoices.OPPOSITE[side]
 
             # If this model is on the "source" side of the relationship, then the field will be named
-            # "cr_<relationship-slug>__destination" since it's used to pick the destination object(s).
-            # If we're on the "destination" side, the field will be "cr_<relationship-slug>__source".
-            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship-slug>__peer"
-            field_name = f"cr_{relationship.slug}__{peer_side}"
+            # "cr_<relationship_key>__destination" since it's used to pick the destination object(s).
+            # If we're on the "destination" side, the field will be "cr_<relationship_key>__source".
+            # For a symmetric relationship, both sides are "peer", so the field will be "cr_<relationship_key>__peer"
+            field_name = f"cr_{relationship.key}__{peer_side}"
 
             if field_name in self.relationships:
                 # This is a symmetric relationship that we already processed from the opposing "initial_side".
@@ -684,6 +688,40 @@ class RelationshipModelFilterFormMixin(forms.Form):
             self.fields[field_name] = relationship.to_form_field(side=side)
             self.fields[field_name].empty_label = None
             self.relationships.append(field_name)
+
+
+#
+# Role
+#
+
+
+class RoleModelBulkEditFormMixin(forms.Form):
+    """Mixin to add non-required `role` choice field to forms."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleModelFilterFormMixin(forms.Form):
+    """
+    Mixin to add non-required `role` multiple-choice field to filter forms.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelMultipleChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+            to_field_name="name",
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
 
 
 class StatusModelBulkEditFormMixin(forms.Form):
@@ -710,19 +748,9 @@ class StatusModelFilterFormMixin(forms.Form):
             required=False,
             queryset=Status.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
-            to_field_name="slug",
+            to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
-
-
-class StatusModelCSVFormMixin(CSVModelForm):
-    """Mixin to add a required `status` choice field to CSV import forms."""
-
-    status = CSVModelChoiceField(
-        queryset=Status.objects.all(),
-        to_field_name="slug",
-        help_text="Operational status",
-    )
 
 
 class TagsBulkEditFormMixin(forms.Form):
