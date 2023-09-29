@@ -79,7 +79,7 @@ export default function GenericObjectListView() {
         return (
             <GenericView gridBackground="white-0">
                 {(menuPath) => (
-                    <NautobotGridItem>
+                    <NautobotGridItem height="full">
                         <ObjectListTable
                             tableData={{}}
                             defaultHeaders={[]}
@@ -115,7 +115,7 @@ export default function GenericObjectListView() {
     return (
         <GenericView gridBackground="white-0">
             {(menuPath) => (
-                <NautobotGridItem>
+                <NautobotGridItem height="full">
                     {/* TODO(timizuo): Use @component/ObjectTable instead, after pagination control has been added to @component/ObjectTable */}
                     <ObjectListTable
                         tableData={listData.results}

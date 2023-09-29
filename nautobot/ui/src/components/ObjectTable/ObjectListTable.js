@@ -3,8 +3,10 @@ import { useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
     Box,
+    calc,
     Divider,
     Flex,
+    getCssVar,
     Heading,
     NtcThumbnailIcon,
     MeatballsIcon,
@@ -172,7 +174,7 @@ export default function ObjectListTable({
     );
 
     return (
-        <Box borderRadius="md" ref={topRef}>
+        <Box borderRadius="md" height="full" ref={topRef}>
             {!include_button ? null : (
                 <Flex align="center">
                     <Heading
@@ -187,16 +189,13 @@ export default function ObjectListTable({
                     </Heading>
                     <Spacer />
                     {!data_fetched ? (
-                        <Box pr="sm">
+                        <Box marginRight="md">
                             <LoadingWidget name={tableTitle} />
                         </Box>
-                    ) : (
-                        () => {}
-                    )}
+                    ) : null}
                     <Box>
                         <ButtonGroup alignItems="center" spacing="md">
                             <UIButton
-                                size="sm"
                                 variant={
                                     activeFiltersCount > 0
                                         ? "primary"
@@ -252,16 +251,41 @@ export default function ObjectListTable({
             )}
 
             <SkeletonText
-                endColor="gray.200"
-                noOfLines={parseInt(page_size)}
-                skeletonHeight="25"
-                spacing="3"
-                marginTop="md"
+                borderRadius="md"
+                endColor="gray-0"
+                height={calc.subtract(
+                    getCssVar("sizes.full"),
+                    // The following compensate for the section header.
+                    getCssVar("lineHeights.tall"),
+                    getCssVar("space.md"),
+                    // The following compensate for the pagination component.
+                    getCssVar("space.md"),
+                    getCssVar("sizes.40")
+                )}
                 isLoaded={data_fetched}
+                marginTop="md"
+                noOfLines={parseInt(page_size, 10)}
+                overflow="hidden"
+                skeletonHeight={calc.subtract(
+                    calc.add(
+                        getCssVar("lineHeights.normal"),
+                        calc.multiply(getCssVar("space.sm"), 2)
+                    ),
+                    "1px"
+                )}
+                spacing="1px"
+                startColor="gray-1"
+                sx={{
+                    ">": {
+                        _first: data_fetched
+                            ? { height: "full" }
+                            : { ">": { _first: { display: "none" } } },
+                    },
+                }}
             >
                 <TableRenderer
                     table={table}
-                    containerProps={{ overflow: "auto" }}
+                    containerProps={{ height: "full" }}
                 />
             </SkeletonText>
             <Pagination
