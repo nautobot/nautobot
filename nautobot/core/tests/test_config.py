@@ -44,26 +44,54 @@ class GetAppSettingsOrConfigTestCase(TestCase):
     def test_settings_if_no_config(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), "Test Samples")
 
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"lowercase_example": "Test Samples"}})
+    def test_settings_if_no_config_lowercase(self):
+        self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "lowercase_example"), "Test Samples")
+
     @override_settings(PLUGINS_CONFIG={"example_plugin": {"SAMPLE_VARIABLE": "Test Samples"}})
     @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
     def test_settings_override_config(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), "Test Samples")
+
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"lowercase_example": "Test Samples"}})
+    @override_config(example_plugin__lowercase_example="Testing")
+    def test_settings_override_config_lowercase(self):
+        self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "lowercase_example"), "Test Samples")
 
     @override_settings(PLUGINS_CONFIG={"example_plugin": {"SAMPLE_VARIABLE": ""}})
     @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
     def test_empty_settings_override_config(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), "")
 
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"lowercase_example": ""}})
+    @override_config(example_plugin__lowercase_example="Testing")
+    def test_empty_settings_override_config_lowercase(self):
+        self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "lowercase_example"), "")
+
     @override_settings(PLUGINS_CONFIG={"example_plugin": {"SAMPLE_VARIABLE": None}})
     @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
     def test_null_settings_override_config(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), None)
 
+    @override_settings(PLUGINS_CONFIG={"example_plugin": {"lowercase_example": None}})
+    @override_config(example_plugin__lowercase_example="Testing")
+    def test_null_settings_override_config_lowercase(self):
+        self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "lowercase_example"), None)
+
     @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
     def test_config_if_no_setting(self):
         self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), "Testing")
 
+    @override_config(example_plugin__lowercase_example="Testing")
+    def test_config_if_no_setting_lowercase(self):
+        self.assertEqual(app_config.get_app_settings_or_config("example_plugin", "lowercase_example"), "Testing")
+
     def test_config_default_value_(self):
         self.assertEqual(
             app_config.get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE"), "example_default_value"
+        )
+
+    def test_config_default_value_lowercase(self):
+        self.assertEqual(
+            app_config.get_app_settings_or_config("example_plugin", "lowercase_example"), "example_lowercase_variable"
         )

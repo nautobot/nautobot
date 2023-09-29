@@ -13,9 +13,12 @@ class AnimalSoundsConfig(NautobotAppConfig):
     constance_config = {
         'DOG_SOUND': ConstanceConfigItem(default='woof', help_text='Dog sound'),
         'CAT_SOUND': ConstanceConfigItem(default='meow', help_text='Cat sound'),
-        'FOX_SOUND': ConstanceConfigItem(default=123, help_text='Fox sound', field_type=int),
+        'fox_sound': ConstanceConfigItem(default=123, help_text='Fox sound', field_type=int),
     }
 ```
+
+!!! note
+    If moving an existing variable to a Database Backed variable, you should keep the variable name as previously defined.
 
 ![Nautobot app in the admin config](../../../media/plugins/plugin_admin_config.png)
 
