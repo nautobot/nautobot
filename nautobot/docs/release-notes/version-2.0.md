@@ -363,6 +363,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 
 - [#4550](https://github.com/nautobot/nautobot/issues/4550) - Fixed a 500 error caused by `PrefixForm` when `prefix_length` was omitted from `prefix` input.
 - [#4559](https://github.com/nautobot/nautobot/issues/4559) - Fixed behavior of a `DynamicGroup` with an invalid `filter` to fail closed rather than failing open.
+- [#4566](https://github.com/nautobot/nautobot/issues/4566) - Fixed table sticky headers in Firefox.
 
 ### Housekeeping
 
