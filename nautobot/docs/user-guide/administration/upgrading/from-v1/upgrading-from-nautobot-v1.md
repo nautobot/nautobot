@@ -146,7 +146,7 @@ Some fields were only renamed without making any changes to the data so the cons
 ## Database (ORM) Changes
 
 !!! warning
-    Changes were made to model and related model fields. In some cases this may invalidate or make subtle changes to existing Permission Constraint filter data. Please review the [Permission Constraint Migration](#permission-constraint-migration) section above for more information. These changes might also affect Filer Extensions you have written in your apps.
+    Changes were made to model and related model fields. In some cases this may invalidate or make subtle changes to existing Permission Constraint filter data. Please review the [Permission Constraint Migration](#permission-constraint-migration) section above for more information. These changes might also affect Filter Extensions you have written in your apps.
 
 ### Database Field Behavior Changes
 

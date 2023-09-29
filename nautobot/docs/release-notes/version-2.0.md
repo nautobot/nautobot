@@ -158,7 +158,7 @@ Check out the [Region and Site Related Data Model Migration Guide](../user-guide
 #### Corrected Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 !!! warning
-    This change may introduce breaking changes to your existing `DynamicGroup`, Object Permission, `Relationship` filters, and any other saved references to these fields. You should review these models before upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#corrected-filter-fields) guide for more details.
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#corrected-filter-fields) guide for more details.
 
 There were also instances where a foreign-key related field (e.g. `console_ports`) was incorrectly mapped to a boolean membership filter (e.g. `has_console_ports`), making it impossible to filter based on specific values of the foreign key:
 
@@ -175,7 +175,7 @@ Check out the specific changes documented in the table at [UI and REST API Filte
 #### Enhanced Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 !!! warning
-    This change may introduce breaking changes to your existing `DynamicGroup`, Object Permission, `Relationship` filters, and any other saved references to these fields. You should review these models before upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#enhanced-filter-fields) guide for more details.
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#enhanced-filter-fields) guide for more details.
 
 Many filter fields have been enhanced to enable filtering by both names and UUID primary keys.
 
@@ -210,7 +210,7 @@ The "Container" status will be removed and all prefixes will be migrated to the 
 #### Renamed Database Foreign Keys and Related Names ([#2520](https://github.com/nautobot/nautobot/issues/2520))
 
 !!! warning
-    This change may introduce breaking changes to your existing `DynamicGroup`, Object Permission, `Relationship` filters, and any other saved references to these fields. You should review these models before upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields) guide for more details.
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields) guide for more details.
 
 Some Foreign Key fields have been renamed to follow a more self-consistent pattern across the Nautobot app. This change is aimed to offer more clarity and predictability when it comes to related object database operations:
 
@@ -267,7 +267,7 @@ Check out more `related-name` changes documented in the table [Renamed Database 
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 !!! warning
-    This change may introduce breaking changes to your existing `DynamicGroup`, Object Permission, `Relationship` filters, and any other saved references to these fields. You should review these models before upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-filter-fields) guide for more details.
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-filter-fields) guide for more details.
 
 Some filter fields have been renamed to reflect their functionalities better.
 
@@ -335,7 +335,7 @@ When we launched Nautobot we introduced the `nautobot-server` command as the pri
 #### Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 !!! warning
-    This change may introduce breaking changes to your existing `DynamicGroup`, Object Permission, `Relationship` filters, and any other saved references to these fields. You should review these models before upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields) guide for more details.
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields) guide for more details.
 
 As a part of breaking changes made in v2.X, shadowed filter/filterset fields are being removed throughout Nautobot.
 
