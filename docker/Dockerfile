@@ -67,8 +67,12 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get install --no-install-recommends -y git mime-support libxml2 libmariadb3 openssl nodejs && \
     apt-get autoremove -y
 
+# Ensure the npm install is cached, updated, and has a long timeout for slow connections
+# The Node.JS install above should install npm 9, but we pin it here just in case
+# npm 10 has shown issues with slow CI environments
 RUN --mount=type=cache,target="/root/.npm",sharing=locked \
-    npm install -g npm@latest
+    npm config set fetch-retry-maxtimeout 300000 && \
+    npm install -g npm@9
 
 # DL3013 - pin all Python package versions
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
@@ -124,14 +128,16 @@ COPY --chown=nautobot:nautobot nautobot/ui/package.json nautobot/ui/package-lock
 WORKDIR /opt/nautobot/ui
 
 # Install (non-development) Node dependencies of Nautobot UI
-RUN npm install --omit=dev
+# npm ci is used instead of npm install to ensure that the package-lock.json is used
+RUN npm ci --omit=dev
 
 ################################ Stage: node-dev-dependencies (intermediate build target)
 
 FROM node-dependencies AS node-dev-dependencies
 
 # Install development Node dependencies of Nautobot UI
-RUN npm install --include=dev
+# npm ci is used instead of npm install to ensure that the package-lock.json is used
+RUN npm ci --include=dev
 
 ################################ Stage: poetry (stub for poetry only)
 

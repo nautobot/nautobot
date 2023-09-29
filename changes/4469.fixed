@@ -1,2 +1,0 @@
-Fixed issue that resulted in stacktrace if no model docs and dunder str was not resolvable.
-Fixed `alter_queryset` not being respected by list views based on `NautobotUIViewSet`.

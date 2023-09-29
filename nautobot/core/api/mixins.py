@@ -60,6 +60,7 @@ class WritableSerializerMixin:
         If it is a dictionary, we return it after remove non-filter fields.
         If it is a primary key, we return a dictionary object formatted like this {"pk": pk}
         """
+
         if isinstance(data, dict):
             params = dict_to_filter_params(data)
             return self.remove_non_filter_fields(params)

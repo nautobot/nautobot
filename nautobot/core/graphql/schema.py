@@ -153,7 +153,7 @@ def extend_schema_type_null_field_choice(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
     # This is a workaround implemented for https://github.com/nautobot/nautobot/issues/466#issuecomment-877991184
     # We want to iterate over fields and see if they meet the criteria: null=False, blank=True, and choices defined
@@ -191,7 +191,7 @@ def extend_schema_type_filter(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
     for field in model._meta.get_fields():
         # Check attribute is a ManyToOne field
@@ -220,7 +220,7 @@ def extend_schema_type_custom_field(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     cfs = CustomField.objects.get_for_model(model)
@@ -268,7 +268,7 @@ def extend_schema_type_computed_field(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     cfs = ComputedField.objects.get_for_model(model)
@@ -309,7 +309,7 @@ def extend_schema_type_tags(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     fields_name = [field.name for field in model._meta.get_fields()]
@@ -332,7 +332,7 @@ def extend_schema_type_config_context(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     fields_name = [field.name for field in model._meta.get_fields()]

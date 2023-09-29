@@ -2,14 +2,20 @@ import {
     Box,
     Breadcrumb,
     Breadcrumbs,
+    calc,
     Flex,
+    getCssVar,
     NautobotGrid,
 } from "@nautobot/nautobot-ui";
 import { FiltersPanelContainer } from "@components/FiltersPanel";
 import { Navbar } from "@components/Navbar";
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
-import { Link as ReactRouterLink, useLocation } from "react-router-dom";
+import {
+    Link as ReactRouterLink,
+    useLocation,
+    useParams,
+} from "react-router-dom";
 
 import { useGetUIMenuQuery } from "@utils/api";
 import { uiUrl } from "@utils/url";
@@ -88,6 +94,8 @@ export default function GenericView({
     const BREADCRUMB_KEY_HOME = "0_home";
 
     const { pathname } = useLocation();
+    const { app_label, model_name, object_id } = useParams();
+
     const { data: menu, isSuccess } = useGetUIMenuQuery();
 
     // Using useMemo to prevent unnecessary re-execution of findMenuPathRecursive
@@ -115,6 +123,8 @@ export default function GenericView({
 
     const hasBreadcrumbs =
         breadcrumbs.length > 0 && breadcrumbs[0].key !== BREADCRUMB_KEY_HOME;
+
+    const isListView = Boolean(app_label && model_name && !object_id);
 
     return (
         <Flex
@@ -149,6 +159,17 @@ export default function GenericView({
                         gridAutoRows="auto"
                         {...(hasBreadcrumbs
                             ? { minHeight: "auto" }
+                            : undefined)}
+                        {...(isListView
+                            ? {
+                                  gridAutoRows:
+                                      getCssVar("sizes.full").reference,
+                                  maxHeight: calc.subtract(
+                                      getCssVar("sizes.full"),
+                                      getCssVar("lineHeights.normal"),
+                                      getCssVar("space.md")
+                                  ),
+                              }
                             : undefined)}
                     >
                         {typeof children === "function"

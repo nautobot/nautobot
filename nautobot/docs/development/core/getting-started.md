@@ -323,18 +323,18 @@ brew install hadolint
 brew install markdownlint-cli
 ```
 
-#### Install npm
+#### Install Node.JS and npm
 
 [npm](https://www.npmjs.com/) is the tool used to install and compile the Nautobot front-end UI. On macOS with [Homebrew](https://brew.sh) you can install npm by running:
 
 ```no-highlight
-brew install npm
+brew install node@18
 ```
 
-You should then move to the `nautobot/ui/` subdirectory and run `npm install` to install all of the JS dependencies for local development of the Nautobot UI:
+You should then move to the `nautobot/ui/` subdirectory and run `npm ci` to install all of the JS dependencies for local development of the Nautobot UI:
 
 ```no-highlight
-npm install
+npm ci
 ```
 
 Be sure to switch back to the base directory of the repository after you do this.

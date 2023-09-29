@@ -78,9 +78,9 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
     """Returns the from_url, to_path and from_branch of a Git Repo
     Returns:
         namedtuple (GitRepoInfo): (
-        from_url: git repo url with token or user if available,
-        to_path: path to location of git repo on local machine
-        from_branch: current git repo branch
+        from_url (str): git repo url with token or user if available,
+        to_path (Path): path to location of git repo on local machine
+        from_branch (str): current git repo branch
     )
     """
 
@@ -134,7 +134,7 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
       head (str): Optional Git commit hash to check out instead of pulling branch latest.
 
     Returns:
-      bool: Whether any change to the local repo actually occurred.
+        (bool): Whether any change to the local repo actually occurred.
     """
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
@@ -166,7 +166,7 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
 def git_repository_dry_run(repository_record, logger):  # pylint: disable=redefined-outer-name
     """Log the difference between local branch and remote branch files.
     Args:
-        repository_record (GitRepository)
+        repository_record (GitRepository): The GitRepostiory instance to diff.
         logger (logging.Logger): Logger to log results to.
     """
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)

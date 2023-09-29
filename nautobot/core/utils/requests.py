@@ -17,7 +17,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 
     Args:
         request_querydict (QueryDict): QueryDict to convert
-        filterset_class: Filterset class
+        filterset (FilterSet): Filterset class
 
     Examples:
         >>> convert_querydict_to_factory_formset_acceptable_querydict({"status": ["active", "decommissioning"], "name__ic": ["location"]},)
@@ -107,9 +107,12 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     to return only queryset filterable parameters.
 
     Args:
-        filter_params(QueryDict): Filter param querydict
-        non_filter_params(list): Non queryset filterable params
-        filterset: The FilterSet class
+        filter_params (QueryDict): Filter param querydict
+        non_filter_params (list): Non queryset filterable params
+        filterset (FilterSet): The FilterSet class
+
+    Returns:
+        (QueryDict): Filter param querydict with only queryset filterable params
     """
     for non_filter_param in non_filter_params:
         filter_params.pop(non_filter_param, None)

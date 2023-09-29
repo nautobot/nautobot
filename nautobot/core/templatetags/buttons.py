@@ -36,9 +36,9 @@ def edit_button(instance, use_pk=False, key="slug"):
     Render a button to edit a model instance.
 
     Args:
-        instance: Model record.
-        use_pk: Used for backwards compatibility, no-op in this function.
-        key: Used for backwards compatibility, no-op in this function.
+        instance (BaseModel): Model record.
+        use_pk (bool): Used for backwards compatibility, no-op in this function.
+        key (str): Used for backwards compatibility, no-op in this function.
     """
     viewname = lookup.get_route_for_model(instance, "edit")
 
@@ -63,9 +63,9 @@ def delete_button(instance, use_pk=False, key="slug"):
     Render a button to delete a model instance.
 
     Args:
-        instance: Model record.
-        use_pk: Used for backwards compatibility, no-op in this function.
-        key: Used for backwards compatibility, no-op in this function.
+        instance (BaseModel): Model record.
+        use_pk (bool): Used for backwards compatibility, no-op in this function.
+        key (str): Used for backwards compatibility, no-op in this function.
     """
     viewname = lookup.get_route_for_model(instance, "delete")
 

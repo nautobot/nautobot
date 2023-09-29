@@ -1,5 +1,4 @@
 """Test IPAM forms."""
-from unittest import skip
 
 from django.test import TestCase
 
@@ -25,14 +24,14 @@ class BaseNetworkFormTest:
             prefix="192.168.1.0/24", namespace=self.namespace, status=self.prefix_status
         )
         self.parent2 = Prefix.objects.create(
-            prefix="192.168.0.0/24", namespace=self.namespace, status=self.prefix_status
+            prefix="192.168.0.0/16", namespace=self.namespace, status=self.prefix_status
         )
         self.parent6 = Prefix.objects.create(
             prefix="2001:0db8::/40", namespace=self.namespace, status=self.prefix_status
         )
 
     def test_valid_ip_address(self):
-        data = {self.field_name: "192.168.1.0/24", "namespace": self.namespace, "status": self.status}
+        data = {self.field_name: "192.168.2.0/24", "namespace": self.namespace, "status": self.status}
         data.update(self.extra_data)
         form = self.form_class(data)
 
@@ -64,7 +63,6 @@ class BaseNetworkFormTest:
         self.assertEqual("CIDR mask (e.g. /24) is required.", form.errors[self.field_name][0])
 
 
-@skip("Needs to be updated for Namespaces")
 class PrefixFormTest(BaseNetworkFormTest, TestCase):
     form_class = forms.PrefixForm
     field_name = "prefix"

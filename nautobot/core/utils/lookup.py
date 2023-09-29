@@ -55,7 +55,7 @@ def get_route_for_model(model, action, api=False):
         api (bool): If set, return an API route.
 
     Returns:
-        str: return the name of the view for the model/action provided.
+        (str): return the name of the view for the model/action provided.
 
     Examples:
         >>> get_route_for_model(Device, "list")
@@ -107,8 +107,13 @@ def get_related_class_for_model(model, module_name, object_suffix):
 
     If a matching class is not found, this will return `None`.
 
+    Args:
+        model (Union[BaseModel, str]): A model class, instance, or dotted representation
+        module_name (str): The name of the module to search for the object class
+        object_suffix (str): The suffix to append to the model name to find the object class
+
     Returns:
-        Either the matching object class or None
+        (Union[BaseModel, str]): Either the matching object class or None
     """
     if isinstance(model, str):
         model = get_model_from_name(model)
@@ -143,8 +148,11 @@ def get_filterset_for_model(model):
 
     If a matching `FilterSet` is not found, this will return `None`.
 
+    Args:
+        model (BaseModel): A model class
+
     Returns:
-        Either the `FilterSet` class or `None`
+        (Union[FilterSet,None]): Either the `FilterSet` class or `None`
     """
     return get_related_class_for_model(model, module_name="filters", object_suffix="FilterSet")
 
@@ -163,7 +171,7 @@ def get_form_for_model(model, form_prefix=""):
             `FooFilterForm`) that will come after the model name.
 
     Returns:
-        Either the `Form` class or `None`
+        (Union[Form, None]): Either the `Form` class or `None`
     """
     object_suffix = f"{form_prefix}Form"
     return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
@@ -177,7 +185,10 @@ def get_table_for_model(model):
 
     If a matching `Table` is not found, this will return `None`.
 
+    Args:
+        model (BaseModel): A model class
+
     Returns:
-        Either the `Table` class or `None`
+        (Union[Table, None]): Either the `Table` class or `None`
     """
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")

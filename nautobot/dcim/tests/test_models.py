@@ -7,7 +7,6 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.core.models.utils import construct_composite_key
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
     CableStatusChoices,
@@ -703,9 +702,9 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
         # Grab an arbitrary leaf node
         location = Location.objects.filter(parent__isnull=False, children__isnull=True).first()
         self.assertEqual([location.name], location.natural_key())
-        self.assertEqual(construct_composite_key([location.name]), location.composite_key)
+        # self.assertEqual(construct_composite_key([location.name]), location.composite_key)  # TODO: Revist this if we reintroduce composite keys
         self.assertEqual(location, Location.objects.get_by_natural_key([location.name]))
-        self.assertEqual(location, Location.objects.get(composite_key=location.composite_key))
+        # self.assertEqual(location, Location.objects.get(composite_key=location.composite_key))  # TODO: Revist this if we reintroduce composite keys
 
     def test_custom_natural_key_args_to_kwargs(self):
         """Test that the custom implementation of Location.natural_key_args_to_kwargs works as intended."""
@@ -960,34 +959,34 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
     def test_natural_key_default(self):
         """Ensure that default natural-key for Device is (name, tenant, location)."""
         self.assertEqual([self.device.name, None, *self.device.location.natural_key()], self.device.natural_key())
-        self.assertEqual(
-            construct_composite_key([self.device.name, None, *self.device.location.natural_key()]),
-            self.device.composite_key,
-        )
+        # self.assertEqual(
+        #     construct_composite_key([self.device.name, None, *self.device.location.natural_key()]),
+        #     self.device.composite_key,
+        # )  # TODO: Revist this if we reintroduce composite keys
         self.assertEqual(
             self.device,
             Device.objects.get_by_natural_key([self.device.name, None, *self.device.location.natural_key()]),
         )
-        self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))
+        # self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))  # TODO: Revist this if we reintroduce composite keys
 
     def test_natural_key_overrides(self):
         """Ensure that the natural-key for Device is affected by settings/Constance."""
         with override_config(DEVICE_NAME_AS_NATURAL_KEY=True):
             self.assertEqual([self.device.name], self.device.natural_key())
-            self.assertEqual(construct_composite_key([self.device.name]), self.device.composite_key)
+            # self.assertEqual(construct_composite_key([self.device.name]), self.device.composite_key)  # TODO: Revist this if we reintroduce composite keys
             self.assertEqual(self.device, Device.objects.get_by_natural_key([self.device.name]))
-            self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))
+            # self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))  # TODO: Revist this if we reintroduce composite keys
 
         with override_config(LOCATION_NAME_AS_NATURAL_KEY=True):
             self.assertEqual([self.device.name, None, self.device.location.name], self.device.natural_key())
-            self.assertEqual(
-                construct_composite_key([self.device.name, None, self.device.location.name]),
-                self.device.composite_key,
-            )
+            # self.assertEqual(
+            #     construct_composite_key([self.device.name, None, self.device.location.name]),
+            #     self.device.composite_key,
+            # )  # TODO: Revist this if we reintroduce composite keys
             self.assertEqual(
                 self.device, Device.objects.get_by_natural_key([self.device.name, None, self.device.location.name])
             )
-            self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))
+            # self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))  # TODO: Revist this if we reintroduce composite keys
 
     def test_device_creation(self):
         """
