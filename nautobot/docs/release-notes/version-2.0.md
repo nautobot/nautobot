@@ -352,6 +352,23 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.0 (2023-09-28)
+
+### Added
+
+- [#4553](https://github.com/nautobot/nautobot/issues/4553) - Implement table sticky headers.
+- [#4556](https://github.com/nautobot/nautobot/issues/4556) - Added documentation for using lowercase variables in App provided Constance Config.
+
+### Fixed
+
+- [#4550](https://github.com/nautobot/nautobot/issues/4550) - Fixed a 500 error caused by `PrefixForm` when `prefix_length` was omitted from `prefix` input.
+- [#4559](https://github.com/nautobot/nautobot/issues/4559) - Fixed behavior of a `DynamicGroup` with an invalid `filter` to fail closed rather than failing open.
+
+### Housekeeping
+
+- [#4489](https://github.com/nautobot/nautobot/issues/4489) - Added release note overview to Jobs Overhaul.
+- [#4492](https://github.com/nautobot/nautobot/issues/4492) - Added slug removal documentation to the 2.0 release notes Release Overview.
+- [#4488](https://github.com/nautobot/nautobot/issues/4488) - Added documentation on the ability to assign one IPAddress to multiple Interfaces/VMInterfaces in Nautobot 2.0 release overview.
 
 ## v2.0.0.rc-4 (2023-09-27)
 
