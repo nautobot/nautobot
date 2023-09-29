@@ -41,11 +41,11 @@ Django = "~3.2.20"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~4.3.0", optional = true}
+django-auth-ldap = {version = "~4.5.0", optional = true}
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.5.0"
 # Provides a database backend & models for Celery task results
-django-celery-results = "~2.4.0"
+django-celery-results = "~2.5.0"
 # Management of app configuration via the Django admin UI
 django-constance = {version = "~2.9.1", extras = ["database"]}
 # Permit cross-domain API requests
@@ -59,7 +59,7 @@ django-filter = "~23.1"
 # Health check endpoint
 django-health-check = "~3.17.0"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
-django-jinja = "~2.10.2"
+django-jinja = "~2.11.0"
 # Prometheus metrics for Django
 django-prometheus = "~2.3.1"
 # Redis cache for Django used for distributed locking
@@ -82,7 +82,7 @@ djangorestframework = "~3.14.0"
 # Adds JSON schema support to API endpoints for rendering JSON schema forms.
 drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "0.26.3", extras = ["sidecar"]}
+drf-spectacular = {version = "0.26.5", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.8.0"
 # Git integrations for Python
@@ -92,14 +92,14 @@ GitPython = "~3.1.32"
 graphene-django = "~2.16.0"
 # Graphene Optimizer
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
-graphene-django-optimizer = "~0.8.0"
+graphene-django-optimizer = "~0.10.0"
 # Template rendering engine
 Jinja2 = "~3.1.2"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = ">=4.7.0,<4.19.0"
+jsonschema = ">=4.19.1,<4.20.0"
 # Rendering of markdown files to HTML
 # NOTE: Markdown 3.4.x is available but mkdocs 1.4.3 isn't yet compatible with it.
-Markdown = "~3.3.7"
+Markdown = "~3.4.0"
 # Escape text to use HTML and XML
 MarkupSafe = "~2.1.3"
 # MySQL database adapter
@@ -107,7 +107,7 @@ mysqlclient = {version = "~2.2.0", optional = true}
 # NAPALM automation library
 napalm = {version = "~4.1.0", optional = true}
 # IP prefix and address handling
-netaddr = "~0.8.0"
+netaddr = "~0.9.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
@@ -130,7 +130,7 @@ PyYAML = "~6.0"
 # Social authentication core
 social-auth-core = {version = "~4.4.2", optional = true, extras = ["openidconnect", "saml"]}
 # Social authentication/registration with support for many auth providers
-social-auth-app-django = "~5.2.0"
+social-auth-app-django = "~5.3.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
 
@@ -148,7 +148,7 @@ sso = ["social-auth-core"]
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~4.1.0"
+django-debug-toolbar = "~4.2.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Nautobot example plugin used for testing
@@ -156,11 +156,11 @@ example-plugin = {path = "examples/example_plugin", develop = true}
 # Nautobot test plugin used for testing core view overrides
 example-plugin-with-view-override = { path = "examples/example_plugin_with_view_override", develop = true }
 # Random data generation
-factory-boy = "~3.2.1"
+factory-boy = "~3.3.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~13.4.2"
+rich = "~13.5.0"
 # Change log management and generation
 towncrier = "~23.6.0"
 # Watch files for celery and mkdocs reload
@@ -168,7 +168,7 @@ watchdog = "~3.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.4.3"
+mkdocs = "~1.5.0"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
@@ -176,21 +176,21 @@ mkdocs-gen-files = "~0.5.0"
 # Allow Markdown files to include other files
 mkdocs-include-markdown-plugin = "~4.0.4"
 # Material for mkdocs theme
-mkdocs-material = "~9.1.18"
+mkdocs-material = "~9.4.0"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.5"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.22.0"
+mkdocstrings = "~0.23.0"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.3.0"
+mkdocstrings-python = "~1.7.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code style enforcement
-black = "~23.7.0"
+black = "~23.9.0"
 # Code style checking and limited static analysis
-flake8 = {version = "~6.0.0", python = ">=3.8.1"}
+flake8 = {version = "~6.1.0", python = ">=3.8.1"}
 # Code style checking for python import statements
 isort = "~5.12.0"
 # Code static analysis
@@ -198,19 +198,19 @@ pylint = "~2.17.4"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # YAML linting
-yamllint = "~1.30.0"
+yamllint = "~1.32.0"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
-coverage = "~7.2.7"
+coverage = "~7.3.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Integration Tests
 requests = ">=2.28.0,<2.32.0"
 # Selenium web drivers for live integration testing
-selenium = "~4.9.1"
+selenium = "~4.13.0"
 # Abstraction layer for working with Selenium
-splinter = "~0.18.1"
+splinter = "~0.19.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
