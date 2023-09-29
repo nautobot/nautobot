@@ -4,7 +4,8 @@
 
 This document describes all new features and changes in Nautobot 2.0.
 
-If you are a user migrating from Nautobot v1.X, please refer to the ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) documentation.
+!!! note
+    Please thoroughly review the release overview below to see what changes may affect you during upgrade. Our ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) guide provides a lot of information around pre- and post-migration helpers we have written that should assist you in a successful 2.0 upgrade. If you have any questions, please reach out to us on the **#nautobot** channel on [Network to Code's Slack community](https://slack.networktocode.com/) or [GitHub Discussions](https://github.com/nautobot/nautobot/discussions).
 
 ## Release Overview
 
@@ -156,6 +157,9 @@ Check out the [Region and Site Related Data Model Migration Guide](../user-guide
 
 #### Corrected Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
+!!! warning
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#corrected-filter-fields) guide for more details.
+
 There were also instances where a foreign-key related field (e.g. `console_ports`) was incorrectly mapped to a boolean membership filter (e.g. `has_console_ports`), making it impossible to filter based on specific values of the foreign key:
 
 For example in v1.x:
@@ -169,6 +173,9 @@ This has been addressed in v2.x as follows:
 Check out the specific changes documented in the table at [UI and REST API Filter Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#corrected-filter-fields)
 
 #### Enhanced Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
+
+!!! warning
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#enhanced-filter-fields) guide for more details.
 
 Many filter fields have been enhanced to enable filtering by both names and UUID primary keys.
 
@@ -201,6 +208,9 @@ Existing prefixes with a status of "Container" will be migrated to the "Containe
 The "Container" status will be removed and all prefixes will be migrated to the "Active" status if it exists. If the "Active" status was deleted, prefixes will be migrated to the first available prefix status in the database that is not "Container".
 
 #### Renamed Database Foreign Keys and Related Names ([#2520](https://github.com/nautobot/nautobot/issues/2520))
+
+!!! warning
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields) guide for more details.
 
 Some Foreign Key fields have been renamed to follow a more self-consistent pattern across the Nautobot app. This change is aimed to offer more clarity and predictability when it comes to related object database operations:
 
@@ -255,6 +265,9 @@ Circuit.objects.filter(circuit_terminations__site__in=["ams01", "ams02", "atl03"
 Check out more `related-name` changes documented in the table [Renamed Database Fields](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields)
 
 #### Renamed Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
+
+!!! warning
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-filter-fields) guide for more details.
 
 Some filter fields have been renamed to reflect their functionalities better.
 
@@ -321,6 +334,9 @@ When we launched Nautobot we introduced the `nautobot-server` command as the pri
 
 #### Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
+!!! warning
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields) guide for more details.
+
 As a part of breaking changes made in v2.X, shadowed filter/filterset fields are being removed throughout Nautobot.
 
 In Nautobot 1.x, for some of the foreign-key related fields:
@@ -352,6 +368,24 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.0 (2023-09-28)
+
+### Added
+
+- [#4553](https://github.com/nautobot/nautobot/issues/4553) - Implement table sticky headers.
+- [#4556](https://github.com/nautobot/nautobot/issues/4556) - Added documentation for using lowercase variables in App provided Constance Config.
+
+### Fixed
+
+- [#4550](https://github.com/nautobot/nautobot/issues/4550) - Fixed a 500 error caused by `PrefixForm` when `prefix_length` was omitted from `prefix` input.
+- [#4559](https://github.com/nautobot/nautobot/issues/4559) - Fixed behavior of a `DynamicGroup` with an invalid `filter` to fail closed rather than failing open.
+- [#4566](https://github.com/nautobot/nautobot/issues/4566) - Fixed table sticky headers in Firefox.
+
+### Housekeeping
+
+- [#4489](https://github.com/nautobot/nautobot/issues/4489) - Added release note overview to Jobs Overhaul.
+- [#4492](https://github.com/nautobot/nautobot/issues/4492) - Added slug removal documentation to the 2.0 release notes Release Overview.
+- [#4488](https://github.com/nautobot/nautobot/issues/4488) - Added documentation on the ability to assign one IPAddress to multiple Interfaces/VMInterfaces in Nautobot 2.0 release overview.
 
 ## v2.0.0.rc-4 (2023-09-27)
 
