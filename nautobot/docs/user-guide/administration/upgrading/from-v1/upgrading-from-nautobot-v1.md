@@ -145,6 +145,9 @@ Some fields were only renamed without making any changes to the data so the cons
 
 ## Database (ORM) Changes
 
+!!! warning
+    Changes were made to model and related model fields. In some cases this may invalidate or make subtle changes to existing Permission Constraint filter data. Please review the [Permission Constraint Migration](#permission-constraint-migration) section above for more information. These changes might also affect Filter Extensions you have written in your apps.
+
 ### Database Field Behavior Changes
 
 Most of the database field behavior changes in Nautobot 2.0 fall into the following general categories:
@@ -340,8 +343,8 @@ Please see the [documentation on the `?depth` query parameter](../../../platform
 
 ## UI, GraphQL, and REST API Filter Changes
 
-!!! note
-    These sweeping changes made to model filter fields will, in some cases, invalidate existing `DynamicGroup` instances' filter data. Please utilize the [`nautobot-server audit_dynamic_groups`](../../tools/nautobot-server.md#audit_dynamic_groups) helper command when you are cleaning up `DynamicGroup` filter data. You should run this command after your Nautobot instance is upgraded to v2.x successfully.
+!!! warning
+    Sweeping changes were made to model filter fields. In some cases this may invalidate or make subtle changes to existing `DynamicGroup` or `Relationship` instances' filter data. Please utilize the [`nautobot-server audit_dynamic_groups`](../../tools/nautobot-server.md#audit_dynamic_groups) helper command when you are cleaning up `DynamicGroup` filter data. You should run this command after your Nautobot instance is upgraded to v2.x successfully. The helper command will not catch all possible issues, but it will catch some common ones. You should review all of your `DynamicGroup` filter data after the upgrade to ensure that they are still valid. At the time of this writing, an audit helper command for `Relationship` filter data is not yet available.
 
 ### Removed Changelog URL from View Context
 
