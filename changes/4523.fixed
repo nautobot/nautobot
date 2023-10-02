@@ -1,0 +1,1 @@
+Fixed `invoke eslint` not running against local development environment.
