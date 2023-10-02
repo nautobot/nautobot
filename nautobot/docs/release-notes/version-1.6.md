@@ -86,7 +86,6 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 - [#4446](https://github.com/nautobot/nautobot/issues/4446) - Updated `GitPython` to `3.1.36` to address `CVE-2023-41040`.
 
-
 ## v1.6.2 (2023-09-01)
 
 ### Added
