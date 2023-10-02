@@ -72,6 +72,20 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.3 (2023-10-02)
+
+### Added
+
+- [#3372](https://github.com/nautobot/nautobot/issues/3372) - Added ObjectPermission constraints check to pre_migrate management command.
+
+### Fixed
+
+- [#4396](https://github.com/nautobot/nautobot/issues/4396) - Fixed rack form silently dropping custom field values.
+
+### Security
+
+- [#4446](https://github.com/nautobot/nautobot/issues/4446) - Updated `GitPython` to `3.1.36` to address `CVE-2023-41040`.
+
 ## v1.6.2 (2023-09-01)
 
 ### Added
