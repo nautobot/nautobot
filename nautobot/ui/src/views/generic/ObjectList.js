@@ -5,6 +5,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { NautobotGridItem, Text } from "@nautobot/nautobot-ui";
 
 import { ObjectListTable } from "@components";
+import { NON_FILTER_QUERY_PARAMS } from "@components/FiltersPanel";
 import GenericView from "@views/generic/GenericView";
 import { useGetRESTAPIQuery } from "@utils/api";
 import {
@@ -49,6 +50,9 @@ export default function GenericObjectListView() {
         app_label: app_label,
         model_name: model_name,
         plugin: isPluginView,
+        filters: [...searchParams].filter(
+            ([param]) => !NON_FILTER_QUERY_PARAMS.includes(param)
+        ),
     };
     if (searchParams.get("limit")) {
         searchQuery.limit = searchParams.get("limit");
@@ -75,11 +79,12 @@ export default function GenericObjectListView() {
         return (
             <GenericView gridBackground="white-0">
                 {(menuPath) => (
-                    <NautobotGridItem>
+                    <NautobotGridItem height="full">
                         <ObjectListTable
                             tableData={{}}
                             defaultHeaders={[]}
                             tableHeaders={[]}
+                            filterData={{}}
                             totalCount={0}
                             active_page_number={active_page_number}
                             page_size={page_size}
@@ -101,21 +106,23 @@ export default function GenericObjectListView() {
     }
 
     // tableHeaders = all fields; and defaultHeaders = only the ones we want to see at first.
-    const tableHeaders = headerData.view_options.fields;
-    let defaultHeaders = headerData.view_options.list_display_fields;
-    // If list_display_fields is not defined or empty, default to showing all headers.
+    const tableHeaders = headerData.view_options.list.all_fields;
+    let defaultHeaders = headerData.view_options.list.default_fields;
+    // If list.default_fields is not defined or empty, default to showing all headers.
     if (!defaultHeaders.length) {
         defaultHeaders = tableHeaders;
     }
     return (
         <GenericView gridBackground="white-0">
             {(menuPath) => (
-                <NautobotGridItem>
+                <NautobotGridItem height="full">
                     {/* TODO(timizuo): Use @component/ObjectTable instead, after pagination control has been added to @component/ObjectTable */}
                     <ObjectListTable
                         tableData={listData.results}
                         defaultHeaders={defaultHeaders}
+                        objectType={headerData.object_type}
                         tableHeaders={tableHeaders}
+                        filterData={headerData.filters}
                         totalCount={listData.count}
                         active_page_number={active_page_number}
                         page_size={page_size}

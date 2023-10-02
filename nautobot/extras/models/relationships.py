@@ -65,20 +65,20 @@ class RelationshipModel(models.Model):
         Return a dictionary of RelationshipAssociation querysets for all custom relationships
 
         Returns:
-            response {
-                "source": {
-                    <Relationship instance #1>: <RelationshipAssociation queryset #1>,
-                    <Relationship instance #2>: <RelationshipAssociation queryset #2>,
-                },
-                "destination": {
-                    <Relationship instance #3>: <RelationshipAssociation queryset #3>,
-                    <Relationship instance #4>: <RelationshipAssociation queryset #4>,
-                },
-                "peer": {
-                    <Relationship instance #5>: <RelationshipAssociation queryset #5>,
-                    <Relationship instance #6>: <RelationshipAssociation queryset #6>,
-                },
-            }
+            (dict): `{
+                    "source": {
+                        <Relationship instance #1>: <RelationshipAssociation queryset #1>,
+                        <Relationship instance #2>: <RelationshipAssociation queryset #2>,
+                    },
+                    "destination": {
+                        <Relationship instance #3>: <RelationshipAssociation queryset #3>,
+                        <Relationship instance #4>: <RelationshipAssociation queryset #4>,
+                    },
+                    "peer": {
+                        <Relationship instance #5>: <RelationshipAssociation queryset #5>,
+                        <Relationship instance #6>: <RelationshipAssociation queryset #6>,
+                    },
+                }`
         """
         src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
         if advanced_ui is not None:
@@ -139,30 +139,30 @@ class RelationshipModel(models.Model):
         Used for rendering relationships in the UI; see nautobot/core/templates/inc/relationships_table_rows.html
 
         Returns:
-            response {
-                "source": {
-                    <Relationship instance #1>: {   # one-to-one relationship that self is the source of
-                        "label": "...",
-                        "peer_type": <ContentType>,
-                        "has_many": False,
-                        "value": <model instance>,     # single destination for this relationship
-                        "url": "...",
+            (dict): `{
+                    "source": {
+                        <Relationship instance #1>: {   # one-to-one relationship that self is the source of
+                            "label": "...",
+                            "peer_type": <ContentType>,
+                            "has_many": False,
+                            "value": <model instance>,     # single destination for this relationship
+                            "url": "...",
+                        },
+                        <Relationship instance #2>: {   # one-to-many or many-to-many relationship that self is a source for
+                            "label": "...",
+                            "peer_type": <ContentType>,
+                            "has_many": True,
+                            "value": None,
+                            "queryset": <RelationshipAssociation queryset #2>   # set of destinations for the relationship
+                        },
                     },
-                    <Relationship instance #2>: {   # one-to-many or many-to-many relationship that self is a source for
-                        "label": "...",
-                        "peer_type": <ContentType>,
-                        "has_many": True,
-                        "value": None,
-                        "queryset": <RelationshipAssociation queryset #2>   # set of destinations for the relationship
+                    "destination": {
+                        (same format as "source" dict - relationships that self is the destination of)
                     },
-                },
-                "destination": {
-                    (same format as "source" dict - relationships that self is the destination of)
-                },
-                "peer": {
-                    (same format as "source" dict - symmetric relationships that self is involved in)
-                },
-            }
+                    "peer": {
+                        (same format as "source" dict - symmetric relationships that self is involved in)
+                    },
+                }`
         """
 
         relationships_by_side = self.get_relationships(**kwargs)
@@ -226,12 +226,12 @@ class RelationshipModel(models.Model):
     ):
         """
         Args:
-            output_for: either "ui" or "api" depending on usage
-            initial_data: submitted form/serializer data to validate against
-            relationships_key_specified: if the "relationships" key was provided or not
-            instance: an optional model instance to validate against
+            output_for (str): either "ui" or "api" depending on usage
+            initial_data (dict): submitted form/serializer data to validate against
+            relationships_key_specified (bool): if the "relationships" key was provided or not
+            instance (Optional[BaseModel]): an optional model instance to validate against
         Returns:
-            List of field error dicts if any are found
+            (list[dict]): List of field error dicts if any are found
         """
 
         required_relationships = Relationship.objects.get_required_for_model(cls)

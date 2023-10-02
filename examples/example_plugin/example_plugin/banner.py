@@ -51,6 +51,9 @@ def banner(context, *args, **kwargs) -> Optional[Banner]:
     content += format_html(
         "<div>SAMPLE_VARIABLE is {}</div>", get_app_settings_or_config("example_plugin", "SAMPLE_VARIABLE")
     )
+    content += format_html(
+        "<div>lowercase_example is {}</div>", get_app_settings_or_config("example_plugin", "lowercase_example")
+    )
 
     # Default banner rendering
     return Banner(content=content, banner_class=BannerClassChoices.CLASS_INFO)

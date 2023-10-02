@@ -2,10 +2,11 @@ from copy import deepcopy
 import csv
 from io import BytesIO, StringIO
 import json
+from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
-from django.test import override_settings, TestCase
+from django.test import RequestFactory, override_settings, TestCase
 from django.urls import reverse
 
 from constance import config
@@ -19,7 +20,7 @@ from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.versioning import NautobotAPIVersioning
-from nautobot.core.models.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices
@@ -536,10 +537,15 @@ class NautobotCSVRendererTest(TestCase):
     APIViewTestCases.ListObjectsViewTestCase.test_list_objects_csv for each API.
     """
 
+    @override_settings(ALLOWED_HOSTS=["*"])
     def test_render_success(self):
         location_type = dcim_models.LocationType.objects.filter(parent__isnull=False).first()
+
+        request = RequestFactory().get(reverse("dcim-api:location-list"), ACCEPT="text/csv")
+        setattr(request, "accepted_media_type", ["text/csv"])
+
         data = dcim_serializers.LocationTypeSerializer(
-            instance=location_type, context={"request": None, "depth": 1}
+            instance=location_type, context={"request": request, "depth": 0}
         ).data
         csv_text = NautobotCSVRenderer().render(data)
 
@@ -550,8 +556,7 @@ class NautobotCSVRendererTest(TestCase):
         self.assertEqual(read_data["id"], str(location_type.id))
         self.assertIn("display", read_data)
         self.assertEqual(read_data["display"], location_type.display)
-        self.assertIn("composite_key", read_data)
-        self.assertEqual(read_data["composite_key"], location_type.composite_key)
+        self.assertNotIn("composite_key", read_data)
         self.assertIn("name", read_data)
         self.assertEqual(read_data["name"], location_type.name)
         self.assertIn("content_types", read_data)
@@ -560,8 +565,75 @@ class NautobotCSVRendererTest(TestCase):
         self.assertEqual(read_data["description"], location_type.description)
         self.assertIn("nestable", read_data)
         self.assertEqual(read_data["nestable"], str(location_type.nestable))
-        self.assertIn("parent", read_data)
-        self.assertEqual(read_data["parent"], location_type.parent.composite_key)
+        self.assertIn("parent__name", read_data)
+        self.assertEqual(read_data["parent__name"], location_type.parent.name)
+
+
+class BaseModelSerializerTest(TestCase):
+    """
+    Some unit tests for BaseModelSerializer (using concrete subclasses, since BaseModelSerializer is abstract).
+    """
+
+    def test_advanced_tab_fields(self):
+        """Test the advanced_tab_fields classproperty."""
+        self.assertEqual(
+            dcim_serializers.DeviceSerializer().advanced_tab_fields,
+            ["id", "url", "object_type", "created", "last_updated", "natural_slug"],
+        )
+
+    def test_list_display_fields(self):
+        """Test the list_display_fields classproperty."""
+        self.assertEqual(
+            dcim_serializers.DeviceSerializer().list_display_fields,
+            dcim_serializers.DeviceSerializer().Meta.list_display_fields,
+        )
+
+    def test_determine_view_options(self):
+        """Test the determine_view_options API."""
+        view_options = dcim_serializers.DeviceSerializer().determine_view_options()
+        self.maxDiff = None
+
+        # assert base structure rather than exhaustively testing every single field
+
+        self.assertIn("list", view_options)
+
+        self.assertIn("all_fields", view_options["list"])
+        self.assertIn({"dataIndex": "name", "key": "name", "title": "Name"}, view_options["list"]["all_fields"])
+        self.assertIn(
+            {"dataIndex": "parent_bay", "key": "parent_bay", "title": "Parent bay"}, view_options["list"]["all_fields"]
+        )
+
+        self.assertIn("default_fields", view_options["list"])
+        self.assertIn({"dataIndex": "name", "key": "name", "title": "Name"}, view_options["list"]["default_fields"])
+        self.assertNotIn(
+            {"dataIndex": "parent_bay", "key": "parent_bay", "title": "Parent bay"},
+            view_options["list"]["default_fields"],
+        )
+
+        self.assertIn("retrieve", view_options)
+        self.assertIn("tabs", view_options["retrieve"])
+
+        self.assertIn("Advanced", view_options["retrieve"]["tabs"])
+        self.assertIn("Object Details", view_options["retrieve"]["tabs"]["Advanced"][0])
+        self.assertIn("fields", view_options["retrieve"]["tabs"]["Advanced"][0]["Object Details"])
+        self.assertIn("id", view_options["retrieve"]["tabs"]["Advanced"][0]["Object Details"]["fields"])
+
+        self.assertIn("Device", view_options["retrieve"]["tabs"])
+        self.assertIn("Device", view_options["retrieve"]["tabs"]["Device"][0])
+        self.assertIn("fields", view_options["retrieve"]["tabs"]["Device"][0]["Device"])
+        self.assertIn("location", view_options["retrieve"]["tabs"]["Device"][0]["Device"]["fields"])
+
+        self.assertIn("Tags", view_options["retrieve"]["tabs"]["Device"][1])
+        self.assertIn("fields", view_options["retrieve"]["tabs"]["Device"][1]["Tags"])
+        self.assertIn("tags", view_options["retrieve"]["tabs"]["Device"][1]["Tags"]["fields"])
+
+        # Custom tab added through DeviceSerializer.get_additional_detail_view_tabs()
+        self.assertIn("Virtual Chassis", view_options["retrieve"]["tabs"])
+        self.assertIn("Virtual Chassis", view_options["retrieve"]["tabs"]["Virtual Chassis"][0])
+        self.assertIn("fields", view_options["retrieve"]["tabs"]["Virtual Chassis"][0]["Virtual Chassis"])
+        self.assertIn(
+            "virtual_chassis", view_options["retrieve"]["tabs"]["Virtual Chassis"][0]["Virtual Chassis"]["fields"]
+        )
 
 
 class WritableNestedSerializerTest(testing.APITestCase):
@@ -690,6 +762,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["location"][0].startswith("Multiple objects match"))
 
+    @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key(self):
         data = {
             "vid": 100,
@@ -707,6 +780,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.location, self.location1)
 
+    @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key_no_match(self):
         data = {
             "vid": 100,
@@ -922,3 +996,26 @@ class GetSettingsAPIViewTestCase(testing.APITestCase):
             self.assertEqual(response.status_code, 400)
             expected_response = {"error": "Invalid settings names specified: NAPALM_PASSWORD."}
             self.assertEqual(response.data, expected_response)
+
+
+class NewUIReadyRoutesAPIViewTestCase(testing.APITestCase):
+    def test_new_ui_ready_routes(self):
+        """Assert get settings value"""
+        url = reverse("ui-api:new-ui-ready-routes")
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, 200)
+        expected_response = [
+            "^$",
+            "^login\\/$",
+            "^dcim\\/device\\-types\\/$",
+            "^dcim\\/device\\-types\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+            "^dcim\\/devices\\/$",
+            "^dcim\\/devices\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+            "^dcim\\/locations\\/$",
+            "^dcim\\/locations\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+            "^ipam\\/ip\\-addresses\\/$",
+            "^ipam\\/ip\\-addresses\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+            "^ipam\\/prefixes\\/$",
+            "^ipam\\/prefixes\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
+        ]
+        self.assertEqual(sorted(response.data), sorted(expected_response))

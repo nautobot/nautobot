@@ -30,6 +30,113 @@ $ nautobot-server pre_migrate
 All pre-migration checks passed.
 ```
 
+### Permission Constraint Migration
+
+Permission constraints that contain references to fields or models that were changed or removed in Nautobot 2.0 will have to be updated manually after the upgrade. For example, any permission constraints that reference a `Site` will need to be updated to reference the `Location` model instead. The `nautobot-server pre_migrate` command will output a list of all permission constraints that need to be updated after the upgrade.
+
+```no-highlight
+>>> Running permission constraint checks...
+
+One or more permission constraints may be affected by the Nautobot 2.0 migration.
+These permission constraints will have to be updated manually after upgrading to
+Nautobot 2.0 to reference new models and/or values. Please review the following
+warnings and make sure to document the objects referenced by these constraints
+before upgrading:
+
+ObjectPermission 'backbone devices' (id: ced686c3-2b34-4612-974a-bad766512661) has a constraint that references a model (nautobot.dcim.models.devices.DeviceRole) that will be migrated to a new model by the Nautobot 2.0 migration.
+{
+    "device_role": "e99adc77-40ef-4a0f-b2c1-26dbf6648ef1"
+}
+
+ObjectPermission 'example job run' (id: 41c6d03e-6388-47eb-b575-1c7a21725bc3) has a constraint that references a model field (nautobot.extras.models.jobs.Job.name) that may be changed by the Nautobot 2.0 migration.
+{
+    "name": "Example job, does nothing"
+}
+
+ObjectPermission 'emea' (id: 2d3b7aae-98ab-44ec-af89-43d3002a1b7d) has a constraint that references a model (nautobot.dcim.models.sites.Region) that will be migrated to a new model by the Nautobot 2.0 migration.
+[
+    {
+        "site__region__slug": "emea"
+    },
+    {
+        "id": "4c9f3e5c-2dc6-46f6-95ac-ac778369edfc"
+    }
+]
+```
+
+We recommend taking inventory of any objects referenced by primary key in permission constraints for the following models:
+
+- `dcim.DeviceRole`
+- `dcim.RackRole`
+- `extras.TaggedItem`
+- `ipam.Aggregate`
+- `ipam.IPAddress`
+- `ipam.Prefix`
+- `ipam.Role`
+
+This is because the primary key for these objects may be changed during the migration. You will not be able to use the primary key value from the old object in the constraint to find the new object.
+
+!!! note
+    This pre-migration check only checks the last model referenced in a constraint filter. If you have nested filters (`device_role__devices`) they may not be reported by this check. You should review all of your permission constraints after the upgrade to ensure that they are still valid.
+
+#### Examples
+
+Primary keys for the migrated `Site` and `Region` objects were retained in the `Location` model, so you do not need to update the primary key value in any `Site` or `Region` constraints:
+
+```json title="Old Constraint"
+{
+    "site": "4c9f3e5c-2dc6-46f6-95ac-ac778369edfc"
+}
+```
+
+```json title="New Constraint"
+{
+    "location": "4c9f3e5c-2dc6-46f6-95ac-ac778369edfc"
+}
+```
+
+Other models such as the `DeviceRole` that was migrated to `Role` did not retain the original primary key. In this case you will need to find the new object's primary key and update the constraint to reference the new model and new primary key value:
+
+```json title="Old Constraint"
+{
+    "device_role": "00000000-0000-0000-0000-000000000000"
+}
+```
+
+```json title="New Constraint"
+{
+    "role": "11111111-1111-1111-1111-111111111111"
+}
+```
+
+You may also need to update field names in your permission constraints. For example, if you have a permission constraint that references the `slug` field on a model that was removed in Nautobot 2.0, you will need to update the constraint to reference a different field instead:
+
+```json title="Old Constraint"
+{
+    "slug": "router-01"
+}
+```
+
+```json title="New Constraint"
+{
+    "id": "5f96ac85-32d4-435d-84e4-66e631ae133f"
+}
+```
+
+Some fields were only renamed without making any changes to the data so the constraint update will be a simple matter of updating the field name:
+
+```json title="Old Constraint"
+{
+    "circuit__type__name": "metro-ethernet-1000mb"
+}
+```
+
+```json title="New Constraint"
+{
+    "circuit__circuit_type__name": "metro-ethernet-1000mb"
+}
+```
+
 ## Dependency Changes
 
 - Nautobot no longer uses or supports the use of `django-cryptography`.
@@ -37,6 +144,9 @@ All pre-migration checks passed.
 - Nautobot no longer uses or supports the use of `django-rq`.
 
 ## Database (ORM) Changes
+
+!!! warning
+    Changes were made to model and related model fields. In some cases this may invalidate or make subtle changes to existing Permission Constraint filter data. Please review the [Permission Constraint Migration](#permission-constraint-migration) section above for more information. These changes might also affect Filter Extensions you have written in your apps.
 
 ### Database Field Behavior Changes
 
@@ -63,7 +173,7 @@ Most renamed database fields in Nautobot 2.0 fall into the following general cat
 Most removed database fields in Nautobot 2.0 fall into the following general categories:
 
 1. Removal of references to removed models such as `Site` and `Region`
-2. Removal of `slug` fields in preference to the use of autogenerated composite keys.
+2. Removal of `slug` fields in preference to the use of natural keys.
 3. Removal of `django-mptt` internal fields (`lft`, `rght`, `tree_id`)
 
 ??? info "Full table of removed database fields"
@@ -201,7 +311,7 @@ Most renamed API fields in Nautobot 2.0 fall into the following general categori
 Most removed database fields in Nautobot 2.0 fall into the following general categories:
 
 1. Removal of references to removed models such as `Site` and `Region`
-2. Removal of `slug` fields in preference to the use of autogenerated composite keys.
+2. Removal of `slug` fields in preference to the use of natural keys.
 
 ??? info "Full table of removed API fields"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-api-removed-fields.yaml}
@@ -222,6 +332,10 @@ These endpoints `/ipam/roles/`, `/dcim/rack-roles/` and `/dcim/device-roles/` ar
 | `/dcim/rack-roles/`   | `/extras/roles/` |
 | `/ipam/roles/`        | `/extras/roles/` |
 
+### New Interface to IP Address Relationship Endpoint
+
+The through table (`ipam.IPAddressToInterface`) for the `IPAddress` to `Interface`/`VMInterface` many-to-many relationship has been exposed through the REST API at `/api/ipam/ip-address-to-interface/`. This endpoint must be used to create, retrieve, update, and delete relationships between IP addresses and interfaces through the REST API. Each `ipam.IPAddressToInterface` object maps a single `ipam.IPAddress` object to a single `dcim.Interface` or `virtualization.VMInterface` object. When creating relationships through this endpoint, the `ip_address` field is required and one of `interface` or `vm_interface` is required. There are additional boolean fields (`is_primary`, `is_default`, etc.) exposed through the REST API that may be used if desired but are not currently implemented in the Nautobot UI.
+
 ### API Query Parameters Changes
 
 Nautobot 2.0 removes the `?brief` query parameter and adds support for the `?depth` query parameter. As a result, the ability to specify `brief_mode` in `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and `MultiMatchModelMultipleChoiceField` has also been removed. For every occurrence of the aforementioned fields where you have `brief_mode` set to `True/False` (e.g. `brief_mode=True`), please remove the statement, leaving other occurrences of the fields where you do not have `brief_mode` specified as they are.
@@ -229,8 +343,8 @@ Please see the [documentation on the `?depth` query parameter](../../../platform
 
 ## UI, GraphQL, and REST API Filter Changes
 
-!!! note
-    These sweeping changes made to model filter fields will, in some cases, invalidate existing `DynamicGroup` instances' filter data. Please utilize the [`nautobot-server audit_dynamic_groups`](../../tools/nautobot-server.md#audit_dynamic_groups) helper command when you are cleaning up `DynamicGroup` filter data. You should run this command after your Nautobot instance is upgraded to v2.x successfully.
+!!! warning
+    Sweeping changes were made to model filter fields. In some cases this may invalidate or make subtle changes to existing `DynamicGroup` or `Relationship` instances' filter data. Please utilize the [`nautobot-server audit_dynamic_groups`](../../tools/nautobot-server.md#audit_dynamic_groups) helper command when you are cleaning up `DynamicGroup` filter data. You should run this command after your Nautobot instance is upgraded to v2.x successfully. The helper command will not catch all possible issues, but it will catch some common ones. You should review all of your `DynamicGroup` filter data after the upgrade to ensure that they are still valid. At the time of this writing, an audit helper command for `Relationship` filter data is not yet available.
 
 ### Removed Changelog URL from View Context
 
@@ -288,7 +402,7 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 
 - Because of the replacement of the `?brief` REST API query parameter with `?depth` and the removal of all `Nested*Serializers`, some of the classes and mixins are removed because they are no longer needed.
 - In the redesigned UI of Nautobot 2.0, menu items may no longer contain buttons, and so the `NavMenuButton` class and its subclasses have been removed as they are no longer needed/supported.
-- With the reimplementation of CSV import and export, `CSVForm` classes are generally no longer needed, and so a number of mixins have been removed.
+- With the reimplementation of CSV import and export, `CSVForm` classes are generally no longer needed, and so a number of related mixin classes have been removed.
 
 ??? info "Full table of code removals"
     {data-table user-guide/administration/upgrading/from-v1/tables/v2-code-removals.yaml}

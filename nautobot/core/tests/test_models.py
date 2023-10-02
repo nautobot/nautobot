@@ -1,6 +1,7 @@
 import time
 import uuid
 
+from unittest import skip
 from unittest.mock import patch
 
 from django.core.cache import cache
@@ -26,6 +27,7 @@ class BaseModelTest(TestCase):
 
 
 class ModelUtilsTestCase(TestCase):
+    @skip("Composite keys aren't being supported at this time")
     def test_construct_deconstruct_composite_key(self):
         """Test that construct_composite_key() and deconstruct_composite_key() work and are symmetric."""
         for values, expected_composite_key in (
@@ -70,6 +72,7 @@ class NaturalKeyTestCase(BaseModelTest):
         dt = DeviceType.objects.first()
         self.assertEqual(dt.natural_key(), [dt.manufacturer.name, dt.model])
 
+    @skip("Composite keys aren't being supported at this time")
     def test_composite_key(self):
         """Test the composite_key default implementation with some representative models."""
         mfr = Manufacturer.objects.first()

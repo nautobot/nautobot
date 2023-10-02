@@ -432,6 +432,7 @@ class Prefix(PrimaryModel):
         null=True,
         editable=False,
         db_index=True,
+        verbose_name="IP Version",
     )
     location = models.ForeignKey(
         to="dcim.Location",
@@ -528,8 +529,6 @@ class Prefix(PrimaryModel):
 
     def __str__(self):
         return str(self.prefix)
-
-    natural_key_field_names = ["namespace", "prefix"]
 
     def _deconstruct_prefix(self, prefix):
         if prefix:
@@ -1043,14 +1042,13 @@ class IPAddress(PrimaryModel):
     def __init__(self, *args, **kwargs):
         address = kwargs.pop("address", None)
         namespace = kwargs.pop("namespace", None)
-        # We don't want users providing their own parent since it will be derived automatically.
-        parent = kwargs.pop("parent", None)
+        super().__init__(*args, **kwargs)
+
         # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and parent is not None:
-            namespace = parent.namespace
+        if namespace is None and self.parent is not None:
+            namespace = self.parent.namespace
         self._namespace = namespace
 
-        super().__init__(*args, **kwargs)
         self._deconstruct_address(address)
 
     def __str__(self):
@@ -1066,6 +1064,17 @@ class IPAddress(PrimaryModel):
 
     natural_key_field_names = ["parent__namespace", "host"]
 
+    def _get_closest_parent(self):
+        try:
+            return (
+                Prefix.objects.filter(namespace=self._namespace)
+                # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
+                # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
+                .get_closest_parent(self.host, include_self=True)
+            )
+        except Prefix.DoesNotExist as e:
+            raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
+
     def clean(self):
         super().clean()
 
@@ -1079,30 +1088,40 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        # Force dns_name to lowercase
-        self.dns_name = self.dns_name.lower()
+        # If neither `parent` or `namespace` was provided; raise this exception
+        if self._namespace is None:
+            raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
+
+        # Validate `parent` can be used as the parent for this ipaddress
+        if self.parent:
+            closest_parent = self._get_closest_parent()
+            if self.parent != closest_parent:
+                raise ValidationError(
+                    {
+                        "parent": (
+                            f"{self.parent} cannot be assigned as the parent of {self}. "
+                            f" In namespace {self._namespace}, the expected parent would be {closest_parent}."
+                        )
+                    }
+                )
+            self.parent = closest_parent
 
     def save(self, *args, **kwargs):
-        if not self.present_in_database:
-            if self._namespace is None:
-                raise ValidationError({"parent": "Namespace could not be determined."})
-            namespace = self._namespace
-        else:
-            namespace = self._namespace or self.parent.namespace
-
-        # Determine the closest parent automatically based on the Namespace.
-        self.parent = (
-            Prefix.objects.filter(namespace=namespace)
-            # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
-            # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
-            .get_closest_parent(self.host, include_self=True)
-        )
-
         # 3.0 TODO: uncomment the below to enforce this constraint
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
 
+        # Force dns_name to lowercase
+        if not self.dns_name.islower:
+            self.dns_name = self.dns_name.lower()
+
+        # validated_save is not always called, particularly in a test environment;
+        # If validated_save is used in creation with an invalid parent specified, the clean method will throw an Exception;
+        # however, if validated_save is not used and an invalid parent is specified, provided parent will be silently discarded.
+        # TODO(timizuo): Optimize the usage of `_get_closest_parent()` by adding a check to determine if it has already been invoked.
+        #   especially considering that it might have been called in the clean method.
+        self.parent = self._get_closest_parent()
         super().save(*args, **kwargs)
 
     @property
@@ -1187,6 +1206,8 @@ class IPAddressToInterface(BaseModel):
             ["ip_address", "interface"],
             ["ip_address", "vm_interface"],
         ]
+        verbose_name = "IP Address Assignment"
+        verbose_name_plural = "IP Address Assignments"
 
     def clean(self):
         super().clean()

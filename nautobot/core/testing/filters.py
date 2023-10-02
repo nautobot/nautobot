@@ -113,7 +113,7 @@ class FilterTestCases:
                     params = {filter_name: test_data}
                     filterset_result = self.filterset(params, self.queryset).qs
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
-                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
         def test_boolean_filters_generic(self):
             """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`

@@ -126,7 +126,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v2"
       - name: "Install NPM Dependencies"
         working-directory: ./nautobot/ui
-        run: "npm install"
+        run: "npm ci"
       - name: "Setup base aliases for tests"
         working-directory: ./nautobot/ui
         run: "mkdir generated && cp src/file_templates/jsconfig-base.json generated/jsconfig.paths.json"
@@ -251,7 +251,7 @@ jobs:
     runs-on: "ubuntu-22.04"
     if: |
       github.event_name == 'push' &&
-      (github.ref_name == 'develop' || github.ref_name == 'next')
+      (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm/1.6')
     needs:
       - "check-schema"
       - "integration-test"
@@ -269,12 +269,16 @@ jobs:
         id: "config"
         shell: "bash"
         run: |
-          export BRANCH="${{ github.ref_name }}"
+          if [[ "${{ github.ref_name }}" == "ltm/1.6" ]]; then
+            export BRANCH="ltm-1.6"
+          else
+            export BRANCH="${{ github.ref_name }}"
+          fi
           export TAG_LATEST="false"
           export TAG_LATEST_FOR_BRANCH="false"
           export TAG_LATEST_FOR_PY="false"
 
-          if [[ $BRANCH == "develop" ]]; then
+          if [[ $BRANCH == "ltm-1.6" ]]; then
             export TAG_LATEST_FOR_PY="true"
           fi
 

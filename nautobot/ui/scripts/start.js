@@ -25,14 +25,10 @@ const {
     prepareUrls,
 } = require("react-dev-utils/WebpackDevServerUtils");
 const openBrowser = require("react-dev-utils/openBrowser");
-const semver = require("semver");
 const paths = require("../config/paths");
 const configFactory = require("../config/webpack.config");
 const createDevServerConfig = require("../config/webpackDevServer.config");
-const getClientEnvironment = require("../config/env");
-const react = require(require.resolve("react", { paths: [paths.appPath] }));
 
-const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
 const useYarn = fs.existsSync(paths.yarnLockFile);
 const isInteractive = process.stdout.isTTY;
 
@@ -98,7 +94,7 @@ checkBrowsers(paths.appPath, isInteractive)
             webpack,
         });
         // Load proxy config
-        const proxySetting = require(paths.appPackageJson).proxy;
+        const proxySetting = "http://nautobot:8080";
         const proxyConfig = prepareProxy(
             proxySetting,
             paths.appPublic,
@@ -115,14 +111,6 @@ checkBrowsers(paths.appPath, isInteractive)
         devServer.startCallback(() => {
             if (isInteractive) {
                 clearConsole();
-            }
-
-            if (env.raw.FAST_REFRESH && semver.lt(react.version, "16.10.0")) {
-                console.log(
-                    chalk.yellow(
-                        `Fast Refresh requires React 16.10 or higher. You are using React ${react.version}.`
-                    )
-                );
             }
 
             console.log(chalk.cyan("Starting the development server...\n"));

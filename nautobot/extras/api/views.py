@@ -6,13 +6,12 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
-from rest_framework.filters import OrderingFilter
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,12 +19,13 @@ from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
-from nautobot.core.api.filter_backends import NautobotFilterBackend
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
     ModelViewSet,
+    ModelViewSetMixin,
+    NautobotAPIVersionMixin,
     ReadOnlyModelViewSet,
 )
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
@@ -80,18 +80,37 @@ class ExtrasRootView(APIRootView):
 
 
 class NotesViewSetMixin:
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply "view" permissions on the POST /notes/ endpoint, otherwise as ModelViewSetMixin.
+        """
+        if request.user.is_authenticated and self.action == "notes":
+            self.queryset = self.queryset.restrict(request.user, "view")
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
+    class CreateNotePermissions(TokenPermissions):
+        """As nautobot.core.api.authentication.TokenPermissions, but enforcing add_note permission."""
+
+        perms_map = {
+            "GET": ["%(app_label)s.view_%(model_name)s", "extras.view_note"],
+            "POST": ["%(app_label)s.view_%(model_name)s", "extras.add_note"],
+        }
+
     @extend_schema(methods=["get"], filters=False, responses={200: serializers.NoteSerializer(many=True)})
     @extend_schema(
         methods=["post"],
         request=serializers.NoteInputSerializer,
         responses={201: serializers.NoteSerializer(many=False)},
     )
-    @action(detail=True, url_path="notes", methods=["get", "post"])
-    def notes(self, request, pk=None):
+    @action(detail=True, url_path="notes", methods=["get", "post"], permission_classes=[CreateNotePermissions])
+    def notes(self, request, *args, **kwargs):
         """
         API methods for returning or creating notes on an object.
         """
-        obj = get_object_or_404(self.queryset, pk=pk)
+        obj = get_object_or_404(
+            self.queryset, **{self.lookup_field: self.kwargs[self.lookup_url_kwarg or self.lookup_field]}
+        )
         if request.method == "POST":
             content_type = ContentType.objects.get_for_model(obj)
             data = request.data
@@ -116,7 +135,7 @@ class NotesViewSetMixin:
 #
 
 
-class ComputedFieldViewSet(ModelViewSet, NotesViewSetMixin):
+class ComputedFieldViewSet(NotesViewSetMixin, ModelViewSet):
     """
     Manage Computed Fields through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -131,22 +150,6 @@ class ComputedFieldViewSet(ModelViewSet, NotesViewSetMixin):
 #
 
 
-class ConfigContextFilterBackend(NautobotFilterBackend):
-    """
-    Used by views that work with config context models (device and virtual machine).
-
-    Recognizes that "exclude" is not a filterset parameter but rather a view parameter (see ConfigContextQuerySetMixin)
-    """
-
-    def get_filterset_kwargs(self, request, queryset, view):
-        kwargs = super().get_filterset_kwargs(request, queryset, view)
-        try:
-            kwargs["data"].pop("exclude")
-        except KeyError:
-            pass
-        return kwargs
-
-
 class ConfigContextQuerySetMixin:
     """
     Used by views that work with config context models (device and virtual machine).
@@ -154,25 +157,22 @@ class ConfigContextQuerySetMixin:
     data annotation or not.
     """
 
-    filter_backends = [ConfigContextFilterBackend, OrderingFilter]
-
     def get_queryset(self):
         """
         Build the proper queryset based on the request context
 
-        If the `exclude` query param
-        includes `config_context` as a value, return the base queryset.
+        If the `include` query param includes `config_context`, return the queryset annotated with config context.
 
-        Else, return the queryset annotated with config context data
+        Else, return the base queryset.
         """
         queryset = super().get_queryset()
         request = self.get_serializer_context()["request"]
-        if request is not None and "config_context" in request.query_params.get("exclude", []):
-            return queryset
-        return queryset.annotate_config_context_data()
+        if request is not None and "config_context" in request.query_params.get("include", []):
+            return queryset.annotate_config_context_data()
+        return queryset
 
 
-class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
+class ConfigContextViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = ConfigContext.objects.prefetch_related(
         "locations",
         "roles",
@@ -190,7 +190,7 @@ class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
 #
 
 
-class ConfigContextSchemaViewSet(ModelViewSet, NotesViewSetMixin):
+class ConfigContextSchemaViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     filterset_class = filters.ConfigContextSchemaFilterSet
@@ -217,7 +217,7 @@ class ContentTypeViewSet(viewsets.ReadOnlyModelViewSet):
 #
 
 
-class CustomFieldViewSet(ModelViewSet, NotesViewSetMixin):
+class CustomFieldViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = CustomField.objects.all()
     serializer_class = serializers.CustomFieldSerializer
     filterset_class = filters.CustomFieldFilterSet
@@ -248,7 +248,7 @@ class CustomFieldModelViewSet(ModelViewSet):
         return context
 
 
-class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin):
+class NautobotModelViewSet(NotesViewSetMixin, CustomFieldModelViewSet):
     """Base class to use for API ViewSets based on OrganizationalModel or PrimaryModel.
 
     Can also be used for models derived from BaseModel, so long as they support Notes.
@@ -260,7 +260,7 @@ class NautobotModelViewSet(CustomFieldModelViewSet, NotesViewSetMixin):
 #
 
 
-class CustomLinkViewSet(ModelViewSet, NotesViewSetMixin):
+class CustomLinkViewSet(NotesViewSetMixin, ModelViewSet):
     """
     Manage Custom Links through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -275,7 +275,7 @@ class CustomLinkViewSet(ModelViewSet, NotesViewSetMixin):
 #
 
 
-class DynamicGroupViewSet(ModelViewSet, NotesViewSetMixin):
+class DynamicGroupViewSet(NotesViewSetMixin, ModelViewSet):
     """
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -315,7 +315,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
 #
 
 
-class ExportTemplateViewSet(ModelViewSet, NotesViewSetMixin):
+class ExportTemplateViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
@@ -357,7 +357,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
 #
 
 
-class GraphQLQueryViewSet(ModelViewSet, NotesViewSetMixin):
+class GraphQLQueryViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = GraphQLQuery.objects.all()
     serializer_class = serializers.GraphQLQuerySerializer
     filterset_class = filters.GraphQLQueryFilterSet
@@ -449,17 +449,15 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
     return scheduled_job
 
 
-class JobViewSet(
-    # DRF mixins:
+class JobViewSetBase(
+    NautobotAPIVersionMixin,
     # note no CreateModelMixin
+    mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
-    # Nautobot mixins:
-    BulkUpdateModelMixin,
-    BulkDestroyModelMixin,
-    # Base class
-    ReadOnlyModelViewSet,
     NotesViewSetMixin,
+    ModelViewSetMixin,
+    viewsets.GenericViewSet,
 ):
     queryset = Job.objects.all()
     serializer_class = serializers.JobSerializer
@@ -467,7 +465,7 @@ class JobViewSet(
 
     @extend_schema(responses={"200": serializers.JobVariableSerializer(many=True)})
     @action(detail=True, filterset_class=None)
-    def variables(self, request, pk):
+    def variables(self, request, *args, **kwargs):
         """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()
         job_class = job_model.job_class
@@ -527,7 +525,7 @@ class JobViewSet(
         permission_classes=[JobRunTokenPermissions],
         parser_classes=[JSONParser, MultiPartParser],
     )
-    def run(self, request, *args, pk, **kwargs):
+    def run(self, request, *args, **kwargs):
         """Run the specified Job."""
         job_model = self.get_object()
         if not request.user.has_perm("extras.run_job"):
@@ -676,6 +674,43 @@ class JobViewSet(
         return Response(data, status=status.HTTP_201_CREATED)
 
 
+class JobViewSet(
+    JobViewSetBase,
+    mixins.ListModelMixin,
+    BulkUpdateModelMixin,
+    BulkDestroyModelMixin,
+):
+    lookup_value_regex = r"[-0-9a-fA-F]+"
+
+
+@extend_schema_view(
+    destroy=extend_schema(operation_id="extras_jobs_destroy_by_name"),
+    partial_update=extend_schema(operation_id="extras_jobs_partial_update_by_name"),
+    notes=extend_schema(methods=["get"], operation_id="extras_jobs_notes_list_by_name"),
+    retrieve=extend_schema(operation_id="extras_jobs_retrieve_by_name"),
+    run=extend_schema(
+        methods=["post"],
+        operation_id="extras_jobs_run_create_by_name",
+        request={
+            "application/json": serializers.JobInputSerializer,
+            "multipart/form-data": serializers.JobMultiPartInputSerializer,
+        },
+        responses={"201": serializers.JobRunResponseSerializer},
+    ),
+    update=extend_schema(operation_id="extras_jobs_update_by_name"),
+    variables=extend_schema(operation_id="extras_jobs_variables_list_by_name"),
+)
+@extend_schema_view(
+    notes=extend_schema(methods=["post"], operation_id="extras_jobs_notes_create_by_name"),
+)
+class JobByNameViewSet(
+    JobViewSetBase,
+):
+    lookup_field = "name"
+    lookup_url_kwarg = "name"
+    lookup_value_regex = r"[^/]+"
+
+
 #
 # Job Hooks
 #
@@ -736,7 +771,7 @@ class JobResultViewSet(
 #
 
 
-class JobButtonViewSet(ModelViewSet, NotesViewSetMixin):
+class JobButtonViewSet(NotesViewSetMixin, ModelViewSet):
     """
     Manage Job Buttons through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -921,7 +956,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
 #
 
 
-class RelationshipViewSet(ModelViewSet, NotesViewSetMixin):
+class RelationshipViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = Relationship.objects.all()
     serializer_class = serializers.RelationshipSerializer
     filterset_class = filters.RelationshipFilterSet
@@ -1035,7 +1070,7 @@ class TagViewSet(NautobotModelViewSet):
 #
 
 
-class WebhooksViewSet(ModelViewSet, NotesViewSetMixin):
+class WebhooksViewSet(NotesViewSetMixin, ModelViewSet):
     """
     Manage Webhooks through DELETE, GET, POST, PUT, and PATCH requests.
     """

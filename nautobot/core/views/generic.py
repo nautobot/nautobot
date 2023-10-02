@@ -68,7 +68,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
-    use_new_ui = True
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -159,7 +158,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
     )
-    use_new_ui = True
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
@@ -354,11 +352,11 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         Return any additional context data for the template.
 
         Args:
-            request: The current request
-            instance: The object being edited
+            request (HttpRequest): The current request
+            instance (Model): The object being edited
 
         Returns:
-            dict
+            (dict): Additional context data
         """
         return {}
 
@@ -951,9 +949,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
+                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
             else:
-                pk_list = model.objects.all()
+                pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -1172,8 +1170,13 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         """
         Return selected_objects parent name.
 
+        This method is intended to be overridden by child classes to return the parent name of the selected objects.
+
         Args:
-            selected_objects: The objects being renamed
+            selected_objects (list[BaseModel]): The objects being renamed
+
+        Returns:
+            (str): The parent name of the selected objects
         """
 
         return ""
@@ -1209,9 +1212,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
+                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
             else:
-                pk_list = model.objects.all()
+                pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
             pk_list = request.POST.getlist("pk")
 

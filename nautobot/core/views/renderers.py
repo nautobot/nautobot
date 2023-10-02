@@ -61,9 +61,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Helper function to construct and paginate the table for rendering used in the ObjectListView, ObjectBulkUpdateView and ObjectBulkDestroyView.
         """
         table_class = view.get_table_class()
-        queryset = view.get_queryset()
+        request = kwargs.get("request", view.request)
+        queryset = view.alter_queryset(request)
         if view.action in ["list", "notes", "changelog"]:
-            request = kwargs.get("request", view.request)
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
                 table = table_class(queryset, user=request.user)
@@ -104,7 +104,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     def validate_action_buttons(self, view, request):
         """Verify actions in self.action_buttons are valid view actions."""
-        queryset = view.get_queryset()
+        queryset = view.alter_queryset(request)
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
@@ -135,8 +135,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             return {}
         view = renderer_context["view"]
         request = renderer_context["request"]
-        # Check if queryset attribute is set before doing anything.
-        queryset = view.get_queryset()
+        # Check if queryset attribute is set before doing anything
+        queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
         content_type = ContentType.objects.get_for_model(model)
@@ -145,7 +145,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         search_form = None
         instance = None
         filter_form = None
-        queryset = view.alter_queryset(request)
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
@@ -161,7 +160,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             if view.action == "list":
                 if view.filterset_class is not None:
-                    view.queryset = view.filter_queryset(view.get_queryset())
+                    view.queryset = view.filter_queryset(queryset)
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:

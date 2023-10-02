@@ -4,9 +4,14 @@ import RenderGroup from "./RenderGroup";
 
 function RenderColumn({ tabData, data, schema }) {
     return (
-        <NautobotGrid columns="2">
+        <NautobotGrid columns="2" padding={0}>
             {tabData.map((group, idx) => (
-                <NautobotGridItem key={idx}>
+                <NautobotGridItem
+                    key={idx}
+                    flexDirection="column"
+                    display="flex"
+                    gap="md"
+                >
                     {Object.entries(group).map(([title, { fields }], idx) => (
                         <RenderGroup
                             key={idx}

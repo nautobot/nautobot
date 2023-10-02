@@ -142,7 +142,7 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
           action (str): The action which must be permitted (e.g. "view" for "dcim.view_location"); default is 'view'
 
         Returns:
-          bool: Whether the action is permitted or not
+            (bool): Whether the action is permitted or not
         """
         if instance is not None and pk is not None and instance.pk != pk:
             raise RuntimeError("Should not be called with both instance and pk specified!")
@@ -163,13 +163,13 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
             in the Django `distinct()` documentation at https://docs.djangoproject.com/en/stable/ref/models/querysets/#distinct
 
         Args:
-            *fields: Optional positional arguments which specify field names.
+            *fields (str): Optional positional arguments which specify field names.
             flat (bool): Set to True to return a QuerySet of individual values instead of a QuerySet of tuples.
                 Defaults to False.
             named (bool): Set to True to return a QuerySet of namedtuples. Defaults to False.
 
         Returns:
-            QuerySet object: A QuerySet of tuples or, if `flat` is set to True, a queryset of individual values.
+            (QuerySet): A QuerySet of tuples or, if `flat` is set to True, a queryset of individual values.
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()

@@ -4,6 +4,7 @@ import {
     API_OBJECT_COUNTS,
     API_USER_SESSION_INFO,
     API_UI_MENU_INFO,
+    API_UI_READY_ROUTES,
     API_USER_AUTHENTICATE,
     AUTH_LOGOUT,
 } from "@constants/apiPath";
@@ -74,6 +75,7 @@ export const baseApi = createApi({
                 limit = null,
                 offset = null,
                 depth = 1,
+                filters = null,
             }) => {
                 let url = `${API_BASE}/${
                     plugin ? "plugins/" : ""
@@ -92,6 +94,15 @@ export const baseApi = createApi({
                     }
                     if (offset) {
                         queryParams.append("offset", offset);
+                    }
+                    if (filters) {
+                        [
+                            ...(filters instanceof URLSearchParams
+                                ? filters
+                                : new URLSearchParams(filters)),
+                        ].forEach(([param, value]) =>
+                            queryParams.append(param, value)
+                        );
                     }
                 }
 
@@ -118,6 +129,12 @@ export const baseApi = createApi({
                 method: "GET",
             }),
         }),
+        getNewUIReadyRoutes: builder.query({
+            query: () => ({
+                url: API_UI_READY_ROUTES,
+                method: "GET",
+            }),
+        }),
     }),
 });
 
@@ -137,6 +154,7 @@ export const {
     useGetUIMenuQuery,
     useGetRESTAPIQuery,
     useGetObjectCountsQuery,
+    useGetNewUIReadyRoutesQuery,
     useLoginMutation,
     useLogoutMutation,
 } = baseApi;

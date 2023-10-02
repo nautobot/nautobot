@@ -244,7 +244,20 @@ Get a value from Django settings (if specified) or Constance configuration (othe
     ```django
     # Django Template
     {{ "SAMPLE_VARIABLE" | settings_or_config:"example_plugin" }}
+    {{ "lowercase_example" | settings_or_config:"example_plugin" }}
     ```
+
+### slugify
+
+Slugify a string.
+
+```django
+# Django Template
+{{ string | slugify }}
+
+# Jinja
+{{ string | slugify }}
+```
 
 ### split
 
