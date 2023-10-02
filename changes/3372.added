@@ -1,1 +1,0 @@
-Added ObjectPermission constraints check to pre_migrate management command.
