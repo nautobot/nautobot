@@ -1061,9 +1061,12 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             pk_iter = iter(self._get_queryset().values_list("pk", flat=True))
-            first_pk = next(pk_iter)
-            second_pk = next(pk_iter)
-            third_pk = next(pk_iter)
+            try:
+                first_pk = next(pk_iter)
+                second_pk = next(pk_iter)
+                third_pk = next(pk_iter)
+            except StopIteration:
+                self.fail(f"Test requires at least three instances of {self.model._meta.model_name} to be defined.")
 
             post_data = testing.post_data(self.bulk_edit_data)
 
@@ -1219,9 +1222,12 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             pk_iter = iter(self._get_queryset().values_list("pk", flat=True))
-            first_pk = next(pk_iter)
-            second_pk = next(pk_iter)
-            third_pk = next(pk_iter)
+            try:
+                first_pk = next(pk_iter)
+                second_pk = next(pk_iter)
+                third_pk = next(pk_iter)
+            except StopIteration:
+                self.fail(f"Test requires at least three instances of {self.model._meta.model_name} to be defined.")
 
             # Open bulk delete form with first two objects
             selected_data = {

@@ -1,0 +1,1 @@
+Improved `test_bulk_delete_form_contains_all_filtered` and `test_bulk_edit_form_contains_all_filtered` generic tests to fail more gracefully if insufficient test data is available.
