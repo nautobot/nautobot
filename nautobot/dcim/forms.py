@@ -2139,9 +2139,6 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         queryset=Interface.objects.all(),
         required=False,
         label="Parent interface",
-        query_params={
-            "kind": "physical",
-        },
         help_text="Assigned parent interface",
     )
     bridge = DynamicModelChoiceField(
