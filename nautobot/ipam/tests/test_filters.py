@@ -2,6 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
 from nautobot.core.testing import TestCase, FilterTestCases
+from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -14,6 +15,7 @@ from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.filters import (
     IPAddressFilterSet,
+    IPAddressToInterfaceFilterSet,
     PrefixFilterSet,
     RIRFilterSet,
     RouteTargetFilterSet,
@@ -24,6 +26,7 @@ from nautobot.ipam.filters import (
 )
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressToInterface,
     Prefix,
     RIR,
     RouteTarget,
@@ -864,6 +867,88 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(role__in=roles),
         )
+
+
+class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
+    queryset = IPAddressToInterface.objects.all()
+    filterset = IPAddressToInterfaceFilterSet
+    generic_filter_tests = (
+        ["ip_address"],
+        ["interface", "interface__id"],
+        ["interface", "interface__name"],
+        ["vm_interface", "vm_interface__id"],
+        ["vm_interface", "vm_interface__name"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        ip_addresses = list(IPAddress.objects.all()[:5])
+        location = Location.objects.get_for_model(Device).first()
+        devicetype = DeviceType.objects.first()
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            name="Device 1",
+            location=location,
+            device_type=devicetype,
+            role=devicerole,
+            status=devicestatus,
+        )
+        int_status = Status.objects.get_for_model(Interface).first()
+        int_type = InterfaceTypeChoices.TYPE_1GE_FIXED
+        interfaces = [
+            Interface.objects.create(device=device, name="eth0", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth1", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth2", status=int_status, type=int_type),
+        ]
+
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
+        vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_interfaces = [
+            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
+            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
+        ]
+
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[0], interface=interfaces[0], vm_interface=None)
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[1], interface=interfaces[1], vm_interface=None)
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[2], interface=interfaces[2], vm_interface=None)
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[3], interface=None, vm_interface=vm_interfaces[0])
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[4], interface=None, vm_interface=vm_interfaces[1])
+
+    def test_boolean_filters(self):
+        filters = [
+            "is_source",
+            "is_destination",
+            "is_default",
+            "is_preferred",
+            "is_primary",
+            "is_secondary",
+            "is_standby",
+        ]
+
+        ip_association1 = IPAddressToInterface.objects.first()
+        ip_association2 = IPAddressToInterface.objects.last()
+        for test_filter in filters:
+            setattr(ip_association1, test_filter, True)
+            setattr(ip_association2, test_filter, True)
+        ip_association1.validated_save()
+        ip_association2.validated_save()
+
+        for test_filter in filters:
+            with self.subTest(filter=test_filter):
+                params = {test_filter: True}
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs, self.queryset.filter(**{test_filter: True}), ordered=False
+                )
+                params = {test_filter: False}
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs,
+                    self.queryset.filter(**{test_filter: False}),
+                    ordered=False,
+                )
 
 
 class VLANGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):

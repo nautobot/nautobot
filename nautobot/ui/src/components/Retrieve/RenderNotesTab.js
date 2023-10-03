@@ -1,10 +1,5 @@
 import useSWR from "swr";
-import {
-    Heading,
-    NautobotGrid,
-    NautobotGridItem,
-    NtcThumbnailIcon,
-} from "@nautobot/nautobot-ui";
+import { Flex, Heading, NtcThumbnailIcon } from "@nautobot/nautobot-ui";
 import { SkeletonText } from "@chakra-ui/react";
 
 import { useGetRESTAPIQuery, fetcher } from "@utils/api";
@@ -45,22 +40,21 @@ export default function RenderNotesTab(props) {
         return <div>Failed to load Notes Data</div>;
     }
 
-    const defaultHeaders = schema.view_options.list_display_fields;
-    const tableHeaders = schema.view_options.fields;
+    const defaultHeaders = schema.view_options.list.default_fields;
+    const tableHeaders = schema.view_options.list.all_fields;
     const tableData = data?.results || [];
 
     return (
-        <NautobotGrid columns="4">
-            <NautobotGridItem>
-                <Heading display="flex" alignItems="center" gap="5px">
-                    <NtcThumbnailIcon width="25px" height="30px" /> Notes
-                </Heading>
-                <ObjectTable
-                    defaultHeaders={defaultHeaders}
-                    tableHeaders={tableHeaders}
-                    tableData={tableData}
-                />
-            </NautobotGridItem>
-        </NautobotGrid>
+        <Flex as="section" direction="column" gap="md">
+            <Heading alignItems="center" display="flex" gap="xs">
+                <NtcThumbnailIcon height="auto" width="24" />
+                Notes
+            </Heading>
+            <ObjectTable
+                defaultHeaders={defaultHeaders}
+                tableHeaders={tableHeaders}
+                tableData={tableData}
+            />
+        </Flex>
     );
 }

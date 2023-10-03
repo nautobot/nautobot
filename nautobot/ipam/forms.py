@@ -251,6 +251,10 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "namespace": "$namespace",
         },
     )
+    # It is required to add prefix_length here and set it to required=False and hidden input so that
+    # form validation doesn't complain and that it doesn't show in forms.
+    # Ref:  https://github.com/nautobot/nautobot/issues/4550
+    prefix_length = forms.IntegerField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = Prefix
@@ -493,6 +497,8 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         setattr(self.instance, "_namespace", namespace)
 
     def clean(self):
+        # Pass address to the instance, because this is required to be accessible in the IPAddress.clean method
+        self.instance.address = self.cleaned_data.get("address")
         super().clean()
         # If user input was bad, might not even *have* an identifiable host
         if self.instance.host and self.instance._namespace:

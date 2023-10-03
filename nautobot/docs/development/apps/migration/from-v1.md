@@ -8,6 +8,10 @@ This document provides guidance on migrating code from version 1.x to version 2.
     - [New UI](../../core/react-ui.md)
     - [Enhanced Filter Fields](../../../release-notes/version-2.0.md#enhanced-filter-fields-2804)
 - Changes to Nautobot in v2.0.0
+    - [Database (ORM) Changes](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-orm-changes)
+        - [Database Field Behavior Changes](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-field-behavior-changes)
+        - [Renamed Database Fields](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#renamed-database-fields)
+        - [Removed Database Fields](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-database-fields)
     - [Generic Role Model](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#generic-role-model)
     - [Collapse Site and Region into Location](../migration/model-updates/dcim.md#replace-site-and-region-with-location-model)
     - [Aggregate model Migrated to Prefix](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#aggregate-migrated-to-prefix)
@@ -18,10 +22,8 @@ This document provides guidance on migrating code from version 1.x to version 2.
 - Steps to Migrate an App from V1
     - Preliminary Steps:
         - Add [`pylint-nautobot`](https://github.com/nautobot/pylint-nautobot) as a development dependency
-        - Temporarily disable `pylint-django` while your app is not running
-        - Run `pylint-nautobot` in order to parse your development environment code and generate recommendations for necessary changes to for your app to upgrade to v2.0
+        - Run `pylint -v --disable=all --enable=nautobot-code-location-changes,nautobot-replaced-models *` in order to parse your development environment for changes that need to be fixed before pylint-django can successfully run.
         - Specific steps to install and run `pylint-nautobot` in your development environment is available [here](https://docs.nautobot.com/projects/pylint-nautobot/en/latest/getting_started/)
-        - Once you make the recommended changes from `pylint-nautobot`, you can enable `pylint-django` and restart your app
     - [Dependency Updates](dependency-updates.md)
         - [Nautobot Version](dependency-updates.md#nautobot-version)
         - [Python Version](dependency-updates.md#python-version)
@@ -29,12 +31,14 @@ This document provides guidance on migrating code from version 1.x to version 2.
     - [Code Updates](code-updates.md)
         - [Update Code Import Locations](code-updates.md#update-code-import-locations)
         - [Replace PluginMenuItem with NavMenuItem](code-updates.md#replace-pluginmenuitem-with-navmenuitem)
+        - [Remove Tag/Tags Filter Field from FilterSet Definitions](code-updates.md#remove-tagtags-filter-from-filterset-definitions)
         - [Replace DjangoFilterBackend with NautobotFilterBackend](code-updates.md#replace-djangofilterbackend-with-nautobotfilterbackend)
+        - [App Model Serializer Inheritance](code-updates.md#app-model-serializer-inheritance)
         - [Revamp Rest API Serializers](code-updates.md#revamp-rest-api-serializers)
         - [Revamp CSV Import and Export](code-updates.md#revamp-csv-import-and-export)
     - Model Updates
         - [Global](model-updates/global.md)
-            - [Replace the Usage of Slugs with Composite Keys](model-updates/global.md#replace-the-usage-of-slugs-with-composite-keys)
+            - [Replace the Usage of Slugs](model-updates/global.md#replace-the-usage-of-slugs-with-composite-keys)
         - [DCIM](model-updates/dcim.md)
             - [Replace Site and Region with Location Model](model-updates/dcim.md#replace-site-and-region-with-location-model)
         - [Extras](model-updates/extras.md)

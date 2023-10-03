@@ -102,30 +102,29 @@ Example output:
 
 Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home directory and we had you set the shell to `/bin/bash`, the binary path `$NAUTOBOT_ROOT/bin` is automatically added to the beginning of the `$PATH` environment variable:
 
-In Ubuntu 20.04:
+=== "Ubuntu 20.04"
 
-```no-highlight
-echo $PATH
-```
+    ```no-highlight
+    echo $PATH
+    ```
 
-Example output:
+    Example output:
 
-```no-highlight
-/opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-```
+    ```no-highlight
+    /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+    ```
 
-Due to differences between OS, in CentOS `$PATH` will appear as:
+=== "RHEL8 flavors"
 
-```no-highlight
-echo $PATH
-```
+    ```no-highlight
+    echo $PATH
+    ```
 
-Example output:
+    Example output:
 
-```no-highlight
-/opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
-
-```
+    ```no-highlight
+    /opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
+    ```
 
 Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
 
@@ -159,25 +158,21 @@ pip3 install --upgrade pip wheel
 
 ## Install Nautobot
 
-Use Pip to install Nautobot:
+=== "PostgreSQL (Ubuntu and RHEL Flavors)"
 
-```no-highlight
-pip3 install nautobot
-```
+    Use Pip to install Nautobot:
 
-!!! hint
-    If you are using MySQL as your database backend, use `pip3 install "nautobot[mysql]"` to install Nautobot and the `mysqlclient` library together!
+    ```no-highlight
+    pip3 install nautobot
+    ```
 
-### Install MySQL client library
+=== "MySQL (Ubuntu and RHEL Flavors)"
 
-If you are using MySQL as your database server you must install the `mysqlclient` database client for Python.
+    Use Pip to install Nautobot with the MySQL client:
 
-!!! warning
-    If you're using a MySQL database, Nautobot **will not work** without this client library. You cannot skip this step.
-
-```no-highlight
-pip3 install "nautobot[mysql]"
-```
+    ```no-highlight
+    pip3 install "nautobot[mysql]"
+    ```
 
 Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
 

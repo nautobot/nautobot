@@ -75,6 +75,7 @@ class ClusterTypeBulkImportView(generic.BulkImportView):
 class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
     queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
     table = tables.ClusterTypeTable
+    filterset = filters.ClusterTypeFilterSet
 
 
 #
@@ -133,6 +134,7 @@ class ClusterGroupBulkImportView(generic.BulkImportView):
 class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
     table = tables.ClusterGroupTable
+    filterset = filters.ClusterGroupFilterSet
 
 
 #
@@ -452,6 +454,7 @@ class VMInterfaceBulkEditView(generic.BulkEditView):
     queryset = VMInterface.objects.all()
     table = tables.VMInterfaceTable
     form = forms.VMInterfaceBulkEditForm
+    filterset = filters.VMInterfaceFilterSet
 
 
 class VMInterfaceBulkRenameView(generic.BulkRenameView):
@@ -462,13 +465,14 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
         selected_object = selected_objects.first()
         if selected_object:
             return selected_object.virtual_machine.name
-        return None
+        return ""
 
 
 class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
     queryset = VMInterface.objects.all()
     table = tables.VMInterfaceTable
-    template_name = "virtualization/virtual_machine_vminterface_delete.html"
+    template_name = "virtualization/vminterface_bulk_delete.html"
+    filterset = filters.VMInterfaceFilterSet
 
 
 #

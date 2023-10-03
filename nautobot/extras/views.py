@@ -115,6 +115,7 @@ class ComputedFieldDeleteView(generic.ObjectDeleteView):
 class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = ComputedField.objects.all()
     table = tables.ComputedFieldTable
+    filterset = filters.ComputedFieldFilterSet
 
 
 #
@@ -172,6 +173,7 @@ class ConfigContextDeleteView(generic.ObjectDeleteView):
 class ConfigContextBulkDeleteView(generic.BulkDeleteView):
     queryset = ConfigContext.objects.all()
     table = tables.ConfigContextTable
+    filterset = filters.ConfigContextFilterSet
 
 
 class ObjectConfigContextView(generic.ObjectView):
@@ -348,6 +350,7 @@ class ConfigContextSchemaDeleteView(generic.ObjectDeleteView):
 class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
     queryset = ConfigContextSchema.objects.all()
     table = tables.ConfigContextSchemaTable
+    filterset = filters.ConfigContextSchemaFilterSet
 
 
 #
@@ -471,6 +474,7 @@ class CustomFieldDeleteView(generic.ObjectDeleteView):
 class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
+    filterset = filters.CustomFieldFilterSet
 
     def construct_custom_field_delete_tasks(self, queryset):
         """
@@ -706,6 +710,7 @@ class DynamicGroupDeleteView(generic.ObjectDeleteView):
 class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = DynamicGroup.objects.all()
     table = tables.DynamicGroupTable
+    filterset = filters.DynamicGroupFilterSet
 
 
 class ObjectDynamicGroupsView(View):
@@ -867,6 +872,7 @@ class GitRepositoryBulkEditView(generic.BulkEditView):
 class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
     queryset = GitRepository.objects.all()
     table = tables.GitRepositoryBulkTable
+    filterset = filters.GitRepositoryFilterSet
 
     def extra_context(self):
         return {
@@ -877,11 +883,12 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
 def check_and_call_git_repository_function(request, pk, func):
     """Helper for checking Git permissions and worker availability, then calling provided function if all is well
     Args:
-        request: request object.
+        request (HttpRequest): request object.
         pk (UUID): GitRepository pk value.
         func (function): Enqueue git repo function.
     Returns:
-        HttpResponseForbidden or a redirect
+        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
+            otherwise redirect to the job result page.
     """
     if not request.user.has_perm("extras.change_gitrepository"):
         return HttpResponseForbidden()
@@ -1473,6 +1480,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 class JobResultBulkDeleteView(generic.BulkDeleteView):
     queryset = JobResult.objects.defer("result").all()
     table = tables.JobResultTable
+    filterset = filters.JobResultFilterSet
 
 
 class JobResultView(generic.ObjectView):
@@ -1675,7 +1683,7 @@ class NoteDeleteView(generic.ObjectDeleteView):
 
 class ObjectNotesView(View):
     """
-    Present a history of changes made to a particular object.
+    Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
@@ -1746,6 +1754,7 @@ class RelationshipEditView(generic.ObjectEditView):
 class RelationshipBulkDeleteView(generic.BulkDeleteView):
     queryset = Relationship.objects.all()
     table = tables.RelationshipTable
+    filterset = filters.RelationshipFilterSet
 
 
 class RelationshipDeleteView(generic.ObjectDeleteView):
@@ -1763,6 +1772,7 @@ class RelationshipAssociationListView(generic.ObjectListView):
 class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
     queryset = RelationshipAssociation.objects.all()
     table = tables.RelationshipAssociationTable
+    filterset = filters.RelationshipAssociationFilterSet
 
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
@@ -2167,11 +2177,13 @@ class TagBulkEditView(generic.BulkEditView):
     queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
     form = forms.TagBulkEditForm
+    filterset = filters.TagFilterSet
 
 
 class TagBulkDeleteView(generic.BulkDeleteView):
     queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
+    filterset = filters.TagFilterSet
 
 
 #

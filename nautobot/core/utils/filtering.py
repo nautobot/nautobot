@@ -170,7 +170,7 @@ def get_filter_field_label(filter_field):
     Return a label for a given field name and value.
 
     Args:
-        field (Filter): The filter to get a label for
+        filter_field (Filter): The filter to get a label for
 
     Returns:
         (str): The label for the given field

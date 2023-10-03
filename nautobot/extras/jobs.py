@@ -193,7 +193,7 @@ class BaseJob(Task):
             kwargs (Dict): Original keyword arguments for the task to execute.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
         self.clear_cache()
 
@@ -248,7 +248,7 @@ class BaseJob(Task):
             kwargs (Dict): Original keyword arguments for the executed task.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def on_retry(self, exc, task_id, args, kwargs, einfo):
@@ -264,7 +264,7 @@ class BaseJob(Task):
             einfo (~billiard.einfo.ExceptionInfo): Exception information.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
@@ -280,7 +280,7 @@ class BaseJob(Task):
             einfo (~billiard.einfo.ExceptionInfo): Exception information.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
@@ -298,7 +298,7 @@ class BaseJob(Task):
             einfo - ExceptionInfo instance, containing the traceback (if any).
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
         # Cleanup FileProxy objects
@@ -758,7 +758,7 @@ class BaseJob(Task):
             pk (uuid): Primary key of the `FileProxy` to retrieve
 
         Returns:
-            File-like object
+            (FileProxy): A File-like object
         """
         fp = FileProxy.objects.get(pk=pk)
         return fp.file
@@ -773,7 +773,7 @@ class BaseJob(Task):
             uploaded_file (file): File handle of file to save to database
 
         Returns:
-            uuid
+            (uuid): The pk of the `FileProxy` object
         """
         fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
         return fp.pk
@@ -785,7 +785,7 @@ class BaseJob(Task):
             files_to_delete (*args): List of primary keys to delete
 
         Returns:
-            int (number of objects deleted)
+            (int): number of objects deleted
         """
         files = FileProxy.objects.filter(pk__in=files_to_delete)
         num = 0

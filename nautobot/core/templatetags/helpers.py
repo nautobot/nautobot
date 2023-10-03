@@ -9,6 +9,7 @@ from django.contrib.staticfiles.finders import find
 from django.templatetags.static import StaticNode, static
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
+from django.utils.text import slugify as django_slugify
 from django.utils.safestring import mark_safe
 from django_jinja import library
 from markdown import markdown
@@ -17,6 +18,7 @@ import yaml
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
+from nautobot.core.utils.navigation import is_route_new_ui_ready
 
 HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
@@ -43,10 +45,11 @@ def hyperlinked_object(value, field="display"):
     additionally if there is an `object.description` this will be used as the title of the hyperlink.
 
     Args:
-        value (django.db.models.Model, None)
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
 
     Returns:
-        str: String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
 
     Examples:
         >>> hyperlinked_object(device)
@@ -81,7 +84,7 @@ def placeholder(value):
         value (any): Input value, can be any variable.
 
     Returns:
-        str: Placeholder in HTML, or the string representation of the value.
+        (str): Placeholder in HTML, or the string representation of the value.
 
     Example:
         >>> placeholder("")
@@ -104,7 +107,7 @@ def add_html_id(element_str, id_str):
         id_str (str): String to add as the `id` attribute of the element_str.
 
     Returns:
-        str: HTML string with added `id`.
+        (str): HTML string with added `id`.
 
     Example:
         >>> add_html_id("<div></div>", "my-div")
@@ -125,17 +128,17 @@ def render_boolean(value):
 
     Args:
         value (any): Input value, can be any variable.
-        A truthy value (for example non-empty string / True / non-zero number) is considered True.
-        A falsey value other than None (for example "" or 0 or False) is considered False.
-        A value of None is considered neither True nor False.
+            A truthy value (for example non-empty string / True / non-zero number) is considered True.
+            A falsey value other than None (for example "" or 0 or False) is considered False.
+            A value of None is considered neither True nor False.
 
     Returns:
-        str: HTML
-        '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
-        - or -
-        '<span class="text-muted">&mdash;</span>' if None value
-        - or -
-        '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
+        (str): HTML
+            '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
+            - or -
+            '<span class="text-muted">&mdash;</span>' if None value
+            - or -
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
 
     Examples:
         >>> render_boolean(None)
@@ -205,7 +208,7 @@ def meta(obj, attr):
         attr (str): name of the attribute to access
 
     Returns:
-        any: return the value of the attribute
+        (any): return the value of the attribute
     """
     return getattr(obj._meta, attr, "")
 
@@ -221,7 +224,7 @@ def viewname(model, action):
         action (str): name of the action in the viewname
 
     Returns:
-        str: return the name of the view for the model/action provided.
+        (str): return the name of the view for the model/action provided.
     Examples:
         >>> viewname(Device, "list")
         "dcim:device_list"
@@ -240,7 +243,7 @@ def validated_viewname(model, action):
         action (str): name of the action in the viewname
 
     Returns:
-        str or None: return the name of the view for the model/action provided if valid, or None if invalid.
+        (Union[str, None]): return the name of the view for the model/action provided if valid, or None if invalid.
     """
     viewname_str = lookup.get_route_for_model(model, action)
 
@@ -263,7 +266,7 @@ def bettertitle(value):
         value (str): string to convert to Title Case
 
     Returns:
-        str: string in Title format
+        (str): string in Title format
 
     Example:
         >>> bettertitle("IP address")
@@ -315,7 +318,7 @@ def fgcolor(value):
         value (str): Color in RRGGBB format, with or without #
 
     Returns:
-        str: ideal foreground color, either black (#000000) or white (#ffffff)
+        (str): ideal foreground color, either black (#000000) or white (#ffffff)
 
     Example:
         >>> fgcolor("#999999")
@@ -337,7 +340,7 @@ def divide(x, y):
         y (int or float): divisor number
 
     Returns:
-        int: x/y (rounded)
+        (int): x/y (rounded)
 
     Examples:
         >>> divide(10, 3)
@@ -358,7 +361,7 @@ def percentage(x, y):
         y (int or float): divisor number
 
     Returns:
-        int: x/y as a percentage
+        (int): x/y as a percentage
 
     Examples:
         >>> percentage(2, 10)
@@ -387,8 +390,7 @@ def get_docs_url(model):
         model (models.Model): Instance of a Django model
 
     Returns:
-        str: static URL for the documentation of the object.
-        None: if not found.
+        (Union[str, None]): static URL for the documentation of the object or None if not found.
 
     Example:
         >>> get_docs_url(location_instance)
@@ -406,7 +408,7 @@ def get_docs_url(model):
     # Check to see if documentation exists in any of the static paths.
     if find(path):
         return static(path)
-    logger.debug("No documentation found for %s (expected to find it at %s)", model, path)
+    logger.debug("No documentation found for %s (expected to find it at %s)", type(model), path)
     return None
 
 
@@ -442,7 +444,7 @@ def split(string, sep=","):
         sep (str default=,): separator to look for in the string
 
     Returns:
-        [list]: List of string, if the separator wasn't found, list of 1
+        (list[str]): List of string, if the separator wasn't found, list of 1
     """
     return string.split(sep)
 
@@ -456,7 +458,7 @@ def as_range(n):
         n (int, str): Number of element in the range
 
     Returns:
-        [list, Range]: range function from o to the value provided. Returns an empty list if n is not valid.
+        (Union[list, Range]): range function from o to the value provided. Returns an empty list if n is not valid.
 
     Example:
         {% for i in record.ancestors.count|as_range %}
@@ -479,7 +481,7 @@ def meters_to_feet(n):
         n (int, float, str): Number of meters to convert
 
     Returns:
-        [float]: Value in feet
+        (float): Value in feet
     """
     return float(n) * 3.28084
 
@@ -491,10 +493,10 @@ def get_item(d, key):
 
     Args:
         d (dict): dictionary containing the data to access
-        key (str]): name of the item/key to access
+        key (str): name of the item/key to access
 
     Returns:
-        [any]: Value of the item in the dictionary provided
+        (any): Value of the item in the dictionary provided
 
     Example:
         >>> get_item(data, key)
@@ -519,6 +521,12 @@ def quote_string(value):
     if isinstance(value, str):
         return f'"{value}"'
     return value
+
+
+@library.filter()
+def slugify(value):
+    """Return a slugified version of the value."""
+    return django_slugify(value)
 
 
 #
@@ -562,7 +570,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
         danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
 
     Returns:
-        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
+        (dict): Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
                 display
     """
     # See https://github.com/nautobot/nautobot/issues/1169
@@ -589,7 +597,7 @@ def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, dan
         danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
 
     Returns:
-        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
+        (dict): Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
                 display
     """
     # Check for possible division by zero error
@@ -675,7 +683,7 @@ def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type
         obj_type (string, optional): Used in title of form to display object type. Defaults to None.
 
     Returns:
-        dict: Passed in values used to render HTML.
+        (dict): Passed in values used to render HTML.
     """
     return {
         "editing": editing,
@@ -714,3 +722,14 @@ def queryset_to_pks(obj):
     result = list(obj.values_list("pk", flat=True)) if obj else []
     result = [str(entry) for entry in result]
     return ",".join(result)
+
+
+#
+# Navigation
+#
+
+
+@register.filter()
+def is_new_ui_ready(url_path):
+    """Return True if url_path is NewUI Ready else False"""
+    return is_route_new_ui_ready(url_path)

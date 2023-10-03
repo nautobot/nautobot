@@ -15,6 +15,7 @@ theme:
     - "yaml"
   features:
     - "content.code.copy"
+    - "navigation.footer"
     - "navigation.tabs"
     - "navigation.tabs.sticky"
     - "navigation.tracking"
@@ -108,10 +109,8 @@ nav:
     - "user-guide/index.md"
     - Administration:
       - Installation:
-        - "user-guide/administration/installation/index.md"
-        - Installing System Dependencies:
-          - On RHEL: "user-guide/administration/installation/centos.md"
-          - On Ubuntu: "user-guide/administration/installation/ubuntu.md"
+        - Prerequisites: "user-guide/administration/installation/index.md"
+        - Installing System Dependencies: "user-guide/administration/installation/install_system.md"
         - Installing Nautobot: "user-guide/administration/installation/nautobot.md"
         - Deploying Nautobot Services: "user-guide/administration/installation/services.md"
         - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
@@ -382,6 +381,7 @@ nav:
     - Network to Code App Docs:
       - Nautobot ChatOps: "https://docs.nautobot.com/projects/chatops/en/latest/"
       - Nautobot Circuit Maintenance: "https://docs.nautobot.com/projects/circuit-maintenance/en/latest/"
+      - Nautobot Data Validation Engine: "https://docs.nautobot.com/projects/data-validation/en/latest/"
       - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
       - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
       - Nautobot Firewall Models: "https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/"

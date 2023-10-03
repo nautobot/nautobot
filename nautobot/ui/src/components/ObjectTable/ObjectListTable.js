@@ -1,9 +1,12 @@
-import { ButtonGroup, Flex, SkeletonText, Spacer } from "@chakra-ui/react";
-import * as Icon from "react-icons/tb";
+import { ButtonGroup, SkeletonText, Spacer } from "@chakra-ui/react";
 import { useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
     Box,
+    calc,
+    Divider,
+    Flex,
+    getCssVar,
     Heading,
     NtcThumbnailIcon,
     MeatballsIcon,
@@ -14,14 +17,20 @@ import {
     PlusIcon,
     Button,
     EditIcon,
-    Text,
+    Tag,
+    TagLabel,
 } from "@nautobot/nautobot-ui";
 import { useCallback, useMemo } from "react";
 
+import {
+    FiltersPanelContent,
+    NON_FILTER_QUERY_PARAMS,
+    useFiltersPanel,
+} from "@components/FiltersPanel";
+import { Pagination } from "@components/Pagination";
+
 import LoadingWidget from "../LoadingWidget";
 import ObjectTableItem from "./ObjectTableItem";
-import { useFiltersPanel } from "@components/FiltersPanel";
-import { Pagination } from "@components/Pagination";
 
 const getTableItemLink = (idx, obj) => {
     if (idx === 0) {
@@ -41,7 +50,9 @@ const getTableItemLink = (idx, obj) => {
 export default function ObjectListTable({
     tableData,
     defaultHeaders,
+    objectType,
     tableHeaders,
+    filterData,
     totalCount,
     active_page_number,
     page_size,
@@ -113,7 +124,12 @@ export default function ObjectListTable({
     );
 
     const filtersPanel = useFiltersPanel({
-        content: <Text>You have successfully opened filters panel.</Text>,
+        content: (
+            <FiltersPanelContent
+                lookupFields={filterData}
+                objectType={objectType}
+            />
+        ),
         id: "object-list-table-filters-panel",
         title: "Filters",
     });
@@ -128,10 +144,39 @@ export default function ObjectListTable({
         actionMenu: ActionMenu,
     });
 
+    const activeFiltersCount = useMemo(
+        () =>
+            [...new URLSearchParams(location.search)].filter(
+                ([searchParam]) =>
+                    !NON_FILTER_QUERY_PARAMS.includes(searchParam)
+            ).length,
+        [location]
+    );
+
+    useEffect(() => {
+        if (filtersPanel.isOpen) {
+            // This re-renders the filters panel when it is already open and the
+            // current `ObjectList` view collection is changed to another.
+            filtersPanel.open();
+        } // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [objectType, tableHeaders]);
+
+    useEffect(
+        () => () => {
+            // This closes the filters panel when users navigate away from the
+            // `ObjectList` view. Use `setTimeout` in order to delay the filters
+            // panel closing function by one cycle. Otherwise, if called
+            // immediately, some ancestor component lifecycle will mount it
+            // again, effectively cancelling the `filtersPanel.close()` call.
+            setTimeout(() => filtersPanel.close());
+        }, // eslint-disable-next-line react-hooks/exhaustive-deps
+        [] // Keep the dependency array empty to execute only on unmount.
+    );
+
     return (
-        <Box borderRadius="md" ref={topRef}>
+        <Box borderRadius="md" height="full" ref={topRef}>
             {!include_button ? null : (
-                <Flex align="center" height="60px">
+                <Flex align="center">
                     <Heading
                         as="h1"
                         size="H1"
@@ -139,41 +184,53 @@ export default function ObjectListTable({
                         alignItems="center"
                         gap="5px"
                     >
-                        <NtcThumbnailIcon width="25px" height="30px" />{" "}
+                        <NtcThumbnailIcon height="auto" width="24" />
                         {tableTitle}
                     </Heading>
                     <Spacer />
                     {!data_fetched ? (
-                        <Box pr="sm">
+                        <Box marginRight="md">
                             <LoadingWidget name={tableTitle} />
                         </Box>
-                    ) : (
-                        () => {}
-                    )}
+                    ) : null}
                     <Box>
-                        <ButtonGroup alignItems="center">
+                        <ButtonGroup alignItems="center" spacing="md">
                             <UIButton
-                                size="sm"
-                                variant="secondary"
+                                variant={
+                                    activeFiltersCount > 0
+                                        ? "primary"
+                                        : "secondary"
+                                }
                                 onClick={() =>
                                     filtersPanel.isOpen
                                         ? filtersPanel.close()
                                         : filtersPanel.open()
                                 }
                             >
+                                {activeFiltersCount > 0 ? (
+                                    <Tag
+                                        background="white-0"
+                                        boxShadow="none"
+                                        marginRight="xs"
+                                        size="sm"
+                                        variant="secondary"
+                                    >
+                                        <TagLabel>
+                                            {activeFiltersCount}
+                                        </TagLabel>
+                                    </Tag>
+                                ) : null}
                                 Filters
                             </UIButton>
                             <UIButton
-                                size="sm"
                                 variant="primary"
                                 leftIcon={<MeatballsIcon />}
                             >
                                 Actions
                             </UIButton>
-                            <Icon.TbMinusVertical />
+                            <Divider height={10} orientation="vertical" />
                             <UIButton
                                 to={`${location.pathname}add/`}
-                                size="sm"
                                 leftIcon={<PlusIcon />}
                                 onClick={(e) => {
                                     e.preventDefault();
@@ -194,16 +251,41 @@ export default function ObjectListTable({
             )}
 
             <SkeletonText
-                endColor="gray.200"
-                noOfLines={parseInt(page_size)}
-                skeletonHeight="25"
-                spacing="3"
-                mt="3"
+                borderRadius="md"
+                endColor="gray-0"
+                height={calc.subtract(
+                    getCssVar("sizes.full"),
+                    // The following compensate for the section header.
+                    getCssVar("lineHeights.tall"),
+                    getCssVar("space.md"),
+                    // The following compensate for the pagination component.
+                    getCssVar("space.md"),
+                    getCssVar("sizes.40")
+                )}
                 isLoaded={data_fetched}
+                marginTop="md"
+                noOfLines={parseInt(page_size, 10)}
+                overflow="hidden"
+                skeletonHeight={calc.subtract(
+                    calc.add(
+                        getCssVar("lineHeights.normal"),
+                        calc.multiply(getCssVar("space.sm"), 2)
+                    ),
+                    "1px"
+                )}
+                spacing="1px"
+                startColor="gray-1"
+                sx={{
+                    ">": {
+                        _first: data_fetched
+                            ? { height: "full" }
+                            : { ">": { _first: { display: "none" } } },
+                    },
+                }}
             >
                 <TableRenderer
                     table={table}
-                    containerProps={{ overflow: "auto" }}
+                    containerProps={{ height: "full" }}
                 />
             </SkeletonText>
             <Pagination

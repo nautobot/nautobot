@@ -10,7 +10,7 @@ from django.utils.tree import Node
 import emoji
 from slugify import slugify
 
-from nautobot.core.models import constants
+from nautobot.core import constants
 from nautobot.core.utils.data import is_uuid
 
 
@@ -51,7 +51,7 @@ def pretty_print_query(query):
         query (Q): Query to display.
 
     Returns:
-        str: Pretty-printed query logic
+        (str): Pretty-printed query logic
 
     Example:
         >>> print(pretty_print_query(Q))
@@ -155,12 +155,12 @@ def find_models_with_matching_fields(app_models, field_names, field_attributes=N
     Find all models that have fields with the specified names, and return them grouped by app.
 
     Args:
-        app_models: A list of model classes to search through.
-        field_names: A list of names of fields that must be present in order for the model to be considered
-        field_attributes: Optional dictionary of attributes to filter the fields by.
+        app_models (list[BaseModel]): A list of model classes to search through.
+        field_names (list[str]): A list of names of fields that must be present in order for the model to be considered
+        field_attributes (dict): Optional dictionary of attributes to filter the fields by.
 
     Return:
-        A dictionary where the keys are app labels and the values are sets of model names.
+        (dict): A dictionary where the keys are app labels and the values are sets of model names.
     """
     registry_items = {}
     field_attributes = field_attributes or {}

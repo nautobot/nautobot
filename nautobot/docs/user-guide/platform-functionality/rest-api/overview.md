@@ -224,7 +224,7 @@ Here, the `role`, `status`, `vrf`, `tenant`, and `nat_outside` fields represent 
 +/- 2.0.0
     The representation of related objects on retrieval has changed from Nautobot 1.x. The `brief` query parameter has been removed, and distinct "nested" serializers no longer exist. Instead, the `depth` parameter controls whether related objects are represented by URLs or as nested objects. Please see [Depth Query Parameter](#depth-query-parameter) for more details.
 
-When performing write API actions (`POST`, `PUT`, and `PATCH`), related objects may be specified by either UUID (primary key), or by a set of attributes sufficiently unique to return the desired object, or by their [composite key](../../../development/core/natural-keys.md).
+When performing write API actions (`POST`, `PUT`, and `PATCH`), related objects may be specified by either UUID (primary key), or by a set of attributes sufficiently unique to return the desired object, or by their [natural key](../../../development/core/natural-keys.md).
 
 +++ 2.0.0
     Support for specifying a related object by composite-key was added.
@@ -254,7 +254,7 @@ Or by a set of nested attributes which uniquely identify the rack:
 }
 ```
 
-Or by the [composite key](../../../development/core/natural-keys.md) of the rack (for the Rack model, this is just its name, but this will vary by object type - you can always find this information under the Advanced tab of an object's detail view):
+Or by the [natural key](../../../development/core/natural-keys.md) of the rack (for the Rack model, this is just its name, but this will vary by object type - you can always find this information under the Advanced tab of an object's detail view):
 
 ```json
 {
@@ -268,7 +268,7 @@ Note that if the provided parameters do not match exactly one object, a validati
 
 ### Generic Relations
 
-Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, a `Cable` can be terminated (connected) to an `Interface`, or a `FrontPort`, or a `RearPort`, etc. For such generic relations, when making this assignment via the REST API, we must specify two attributes, typically a `object_type` and an `object_id`, and by convention in Nautobot's API:
+Some objects within Nautobot have attributes which can reference an object of multiple types, known as _generic relations_. For example, a `Cable` can be terminated (connected) to an `Interface`, or a `FrontPort`, or a `RearPort`, etc. For such generic relations, when making this assignment via the REST API, we must specify two attributes, typically an `object_type` and an `object_id`, and by convention in Nautobot's API:
 
 * the `object_type` is the type of assigned object, typically represented as `<app_label>.<model_name>`
 * the `object_id` is the UUID (primary key) of the assigned object.
@@ -306,6 +306,12 @@ On retrieval, the REST API will include the `object_type` and `object_id` fields
     ...
 }
 ```
+
+### Many-To-Many Relationships
+
++++ 2.0.0
+
+Many-to-many relationships differ from one-to-many and one-to-one relationships because they utilize a separate database table called a "through table" to track the relationships instead of a single field in an existing table. In Nautobot 2.0, some relationships such as `IPAddress` to `Interface`/`VMInterface`, `Prefix` to `VRF`, and `VRF` to `Device`/`VirtualMachine` are represented as many-to-many relationships. The REST API represents these relationships as nested objects for retrieval, but in order to create, update or delete these relationships, the through table endpoint must be used. Currently, the only through table endpoint available is the [`IPAddress` to `Interface`/`VMInterface` at `/api/ipam/ip-address-to-interface/`](../../administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#new-interface-to-ip-address-relationship-endpoint).
 
 ## Pagination
 
@@ -1028,3 +1034,12 @@ http://nautobot/api/dcim/locations/ \
 
 !!! note
     The bulk deletion of objects is an all-or-none operation, meaning that if Nautobot fails to delete any of the specified objects (e.g. due a dependency by a related object), the entire operation will be aborted and none of the objects will be deleted.
+
+## CSV Format
+
++++ 2.0.0
+
+In addition to the standard JSON format for REST APIs, Nautobot's REST API also supports most (but not all) REST operations in CSV format when specifying a `?format=csv` query parameter or an `Accept: text/csv` header on requests, allowing Nautobot object data to be created, retrieved, and updated in this format as an alternative to JSON.
+
+!!! tip
+    Nautobot's JSON support in the REST API is more fully-featured than its CSV support; not all data can be populated, retrieved, or modified by CSV at this time due to limitations of the CSV format in describing certain types of data. When in doubt, prefer JSON over CSV when interacting with the REST API.

@@ -1,6 +1,6 @@
 import { useLocation, useParams } from "react-router-dom";
 import { SkeletonText } from "@chakra-ui/react"; // TODO: use nautobot-ui when available
-import { Box } from "@nautobot/nautobot-ui";
+import { Flex } from "@nautobot/nautobot-ui";
 
 import { useGetRESTAPIQuery } from "@utils/api";
 import GenericView from "@views/generic/GenericView";
@@ -62,16 +62,15 @@ export default function ObjectRetrieve({ api_url }) {
 
     // NOTE: This acts as a schema that would be gotten form an OPTIONS call,
     // which loads the tabs and its layout schema.
-    const objectRetrieveTabSchema = {
-        tabs: {
-            [`${schemaData.name}`]: schemaData.view_options.retrieve,
-            Advanced: schemaData.view_options.advanced,
-        },
-    };
+    const objectRetrieveTabSchema = schemaData.view_options.retrieve;
 
     return (
-        <GenericView objectData={data} key={window.location.pathname}>
-            <Box background="white-0" borderRadius="md">
+        <GenericView
+            key={window.location.pathname}
+            gridBackground="white-0"
+            objectData={data}
+        >
+            <Flex direction="column" gap="md">
                 <RenderHeader data={data} />
                 <RenderTabs
                     schema={schemaData.schema.properties}
@@ -82,7 +81,7 @@ export default function ObjectRetrieve({ api_url }) {
                     object_id={object_id}
                     isPluginView={isPluginView}
                 />
-            </Box>
+            </Flex>
         </GenericView>
     );
 }
