@@ -1,2 +1,0 @@
-Fixed `release.yml` and `pre-release.yml` workflow files to target `ci_integration.yml` in its own branch.
-Enforced changelog requirement in `ci_pullrequest.yml` for `ltm/1.6`.
