@@ -22,6 +22,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
 * [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
 * [RELEASE_CHECK_URL](#release_check_url)
+* [SUPPORT_MESSAGE](#support_message)
 
 ## Extra Applications
 
@@ -893,6 +894,21 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 !!! warning
     Setting this to `False` can result in unexpected filtering results in the case of user error, for example `/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+
+---
+
+## SUPPORT_MESSAGE
+
++++ 1.6.4
+
+Default: `""`
+
+A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message (raw HTML is not).
+
+If unset, the default message that will appear is `If further assistance is required, please join the #nautobot channel on [Network to Code's Slack community](https://slack.networktocode.com) and post your question.`
+
+!!! tip
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 

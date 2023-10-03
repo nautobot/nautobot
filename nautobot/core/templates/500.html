@@ -1,4 +1,5 @@
 {% load static %}
+{% load helpers %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -36,7 +37,7 @@
 Python version: {{ python_version }}
 Nautobot version: {{ nautobot_version }}</pre>
                         <p>
-                            If further assistance is required, please join the <b>#nautobot</b> channel on <a href="https://slack.networktocode.com/">Network to Code's Slack community</a> and post your question.
+                            {% support_message %}
                         </p>
                         <div class="text-right">
                             <a href="{% url 'home' %}" class="btn btn-primary">Home Page</a>
