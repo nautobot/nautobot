@@ -1,4 +1,5 @@
 import re
+from unittest import mock
 import urllib.parse
 
 from django.contrib.contenttypes.models import ContentType
@@ -388,3 +389,59 @@ class MetricsViewTestCase(TestCase):
             self.assertNotIn(test_metric_name, metric_names_without_plugin)
         metric_names_with_plugin.remove(test_metric_name)
         self.assertSetEqual(metric_names_with_plugin, metric_names_without_plugin)
+
+
+class ErrorPagesTestCase(TestCase):
+    """Tests for 4xx and 5xx error page rendering."""
+
+    @override_settings(DEBUG=False)
+    def test_404_default_support_message(self):
+        """Nautobot's custom 404 page should be used and should include a default support message."""
+        with self.assertTemplateUsed("404.html"):
+            response = self.client.get("/foo/bar")
+        self.assertContains(response, "Network to Code", status_code=404)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML(
+            "If further assistance is required, please join the <code>#nautobot</code> channel "
+            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
+            "and post your question.",
+            response_content,
+        )
+
+    @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
+    def test_404_custom_support_message(self):
+        """Nautobot's custom 404 page should be used and should include a custom support message if defined."""
+        with self.assertTemplateUsed("404.html"):
+            response = self.client.get("/foo/bar")
+        self.assertNotContains(response, "Network to Code", status_code=404)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML("Hello world!", response_content)
+
+    @override_settings(DEBUG=False)
+    @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
+    def test_500_default_support_message(self, mock_get):
+        """Nautobot's custom 500 page should be used and should include a default support message."""
+        url = reverse("home")
+        with self.assertTemplateUsed("500.html"):
+            self.client.raise_request_exception = False
+            response = self.client.get(url)
+        self.assertContains(response, "Network to Code", status_code=500)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML(
+            "If further assistance is required, please join the <code>#nautobot</code> channel "
+            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
+            "and post your question.",
+            response_content,
+        )
+
+    @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
+    @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
+    def test_500_custom_support_message(self, mock_get):
+        """Nautobot's custom 500 page should be used and should include a default support message."""
+        url = reverse("home")
+        with self.assertTemplateUsed("500.html"):
+            self.client.raise_request_exception = False
+            response = self.client.get(url)
+        self.assertNotContains(response, "Network to Code", status_code=500)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML("Hello world!", response_content)

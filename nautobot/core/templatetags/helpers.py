@@ -24,6 +24,11 @@ HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes
 HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
 HTML_NONE = '<span class="text-muted">&mdash;</span>'
 
+DEFAULT_SUPPORT_MESSAGE = (
+    "If further assistance is required, please join the `#nautobot` channel "
+    "on [Network to Code's Slack community](https://slack.networktocode.com/) and post your question."
+)
+
 register = template.Library()
 
 
@@ -704,6 +709,20 @@ def custom_branding_or_static(branding_asset, static_asset):
     if settings.BRANDING_FILEPATHS.get(branding_asset):
         return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
     return StaticNode.handle_simple(static_asset)
+
+
+@register.simple_tag
+def support_message():
+    """
+    Return the configured support message (if any) or else the default.
+    """
+    try:
+        support_message = config.get_settings_or_config("SUPPORT_MESSAGE")
+    except AttributeError:
+        support_message = ""
+    if not support_message:
+        support_message = DEFAULT_SUPPORT_MESSAGE
+    return render_markdown(support_message)
 
 
 @library.filter()
