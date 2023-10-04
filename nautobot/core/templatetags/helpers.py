@@ -717,12 +717,12 @@ def support_message():
     Return the configured support message (if any) or else the default.
     """
     try:
-        support_message = config.get_settings_or_config("SUPPORT_MESSAGE")
+        message = config.get_settings_or_config("SUPPORT_MESSAGE")
     except AttributeError:
-        support_message = ""
-    if not support_message:
-        support_message = DEFAULT_SUPPORT_MESSAGE
-    return render_markdown(support_message)
+        message = ""
+    if not message:
+        message = DEFAULT_SUPPORT_MESSAGE
+    return render_markdown(message)
 
 
 @library.filter()
