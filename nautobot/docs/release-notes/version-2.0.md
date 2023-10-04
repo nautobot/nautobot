@@ -372,11 +372,11 @@ A natural key interface has been provided for most models to allow for uniquely 
 
 ### Fixed
 
+- [#4436](https://github.com/nautobot/nautobot/issues/4436) - Allowed Interfaces of type `Virtual`, `LAG`, and `Bridge` to be selected as a virtual Interface's `parent`.
 - [#4572](https://github.com/nautobot/nautobot/issues/4572) - Fixed a JS crash when using list view search box to filter objects in legacy UI.
 
 ### Housekeeping
 
-- [#4436](https://github.com/nautobot/nautobot/issues/4436) - Allowed Interfaces of type `Virtual`, `LAG`, and `Bridge` to be selected as a virtual Interface's `parent`.
 - [#4523](https://github.com/nautobot/nautobot/issues/4523) - Fixed `invoke eslint` not running against local development environment.
 - [#4552](https://github.com/nautobot/nautobot/issues/4552) - Improved `test_bulk_delete_form_contains_all_filtered` and `test_bulk_edit_form_contains_all_filtered` generic tests to fail more gracefully if insufficient test data is available.
 
