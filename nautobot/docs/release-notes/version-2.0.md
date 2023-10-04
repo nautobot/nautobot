@@ -368,6 +368,18 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.1 (2023-10-04)
+
+### Fixed
+
+- [#4436](https://github.com/nautobot/nautobot/issues/4436) - Allowed Interfaces of type `Virtual`, `LAG`, and `Bridge` to be selected as a virtual Interface's `parent`.
+- [#4523](https://github.com/nautobot/nautobot/issues/4523) - Fixed `invoke eslint` not running against local development environment.
+- [#4572](https://github.com/nautobot/nautobot/issues/4572) - Fixed a JS crash when using list view search box to filter objects in legacy UI.
+
+### Housekeeping
+
+- [#4552](https://github.com/nautobot/nautobot/issues/4552) - Improved `test_bulk_delete_form_contains_all_filtered` and `test_bulk_edit_form_contains_all_filtered` generic tests to fail more gracefully if insufficient test data is available.
+
 ## v2.0.0 (2023-09-28)
 
 ### Added
