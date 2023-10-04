@@ -89,8 +89,6 @@ jobs:
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.11 }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.11 }}
-            type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build"
@@ -120,8 +118,6 @@ jobs:
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
             type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.python-version == 3.11 }}
-            type=raw,value=stable,enable=${{ matrix.python-version == 3.11 }}
-            type=raw,value=stable-py${{ matrix.python-version }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build Dev Containers"
