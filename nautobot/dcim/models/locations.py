@@ -1,17 +1,15 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
-
-from tree_queries.models import TreeNode
 
 from nautobot.core.fields import AutoSlugField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.extras.models import StatusModel
 from nautobot.extras.utils import extras_features, FeatureQuery
 from nautobot.utilities.fields import NaturalOrderingField
-from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
+from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet, TreeModel
 
 
 @extras_features(
@@ -23,7 +21,7 @@ from nautobot.utilities.tree_queries import TreeManager, TreeQuerySet
     "relationships",
     "webhooks",
 )
-class LocationType(TreeNode, OrganizationalModel):
+class LocationType(TreeModel, OrganizationalModel):
     """
     Definition of a category of Locations, including its hierarchical relationship to other LocationTypes.
 
@@ -120,30 +118,6 @@ class LocationType(TreeNode, OrganizationalModel):
                 }
             )
 
-    @property
-    def display(self):
-        """
-        Include the parent type names as well in order to provide UI clarity.
-        `self.ancestors()` returns all the preceding nodes from the top down.
-        So if we are looking at node C and its node structure is the following:
-            A
-           /
-          B
-         /
-        C
-        This method will return "A → B → C".
-        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
-        """
-        display_str = ""
-        try:
-            for ancestor in self.ancestors():
-                display_str += ancestor.name + " → "
-        except ObjectDoesNotExist:
-            pass
-        finally:
-            display_str += self.name
-            return display_str  # pylint: disable=lost-exception
-
 
 class LocationQuerySet(TreeQuerySet):
     def get_for_model(self, model):
@@ -162,7 +136,7 @@ class LocationQuerySet(TreeQuerySet):
     "statuses",
     "webhooks",
 )
-class Location(TreeNode, StatusModel, PrimaryModel):
+class Location(TreeModel, StatusModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
 
@@ -264,31 +238,6 @@ class Location(TreeNode, StatusModel, PrimaryModel):
     def base_site(self):
         """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
         return self.site or self.ancestors().first().site
-
-    @property
-    def display(self):
-        """
-        Location name is unique per parent but not globally unique, so include parent information as context.
-        `self.ancestors()` returns all the preceding nodes from the top down.
-        So if we are looking at node C and its node structure is the following:
-            A
-           /
-          B
-         /
-        C
-        This method will return "A → B → C".
-
-        Note that `self.ancestors()` may throw an `ObjectDoesNotExist` during bulk-delete operations.
-        """
-        display_str = ""
-        try:
-            for ancestor in self.ancestors():
-                display_str += ancestor.name + " → "
-        except ObjectDoesNotExist:
-            pass
-        finally:
-            display_str += self.name
-            return display_str  # pylint: disable=lost-exception
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
