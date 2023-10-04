@@ -1805,6 +1805,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
                 device=device, name="BRIDGE", status=status_active, type=InterfaceTypeChoices.TYPE_BRIDGE
             ),
         )
+        cls.lag_interface = interfaces[3]
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = interfaces
         cls.selected_objects_parent_name = device.name
@@ -1896,6 +1897,25 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             f"1000base-t,Interface 5,{device.name},{device.location.name},{statuses[0].name}",
             f"1000base-t,Interface 6,{device.name},{device.location.name},{statuses[1].name}",
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_virtual_interface_with_parent_lag(self):
+        """https://github.com/nautobot/nautobot/issues/4436."""
+        self.add_permissions("dcim.add_interface")
+        form_data = self.form_data.copy()
+        del form_data["name"]
+        form_data["name_pattern"] = "LAG.0"
+        form_data["type"] = InterfaceTypeChoices.TYPE_VIRTUAL
+        form_data["parent_interface"] = self.lag_interface
+        del form_data["lag"]
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance = self._get_queryset().order_by("last_updated").last()
+        self.assertEqual(instance.type, InterfaceTypeChoices.TYPE_VIRTUAL)
+        self.assertEqual(instance.parent_interface, self.lag_interface)
 
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):

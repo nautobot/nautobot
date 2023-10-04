@@ -611,8 +611,8 @@ function initializeDynamicFilterForm(context){
         dynamic_form.append(q_field_phantom);
 
         // Get the serialize data from the forms and filter out query_params which values are empty e.g ?sam=&dan=2 becomes dan=2
-        let dynamic_filter_form_query = $("#dynamic-filter-form").serialize().split("&").filter(params => params.split("=")[1].length)
-        let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1].length)
+        let dynamic_filter_form_query = $("#dynamic-filter-form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
+        let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
         // Union Operation
         let search_query = [...new Set([...default_filter_form_query, ...dynamic_filter_form_query])].join("&")
         location.replace("?" + search_query)
