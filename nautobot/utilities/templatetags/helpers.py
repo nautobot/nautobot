@@ -694,7 +694,7 @@ def support_message():
     Return the configured support message (if any) or else the default.
     """
     try:
-        message = config.get_settings_or_config("SUPPORT_MESSAGE")
+        message = get_settings_or_config("SUPPORT_MESSAGE")
     except AttributeError:
         message = ""
     if not message:
