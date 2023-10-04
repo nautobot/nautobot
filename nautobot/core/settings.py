@@ -606,6 +606,11 @@ CONSTANCE_CONFIG = {
         "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
         field_type=int,
     ),
+    "FEEDBACK_BUTTON_ENABLED": ConstanceConfigItem(
+        default=True,
+        help_text="Whether to show the Feedback button in the new UI sidebar.",
+        field_type=bool,
+    ),
     "HIDE_RESTRICTED_UI": ConstanceConfigItem(
         default=False,
         help_text="If set to True, users with limited permissions will not be shown menu items and home-page elements that "
@@ -678,10 +683,10 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         field_type="release_check_url_field",
     ),
-    "FEEDBACK_BUTTON_ENABLED": ConstanceConfigItem(
-        default=True,
-        help_text="Whether to show the Feedback button in the new UI sidebar.",
-        field_type=bool,
+    "SUPPORT_MESSAGE": ConstanceConfigItem(
+        default="",
+        help_text="Help message to include on 4xx and 5xx error pages. Markdown is supported.\n"
+        "If unspecified, instructions to join Network to Code's Slack community will be provided.",
     ),
 }
 
@@ -695,7 +700,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["HIDE_RESTRICTED_UI", "FEEDBACK_BUTTON_ENABLED"],
+    "User Interface": ["HIDE_RESTRICTED_UI", "FEEDBACK_BUTTON_ENABLED", "SUPPORT_MESSAGE"],
 }
 
 #
