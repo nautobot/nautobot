@@ -218,6 +218,37 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "time_zone": pytz.timezone("US/Eastern"),
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_child_location_under_a_non_globally_unique_named_parent_location(self):
+        self.add_permissions("dcim.add_location")
+        status = Status.objects.get_for_model(Location).first()
+        region_type = LocationType.objects.create(name="Region")
+        site_type = LocationType.objects.create(name="Site", parent=region_type)
+        building_type = LocationType.objects.create(name="Building Type", parent=site_type)
+        region_1 = Location.objects.create(name="Region 1", location_type=region_type, status=status)
+        region_2 = Location.objects.create(name="Region 2", location_type=region_type, status=status)
+        site_1 = Location.objects.create(name="Generic Site", location_type=site_type, parent=region_1, status=status)
+        Location.objects.create(name="Generic Site", location_type=site_type, parent=region_2, status=status)
+        test_form_data = {
+            "location_type": building_type.pk,
+            "parent": "Generic Site",
+            "name": "Root 3",
+            "status": status.pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(Location)],
+        }
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(test_form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("“Generic Site” is not a valid UUID.", response_body)
+        test_form_data["parent"] = site_1.pk
+        request["data"] = post_data(test_form_data)
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(Location.objects.get(name="Root 3").parent.pk, site_1.pk)
+
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
