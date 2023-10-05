@@ -6,7 +6,6 @@ import yaml
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
@@ -237,7 +236,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         region_1 = Location.objects.create(name="Region 1", location_type=region_type, status=status)
         region_2 = Location.objects.create(name="Region 2", location_type=region_type, status=status)
         site_1 = Location.objects.create(name="Generic Site", location_type=site_type, parent=region_1, status=status)
-        site_2 = Location.objects.create(name="Generic Site", location_type=site_type, parent=region_2, status=status)
+        Location.objects.create(name="Generic Site", location_type=site_type, parent=region_2, status=status)
         test_form_data = {
             "location_type": building_type.pk,
             "parent": "Generic Site",
