@@ -1542,7 +1542,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
                     self.queryset.filter(qs_filter),
                 )
 
-        with self.subTest("q filter by pk"):
+        with self.subTest("test q filter by field pk"):
             value = self.queryset.values_list("pk", flat=True).first()
             params = {"q": value}
             self.assertQuerysetEqualAndNotEmpty(
