@@ -1511,9 +1511,19 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             )
 
     def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        with self.subTest("q filter by pk"):
+            value = self.queryset.values_list("pk", flat=True)[0]
+            params = {"q": value}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=value)
+            )
+        with self.subTest("q filter by manufacturer"):
+            value = self.queryset.values_list("device_type__manufacturer__name", flat=True)[0]
+            params = {"q": value}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(device_type__manufacturer__name__icontains=value),
+            )
 
 
 class ConsolePortTestCase(FilterTestCases.FilterTestCase):
