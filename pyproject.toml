@@ -252,6 +252,7 @@ py-version = "3.8"
 ignore-paths = [
     ".*third_party.*"
 ]
+jobs = 0
 
 [tool.pylint.basic]
 # No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
