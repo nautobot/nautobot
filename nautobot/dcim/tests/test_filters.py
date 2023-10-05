@@ -1527,6 +1527,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
                     .first()
                 )
                 params = {"q": value}
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
                 qs_filter = (
                     Q(name__icontains=value)
                     | Q(serial__icontains=value.strip())
