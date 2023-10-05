@@ -220,15 +220,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_child_location_under_a_non_globally_unique_named_parent_location(self):
-        # Assign unconstrained permission
-        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-
-        # Try GET with model-level permission
-        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
-
+        self.add_permissions("dcim.add_location")
         status = Status.objects.get_for_model(Location).first()
         region_type = LocationType.objects.create(name="Region")
         site_type = LocationType.objects.create(name="Site", parent=region_type)
@@ -252,11 +244,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         self.assertIn("“Generic Site” is not a valid UUID.", response_body)
-        initial_count = Location.objects.count()
         test_form_data["parent"] = site_1.pk
         request["data"] = post_data(test_form_data)
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(initial_count + 1, self._get_queryset().count())
+        self.assertEqual(Location.objects.get(name="Root 3").parent.pk, site_1.pk)
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
