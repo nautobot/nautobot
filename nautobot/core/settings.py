@@ -669,6 +669,11 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         "release_check_url_field",
     ],
+    "SUPPORT_MESSAGE": [
+        "",
+        "Help message to include on 4xx and 5xx error pages. Markdown is supported.\n"
+        "If unspecified, instructions to join Network to Code's Slack community will be provided.",
+    ],
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -680,7 +685,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
+    "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI", "SUPPORT_MESSAGE"],
 }
 
 #
