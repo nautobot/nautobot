@@ -957,6 +957,10 @@ class DeviceFilterSet(
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
+            "device_type__manufacturer__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
             "comments": "icontains",
         },
     )
