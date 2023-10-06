@@ -198,7 +198,7 @@ However, because we've set the `NAUTOBOT_ROOT`, this command will automatically 
 nautobot-server init
 ```
 
-Example output
+Example output:
 
 ```no-highlight
 Nautobot would like to send anonymized installation metrics to the project's maintainers.
