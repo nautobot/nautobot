@@ -1,9 +1,10 @@
 from django.test import TestCase
 
+from nautobot.core.models.querysets import count_related
 from nautobot.core.views.utils import check_filter_for_display
 
 from nautobot.dcim.filters import DeviceFilterSet
-from nautobot.dcim.models import DeviceRedundancyGroup
+from nautobot.dcim.models import DeviceRedundancyGroup, InventoryItem, Manufacturer
 
 
 class CheckFilterForDisplayTest(TestCase):
@@ -98,3 +99,9 @@ class CheckFilterForDisplayTest(TestCase):
         # with self.assertEqual(
         #     check_filter_for_display(device_filter_set_filters, "manufacturer", ["fake_slug"]), expected_output
         # )
+
+
+class CheckCountRelatedSubquery(TestCase):
+    def test_count_related(self):
+        queryset = Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer"))
+        self.assertIsNotNone(queryset.count)
