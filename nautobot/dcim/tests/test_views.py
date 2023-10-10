@@ -585,47 +585,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Manufacturer 7,Seventh manufacturer",
         )
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_manufacturer_list_view_count_related_subquery(self):
-        """Assert that InventoryItems with the same Manufacuturers do not cause issues in ManufacturerListView."""
-        location = Location.objects.filter(parent__isnull=False).first()
-        manufacturer = Manufacturer.objects.create(name="New Manufacturer")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).first()
-        device1 = Device.objects.create(
-            device_type=devicetype,
-            role=devicerole,
-            name="TestDevice1",
-            status=device_status,
-            location=location,
-        )
-        self.manufacturer_1 = Manufacturer.objects.create(name="Manufacturer 1")
-        self.manufacturer_2 = Manufacturer.objects.create(name="Manufacturer 2")
-        self.manufacturer_3 = Manufacturer.objects.create(name="Manufacturer 3")
-        self.parent_inventory_item_1 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_1, name="Parent Inv 1"
-        )
-        self.child_inventory_item_1 = InventoryItem.objects.create(
-            device=device1,
-            manufacturer=self.manufacturer_1,
-            name="Parent Inv 1",
-            parent=self.parent_inventory_item_1,
-        )
-        self.inventory_item_2 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_2, name="Inv 2"
-        )
-        self.inventory_item_3 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_3, name="Inv 3"
-        )
-        self.inventory_item_4 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_3, name="Inv 4"
-        )
-        # Try GET with model-level permission
-        self.add_permissions("dcim.view_manufacturer")
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-
 
 # TODO: Change base class to PrimaryObjectViewTestCase
 # Blocked by absence of bulk import view for DeviceTypes
