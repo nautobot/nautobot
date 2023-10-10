@@ -618,8 +618,8 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         self.inventory_item_3 = InventoryItem.objects.create(
             device=device1, manufacturer=self.manufacturer_3, name="Inv 3"
         )
-        self.inventory_item_3 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_3, name="Inv 3"
+        self.inventory_item_4 = InventoryItem.objects.create(
+            device=device1, manufacturer=self.manufacturer_3, name="Inv 4"
         )
         # Try GET with model-level permission
         self.add_permissions("dcim.view_manufacturer")
