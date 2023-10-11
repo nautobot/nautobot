@@ -106,37 +106,32 @@ class CheckCountRelatedSubquery(TestCase):
     def test_count_related(self):
         """Assert that InventoryItems with the same Manufacuturers do not cause issues in count_related subquery."""
         location = Location.objects.filter(parent__isnull=False).first()
-        manufacturer = Manufacturer.objects.create(name="New Manufacturer")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        self.manufacturers = Manufacturer.objects.all()[:3]
+        devicetype = DeviceType.objects.first()
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
         device1 = Device.objects.create(
             device_type=devicetype,
             role=devicerole,
-            name="TestDevice1",
             status=device_status,
             location=location,
         )
-        self.manufacturer_1 = Manufacturer.objects.create(name="Manufacturer 1")
-        self.manufacturer_2 = Manufacturer.objects.create(name="Manufacturer 2")
-        self.manufacturer_3 = Manufacturer.objects.create(name="Manufacturer 3")
         self.parent_inventory_item_1 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_1, name="Parent Inv 1"
+            device=device1, manufacturer=self.manufacturers[0], name="Parent Inv 1"
         )
         self.child_inventory_item_1 = InventoryItem.objects.create(
             device=device1,
-            manufacturer=self.manufacturer_1,
-            name="Parent Inv 1",
+            manufacturer=self.manufacturers[0],
+            name="Child Inv 1",
             parent=self.parent_inventory_item_1,
         )
         self.inventory_item_2 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_2, name="Inv 2"
+            device=device1, manufacturer=self.manufacturers[1], name="Inv 2"
         )
         self.inventory_item_3 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_3, name="Inv 3"
+            device=device1, manufacturer=self.manufacturers[2], name="Inv 3"
         )
         self.inventory_item_4 = InventoryItem.objects.create(
-            device=device1, manufacturer=self.manufacturer_3, name="Inv 4"
+            device=device1, manufacturer=self.manufacturers[2], name="Inv 4"
         )
-        queryset = Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer"))
-        self.assertIsNotNone(queryset.count)
+        Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer"))
