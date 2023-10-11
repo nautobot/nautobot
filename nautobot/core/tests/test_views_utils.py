@@ -104,7 +104,7 @@ class CheckFilterForDisplayTest(TestCase):
 
 class CheckCountRelatedSubquery(TestCase):
     def test_count_related(self):
-        """Assert that InventoryItems with the same Manufacuturers do not cause issues in ManufacturerListView."""
+        """Assert that InventoryItems with the same Manufacuturers do not cause issues in count_related subquery."""
         location = Location.objects.filter(parent__isnull=False).first()
         manufacturer = Manufacturer.objects.create(name="New Manufacturer")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
