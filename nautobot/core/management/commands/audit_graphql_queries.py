@@ -25,7 +25,7 @@ class Command(BaseCommand):
         if is_valid:
             self.stdout.write("\n>>> All GraphQLQuery query data are validated successfully!")
         else:
-            self.stderr.write(f">>> The following GraphQLQuery instances have invalid query data: \n")
+            self.stderr.write(">>> The following GraphQLQuery instances have invalid query data: \n")
             for name, error_message in error_dict.items():
                 self.stderr.write(
                     f"    GraphQLQuery instance with name `{name}` has invalid query data: {error_message}\n"
