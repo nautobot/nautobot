@@ -165,6 +165,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ["rir", "rir__name"],
         ["role", "role__id"],
         ["role", "role__name"],
+        ["status", "status__id"],
         ["status", "status__name"],
         ["type"],
     )
@@ -855,7 +856,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(IPAddress).filter(ip_addresses__isnull=False)[:2])
-        params = {"status": [statuses[0].name, statuses[1].name]}
+        params = {"status": [statuses[0].name, statuses[1].id]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses)
         )
@@ -1114,7 +1115,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(vlans__isnull=False).distinct())[:2]
-        params = {"status": [statuses[0].name, statuses[1].name]}
+        params = {"status": [statuses[0].name, statuses[1].id]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses))
 
     def test_search(self):

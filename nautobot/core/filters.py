@@ -5,10 +5,8 @@ import uuid
 
 from django import forms as django_forms
 from django.conf import settings
-from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
-from django.utils.module_loading import import_string
 import django_filters
 from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, resolve_field
@@ -21,17 +19,6 @@ from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import data as data_utils
 
 logger = logging.getLogger(__name__)
-
-NULLABLE_CLASSES = (
-    models.CharField,
-    models.DateField,
-    models.DecimalField,
-    models.ForeignKey,
-    models.FloatField,
-    models.IntegerField,
-    models.TextField,
-    models.UUIDField,
-)
 
 
 def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
@@ -643,21 +630,8 @@ class BaseFilterSet(django_filters.FilterSet):
         if field is None:
             return magic_filters
 
-        field_type = None
-        try:
-            field_type = cls._meta.model._meta.get_field(field_name)
-            # TODO: This should not be needed, there seems to be some behavior changes with
-            # RoleFilter filters that haven't been migrated, which is beyond the scope of this change
-            # Working around it for now
-            if isinstance(filter_field, import_string("nautobot.extras.filters.mixins.RoleFilter")):
-                field_type = None
-        except FieldDoesNotExist:
-            # Will get error like:
-            # `FieldDoesNotExist: RelationshipAssociation has no field named 'relationship__key'`
-            pass
-
         # If the field allows null values, add an `isnull`` check
-        if field.null and isinstance(field_type, NULLABLE_CLASSES):
+        if getattr(field, "null", None):
             # Use this method vs extend as the `lookup_map` variable is generally one of
             # the constants which we do not want to update
             lookup_map = dict(lookup_map, **{"isnull": "isnull"})
