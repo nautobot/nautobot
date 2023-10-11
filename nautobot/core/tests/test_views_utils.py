@@ -1,3 +1,4 @@
+from django.db import ProgrammingError
 from django.test import TestCase
 
 from nautobot.core.models.querysets import count_related
@@ -134,4 +135,7 @@ class CheckCountRelatedSubquery(TestCase):
         self.inventory_item_4 = InventoryItem.objects.create(
             device=device1, manufacturer=self.manufacturers[2], name="Inv 4"
         )
-        Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer"))
+        try:
+            list(Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer")))
+        except ProgrammingError:
+            self.fail("count_related subquery failed with ProgrammingError")
