@@ -33,5 +33,5 @@ class Command(BaseCommand):
 
             self.stderr.write(
                 "\n>>> Please fix the outdated query data stated above according to the documentation available at:\n"
-                "<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes\n"
+                "https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1/#ui-graphql-and-rest-api-filter-changes\n"
             )
