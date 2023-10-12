@@ -41,6 +41,9 @@ class OpenAPITest(TestCase):
         query_params = self.schema["paths"]["/dcim/devices/"]["get"]["parameters"]
         at_least_one_test = False
         for query_param_info in query_params:
+            if query_param_info["name"].endswith("_isnull"):
+                # The broad catch below does not apply to isnull, which will return a boolean.
+                continue
             if query_param_info["name"].startswith("created") or query_param_info["name"].startswith("last_updated"):
                 self.assertEqual("array", query_param_info["schema"]["type"])
                 self.assertEqual("string", query_param_info["schema"]["items"]["type"])
@@ -57,6 +60,9 @@ class OpenAPITest(TestCase):
         query_params = self.schema["paths"]["/dcim/devices/"]["get"]["parameters"]
         at_least_one_test = False
         for query_param_info in query_params:
+            if query_param_info["name"].endswith("_isnull"):
+                # The broad catch below does not apply to isnull, which will return a boolean.
+                continue
             if query_param_info["name"].startswith("device_redundancy_group_priority"):
                 self.assertEqual("array", query_param_info["schema"]["type"])
                 self.assertEqual("integer", query_param_info["schema"]["items"]["type"])

@@ -1,0 +1,2 @@
+Added the ability to automatically apply `isnull` filters when model field is nullable.
+Enhanced `status` filters to support filtering by ID (UUID) as an alternative to filtering by `name`.
