@@ -644,7 +644,7 @@ class BaseFilterSet(django_filters.FilterSet):
                 if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:
                     # The filter field has been explicitly defined on the filterset class so we must manually
                     # create the new filter with the same type because there is no guarantee the defined type
-                    # is the same as the default type for the field. This does not apply to apply if the filter
+                    # is the same as the default type for the field. This does not apply if the filter
                     # should retain the original lookup_expr type, such as `isnull` using a boolean field on a
                     # char or date object.
                     resolve_field(field, lookup_expr)  # Will raise FieldLookupError if the lookup is invalid
