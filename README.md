@@ -71,7 +71,7 @@ There are many plugins available within the Nautobot Apps ecosystem. The below s
 
 The best platform for general feedback, assistance, and other discussion is our [GitHub discussions](https://github.com/nautobot/nautobot/discussions). To report a bug or request a specific feature, please open a GitHub issue using the [appropriate template](https://github.com/nautobot/nautobot/issues/new/choose).
 
-If you are interested in contributing to the development of Nautobot, please read our [contributing guide](https://docs.nautobot.com/projects/core/en/stable/development/) prior to beginning any work.
+If you are interested in contributing to the development of Nautobot, please read our [contributing guide](https://docs.nautobot.com/projects/core/en/stable/development/core/#contributing) prior to beginning any work.
 
 ## Related projects
 
