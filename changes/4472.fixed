@@ -1,1 +1,1 @@
-Fixes catching multiple database types of MySQL (django_prometheus and standard mysql).
+Fixed incorrect logic in `nautobot_config.py.j2` template that wouldn't detect the MySQL engine when Prometheus metrics are enabled.
