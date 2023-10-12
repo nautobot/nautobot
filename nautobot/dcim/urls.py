@@ -79,7 +79,7 @@ urlpatterns = [
         kwargs={"model": Location},
     ),
     path(
-        "locations/<uuid:pk>/images/add/",
+        "locations/<uuid:object_id>/images/add/",
         ImageAttachmentEditView.as_view(),
         name="location_add_image",
         kwargs={"model": Location},
