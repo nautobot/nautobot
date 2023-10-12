@@ -75,7 +75,7 @@ If you are interested in contributing to the development of Nautobot, please rea
 
 ## Related projects
 
-Please checkout [our community repository](https://github.com/nautobot/community/blob/main/content/README.md) for a list of relevant community projects.
+Please checkout [our nautobot topics](https://github.com/topics/nautobot) for a list of relevant community projects.
 
 ## Notices
 
