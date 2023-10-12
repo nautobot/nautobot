@@ -1,4 +1,5 @@
-from django.test import TestCase
+from constance.test import override_config
+from django.test import TestCase, override_settings
 from django.templatetags.static import static
 from django.conf import settings
 from unittest import skipIf
@@ -27,6 +28,7 @@ from nautobot.utilities.templatetags.helpers import (
     as_range,
     meters_to_feet,
     get_item,
+    support_message,
 )
 from nautobot.dcim.models import Site
 from example_plugin.models import AnotherExampleModel, ExampleModel
@@ -209,3 +211,28 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 render_boolean(value), '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
             )
         self.assertEqual(render_boolean(None), '<span class="text-muted">&mdash;</span>')
+
+    def test_support_message(self):
+        """Test the `support_message` tag with config and settings."""
+        with override_settings():
+            del settings.SUPPORT_MESSAGE
+            with override_config():
+                self.assertHTMLEqual(
+                    support_message(),
+                    "<p>If further assistance is required, please join the <code>#nautobot</code> channel "
+                    'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
+                    "and post your question.</p>",
+                )
+
+            with override_config(SUPPORT_MESSAGE="Reach out to your support team for assistance."):
+                self.assertHTMLEqual(
+                    support_message(),
+                    "<p>Reach out to your support team for assistance.</p>",
+                )
+
+        with override_settings(SUPPORT_MESSAGE="Settings **support** message:\n\n- Item 1\n- Item 2"):
+            with override_config(SUPPORT_MESSAGE="Config support message"):
+                self.assertHTMLEqual(
+                    support_message(),
+                    "<p>Settings <strong>support</strong> message:</p><ul><li>Item 1</li><li>Item 2</li></ul>",
+                )
