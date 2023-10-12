@@ -58,7 +58,7 @@ If you have invalid filters in your `DynamicGroup` instances, the following outp
     DynamicGroup instance with name `Test DP 4` and content type `example_plugin | another example model` has an invalid filter `site`
 
 >>> Please fix the broken filters stated above according to the documentation available at:
-<nautobot-home>/static/docs/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes
+https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1/#ui-graphql-and-rest-api-filter-changes
 ```
 
 If your filter data is valid, you should see a success message at the end of the output:
@@ -94,7 +94,7 @@ If you have invalid query data in your `GraphQLQuery` instances, the following o
     GraphQLQuery with name `Wrong Query 2` has invalid query data: [{'message': "{'location': ['Select a valid choice. Location 01 is not one of the available choices.']}", 'locations': [{'line': 5, 'column': 8}], 'path': ['devices']}]
 
 >>> Please fix the outdated query data stated above according to the documentation available at:
-<nautobot-home>/static/docs/installation/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes
+https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1/#ui-graphql-and-rest-api-filter-changes
 ```
 
 If your query data is valid, you should see a success message at the end of the output:
