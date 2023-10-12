@@ -75,7 +75,7 @@ If you are interested in contributing to the development of Nautobot, please rea
 
 ## Related projects
 
-Please checkout [our nautobot topics](https://github.com/topics/nautobot) for a list of relevant community projects.
+Please check out [the GitHub `nautobot` topic](https://github.com/topics/nautobot) for a list of relevant community projects.
 
 ## Notices
 
