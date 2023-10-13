@@ -1074,7 +1074,7 @@ class IPAddress(PrimaryModel):
                 # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
                 .get_closest_parent(self.host, include_self=True)
             )
-            setattr(self, "_closest_parent", self._get_closest_parent())
+            setattr(self, "_closest_parent", closes_parent)
             return closes_parent
         except Prefix.DoesNotExist as e:
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
