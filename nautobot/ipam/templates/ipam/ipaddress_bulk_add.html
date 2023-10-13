@@ -13,6 +13,8 @@
         <div class="panel-heading"><strong>IP Addresses</strong></div>
         <div class="panel-body">
             {% render_field form.pattern %}
+            {% render_field model_form.namespace %}
+            {% render_field model_form.type %}
             {% render_field model_form.status %}
             {% render_field model_form.role %}
             {% render_field model_form.vrf %}

@@ -548,7 +548,6 @@ class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
 class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
     namespace = DynamicModelChoiceField(
         queryset=Namespace.objects.all(),
-        required=False,
         label="Namespace",
     )
 
@@ -566,6 +565,17 @@ class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
             "tenant",
             "tags",
         ]
+
+    def clean_namespace(self):
+        """
+        Explicitly set the Namespace on the instance so it will be used on save.
+
+        While the model does this itself on create, the model form is creating a bare instance first
+        and setting attributes individually based on the form field values. Since namespace isn't an
+        actual model field, it gets ignored by default.
+        """
+        namespace = self.cleaned_data.pop("namespace")
+        setattr(self.instance, "_namespace", namespace)
 
 
 class IPAddressBulkEditForm(
