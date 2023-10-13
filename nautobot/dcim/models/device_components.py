@@ -604,16 +604,11 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
             # An interface cannot be its own parent
             if self.parent_interface_id == self.pk:
                 raise ValidationError({"parent_interface": "An interface cannot be its own parent."})
+
             # A physical interface cannot have a parent interface
             if hasattr(self, "type") and self.type != InterfaceTypeChoices.TYPE_VIRTUAL:
                 raise ValidationError(
                     {"parent_interface": "Only virtual interfaces may be assigned to a parent interface."}
-                )
-
-            # A virtual interface cannot be a parent interface
-            if getattr(self.parent_interface, "type", None) == InterfaceTypeChoices.TYPE_VIRTUAL:
-                raise ValidationError(
-                    {"parent_interface": "Virtual interfaces may not be parents of other interfaces."}
                 )
 
             # An interface's parent must belong to the same device or virtual chassis

@@ -979,7 +979,7 @@ def eslint(context, autoformat=False):
         docker_compose(
             context,
             "run --workdir='/opt/nautobot/ui' -e NODE_ENV=test "
-            f"--entrypoint '{eslint_command} /opt/nautobot/ui' nautobot",
+            f"--entrypoint '{eslint_command} /opt/nautobot/ui' nodejs",
         )
 
 

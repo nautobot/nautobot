@@ -61,7 +61,7 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 # Ensure proper Unicode handling for MySQL
 #
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+if DATABASES["default"]["ENGINE"].endswith("mysql"):
     DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
@@ -466,6 +466,13 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # Reject invalid UI/API filter parameters, or discard them while logging a warning?
 #
 # STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
+
+# Custom message to display on 4xx and 5xx error pages. Markdown is supported.
+#
+# SUPPORT_MESSAGE = (
+#     "If further assistance is required, please join the `#nautobot` channel "
+#     "on [Network to Code's Slack community](https://slack.networktocode.com) and post your question."
+# )
 
 # UI_RACK_VIEW_TRUNCATE_FUNCTION
 #
