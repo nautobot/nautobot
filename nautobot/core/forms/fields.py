@@ -354,11 +354,16 @@ class ExpandableIPAddressField(django_forms.CharField):
             )
 
     def to_python(self, value):
+        # Ensure that a subnet mask has been specified. This prevents IPs from defaulting to a /32 or /128.
+        if len(value.split("/")) != 2:
+            raise ValidationError("CIDR mask (e.g. /24) is required.")
+
         # Hackish address version detection but it's all we have to work with
         if "." in value and re.search(forms.IP4_EXPANSION_PATTERN, value):
             return list(forms.expand_ipaddress_pattern(value, 4))
         elif ":" in value and re.search(forms.IP6_EXPANSION_PATTERN, value):
             return list(forms.expand_ipaddress_pattern(value, 6))
+
         return [value]
 
 
