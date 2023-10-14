@@ -405,7 +405,22 @@ class PrefixFilterForm(
 #
 
 
-class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldMixin):
+class IPAddressFormMixin(NautobotModelForm, TenancyForm, AddressFieldMixin):
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), label="Namespace")
+
+    def clean_namespace(self):
+        """
+        Explicitly set the Namespace on the instance so it will be used on save.
+
+        While the model does this itself on create, the model form is creating a bare instance first
+        and setting attributes individually based on the form field values. Since namespace isn't an
+        actual model field, it gets ignored by default.
+        """
+        namespace = self.cleaned_data.pop("namespace")
+        setattr(self.instance, "_namespace", namespace)
+
+
+class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
     nat_location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
@@ -451,7 +466,6 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "vrf_id": "$nat_vrf",
         },
     )
-    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
 
     class Meta:
         model = IPAddress
@@ -485,32 +499,10 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
         exclude.remove("parent")
         return exclude
 
-    def clean_namespace(self):
-        """
-        Explicitly set the Namespace on the instance so it will be used on save.
-
-        While the model does this itself on create, the model form is creating a bare instance first
-        and setting attributes individually based on the form field values. Since namespace isn't an
-        actual model field, it gets ignored by default.
-        """
-        namespace = self.cleaned_data.pop("namespace")
-        setattr(self.instance, "_namespace", namespace)
-
     def clean(self):
         # Pass address to the instance, because this is required to be accessible in the IPAddress.clean method
         self.instance.address = self.cleaned_data.get("address")
         super().clean()
-        # If user input was bad, might not even *have* an identifiable host
-        if self.instance.host and self.instance._namespace:
-            try:
-                self.instance.parent = (
-                    Prefix.objects.filter(namespace=self.instance._namespace)
-                    # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick TYPE_NETWORK
-                    # .exclude(type=PrefixTypeChoices.TYPE_POOL)
-                    .get_closest_parent(self.instance.host, include_self=True)
-                )
-            except Prefix.DoesNotExist:
-                raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"})
 
     def __init__(self, *args, **kwargs):
         # Initialize helper selectors
@@ -545,12 +537,7 @@ class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
     pattern = ExpandableIPAddressField(label="Address pattern")
 
 
-class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
-    namespace = DynamicModelChoiceField(
-        queryset=Namespace.objects.all(),
-        label="Namespace",
-    )
-
+class IPAddressBulkAddForm(IPAddressFormMixin):
     class Meta:
         model = IPAddress
         fields = [
@@ -565,17 +552,6 @@ class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
             "tenant",
             "tags",
         ]
-
-    def clean_namespace(self):
-        """
-        Explicitly set the Namespace on the instance so it will be used on save.
-
-        While the model does this itself on create, the model form is creating a bare instance first
-        and setting attributes individually based on the form field values. Since namespace isn't an
-        actual model field, it gets ignored by default.
-        """
-        namespace = self.cleaned_data.pop("namespace")
-        setattr(self.instance, "_namespace", namespace)
 
 
 class IPAddressBulkEditForm(

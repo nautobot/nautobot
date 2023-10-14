@@ -1044,6 +1044,9 @@ class IPAddress(PrimaryModel):
         namespace = kwargs.pop("namespace", None)
         super().__init__(*args, **kwargs)
 
+        # Initialize `_closest_parent` which would be updated when `_get_closest_parent` is called.
+        self._closest_parent = None
+
         # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
         if namespace is None and self.parent is not None:
             namespace = self.parent.namespace
@@ -1065,8 +1068,8 @@ class IPAddress(PrimaryModel):
     natural_key_field_names = ["parent__namespace", "host"]
 
     def _get_closest_parent(self):
-        if closes_parent := getattr(self, "_closest_parent", None):
-            return closes_parent
+        if self._closest_parent:
+            return self._closest_parent
         try:
             closes_parent = (
                 Prefix.objects.filter(namespace=self._namespace)
@@ -1074,7 +1077,7 @@ class IPAddress(PrimaryModel):
                 # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
                 .get_closest_parent(self.host, include_self=True)
             )
-            setattr(self, "_closest_parent", closes_parent)
+            self._closest_parent = closes_parent
             return closes_parent
         except Prefix.DoesNotExist as e:
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
