@@ -221,6 +221,10 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
         if mismatches:
             print(" ".join(error_message), flush=True)
 
+    # migrate Aggregate ObjectChange to Prefix
+    ObjectChange.objects.filter(changed_object_type=aggregate_ct).update(changed_object_type=prefix_ct)
+    ObjectChange.objects.filter(related_object_type=aggregate_ct).update(related_object_type=prefix_ct)
+
 
 class Migration(migrations.Migration):
     dependencies = [

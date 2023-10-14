@@ -1,0 +1,1 @@
+Fixed `post_upgrade` bug caused due to left over reference of Aggregate ContentType in ObjectChange.
