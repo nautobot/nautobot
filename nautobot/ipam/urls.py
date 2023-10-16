@@ -18,6 +18,7 @@ app_name = "ipam"
 
 router = NautobotUIViewSetRouter()
 router.register("namespaces", views.NamespaceUIViewSet)
+router.register("ip-address-to-interface", views.IPAddressToInterfaceUIViewSet)
 
 urlpatterns = [
     # VRFs

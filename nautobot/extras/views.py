@@ -883,11 +883,12 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
 def check_and_call_git_repository_function(request, pk, func):
     """Helper for checking Git permissions and worker availability, then calling provided function if all is well
     Args:
-        request: request object.
+        request (HttpRequest): request object.
         pk (UUID): GitRepository pk value.
         func (function): Enqueue git repo function.
     Returns:
-        HttpResponseForbidden or a redirect
+        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
+            otherwise redirect to the job result page.
     """
     if not request.user.has_perm("extras.change_gitrepository"):
         return HttpResponseForbidden()
@@ -1682,7 +1683,7 @@ class NoteDeleteView(generic.ObjectDeleteView):
 
 class ObjectNotesView(View):
     """
-    Present a history of changes made to a particular object.
+    Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 

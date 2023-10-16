@@ -265,7 +265,6 @@ class LocationForm(NautobotModelForm, TenancyForm):
     parent = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         query_params={"child_location_type": "$location_type"},
-        to_field_name="name",
         required=False,
     )
     comments = CommentField()
@@ -2139,9 +2138,6 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         queryset=Interface.objects.all(),
         required=False,
         label="Parent interface",
-        query_params={
-            "kind": "physical",
-        },
         help_text="Assigned parent interface",
     )
     bridge = DynamicModelChoiceField(

@@ -72,7 +72,7 @@ def get_api_version_serializer(serializer_choices, api_version):
         api_version (str): Request API version
 
     Returns:
-        returns the serializer for the api_version if found in serializer_choices else None
+        (Serializer): the serializer for the api_version if found in serializer_choices else None
     """
     for versions, serializer in serializer_choices:
         if api_version in versions:
@@ -338,11 +338,11 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
     When depth > 0, return the data for the appropriate nested serializer, plus a "generic_foreign_key = True" field.
 
     Args:
-        serializer: BaseSerializer
-        depth: Levels of nested serialization
-        obj: Object needs to be serialized
-        obj_related_field: Related object needs to be serialized
-        obj_related_field_name: Object's field name that represents the related object.
+        serializer (BaseSerializer): BaseSerializer
+        depth (int): Levels of nested serialization
+        obj (BaseModel): Object needs to be serialized
+        obj_related_field (BaseModel): Related object needs to be serialized
+        obj_related_field_name (str): Object's field name that represents the related object.
     """
     if depth == 0:
         url = obj_related_field.get_absolute_url(api=True)

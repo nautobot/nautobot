@@ -670,6 +670,7 @@ class NoteInputSerializer(serializers.Serializer):
 class ObjectChangeSerializer(BaseModelSerializer):
     action = ChoiceField(choices=ObjectChangeActionChoices, read_only=True)
     changed_object_type = ContentTypeField(read_only=True)
+    related_object_type = ContentTypeField(read_only=True)
     changed_object = serializers.SerializerMethodField(read_only=True)
 
     class Meta:

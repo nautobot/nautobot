@@ -1,3 +1,0 @@
-Fixed a case where an ObjectChange would not be created when making an M2M change via the ORM.
-Fixed an error when trying to send a Webhook after all ObjectChanges for an object had been deleted/pruned.
-Fixed a case where a JobHook would not be sent when making an M2M change after all existing ObjectChanges for the object had been deleted/pruned.

@@ -1,0 +1,1 @@
+Allowed Interfaces of type `Virtual`, `LAG`, and `Bridge` to be selected as a virtual Interface's `parent`.

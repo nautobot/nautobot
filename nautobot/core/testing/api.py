@@ -5,17 +5,19 @@ from typing import Optional, Sequence, Union
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import ForeignKey, ManyToManyField
+from django.db.models import ForeignKey, ManyToManyField, QuerySet
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.text import slugify
 from rest_framework import status
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
+from rest_framework.relations import ManyRelatedField
 
 from nautobot.core import testing
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -196,59 +198,50 @@ class APIViewTestCases:
                 # Namings Help
                 # 1. detail_view_config: This is the detail view config set in the serializer.Meta.detail_view_config
                 # 2. detail_view_schema: This is the retrieve schema generated from an OPTIONS request.
-                # 3. advanced_view_config: This is the advanced view config set in the serializer.Meta.advanced_view_config
-                # 4. advanced_view_schema: This is the advanced tab schema generated from an OPTIONS request.
+                # 3. advanced_view_schema: This is the advanced tab schema generated from an OPTIONS request.
                 serializer = get_serializer_for_model(self._get_queryset().model)
-                advanced_view_schema = response.data["view_options"]["advanced"]
+                advanced_view_schema = response.data["view_options"]["retrieve"]["tabs"]["Advanced"]
 
-                if getattr(serializer.Meta, "advanced_view_config", None):
-                    # Get all custom advanced tab fields
-                    advanced_view_config = serializer.Meta.advanced_view_config
-                    self.assertGreaterEqual(len(advanced_view_schema), 1)
-                    advanced_tab_fields = []
-                    advanced_view_layout = advanced_view_config["layout"]
-                    for section in advanced_view_layout:
-                        for value in section.values():
-                            advanced_tab_fields += value["fields"]
-                else:
-                    # Get default advanced tab fields
-                    self.assertEqual(len(advanced_view_schema), 1)
-                    self.assertIn("Object Details", advanced_view_schema[0])
-                    advanced_tab_fields = advanced_view_schema[0].get("Object Details")["fields"]
+                # Get default advanced tab fields
+                self.assertEqual(len(advanced_view_schema), 1)
+                self.assertIn("Object Details", advanced_view_schema[0])
+                advanced_tab_fields = advanced_view_schema[0].get("Object Details")["fields"]
 
                 if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
-                    detail_view_schema = response.data["view_options"]["retrieve"]
+                    detail_view_schema = response.data["view_options"]["retrieve"]["tabs"][
+                        bettertitle(self._get_queryset().model._meta.verbose_name)
+                    ]
                     self.assertHttpStatus(response, status.HTTP_200_OK)
 
                     # According to convention, fields in the advanced tab fields should not exist in
                     # the `detail_view_schema`. Assert this is True.
                     with self.subTest("Assert advanced tab fields should not exist in the detail_view_schema."):
                         if detail_view_config.get("include_others"):
-                            # Handle `Other Fields` specially as `Other Field` is dynamically added by nautobot and not part of the serializer view config
+                            # Handle "Other Fields" section specially as "Other Field" is dynamically added
+                            # by Nautobot and is not part of the serializer-defined detail_view_config
                             other_fields = detail_view_schema[0]["Other Fields"]["fields"]
                             for field in advanced_tab_fields:
                                 self.assertNotIn(field, other_fields)
 
                         for col_idx, col in enumerate(detail_view_schema):
-                            for group_idx, (group_title, group) in enumerate(col.items()):
+                            for group_title, group in col.items():
                                 if group_title == "Other Fields":
                                     continue
                                 group_fields = group["fields"]
                                 # Config on the serializer
-                                fields = detail_view_config["layout"][col_idx][group_title]["fields"]
-                                # According to convention, advanced_tab_fields should only exist at the end of the first col group and should be
-                                # deleted from any other places it may appear in the layout. Assert this is True.
-                                if group_idx == 0 == col_idx:
-                                    self.assertFalse(
-                                        any(
-                                            field in advanced_tab_fields
-                                            for field in group_fields[: -len(advanced_tab_fields)]
-                                        )
-                                    )
+                                if (
+                                    col_idx < len(detail_view_config["layout"])
+                                    and group_title in detail_view_config["layout"][col_idx]
+                                ):
+                                    fields = detail_view_config["layout"][col_idx][group_title]["fields"]
                                 else:
-                                    for field in group_fields:
-                                        self.assertNotIn(field, advanced_tab_fields)
-                                # Assert response from options correspond to the view config set on the serializer
+                                    fields = []
+
+                                # Fields that are in the detail_view_schema must not be in the advanced tab as well
+                                for field in group_fields:
+                                    self.assertNotIn(field, advanced_tab_fields)
+
+                                # Fields that are explicit in the detail_view_config must remain as such in the schema
                                 for field in fields:
                                     if field not in advanced_tab_fields:
                                         self.assertIn(field, group_fields)
@@ -689,6 +682,9 @@ class APIViewTestCases:
             new_serializer = serializer_class(new_instance, context={"request": None})
             new_data = new_serializer.data
             for field_name, field in new_serializer.fields.items():
+                # Skip M2M fields except for tags because M2M fields are not supported in CSV Export/Import;
+                if isinstance(field, ManyRelatedField) and field_name != "tags":
+                    continue
                 if field.read_only or field.write_only:
                     continue
                 if field_name in ["created", "last_updated"]:
@@ -1032,23 +1028,62 @@ class APIViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_on_object(self):
-            notes = getattr(self.model, "notes", None)
-            if notes and isinstance(notes, ForeignKey):
-                instance1 = self._get_queryset().first()
-                # Add object-level permission
-                obj_perm = users_models.ObjectPermission(
-                    name="Test permission",
-                    constraints={"pk": instance1.pk},
-                    actions=["view"],
-                )
-                obj_perm.save()
-                obj_perm.users.add(self.user)
-                obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-                url = self._get_detail_url(instance1)
-                response = self.client.get(url, **self.header)
-                self.assertHttpStatus(response, status.HTTP_200_OK)
-                self.assertIn("notes_url", response.data)
-                self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+            if not hasattr(self.model, "notes"):
+                self.skipTest("Model doesn't appear to support Notes")
+            instance = self._get_queryset().first()
+            if not isinstance(instance.notes, QuerySet):
+                self.skipTest("Model has a notes field but it doesn't appear to be Notes")
+
+            # Add object-level permission
+            obj_perm = users_models.ObjectPermission(
+                name="Test permission",
+                constraints={"pk": instance.pk},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            url = self._get_detail_url(instance)
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIn("notes_url", response.data)
+            self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+            self.assertIn(instance.get_notes_url(api=True), str(response.data["notes_url"]))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_notes_url_functionality(self):
+            if not hasattr(self.model, "notes"):
+                self.skipTest("Model doesn't appear to support Notes")
+            instance = self._get_queryset().first()
+            if not isinstance(instance.notes, QuerySet):
+                self.skipTest("Model has a notes field but it doesn't appear to be Notes")
+
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            self.add_permissions("extras.add_note")
+
+            # Add note via REST API
+            notes_url = instance.get_notes_url(api=True)
+            response = self.client.post(
+                notes_url,
+                {"note": f"This is a note for {instance}"},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertIsInstance(response.data, dict)
+            self.assertEqual(f"This is a note for {instance}", response.data["note"])
+            self.assertEqual(str(self.user.pk), str(response.data["user"]["id"]))
+            self.assertEqual(str(instance.pk), str(response.data["assigned_object_id"]))
+            self.assertEqual(str(instance.pk), str(response.data["assigned_object"]["id"]))
+
+            # Get note via REST API
+            response = self.client.get(notes_url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+            self.add_permissions("extras.view_note")
+            response = self.client.get(notes_url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(f"This is a note for {instance}", response.data["results"][0]["note"])
 
     class TreeModelAPIViewTestCaseMixin:
         """Test `?depth=2` query parameter for TreeModel"""

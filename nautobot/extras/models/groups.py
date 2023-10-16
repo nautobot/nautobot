@@ -302,6 +302,10 @@ class DynamicGroup(OrganizationalModel):
             raise RuntimeError(f"Could not determine queryset for model '{model}'")
 
         filterset = self.filterset_class(self.filter, model.objects.all())
+        if not filterset.is_valid():
+            logger.warning('Filter for DynamicGroup "%s" is not valid', self)
+            return model.objects.none()
+
         qs = filterset.qs
 
         # Make sure that this instance can't be a member of its own group.

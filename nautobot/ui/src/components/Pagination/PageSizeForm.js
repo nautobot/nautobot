@@ -25,10 +25,14 @@ export default function PageSizeForm({ scroll_ref }) {
             behavior: "smooth",
         });
 
-        setSearchParams({
-            limit: newLimit,
-            offset: newOffset ? newOffset : 0,
-        });
+        setSearchParams([
+            ...[...searchParams].filter(
+                ([searchParam]) =>
+                    searchParam !== "limit" && searchParam !== "offset"
+            ),
+            ["limit", newLimit],
+            ["offset", newOffset ? newOffset : 0],
+        ]);
     }
 
     return (

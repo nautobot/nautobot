@@ -58,6 +58,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 "abstract": False,
+                "verbose_name": "IP Address Assignment",
+                "verbose_name_plural": "IP Address Assignments",
             },
         ),
     ]

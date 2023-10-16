@@ -97,7 +97,7 @@ def random_instance(model_or_queryset_or_lambda, allow_null=True):
     TODO: once we have factories for all mandatory foreign keys, change allow_null default to False
 
     Args:
-        model_or_queryset_or_lambda: Either a model class, a model queryset, or a lambda that returns one of those
+        model_or_queryset_or_lambda (Union[BaseModel, QuerySet, func]): Either a model class, a model queryset, or a lambda that returns one of those
         allow_null (bool): If False, and the given queryset contains no objects, raise a RuntimeError.
 
     Example:
@@ -148,7 +148,7 @@ def get_random_instances(model_or_queryset_or_lambda, minimum=0, maximum=None):
         - 1/3 chance of (2 to n) instances, where each possibility is equally likely within this range
 
     Args:
-        model_or_queryset_or_lambda: Either a model class, a model queryset, or a lambda that returns one of those
+        model_or_queryset_or_lambda (Union[BaseModel, QuerySet, func]): Either a model class, a model queryset, or a lambda that returns one of those
         minimum (int): Minimum number of objects to return
         maximum (int): Maximum number of objects to return, or None for no limit
     """
@@ -179,7 +179,7 @@ class NautobotBoolIterator(factory.Iterator):
             exhausted. Otherwise raise a `StopIterator` exception when values are exhausted.
             Defaults to True.
         chance_of_getting_true (int): Percentage (0-100) of the values in the returned iterable
-        set to True. Defaults to 50.
+            set to True. Defaults to 50.
         length (int): Length of the returned iterable. Defaults to 8.
     """
 

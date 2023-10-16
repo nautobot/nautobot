@@ -75,6 +75,7 @@ export const baseApi = createApi({
                 limit = null,
                 offset = null,
                 depth = 1,
+                filters = null,
             }) => {
                 let url = `${API_BASE}/${
                     plugin ? "plugins/" : ""
@@ -93,6 +94,15 @@ export const baseApi = createApi({
                     }
                     if (offset) {
                         queryParams.append("offset", offset);
+                    }
+                    if (filters) {
+                        [
+                            ...(filters instanceof URLSearchParams
+                                ? filters
+                                : new URLSearchParams(filters)),
+                        ].forEach(([param, value]) =>
+                            queryParams.append(param, value)
+                        );
                     }
                 }
 

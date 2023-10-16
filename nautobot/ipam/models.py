@@ -432,6 +432,7 @@ class Prefix(PrimaryModel):
         null=True,
         editable=False,
         db_index=True,
+        verbose_name="IP Version",
     )
     location = models.ForeignKey(
         to="dcim.Location",
@@ -528,8 +529,6 @@ class Prefix(PrimaryModel):
 
     def __str__(self):
         return str(self.prefix)
-
-    natural_key_field_names = ["namespace", "prefix"]
 
     def _deconstruct_prefix(self, prefix):
         if prefix:
@@ -1207,6 +1206,8 @@ class IPAddressToInterface(BaseModel):
             ["ip_address", "interface"],
             ["ip_address", "vm_interface"],
         ]
+        verbose_name = "IP Address Assignment"
+        verbose_name_plural = "IP Address Assignments"
 
     def clean(self):
         super().clean()
