@@ -1,1 +1,1 @@
-DeviceFilterForm: Changed filter field from IntegerField to NumericArrayField that properly displays the data being passed in.
+Fixed incorrect form field type for DeviceFilterForm.device_redundancy_group_priority.
