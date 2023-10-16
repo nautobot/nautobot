@@ -4,7 +4,7 @@ import logging
 from celery import chain
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import Count, ProtectedError, Q
 from django.forms.utils import pretty_name
@@ -685,6 +685,10 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
+            except ValidationError as err:
+                msg = "Invalid filter detected in existing DynamicGroup filter data."
+                logger.debug(msg)
+                form.add_error(None, err.args[0])
 
         else:
             logger.debug("Form validation failed")
