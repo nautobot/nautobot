@@ -507,10 +507,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "pattern": "192.0.2.[4-6]/24",
             "status": self.statuses[1].pk,
             "type": IPAddressTypeChoices.TYPE_DHCP,
-            # "role": None,
-            # "description": IPAddressTypeChoices.TYPE_DHCP,
-            # "tenant_group": IPAddressTypeChoices.TYPE_DHCP,
-            # 'tenant': [''],
         }
         request = {
             "path": reverse("ipam:ipaddress_bulk_add"),
