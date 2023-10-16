@@ -1048,9 +1048,11 @@ class IPAddress(PrimaryModel):
         self._closest_parent = None
 
         # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and self.parent is not None:
+        if namespace is None and getattr(self, "_namespace", None) is None and self.parent is not None:
             namespace = self.parent.namespace
-        self._namespace = namespace
+
+        if namespace:
+            self._namespace = namespace
 
         self._deconstruct_address(address)
 
