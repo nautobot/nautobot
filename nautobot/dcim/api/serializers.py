@@ -1213,7 +1213,11 @@ class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 class DeviceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, StatusModelSerializerMixin):
     url = serializers.HyperlinkedIdentityField(view_name="dcim-api:deviceredundancygroup-detail")
-    failover_strategy = ChoiceField(choices=DeviceRedundancyGroupFailoverStrategyChoices)
+    failover_strategy = ChoiceField(
+        choices=DeviceRedundancyGroupFailoverStrategyChoices,
+        allow_blank=True,
+        default=DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_UNSPECIFIED,
+    )
 
     class Meta:
         model = DeviceRedundancyGroup
