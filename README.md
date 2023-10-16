@@ -43,7 +43,7 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Installation
 
-Please see [the documentation](https://docs.nautobot.com/projects/core/en/stable/installation/) for instructions on installing Nautobot.
+Please see [the documentation](https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/installation/) for instructions on installing Nautobot.
 
 ## Application Stack
 
@@ -71,11 +71,11 @@ There are many plugins available within the Nautobot Apps ecosystem. The below s
 
 The best platform for general feedback, assistance, and other discussion is our [GitHub discussions](https://github.com/nautobot/nautobot/discussions). To report a bug or request a specific feature, please open a GitHub issue using the [appropriate template](https://github.com/nautobot/nautobot/issues/new/choose).
 
-If you are interested in contributing to the development of Nautobot, please read our [contributing guide](CONTRIBUTING.md) prior to beginning any work.
+If you are interested in contributing to the development of Nautobot, please read our [contributing guide](https://docs.nautobot.com/projects/core/en/stable/development/core/#contributing) prior to beginning any work.
 
 ## Related projects
 
-Please see [our wiki](https://github.com/nautobot/nautobot/wiki/Related-Projects) for a list of relevant community projects.
+Please check out [the GitHub `nautobot` topic](https://github.com/topics/nautobot) for a list of relevant community projects.
 
 ## Notices
 

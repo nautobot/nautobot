@@ -42,7 +42,7 @@ This will install:
     sudo dnf install -y git python38 python38-devel python38-pip redis
     sudo dnf module reset -y nodejs # Reset the nodejs modules to ensure we get the desired version
     sudo dnf module enable -y nodejs:18 # Enable the Node.js 18.x module
-    sudo dns module install -y nodejs:18/common # Install Node.js 18.x
+    sudo dnf module install -y nodejs:18/common # Install Node.js 18.x
     ```
 
 ## Database Setup

@@ -196,7 +196,11 @@ However, because we've set the `NAUTOBOT_ROOT`, this command will automatically 
 
 ```no-highlight
 nautobot-server init
+```
 
+Example output:
+
+```no-highlight
 Nautobot would like to send anonymized installation metrics to the project's maintainers.
 These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
 Allow Nautobot to send these metrics? [y/n]: y
