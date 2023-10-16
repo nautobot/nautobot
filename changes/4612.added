@@ -1,0 +1,1 @@
+Added a data migration to clean up v1.x `tag` filter data in v2.x DynamicGroup instances.
