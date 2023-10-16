@@ -1,0 +1,1 @@
+Fixed a JS crash when using list view search box to filter objects in legacy UI.

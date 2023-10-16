@@ -218,6 +218,37 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "time_zone": pytz.timezone("US/Eastern"),
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_child_location_under_a_non_globally_unique_named_parent_location(self):
+        self.add_permissions("dcim.add_location")
+        status = Status.objects.get_for_model(Location).first()
+        region_type = LocationType.objects.create(name="Region")
+        site_type = LocationType.objects.create(name="Site", parent=region_type)
+        building_type = LocationType.objects.create(name="Building Type", parent=site_type)
+        region_1 = Location.objects.create(name="Region 1", location_type=region_type, status=status)
+        region_2 = Location.objects.create(name="Region 2", location_type=region_type, status=status)
+        site_1 = Location.objects.create(name="Generic Site", location_type=site_type, parent=region_1, status=status)
+        Location.objects.create(name="Generic Site", location_type=site_type, parent=region_2, status=status)
+        test_form_data = {
+            "location_type": building_type.pk,
+            "parent": "Generic Site",
+            "name": "Root 3",
+            "status": status.pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(Location)],
+        }
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(test_form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("“Generic Site” is not a valid UUID.", response_body)
+        test_form_data["parent"] = site_1.pk
+        request["data"] = post_data(test_form_data)
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(Location.objects.get(name="Root 3").parent.pk, site_1.pk)
+
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
@@ -1805,6 +1836,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
                 device=device, name="BRIDGE", status=status_active, type=InterfaceTypeChoices.TYPE_BRIDGE
             ),
         )
+        cls.lag_interface = interfaces[3]
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = interfaces
         cls.selected_objects_parent_name = device.name
@@ -1896,6 +1928,25 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             f"1000base-t,Interface 5,{device.name},{device.location.name},{statuses[0].name}",
             f"1000base-t,Interface 6,{device.name},{device.location.name},{statuses[1].name}",
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_virtual_interface_with_parent_lag(self):
+        """https://github.com/nautobot/nautobot/issues/4436."""
+        self.add_permissions("dcim.add_interface")
+        form_data = self.form_data.copy()
+        del form_data["name"]
+        form_data["name_pattern"] = "LAG.0"
+        form_data["type"] = InterfaceTypeChoices.TYPE_VIRTUAL
+        form_data["parent_interface"] = self.lag_interface
+        del form_data["lag"]
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance = self._get_queryset().order_by("last_updated").last()
+        self.assertEqual(instance.type, InterfaceTypeChoices.TYPE_VIRTUAL)
+        self.assertEqual(instance.parent_interface, self.lag_interface)
 
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
