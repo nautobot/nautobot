@@ -19,6 +19,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.serializers import BaseModelSerializer
 from nautobot.dcim.api.nested_serializers import (
     NestedDeviceSerializer,
+    NestedDeviceRedundancyGroupSerializer,
     NestedDeviceRoleSerializer,
     NestedDeviceTypeSerializer,
     NestedLocationSerializer,
@@ -27,7 +28,17 @@ from nautobot.dcim.api.nested_serializers import (
     NestedRegionSerializer,
     NestedSiteSerializer,
 )
-from nautobot.dcim.models import Device, DeviceRole, DeviceType, Location, Platform, Rack, Region, Site
+from nautobot.dcim.models import (
+    Device,
+    DeviceRedundancyGroup,
+    DeviceRole,
+    DeviceType,
+    Location,
+    Platform,
+    Rack,
+    Region,
+    Site,
+)
 from nautobot.extras.api.fields import StatusSerializerField
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
@@ -344,6 +355,12 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         required=False,
         many=True,
     )
+    device_redundancy_groups = SerializedPKRelatedField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        serializer=NestedDeviceRedundancyGroupSerializer,
+        required=False,
+        many=True,
+    )
     tags = serializers.SlugRelatedField(queryset=Tag.objects.all(), slug_field="slug", required=False, many=True)
 
     dynamic_groups = SerializedPKRelatedField(
@@ -382,6 +399,7 @@ class ConfigContextSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             "clusters",
             "tenant_groups",
             "tenants",
+            "device_redundancy_groups",
             "tags",
             "dynamic_groups",
             "data",

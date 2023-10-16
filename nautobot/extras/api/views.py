@@ -186,6 +186,7 @@ class ConfigContextViewSet(ModelViewSet, NotesViewSetMixin):
         "platforms",
         "tenant_groups",
         "tenants",
+        "device_redundancy_groups",
     )
     serializer_class = serializers.ConfigContextSerializer
     filterset_class = filters.ConfigContextFilterSet
