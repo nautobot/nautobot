@@ -412,9 +412,9 @@ class DynamicGroup(OrganizationalModel):
 
         # Check for potential legacy filters from v1.x that is no longer valid in v2.x.
         # Raise the validation error in DynamicGroup form handling.
-        for filter, value in self.filter.items():
-            if filter not in filter_fields:
-                raise ValidationError(f"Invalid filter '{filter}' detected with value {value}")
+        for key, value in self.filter.items():
+            if key not in filter_fields:
+                raise ValidationError(f"Invalid filter '{key}' detected with value {value}")
 
         # Populate the filterset from the incoming `form_data`. The filterset's internal form is
         # used for validation, will be used by us to extract cleaned data for final processing.
