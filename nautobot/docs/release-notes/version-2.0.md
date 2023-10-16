@@ -368,6 +368,41 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.2 (2023-10-16)
+
+### Added
+
+- [#4361](https://github.com/nautobot/nautobot/issues/4361) - Added `SUPPORT_MESSAGE` configuration setting.
+- [#4607](https://github.com/nautobot/nautobot/issues/4607) - Added `nautobot-server audit_graphql_queries` management command for evaluating breaking filter changes to existing GraphQLQuery instances.
+
+### Changed
+
+- [#4313](https://github.com/nautobot/nautobot/issues/4313) - Updated device search to include manufacturer name.
+
+### Fixed
+
+- [#4472](https://github.com/nautobot/nautobot/issues/4472) - Fixed incorrect logic in `nautobot_config.py.j2` template that wouldn't detect the MySQL engine when Prometheus metrics are enabled.
+- [#4547](https://github.com/nautobot/nautobot/issues/4547) - Fixed incorrect form field type for `DeviceFilterForm.device_redundancy_group_priority`.
+- [#4588](https://github.com/nautobot/nautobot/issues/4588) - Fixed the error when creating a child Location under a non-globally-unique named parent Location.
+- [#4598](https://github.com/nautobot/nautobot/issues/4598) - Fixed inconsistent column names in `docs/user-guide/administration/upgrading/from-v1/tables/v2-filters-renamed-fields.yml`.
+- [#4603](https://github.com/nautobot/nautobot/issues/4603) - Fixed a bug that makes Manufacturers list fail to load.
+- [#4639](https://github.com/nautobot/nautobot/issues/4639) - Fixed the ability to attach images to Locations.
+
+### Housekeeping
+
+- [#4591](https://github.com/nautobot/nautobot/issues/4591) - Fixed incorrect documentation of `FEEDBACK_BUTTON_ENABLED` configuration setting.
+- [#4591](https://github.com/nautobot/nautobot/issues/4591) - Fixed a number of missing app code-reference links in the documentation table of contents.
+- [#4592](https://github.com/nautobot/nautobot/issues/4592) - Updated formatting on installation docs.
+- [#4611](https://github.com/nautobot/nautobot/issues/4611) - Updated pylint to use multiple threads.
+- [#4613](https://github.com/nautobot/nautobot/issues/4613) - Changed CLI reference from `dns` to `dnf` for install on RHEL systems.
+- [#4619](https://github.com/nautobot/nautobot/issues/4619) - Fixed broken links in Nautobot README.md.
+
+### Security
+
+- [#4586](https://github.com/nautobot/nautobot/issues/4586) - Updated `urllib3` to 2.0.6 due to CVE-2023-43804. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4621](https://github.com/nautobot/nautobot/issues/4621) - Updated `postcss` `npm` package to 8.4.31 to address CVE-2023-44270.
+- [#4652](https://github.com/nautobot/nautobot/issues/4652) - Updated `babel/traverse` `npm` dependency to 7.23.2 to address CVE-2023-45133.
+
 ## v2.0.1 (2023-10-04)
 
 ### Fixed
