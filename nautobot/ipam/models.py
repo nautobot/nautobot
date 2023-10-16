@@ -1071,14 +1071,14 @@ class IPAddress(PrimaryModel):
         if self._closest_parent:
             return self._closest_parent
         try:
-            closes_parent = (
+            closest_parent = (
                 Prefix.objects.filter(namespace=self._namespace)
                 # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
                 # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
                 .get_closest_parent(self.host, include_self=True)
             )
-            self._closest_parent = closes_parent
-            return closes_parent
+            self._closest_parent = closest_parent
+            return closest_parent
         except Prefix.DoesNotExist as e:
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
 
