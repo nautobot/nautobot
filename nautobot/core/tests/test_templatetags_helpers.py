@@ -216,3 +216,28 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_settings_or_config(self):
         self.assertEqual(helpers.settings_or_config("BANNER_TOP"), "¡Hola, mundo!")
         self.assertEqual(helpers.settings_or_config("SAMPLE_VARIABLE", "example_plugin"), "Testing")
+
+    def test_support_message(self):
+        """Test the `support_message` tag with config and settings."""
+        with override_settings():
+            del settings.SUPPORT_MESSAGE
+            with override_config():
+                self.assertHTMLEqual(
+                    helpers.support_message(),
+                    "<p>If further assistance is required, please join the <code>#nautobot</code> channel "
+                    'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
+                    "and post your question.</p>",
+                )
+
+            with override_config(SUPPORT_MESSAGE="Reach out to your support team for assistance."):
+                self.assertHTMLEqual(
+                    helpers.support_message(),
+                    "<p>Reach out to your support team for assistance.</p>",
+                )
+
+        with override_settings(SUPPORT_MESSAGE="Settings **support** message:\n\n- Item 1\n- Item 2"):
+            with override_config(SUPPORT_MESSAGE="Config support message"):
+                self.assertHTMLEqual(
+                    helpers.support_message(),
+                    "<p>Settings <strong>support</strong> message:</p><ul><li>Item 1</li><li>Item 2</li></ul>",
+                )

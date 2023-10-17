@@ -10,8 +10,12 @@ def count_related(model, field):
     """
     Return a Subquery suitable for annotating a child object count.
     """
+
+    manager = model.objects
+    if hasattr(model.objects, "without_tree_fields"):
+        manager = manager.without_tree_fields()
     subquery = Subquery(
-        model.objects.filter(**{field: OuterRef("pk")}).order_by().values(field).annotate(c=Count("*")).values("c")
+        manager.filter(**{field: OuterRef("pk")}).order_by().values(field).annotate(c=Count("*")).values("c")
     )
 
     return Coalesce(subquery, 0)

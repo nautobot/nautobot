@@ -1368,8 +1368,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         )
 
         # Create additional components for filtering
-        InventoryItem.objects.create(device=devices[0], name="Inventory Item 1")
-        InventoryItem.objects.create(device=devices[1], name="Inventory Item 2")
+        InventoryItem.objects.create(device=devices[0], name="Inventory Item 1", serial="abc")
+        InventoryItem.objects.create(device=devices[1], name="Inventory Item 2", serial="xyz")
         Service.objects.create(device=devices[0], name="ssh", protocol="tcp", ports=[22])
         Service.objects.create(device=devices[1], name="dns", protocol="udp", ports=[53])
 
@@ -1515,9 +1515,43 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             )
 
     def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        filter_fields = (
+            "name",
+            "serial",
+            "inventory_items__serial",
+            "asset_tag",
+            "device_type__manufacturer__name",
+            "comments",
+        )
+        for filter_field in filter_fields:
+            with self.subTest(f"test q filter by field {filter_field}"):
+                value = (
+                    self.queryset.values_list(filter_field, flat=True)
+                    .exclude(**{f"{filter_field}__in": ["", None]})
+                    .first()
+                )
+                params = {"q": value}
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                qs_filter = (
+                    Q(name__icontains=value)
+                    | Q(serial__icontains=value.strip())
+                    | Q(inventory_items__serial__icontains=value.strip())
+                    | Q(asset_tag__icontains=value.strip())
+                    | Q(device_type__manufacturer__name__icontains=value.strip())
+                    | Q(comments__icontains=value)
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs,
+                    self.queryset.filter(qs_filter),
+                )
+
+        with self.subTest("test q filter by field pk"):
+            value = self.queryset.values_list("pk", flat=True).first()
+            params = {"q": value}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(id=value)
+            )
 
 
 class ConsolePortTestCase(FilterTestCases.FilterTestCase):

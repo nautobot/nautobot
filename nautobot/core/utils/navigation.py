@@ -49,4 +49,6 @@ def get_all_new_ui_ready_routes():
 
 
 def is_route_new_ui_ready(route):
+    if route is None:
+        return False
     return any(re.compile(url).match(route.lstrip("/")) for url in registry["new_ui_ready_routes"])
