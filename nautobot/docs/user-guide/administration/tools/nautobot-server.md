@@ -58,7 +58,7 @@ If you have invalid filters in your `DynamicGroup` instances, the following outp
     DynamicGroup instance with name `Test DP 4` and content type `example_plugin | another example model` has an invalid filter `site`
 
 >>> Please fix the broken filters stated above according to the documentation available at:
-<nautobot-home>/static/docs/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.html#ui-graphql-and-rest-api-filter-changes
+https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1/#ui-graphql-and-rest-api-filter-changes
 ```
 
 If your filter data is valid, you should see a success message at the end of the output:
@@ -68,6 +68,41 @@ If your filter data is valid, you should see a success message at the end of the
 
 
 >>> All DynamicGroup filters are validated successfully!
+```
+
+### `audit_graphql_queries`
+
+`nautobot-server audit_graphql_queries`
+
+After upgrading your Nautobot instance from v1.x to v2.x, breaking changes made to model filter fields will, in some cases, invalidate existing `GraphQLQuery` instances' query data. `nautobot-server audit_graphql_queries` is a helper command to assist you in cleaning up `GraphQLQuery` query data by spotting invalid query filters and outputting them to the command line interface.
+
+```no-highlight
+nautobot-server audit_graphql_queries
+```
+
+Example output:
+
+If you have invalid query data in your `GraphQLQuery` instances, the following output should be expected:
+
+```no-highlight
+>>> Auditing existing GraphQLQuery data for invalid queries ...
+
+>>> The following GraphQLQuery instances have invalid query data:
+
+    GraphQLQuery with name `Wrong Query` has invalid query data: [{'message': 'Unknown argument "site" on field "racks" of type "Query".', 'locations': [{'line': 2, 'column': 19}]}]
+    GraphQLQuery with name `Wrong Query 1` has invalid query data: [{'message': 'Unknown argument "site" on field "device" of type "Query".', 'locations': [{'line': 2, 'column': 14}]}]
+    GraphQLQuery with name `Wrong Query 2` has invalid query data: [{'message': "{'location': ['Select a valid choice. Location 01 is not one of the available choices.']}", 'locations': [{'line': 5, 'column': 8}], 'path': ['devices']}]
+
+>>> Please fix the outdated query data stated above according to the documentation available at:
+https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1/#ui-graphql-and-rest-api-filter-changes
+```
+
+If your query data is valid, you should see a success message at the end of the output:
+
+```no-highlight
+>>> Auditing existing GraphQLQuery data for invalid queries ...
+
+>>> All GraphQLQuery queries are validated successfully!
 ```
 
 ### `build_ui`

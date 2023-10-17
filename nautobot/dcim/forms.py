@@ -265,7 +265,6 @@ class LocationForm(NautobotModelForm, TenancyForm):
     parent = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         query_params={"child_location_type": "$location_type"},
-        to_field_name="name",
         required=False,
     )
     comments = CommentField()
@@ -1754,7 +1753,7 @@ class DeviceFilterForm(
         required=False,
         null_option="None",
     )
-    device_redundancy_group_priority = forms.IntegerField(min_value=1, required=False)
+    device_redundancy_group_priority = NumericArrayField(base_field=forms.IntegerField(min_value=1), required=False)
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",

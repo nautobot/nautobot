@@ -234,7 +234,7 @@
         {% include 'inc/image_attachments.html' with images=object.images.all %}
         {% if perms.extras.add_imageattachment %}
             <div class="panel-footer text-right noprint">
-                <a href="{% url 'dcim:location_add_image' pk=object.pk %}" class="btn btn-primary btn-xs">
+                <a href="{% url 'dcim:location_add_image' object_id=object.pk %}" class="btn btn-primary btn-xs">
                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                     Attach an image
                 </a>
