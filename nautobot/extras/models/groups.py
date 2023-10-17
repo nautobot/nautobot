@@ -559,7 +559,7 @@ class DynamicGroup(OrganizationalModel):
         """
         query = models.Q()
         if filter_field is None:
-            logger.warning(f"Filter field {filter_field} is not valid for DynamicGroup {self}")
+            logger.warning(f"Filter data is not valid for DynamicGroup {self}")
             return query
 
         field_name = filter_field.field_name
