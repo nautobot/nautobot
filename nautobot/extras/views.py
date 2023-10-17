@@ -688,7 +688,10 @@ class DynamicGroupEditView(generic.ObjectEditView):
             except ValidationError as err:
                 msg = "Invalid filter detected in existing DynamicGroup filter data."
                 logger.debug(msg)
-                form.add_error(None, err.args[0])
+                err_messages = err.args[0].split("\n")
+                for message in err_messages:
+                    if message:
+                        form.add_error(None, message)
 
         else:
             logger.debug("Form validation failed")
