@@ -1,1 +1,0 @@
-Added caching for `display` property of `Location` and `LocationType`, mitigating duplicated SQL queries in the related API views.
