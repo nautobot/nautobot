@@ -2,9 +2,12 @@
 {% load helpers %}
 {% load plugins %}
 
+    <link rel="stylesheet/less"
+      href="{% static 'bootstrap-3.4.1-dist/css/base.less' %}"
+      onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/base.less'">
     <link rel="stylesheet"
-          href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
+          href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.css'">
     <link rel="stylesheet"
           href="{% static 'materialdesignicons-6.5.95/css/materialdesignicons.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-6.5.95/css/materialdesignicons.min.css'">
