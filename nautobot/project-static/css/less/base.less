@@ -1,7 +1,9 @@
-@import "bootstrap";
-
 @brand-primary: #007dff;
 // Danger and error appear as red
 .btn-danger {
+    .button-variant(@btn-danger-color; @brand-primary; @btn-danger-border);
+}
+
+.btn-warning {
     .button-variant(@btn-danger-color; @brand-primary; @btn-danger-border);
 }
