@@ -1051,8 +1051,7 @@ class IPAddress(PrimaryModel):
         if namespace is None and getattr(self, "_namespace", None) is None and self.parent is not None:
             namespace = self.parent.namespace
 
-        if namespace:
-            self._namespace = namespace
+        self._namespace = namespace
 
         self._deconstruct_address(address)
 
