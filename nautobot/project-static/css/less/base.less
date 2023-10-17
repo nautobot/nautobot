@@ -1,9 +1,12 @@
 @brand-primary: #007dff;
-// Danger and error appear as red
-.btn-danger {
-    .button-variant(@btn-danger-color; @brand-primary; @btn-danger-border);
-}
+@brand-success: #098a15;
+@brand-info: #5bc0de;
+@brand-warning: #e07807;
+@brand-danger: #e01f1f;
 
-.btn-warning {
-    .button-variant(@btn-danger-color; @brand-primary; @btn-danger-border);
+// Danger and error appear as blue
+.btn-danger,.btn-warning {
+    color: @brand-primary;
+    background-color: @brand-success;
+    border-color: @brand-primary
 }
