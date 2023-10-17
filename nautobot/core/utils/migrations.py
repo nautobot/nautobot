@@ -58,7 +58,5 @@ def update_object_change_ct_for_replaced_models(apps, new_app_model, replaced_ap
             ObjectChange.objects.filter(changed_object_type=new_model_ct).update(changed_object_type=replaced_model_ct)
             ObjectChange.objects.filter(related_object_type=new_model_ct).update(related_object_type=replaced_model_ct)
         else:
-            ObjectChange.objects.filter(changed_object_type=replaced_model_ct).update(
-                changed_object_type=new_model_ct
-            )
+            ObjectChange.objects.filter(changed_object_type=replaced_model_ct).update(changed_object_type=new_model_ct)
             ObjectChange.objects.filter(related_object_type=replaced_model_ct).update(related_object_type=new_model_ct)
