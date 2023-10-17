@@ -35,25 +35,30 @@ def check_for_duplicates_with_natural_key_fields_in_migration(model_class, natur
         raise RuntimeError("Duplicate records must be manually resolved before migrating.")
 
 
-def update_object_change_ct_for_replaced_models(
-    apps, new_model_app_model, replaced_apps_models, reverse_migration=False
-):
+def update_object_change_ct_for_replaced_models(apps, new_app_model, replaced_apps_models, reverse_migration=False):
     """
-    Update the ObjectChange `changed_object_type`, `related_object_type` of replaced models to its new models content-type.
+    Update the ObjectChange content type references for replaced models to their new models' content type.
 
+    Args:
+        - apps: An instance of the Django 'apps' object.
+        - new_app_model: A dict containing information about the new model, including the 'app_name' and 'model' names.
+        - replaced_apps_models: A list of dict, each containing information about a replaced model, including the 'app_name' and 'model' names.
+        - reverse_migration: If set to True, reverse the migration by updating references from new models to replaced models.
     """
     ObjectChange = apps.get_model("extras", "ObjectChange")
-    NewModel = apps.get_model(new_model_app_model["app_label"], new_model_app_model["model"])
+    NewModel = apps.get_model(new_app_model["app_name"], new_app_model["model"])
     ContentType = apps.get_model("contenttypes", "ContentType")
     new_model_ct = ContentType.objects.get_for_model(NewModel)
 
     for replaced_model in replaced_apps_models:
-        ReplacedModel = apps.get_model(replaced_model["app_label"], replaced_model["model"])
-        replace_model_ct = ContentType.objects.get_for_model(ReplacedModel)
+        ReplacedModel = apps.get_model(replaced_model["app_name"], replaced_model["model"])
+        replaced_model_ct = ContentType.objects.get_for_model(ReplacedModel)
 
         if reverse_migration:
-            ObjectChange.objects.filter(changed_object_type=new_model_ct).update(changed_object_type=replace_model_ct)
-            ObjectChange.objects.filter(related_object_type=new_model_ct).update(related_object_type=replace_model_ct)
+            ObjectChange.objects.filter(changed_object_type=new_model_ct).update(changed_object_type=replaced_model_ct)
+            ObjectChange.objects.filter(related_object_type=new_model_ct).update(related_object_type=replaced_model_ct)
         else:
-            ObjectChange.objects.filter(changed_object_type=replace_model_ct).update(changed_object_type=new_model_ct)
-            ObjectChange.objects.filter(related_object_type=replace_model_ct).update(related_object_type=new_model_ct)
+            ObjectChange.objects.filter(changed_object_type=replaced_model_ct).update(
+                changed_object_type=new_model_ct
+            )
+            ObjectChange.objects.filter(related_object_type=replaced_model_ct).update(related_object_type=new_model_ct)

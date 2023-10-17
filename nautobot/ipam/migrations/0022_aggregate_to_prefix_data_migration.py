@@ -225,10 +225,10 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
     # migrate Aggregate ObjectChange to Prefix
     update_object_change_ct_for_replaced_models(
         apps=apps,
+        new_app_model={"model": "ipam", "app_name": "Prefix"},
         replaced_apps_models=[
             {"model": "ipam", "app_name": "Aggregate"},
         ],
-        new_model_app_model={"model": "ipam", "app_name": "Prefix"},
     )
 
 
