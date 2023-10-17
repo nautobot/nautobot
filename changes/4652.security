@@ -1,0 +1,1 @@
+Updated `babel/traverse` `npm` dependency to 7.23.2 to address CVE-2023-45133.
