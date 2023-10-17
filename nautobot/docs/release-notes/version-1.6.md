@@ -72,6 +72,25 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.4 (2023-10-17)
+
+### Added
+
+- [#4361](https://github.com/nautobot/nautobot/issues/4361) - Added `SUPPORT_MESSAGE` configuration setting.
+- [#4573](https://github.com/nautobot/nautobot/issues/4573) - Added caching for `display` property of `Location` and `LocationType`, mitigating duplicated SQL queries in the related API views.
+
+### Changed
+
+- [#4313](https://github.com/nautobot/nautobot/issues/4313) - Updated device search to include manufacturer name.
+
+### Housekeeping
+
+- [#4619](https://github.com/nautobot/nautobot/issues/4619) - Fixed broken links in Nautobot README.md.
+
+### Removed
+
+- [#4595](https://github.com/nautobot/nautobot/issues/4595) - Removed `stable` tagging for container builds in LTM release workflow.
+
 ## v1.6.3 (2023-10-03)
 
 ### Added
