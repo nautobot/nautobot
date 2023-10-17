@@ -417,10 +417,6 @@ class IPAddressFormMixin(NautobotModelForm, TenancyForm, AddressFieldMixin):
         """
         namespace = self.cleaned_data.pop("namespace")
         setattr(self.instance, "_namespace", namespace)
-        # Since 'parent' is always derived from 'namespace', we set the current instance's 'parent' to 'None'.
-        # This prevents the model from revalidating the 'parent', which could raise a validation error when the current
-        # parent differs from the parent derived from the new `namespace`.
-        self.instance.parent = None
 
 
 class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
