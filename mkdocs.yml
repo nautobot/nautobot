@@ -220,6 +220,20 @@ plugins:
         'models/extras/dynamicgroup.md': 'user-guide/platform-functionality/dynamicgroup.md'
         'models/extras/exporttemplate.md': 'user-guide/platform-functionality/exporttemplate.md'
         'models/extras/gitrepository.md': 'user-guide/platform-functionality/gitrepository.md'
+        'plugins/development.md': 'development/apps/index.md'
+        'models/extras/jobhook.md': 'user-guide/platform-functionality/jobs/jobhook.md'
+        'models/extras/joblogentry.md': 'user-guide/platform-functionality/jobs/models.md'
+        'models/extras/jobresult.md': 'user-guide/platform-functionality/jobs/models.md'
+        'models/circuits/circuittermination.md': 'user-guide/core-data-model/circuits/circuittermination.md'
+        'models/circuits/provider.md': 'user-guide/core-data-model/circuits/provider.md'
+        'models/dcim/consoleporttemplate.md': 'user-guide/core-data-model/dcim/consoleporttemplate.md'
+        'models/dcim/consoleserverporttemplate.md': 'user-guide/core-data-model/dcim/consoleserverporttemplate.md'
+        'models/dcim/devicebaytemplate.md': 'user-guide/core-data-model/dcim/devicebaytemplate.md'
+        'models/dcim/devicetype.md': 'user-guide/core-data-model/dcim/devicetype.md'
+        'models/dcim/rackgroup.md': 'user-guide/core-data-model/dcim/rackgroup.md'
+        'models/ipam/vrf.md': 'user-guide/core-data-model/ipam/vrf.md'
+        'models/extras/secret.md': 'user-guide/platform-functionality/secret.md'
+        'models/extras/secretsgroup.md': 'user-guide/platform-functionality/secret.md'
 
 
 nav:
