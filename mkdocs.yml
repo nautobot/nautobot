@@ -234,6 +234,18 @@ plugins:
         'models/ipam/vrf.md': 'user-guide/core-data-model/ipam/vrf.md'
         'models/extras/secret.md': 'user-guide/platform-functionality/secret.md'
         'models/extras/secretsgroup.md': 'user-guide/platform-functionality/secret.md'
+        'additional-features/config-contexts.md': 'user-guide/core-data-model/extras/configcontext.md'
+        'core-functionality/circuits.md': 'user-guide/core-data-model/circuits/circuit.md'
+        'core-functionality/devices.md': 'user-guide/core-data-model/dcim/device.md'
+        'core-functionality/ipam.md': 'user-guide/core-data-model/ipam/namespace.md'
+        'core-functionality/power.md': 'user-guide/core-data-model/dcim/powerpanel.md'
+        'core-functionality/secrets.md': 'user-guide/platform-functionality/secret.md'
+        'core-functionality/services.md': 'user-guide/core-data-model/ipam/service.md'
+        'core-functionality/sites-and-racks.md': 'user-guide/core-data-model/dcim/rack.md'
+        'core-functionality/tenancy.md': 'user-guide/core-data-model/tenancy/tenant.md'
+        'core-functionality/virtualization.md': 'user-guide/core-data-model/virtualization/virtualmachine.md'
+        'core-functionality/vlans.md': 'user-guide/core-data-model/ipam/vlan.md'
+        'rest-api/overview.md': 'user-guide/platform-functionality/rest-api/overview.md'
 
 
 nav:
