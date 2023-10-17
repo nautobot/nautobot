@@ -179,6 +179,8 @@ mkdocs-include-markdown-plugin = "~4.0.4"
 mkdocs-material = "~9.1.18"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.5"
+# Handle docs redirections
+mkdocs-redirects = "~1.2.1"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
