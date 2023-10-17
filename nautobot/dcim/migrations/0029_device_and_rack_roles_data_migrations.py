@@ -21,7 +21,7 @@ def migrate_data_from_legacy_role_to_new_role(apps, schema):
 
     update_object_change_ct_for_replaced_models(
         apps=apps,
-        new_app_model={"app_name": "dcim", "model": "role"},
+        new_app_model={"app_name": "extras", "model": "role"},
         replaced_apps_models=[
             {"app_name": "dcim", "model": "rackrole"},
             {"app_name": "dcim", "model": "devicerole"},
@@ -44,7 +44,7 @@ def reverse_role_data_migrate(apps, schema):
         )
     update_object_change_ct_for_replaced_models(
         apps=apps,
-        new_app_model={"app_name": "dcim", "model": "role"},
+        new_app_model={"app_name": "extras", "model": "role"},
         replaced_apps_models=[
             {"app_name": "dcim", "model": "rackrole"},
             {"app_name": "dcim", "model": "devicerole"},
