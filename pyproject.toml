@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.0.1b1"
+version = "2.0.3b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -252,6 +252,7 @@ py-version = "3.8"
 ignore-paths = [
     ".*third_party.*"
 ]
+jobs = 0
 
 [tool.pylint.basic]
 # No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
