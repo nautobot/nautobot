@@ -1,0 +1,1 @@
+Fixed `post_upgrade` bug involving potential left over references to Aggregate, DeviceRole, and RackRole ContentTypes in ObjectChange records.
