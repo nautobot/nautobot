@@ -1,0 +1,1 @@
+Added an `ENABLE_ALPHA_UI` configuration option to the settings, which is initially set to False. When set to True, this option enables the "Alpha UI 2.0" feature.
