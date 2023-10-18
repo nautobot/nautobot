@@ -3,17 +3,114 @@
 @brand-info: #5bc0de;
 @brand-warning: #e07807;
 @brand-danger: #e01f1f;
-@white-0: #FFFFFF;
+@white-0: #ffffff;
 
-// Danger and error appear as blue
-.btn-danger {
-    color: @white-0;
-    background-color: @brand-danger;
-    border-color: @brand-danger;
-}
-
-.btn-warning {
+// Customize Button Success
+.btn-success {
     color: @white-0;
     background-color: @brand-primary;
-    border-color: @brand-danger;
+    border-color: @brand-primary*0.9;
+}
+.btn-success:focus,
+.btn-success.focus {
+    color: @white-0;
+    background-color: @brand-primary*0.9;
+    border-color: @brand-primary*0.8;
+}
+.btn-success:hover {
+    color: @white-0;
+    background-color: @brand-primary*0.9;
+    border-color: @brand-primary*0.85;
+}
+.btn-success:active,
+.btn-success.active,
+.open > .dropdown-toggle.btn-success {
+    color: @white-0;
+    background-color: @brand-primary*0.9;
+    background-image: none;
+    border-color: @brand-primary*0.85;
+}
+.btn-success:active:hover,
+.btn-success.active:hover,
+.open > .dropdown-toggle.btn-success:hover,
+.btn-success:active:focus,
+.btn-success.active:focus,
+.open > .dropdown-toggle.btn-success:focus,
+.btn-success:active.focus,
+.btn-success.active.focus,
+.open > .dropdown-toggle.btn-success.focus {
+    color: @white-0;
+    background-color: @brand-primary*0.85;
+    border-color: @brand-primary*0.8;
+}
+.btn-success.disabled:hover,
+.btn-success[disabled]:hover,
+fieldset[disabled] .btn-success:hover,
+.btn-success.disabled:focus,
+.btn-success[disabled]:focus,
+fieldset[disabled] .btn-success:focus,
+.btn-success.disabled.focus,
+.btn-success[disabled].focus,
+fieldset[disabled] .btn-success.focus {
+    background-color: @brand-primary;
+    border-color: @brand-primary*1.1;
+}
+.btn-success .badge {
+    color: @brand-primary;
+    background-color: @white-0;
+}
+
+// Customize Button Primary
+.btn-primary {
+    color: @white-0;
+    background-color: @brand-warning;
+    border-color: @brand-warning*1.1;
+}
+.btn-primary:focus,
+.btn-primary.focus {
+    color: @white-0;
+    background-color: @brand-warning*0.9;
+    border-color: @brand-warning*0.8;
+}
+.btn-primary:hover {
+    color: @white-0;
+    background-color: @brand-warning*0.9;
+    border-color: @brand-warning*0.85;
+}
+.btn-primary:active,
+.btn-primary.active,
+.open > .dropdown-toggle.btn-primary {
+    color: @white-0;
+    background-color: @brand-warning*0.9;
+    background-image: none;
+    border-color: @brand-warning*0.85;
+}
+.btn-primary:active:hover,
+.btn-primary.active:hover,
+.open > .dropdown-toggle.btn-primary:hover,
+.btn-primary:active:focus,
+.btn-primary.active:focus,
+.open > .dropdown-toggle.btn-primary:focus,
+.btn-primary:active.focus,
+.btn-primary.active.focus,
+.open > .dropdown-toggle.btn-primary.focus {
+    color: @white-0;
+    background-color: @brand-warning*0.85;
+    border-color: @brand-warning*0.8;
+}
+.btn-primary.disabled:hover,
+.btn-primary[disabled]:hover,
+fieldset[disabled] .btn-primary:hover,
+.btn-primary.disabled:focus,
+.btn-primary[disabled]:focus,
+fieldset[disabled] .btn-primary:focus,
+.btn-primary.disabled.focus,
+.btn-primary[disabled].focus,
+fieldset[disabled] .btn-primary.focus {
+    background-color: @brand-warning;
+    border-color: @brand-warning*1.1;
+}
+.btn-primary .badge {
+    color: @brand-warning;
+    background-color: @white-0;
 }
