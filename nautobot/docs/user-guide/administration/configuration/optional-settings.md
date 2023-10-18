@@ -902,7 +902,7 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 +++ 1.6.4
 
-+++ 2.0.1
++++ 2.0.2
 
 Default: `""`
 

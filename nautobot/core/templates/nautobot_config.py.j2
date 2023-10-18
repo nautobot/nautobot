@@ -61,7 +61,7 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 
 # Ensure proper Unicode handling for MySQL
 #
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+if DATABASES["default"]["ENGINE"].endswith("mysql"):
     DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.

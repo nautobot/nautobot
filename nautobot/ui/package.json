@@ -1,6 +1,6 @@
 {
     "name": "nautobot",
-    "version": "2.0.1-b1",
+    "version": "2.0.3-b1",
     "private": true,
     "dependencies": {
         "@chakra-ui/icons": "^2.0.0",
@@ -92,7 +92,7 @@
         "jest-watch-typeahead": "^2.2.2",
         "markdownlint-cli": "^0.35.0",
         "mini-css-extract-plugin": "^2.7.6",
-        "postcss": "^8.4.27",
+        "postcss": "^8.4.31",
         "postcss-flexbugs-fixes": "^5.0.2",
         "postcss-loader": "^7.3.3",
         "postcss-normalize": "^10.0.1",

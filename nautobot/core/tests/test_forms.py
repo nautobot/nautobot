@@ -9,7 +9,7 @@ from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
 from nautobot.core.utils import requests
-from nautobot.dcim import filters as dcim_filters
+from nautobot.dcim import filters as dcim_filters, forms as dcim_forms
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.tests import test_views
 from nautobot.extras import filters as extras_filters
@@ -485,11 +485,14 @@ class MultiValueCharFieldTest(TestCase):
 class NumericArrayFieldTest(TestCase):
     def setUp(self):
         super().setUp()
-        self.field = ipam_forms.ServiceForm().fields["ports"]
+        # We need to use a field with required=False so we can test empty/None inputs
+        self.field = dcim_forms.DeviceFilterForm().fields["device_redundancy_group_priority"]
 
     def test_valid_input(self):
         # Mapping of input => expected
         tests = {
+            None: [],
+            "": [],
             "80,443-444": [80, 443, 444],
             "1024-1028,31337": [1024, 1025, 1026, 1027, 1028, 31337],
         }

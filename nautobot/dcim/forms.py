@@ -1753,7 +1753,7 @@ class DeviceFilterForm(
         required=False,
         null_option="None",
     )
-    device_redundancy_group_priority = forms.IntegerField(min_value=1, required=False)
+    device_redundancy_group_priority = NumericArrayField(base_field=forms.IntegerField(min_value=1), required=False)
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
