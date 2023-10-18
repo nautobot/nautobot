@@ -1,0 +1,1 @@
+Fixed a bug where the `failover-strategy` field was required for the device redundancy group api.
