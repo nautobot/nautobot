@@ -10,6 +10,7 @@ from rest_framework import status
 from constance.test import override_config
 
 from nautobot.dcim.choices import (
+    DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
     InterfaceStatusChoices,
     InterfaceTypeChoices,
@@ -2614,17 +2615,26 @@ class DeviceRedundancyGroupTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Device Redundancy Group 4",
-            "failover_strategy": "active-active",
+            "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
             "status": "active",
         },
         {
             "name": "Device Redundancy Group 5",
-            "failover_strategy": "active-passive",
+            "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
             "status": "planned",
         },
         {
             "name": "Device Redundancy Group 6",
-            "failover_strategy": "active-active",
+            "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_ACTIVE,
+            "status": "staging",
+        },
+        {
+            "name": "Device Redundancy Group 7",
+            "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_UNSPECIFIED,
+            "status": "staging",
+        },
+        {
+            "name": "Device Redundancy Group 8",
             "status": "staging",
         },
     ]
