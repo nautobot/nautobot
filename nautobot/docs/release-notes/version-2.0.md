@@ -15,6 +15,9 @@ This document describes all new features and changes in Nautobot 2.0.
 
 Nautobot 2.0 includes an "alpha" version of a new user interface (UI) for Nautobot, based on the React web framework.
 
++/- 2.0.3
+    This UI is disabled by default but can be enabled as an option by setting the `ENABLE_ALPHA_UI` setting to `True` in your `nautobot_config.py` and then running [`nautobot-server build_ui`](../user-guide/administration/tools/nautobot-server.md).
+
 Users can switch between the existing UI and new UI for views supported in the new UI via a "View in New UI" link in the page footer of the existing UI and a "Return to Legacy UI" link in the left sidebar of the new UI.
 
 !!! tip
