@@ -109,7 +109,7 @@ If your query data is valid, you should see a success message at the end of the 
 
 `nautobot-server build_ui`
 
-Build or rebuild the UI for the Nautobot server environment and installed Nautobot Apps. This command is normally run as part of [`nautobot-server post_upgrade`](#post_upgrade) rather than being invoked directly by an administrator.
+Build or rebuild the UI for the Nautobot server environment and installed Nautobot Apps.
 
 Here are some commonly used flags:
 
@@ -545,8 +545,11 @@ This will run the following management commands with default settings, in order:
 +++ 2.0.0
     Added [`build_ui`](#build_ui) to this command's default behavior.
 
-`--no-build-ui`
-Do not automatically rebuild the new UI.
++/- 2.0.3
+    Changed the [`build_ui`](#build_ui) flag's value to be False by default.
+
+`--build-ui`
+Build or rebuild the new UI.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
