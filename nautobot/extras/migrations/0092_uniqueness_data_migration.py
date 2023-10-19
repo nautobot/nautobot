@@ -3,7 +3,7 @@ from django.db import migrations
 from nautobot.core.utils.migrations import check_for_duplicates_with_natural_key_fields_in_migration
 
 
-def ensure_unique_scheduledjob_names_and_save_job_class_parameter_to_task(apps, schema_editor):
+def ensure_unique_scheduledjob_names(apps, schema_editor):
     ScheduledJob = apps.get_model("extras", "ScheduledJob")
 
     cache = set()
@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(
-            ensure_unique_scheduledjob_names_and_save_job_class_parameter_to_task, migrations.RunPython.noop
+            ensure_unique_scheduledjob_names, migrations.RunPython.noop
         ),
         migrations.RunPython(check_for_duplicates, migrations.RunPython.noop),
     ]
