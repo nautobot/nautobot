@@ -8,8 +8,6 @@ def ensure_unique_scheduledjob_names_and_save_job_class_parameter_to_task(apps, 
 
     cache = set()
     for instance in ScheduledJob.objects.all():
-        instance.task = instance.job_class
-        instance.save()
         name = instance.name
         counter = 1
         while name in cache:
