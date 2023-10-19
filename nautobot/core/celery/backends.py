@@ -1,5 +1,6 @@
 from django_celery_results.backends import DatabaseBackend
 
+from nautobot.core.utils.logging import sanitize
 from nautobot.extras.constants import JOB_RESULT_CUSTOM_CELERY_KWARGS
 from nautobot.extras.models import JobResult
 
@@ -49,6 +50,10 @@ class NautobotDatabaseBackend(DatabaseBackend):
                 if kwarg_name in properties:
                     celery_kwargs[kwarg_name] = properties[kwarg_name]
 
+            # Explicitly sanitize the traceback output.
+            if traceback is not None:
+                traceback = sanitize(traceback)
+
             extended_props.update(
                 {
                     "task_args": task_args,
@@ -64,3 +69,16 @@ class NautobotDatabaseBackend(DatabaseBackend):
             )
 
         return extended_props
+
+    def prepare_exception(self, exc, serializer=None):
+        """Overload default to explicitly sanitize the traceback message result."""
+        exc_info = super().prepare_exception(exc, serializer=serializer)
+
+        # If this is a GitCommandError, attempt to sanitize the message error.
+        # e.g. b"fatal: could not read Password for 'https://abc123@github.com': terminal prompts disabled"
+        if exc_info["exc_type"] == "GitCommandError":
+            exc_msg = list(exc_info["exc_message"])  # It starts as a tuple.
+            exc_msg[-1] = sanitize(exc_msg[-1].decode("utf-8"))  # The message will be bytes.
+            exc_info["exc_message"] = tuple(exc_msg)  # Turn it back into a tuple.
+
+        return exc_info
