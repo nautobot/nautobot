@@ -354,7 +354,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
-        statuses = Status.objects.get_for_model(IPAddress)
+        cls.statuses = Status.objects.get_for_model(IPAddress)
         cls.prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
         parent, _ = Prefix.objects.get_or_create(
@@ -366,7 +366,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "namespace": cls.namespace.pk,
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
-            "status": statuses[1].pk,
+            "status": cls.statuses[1].pk,
             "type": IPAddressTypeChoices.TYPE_DHCP,
             "role": roles[0].pk,
             "nat_inside": None,
@@ -377,14 +377,14 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "address,status,parent",
-            f"192.0.2.4/24,{statuses[0].name},{parent.composite_key}",
-            f"192.0.2.5/24,{statuses[0].name},{parent.composite_key}",
-            f"192.0.2.6/24,{statuses[0].name},{parent.composite_key}",
+            f"192.0.2.4/24,{cls.statuses[0].name},{parent.composite_key}",
+            f"192.0.2.5/24,{cls.statuses[0].name},{parent.composite_key}",
+            f"192.0.2.6/24,{cls.statuses[0].name},{parent.composite_key}",
         )
 
         cls.bulk_edit_data = {
             "tenant": None,
-            "status": statuses[1].pk,
+            "status": cls.statuses[1].pk,
             "role": roles[1].pk,
             "type": IPAddressTypeChoices.TYPE_HOST,
             "dns_name": "example",
@@ -497,6 +497,26 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 "Consider changing the prefix to type Network or Pool to resolve this issue.",
                 strip_tags(content),
             )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips(self):
+        """"""
+        self.add_permissions("ipam.add_ipaddress")
+        form_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[4-6]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+        }
+        request = {
+            "path": reverse("ipam:ipaddress_bulk_add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        self.assertEqual(302, response.status_code)
+        self.assertTrue(IPAddress.objects.filter(address="192.0.2.4/24").exists())
+        self.assertTrue(IPAddress.objects.filter(address="192.0.2.5/24").exists())
+        self.assertTrue(IPAddress.objects.filter(address="192.0.2.6/24").exists())
 
 
 class IPAddressMergeTestCase(ModelViewTestCase):
