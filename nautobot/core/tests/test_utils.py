@@ -1,6 +1,7 @@
 import uuid
 
 from django import forms as django_forms
+from django.apps import apps
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -14,13 +15,15 @@ from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
 from nautobot.core.models import fields as core_fields, utils as models_utils
 from nautobot.core.utils import data as data_utils, filtering, lookup, requests
+from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.dcim import filters as dcim_filters
 from nautobot.dcim import forms as dcim_forms
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim import tables
 from nautobot.extras import models as extras_models
 from nautobot.extras import utils as extras_utils
-from nautobot.extras.choices import RelationshipTypeChoices
+from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
+from nautobot.extras.models import ObjectChange
 from nautobot.extras.registry import registry
 
 
@@ -712,3 +715,40 @@ class NavigationRelatedUtils(TestCase):
             "^ipam/ip\\-addresses/\\Z",
         ]
         self.assertEqual(sorted(ui_ready_routes), sorted(list(registry["new_ui_ready_routes"])))
+
+
+class TestMigrationUtils(TestCase):
+    def test_update_object_change_ct_for_replaced_models(self):
+        """Assert update and update reverse of ObjectChange"""
+        location = dcim_models.Location.objects.first()
+        request_id = uuid.uuid4()
+        location_ct = ContentType.objects.get_for_model(dcim_models.Location)
+        device_ct = ContentType.objects.get_for_model(dcim_models.Device)
+        ObjectChange.objects.create(
+            user_name="test-user",
+            request_id=request_id,
+            action=ObjectChangeActionChoices.ACTION_UPDATE,
+            changed_object=location,
+            related_object=location,
+            object_repr=str(location),
+            object_data={"name": location.name},
+        )
+
+        with self.subTest("Update ObjectChange ContentType"):
+            update_object_change_ct_for_replaced_models(
+                apps=apps,
+                new_app_model={"app_name": "dcim", "model": "device"},
+                replaced_apps_models=[{"app_name": "dcim", "model": "location"}],
+            )
+            self.assertEqual(ObjectChange.objects.get(request_id=request_id).changed_object_type, device_ct)
+            self.assertEqual(ObjectChange.objects.get(request_id=request_id).related_object_type, device_ct)
+
+        with self.subTest("Reverse ObjectChange ContentType changes"):
+            update_object_change_ct_for_replaced_models(
+                apps=apps,
+                new_app_model={"app_name": "dcim", "model": "device"},
+                replaced_apps_models=[{"app_name": "dcim", "model": "location"}],
+                reverse_migration=True,
+            )
+            self.assertEqual(ObjectChange.objects.get(request_id=request_id).changed_object_type, location_ct)
+            self.assertEqual(ObjectChange.objects.get(request_id=request_id).related_object_type, location_ct)
