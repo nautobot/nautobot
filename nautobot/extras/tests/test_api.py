@@ -14,6 +14,7 @@ from rest_framework import status
 
 from nautobot.dcim.models import (
     Device,
+    DeviceRedundancyGroup,
     DeviceRole,
     DeviceType,
     Manufacturer,
@@ -183,20 +184,6 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
     brief_fields = ["display", "id", "name", "url"]
-    create_data = [
-        {
-            "name": "Config Context 4",
-            "data": {"more_foo": True},
-        },
-        {
-            "name": "Config Context 5",
-            "data": {"more_bar": False},
-        },
-        {
-            "name": "Config Context 6",
-            "data": {"more_baz": None},
-        },
-    ]
     bulk_update_data = {
         "description": "New description",
     }
@@ -206,6 +193,24 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
         ConfigContext.objects.create(name="Config Context 2", weight=200, data={"bar": 456})
         ConfigContext.objects.create(name="Config Context 3", weight=300, data={"baz": 789})
+
+        device_redundancy_groups = DeviceRedundancyGroup.objects.all()[:2]
+        cls.create_data = [
+            {
+                "name": "Config Context 4",
+                "device_redundancy_groups": [device_redundancy_groups[0].pk, device_redundancy_groups[1].pk],
+                "data": {"more_foo": True},
+            },
+            {
+                "name": "Config Context 5",
+                "device_redundancy_groups": [device_redundancy_groups[1].pk],
+                "data": {"more_bar": False},
+            },
+            {
+                "name": "Config Context 6",
+                "data": {"more_baz": None},
+            },
+        ]
 
     def test_render_configcontext_for_object(self):
         """
