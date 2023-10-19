@@ -1,0 +1,1 @@
+Ensured that `ScheduledJob.job_class` values are correctly transferred to `ScheduledJob.task` during v2 migration.
