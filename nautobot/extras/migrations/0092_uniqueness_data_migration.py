@@ -40,8 +40,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(
-            ensure_unique_scheduledjob_names, migrations.RunPython.noop
-        ),
+        migrations.RunPython(ensure_unique_scheduledjob_names, migrations.RunPython.noop),
         migrations.RunPython(check_for_duplicates, migrations.RunPython.noop),
     ]
