@@ -1,0 +1,1 @@
+Fixed potential exposure of hashed user password data on certain REST API endpoints when using the `?depth=1` query parameter.
