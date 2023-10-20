@@ -74,11 +74,27 @@ class NautobotDatabaseBackend(DatabaseBackend):
         """Overload default to explicitly sanitize the traceback message result."""
         exc_info = super().prepare_exception(exc, serializer=serializer)
 
-        # If this is a GitCommandError, attempt to sanitize the message error.
-        # e.g. b"fatal: could not read Password for 'https://abc123@github.com': terminal prompts disabled"
-        if exc_info["exc_type"] == "GitCommandError":
-            exc_msg = list(exc_info["exc_message"])  # It starts as a tuple.
-            exc_msg[-1] = sanitize(exc_msg[-1].decode("utf-8"))  # The message will be bytes.
-            exc_info["exc_message"] = tuple(exc_msg)  # Turn it back into a tuple.
+        exc_message = exc_info["exc_message"]
+
+        # If the message is iterable, walk through every item and try to sanitize any strings.
+        if isinstance(exc_message, (list, tuple)):
+            new_exc_message = []
+            for item in exc_message:
+                if isinstance(item, list):
+                    new_list = []
+                    for i in item:
+                        if isinstance(i, str):
+                            i = sanitize(i)
+                        new_list.append(i)
+                    new_exc_message.append(new_list)
+                elif isinstance(item, bytes):
+                    new_exc_message.append(sanitize(item.decode("utf-8")))
+                elif isinstance(item, str):
+                    new_exc_message.append(sanitize(item))
+                # Pass through anything that isn't a string/list of strings
+                else:
+                    new_exc_message.append(item)
+
+            exc_info["exc_message"] = tuple(new_exc_message)
 
         return exc_info
