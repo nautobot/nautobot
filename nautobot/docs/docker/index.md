@@ -6,8 +6,8 @@ Nautobot is packaged as a Docker image for use in a production environment; deve
 
 Docker images are published for multiple supported Python versions. The default image, recommended for most users, is based on the `python:3.11-slim` image.
 
-+/- 1.6.0
-    The Python version for the image tags that do not explicitly state a Python version changed to 3.11 for Nautobot 1.6.0. From now on, these tagged images will always contain the **latest** supported Python version (e.g., when Python 3.12 support is added, these tags will change to contain Python 3.12). This is a change from Nautobot 1.5.x and earlier, where tags that did not state a Python version would contain the **earliest** supported Python version.
++/- 1.6.1
+    The Python version for the image tags that do not explicitly state a Python version changed to 3.11 for Nautobot 1.6.1. From now on, these tagged images will always contain the **latest** supported Python version (e.g., when Python 3.12 support is added, these tags will change to contain Python 3.12). This is a change from Nautobot 1.6.0 and earlier, where tags that did not state a Python version would contain the **earliest** supported Python version.
 
 Currently images are pushed for the following python versions:
 
