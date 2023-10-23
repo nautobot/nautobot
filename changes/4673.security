@@ -1,1 +1,0 @@
-Fixed token exposure in `JobResult` traceback and result output when a `GitRepositorySync` job fails in certain ways.
