@@ -1,5 +1,6 @@
 from django_celery_results.backends import DatabaseBackend
 
+from nautobot.core.utils.logging import sanitize
 from nautobot.extras.constants import JOB_RESULT_CUSTOM_CELERY_KWARGS
 from nautobot.extras.models import JobResult
 
@@ -49,6 +50,10 @@ class NautobotDatabaseBackend(DatabaseBackend):
                 if kwarg_name in properties:
                     celery_kwargs[kwarg_name] = properties[kwarg_name]
 
+            # Explicitly sanitize the traceback output.
+            if traceback is not None:
+                traceback = sanitize(traceback)
+
             extended_props.update(
                 {
                     "task_args": task_args,
@@ -64,3 +69,32 @@ class NautobotDatabaseBackend(DatabaseBackend):
             )
 
         return extended_props
+
+    def prepare_exception(self, exc, serializer=None):
+        """Overload default to explicitly sanitize the traceback message result."""
+        exc_info = super().prepare_exception(exc, serializer=serializer)
+
+        exc_message = exc_info["exc_message"]
+
+        # If the message is iterable, walk through every item and try to sanitize any strings.
+        if isinstance(exc_message, (list, tuple)):
+            new_exc_message = []
+            for item in exc_message:
+                if isinstance(item, list):
+                    new_list = []
+                    for i in item:
+                        if isinstance(i, str):
+                            i = sanitize(i)
+                        new_list.append(i)
+                    new_exc_message.append(new_list)
+                elif isinstance(item, bytes):
+                    new_exc_message.append(sanitize(item.decode("utf-8")))
+                elif isinstance(item, str):
+                    new_exc_message.append(sanitize(item))
+                # Pass through anything that isn't a string/list of strings
+                else:
+                    new_exc_message.append(item)
+
+            exc_info["exc_message"] = tuple(new_exc_message)
+
+        return exc_info
