@@ -73,10 +73,29 @@ class APITestCase(views.ModelTestCase):
         viewname = lookup.get_route_for_model(self.model, "list", api=True)
         return reverse(viewname)
 
+    VERBOTEN_STRINGS = (
+        "password",
+        # https://docs.djangoproject.com/en/3.2/topics/auth/passwords/#included-hashers
+        "argon2",
+        "bcrypt",
+        "crypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
+
     def assert_no_verboten_content(self, response):
-        """Check an API response for content that should not be exposed in the API."""
+        """
+        Check an API response for content that should not be exposed in the API.
+
+        If a specific API has a false failure here (maybe it has security-related strings as model flags or something?),
+        its test case should overload self.VERBOTEN_STRINGS appropriately.
+        """
         response_raw_content = response.content.decode(response.charset)
-        for verboten in ["password", "pbkdf2", "sha1", "sha256", "sha512"]:
+        for verboten in self.VERBOTEN_STRINGS:
             self.assertNotIn(verboten, response_raw_content)
 
 
