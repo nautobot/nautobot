@@ -278,7 +278,7 @@ jobs:
           export TAG_LATEST_FOR_BRANCH="false"
           export TAG_LATEST_FOR_PY="false"
 
-          if [[ $BRANCH == "ltm-1.6" ]]; then
+          if [[ $BRANCH == "develop" ]]; then
             export TAG_LATEST_FOR_PY="true"
           fi
 
