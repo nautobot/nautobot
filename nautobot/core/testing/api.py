@@ -73,6 +73,31 @@ class APITestCase(views.ModelTestCase):
         viewname = lookup.get_route_for_model(self.model, "list", api=True)
         return reverse(viewname)
 
+    VERBOTEN_STRINGS = (
+        "password",
+        # https://docs.djangoproject.com/en/3.2/topics/auth/passwords/#included-hashers
+        "argon2",
+        "bcrypt",
+        "crypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
+
+    def assert_no_verboten_content(self, response):
+        """
+        Check an API response for content that should not be exposed in the API.
+
+        If a specific API has a false failure here (maybe it has security-related strings as model flags or something?),
+        its test case should overload self.VERBOTEN_STRINGS appropriately.
+        """
+        response_raw_content = response.content.decode(response.charset)
+        for verboten in self.VERBOTEN_STRINGS:
+            self.assertNotIn(verboten, response_raw_content)
+
 
 @tag("unit")
 class APIViewTestCases:
@@ -150,6 +175,8 @@ class APIViewTestCases:
             # Fields that should be absent by default (opt-in fields):
             self.assertNotIn("computed_fields", response.data)
             self.assertNotIn("relationships", response.data)
+            # Content that should never be present:
+            self.assert_no_verboten_content(response)
 
             # If opt-in fields are supported on this model, make sure they can be opted into
 
@@ -302,6 +329,7 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+            self.assert_no_verboten_content(response)
 
             for response_data in response.data["results"]:
                 for field in depth_fields:
@@ -316,7 +344,8 @@ class APIViewTestCases:
                             url = response_data[field]["url"]
                             pk = response_data[field]["id"]
                             object_type = response_data[field]["object_type"]
-                            # The response should be a brief API object, containing an ID, object_type, and URL ending in the UUID of the relevant object
+                            # The response should be a brief API object, containing an ID, object_type, and a
+                            # URL ending in the UUID of the relevant object:
                             # http://nautobot.example.com/api/circuits/providers/<uuid>/
                             #                                                    ^^^^^^
                             self.assertTrue(is_uuid(url.split("/")[-2]))
@@ -340,6 +369,7 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+            self.assert_no_verboten_content(response)
 
             for response_data in response.data["results"]:
                 for field in depth_fields:
@@ -392,6 +422,7 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
             self.assertEqual(len(response.data["results"]), 2)
+            self.assert_no_verboten_content(response)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_filtered(self):
