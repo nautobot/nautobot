@@ -314,14 +314,9 @@ def nested_serializer_factory(relation_info, nested_depth):
         base_serializer_class = get_serializer_for_model(relation_info.related_model)
 
         class NautobotNestedSerializer(base_serializer_class):
-            class Meta:
-                model = relation_info.related_model
+            class Meta(base_serializer_class.Meta):
                 is_nested = True
                 depth = nested_depth - 1
-                if hasattr(base_serializer_class.Meta, "fields"):
-                    fields = base_serializer_class.Meta.fields
-                if hasattr(base_serializer_class.Meta, "exclude"):
-                    exclude = base_serializer_class.Meta.exclude
 
         NautobotNestedSerializer.__name__ = nested_serializer_name
         NESTED_SERIALIZER_CACHE[nested_serializer_name] = NautobotNestedSerializer
