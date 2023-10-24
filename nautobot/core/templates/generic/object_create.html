@@ -26,11 +26,12 @@
                 </h3>
                 {% block tabs %}{% endblock %}
                 {% block form_errors %}
-                    {% if form.non_field_errors %}
+                    {% if form.non_field_errors or model_form.non_field_errors %}
                         <div class="panel panel-danger">
                             <div class="panel-heading"><strong>Errors</strong></div>
                             <div class="panel-body">
                                 {{ form.non_field_errors }}
+                                {{ model_form.non_field_errors }}
                             </div>
                         </div>
                     {% endif %}

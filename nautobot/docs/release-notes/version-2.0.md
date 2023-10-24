@@ -15,6 +15,9 @@ This document describes all new features and changes in Nautobot 2.0.
 
 Nautobot 2.0 includes an "alpha" version of a new user interface (UI) for Nautobot, based on the React web framework.
 
++/- 2.0.3
+    This UI is disabled by default but can be enabled as an option by setting the `ENABLE_ALPHA_UI` setting to `True` in your `nautobot_config.py` and then running [`nautobot-server build_ui`](../user-guide/administration/tools/nautobot-server.md).
+
 Users can switch between the existing UI and new UI for views supported in the new UI via a "View in New UI" link in the page footer of the existing UI and a "Return to Legacy UI" link in the left sidebar of the new UI.
 
 !!! tip
@@ -368,6 +371,82 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.3 (2023-10-23)
+
+### Added
+
+- [#4612](https://github.com/nautobot/nautobot/issues/4612) - Added validation step to handle invalid/legacy filters from v1.x in DynamicGroup form validation.
+- [#4668](https://github.com/nautobot/nautobot/issues/4668) - Added an `ENABLE_ALPHA_UI` configuration option to the settings, which is initially set to False. When set to True, this option enables the "Alpha UI 2.0" feature.
+
+### Changed
+
+- [#4668](https://github.com/nautobot/nautobot/issues/4668) - Changed the flag `--no-build-ui` to `--build-ui`, and its default value to False for the `nautobot-server post-upgrade` command.
+
+### Fixed
+
+- [#4604](https://github.com/nautobot/nautobot/issues/4604) - Fixed `post_upgrade` bug involving potential left over references to Aggregate, DeviceRole, and RackRole ContentTypes in ObjectChange records.
+- [#4608](https://github.com/nautobot/nautobot/issues/4608) - Fixed error `'IPAddressBulkAddForm' has no field named 'parent'` when bulk creating IPs via UI.
+- [#4669](https://github.com/nautobot/nautobot/issues/4669) - Added redirects from 1.x documentation paths to their 2.x equivalents to fix broken links/bookmarks.
+- [#4676](https://github.com/nautobot/nautobot/issues/4676) - Ensured that `ScheduledJob.job_class` values are correctly transferred to `ScheduledJob.task` during v2 migration.
+- [#4692](https://github.com/nautobot/nautobot/issues/4692) - Fixed incorrect inheritance of `Meta` attributes into nested serializers (`depth >= 1`).
+
+### Housekeeping
+
+- [#4692](https://github.com/nautobot/nautobot/issues/4692) - Added check in REST API generic test cases to detect strings like `password` and `sha256` that shouldn't generally appear in REST API responses.
+
+### Security
+
+- [#4671](https://github.com/nautobot/nautobot/issues/4671) - Updated `urllib3` to 2.0.7 due to CVE-2023-45803. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4673](https://github.com/nautobot/nautobot/issues/4673) - Fixed token exposure in `JobResult` traceback and result output when a `GitRepositorySync` job fails in certain ways.
+- [#4692](https://github.com/nautobot/nautobot/issues/4692) - Fixed potential exposure of hashed user password data on certain REST API endpoints when using the `?depth=1` query parameter. For more details, please refer to [GHSA-r2hw-74xv-4gqp](https://github.com/nautobot/nautobot/security/advisories/GHSA-r2hw-74xv-4gqp).
+
+## v2.0.2 (2023-10-16)
+
+### Added
+
+- [#4361](https://github.com/nautobot/nautobot/issues/4361) - Added `SUPPORT_MESSAGE` configuration setting.
+- [#4607](https://github.com/nautobot/nautobot/issues/4607) - Added `nautobot-server audit_graphql_queries` management command for evaluating breaking filter changes to existing GraphQLQuery instances.
+
+### Changed
+
+- [#4313](https://github.com/nautobot/nautobot/issues/4313) - Updated device search to include manufacturer name.
+
+### Fixed
+
+- [#4472](https://github.com/nautobot/nautobot/issues/4472) - Fixed incorrect logic in `nautobot_config.py.j2` template that wouldn't detect the MySQL engine when Prometheus metrics are enabled.
+- [#4547](https://github.com/nautobot/nautobot/issues/4547) - Fixed incorrect form field type for `DeviceFilterForm.device_redundancy_group_priority`.
+- [#4588](https://github.com/nautobot/nautobot/issues/4588) - Fixed the error when creating a child Location under a non-globally-unique named parent Location.
+- [#4598](https://github.com/nautobot/nautobot/issues/4598) - Fixed inconsistent column names in `docs/user-guide/administration/upgrading/from-v1/tables/v2-filters-renamed-fields.yml`.
+- [#4603](https://github.com/nautobot/nautobot/issues/4603) - Fixed a bug that makes Manufacturers list fail to load.
+- [#4639](https://github.com/nautobot/nautobot/issues/4639) - Fixed the ability to attach images to Locations.
+
+### Housekeeping
+
+- [#4591](https://github.com/nautobot/nautobot/issues/4591) - Fixed incorrect documentation of `FEEDBACK_BUTTON_ENABLED` configuration setting.
+- [#4591](https://github.com/nautobot/nautobot/issues/4591) - Fixed a number of missing app code-reference links in the documentation table of contents.
+- [#4592](https://github.com/nautobot/nautobot/issues/4592) - Updated formatting on installation docs.
+- [#4611](https://github.com/nautobot/nautobot/issues/4611) - Updated pylint to use multiple threads.
+- [#4613](https://github.com/nautobot/nautobot/issues/4613) - Changed CLI reference from `dns` to `dnf` for install on RHEL systems.
+- [#4619](https://github.com/nautobot/nautobot/issues/4619) - Fixed broken links in Nautobot README.md.
+
+### Security
+
+- [#4586](https://github.com/nautobot/nautobot/issues/4586) - Updated `urllib3` to 2.0.6 due to CVE-2023-43804. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4621](https://github.com/nautobot/nautobot/issues/4621) - Updated `postcss` `npm` package to 8.4.31 to address CVE-2023-44270.
+- [#4652](https://github.com/nautobot/nautobot/issues/4652) - Updated `babel/traverse` `npm` dependency to 7.23.2 to address CVE-2023-45133.
+
+## v2.0.1 (2023-10-04)
+
+### Fixed
+
+- [#4436](https://github.com/nautobot/nautobot/issues/4436) - Allowed Interfaces of type `Virtual`, `LAG`, and `Bridge` to be selected as a virtual Interface's `parent`.
+- [#4572](https://github.com/nautobot/nautobot/issues/4572) - Fixed a JS crash when using list view search box to filter objects in legacy UI.
+
+### Housekeeping
+
+- [#4523](https://github.com/nautobot/nautobot/issues/4523) - Fixed `invoke eslint` not running against local development environment.
+- [#4552](https://github.com/nautobot/nautobot/issues/4552) - Improved `test_bulk_delete_form_contains_all_filtered` and `test_bulk_edit_form_contains_all_filtered` generic tests to fail more gracefully if insufficient test data is available.
+
 ## v2.0.0 (2023-09-28)
 
 ### Added

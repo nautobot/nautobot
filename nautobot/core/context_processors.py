@@ -34,11 +34,13 @@ def settings(request):
     """
     Expose Django settings in the template context. Example: {{ settings.DEBUG }}
     """
-
-    use_new_ui = request.COOKIES.get("newui", False) and is_route_new_ui_ready(request.path)
+    root_template = "base_django.html"
+    if django_settings.ENABLE_ALPHA_UI:
+        use_new_ui = request.COOKIES.get("newui", False) and is_route_new_ui_ready(request.path)
+        root_template = "base_react.html" if use_new_ui else "base_django.html"
     return {
         "settings": django_settings,
-        "root_template": "base_react.html" if use_new_ui else "base_django.html",
+        "root_template": root_template,
     }
 
 
