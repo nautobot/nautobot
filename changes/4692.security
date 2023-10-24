@@ -1,1 +1,0 @@
-Fixed potential exposure of hashed user password data on certain REST API endpoints when using the `?depth=1` query parameter. For more details, please refer to [GHSA-r2hw-74xv-4gqp](https://github.com/nautobot/nautobot/security/advisories/GHSA-r2hw-74xv-4gqp).
