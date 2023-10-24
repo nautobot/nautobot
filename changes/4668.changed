@@ -1,1 +1,0 @@
-Changed the flag `--no-build-ui` to `--build-ui`, and its default value to False for the `nautobot-server post-upgrade` command.
