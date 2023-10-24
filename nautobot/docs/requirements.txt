@@ -5,6 +5,7 @@ mkdocs==1.4.3
 mkdocs-gen-files==0.5.0
 mkdocs-include-markdown-plugin==4.0.4
 mkdocs-material==9.1.18
+mkdocs-redirects==1.2.1
 mkdocs-section-index==0.3.5
 mkdocs-version-annotations==1.0.0
 mkdocstrings==0.22.0

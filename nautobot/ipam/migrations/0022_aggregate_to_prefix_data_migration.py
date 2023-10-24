@@ -7,6 +7,7 @@ from django.utils.timezone import make_aware
 
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import serialize_object
+from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
 from nautobot.extras.constants import CHANGELOG_MAX_OBJECT_REPR
@@ -220,6 +221,15 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
         )
         if mismatches:
             print(" ".join(error_message), flush=True)
+
+    # migrate Aggregate ObjectChange to Prefix
+    update_object_change_ct_for_replaced_models(
+        apps=apps,
+        new_app_model={"app_name": "ipam", "model": "prefix"},
+        replaced_apps_models=[
+            {"app_name": "ipam", "model": "aggregate"},
+        ],
+    )
 
 
 class Migration(migrations.Migration):

@@ -20,6 +20,7 @@ def migrate_existing_scheduled_jobs(apps, schema_editor):
         sj.queue = old_kwargs.get("task_queue", "")
         sj.celery_kwargs["queue"] = old_kwargs.get("task_queue", "")
         sj.job_class = ".".join(sj.job_class.split("/")[-2:])
+        sj.task = sj.job_class
         sj.save()
 
 

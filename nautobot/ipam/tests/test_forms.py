@@ -114,3 +114,18 @@ class IPAddressFormTest(BaseNetworkFormTest, TestCase):
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertEqual("Only IPv6 addresses can be assigned SLAAC type", form.errors["type"][0])
+
+
+class IPAddressBulkCreateFormTest(TestCase):
+    def test_ipaddress_bulk_create_form_pattern_field(self):
+        form_class = forms.IPAddressBulkCreateForm
+        with self.subTest("Assert IPAddressBulkCreateForm catches address without CIDR mask"):
+            form = form_class(data={"pattern": "192.0.2.1"})
+            self.assertFalse(form.is_valid())
+            self.assertEqual(
+                form.errors.get_json_data()["pattern"],
+                [{"message": "CIDR mask (e.g. /24) is required.", "code": ""}],
+            )
+        with self.subTest("Assert IPAddressBulkCreateForm with valid pattern"):
+            form = form_class(data={"pattern": "192.0.2.[1,5,100-254]/24"})
+            self.assertTrue(form.is_valid())
