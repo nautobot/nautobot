@@ -15,6 +15,9 @@ This document describes all new features and changes in Nautobot 2.0.
 
 Nautobot 2.0 includes an "alpha" version of a new user interface (UI) for Nautobot, based on the React web framework.
 
++/- 2.0.3
+    This UI is disabled by default but can be enabled as an option by setting the `ENABLE_ALPHA_UI` setting to `True` in your `nautobot_config.py` and then running [`nautobot-server build_ui`](../user-guide/administration/tools/nautobot-server.md).
+
 Users can switch between the existing UI and new UI for views supported in the new UI via a "View in New UI" link in the page footer of the existing UI and a "Return to Legacy UI" link in the left sidebar of the new UI.
 
 !!! tip
@@ -368,6 +371,35 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.3 (2023-10-23)
+
+### Added
+
+- [#4612](https://github.com/nautobot/nautobot/issues/4612) - Added validation step to handle invalid/legacy filters from v1.x in DynamicGroup form validation.
+- [#4668](https://github.com/nautobot/nautobot/issues/4668) - Added an `ENABLE_ALPHA_UI` configuration option to the settings, which is initially set to False. When set to True, this option enables the "Alpha UI 2.0" feature.
+
+### Changed
+
+- [#4668](https://github.com/nautobot/nautobot/issues/4668) - Changed the flag `--no-build-ui` to `--build-ui`, and its default value to False for the `nautobot-server post-upgrade` command.
+
+### Fixed
+
+- [#4604](https://github.com/nautobot/nautobot/issues/4604) - Fixed `post_upgrade` bug involving potential left over references to Aggregate, DeviceRole, and RackRole ContentTypes in ObjectChange records.
+- [#4608](https://github.com/nautobot/nautobot/issues/4608) - Fixed error `'IPAddressBulkAddForm' has no field named 'parent'` when bulk creating IPs via UI.
+- [#4669](https://github.com/nautobot/nautobot/issues/4669) - Added redirects from 1.x documentation paths to their 2.x equivalents to fix broken links/bookmarks.
+- [#4676](https://github.com/nautobot/nautobot/issues/4676) - Ensured that `ScheduledJob.job_class` values are correctly transferred to `ScheduledJob.task` during v2 migration.
+- [#4692](https://github.com/nautobot/nautobot/issues/4692) - Fixed incorrect inheritance of `Meta` attributes into nested serializers (`depth >= 1`).
+
+### Housekeeping
+
+- [#4692](https://github.com/nautobot/nautobot/issues/4692) - Added check in REST API generic test cases to detect strings like `password` and `sha256` that shouldn't generally appear in REST API responses.
+
+### Security
+
+- [#4671](https://github.com/nautobot/nautobot/issues/4671) - Updated `urllib3` to 2.0.7 due to CVE-2023-45803. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4673](https://github.com/nautobot/nautobot/issues/4673) - Fixed token exposure in `JobResult` traceback and result output when a `GitRepositorySync` job fails in certain ways.
+- [#4692](https://github.com/nautobot/nautobot/issues/4692) - Fixed potential exposure of hashed user password data on certain REST API endpoints when using the `?depth=1` query parameter. For more details, please refer to [GHSA-r2hw-74xv-4gqp](https://github.com/nautobot/nautobot/security/advisories/GHSA-r2hw-74xv-4gqp).
+
 ## v2.0.2 (2023-10-16)
 
 ### Added

@@ -410,6 +410,17 @@ class DynamicGroup(OrganizationalModel):
         # Get the authoritative source of filter fields we want to keep.
         filter_fields = self.get_filter_fields()
 
+        # Check for potential legacy filters from v1.x that is no longer valid in v2.x.
+        # Raise the validation error in DynamicGroup form handling.
+        error_message = ""
+        invalid_filter_exist = False
+        for key, value in self.filter.items():
+            if key not in filter_fields:
+                invalid_filter_exist = True
+                error_message += f"Invalid filter '{key}' detected with value {value}\n"
+        if invalid_filter_exist:
+            raise ValidationError(error_message)
+
         # Populate the filterset from the incoming `form_data`. The filterset's internal form is
         # used for validation, will be used by us to extract cleaned data for final processing.
         filterset_class = self.filterset_class
@@ -547,6 +558,10 @@ class DynamicGroup(OrganizationalModel):
             Value passed to the filter
         """
         query = models.Q()
+        if filter_field is None:
+            logger.warning(f"Filter data is not valid for DynamicGroup {self}")
+            return query
+
         field_name = filter_field.field_name
 
         # Attempt to account for `ModelChoiceFilter` where `to_field_name` MAY be set.
@@ -609,7 +624,7 @@ class DynamicGroup(OrganizationalModel):
         # In this case we want all filters for a group's filter dict in a set intersection (boolean
         # AND) because ALL filter conditions must match for the filter parameters to be valid.
         for field_name, value in fs.data.items():
-            filter_field = fs.filters[field_name]
+            filter_field = fs.filters.get(field_name)
             query &= self.generate_query_for_filter(filter_field, value)
 
         return query

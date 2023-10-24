@@ -912,3 +912,6 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     "TimeZoneSerializerField": {"type": "string"},
     "UUIDField": {"type": "string", "format": "uuid"},
 }
+
+# Turn on or off new ui feature
+ENABLE_ALPHA_UI = is_truthy(os.getenv("NAUTOBOT_ENABLE_ALPHA_UI", "False"))
