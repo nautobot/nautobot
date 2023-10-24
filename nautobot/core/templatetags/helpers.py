@@ -20,8 +20,8 @@ from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
 from nautobot.core.utils.navigation import is_route_new_ui_ready
 
-HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
-HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
+HTML_TRUE = '<span><i class="mdi mdi-check-bold" style="color:green" title="Yes"></i></span>'
+HTML_FALSE = '<span><i class="mdi mdi-close-thick" style="color:red" title="No"></i></span>'
 HTML_NONE = '<span class="text-muted">&mdash;</span>'
 
 DEFAULT_SUPPORT_MESSAGE = (
