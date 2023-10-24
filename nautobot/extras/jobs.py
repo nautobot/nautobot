@@ -10,7 +10,7 @@ from textwrap import dedent
 from typing import final
 import warnings
 
-from billiard.einfo import ExceptionInfo
+from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
 from celery import states
 from celery.exceptions import NotRegistered, Retry
 from celery.result import EagerResult
@@ -361,6 +361,10 @@ class BaseJob(Task):
             },
             "properties": options,  # one line fix to overloaded method
         }
+        if "stamped_headers" in options:
+            request["stamped_headers"] = maybe_list(options["stamped_headers"])
+            request["stamps"] = {header: maybe_list(options.get(header, [])) for header in request["stamped_headers"]}
+
         tb = None
         tracer = build_tracer(
             task.name,
@@ -373,6 +377,8 @@ class BaseJob(Task):
         retval = ret.retval
         if isinstance(retval, ExceptionInfo):
             retval, tb = retval.exception, retval.traceback
+            if isinstance(retval, ExceptionWithTraceback):
+                retval = retval.exc
         if isinstance(retval, Retry) and retval.sig is not None:
             return retval.sig.apply(retries=retries + 1)
         state = states.SUCCESS if ret.info is None else ret.info.state

@@ -177,6 +177,8 @@ mkdocs-gen-files = "~0.5.0"
 mkdocs-include-markdown-plugin = "~4.0.4"
 # Material for mkdocs theme
 mkdocs-material = "~9.1.18"
+# Handle docs redirections
+mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.5"
 # Render custom markdown for version added/changed/remove notes
