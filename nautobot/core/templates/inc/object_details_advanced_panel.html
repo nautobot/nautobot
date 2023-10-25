@@ -1,3 +1,5 @@
+{% load helpers %}
+
 {% if object.pk %}
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -54,6 +56,23 @@
                         <td>{{ object.last_updated }}</td>
                     </tr>
                 {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Data Provenance</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                <tr>
+                    <td>Created By</td>
+                    <td>{{ object.created_by | placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated By</td>
+                    <td>{{ object.last_updated_by | placeholder }}</td>
+                </tr>
             </tbody>
         </table>
     </div>

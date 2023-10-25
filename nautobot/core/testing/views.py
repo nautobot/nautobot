@@ -334,6 +334,8 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
+                self.assertEqual(instance.created_by, self.user)
+                self.assertEqual(instance.last_updated_by, self.user)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -459,6 +461,7 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+                self.assertEqual(instance.last_updated_by, self.user)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):
