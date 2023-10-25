@@ -46,20 +46,23 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
+    {% if "dcim | device" in content_types %}
     <div class="panel panel-default">
-         <div class="panel-heading">
-             <strong>Devices</strong>
-         </div>
-         {% include 'inc/table.html' with table=device_table %}
-         {% if perms.ipam.add_device %}
-             <div class="panel-footer text-right noprint">
-                 <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
-                     <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Device
-                 </a>
-             </div>
-         {% endif %}
-     </div>
+        <div class="panel-heading">
+            <strong>Devices</strong>
+        </div>
+        {% include 'inc/table.html' with table=device_table %}
+        {% if perms.ipam.add_device %}
+            <div class="panel-footer text-right noprint">
+                <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Device
+                </a>
+            </div>
+        {% endif %}
+    </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=device_table.page %}
+    {% endif %}
+    {% if "ipam | IPAddress" in content_types %}
     <div class="panel panel-default">
          <div class="panel-heading">
              <strong>IP Addresses</strong>
@@ -74,6 +77,8 @@
          {% endif %}
      </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=ipaddress_table.page %}
+    {% endif %}
+    {% if "ipam | prefix" in content_types %}
      <div class="panel panel-default">
          <div class="panel-heading">
              <strong>Prefixes</strong>
@@ -88,6 +93,8 @@
          {% endif %}
      </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=prefix_table.page %}
+    {% endif %}
+    {% if "virtualization | virtual machines" in content_types %}
     <div class="panel panel-default">
          <div class="panel-heading">
              <strong>Virtual Machines</strong>
@@ -102,6 +109,8 @@
          {% endif %}
      </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=virtual_machine_table.page %}
+    {% endif %}
+    {% if "ipam | VLANs" in content_types %}
     <div class="panel panel-default">
          <div class="panel-heading">
              <strong>VLANs</strong>
@@ -116,5 +125,6 @@
          {% endif %}
      </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
+    {% endif %}
      <div class="row"></div>
  {% endblock content_full_width_page %}

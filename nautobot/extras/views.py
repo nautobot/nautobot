@@ -1804,7 +1804,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
-            context["content_types"] = instance.content_types.order_by("app_label", "model")
+            context["content_types"] = [str(ct) for ct in instance.content_types.order_by("app_label", "model")]
 
             devices = instance.devices.select_related(
                 "status",
