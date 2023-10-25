@@ -6,31 +6,58 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('tenancy', '0008_tagsfield'),
+        ("tenancy", "0008_tagsfield"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='tenant',
-            name='created_by',
-            field=models.ForeignKey(blank=True, db_column='created_by', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="tenant",
+            name="created_by",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="created_by",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='tenant',
-            name='last_updated_by',
-            field=models.ForeignKey(blank=True, db_column='last_updated_by', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="tenant",
+            name="last_updated_by",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="last_updated_by",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='tenantgroup',
-            name='created_by',
-            field=models.ForeignKey(blank=True, db_column='created_by', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="tenantgroup",
+            name="created_by",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="created_by",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='tenantgroup',
-            name='last_updated_by',
-            field=models.ForeignKey(blank=True, db_column='last_updated_by', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="tenantgroup",
+            name="last_updated_by",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="last_updated_by",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

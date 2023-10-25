@@ -6,31 +6,58 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('example_plugin', '0006_add_natural_keys'),
+        ("example_plugin", "0006_add_natural_keys"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='anotherexamplemodel',
-            name='created_by',
-            field=models.ForeignKey(blank=True, db_column='created_by', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="anotherexamplemodel",
+            name="created_by",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="created_by",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='anotherexamplemodel',
-            name='last_updated_by',
-            field=models.ForeignKey(blank=True, db_column='last_updated_by', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="anotherexamplemodel",
+            name="last_updated_by",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="last_updated_by",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='examplemodel',
-            name='created_by',
-            field=models.ForeignKey(blank=True, db_column='created_by', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="examplemodel",
+            name="created_by",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="created_by",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='examplemodel',
-            name='last_updated_by',
-            field=models.ForeignKey(blank=True, db_column='last_updated_by', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="examplemodel",
+            name="last_updated_by",
+            field=models.ForeignKey(
+                blank=True,
+                db_column="last_updated_by",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]
