@@ -340,7 +340,7 @@ class ViewTestCases:
                 validate = URLValidator()
                 try:
                     validate(instance.get_absolute_url())
-                except ValidationError as e:
+                except ValidationError:
                     self.skipTest("Model does not have a detail view")
                 response = self.client.get(instance.get_absolute_url())
                 response_body = testing.extract_page_body(response.content.decode(response.charset))
@@ -477,7 +477,7 @@ class ViewTestCases:
                 validate = URLValidator()
                 try:
                     validate(instance.get_absolute_url())
-                except ValidationError as e:
+                except ValidationError:
                     self.skipTest("Model does not have a detail view")
 
                 # Assert that Last Updated By table row is updated with the user that most recently modified the object
