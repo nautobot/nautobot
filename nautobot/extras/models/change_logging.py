@@ -9,7 +9,7 @@ from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.core.utils.data import shallow_compare_dict
-from nautobot.core.utils.lookup import get_changes_for_model, get_route_for_model
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.utils import extras_features
