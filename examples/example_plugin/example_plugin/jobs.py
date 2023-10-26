@@ -1,8 +1,12 @@
+from datetime import datetime, timezone
 import sys
 import time
 
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.db import transaction
+from faker import Faker
 
 from nautobot.apps.jobs import (
     DryRunVar,
@@ -97,6 +101,23 @@ class ExampleLoggingJob(Job):
         return f"Ran for {interval} seconds"
 
 
+class ExampleFileOutputJob(Job):
+    lines = IntegerVar(default=4, description="Number of lines of nonsense to include.")
+
+    class Meta:
+        name = "Example File Output job"
+        description = "Creates a file as output."
+
+    def run(self, lines):
+
+        sentences = Faker().sentences(nb=lines)
+
+        filename = f"{self.__name__}-{datetime.now(tz=timezone.utc).strftime('%Y-%m-%d-%H-%M-%S-%f')}.txt"
+        intended_file_path = "/".join(["job_output", *self.__module__.split("."), filename])
+        file_path = default_storage.save(intended_file_path, ContentFile("\n".join(sentences)))
+        self.logger.info("File is available for download [here](%s)", default_storage.url(file_path))
+
+
 class ExampleJobHookReceiver(JobHookReceiver):
     class Meta:
         name = "Example job hook receiver"
@@ -171,6 +192,7 @@ jobs = (
     ExampleJob,
     ExampleHiddenJob,
     ExampleLoggingJob,
+    ExampleFileOutputJob,
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
