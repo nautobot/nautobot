@@ -333,7 +333,14 @@ class ViewTestCases:
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
+                # Assert that Created By table row is updated with the user that created the object
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
+                response = self.client.get(instance.get_absolute_url())
+                response_body = testing.extract_page_body(response.content.decode(response.charset))
+                advanced_tab_href = f"{instance.get_absolute_url()}#advanced"
+                self.assertIn(advanced_tab_href, response_body)
+                self.assertIn("<td>Created By</td>", response_body)
+                self.assertIn("<td>nautobotuser</td>", response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -459,6 +466,13 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+                # Assert that Last Updated By table row is updated with the user that most recently modified the object
+                response = self.client.get(instance.get_absolute_url())
+                response_body = testing.extract_page_body(response.content.decode(response.charset))
+                advanced_tab_href = f"{instance.get_absolute_url()}#advanced"
+                self.assertIn(advanced_tab_href, response_body)
+                self.assertIn("<td>Last Updated By</td>", response_body)
+                self.assertIn("<td>nautobotuser</td>", response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):

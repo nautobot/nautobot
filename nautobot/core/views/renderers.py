@@ -14,6 +14,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -231,7 +232,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         }
         if view.action == "retrieve":
             # Get the ObjectChange records to populate the advanced tab information
-            object_change_records = ObjectChange.objects.filter(changed_object_id=instance.id)
+            object_change_records = get_changes_for_model(instance)
             created_by = None
             last_updated_by = None
             try:
