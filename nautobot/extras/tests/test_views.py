@@ -2348,8 +2348,15 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
             'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
             'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
+            'test_role5,25,ffffff,"virtualization.virtualmachine",A Role',
         )
 
         cls.bulk_edit_data = {
             "color": "000000",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_view_with_content_types(self):
+        for instance in self._get_queryset().all():
+            response = self.client.get(instance.get_absolute_url())
+            response_body = extract_page_body(response.content.decode(response.charset))
