@@ -28,34 +28,9 @@ class ChangeLoggedModel(models.Model):
 
     created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
-    created_by = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        related_name="+",
-    )
-    last_updated_by = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        related_name="+",
-    )
 
     class Meta:
         abstract = True
-
-    def save(self, *args, **kwargs):
-        from nautobot.extras.choices import ObjectChangeActionChoices
-
-        # call save() first so that the ObjectChange record exists
-        super().save(*args, **kwargs)
-        most_recent_change = get_changes_for_model(self).first()
-        if most_recent_change and most_recent_change.action == ObjectChangeActionChoices.ACTION_CREATE:
-            self.created_by = most_recent_change.user
-        self.last_updated_by = most_recent_change.user
-        return super().save(*args, **kwargs)
 
     def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
         """

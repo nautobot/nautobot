@@ -54,7 +54,8 @@ from nautobot.core.views.utils import (
     handle_protectederror,
     prepare_cloned_fields,
 )
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.models import ExportTemplate, ObjectChange
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
@@ -101,6 +102,19 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
+        # Get the ObjectChange records to populate the advanced tab information
+        object_change_records = ObjectChange.objects.filter(changed_object_id=instance.id)
+        created_by = None
+        last_updated_by = None
+        try:
+            created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
+            created_by = created_by_record.user
+        except ObjectChange.DoesNotExist:
+            pass
+
+        last_updated_by_record = object_change_records.filter(action=ObjectChangeActionChoices.ACTION_UPDATE).first()
+        if last_updated_by_record:
+            last_updated_by = last_updated_by_record.user
 
         # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
         # on the object-retrieve endpoint?
@@ -112,6 +126,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             temp_fake_context = {
                 "object": instance,
                 "request": request,
+                "created_by": created_by,
+                "last_updated_by": last_updated_by,
                 "settings": {},
                 "csrf_token": "",
                 "perms": {},
@@ -128,6 +144,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                     "object": instance,
                     "verbose_name": self.queryset.model._meta.verbose_name,
                     "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                    "created_by": created_by,
+                    "last_updated_by": last_updated_by,
                     **self.get_extra_context(request, instance),
                 },
             )

@@ -361,7 +361,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         self.extend_field_names(fields, "id", at_start=True)
 
         # Move these fields to the end
-        fields_to_include = ["created", "last_updated", "created_by", "last_updated_by"]
+        fields_to_include = ["created", "last_updated"]
         for field in fields_to_include:
             if hasattr(self.Meta.model, field):
                 self.extend_field_names(fields, field)
