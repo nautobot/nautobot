@@ -35,6 +35,7 @@ from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
@@ -1804,75 +1805,92 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
-            context["content_types"] = [str(ct) for ct in instance.content_types.order_by("app_label", "model")]
-
-            devices = instance.devices.select_related(
-                "status",
-                "location",
-                "tenant",
-                "role",
-                "rack",
-                "device_type",
-            )
-            ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
-                interface_count=Count("interfaces"),
-                interface_parent_count=(Count("interfaces__device", distinct=True)),
-                vm_interface_count=Count("vm_interfaces"),
-                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
-                assigned_count=Count("interfaces") + Count("vm_interfaces"),
-            )
-            prefixes = instance.prefixes.select_related(
-                "location",
-                "status",
-                "tenant",
-                "vlan",
-                # "vrf",
-                "namespace",
-            )
-            virtual_machines = instance.virtual_machines.select_related(
-                "cluster",
-                "role",
-                "status",
-                "tenant",
-            )
-            vlans = instance.vlans.select_related(
-                "vlan_group",
-                "location",
-                "status",
-                "tenant",
-            )
-
-            device_table = DeviceTable(devices)
-            device_table.columns.hide("role")
-            ipaddress_table = IPAddressTable(ipaddress)
-            ipaddress_table.columns.hide("role")
-            prefix_table = PrefixTable(prefixes)
-            prefix_table.columns.hide("role")
-            virtual_machine_table = VirtualMachineTable(virtual_machines)
-            virtual_machine_table.columns.hide("role")
-            vlan_table = VLANTable(vlans)
-            vlan_table.columns.hide("role")
+            context["content_types"] = instance.content_types.order_by("app_label", "model")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
 
-            RequestConfig(request, paginate).configure(device_table)
-            RequestConfig(request, paginate).configure(ipaddress_table)
-            RequestConfig(request, paginate).configure(prefix_table)
-            RequestConfig(request, paginate).configure(virtual_machine_table)
-            RequestConfig(request, paginate).configure(vlan_table)
+            if ContentType.objects.get_for_model(Device) in context["content_types"]:
+                context["show_device_table"] = True
+                devices = instance.devices.select_related(
+                    "status",
+                    "location",
+                    "tenant",
+                    "role",
+                    "rack",
+                    "device_type",
+                )
+                device_table = DeviceTable(devices)
+                device_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(device_table)
+                context.update({"device_table": device_table})
+            else:
+                context.update({"show_device_table": False})
 
-            context.update(
-                {
-                    "device_table": device_table,
-                    "ipaddress_table": ipaddress_table,
-                    "prefix_table": prefix_table,
-                    "virtual_machine_table": virtual_machine_table,
-                    "vlan_table": vlan_table,
-                }
-            )
+            if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
+                context["show_ipaddress_table"] = True
+                ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
+                    interface_count=Count("interfaces"),
+                    interface_parent_count=(Count("interfaces__device", distinct=True)),
+                    vm_interface_count=Count("vm_interfaces"),
+                    vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                    assigned_count=Count("interfaces") + Count("vm_interfaces"),
+                )
+                ipaddress_table = IPAddressTable(ipaddress)
+                ipaddress_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(ipaddress_table)
+                context.update({"ipaddress_table": ipaddress_table})
+            else:
+                context.update({"show_ipaddress_table": False})
+
+            if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
+                context["show_prefix_table"] = True
+                prefixes = instance.prefixes.select_related(
+                    "location",
+                    "status",
+                    "tenant",
+                    "vlan",
+                    # "vrf",
+                    "namespace",
+                )
+                prefix_table = PrefixTable(prefixes)
+                prefix_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(prefix_table)
+                context.update({"prefix_table": prefix_table})
+            else:
+                context.update({"show_prefix_table": False})
+
+            if ContentType.objects.get_for_model(VirtualMachine) in context["content_types"]:
+                context["show_virtual_machine_table"] = True
+                virtual_machines = instance.virtual_machines.select_related(
+                    "cluster",
+                    "role",
+                    "status",
+                    "tenant",
+                )
+                virtual_machine_table = VirtualMachineTable(virtual_machines)
+                virtual_machine_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(virtual_machine_table)
+                context.update({"virtual_machine_table": virtual_machine_table})
+            else:
+                context.update({"show_virtual_machine_table": False})
+
+            if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
+                context["show_vlan_table"] = True
+                vlans = instance.vlans.select_related(
+                    "vlan_group",
+                    "location",
+                    "status",
+                    "tenant",
+                )
+                vlan_table = VLANTable(vlans)
+                vlan_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vlan_table)
+                context.update({"vlan_table": vlan_table})
+            else:
+                context.update({"show_vlan_table": False})
 
         return context
 

@@ -46,7 +46,7 @@
 {% endblock content_left_page %}
 
 {% block content_full_width_page %}
-    {% if "dcim | device" in content_types %}
+    {% if show_device_table %}
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Devices</strong>
@@ -62,7 +62,7 @@
     </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=device_table.page %}
     {% endif %}
-    {% if "ipam | IPAddress" in content_types %}
+    {% if show_ipaddress_table %}
     <div class="panel panel-default">
          <div class="panel-heading">
              <strong>IP Addresses</strong>
@@ -78,7 +78,7 @@
      </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=ipaddress_table.page %}
     {% endif %}
-    {% if "ipam | prefix" in content_types %}
+    {% if show_prefix_table %}
      <div class="panel panel-default">
          <div class="panel-heading">
              <strong>Prefixes</strong>
@@ -94,7 +94,7 @@
      </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=prefix_table.page %}
     {% endif %}
-    {% if "virtualization | virtual machines" in content_types %}
+    {% if show_virtual_machine_table %}
     <div class="panel panel-default">
          <div class="panel-heading">
              <strong>Virtual Machines</strong>
@@ -110,7 +110,7 @@
      </div>
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=virtual_machine_table.page %}
     {% endif %}
-    {% if "ipam | VLANs" in content_types %}
+    {% if show_vlan_table %}
     <div class="panel panel-default">
          <div class="panel-heading">
              <strong>VLANs</strong>
