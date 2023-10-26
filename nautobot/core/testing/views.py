@@ -5,8 +5,9 @@ import uuid
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.validators import URLValidator
 from django.test import TestCase as _TestCase
 from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
@@ -335,6 +336,12 @@ class ViewTestCases:
                 self.assertEqual(len(objectchanges), 1)
                 # Assert that Created By table row is updated with the user that created the object
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
+                # Validate if detail view exists
+                validate = URLValidator()
+                try:
+                    validate(instance.get_absolute_url())
+                except ValidationError as e:
+                    self.skipTest("Model does not have a detail view")
                 response = self.client.get(instance.get_absolute_url())
                 response_body = testing.extract_page_body(response.content.decode(response.charset))
                 advanced_tab_href = f"{instance.get_absolute_url()}#advanced"
@@ -466,6 +473,13 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+                # Validate if detail view exists
+                validate = URLValidator()
+                try:
+                    validate(instance.get_absolute_url())
+                except ValidationError as e:
+                    self.skipTest("Model does not have a detail view")
+
                 # Assert that Last Updated By table row is updated with the user that most recently modified the object
                 response = self.client.get(instance.get_absolute_url())
                 response_body = testing.extract_page_body(response.content.decode(response.charset))

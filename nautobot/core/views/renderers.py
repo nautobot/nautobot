@@ -237,15 +237,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             last_updated_by = None
             try:
                 created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
-                created_by = created_by_record.user
+                created_by = created_by_record.user_name
             except ObjectChange.DoesNotExist:
                 pass
 
-            last_updated_by_record = object_change_records.filter(
-                action=ObjectChangeActionChoices.ACTION_UPDATE
-            ).first()
+            last_updated_by_record = object_change_records.first()
             if last_updated_by_record:
-                last_updated_by = last_updated_by_record.user
+                last_updated_by = last_updated_by_record.user_name
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
             context.update(view.get_extra_context(request, instance))
