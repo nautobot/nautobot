@@ -365,6 +365,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             self.extend_field_names(fields, "created")
         if hasattr(self.Meta.model, "last_updated"):
             self.extend_field_names(fields, "last_updated")
+        if hasattr(self.Meta.model, "created_by"):
+            self.extend_field_names(fields, "created_by")
+        if hasattr(self.Meta.model, "last_updated_by"):
+            self.extend_field_names(fields, "last_updated_by")
 
         def filter_field(field):
             # Eliminate all field names that start with "_" as those fields are not user-facing
