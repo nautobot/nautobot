@@ -40,6 +40,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -101,6 +102,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
+        # Get the ObjectChange records to populate the advanced tab information
+        created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
 
         # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
         # on the object-retrieve endpoint?
@@ -128,6 +131,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                     "object": instance,
                     "verbose_name": self.queryset.model._meta.verbose_name,
                     "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                    "created_by": created_by,
+                    "last_updated_by": last_updated_by,
                     **self.get_extra_context(request, instance),
                 },
             )

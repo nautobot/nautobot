@@ -192,3 +192,31 @@ def get_table_for_model(model):
         (Union[Table, None]): Either the `Table` class or `None`
     """
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
+
+
+def get_created_and_last_updated_usernames_for_model(instance):
+    """
+    Args:
+        instance: A model class instance
+
+    Returns:
+        created_by: Username of the user that created the instance
+        last_updated_by: Username of the user that last modified the instance
+    """
+    from nautobot.extras.choices import ObjectChangeActionChoices
+    from nautobot.extras.models import ObjectChange
+
+    object_change_records = get_changes_for_model(instance)
+    created_by = None
+    last_updated_by = None
+    try:
+        created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
+        created_by = created_by_record.user_name
+    except ObjectChange.DoesNotExist:
+        pass
+
+    last_updated_by_record = object_change_records.first()
+    if last_updated_by_record:
+        last_updated_by = last_updated_by_record.user_name
+
+    return created_by, last_updated_by

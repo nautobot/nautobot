@@ -5,8 +5,9 @@ import uuid
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.validators import URLValidator
 from django.test import TestCase as _TestCase
 from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
@@ -333,7 +334,22 @@ class ViewTestCases:
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
+                # Assert that Created By table row is updated with the user that created the object
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
+                # Validate if detail view exists
+                validate = URLValidator()
+                detail_url = instance.get_absolute_url()
+                try:
+                    validate(detail_url)
+                    response = self.client.get(detail_url)
+                    response_body = testing.extract_page_body(response.content.decode(response.charset))
+                    advanced_tab_href = f"{detail_url}#advanced"
+                    self.assertIn(advanced_tab_href, response_body)
+                    self.assertIn("<td>Created By</td>", response_body)
+                    self.assertIn("<td>nautobotuser</td>", response_body)
+                except ValidationError:
+                    # Instance does not have a valid detail view, do nothing here.
+                    pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -459,6 +475,20 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+                # Validate if detail view exists
+                validate = URLValidator()
+                detail_url = instance.get_absolute_url()
+                try:
+                    validate(detail_url)
+                    response = self.client.get(detail_url)
+                    response_body = testing.extract_page_body(response.content.decode(response.charset))
+                    advanced_tab_href = f"{detail_url}#advanced"
+                    self.assertIn(advanced_tab_href, response_body)
+                    self.assertIn("<td>Last Updated By</td>", response_body)
+                    self.assertIn("<td>nautobotuser</td>", response_body)
+                except ValidationError:
+                    # Instance does not have a valid detail view, do nothing here.
+                    pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):
