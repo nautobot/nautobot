@@ -784,7 +784,7 @@ class TagFilterField(DynamicModelMultipleChoiceField):
         from nautobot.extras.models import Tag
 
         if queryset is None:
-            queryset = Tag.objects.filter(content_types=ContentType.objects.get_for_model(model))
+            queryset = Tag.objects.get_for_model(model)
         query_params = query_params or {}
         query_params.update({"content_types": model._meta.label_lower})
         super().__init__(
