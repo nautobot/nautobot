@@ -40,6 +40,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     Role,
     Status,
+    Tag,
 )
 from nautobot.ipam.models import Prefix
 from nautobot.tenancy.models import Tenant
@@ -969,6 +970,11 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         this_dg.set_filter({"example_plugin_prefix_tenant_name": [a_tenant]})
         this_dg.validated_save()
+
+    def test_unapplied_tags_can_be_added_to_dynamic_group_filters(self):
+        dg = self.groups[0]
+        dg.filter.update({"tags": [Tag.objects.filter(content_types=ContentType.objects.get_for_model(Device)).first()]})
+        dg.validated_save()
 
     def test_member_caching_output(self):
         group = self.first_child
