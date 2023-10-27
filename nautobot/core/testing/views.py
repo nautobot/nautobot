@@ -341,14 +341,15 @@ class ViewTestCases:
                 detail_url = instance.get_absolute_url()
                 try:
                     validate(detail_url)
+                    response = self.client.get(detail_url)
+                    response_body = testing.extract_page_body(response.content.decode(response.charset))
+                    advanced_tab_href = f"{detail_url}#advanced"
+                    self.assertIn(advanced_tab_href, response_body)
+                    self.assertIn("<td>Created By</td>", response_body)
+                    self.assertIn("<td>nautobotuser</td>", response_body)
                 except ValidationError:
-                    self.skipTest("Model does not have a detail view")
-                response = self.client.get(detail_url)
-                response_body = testing.extract_page_body(response.content.decode(response.charset))
-                advanced_tab_href = f"{detail_url}#advanced"
-                self.assertIn(advanced_tab_href, response_body)
-                self.assertIn("<td>Created By</td>", response_body)
-                self.assertIn("<td>nautobotuser</td>", response_body)
+                    # Instance does not have a valid detail view, do nothing here.
+                    pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -479,16 +480,15 @@ class ViewTestCases:
                 detail_url = instance.get_absolute_url()
                 try:
                     validate(detail_url)
+                    response = self.client.get(detail_url)
+                    response_body = testing.extract_page_body(response.content.decode(response.charset))
+                    advanced_tab_href = f"{detail_url}#advanced"
+                    self.assertIn(advanced_tab_href, response_body)
+                    self.assertIn("<td>Last Updated By</td>", response_body)
+                    self.assertIn("<td>nautobotuser</td>", response_body)
                 except ValidationError:
-                    self.skipTest("Model does not have a detail view")
-
-                # Assert that Last Updated By table row is updated with the user that most recently modified the object
-                response = self.client.get(detail_url)
-                response_body = testing.extract_page_body(response.content.decode(response.charset))
-                advanced_tab_href = f"{detail_url}#advanced"
-                self.assertIn(advanced_tab_href, response_body)
-                self.assertIn("<td>Last Updated By</td>", response_body)
-                self.assertIn("<td>nautobotuser</td>", response_body)
+                    # Instance does not have a valid detail view, do nothing here.
+                    pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):

@@ -115,8 +115,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             temp_fake_context = {
                 "object": instance,
                 "request": request,
-                "created_by": created_by,
-                "last_updated_by": last_updated_by,
                 "settings": {},
                 "csrf_token": "",
                 "perms": {},
