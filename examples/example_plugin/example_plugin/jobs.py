@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import sys
 import time
 
