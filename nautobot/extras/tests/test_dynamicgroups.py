@@ -972,8 +972,14 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         this_dg.validated_save()
 
     def test_unapplied_tags_can_be_added_to_dynamic_group_filters(self):
+        """
+        Test that tags without being applied to any member instances can still be added as filters on DynamicGroups
+        """
         dg = self.groups[0]
-        dg.filter.update({"tags": [Tag.objects.filter(content_types=ContentType.objects.get_for_model(Device)).first()]})
+        unapplied_tag = Tag.objects.create(name="Unapplied Tag")
+        unapplied_tag.content_types.set([ContentType.objects.get_for_model(Device)])
+        unapplied_tag.save()
+        dg.filter["tags"] = [unapplied_tag.pk]
         dg.validated_save()
 
     def test_member_caching_output(self):
