@@ -57,7 +57,7 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 
 ### Developer Tags
 
-Additionally, GitHub Actions are used to automatically build "developer" images corresponding to each commit to the `ltm/1.6`, `develop`, and `next` branches. These images are named `networktocode/nautobot-dev:${TAG}` and `ghcr.io/nautobot/nautobot-dev:${TAG}`, and provide the development dependencies needed to build Nautobot; they can be used as a base for development to develop your own Nautobot apps but should **NOT** be used in production.
+Additionally, GitHub Actions are used to automatically build "developer" images corresponding to each commit to the `ltm-1.6`, `develop`, and `next` branches. These images are named `networktocode/nautobot-dev:${TAG}` and `ghcr.io/nautobot/nautobot-dev:${TAG}`, and provide the development dependencies needed to build Nautobot; they can be used as a base for development to develop your own Nautobot apps but should **NOT** be used in production.
 
 In addition to all tags described in the previous section, the following additional tags are available from the GitHub Container Registry, only for the `ghcr.io/nautobot/nautobot-dev` images:
 
@@ -67,8 +67,8 @@ In addition to all tags described in the previous section, the following additio
 | `latest-py${PYTHON_VER}`                             | `develop`, the latest commit | As specified   |
 | `develop`                                            | `develop`, the latest commit | 3.11           |
 | `develop-py${PYTHON_VER}`                            | `develop`, the latest commit | As specified   |
-| `ltm-1.6`                                            | `ltm/1.6`, the latest commit | 3.11           |
-| `ltm-1.6-py${PYTHON_VER}`                            | `ltm/1.6`, the latest commit | As specified   |
+| `ltm-1.6`                                            | `ltm-1.6`, the latest commit | 3.11           |
+| `ltm-1.6-py${PYTHON_VER}`                            | `ltm-1.6`, the latest commit | As specified   |
 | `next`                                               | `next`, the latest commit    | 3.11           |
 | `next-py${PYTHON_VER}`                               | `next`, the latest commit    | As specified   |
 

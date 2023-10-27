@@ -1,5 +1,5 @@
 {
-  "baseBranches": ["develop", "next", "ltm/*"],
+  "baseBranches": ["develop", "next", "ltm-*"],
   "enabledManagers": ["pip_requirements", "poetry"],
   "extends": [
     "config:base"
@@ -21,7 +21,7 @@
     {
       "description": "Group patch-only updates to develop weekly to cut down on PR noise.",
       "groupName": "Lock-file Patch Releases for LTM branches",
-      "matchBaseBranches": ["ltm/*"],
+      "matchBaseBranches": ["ltm-*"],
       "extends": ["schedule:monthly"],
       "major": {"enabled": false},
       "minor": {"enabled": false}
