@@ -31,7 +31,7 @@ class FileProxyForm(forms.ModelForm):
 @admin.register(FileProxy)
 class FileProxyAdmin(NautobotModelAdmin):
     form = FileProxyForm
-    list_display = ["name", "uploaded_at"]
+    list_display = ["name", "file", "uploaded_at"]
     list_filter = ["uploaded_at"]
 
 

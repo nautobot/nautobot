@@ -31,7 +31,7 @@ urlpatterns = [
     path("api/", include("nautobot.core.api.urls")),
     # GraphQL
     path("graphql/", CustomGraphQLView.as_view(graphiql=True), name="graphql"),
-    # Serving static media in Django
+    # Serving static media in Django (TODO: should be DEBUG mode only - "This view is NOT hardened for production use")
     path("media/<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
     # Admin
     path("admin/", admin_site.urls),

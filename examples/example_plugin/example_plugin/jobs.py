@@ -3,13 +3,11 @@ import sys
 import time
 
 from django.conf import settings
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from django.db import transaction
-from faker import Faker
 
 from nautobot.apps.jobs import (
     DryRunVar,
+    FileVar,
     IntegerVar,
     Job,
     JobButtonReceiver,
@@ -101,21 +99,19 @@ class ExampleLoggingJob(Job):
         return f"Ran for {interval} seconds"
 
 
-class ExampleFileOutputJob(Job):
-    lines = IntegerVar(default=4, description="Number of lines of nonsense to include.")
+class ExampleFileInputOutputJob(Job):
+    input_file = FileVar(description="Text file to transform")
 
     class Meta:
-        name = "Example File Output job"
-        description = "Creates a file as output."
+        name = "Example File Input/Output job"
+        description = "Takes a file as input and reverses its line order, creating a new file as output."
 
-    def run(self, lines):
-
-        sentences = Faker().sentences(nb=lines)
-
-        filename = f"{self.__name__}-{datetime.now(tz=timezone.utc).strftime('%Y-%m-%d-%H-%M-%S-%f')}.txt"
-        intended_file_path = "/".join(["job_output", *self.__module__.split("."), filename])
-        file_path = default_storage.save(intended_file_path, ContentFile("\n".join(sentences)))
-        self.logger.info("File is available for download [here](%s)", default_storage.url(file_path))
+    def run(self, input_file):
+        # Note that input_file is always opened in binary mode, so we need to decode it to a str
+        text = input_file.read().decode("utf-8")
+        output = "\n".join(reversed(text.split("\n")))
+        # create_file(filename, content) can take either str or bytes as content
+        self.create_file("output.txt", output)
 
 
 class ExampleJobHookReceiver(JobHookReceiver):
@@ -192,7 +188,7 @@ jobs = (
     ExampleJob,
     ExampleHiddenJob,
     ExampleLoggingJob,
-    ExampleFileOutputJob,
+    ExampleFileInputOutputJob,
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
