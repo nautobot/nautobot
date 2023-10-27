@@ -14,7 +14,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_changes_for_model
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -22,7 +22,6 @@ from nautobot.core.utils.requests import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
-from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.utils import get_base_template
 
@@ -231,19 +230,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
-            # Get the ObjectChange records to populate the advanced tab information
-            object_change_records = get_changes_for_model(instance)
-            created_by = None
-            last_updated_by = None
-            try:
-                created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
-                created_by = created_by_record.user_name
-            except ObjectChange.DoesNotExist:
-                pass
+            created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
 
-            last_updated_by_record = object_change_records.first()
-            if last_updated_by_record:
-                last_updated_by = last_updated_by_record.user_name
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
             context.update(view.get_extra_context(request, instance))

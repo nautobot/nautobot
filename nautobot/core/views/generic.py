@@ -40,7 +40,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_changes_for_model
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -55,8 +55,7 @@ from nautobot.core.views.utils import (
     handle_protectederror,
     prepare_cloned_fields,
 )
-from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.models import ExportTemplate, ObjectChange
+from nautobot.extras.models import ExportTemplate
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
@@ -104,18 +103,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
         # Get the ObjectChange records to populate the advanced tab information
-        object_change_records = get_changes_for_model(instance)
-        created_by = None
-        last_updated_by = None
-        try:
-            created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
-            created_by = created_by_record.user_name
-        except ObjectChange.DoesNotExist:
-            pass
-
-        last_updated_by_record = object_change_records.first()
-        if last_updated_by_record:
-            last_updated_by = last_updated_by_record.user_name
+        created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
 
         # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
         # on the object-retrieve endpoint?

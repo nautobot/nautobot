@@ -339,7 +339,8 @@ class ViewTestCases:
                 # Validate if detail view exists
                 validate = URLValidator()
                 try:
-                    validate(instance.get_absolute_url())
+                    detail_url = instance.get_absolute_url()
+                    validate(detail_url)
                 except ValidationError:
                     self.skipTest("Model does not have a detail view")
                 response = self.client.get(instance.get_absolute_url())
@@ -476,7 +477,8 @@ class ViewTestCases:
                 # Validate if detail view exists
                 validate = URLValidator()
                 try:
-                    validate(instance.get_absolute_url())
+                    detail_url = instance.get_absolute_url()
+                    validate(detail_url)
                 except ValidationError:
                     self.skipTest("Model does not have a detail view")
 
