@@ -309,4 +309,4 @@ Bumping version from 1.1.0 to 1.1.1-alpha.0
 
 ### Redeploy demo.nautobot.com and next.demo.nautobot.com sandbox environments
 
-Afer you publish the release, you need to blow away the current demo environments and redeploy them for `demo.nautobot.com` and `next.demo.nautobot.com`. The documentation on how to build a demo environment is available in the [nautobot/sandboxes repository](https://github.com/nautobot/sandboxes/blob/main/README.md).
+Afer you publish the release, you need to blow away the current demo environment and redeploy it for `demo.nautobot.com`. The documentation on how to build a demo environment is available in the nautobot/sandboxes repository.
