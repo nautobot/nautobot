@@ -251,7 +251,7 @@ jobs:
     runs-on: "ubuntu-22.04"
     if: |
       github.event_name == 'push' &&
-      (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm/1.6')
+      (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm-1.6')
     needs:
       - "check-schema"
       - "integration-test"
@@ -269,11 +269,7 @@ jobs:
         id: "config"
         shell: "bash"
         run: |
-          if [[ "${{ github.ref_name }}" == "ltm/1.6" ]]; then
-            export BRANCH="ltm-1.6"
-          else
-            export BRANCH="${{ github.ref_name }}"
-          fi
+          export BRANCH="${{ github.ref_name }}"
           export TAG_LATEST="false"
           export TAG_LATEST_FOR_BRANCH="false"
           export TAG_LATEST_FOR_PY="false"
