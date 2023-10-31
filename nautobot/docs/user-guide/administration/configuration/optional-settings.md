@@ -571,13 +571,13 @@ When set to `True`, Nautobot will send anonymized installation metrics to the Na
 
 ---
 
-## JOB_STORAGE_BACKEND
+## JOB_FILE_IO_STORAGE
 
 +++ 2.1.0
 
 Default: `"db_file_storage.storage.DatabaseFileStorage"`
 
-Environment Variable: `NAUTOBOT_JOB_STORAGE_BACKEND`
+Environment Variable: `NAUTOBOT_JOB_FILE_IO_STORAGE`
 
 The backend storage engine for handling files provided as input to Jobs and files generated as output by Jobs.
 
@@ -901,7 +901,7 @@ The backend storage engine for handling uploaded files (e.g. image attachments).
 
 The configuration parameters for the specified storage backend are defined under the [`STORAGE_CONFIG`](#storage_config) setting.
 
-> See also: [`JOB_STORAGE_BACKEND`](#job_storage_backend)
+> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
 
 ---
 

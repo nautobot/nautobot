@@ -479,7 +479,7 @@ Markdown rendering is supported for log messages.
 
 +++ 2.1.0
 
-A Job can create files that will be saved and can later be downloaded by a user. (The specifics of how and where these files are stored will depend on your system's [`JOB_STORAGE_BACKEND`](../../user-guide/administration/configuration/optional-settings.md#job_storage_backend) configuration.) To do so, use the `Job.create_file(filename, content)` method:
+A Job can create files that will be saved and can later be downloaded by a user. (The specifics of how and where these files are stored will depend on your system's [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/optional-settings.md#job_file_io_storage) configuration.) To do so, use the `Job.create_file(filename, content)` method:
 
 ```python
 from nautobot.extras.jobs import Job

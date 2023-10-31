@@ -342,7 +342,7 @@ post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMember
 @receiver(pre_delete, sender=JobResult)
 def job_result_delete_associated_files(instance, **kwargs):
     """For each related FileProxy, make sure its file gets deleted correctly from disk or database."""
-    if get_storage_class(settings.JOB_STORAGE_BACKEND) == DatabaseFileStorage:
+    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
         for file_proxy in instance.files.all():
             delete_file(file_proxy, "file")
     else:

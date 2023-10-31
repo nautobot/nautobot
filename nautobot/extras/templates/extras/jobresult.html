@@ -128,7 +128,7 @@
                                 {% if file_proxy.file %}
                                     <li>
                                         <a
-                                        {% if settings.JOB_STORAGE_BACKEND == "db_file_storage.storage.DatabaseFileStorage" %}
+                                        {% if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage" %}
                                             href="{% url "db_file_storage.download_file" %}?name={{ file_proxy.file }}"
                                         {% else %}
                                             href="{{ file_proxy.file.url }}"
