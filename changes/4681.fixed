@@ -1,1 +1,1 @@
-Fixed NAPALM device view functions assuming 'Active' as correct status.
+Fixed NAPALM device view functions assuming 'Active' as the correct status.
