@@ -306,3 +306,7 @@ Bumping version from 1.1.0 to 1.1.1-alpha.0
 
 !!! important
     Do not squash merge this branch into `develop`. Make sure to select `Create a merge commit` when merging in GitHub.
+
+### Redeploy demo.nautobot.com Sandbox Environment
+
+Afer you publish the release, you need to blow away the current demo environment and redeploy it for `demo.nautobot.com`. The documentation on how to build a demo environment is available in the nautobot/sandboxes repository.
