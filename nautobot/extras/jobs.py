@@ -835,7 +835,7 @@ class BaseJob(Task):
             content (str, bytes): Content to populate the created file with.
 
         Returns:
-            FileProxy: record that was created
+            (FileProxy): record that was created
         """
         if isinstance(content, str):
             content = content.encode("utf-8")
