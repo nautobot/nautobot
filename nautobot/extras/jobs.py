@@ -827,9 +827,23 @@ class BaseJob(Task):
         return data
 
     def create_file(self, filename, content):
+        """
+        Create a file that can later be downloaded by users.
+
+        Args:
+            filename (str): Name of the file to create, including extension
+            content (str, bytes): Content to populate the created file with.
+
+        Returns:
+            FileProxy: record that was created
+        """
         if isinstance(content, str):
             content = content.encode("utf-8")
-        FileProxy.objects.create(name=filename, job_result=self.job_result, file=ContentFile(content, name=filename))
+        fp = FileProxy.objects.create(
+            name=filename, job_result=self.job_result, file=ContentFile(content, name=filename)
+        )
+        self.logger.info("Created file [%s](%s)", filename, fp.file.url)
+        return fp
 
 
 class Job(BaseJob):
