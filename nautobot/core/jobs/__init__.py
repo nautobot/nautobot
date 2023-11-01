@@ -113,7 +113,7 @@ class ExportObjectList(Job):
         # TODO: ideally the ObjectListView should strip its non_filter_params (which may vary by view!)
         #       such that they never are even seen here.
         query_params = QueryDict(query_string)
-        self.logger.debug("Parsed query_params: `%s`", query_params)
+        self.logger.debug("Parsed query_params: `%s`", query_params.dict())
         default_non_filter_params = ("export", "page", "per_page", "sort")
         filter_params = get_filterable_params_from_filter_params(
             query_params, default_non_filter_params, filterset_class()

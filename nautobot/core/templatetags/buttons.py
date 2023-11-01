@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django import template
 from django.urls import NoReverseMatch, reverse
 
@@ -114,15 +116,19 @@ def export_button(context, content_type=None):
         user = context["request"].user
         export_templates = models.ExportTemplate.objects.restrict(user, "view").filter(content_type=content_type)
         try:
-            export_url = reverse(lookup.get_route_for_model(content_type.model_class(), "list", api=True))
+            export_url = reverse(
+                "extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ExportObjectList"}
+            )
         except NoReverseMatch:
             export_url = None
     else:
         export_templates = []
         export_url = None
 
+    url_params = urlencode({"query_string": context["request"].GET.urlencode(), "content_type": content_type.pk})
+
     return {
         "export_url": export_url,
-        "url_params": context["request"].GET,
+        "url_params": url_params,
         "export_templates": export_templates,
     }
