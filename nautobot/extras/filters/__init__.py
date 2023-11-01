@@ -52,6 +52,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -482,6 +483,17 @@ class ExportTemplateFilterSet(BaseFilterSet):
     class Meta:
         model = ExportTemplate
         fields = ["id", "content_type", "owner_content_type", "owner_object_id", "name"]
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationFilterSet(NautobotFilterSet):
+    class Meta:
+        model = ExternalIntegration
+        fields = "__all__"
 
 
 #

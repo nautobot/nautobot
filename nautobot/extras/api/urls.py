@@ -31,6 +31,9 @@ router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
 
+# External integrations
+router.register("external-integrations", views.ExternalIntegrationViewSet)
+
 # Git repositories
 router.register("git-repositories", views.GitRepositoryViewSet)
 

@@ -27,6 +27,7 @@ from .models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     Job as JobModel,
@@ -405,6 +406,32 @@ class ExportTemplateTable(BaseTable):
             "name",
             "content_type",
             "file_extension",
+        )
+
+
+class ExternalIntegrationTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    url = tables.Column(linkify=False)
+
+    class Meta(BaseTable.Meta):
+        model = ExternalIntegration
+        fields = (
+            "pk",
+            "name",
+            "url",
+            "secrets_group",
+            "verify_ssl",
+            "timeout",
+            "extra_config",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "url",
+            "secrets_group",
+            "verify_ssl",
+            "timeout",
         )
 
 

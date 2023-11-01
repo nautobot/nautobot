@@ -49,6 +49,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -108,6 +109,8 @@ __all__ = (
     "DynamicGroupMembershipFormSet",
     "ExportTemplateForm",
     "ExportTemplateFilterForm",
+    "ExternalIntegrationForm",
+    "ExternalIntegrationBulkEditForm",
     "GitRepositoryForm",
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
@@ -565,6 +568,34 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Content Type",
     )
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationForm(NautobotModelForm):
+    class Meta:
+        model = ExternalIntegration
+        fields = "__all__"
+
+
+class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    name = forms.CharField(required=False)
+    url = forms.CharField(required=False, label="URL")
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
+    verify_ssl = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    timeout = forms.IntegerField(required=False, min_value=0)
+    extra_config = forms.JSONField(required=False)
+
+    class Meta:
+        model = ExternalIntegration
+        nullable_fields = ["extra_config", "secrets_group"]
 
 
 #

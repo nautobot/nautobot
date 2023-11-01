@@ -48,6 +48,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     FileAttachment,
     FileProxy,
     GitRepository,
@@ -774,6 +775,14 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
                 content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
             )
             nonduplicate_template.validated_save()
+
+
+class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
+    """
+    Tests for the ExternalIntegration model class.
+    """
+
+    model = ExternalIntegration
 
 
 class FileProxyTest(ModelTestCases.BaseModelTestCase):

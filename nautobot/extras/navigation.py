@@ -373,6 +373,22 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
+                        link="extras:externalintegration_list",
+                        name="External Integrations",
+                        weight=300,
+                        permissions=[
+                            "extras.view_externalintegration",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:externalintegration_add",
+                                permissions=[
+                                    "extras.add_externalintegration",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="extras:webhook_list",
                         name="Webhooks",
                         weight=400,
