@@ -4,10 +4,10 @@ import faker
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.factory import (
+    get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
-    get_random_instances,
     UniqueFaker,
 )
 from nautobot.extras.models import ExternalIntegration, Role, Status, Tag
