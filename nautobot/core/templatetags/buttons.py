@@ -1,5 +1,3 @@
-from urllib.parse import urlencode
-
 from django import template
 from django.urls import NoReverseMatch, reverse
 
