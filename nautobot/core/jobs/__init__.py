@@ -94,6 +94,9 @@ class ExportObjectList(Job):
     class Meta:
         name = "Export Object List"
         has_sensitive_variables = False
+        # Exporting large querysets may take substantial processing time
+        soft_time_limit = 1500
+        time_limit = 3000
 
     def run(self, *, content_type, query_string="", export_template=None):
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
@@ -124,6 +127,7 @@ class ExportObjectList(Job):
             self.logger.error("Invalid filters were specified: %s", filterset.errors)
             raise Exception("Invalid query_string value for this content_type")
         queryset = filterset.qs
+        object_count = queryset.count()
 
         filename = f"{settings.BRANDING_PREPENDED_FILENAME}{model._meta.verbose_name_plural.lower().replace(' ', '_')}"
 
@@ -142,8 +146,13 @@ class ExportObjectList(Job):
             if export_template.content_type != content_type:
                 self.logger.error("ExportTemplate %s doesn't apply to %s", export_template, content_type)
                 raise Exception("ExportTemplate ContentType mismatch")
-            self.logger.info("Exporting based on ExportTemplate", extra={"object": export_template})
+            self.logger.info(
+                "Exporting %d objects via ExportTemplate. This may take some time.",
+                object_count,
+                extra={"object": export_template},
+            )
             try:
+                # export_template.render() consumes the whole queryset, so we don't have any way to do a progress bar.
                 output = export_template.render(queryset)
             except Exception as e:
                 self.logger.error("Error when rendering ExportTemplate: %s", e)
@@ -153,21 +162,22 @@ class ExportObjectList(Job):
             self.create_file(filename, output)
 
         elif "export" in query_params and hasattr(model, "to_yaml"):
-            # Device-type YAML export
-            self.logger.info("Exporting to YAML")
+            # Device-type (etc.) YAML export
+            self.logger.info("Exporting %d objects to YAML. This may take some time.", object_count)
             yaml_data = [obj.to_yaml() for obj in queryset]
             self.create_file(filename + ".yaml", "---\n".join(yaml_data))
 
         else:
             # Generic CSV export
-            self.logger.info("Exporting to CSV")
             serializer_class = get_serializer_for_model(model)
             self.logger.debug("Found serializer class: `%s`", serializer_class.__name__)
+            renderer = NautobotCSVRenderer()
+            self.logger.info("Exporting %d objects to CSV. This may take some time.", object_count)
             # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
             # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
             serializer = serializer_class(queryset, many=True, context={"request": None}, force_csv=True)
-            output = NautobotCSVRenderer().render(serializer.data)
-            self.create_file(filename + ".csv", output)
+            csv_data = renderer.render(serializer.data)
+            self.create_file(filename + ".csv", csv_data)
 
 
 jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun]

@@ -125,10 +125,9 @@ def export_button(context, content_type=None):
         export_templates = []
         export_url = None
 
-    url_params = urlencode({"query_string": context["request"].GET.urlencode(), "content_type": content_type.pk})
-
     return {
         "export_url": export_url,
-        "url_params": url_params,
+        "query_string": context["request"].GET.urlencode(),
+        "content_type": content_type,
         "export_templates": export_templates,
     }
