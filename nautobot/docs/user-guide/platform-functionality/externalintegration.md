@@ -2,7 +2,7 @@
 
 +++ 2.1.0
 
-The external integration feature provides a centralized store for tracking how to access systems external to Nautobot. This information can then be used by jobs or apps to perform actions such as creating DNS records or updating configuration management tickets.
+The external integration feature provides a centralized store for data such as URLs and credentials that are used to access systems external to Nautobot. This information can then be used by jobs or apps to perform actions such as creating DNS records or updating configuration management tickets.
 
 The external integration model includes the following fields:
 
