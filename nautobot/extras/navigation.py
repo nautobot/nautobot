@@ -386,6 +386,12 @@ menu_items = (
                                     "extras.add_externalintegration",
                                 ],
                             ),
+                            NavMenuImportButton(
+                                link="extras:externalintegration_import",
+                                permissions=[
+                                    "extras.add_externalintegration",
+                                ],
+                            ),
                         ),
                     ),
                     NavMenuItem(

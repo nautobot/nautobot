@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                 (
                     "secrets_group",
                     models.ForeignKey(
-                        blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to="extras.secretsgroup"
+                        blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to="extras.secretsgroup"
                     ),
                 ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),

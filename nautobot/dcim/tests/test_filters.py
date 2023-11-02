@@ -142,7 +142,7 @@ def common_test_data(cls):
     )
     cls.manufacturers = manufacturers
 
-    platforms = Platform.objects.all()[:3]
+    platforms = Platform.objects.filter(manufacturer__in=manufacturers)[:3]
     for num, platform in enumerate(platforms):
         platform.napalm_driver = f"driver-{num}"
         platform.napalm_args = ["--test", f"--arg{num}"]

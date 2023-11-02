@@ -468,7 +468,7 @@ class ExternalIntegration(PrimaryModel):
         null=True,
         blank=True,
         to="extras.SecretsGroup",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         help_text="Credentials used for authenticating with the remote system",
     )
     verify_ssl = models.BooleanField(

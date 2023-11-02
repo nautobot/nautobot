@@ -423,7 +423,6 @@ class ExternalIntegrationTable(BaseTable):
             "secrets_group",
             "verify_ssl",
             "timeout",
-            "extra_config",
         )
         default_columns = (
             "pk",

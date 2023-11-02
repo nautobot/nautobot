@@ -328,7 +328,7 @@ class ExportTemplateViewSet(NotesViewSetMixin, ModelViewSet):
 
 
 class ExternalIntegrationViewSet(NautobotModelViewSet):
-    queryset = ExternalIntegration.objects.all()
+    queryset = ExternalIntegration.objects.select_related("secrets_group")
     serializer_class = serializers.ExternalIntegrationSerializer
     filterset_class = filters.ExternalIntegrationFilterSet
 

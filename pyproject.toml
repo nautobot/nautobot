@@ -344,7 +344,7 @@ signature-mutators=["unittest.mock.patch"]
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.0.md"
+filename = "nautobot/docs/release-notes/version-2.1.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

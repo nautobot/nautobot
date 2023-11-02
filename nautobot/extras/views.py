@@ -802,7 +802,7 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ExternalIntegrationBulkEditForm
     filterset_class = filters.ExternalIntegrationFilterSet
     form_class = forms.ExternalIntegrationForm
-    queryset = ExternalIntegration.objects.all()
+    queryset = ExternalIntegration.objects.select_related("secrets_group")
     serializer_class = serializers.ExternalIntegrationSerializer
     table_class = tables.ExternalIntegrationTable
 

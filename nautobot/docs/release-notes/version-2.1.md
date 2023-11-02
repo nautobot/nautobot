@@ -16,3 +16,5 @@ The `Job` base class now includes a [`create_file(filename, content)`](../develo
 #### External Integration Model ([#4694](https://github.com/nautobot/nautobot/issues/4694))
 
 A new [`ExternalIntegration` model](../user-guide/platform-functionality/externalintegration.md) has been added which provides a centralized store for data such as URLs and credentials that are used to access systems external to Nautobot. This information can then be used by jobs or apps to perform actions such as creating DNS records or updating configuration management tickets.
+
+<!-- towncrier release notes start -->
