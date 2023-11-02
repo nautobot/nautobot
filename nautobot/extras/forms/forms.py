@@ -588,7 +588,7 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
     )
     remote_url = forms.CharField(required=False, label="Remote URL")
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
-    verify_ssl = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    verify_ssl = forms.NullBooleanField(required=False, label="Verify SSL", widget=BulkEditNullBooleanSelect)
     timeout = forms.IntegerField(required=False, min_value=0)
     extra_config = forms.JSONField(required=False)
 

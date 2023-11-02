@@ -473,6 +473,7 @@ class ExternalIntegration(PrimaryModel):
     )
     verify_ssl = models.BooleanField(
         default=True,
+        verbose_name="Verify SSL",
         help_text="Verify SSL certificates when connecting to the remote system",
     )
     timeout = models.IntegerField(
