@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import PermissionDenied
 from django.http import QueryDict
 
 from nautobot.core.api.renderers import NautobotCSVRenderer
@@ -8,7 +9,7 @@ from nautobot.core.celery import app, register_jobs
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
-from nautobot.extras.jobs import Job, ObjectVar, StringVar
+from nautobot.extras.jobs import Job, ObjectVar, RunJobTaskFailed, StringVar
 from nautobot.extras.models import ExportTemplate, GitRepository
 
 name = "System Jobs"
@@ -95,13 +96,13 @@ class ExportObjectList(Job):
         name = "Export Object List"
         has_sensitive_variables = False
         # Exporting large querysets may take substantial processing time
-        soft_time_limit = 1500
-        time_limit = 3000
+        soft_time_limit = 1800
+        time_limit = 2000
 
     def run(self, *, content_type, query_string="", export_template=None):
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
-            raise Exception("User does not have view permissions on the requested content-type")
+            raise PermissionDenied("User does not have view permissions on the requested content-type")
 
         model = content_type.model_class()
 
@@ -121,11 +122,11 @@ class ExportObjectList(Job):
         filter_params = get_filterable_params_from_filter_params(
             query_params, default_non_filter_params, filterset_class()
         )
-        self.logger.debug("Filter params: `%s`", filter_params)
+        self.logger.debug("Filterset params: `%s`", filter_params)
         filterset = filterset_class(filter_params, queryset)
         if not filterset.is_valid():
             self.logger.error("Invalid filters were specified: %s", filterset.errors)
-            raise Exception("Invalid query_string value for this content_type")
+            raise RunJobTaskFailed("Invalid query_string value for this content_type")
         queryset = filterset.qs
         object_count = queryset.count()
 
@@ -135,17 +136,17 @@ class ExportObjectList(Job):
         if export_template is None and query_params.get("export", [""]) != [""]:
             try:
                 export_template = ExportTemplate.objects.get(content_type=content_type, name=query_params.get("export"))
-            except ExportTemplate.DoesNotExist as err:
+            except ExportTemplate.DoesNotExist:
                 self.logger.error(
                     "ExportTemplate %s not found for content-type %s", query_params.get("export"), content_type
                 )
-                raise Exception("Requested export-template not found") from err
+                raise
 
         if export_template is not None:
             # Export templates
             if export_template.content_type != content_type:
                 self.logger.error("ExportTemplate %s doesn't apply to %s", export_template, content_type)
-                raise Exception("ExportTemplate ContentType mismatch")
+                raise RunJobTaskFailed("ExportTemplate ContentType mismatch")
             self.logger.info(
                 "Exporting %d objects via ExportTemplate. This may take some time.",
                 object_count,
@@ -154,8 +155,8 @@ class ExportObjectList(Job):
             try:
                 # export_template.render() consumes the whole queryset, so we don't have any way to do a progress bar.
                 output = export_template.render(queryset)
-            except Exception as e:
-                self.logger.error("Error when rendering ExportTemplate: %s", e)
+            except Exception as err:
+                self.logger.error("Error when rendering ExportTemplate: %s", err)
                 raise
             if export_template.file_extension:
                 filename += f".{export_template.file_extension}"
