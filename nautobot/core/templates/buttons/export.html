@@ -1,5 +1,5 @@
 {% if export_url %}
-    {% if export_templates %}
+    {% if export_templates or include_yaml_option %}
         <div class="btn-group">
             <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <span class="mdi mdi-database-export" aria-hidden="true"></span>
@@ -7,7 +7,6 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-right">
                 <li>
-                    <!-- CSV export, no export-template -->
                     <form action="{{ export_url }}" method="post">
                         {% csrf_token %}
                         <input type="hidden" name="content_type" value="{{ content_type.pk }}">
@@ -16,21 +15,35 @@
                         <button type="submit" class="btn btn-link">CSV format</button>
                     </form>
                 </li>
-                <li class="divider"></li>
-                {% for et in export_templates %}
+                {% if include_yaml_option %}
                     <li>
                         <form action="{{ export_url }}" method="post">
                             {% csrf_token %}
                             <input type="hidden" name="content_type" value="{{ content_type.pk }}">
-                            <input type="hidden" name="export_template" value="{{ et.pk }}">
                             <input type="hidden" name="query_string" value="{{ query_string }}">
+                            <input type="hidden" name="export_format" value="yaml">
                             <input type="hidden" name="_schedule_type" value="immediately">
-                            <button type="submit" class="btn btn-link"
-                                {% if et.description %}title="{{ et.description }}"{% endif %}
-                            >{{ et.name }}</button>
+                            <button type="submit" class="btn btn-link">YAML format</button>
                         </form>
                     </li>
-                {% endfor %}
+                {% endif %}
+                {% if export_templates %}
+                    <li class="divider"></li>
+                    {% for et in export_templates %}
+                        <li>
+                            <form action="{{ export_url }}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="content_type" value="{{ content_type.pk }}">
+                                <input type="hidden" name="export_template" value="{{ et.pk }}">
+                                <input type="hidden" name="query_string" value="{{ query_string }}">
+                                <input type="hidden" name="_schedule_type" value="immediately">
+                                <button type="submit" class="btn btn-link"
+                                    {% if et.description %}title="{{ et.description }}"{% endif %}
+                                >{{ et.name }}</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                {% endif %}
             </ul>
         </div>
     {% else %}

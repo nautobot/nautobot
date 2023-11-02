@@ -119,6 +119,7 @@ def export_button(context, content_type=None):
             )
         except NoReverseMatch:
             export_url = None
+        include_yaml_option = hasattr(content_type.model_class(), "to_yaml")
     else:
         export_templates = []
         export_url = None
@@ -128,4 +129,5 @@ def export_button(context, content_type=None):
         "query_string": context["request"].GET.urlencode(),
         "content_type": content_type,
         "export_templates": export_templates,
+        "include_yaml_option": include_yaml_option,
     }
