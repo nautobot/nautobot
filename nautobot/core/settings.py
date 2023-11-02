@@ -87,6 +87,9 @@ HTTP_PROXIES = None
 # Send anonymized installation metrics when post_upgrade or send_installation_metrics management commands are run
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "True"))
 
+# The storage backend to use for Job input files and Job output files
+JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
+
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 

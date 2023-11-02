@@ -6,6 +6,7 @@ from django.db import transaction
 
 from nautobot.apps.jobs import (
     DryRunVar,
+    FileVar,
     IntegerVar,
     Job,
     JobButtonReceiver,
@@ -97,6 +98,21 @@ class ExampleLoggingJob(Job):
         return f"Ran for {interval} seconds"
 
 
+class ExampleFileInputOutputJob(Job):
+    input_file = FileVar(description="Text file to transform")
+
+    class Meta:
+        name = "Example File Input/Output job"
+        description = "Takes a file as input and reverses its line order, creating a new file as output."
+
+    def run(self, input_file):
+        # Note that input_file is always opened in binary mode, so we need to decode it to a str
+        text = input_file.read().decode("utf-8")
+        output = "\n".join(reversed(text.split("\n")))
+        # create_file(filename, content) can take either str or bytes as content
+        self.create_file("output.txt", output)
+
+
 class ExampleJobHookReceiver(JobHookReceiver):
     class Meta:
         name = "Example job hook receiver"
@@ -171,6 +187,7 @@ jobs = (
     ExampleJob,
     ExampleHiddenJob,
     ExampleLoggingJob,
+    ExampleFileInputOutputJob,
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,

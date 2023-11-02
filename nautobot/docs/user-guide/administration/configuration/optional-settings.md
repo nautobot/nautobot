@@ -569,6 +569,37 @@ Environment Variable: `NAUTOBOT_INSTALLATION_METRICS_ENABLED`
 
 When set to `True`, Nautobot will send anonymized installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management command for more details.
 
+---
+
+## JOB_FILE_IO_STORAGE
+
++++ 2.1.0
+
+Default: `"db_file_storage.storage.DatabaseFileStorage"`
+
+Environment Variable: `NAUTOBOT_JOB_FILE_IO_STORAGE`
+
+The backend storage engine for handling files provided as input to Jobs and files generated as output by Jobs.
+
+!!! warning
+    For backwards compatibility with storage of Job inputs in prior versions of Nautobot, this currently defaults to using `DatabaseFileStorage` to store such files directly in Nautobot's database, however this is not typically the best option (see below) and may change in a future major release.
+
+If your Nautobot server instance(s) and your Celery worker instance(s) share a common [`MEDIA_ROOT`](#media_root) filesystem (as would typically be the case in a single-server installation of Nautobot) then we recommend changing this to `"django.core.files.storage.FileSystemStorage"` to store Job files on the filesystem (which will place them into a `files/` subdirectory under [`MEDIA_ROOT`](#media_root)) instead of in the database.
+
+If your Nautobot server instance(s) and Celery worker instance(s) do _not_ share a common filesystem, we recommend using one of the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) options such as S3 to provide a storage backend that can be accessed by the server(s) and worker(s) alike.
+
+!!! tip
+    For an example of using `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
+
+If you have neither a common `MEDIA_ROOT` filesystem nor an appropriate remote storage option, then it's permissible to leave this at its default, but know that storing files in the database is provided here as a "least-worst" option only.
+
+!!! caution
+    It's typically safe to change this setting when initially updating to Nautobot 2.1.0 or later, as there should be no pre-existing Job output files, although any existing scheduled Jobs that have file _inputs_ may need to be deleted and recreated after doing so. However, once you've run any Jobs that output to a file, changing storage backends will of course break any existing links to Job output files in the previous storage backend. Migrating Job stored files from one backend to another is out of scope for this document.
+
+> See also: [`STORAGE_BACKEND`](#storage_backend)
+
+---
+
 ## JOBS_ROOT
 
 Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
@@ -865,9 +896,12 @@ Default: `None` (local storage)
 
 The backend storage engine for handling uploaded files (e.g. image attachments). Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) package, which provides backends for several popular file storage services. If not configured, local filesystem storage will be used.
 
-An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
+!!! tip
+    For an example of using `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
 The configuration parameters for the specified storage backend are defined under the [`STORAGE_CONFIG`](#storage_config) setting.
+
+> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
 
 ---
 

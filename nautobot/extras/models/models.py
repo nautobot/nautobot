@@ -1,13 +1,14 @@
-import json
 from collections import OrderedDict
+import json
 
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.serializers.json import DjangoJSONEncoder
+from django.core.files.storage import get_storage_class
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.http import HttpResponse
 from graphene_django.settings import graphene_settings
@@ -473,29 +474,55 @@ class FileAttachment(BaseModel):
 
 
 def database_storage():
-    """Returns storage backend used by `FileProxy.file` to store files in the database."""
+    """
+    Returns an instance of DatabaseFileStorage() unconditionally.
+
+    This is kept around to support legacy migrations; it shouldn't generally be used outside that.
+    Use `_job_storage()` instead.
+    """
     return DatabaseFileStorage()
 
 
+def _job_storage():
+    return get_storage_class(settings.JOB_FILE_IO_STORAGE)()
+
+
+def _upload_to(instance, filename):
+    """
+    Returns the upload path for attaching the given filename to the given FileProxy instance.
+
+    Because django-db-file-storage has specific requirements for this path to configure the FileAttachment model,
+    this needs to inspect which storage backend is in use in order to make the right determination.
+    """
+    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        # must be a string of the form
+        # "<app_label>.<ModelName>/<data field name>/<filename field name>/<mimetype field name>/filename"
+        return f"extras.FileAttachment/bytes/filename/mimetype/{filename}"
+    else:
+        return f"files/{instance.pk}-{filename}"
+
+
 class FileProxy(BaseModel):
-    """An object to store a file in the database.
+    """A database object to reference and index a file, such as a Job input file or a Job output file.
 
-    The `file` field can be used like a file handle. The file contents are stored and retrieved from
-    `FileAttachment` objects.
+    The `file` field can be used like a file handle.
 
-    The associated `FileAttachment` is removed when `delete()` is called. For this reason, one
-    should never use bulk delete operations on `FileProxy` objects, unless `FileAttachment` objects
-    are also bulk-deleted, because a model's `delete()` method is not called during bulk operations.
+    The file contents are stored and retrieved from `FileAttachment` objects,
+    if `settings.JOB_FILE_IO_STORAGE` is set to use DatabaseFileStorage,
+    otherwise they're written to whatever other file storage backend is in use.
+
+    When using DatabaseFileStorage, the associated `FileAttachment` is removed when `delete()` is called.
+    For this reason, one should never use bulk delete operations on `FileProxy` objects,
+    unless `FileAttachment` objects are also bulk-deleted,
+    because a model's `delete()` method is not called during bulk operations.
     In most cases, it is better to iterate over a queryset of `FileProxy` objects and call
     `delete()` on each one individually.
     """
 
     name = models.CharField(max_length=255)
-    file = models.FileField(
-        upload_to="extras.FileAttachment/bytes/filename/mimetype",
-        storage=database_storage,  # Use only this backend
-    )
+    file = models.FileField(upload_to=_upload_to, storage=_job_storage)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
 
     def __str__(self):
         return self.name
@@ -511,12 +538,19 @@ class FileProxy(BaseModel):
     natural_key_field_names = ["name", "uploaded_at"]
 
     def save(self, *args, **kwargs):
-        delete_file_if_needed(self, "file")
+        if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+            delete_file_if_needed(self, "file")
+        else:
+            # TODO check whether there's an existing file with a different filename and delete it if so?
+            pass
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
+        if get_storage_class(settings.JOB_FILE_IO_STORAGE) != DatabaseFileStorage:
+            self.file.delete()
         super().delete(*args, **kwargs)
-        delete_file(self, "file")
+        if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+            delete_file(self, "file")
 
 
 #

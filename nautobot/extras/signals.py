@@ -5,9 +5,13 @@ import shutil
 import logging
 from datetime import timedelta
 
+from db_file_storage.model_utils import delete_file
+from db_file_storage.storage import DatabaseFileStorage
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.files.storage import get_storage_class
 from django.db import transaction
 from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save, post_delete
 from django.dispatch import receiver
@@ -333,6 +337,17 @@ post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMember
 #
 # Jobs
 #
+
+
+@receiver(pre_delete, sender=JobResult)
+def job_result_delete_associated_files(instance, **kwargs):
+    """For each related FileProxy, make sure its file gets deleted correctly from disk or database."""
+    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        for file_proxy in instance.files.all():
+            delete_file(file_proxy, "file")
+    else:
+        for file_proxy in instance.files.all():
+            file_proxy.file.delete()
 
 
 def refresh_job_models(sender, *, apps, **kwargs):
