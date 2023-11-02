@@ -475,11 +475,26 @@ Markdown rendering is supported for log messages.
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
 
+### File Output
+
++++ 2.1.0
+
+A Job can create files that will be saved and can later be downloaded by a user. (The specifics of how and where these files are stored will depend on your system's [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/optional-settings.md#job_file_io_storage) configuration.) To do so, use the `Job.create_file(filename, content)` method:
+
+```python
+from nautobot.extras.jobs import Job
+
+class MyJob(Job):
+    def run(self):
+        self.create_file("greeting.txt", "Hello world!")
+        self.create_file("farewell.txt", b"Goodbye for now!")  # content can be a str or bytes
+```
+
+The above Job when run will create two files, "greeting.txt" and "farewell.txt", that will be made available for download from the JobResult detail view's "Additional Data" tab. These files will persist indefinitely, but can automatically be deleted if the JobResult itself is deleted; they can also be deleted manually by an administrator via the "File Proxies" link in the Admin UI.
+
 ### Marking a Job as Failed
 
 To mark a job as failed, raise an exception from within the `run()` method. The exception message will be logged to the traceback of the job result. The job result status will be set to `failed`. To output a job log message you can use the `self.logger.error()` method.
-
-```python
 
 As an example, the following job will fail if the user does not put the word "Taco" in `var1`:
 

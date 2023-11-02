@@ -22,6 +22,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
@@ -305,7 +306,7 @@ class BaseJob(Task):
         file_fields = list(self._get_file_vars())
         file_ids = [kwargs[f] for f in file_fields]
         if file_ids:
-            self.delete_files(*file_ids)
+            self._delete_file_proxies(*file_ids)
 
         self.logger.info("Job completed", extra={"grouping": "post_run"})
 
@@ -530,8 +531,10 @@ class BaseJob(Task):
     @classmethod
     def _get_vars(cls):
         """
-        Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
-        The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
+        Return dictionary of ScriptVariable attributes defined on this class or any of its base parent classes.
+
+        The variables are sorted in the order that they were defined,
+        with variables defined on base classes appearing before subclass variables.
         """
         cls_vars = {}
         # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
@@ -660,7 +663,7 @@ class BaseJob(Task):
                 return_data[field_name] = value.pk
             # FileVar (Save each FileVar as a FileProxy)
             elif isinstance(value, InMemoryUploadedFile):
-                return_data[field_name] = BaseJob.save_file(value)
+                return_data[field_name] = BaseJob._save_file_to_proxy(value)
             # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
             elif isinstance(value, netaddr.ip.BaseIP):
                 return_data[field_name] = str(value)
@@ -720,7 +723,7 @@ class BaseJob(Task):
                 else:
                     return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
             elif isinstance(var, FileVar):
-                return_data[field_name] = cls.load_file(value)
+                return_data[field_name] = cls._load_file_from_proxy(value)
             # IPAddressVar is a netaddr.IPAddress object
             elif isinstance(var, IPAddressVar):
                 return_data[field_name] = netaddr.IPAddress(value)
@@ -757,20 +760,20 @@ class BaseJob(Task):
         return {k: v for k, v in job_kwargs.items() if k in job_vars}
 
     @staticmethod
-    def load_file(pk):
+    def _load_file_from_proxy(pk):
         """Load a file proxy stored in the database by primary key.
 
         Args:
             pk (uuid): Primary key of the `FileProxy` to retrieve
 
         Returns:
-            (FileProxy): A File-like object
+            (File): A File-like object
         """
         fp = FileProxy.objects.get(pk=pk)
         return fp.file
 
     @staticmethod
-    def save_file(uploaded_file):
+    def _save_file_to_proxy(uploaded_file):
         """
         Save an uploaded file to the database as a file proxy and return the
         primary key.
@@ -784,7 +787,7 @@ class BaseJob(Task):
         fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
         return fp.pk
 
-    def delete_files(self, *files_to_delete):
+    def _delete_file_proxies(self, *files_to_delete):
         """Given an unpacked list of primary keys for `FileProxy` objects, delete them.
 
         Args:
@@ -822,6 +825,25 @@ class BaseJob(Task):
             data = json.load(datafile)
 
         return data
+
+    def create_file(self, filename, content):
+        """
+        Create a file that can later be downloaded by users.
+
+        Args:
+            filename (str): Name of the file to create, including extension
+            content (str, bytes): Content to populate the created file with.
+
+        Returns:
+            (FileProxy): record that was created
+        """
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+        fp = FileProxy.objects.create(
+            name=filename, job_result=self.job_result, file=ContentFile(content, name=filename)
+        )
+        self.logger.info("Created file [%s](%s)", filename, fp.file.url)
+        return fp
 
 
 class Job(BaseJob):
