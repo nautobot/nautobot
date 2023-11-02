@@ -1,1 +1,1 @@
-Fixed the issue where the 500 error page did not switch to dark mode when the app was set to dark mode.
+Fixed the issue where the 500 error page does not support dark mode.
