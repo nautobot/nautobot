@@ -1,0 +1,1 @@
+Fixed bug in which a device's device redundancy group priority was not being set to `None` when the device redundancy group was deleted.
