@@ -1,0 +1,2 @@
+Fixed InterfaceRedundancyGroup.status to no longer be nullable.
+Fixed InterfaceRedundancyGroupAssociation.created to be a DateTimeField.
