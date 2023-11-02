@@ -458,9 +458,9 @@ class ExternalIntegration(PrimaryModel):
     """Model for tracking integrations with external applications."""
 
     name = models.CharField(max_length=255, unique=True)
-    url = models.CharField(
+    remote_url = models.CharField(
         max_length=500,
-        verbose_name="URL",
+        verbose_name="Remote URL",
         validators=[EnhancedURLValidator()],
     )
     secrets_group = models.ForeignKey(
@@ -486,7 +486,7 @@ class ExternalIntegration(PrimaryModel):
     )
 
     def __str__(self):
-        return f"{self.name} ({self.url})"
+        return f"{self.name} ({self.remote_url})"
 
     class Meta:
         ordering = ["name"]

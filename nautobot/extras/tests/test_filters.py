@@ -33,6 +33,7 @@ from nautobot.extras.filters import (
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
+    ExternalIntegrationFilterSet,
     GitRepositoryFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
@@ -59,6 +60,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -498,6 +500,41 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     def test_search(self):
         params = {"q": "export"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class ExternalIntegrationTestCase(FilterTestCases.FilterTestCase):
+    queryset = ExternalIntegration.objects.all()
+    filterset = ExternalIntegrationFilterSet
+
+    generic_filter_tests = (
+        ["name"],
+        ["remote_url"],
+        ["timeout"],
+        ["secrets_group", "secrets_group__id"],
+        ["secrets_group", "secrets_group__name"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        )
+        external_integrations = list(ExternalIntegration.objects.all()[:2])
+        external_integrations[0].secrets_group = secrets_groups[0]
+        external_integrations[1].secrets_group = secrets_groups[1]
+        for ei in external_integrations:
+            ei.validated_save()
+
+    def test_verify_ssl(self):
+        params = {"verify_ssl": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(verify_ssl=True)
+        )
+        params = {"verify_ssl": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(verify_ssl=False)
+        )
 
 
 class GitRepositoryTestCase(FilterTestCases.FilterTestCase):

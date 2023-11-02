@@ -24,7 +24,7 @@ class ExternalIntegrationFactory(PrimaryModelFactory):
         has_extra_config = NautobotBoolIterator()
 
     name = UniqueFaker("bs")
-    url = factory.Faker("url", schemes=["http", "https", "ssh"])
+    remote_url = factory.Faker("url", schemes=["http", "https", "ssh"])
     verify_ssl = factory.Faker("boolean")
     timeout = factory.Faker("pyint", min_value=0, max_value=300)
     extra_config = factory.Maybe(

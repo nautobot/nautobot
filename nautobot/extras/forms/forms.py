@@ -587,7 +587,7 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
         widget=forms.MultipleHiddenInput(),
     )
     name = forms.CharField(required=False)
-    url = forms.CharField(required=False, label="URL")
+    remote_url = forms.CharField(required=False, label="Remote URL")
     secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
     verify_ssl = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     timeout = forms.IntegerField(required=False, min_value=0)

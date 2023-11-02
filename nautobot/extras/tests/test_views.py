@@ -31,6 +31,7 @@ from nautobot.extras.models import (
     CustomLink,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -566,6 +567,25 @@ class ExportTemplateTestCase(
             "content_type": obj_type.pk,
             "template_code": "template-4 test4",
         }
+
+
+class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ExternalIntegration
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}
+    csv_data = (
+        "name,remote_url,verify_ssl,timeout",
+        "Test External Integration 1,https://example.com/test1/,False,10",
+        "Test External Integration 2,https://example.com/test2/,True,20",
+        "Test External Integration 3,https://example.com/test3/,False,30",
+    )
+    form_data = {
+        "name": "Test External Integration",
+        "remote_url": "https://example.com/test1/",
+        "verify_ssl": False,
+        "secrets_group": None,
+        "timeout": 10,
+        "extra_config": '{"foo": "bar"}',
+    }
 
 
 class GitRepositoryTestCase(

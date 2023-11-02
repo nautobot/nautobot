@@ -9,6 +9,7 @@ from nautobot.core.filters import (
     ContentTypeMultipleChoiceFilter,
     MultiValueUUIDFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
@@ -491,6 +492,15 @@ class ExportTemplateFilterSet(BaseFilterSet):
 
 
 class ExternalIntegrationFilterSet(NautobotFilterSet):
+    has_secrets_group = RelatedMembershipBooleanFilter(
+        field_name="secrets_group",
+        label="Has secrets group",
+    )
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        label="Secrets group (ID or name)",
+    )
+
     class Meta:
         model = ExternalIntegration
         fields = "__all__"

@@ -48,6 +48,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -811,6 +812,31 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
             name="Export Template 3",
             template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
         )
+
+
+class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
+    model = ExternalIntegration
+    create_data = [
+        {
+            "name": "Test External Integration 1",
+            "remote_url": "ssh://example.com/test1/",
+            "verify_ssl": False,
+            "timeout": 5,
+            "extra_config": "{'foo': 'bar'}",
+        },
+        {
+            "name": "Test External Integration 2",
+            "remote_url": "http://example.com/test2/",
+        },
+        {
+            "name": "Test External Integration 3",
+            "remote_url": "https://example.com/test3/",
+            "verify_ssl": True,
+            "timeout": 30,
+            "extra_config": "{'foo': ['bat', 'baz']}",
+        },
+    ]
+    bulk_update_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}
 
 
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):

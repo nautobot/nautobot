@@ -7,7 +7,7 @@ The external integration feature provides a centralized store for tracking how t
 The external integration model includes the following fields:
 
 - **Name** - The name of the external integration. This must be unique.
-- **URL** - The URL used to access the external system. (ex: `https://service.example.com/api/v1/`)
+- **Remote URL** - The URL used to access the external system. (ex: `https://service.example.com/api/v1/`)
 - **Secrets Group** - Optional secrets group used to store credentials for the external system.
 - **SSL Verification** - Whether or not to verify the SSL certificate of the external system.
 - **Timeout** - The number of seconds to wait for a response from the external system before timing out.

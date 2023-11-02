@@ -412,14 +412,14 @@ class ExportTemplateTable(BaseTable):
 class ExternalIntegrationTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    url = tables.Column(linkify=False)
+    remote_url = tables.Column(linkify=False)
 
     class Meta(BaseTable.Meta):
         model = ExternalIntegration
         fields = (
             "pk",
             "name",
-            "url",
+            "remote_url",
             "secrets_group",
             "verify_ssl",
             "timeout",
@@ -428,7 +428,7 @@ class ExternalIntegrationTable(BaseTable):
         default_columns = (
             "pk",
             "name",
-            "url",
+            "remote_url",
             "secrets_group",
             "verify_ssl",
             "timeout",

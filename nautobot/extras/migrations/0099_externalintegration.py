@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=255, unique=True)),
                 (
-                    "url",
+                    "remote_url",
                     models.CharField(
                         max_length=500, validators=[nautobot.core.models.validators.EnhancedURLValidator()]
                     ),
