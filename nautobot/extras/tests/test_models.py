@@ -784,6 +784,31 @@ class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
 
     model = ExternalIntegration
 
+    def test_remote_url_validation(self):
+        with self.assertRaises(ValidationError):
+            ei = ExternalIntegration(
+                name="Test Integration",
+                remote_url="foo://localhost",
+            )
+            ei.validated_save()
+
+        ei.remote_url = "http://localhost"
+        ei.validated_save()
+
+    def test_timeout_validation(self):
+        with self.assertRaises(ValidationError):
+            ei = ExternalIntegration(
+                name="Test Integration",
+                remote_url="http://localhost",
+                timeout=-1,
+            )
+            ei.validated_save()
+
+        ei.timeout = 0
+        ei.validated_save()
+        ei.timeout = 65536
+        ei.validated_save()
+
 
 class FileProxyTest(ModelTestCases.BaseModelTestCase):
     model = FileProxy
