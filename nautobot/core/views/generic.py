@@ -158,7 +158,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
     non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export
+        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
@@ -172,7 +172,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
 
-    # TODO: remove this as well?
+    # 3.0 TODO: remove, irrelevant after #4746
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -235,7 +235,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 filter_form = self.filterset_form(filter_params, label_suffix="")
 
         # Check for export template rendering
-        if request.GET.get("export"):
+        if request.GET.get("export"):  # 3.0 TODO: remove, irrelevant after #4746
             et = get_object_or_404(
                 ExportTemplate,
                 content_type=content_type,
@@ -250,7 +250,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 )
 
         # Check for YAML export support
-        elif "export" in request.GET and hasattr(model, "to_yaml"):
+        elif "export" in request.GET and hasattr(model, "to_yaml"):  # 3.0 TODO: remove, irrelevant after #4746
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.yaml"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'

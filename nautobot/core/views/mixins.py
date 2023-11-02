@@ -605,7 +605,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     filterset_class = None
     filterset_form_class = None
     non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export
+        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
@@ -627,6 +627,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                 queryset = queryset.none()
         return queryset
 
+    # 3.0 TODO: remove, irrelevant after #4746
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
         queryset = self.filter_queryset(self.get_queryset())
@@ -653,6 +654,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
         return None
 
+    # 3.0 TODO: remove, irrelevant after #4746
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -667,7 +669,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         List the model instances.
         """
         context = {"use_new_ui": True}
-        if "export" in request.GET:
+        if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
             queryset = self.get_queryset()
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)
