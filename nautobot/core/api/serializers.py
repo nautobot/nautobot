@@ -134,7 +134,15 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     natural_keys_values = None
     natural_slug = serializers.SerializerMethodField()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, force_csv=False, **kwargs):
+        """
+        Instantiate a BaseModelSerializer.
+
+        The force_csv kwarg allows you to force _is_csv_request() to evaluate True without passing a Request object,
+        which is necessary to be able to export appropriately structured CSV from a Job that doesn't have a Request.
+        """
+        self._force_csv = force_csv
+
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
         if not self.is_nested:
@@ -270,6 +278,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     def _is_csv_request(self):
         """Return True if this a CSV export request"""
+        if self._force_csv:
+            return True
         request = self.context.get("request")
         return hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type
 
