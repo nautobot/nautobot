@@ -114,13 +114,12 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     Returns:
         (QueryDict): Filter param querydict with only queryset filterable params
     """
-    for non_filter_param in non_filter_params:
-        filter_params.pop(non_filter_param, None)
-
     # Some FilterSet field only accept single choice not multiple choices
     # e.g datetime field, bool fields etc.
     final_filter_params = {}
     for field in filter_params.keys():
+        if field in non_filter_params:
+            continue
         if filter_params.get(field):
             # `is_single_choice_field` implements `get_filterset_field`, which throws an exception if a field is not found.
             # If an exception is thrown, instead of throwing an exception, set `_is_single_choice_field` to 'False'
