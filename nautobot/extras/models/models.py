@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.files.storage import get_storage_class
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.http import HttpResponse
 from graphene_django.settings import graphene_settings
@@ -21,7 +22,8 @@ from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName
-from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -446,6 +448,50 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         super().clean()
         if self.file_extension.startswith("."):
             self.file_extension = self.file_extension[1:]
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegration(PrimaryModel):
+    """Model for tracking integrations with external applications."""
+
+    name = models.CharField(max_length=255, unique=True)
+    remote_url = models.CharField(
+        max_length=500,
+        verbose_name="Remote URL",
+        validators=[EnhancedURLValidator()],
+    )
+    secrets_group = models.ForeignKey(
+        null=True,
+        blank=True,
+        to="extras.SecretsGroup",
+        on_delete=models.PROTECT,
+        help_text="Credentials used for authenticating with the remote system",
+    )
+    verify_ssl = models.BooleanField(
+        default=True,
+        verbose_name="Verify SSL",
+        help_text="Verify SSL certificates when connecting to the remote system",
+    )
+    timeout = models.IntegerField(
+        default=30,
+        validators=[MinValueValidator(0)],
+        help_text="Number of seconds to wait for a response",
+    )
+    extra_config = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Optional user-defined JSON data for this integration",
+    )
+
+    def __str__(self):
+        return f"{self.name} ({self.remote_url})"
+
+    class Meta:
+        ordering = ["name"]
 
 
 #

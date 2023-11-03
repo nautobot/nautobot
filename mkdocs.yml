@@ -387,6 +387,7 @@ nav:
       - Custom Links: "user-guide/platform-functionality/customlink.md"
       - Dynamic Groups: "user-guide/platform-functionality/dynamicgroup.md"
       - Export Templates: "user-guide/platform-functionality/exporttemplate.md"
+      - External Integrations: "user-guide/platform-functionality/externalintegration.md"
       - Git Repositories: "user-guide/platform-functionality/gitrepository.md"
       - GraphQL:
         - "user-guide/platform-functionality/graphql.md"

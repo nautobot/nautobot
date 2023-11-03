@@ -3,9 +3,35 @@ import factory
 import faker
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.factory import NautobotBoolIterator, OrganizationalModelFactory, get_random_instances
-from nautobot.extras.models import Role, Status, Tag
+from nautobot.core.factory import (
+    get_random_instances,
+    NautobotBoolIterator,
+    OrganizationalModelFactory,
+    PrimaryModelFactory,
+    UniqueFaker,
+)
+from nautobot.extras.models import ExternalIntegration, Role, Status, Tag
 from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+
+
+class ExternalIntegrationFactory(PrimaryModelFactory):
+    """ExternalIntegration model factory."""
+
+    class Meta:
+        model = ExternalIntegration
+
+    class Params:
+        has_extra_config = NautobotBoolIterator()
+
+    name = UniqueFaker("bs")
+    remote_url = factory.Faker("url", schemes=["http", "https", "ssh"])
+    verify_ssl = factory.Faker("boolean")
+    timeout = factory.Faker("pyint", min_value=0, max_value=300)
+    extra_config = factory.Maybe(
+        "has_extra_config",
+        factory.Faker("pydict", allowed_types=[bool, int, str]),
+        None,
+    )
 
 
 class RoleFactory(OrganizationalModelFactory):

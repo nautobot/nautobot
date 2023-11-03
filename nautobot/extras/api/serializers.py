@@ -51,6 +51,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -291,6 +292,17 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
             return None
         depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ExternalIntegration
+        fields = "__all__"
 
 
 #

@@ -797,8 +797,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_present_in_vrf(self):
         # clear out all the randomly generated route targets and vrfs before running this custom test
-        test_ip_addresses_pk_list = list(self.queryset.values_list("pk", flat=True)[:10])
-        test_ip_addresses = self.queryset[:10]
+        test_ip_addresses = self.queryset.filter(parent__namespace=self.namespace)
+        test_ip_addresses_pk_list = list(test_ip_addresses.values_list("pk", flat=True))
         # With advent of `IPAddress.parent`, IPAddresses can't just be bulk deleted without clearing their
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
         unwanted_ips = self.queryset.exclude(pk__in=test_ip_addresses_pk_list)
@@ -816,12 +816,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             VRF.objects.create(name="VRF 2", rd="65000:200", namespace=self.namespace),
             VRF.objects.create(name="VRF 3", rd="65000:300", namespace=self.namespace),
         )
-        test_ip_addresses[0].parent.namespace = self.namespace
-        test_ip_addresses[0].validated_save()
-        test_ip_addresses[1].parent.namespace = self.namespace
-        test_ip_addresses[1].validated_save()
-        test_ip_addresses[2].parent.namespace = self.namespace
-        test_ip_addresses[2].validated_save()
         vrfs[0].import_targets.add(route_targets[0], route_targets[1], route_targets[2])
         vrfs[1].export_targets.add(route_targets[1])
         vrfs[2].export_targets.add(route_targets[2])

@@ -137,12 +137,13 @@ def common_test_data(cls):
     CircuitTermination.objects.create(circuit=circuit, location=loc0, term_side="A")
     CircuitTermination.objects.create(circuit=circuit, location=loc1, term_side="Z")
 
-    manufacturers = list(Manufacturer.objects.all()[:3])
+    manufacturers = list(
+        Manufacturer.objects.filter(device_types__isnull=False, platforms__isnull=False).distinct()[:3]
+    )
     cls.manufacturers = manufacturers
 
-    platforms = Platform.objects.all()[:3]
+    platforms = Platform.objects.filter(manufacturer__in=manufacturers)[:3]
     for num, platform in enumerate(platforms):
-        platform.manufacturer = manufacturers[num]
         platform.napalm_driver = f"driver-{num}"
         platform.napalm_args = ["--test", f"--arg{num}"]
         platform.network_driver = f"driver_{num}"

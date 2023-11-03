@@ -48,6 +48,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     FileAttachment,
     FileProxy,
     GitRepository,
@@ -774,6 +775,39 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
                 content_type=self.device_ct, name="Export Template 1", owner=repo, template_code="bar"
             )
             nonduplicate_template.validated_save()
+
+
+class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
+    """
+    Tests for the ExternalIntegration model class.
+    """
+
+    model = ExternalIntegration
+
+    def test_remote_url_validation(self):
+        with self.assertRaises(ValidationError):
+            ei = ExternalIntegration(
+                name="Test Integration",
+                remote_url="foo://localhost",
+            )
+            ei.validated_save()
+
+        ei.remote_url = "http://localhost"
+        ei.validated_save()
+
+    def test_timeout_validation(self):
+        with self.assertRaises(ValidationError):
+            ei = ExternalIntegration(
+                name="Test Integration",
+                remote_url="http://localhost",
+                timeout=-1,
+            )
+            ei.validated_save()
+
+        ei.timeout = 0
+        ei.validated_save()
+        ei.timeout = 65536
+        ei.validated_save()
 
 
 class FileProxyTest(ModelTestCases.BaseModelTestCase):

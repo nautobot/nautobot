@@ -42,6 +42,7 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     CustomLink,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -319,6 +320,17 @@ class ExportTemplateViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = ExportTemplate.objects.all()
     serializer_class = serializers.ExportTemplateSerializer
     filterset_class = filters.ExportTemplateFilterSet
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationViewSet(NautobotModelViewSet):
+    queryset = ExternalIntegration.objects.select_related("secrets_group")
+    serializer_class = serializers.ExternalIntegrationSerializer
+    filterset_class = filters.ExternalIntegrationFilterSet
 
 
 #

@@ -9,6 +9,7 @@ from nautobot.core.filters import (
     ContentTypeMultipleChoiceFilter,
     MultiValueUUIDFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
@@ -52,6 +53,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -482,6 +484,26 @@ class ExportTemplateFilterSet(BaseFilterSet):
     class Meta:
         model = ExportTemplate
         fields = ["id", "content_type", "owner_content_type", "owner_object_id", "name"]
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationFilterSet(NautobotFilterSet):
+    has_secrets_group = RelatedMembershipBooleanFilter(
+        field_name="secrets_group",
+        label="Has secrets group",
+    )
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        label="Secrets group (ID or name)",
+    )
+
+    class Meta:
+        model = ExternalIntegration
+        fields = "__all__"
 
 
 #
