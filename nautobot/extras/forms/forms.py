@@ -1,3 +1,5 @@
+import inspect
+
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -579,6 +581,17 @@ class ExternalIntegrationForm(NautobotModelForm):
     class Meta:
         model = ExternalIntegration
         fields = "__all__"
+
+        EXTRA_CONFIG_HELP_TEXT = """
+            Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
+            <pre><code>{
+                "headers": {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+            }</code></pre>
+        """
+        help_texts = {"extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT)}
 
 
 class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):

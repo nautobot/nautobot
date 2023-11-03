@@ -484,7 +484,7 @@ class ExternalIntegration(PrimaryModel):
     extra_config = models.JSONField(
         blank=True,
         null=True,
-        help_text="Optional user-defined JSON data that is required for this integration",
+        help_text="Optional user-defined JSON data for this integration",
     )
 
     def __str__(self):
