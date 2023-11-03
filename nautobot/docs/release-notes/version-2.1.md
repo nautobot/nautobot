@@ -15,7 +15,7 @@ The `Job` base class now includes a [`create_file(filename, content)`](../develo
 
 ### Changed
 
-#### Data Exports as System Job ([#4745](https://github.com/nautobot/nautobot/issues/4745))
+#### Data Exports as a System Job ([#4745](https://github.com/nautobot/nautobot/issues/4745))
 
 The data export functionality in all object list views (allowing export of all or a filtered subset of objects to CSV, YAML, and/or as defined by an `ExportTemplate`) has been changed from a synchronous operation to an asynchronous background task, leveraging the new `ExportObjectList` system Job. As a result, exports of thousands of objects in a single operation will no longer fail due to browser timeout.
 
