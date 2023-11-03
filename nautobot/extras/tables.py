@@ -413,6 +413,7 @@ class ExternalIntegrationTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     remote_url = tables.Column(linkify=False)
+    secrets_group = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
         model = ExternalIntegration
