@@ -143,7 +143,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
     if change_context_state.get() is None:
         return
 
-    if hasattr(instance, "notes") and isinstance(instance.notes) == NotesQuerySet:
+    if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
         notes = instance.notes
         notes.delete()
 
