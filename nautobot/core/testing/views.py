@@ -530,21 +530,16 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission(self):
             from nautobot.extras.models import Note, ObjectChange
+            from nautobot.extras.querysets import NotesQuerySet
 
             instance = self.get_deletable_object()
             instance_note_pk_list = []
             assigned_object_type = ContentType.objects.get_for_model(self.model)
-            if hasattr(self.model, "notes"):
+            if hasattr(self.model, "notes") and isinstance(instance.notes, NotesQuerySet):
                 notes = (
-                    Note.objects.create(
-                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 1"
-                    ),
-                    Note.objects.create(
-                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 2"
-                    ),
-                    Note.objects.create(
-                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 3"
-                    ),
+                    Note(assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 1"),
+                    Note(assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 2"),
+                    Note(assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 3"),
                 )
                 for note in notes:
                     note.validated_save()
@@ -574,7 +569,7 @@ class ViewTestCases:
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
-            if hasattr(self.model, "notes"):
+            if hasattr(self.model, "notes") and isinstance(instance.notes, NotesQuerySet):
                 # Verify Notes deletion
                 with self.assertRaises(ObjectDoesNotExist):
                     Note.objects.get(assigned_object_id=instance.pk)
@@ -585,26 +580,6 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission_and_xwwwformurlencoded(self):
-            from nautobot.extras.models import Note, ObjectChange
-
-            instance = self.get_deletable_object()
-            instance_note_pk_list = []
-            assigned_object_type = ContentType.objects.get_for_model(self.model)
-            if hasattr(self.model, "notes"):
-                notes = (
-                    Note.objects.create(
-                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 1"
-                    ),
-                    Note.objects.create(
-                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 2"
-                    ),
-                    Note.objects.create(
-                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 3"
-                    ),
-                )
-                for note in notes:
-                    note.validated_save()
-                    instance_note_pk_list.append(note.pk)
             instance = self.get_deletable_object()
 
             # Assign model-level permission
@@ -631,15 +606,6 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
-
-            if hasattr(self.model, "notes"):
-                # Verify Notes deletion
-                with self.assertRaises(ObjectDoesNotExist):
-                    Note.objects.get(assigned_object_id=instance.pk)
-
-                note_objectchanges = ObjectChange.objects.filter(changed_object_id__in=instance_note_pk_list)
-                self.assertEqual(len(note_objectchanges), 3)
-                self.assertEqual(note_objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_constrained_permission(self):
