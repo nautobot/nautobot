@@ -127,9 +127,7 @@
             {% endif %}
         {% endwith %}
         {% if perms.dcim.napalm_read_device %}
-            {% if object.status.name != 'Active' %}
-                {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='Device must be in active status' %}
-            {% elif not object.platform %}
+            {% if not object.platform %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No platform assigned to this device' %}
             {% elif not object.platform.napalm_driver %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No NAPALM driver assigned for this platform' %}
