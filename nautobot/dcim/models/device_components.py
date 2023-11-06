@@ -574,7 +574,8 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                             "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.device})."
                         }
                     )
-                elif self.lag.device.virtual_chassis_id != self.device.virtual_chassis_id:
+
+                if self.lag.device.virtual_chassis_id != self.device.virtual_chassis_id:
                     raise ValidationError(
                         {
                             "lag": (
@@ -620,7 +621,8 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                             f"({self.parent_interface.device})."
                         }
                     )
-                elif self.parent_interface.device.virtual_chassis != self.device.virtual_chassis:
+
+                if self.parent_interface.device.virtual_chassis != self.device.virtual_chassis:
                     raise ValidationError(
                         {
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
@@ -658,7 +660,8 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                             )
                         }
                     )
-                elif self.bridge.device.virtual_chassis_id != self.device.virtual_chassis_id:
+
+                if self.bridge.device.virtual_chassis_id != self.device.virtual_chassis_id:
                     raise ValidationError(
                         {
                             "bridge": (

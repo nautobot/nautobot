@@ -699,9 +699,9 @@ class BaseJob(Task):
             if value is None:
                 if var.field_attrs.get("required"):
                     raise ValidationError(f"{field_name} is a required field")
-                else:
-                    return_data[field_name] = value
-                    continue
+
+                return_data[field_name] = value
+                continue
 
             if isinstance(var, MultiObjectVar):
                 queryset = var.field_attrs["queryset"].filter(pk__in=value)

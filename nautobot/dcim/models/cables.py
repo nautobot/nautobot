@@ -241,7 +241,8 @@ class Cable(PrimaryModel):
         # Validate length and length_unit
         if self.length is not None and not self.length_unit:
             raise ValidationError("Must specify a unit when setting a cable length")
-        elif self.length is None:
+
+        if self.length is None:
             self.length_unit = ""
 
     def save(self, *args, **kwargs):

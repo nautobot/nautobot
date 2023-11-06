@@ -717,7 +717,8 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
                     msg="Cannot delete this choice because it is the default value for the field.",
                     protected_objects=[self],  # TODO: should this be self.field instead?
                 )
-            elif self.value in self.custom_field.default:
+
+            if self.value in self.custom_field.default:
                 raise models.ProtectedError(
                     msg="Cannot delete this choice because it is one of the default values for the field.",
                     protected_objects=[self],  # TODO: should this be self.field instead?

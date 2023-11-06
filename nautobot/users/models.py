@@ -122,8 +122,8 @@ class User(BaseModel, AbstractUser):
         key = keys[-1]
         if key in d and isinstance(d[key], dict):
             raise TypeError(f"Key '{path}' has child keys; cannot assign a value")
-        else:
-            d[key] = value
+
+        d[key] = value
 
         if commit:
             self.save()

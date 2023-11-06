@@ -329,8 +329,10 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
         if items is not None:
             if not isinstance(items, (list, tuple)):
                 raise TypeError("Items must be passed as a tuple or list.")
-            elif not all(isinstance(item, (HomePageGroup, HomePageItem)) for item in items):
+
+            if not all(isinstance(item, (HomePageGroup, HomePageItem)) for item in items):
                 raise TypeError("All items defined in a panel must be an instance of HomePageGroup or HomePageItem")
+
             self.items = items
         else:
             self.items = []
@@ -370,7 +372,8 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
         if items is not None:
             if not isinstance(items, (list, tuple)):
                 raise TypeError("Items must be passed as a tuple or list.")
-            elif not all(isinstance(item, HomePageItem) for item in items):
+
+            if not all(isinstance(item, HomePageItem) for item in items):
                 raise TypeError("All items defined in a group must be an instance of HomePageItem")
             self.items = items
 
@@ -474,7 +477,8 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
         if groups is not None:
             if not isinstance(groups, (list, tuple)):
                 raise TypeError("Groups must be passed as a tuple or list.")
-            elif not all(isinstance(group, NavMenuGroup) for group in groups):
+
+            if not all(isinstance(group, NavMenuGroup) for group in groups):
                 raise TypeError("All groups defined in a tab must be an instance of NavMenuGroup")
             self.groups = groups
 
@@ -517,7 +521,8 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
 
         if items is not None and not isinstance(items, (list, tuple)):
             raise TypeError("Items must be passed as a tuple or list.")
-        elif not all(isinstance(item, NavMenuItem) for item in items):
+
+        if not all(isinstance(item, NavMenuItem) for item in items):
             raise TypeError("All items defined in a group must be an instance of NavMenuItem")
         self.items = items
 
@@ -578,7 +583,8 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
 
         if not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
-        elif not all(isinstance(button, NavMenuButton) for button in buttons):
+
+        if not all(isinstance(button, NavMenuButton) for button in buttons):
             raise TypeError("All buttons defined in an item must be an instance or subclass of NavMenuButton")
         self.buttons = buttons
 
@@ -692,7 +698,8 @@ class NavContext(NavMenuBase):
             groups = self.groups
             if not isinstance(groups, (list, tuple)):
                 raise TypeError("Groups must be passed as a tuple or list.")
-            elif not all(isinstance(group, NavGrouping) for group in groups):
+
+            if not all(isinstance(group, NavGrouping) for group in groups):
                 raise TypeError("All groups defined in a NavContext must be an instance of NavGrouping")
 
     @property

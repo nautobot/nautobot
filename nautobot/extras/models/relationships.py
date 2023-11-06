@@ -649,7 +649,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
                     " are present in the database, delete all associations first before modifying the source type."
                 )
 
-            elif nbr_existing_cras and self.__class__.objects.get(pk=self.pk).destination_type != self.destination_type:
+            if nbr_existing_cras and self.__class__.objects.get(pk=self.pk).destination_type != self.destination_type:
                 raise ValidationError(
                     "Not supported to change the type of the destination object when some associations"
                     " are present in the database, delete all associations first before modifying the destination type."

@@ -177,7 +177,7 @@ class InterfaceCommonForm(forms.Form):
             raise forms.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {self.mode}"})
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
-        elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
+        if mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
         # Validate tagged VLANs; must be a global VLAN or in the same location
@@ -2471,7 +2471,7 @@ class InterfaceBulkEditForm(
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
-        elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
+        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
 

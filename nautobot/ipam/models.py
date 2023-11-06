@@ -589,7 +589,7 @@ class Prefix(PrimaryModel):
                         protected_objects=err.protected_objects,
                     ) from err
 
-                elif protected_model not in (IPAddress, Prefix):
+                if protected_model not in (IPAddress, Prefix):
                     raise
                 # 3.0 TODO: uncomment this check to enforce it
                 # Prefix objects must have a valid parent
