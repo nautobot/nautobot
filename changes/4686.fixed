@@ -1,0 +1,1 @@
+Fixed incorrect tagging of 1.6.x Docker `nautobot-dev` images as `latest`.

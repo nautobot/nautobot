@@ -1,50 +1,37 @@
-{% load static %}
+{% extends 'base.html' %}
 {% load helpers %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <title>Server Error</title>
-    <link rel="stylesheet" href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="{% static 'materialdesignicons-6.5.95/css/materialdesignicons.min.css' %}">
-    <meta charset="UTF-8">
-</head>
+{% block title %}Server Error{% endblock %}
 
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3">
-                <div class="panel panel-danger" style="margin-top: 200px">
-                    <div class="panel-heading">
-                        <strong>
-                            <i class="mdi mdi-alert"></i>
-                            Server Error
-                        </strong>
-                    </div>
-                    <div class="panel-body">
-                        {% block message %}
-                            <p>
-                                There was a problem with your request. Please contact an administrator.
-                            </p>
-                        {% endblock %}
-                        <hr />
-                        <p>
-                            The complete exception is provided below:
-                        </p>
+{% block content %}
+<div class="row" style="margin-top: 150px;">
+    <div class="col-sm-4 col-sm-offset-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong><i class="mdi mdi-alert"></i>Server Error</strong>
+            </div>
+            <div class="panel-body">
+                {% block message %}
+                <p>
+                    There was a problem with your request. Please contact an administrator.
+                </p>
+                {% endblock %}
+                <hr />
+                <p>
+                    The complete exception is provided below:
+                </p>
 <pre><strong>{{ exception }}</strong><br />
 {{ error }}
 
 Python version: {{ python_version }}
-Nautobot version: {{ nautobot_version }}</pre>
-                        {% support_message %}
-                        <div class="text-right">
-                            <a href="{% url 'home' %}" class="btn btn-primary">Home Page</a>
-                        </div>
-                    </div>
-                </div>
+Nautobot version: {{ nautobot_version }}
+</pre>
+                {% support_message %}
+            </div>
+            <div class="panel-footer text-right">
+                <a href="{% url 'home' %}" class="btn btn-xs btn-primary">Home Page</a>
             </div>
         </div>
     </div>
-</body>
-
-</html>
+</div>
+{% endblock %}
