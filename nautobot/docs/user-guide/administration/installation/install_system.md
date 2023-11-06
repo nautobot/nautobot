@@ -87,6 +87,8 @@ Please follow the steps for your selected database backend below.
     CREATE ROLE
     postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
     GRANT
+    postgres=# GRANT CREATE ON SCHEMA public TO nautobot;
+    GRANT
     postgres=# \q
     ```
 
