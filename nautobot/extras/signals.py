@@ -138,9 +138,14 @@ def _handle_deleted_object(sender, instance, **kwargs):
     Fires when an object is deleted.
     """
     from .jobs import enqueue_job_hooks  # avoid circular import
+    from .querysets import NotesQuerySet
 
     if change_context_state.get() is None:
         return
+
+    if hasattr(instance, "notes") and type(instance.notes)==NotesQuerySet:
+        notes = instance.notes
+        notes.delete()
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
