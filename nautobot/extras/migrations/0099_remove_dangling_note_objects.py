@@ -8,36 +8,21 @@ def remove_dangling_note_objects(apps, schema_editor):
     Remove Note objects associated with deleted objects.
     """
     Note = apps.get_model("extras", "Note")
-    notes = Note.objects.order_by("assigned_object_type")
-    model_class = None
     print("\n>>> Removing invalid and dangling Note objects ...\n")
-    for note in notes:
-        try:
-            # break out the loop if we have a valid model class
-            model_class = apps.get_model(note.assigned_object_type.app_label, note.assigned_object_type.model)
-            break
-        except LookupError:
-            # In case model_class does not exist, delete the note as well.
+    model_class = None
+    assigned_object_type_id = None
+    for note in Note.objects.order_by("assigned_object_type").iterator():
+        # cache model_class and assigned_object_type_id
+        if note.assigned_object_type_id != assigned_object_type_id:
+            try:
+                model_class = apps.get_model(note.assigned_object_type.app_label, note.assigned_object_type.model)
+            except LookupError:
+                model_class = None
+            assigned_object_type_id = note.assigned_object_type_id
+        if model_class is None:
             note.delete()
-
-    # If there is a valid assigned_object_type from the previous loop
-    # If not, all invalid notes should be deleted at this point.
-    if model_class is not None:
-        for i, note in enumerate(notes):
-            # If the note does not have an associated object or a valid assigned_object_type.
-            if model_class is None or not model_class.objects.filter(id=note.assigned_object_id).exists():
-                note.delete()
-            # Change the value of cached model_class variable only when the current assigned_object_type is different from the next one.
-            if i != len(notes) - 1:
-                if notes[i].assigned_object_type != notes[i + 1].assigned_object_type:
-                    # set model_class to None if we do not have a valid assigned_object_type
-                    # so the note will be deleted in the next iteration.
-                    try:
-                        model_class = apps.get_model(
-                            notes[i + 1].assigned_object_type.app_label, notes[i + 1].assigned_object_type.model
-                        )
-                    except LookupError:
-                        model_class = None
+        elif not model_class.objects.filter(id=note.assigned_object_id).exists():
+            note.delete()
 
 
 class Migration(migrations.Migration):
