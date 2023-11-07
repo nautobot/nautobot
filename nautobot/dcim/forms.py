@@ -1822,6 +1822,13 @@ class ComponentEditForm(NautobotModelForm):
 
     device = DynamicModelChoiceField(queryset=Device.objects.all())
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Disallow changing the device of an existing component
+        if self.instance is not None and self.instance.present_in_database:
+            self.fields["device"].disabled = True
+
 
 class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())

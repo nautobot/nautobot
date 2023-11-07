@@ -450,6 +450,10 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Disallow changing the virtual_machine of an existing vminterface
+        if self.instance is not None and self.instance.present_in_database:
+            self.fields["virtual_machine"].disabled = True
+
         virtual_machine = VirtualMachine.objects.get(
             pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
         )
