@@ -1820,19 +1820,23 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                     "role",
                     "rack",
                     "device_type",
-                )
+                ).restrict(request.user, "view")
                 device_table = DeviceTable(devices)
                 device_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
 
             if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
-                ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
-                    interface_count=Count("interfaces"),
-                    interface_parent_count=(Count("interfaces__device", distinct=True)),
-                    vm_interface_count=Count("vm_interfaces"),
-                    vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
-                    assigned_count=Count("interfaces") + Count("vm_interfaces"),
+                ipaddress = (
+                    instance.ip_addresses.select_related("status", "tenant")
+                    .restrict(request.user, "view")
+                    .annotate(
+                        interface_count=Count("interfaces"),
+                        interface_parent_count=(Count("interfaces__device", distinct=True)),
+                        vm_interface_count=Count("vm_interfaces"),
+                        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                        assigned_count=Count("interfaces") + Count("vm_interfaces"),
+                    )
                 )
                 ipaddress_table = IPAddressTable(ipaddress)
                 ipaddress_table.columns.hide("role")
@@ -1846,7 +1850,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                     "tenant",
                     "vlan",
                     "namespace",
-                )
+                ).restrict(request.user, "view")
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
@@ -1857,7 +1861,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                     "status",
                     "tenant",
                     "rack_group",
-                )
+                ).restrict(request.user, "view")
                 rack_table = RackTable(racks)
                 rack_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(rack_table)
@@ -1868,7 +1872,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                     "role",
                     "status",
                     "tenant",
-                )
+                ).restrict(request.user, "view")
                 virtual_machine_table = VirtualMachineTable(virtual_machines)
                 virtual_machine_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(virtual_machine_table)
@@ -1880,7 +1884,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                     "location",
                     "status",
                     "tenant",
-                )
+                ).restrict(request.user, "view")
                 vlan_table = VLANTable(vlans)
                 vlan_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vlan_table)

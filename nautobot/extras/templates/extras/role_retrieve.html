@@ -52,7 +52,7 @@
                 <strong>Devices</strong>
             </div>
             {% include 'inc/table.html' with table=device_table %}
-            {% if perms.ipam.add_device %}
+            {% if perms.dcim.add_device %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'dcim:device_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Device
@@ -68,7 +68,7 @@
                 <strong>Racks</strong>
             </div>
             {% include 'inc/table.html' with table=rack_table %}
-            {% if perms.ipam.add_rack %}
+            {% if perms.dcim.add_rack %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'dcim:rack_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Rack
