@@ -31,8 +31,8 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
-from nautobot.dcim.models import Device
-from nautobot.dcim.tables import DeviceTable
+from nautobot.dcim.models import Device, Rack
+from nautobot.dcim.tables import DeviceTable, RackTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
@@ -1851,7 +1851,17 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
                 context["prefix_table"] = prefix_table
-
+            if ContentType.objects.get_for_model(Rack) in context["content_types"]:
+                racks = instance.racks.select_related(
+                    "location",
+                    "status",
+                    "tenant",
+                    "rack_group",
+                )
+                rack_table = RackTable(racks)
+                rack_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(rack_table)
+                context["rack_table"] = rack_table
             if ContentType.objects.get_for_model(VirtualMachine) in context["content_types"]:
                 virtual_machines = instance.virtual_machines.select_related(
                     "cluster",
