@@ -21,7 +21,7 @@ from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
-from nautobot.extras.querysets import NotesQuerySet
+from nautobot.extras import querysets as extras_querysets
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -533,7 +533,7 @@ class ViewTestCases:
             instance = self.get_deletable_object()
             instance_note_pk_list = []
             assigned_object_type = ContentType.objects.get_for_model(self.model)
-            if hasattr(self.model, "notes") and isinstance(instance.notes, NotesQuerySet):
+            if hasattr(self.model, "notes") and isinstance(instance.notes, extras_querysets.NotesQuerySet):
                 notes = (
                     extras_models.Note(
                         assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 1"
@@ -573,7 +573,7 @@ class ViewTestCases:
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
-            if hasattr(self.model, "notes") and isinstance(instance.notes, NotesQuerySet):
+            if hasattr(self.model, "notes") and isinstance(instance.notes, extras_querysets.NotesQuerySet):
                 # Verify Notes deletion
                 with self.assertRaises(ObjectDoesNotExist):
                     extras_models.Note.objects.get(assigned_object_id=instance.pk)

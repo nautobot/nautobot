@@ -21,6 +21,7 @@ from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from .choices import JobResultStatusChoices, ObjectChangeActionChoices
 from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
+from .querysets import NotesQuerySet
 from .webhooks import enqueue_webhooks
 
 
@@ -138,7 +139,6 @@ def _handle_deleted_object(sender, instance, **kwargs):
     Fires when an object is deleted.
     """
     from .jobs import enqueue_job_hooks  # avoid circular import
-    from .querysets import NotesQuerySet
 
     if change_context_state.get() is None:
         return
