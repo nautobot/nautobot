@@ -1813,7 +1813,6 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             }
 
             if ContentType.objects.get_for_model(Device) in context["content_types"]:
-                context["show_device_table"] = True
                 devices = instance.devices.select_related(
                     "status",
                     "location",
@@ -1825,12 +1824,9 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 device_table = DeviceTable(devices)
                 device_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(device_table)
-                context.update({"device_table": device_table})
-            else:
-                context.update({"show_device_table": False})
+                context["device_table"] = device_table
 
             if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
-                context["show_ipaddress_table"] = True
                 ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
                     interface_count=Count("interfaces"),
                     interface_parent_count=(Count("interfaces__device", distinct=True)),
@@ -1841,29 +1837,22 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 ipaddress_table = IPAddressTable(ipaddress)
                 ipaddress_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(ipaddress_table)
-                context.update({"ipaddress_table": ipaddress_table})
-            else:
-                context.update({"show_ipaddress_table": False})
+                context["ipaddress_table"] = ipaddress_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
-                context["show_prefix_table"] = True
                 prefixes = instance.prefixes.select_related(
                     "location",
                     "status",
                     "tenant",
                     "vlan",
-                    # "vrf",
                     "namespace",
                 )
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
-                context.update({"prefix_table": prefix_table})
-            else:
-                context.update({"show_prefix_table": False})
+                context["prefix_table"] = prefix_table
 
             if ContentType.objects.get_for_model(VirtualMachine) in context["content_types"]:
-                context["show_virtual_machine_table"] = True
                 virtual_machines = instance.virtual_machines.select_related(
                     "cluster",
                     "role",
@@ -1873,12 +1862,9 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 virtual_machine_table = VirtualMachineTable(virtual_machines)
                 virtual_machine_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(virtual_machine_table)
-                context.update({"virtual_machine_table": virtual_machine_table})
-            else:
-                context.update({"show_virtual_machine_table": False})
+                context["virtual_machine_table"] = virtual_machine_table
 
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
-                context["show_vlan_table"] = True
                 vlans = instance.vlans.select_related(
                     "vlan_group",
                     "location",
@@ -1888,10 +1874,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 vlan_table = VLANTable(vlans)
                 vlan_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vlan_table)
-                context.update({"vlan_table": vlan_table})
-            else:
-                context.update({"show_vlan_table": False})
-
+                context["vlan_table"] = vlan_table
         return context
 
 

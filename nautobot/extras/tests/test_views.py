@@ -2360,3 +2360,14 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         for instance in self._get_queryset().all():
             response = self.client.get(instance.get_absolute_url())
             response_body = extract_page_body(response.content.decode(response.charset))
+            for content_type in instance.content_types.all():
+                model_class = content_type.model_class()
+                verbose_name_plural = model_class._meta.verbose_name_plural
+                result = " ".join(elem.capitalize() for elem in verbose_name_plural.split())
+                if result == "Ip Addresses":
+                    result = "IP Addresses"
+                elif result == "Vlans":
+                    result = "VLANs"
+                elif result == "Racks":
+                    continue
+                self.assertIn(f"<strong>{result}</strong>", response_body)
