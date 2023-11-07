@@ -535,9 +535,15 @@ class ViewTestCases:
             assigned_object_type = ContentType.objects.get_for_model(self.model)
             if hasattr(self.model, "notes") and isinstance(instance.notes, NotesQuerySet):
                 notes = (
-                    extras_models.Note(assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 1"),
-                    extras_models.Note(assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 2"),
-                    extras_models.Note(assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 3"),
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 1"
+                    ),
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 2"
+                    ),
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 3"
+                    ),
                 )
                 for note in notes:
                     note.validated_save()
@@ -572,7 +578,9 @@ class ViewTestCases:
                 with self.assertRaises(ObjectDoesNotExist):
                     extras_models.Note.objects.get(assigned_object_id=instance.pk)
 
-                note_objectchanges = extras_models.ObjectChange.objects.filter(changed_object_id__in=instance_note_pk_list)
+                note_objectchanges = extras_models.ObjectChange.objects.filter(
+                    changed_object_id__in=instance_note_pk_list
+                )
                 self.assertEqual(note_objectchanges.count(), 3)
                 for object_change in note_objectchanges:
                     self.assertEqual(object_change.action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
