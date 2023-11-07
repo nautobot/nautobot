@@ -5,7 +5,6 @@ from nautobot.core.apps import (
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
-    NavMenuImportButton,
     NavMenuTab,
 )
 
@@ -33,12 +32,6 @@ menu_items = (
                                     "circuits.add_circuit",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="circuits:circuit_import",
-                                permissions=[
-                                    "circuits.add_circuit",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -51,12 +44,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="circuits:circuittype_add",
-                                permissions=[
-                                    "circuits.add_circuittype",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="circuits:circuittype_import",
                                 permissions=[
                                     "circuits.add_circuittype",
                                 ],
@@ -83,12 +70,6 @@ menu_items = (
                                     "circuits.add_provider",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="circuits:provider_import",
-                                permissions=[
-                                    "circuits.add_provider",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -101,12 +82,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="circuits:providernetwork_add",
-                                permissions=[
-                                    "circuits.add_providernetwork",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="circuits:providernetwork_import",
                                 permissions=[
                                     "circuits.add_providernetwork",
                                 ],

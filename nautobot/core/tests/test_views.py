@@ -37,7 +37,7 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in nav
         nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">.*</form>.*</nav>'
+            '<nav.*<form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">.*</form>.*</nav>'
         )
         nav_search_bar_result = nav_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
