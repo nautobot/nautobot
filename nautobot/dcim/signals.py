@@ -11,6 +11,7 @@ from .models import (
     Cable,
     CablePath,
     Device,
+    DeviceRedundancyGroup,
     PathEndpoint,
     PowerPanel,
     Rack,
@@ -144,6 +145,22 @@ def handle_rack_location_change(instance, created, raw=False, **kwargs):
                     )
                 device.location = instance.location
                 device.save()
+
+
+#
+# Device redundancy group
+#
+
+
+@receiver(pre_delete, sender=DeviceRedundancyGroup)
+def clear_deviceredundancygroup_members(instance, **kwargs):
+    """
+    When a DeviceRedundancyGroup is deleted, nullify the device_redundancy_group_priority field of its prior members.
+    """
+    devices = Device.objects.filter(device_redundancy_group=instance.pk)
+    for device in devices:
+        device.device_redundancy_group_priority = None
+        device.save()
 
 
 #
