@@ -19,7 +19,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
             "Example Group 1": {
                 "Example Model": {
                     "permission": "example_plugin.view_examplemodel",
-                    "buttons": ["Add", "Import"],
+                    "buttons": ["Add"],
                 },
             },
         },
@@ -27,23 +27,23 @@ class PluginNavBarTestCase(SeleniumTestCase):
             "Circuits": {
                 "Circuits": {
                     "permission": "circuits.view_circuit",
-                    "buttons": ["Add", "Import"],
+                    "buttons": ["Add"],
                 },
                 "Circuit Type": {
                     "permission": "circuits.view_circuittype",
-                    "buttons": ["Add", "Import"],
+                    "buttons": ["Add"],
                 },
             },
             "Example Circuit Group": {
                 "Example Model": {
                     "permission": "example_plugin.view_examplemodel",
-                    "buttons": ["Add", "Import"],
+                    "buttons": ["Add"],
                 },
             },
             "Providers": {
                 "Providers": {
                     "permission": "circuits.view_provider",
-                    "buttons": ["Add", "Import"],
+                    "buttons": ["Add"],
                 },
             },
         },
@@ -51,7 +51,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
             "Example Nautobot App": {
                 "Models": {
                     "permission": "example_plugin.view_examplemodel",
-                    "buttons": ["Add a new example model", "Import example models"],
+                    "buttons": ["Add a new example model"],
                 },
                 "Other Models": {
                     "permission": "example_plugin.view_examplemodel",

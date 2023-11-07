@@ -12,17 +12,17 @@ class NavBarTestCase(SeleniumTestCase):
             "Locations": {
                 "Location": {
                     "permission": "dcim.view_location",
-                    "buttons": ["Add", "Import"],
+                    "buttons": ["Add"],
                 },
                 "Location Types": {
                     "permission": "dcim.view_locationtype",
-                    "buttons": ["Add", "Import"],
+                    "buttons": ["Add"],
                 },
             },
             "Tags": {
                 "Tags": {
                     "permission": "extras.view_tag",
-                    "buttons": ["Add", "Import"],
+                    "buttons": ["Add"],
                 },
             },
         },
