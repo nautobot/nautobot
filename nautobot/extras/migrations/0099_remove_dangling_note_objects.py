@@ -25,7 +25,7 @@ def remove_dangling_note_objects(apps, schema_editor):
             deleted_count += 1
     if deleted_count > 0:
         print(f"\n>>> Removed {deleted_count} invalid or dangling Note objects. \n")
-    print(f"\n>>> Removal completed.")
+    print("\n>>> Removal completed. \n")
 
 
 class Migration(migrations.Migration):
