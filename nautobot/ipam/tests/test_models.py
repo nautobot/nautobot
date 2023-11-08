@@ -381,6 +381,17 @@ class TestPrefix(TestCase):
 
 
 class TestIPAddress(TestCase):
+
+    def test_create_and_get_ipaddress_using_host_and_prefix_length(self):
+        """Assert bug https://github.com/nautobot/nautobot/issues/4733 Unable to retrieve IPAddress using `address`
+        args if it was created using host and prefix_length is resolved"""
+        status = Status.objects.get_for_model(IPAddress).first()
+        host = "10.35.1.251"
+        prefix_length = 32
+        ipaddress = IPAddress.objects.create(host=host, prefix_length=prefix_length, status=status)
+        self.assertTrue(IPAddress.objects.filter(address=str(ipaddress)).exists())
+
+
     def test_get_duplicates(self):
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
