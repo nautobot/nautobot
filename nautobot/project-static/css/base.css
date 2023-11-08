@@ -9,7 +9,7 @@ html, body {
     height: 100%;
 }
 body {
-    padding-left: 220px;
+    padding-left: 220px;  /* same as width of .navbar-fixed-left */
     padding-top: 20px;
 }
 .wrapper {
