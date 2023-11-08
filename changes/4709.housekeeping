@@ -1,0 +1,1 @@
+Replaced a number of `ModelChoiceField` in DCIM forms with more appropriate `DynamicModelChoiceField`.
