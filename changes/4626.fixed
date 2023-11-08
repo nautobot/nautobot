@@ -1,1 +1,1 @@
-Fixed VRFs Prefix invalid filter link query param name.
+Fixed incorrect "Prefixes" link from VRF detail view.
