@@ -520,23 +520,22 @@ These two methods will load data in YAML or JSON format, respectively, from file
 
 Jobs are Python code and can be tested as such, usually via [Django unit-test features](https://docs.djangoproject.com/en/stable/topics/testing/). That said, there are a few useful tricks specific to testing Jobs.
 
-While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job. Nautobot 1.3.3 introduced a few enhancements to make this simpler to do, but it's also quite possible to test in earlier releases with a bit more effort.
+While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job.
 
-### Nautobot 1.3.3 and later
++++ 1.3.3
+    Entire Job execution testing was only introduced in 1.3.3 and newer.
+    However the import paths used in the examples requires 1.5.2 and newer.
 
-The simplest way to test the entire execution of Jobs from 1.3.3 on is via calling the `nautobot.core.testing.run_job_for_testing()` method, which is a helper wrapper around the `JobResult.enqueue_job` function used to execute a Job via Nautobot's Celery worker process.
+The simplest way to test the entire execution of Jobs is via calling the `nautobot.apps.testing.run_job_for_testing()` method, which is a helper wrapper around the `JobResult.enqueue_job` function used to execute a Job via Nautobot's Celery worker process.
 
-+/- 2.0.0
-    `run_job_for_testing` was moved from the `nautobot.utilities.testing` module to `nautobot.core.testing`.
-
-Because of the way `run_job_for_testing` and more specifically Celery tasks work, which is somewhat complex behind the scenes, you need to inherit from `nautobot.core.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
+Because of the way `run_job_for_testing` and more specifically Celery tasks work, which is somewhat complex behind the scenes, you need to inherit from `nautobot.apps.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
 
 When using `TransactionTestCase` (whether from Django or from Nautobot) each tests runs on a completely empty database. Furthermore, Nautobot requires new jobs to be enabled before they can run. Therefore, we need to make sure the job is enabled before each run which `run_job_for_testing` handles for us.
 
-A simple example of a Job test case for 1.3.3 and forward might look like the following:
+A simple example of a Job test case might look like the following:
 
 ```python
-from nautobot.core.testing import run_job_for_testing, TransactionTestCase
+from nautobot.apps.testing import run_job_for_testing, TransactionTestCase
 from nautobot.extras.models import Job, JobLogEntry
 
 
