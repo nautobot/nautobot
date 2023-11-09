@@ -58,7 +58,7 @@
     </div>
 
     {% block masthead %}
-        <h1>{% block title %}{{ object }}{% endblock %}</h1>
+        <h1><img src="{% static 'img/nautobot_chevron_header.svg' %}" />  {% block title %}{{ object }}{% endblock %}</h1>
     {% endblock masthead %}
     {% include 'inc/created_updated.html' %}
     <div class="pull-right noprint">
