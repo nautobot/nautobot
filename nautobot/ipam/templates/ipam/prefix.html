@@ -1,5 +1,6 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
+{% load static %}
 
 {% block breadcrumbs %}
     <li><a href="{% url 'ipam:namespace_list' %}">Namespaces</a></li>
@@ -11,6 +12,7 @@
 
 {% block masthead %}
 <h1>
+<img src="{% static 'img/nautobot_chevron_header.svg' %}" />
 <span class="hover_copy"><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
     <span class="mdi mdi-content-copy"></span>
 </button>
