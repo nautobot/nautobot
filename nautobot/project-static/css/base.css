@@ -642,6 +642,15 @@ td span.hover_copy:hover .hover_copy_button {
     margin-right: 10px;
 }
 
+.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #navbar_user {
+    display: inline-block;
+    max-width: calc(100% - 48px); /* 48px = 27px of user icon + 14px of caret + 7px of whitespaces between inline elements */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
 .navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu {
     border: none;
     min-width: auto;
