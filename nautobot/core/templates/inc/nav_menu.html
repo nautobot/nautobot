@@ -11,7 +11,7 @@
         </div>
 
         <div id="navbar">
-            {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+            {% if request.user.is_authenticated %}
                 <form action="{% url 'search' %}" method="get" class="navbar-form" id="navbar_search" role="search">
                     <div class="input-group">
                         <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
