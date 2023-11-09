@@ -445,9 +445,9 @@ An optional `grouping` and/or `object` may be provided in log messages by passin
 
 !!! example
     ```py
-    from nautobot.apps.jobs import BaseJob
+    from nautobot.apps.jobs import Job
 
-    class MyJob(BaseJob):
+    class MyJob(Job):
         def run(self):
             logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
     ```
@@ -456,9 +456,9 @@ To skip writing a log entry to the database, set the `skip_db_logging` key in th
 
 !!! example
     ```py
-    from nautobot.apps.jobs import BaseJob
+    from nautobot.apps.jobs import Job
 
-    class MyJob(BaseJob):
+    class MyJob(Job):
         def run(self):
             logger.info("This job is running!", extra={"skip_db_logging": True})
     ```
