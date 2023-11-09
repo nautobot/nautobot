@@ -965,7 +965,11 @@ class PowerOutletTemplateForm(NautobotModelForm):
 
 class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(PowerOutletTypeChoices), required=False)
-    power_port_template = forms.ModelChoiceField(queryset=PowerPortTemplate.objects.all(), required=False)
+    power_port_template = DynamicModelChoiceField(
+        queryset=PowerPortTemplate.objects.all(),
+        required=False,
+        query_params={"device_type": "$device_type"},
+    )
     feed_leg = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletFeedLegChoices),
         required=False,
@@ -981,13 +985,6 @@ class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
         "feed_leg",
         "description",
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit power_port_template choices to current DeviceType
-        device_type = DeviceType.objects.get(pk=self.initial.get("device_type") or self.data.get("device_type"))
-        self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(device_type=device_type)
 
 
 class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
@@ -1816,6 +1813,23 @@ class ComponentCreateForm(ComponentForm):
     description = forms.CharField(max_length=100, required=False)
 
 
+class ComponentEditForm(NautobotModelForm):
+    """
+    Base class for editing device components (models subclassed from ComponentModel).
+
+    Distinct from ComponentCreateForm in that it has a name/label instead of a name_pattern/label_pattern.
+    """
+
+    device = DynamicModelChoiceField(queryset=Device.objects.all())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Disallow changing the device of an existing component
+        if self.instance is not None and self.instance.present_in_database:
+            self.fields["device"].disabled = True
+
+
 class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=100, required=False)
@@ -1835,7 +1849,7 @@ class ConsolePortFilterForm(DeviceComponentFilterForm):
     tags = TagFilterField(model)
 
 
-class ConsolePortForm(NautobotModelForm):
+class ConsolePortForm(ComponentEditForm):
     class Meta:
         model = ConsolePort
         fields = [
@@ -1846,9 +1860,6 @@ class ConsolePortForm(NautobotModelForm):
             "description",
             "tags",
         ]
-        widgets = {
-            "device": forms.HiddenInput(),
-        }
 
 
 class ConsolePortCreateForm(ComponentCreateForm):
@@ -1893,7 +1904,7 @@ class ConsoleServerPortFilterForm(DeviceComponentFilterForm):
     tags = TagFilterField(model)
 
 
-class ConsoleServerPortForm(NautobotModelForm):
+class ConsoleServerPortForm(ComponentEditForm):
     class Meta:
         model = ConsoleServerPort
         fields = [
@@ -1904,9 +1915,6 @@ class ConsoleServerPortForm(NautobotModelForm):
             "description",
             "tags",
         ]
-        widgets = {
-            "device": forms.HiddenInput(),
-        }
 
 
 class ConsoleServerPortCreateForm(ComponentCreateForm):
@@ -1951,7 +1959,7 @@ class PowerPortFilterForm(DeviceComponentFilterForm):
     tags = TagFilterField(model)
 
 
-class PowerPortForm(NautobotModelForm):
+class PowerPortForm(ComponentEditForm):
     class Meta:
         model = PowerPort
         fields = [
@@ -1964,9 +1972,6 @@ class PowerPortForm(NautobotModelForm):
             "description",
             "tags",
         ]
-        widgets = {
-            "device": forms.HiddenInput(),
-        }
 
 
 class PowerPortCreateForm(ComponentCreateForm):
@@ -2026,8 +2031,12 @@ class PowerOutletFilterForm(DeviceComponentFilterForm):
     tags = TagFilterField(model)
 
 
-class PowerOutletForm(NautobotModelForm):
-    power_port = forms.ModelChoiceField(queryset=PowerPort.objects.all(), required=False)
+class PowerOutletForm(ComponentEditForm):
+    power_port = DynamicModelChoiceField(
+        queryset=PowerPort.objects.all(),
+        required=False,
+        query_params={"device": "$device"},
+    )
 
     class Meta:
         model = PowerOutlet
@@ -2041,16 +2050,6 @@ class PowerOutletForm(NautobotModelForm):
             "description",
             "tags",
         ]
-        widgets = {
-            "device": forms.HiddenInput(),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit power_port choices to the local device
-        if hasattr(self.instance, "device"):
-            self.fields["power_port"].queryset = PowerPort.objects.filter(device=self.instance.device)
 
 
 class PowerOutletCreateForm(ComponentCreateForm):
@@ -2059,7 +2058,11 @@ class PowerOutletCreateForm(ComponentCreateForm):
         required=False,
         widget=StaticSelect2(),
     )
-    power_port = forms.ModelChoiceField(queryset=PowerPort.objects.all(), required=False)
+    power_port = DynamicModelChoiceField(
+        queryset=PowerPort.objects.all(),
+        required=False,
+        query_params={"device": "$device"},
+    )
     feed_leg = forms.ChoiceField(choices=add_blank_choice(PowerOutletFeedLegChoices), required=False)
     field_order = (
         "device",
@@ -2071,13 +2074,6 @@ class PowerOutletCreateForm(ComponentCreateForm):
         "description",
         "tags",
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit power_port queryset to PowerPorts which belong to the parent Device
-        device = Device.objects.get(pk=self.initial.get("device") or self.data.get("device"))
-        self.fields["power_port"].queryset = PowerPort.objects.filter(device=device)
 
 
 class PowerOutletBulkCreateForm(form_from_model(PowerOutlet, ["type", "feed_leg", "tags"]), DeviceBulkAddComponentForm):
@@ -2133,24 +2129,27 @@ class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin)
     tags = TagFilterField(model)
 
 
-class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
+class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
     parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Parent interface",
         help_text="Assigned parent interface",
+        query_params={"device_with_common_vc": "$device"},
     )
     bridge = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Bridge interface",
         help_text="Assigned bridge interface",
+        query_params={"device_with_common_vc": "$device"},
     )
     lag = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="LAG interface",
         query_params={
+            "device_with_common_vc": "$device",
             "type": InterfaceTypeChoices.TYPE_LAG,
         },
         help_text="Assigned LAG interface",
@@ -2160,7 +2159,7 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         required=False,
         label="Untagged VLAN",
         query_params={
-            "location": "null",
+            "available_on_device": "$device",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -2168,13 +2167,21 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
         required=False,
         label="Tagged VLANs",
         query_params={
-            "location": "null",
+            "available_on_device": "$device",
         },
     )
     ip_addresses = DynamicModelMultipleChoiceField(
         queryset=IPAddress.objects.all(),
         required=False,
         label="IP Addresses",
+    )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+        query_params={
+            "device": "$device",
+        },
     )
 
     class Meta:
@@ -2201,35 +2208,15 @@ class InterfaceForm(InterfaceCommonForm, NautobotModelForm):
             "status",
         ]
         widgets = {
-            "device": forms.HiddenInput(),
             "type": StaticSelect2(),
             "mode": StaticSelect2(),
-            "vrf": StaticSelect2(),
         }
         labels = {
             "mode": "802.1Q Mode",
-            "vrf": "VRF",
         }
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if self.is_bound:
-            device = Device.objects.get(pk=self.data["device"])
-        else:
-            device = self.instance.device
-
-        # Restrict parent/bridge/LAG interface assignment by device
-        self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
-        self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
-        self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
-
-        # Add current location to VLANs query params
-        self.fields["untagged_vlan"].widget.add_query_param("location", device.location.pk)
-        self.fields["tagged_vlans"].widget.add_query_param("location", device.location.pk)
 
 
 class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
@@ -2249,7 +2236,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         required=False,
         query_params={
             "device_with_common_vc": "$device",
-            "kind": "physical",
         },
         help_text="Assigned parent interface",
     )
@@ -2290,10 +2276,17 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         label="Management only",
         help_text="This interface is used only for out-of-band management",
     )
+    ip_addresses = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        label="IP Addresses",
+    )
     mode = forms.ChoiceField(
         choices=add_blank_choice(InterfaceModeChoices),
         required=False,
         widget=StaticSelect2(),
+        label="802.1Q Mode",
+        help_text=INTERFACE_MODE_HELP_TEXT,
     )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
@@ -2322,6 +2315,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "mac_address",
         "description",
         "mgmt_only",
+        "ip_addresses",
         "mode",
         "untagged_vlan",
         "tagged_vlans",
@@ -2486,7 +2480,12 @@ class FrontPortFilterForm(DeviceComponentFilterForm):
     tags = TagFilterField(model)
 
 
-class FrontPortForm(NautobotModelForm):
+class FrontPortForm(ComponentEditForm):
+    rear_port = DynamicModelChoiceField(
+        queryset=RearPort.objects.all(),
+        query_params={"device": "$device"},
+    )
+
     class Meta:
         model = FrontPort
         fields = [
@@ -2500,17 +2499,8 @@ class FrontPortForm(NautobotModelForm):
             "tags",
         ]
         widgets = {
-            "device": forms.HiddenInput(),
             "type": StaticSelect2(),
-            "rear_port": StaticSelect2(),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Limit RearPort choices to the local device
-        if hasattr(self.instance, "device"):
-            self.fields["rear_port"].queryset = self.fields["rear_port"].queryset.filter(device=self.instance.device)
 
 
 # TODO: Merge with FrontPortTemplateCreateForm to remove duplicate logic
@@ -2614,7 +2604,7 @@ class RearPortFilterForm(DeviceComponentFilterForm):
     tags = TagFilterField(model)
 
 
-class RearPortForm(NautobotModelForm):
+class RearPortForm(ComponentEditForm):
     class Meta:
         model = RearPort
         fields = [
@@ -2627,7 +2617,6 @@ class RearPortForm(NautobotModelForm):
             "tags",
         ]
         widgets = {
-            "device": forms.HiddenInput(),
             "type": StaticSelect2(),
         }
 
@@ -2686,7 +2675,7 @@ class DeviceBayFilterForm(DeviceComponentFilterForm):
     tags = TagFilterField(model)
 
 
-class DeviceBayForm(NautobotModelForm):
+class DeviceBayForm(ComponentEditForm):
     class Meta:
         model = DeviceBay
         fields = [
@@ -2696,9 +2685,6 @@ class DeviceBayForm(NautobotModelForm):
             "description",
             "tags",
         ]
-        widgets = {
-            "device": forms.HiddenInput(),
-        }
 
 
 class DeviceBayCreateForm(ComponentCreateForm):
