@@ -948,6 +948,11 @@ class IPAddress(PrimaryModel, StatusModel):
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
 
+    def save(self, *args, **kwargs):
+        if not self.broadcast:
+            self.broadcast = self.get_broadcast(self.address)
+        super().save(*args, **kwargs)
+
     def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the assigned object, if any
         return super().to_objectchange(action, related_object=self.assigned_object, **kwargs)
