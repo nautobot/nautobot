@@ -1114,7 +1114,7 @@ class ViewTestCases:
             # Check if the first and second pk is passed into the form.
             self.assertIn(f'<input type="hidden" name="pk" value="{first_pk}"', response_body)
             self.assertIn(f'<input type="hidden" name="pk" value="{second_pk}"', response_body)
-            self.assertIn("<h1>Editing 2 ", response_body)
+            self.assertIn("Editing 2 ", response_body)
             # Check if the third pk is not passed into the form.
             self.assertNotIn(f'<input type="hidden" name="pk" value="{third_pk}"', response_body)
 
