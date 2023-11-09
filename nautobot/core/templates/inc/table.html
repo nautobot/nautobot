@@ -1,4 +1,5 @@
 {% load django_tables2 %}
+
 <div class="panel panel-default">
     <table{% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
         {% if table.show_header %}
