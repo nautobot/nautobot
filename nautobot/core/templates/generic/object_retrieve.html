@@ -58,13 +58,15 @@
     </div>
 
     {% block masthead %}
-    <h1>
-        <img src="{% static 'img/nautobot_chevron_header.svg' %}" />
-        <span class="hover_copy"><span id="copy_title">{{ object.display }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
-            <span class="mdi mdi-content-copy"></span>
-        </button>
-        </span>
-    </h1>
+        {% block title %}
+            <h1>
+                <img src="{% static 'img/nautobot_chevron_header.svg' %}" />
+                <span class="hover_copy"><span id="copy_title">{{ object.display }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
+                    <span class="mdi mdi-content-copy"></span>
+                </button>
+                </span>
+            </h1>
+        {% endblock %}
     {% endblock masthead %}
     {% include 'inc/created_updated.html' %}
     <div class="pull-right noprint">

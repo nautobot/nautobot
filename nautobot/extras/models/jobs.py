@@ -243,6 +243,10 @@ class Job(PrimaryModel):
             return None
 
     @property
+    def display(self):
+        return f"{self.name}"
+
+    @property
     def class_path(self):
         return f"{self.module_name}.{self.job_class_name}"
 
