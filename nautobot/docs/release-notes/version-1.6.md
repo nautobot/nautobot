@@ -76,11 +76,8 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ### Added
 
-- [#3289](https://github.com/nautobot/nautobot/issues/3289) - Added documentation on factory data caching.
 - [#3913](https://github.com/nautobot/nautobot/issues/3913) - Added `url` field to GraphQL objects.
-- [#4201](https://github.com/nautobot/nautobot/issues/4201) - Added docs for `InterfaceRedundancyGroup`.
 - [#4316](https://github.com/nautobot/nautobot/issues/4316) - Added management command "nautobot-server populate_platform_network_driver" to help update the `Platform.network_driver` field in bulk.
-- [#4317](https://github.com/nautobot/nautobot/issues/4317) - Added tests for GraphQL url field.
 
 ### Changed
 
@@ -95,42 +92,45 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#3949](https://github.com/nautobot/nautobot/issues/3949) - Fixed `DynamicGroup.clean_fields()` so that it will respect an `exclude=["filter"]` kwarg by not validating the `filter` field.
 - [#4262](https://github.com/nautobot/nautobot/issues/4262) - Fixed warning message when trying to use bulk edit with no items selected.
 
+### Documentation
+
+- [#3289](https://github.com/nautobot/nautobot/issues/3289) - Added documentation on factory data caching.
+- [#4201](https://github.com/nautobot/nautobot/issues/4201) - Added docs for `InterfaceRedundancyGroup`.
+
 ### Housekeeping
 
+- [#4317](https://github.com/nautobot/nautobot/issues/4317) - Added tests for GraphQL url field.
 - [#4331](https://github.com/nautobot/nautobot/issues/4331) - Added a "housekeeping" subsection to the release-notes via `towncrier`.
 
 ## v1.6.1 (2023-08-21)
 
 ### Changed
 
-- [#4242](https://github.com/nautobot/nautobot/issues/4242) - Changed `development/nautobot_config.py` to disable installation metrics for developer environments by default.
 - [#4242](https://github.com/nautobot/nautobot/issues/4242) - Changed behavior of `dev` and `final-dev` Docker images to disable installation metrics by default.
 
 ### Fixed
 
-- [#4028](https://github.com/nautobot/nautobot/issues/4028) - Fixed CI integration workflow to publish 'final-dev', and build only `final` images.
-- [#4028](https://github.com/nautobot/nautobot/issues/4028) - Fixed CI integration workflow `set-output` warnings.
 - [#4093](https://github.com/nautobot/nautobot/issues/4093) - Fixed dependencies required for saml support missing in final docker image.
 - [#4149](https://github.com/nautobot/nautobot/issues/4149) - Fixed a bug that prevented renaming a `Rack` if it contained any devices whose names were not globally unique.
 - [#4241](https://github.com/nautobot/nautobot/issues/4241) - Added a timeout and exception handling to the `nautobot-server send_installation_metrics` command.
+
+### Documentation
+
 - [#4256](https://github.com/nautobot/nautobot/issues/4256) - Introduced new `mkdocs` setting of `tabbed`.
 - [#4256](https://github.com/nautobot/nautobot/issues/4256) - Updated docs at `nautobot/docs/installation/nautobot.md` and `nautobot/docs/installation/http-server.md` to adopt tabbed interfaces.
 - [#4258](https://github.com/nautobot/nautobot/issues/4258) - Re-enabled copy-to-clipboard button in mkdocs theme.
+
+### Housekeeping
+
+- [#4028](https://github.com/nautobot/nautobot/issues/4028) - Fixed CI integration workflow to publish 'final-dev', and build only `final` images.
+- [#4028](https://github.com/nautobot/nautobot/issues/4028) - Fixed CI integration workflow `set-output` warnings.
+- [#4242](https://github.com/nautobot/nautobot/issues/4242) - Changed `development/nautobot_config.py` to disable installation metrics for developer environments by default.
 
 ## v1.6.0 (2023-08-08)
 
 ### Added
 
 - [#4169](https://github.com/nautobot/nautobot/issues/4169) - Added environment variable `NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE` to set the `SESSION_EXPIRE_AT_BROWSER_CLOSE` Django setting which expires session cookies when the user closes their browser.
-- [#4184](https://github.com/nautobot/nautobot/issues/4184) - Added documentation detailing rack power utilization calculation.
-
-### Dependencies
-
-- [#4208](https://github.com/nautobot/nautobot/issues/4208) - Updated django-rq to 2.8.1.
-- [#4209](https://github.com/nautobot/nautobot/issues/4209) - Relaxed constraint on prometheus-client minimum version to `0.14.1`.
-- [#4173](https://github.com/nautobot/nautobot/issues/4173) - Updated `drf-spectacular` to `0.26.4`.
-- [#4199](https://github.com/nautobot/nautobot/issues/4199) - Updated `cryptography` to `~41.0.3`. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
-- [#4215](https://github.com/nautobot/nautobot/issues/4215) - Broadened the range of acceptable `packaging` dependency versions.
 
 ### Fixed
 
@@ -140,6 +140,18 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#4204](https://github.com/nautobot/nautobot/issues/4204) - Fixed failing Apps CI by downgrading `jsonschema<4.18`.
 - [#4205](https://github.com/nautobot/nautobot/issues/4205) - Fixed failing Apps CI due to missing dependency of `toml`.
 - [#4222](https://github.com/nautobot/nautobot/issues/4222) - Fixed a bug in which `Job` `ChoiceVars` could sometimes get rendered incorrectly in the UI as multiple-choice fields.
+
+### Dependencies
+
+- [#4208](https://github.com/nautobot/nautobot/issues/4208) - Updated django-rq to 2.8.1.
+- [#4209](https://github.com/nautobot/nautobot/issues/4209) - Relaxed constraint on prometheus-client minimum version to `0.14.1`.
+- [#4173](https://github.com/nautobot/nautobot/issues/4173) - Updated `drf-spectacular` to `0.26.4`.
+- [#4199](https://github.com/nautobot/nautobot/issues/4199) - Updated `cryptography` to `~41.0.3`. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4215](https://github.com/nautobot/nautobot/issues/4215) - Broadened the range of acceptable `packaging` dependency versions.
+
+### Documentation
+
+- [#4184](https://github.com/nautobot/nautobot/issues/4184) - Added documentation detailing rack power utilization calculation.
 
 ## v1.6.0-rc.1 (2023-08-02)
 
@@ -152,7 +164,6 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#4006](https://github.com/nautobot/nautobot/issues/4006) - Added Markdown custom field type.
 - [#4044](https://github.com/nautobot/nautobot/issues/4044) - Added ability to use `@action(detail=True)` decorator for registering additional non-standard `GET` views to a `NautobotUIViewSet`.
 - [#4047](https://github.com/nautobot/nautobot/issues/4047) - Added ability for Nautobot to send installation metrics.
-- [#4118](https://github.com/nautobot/nautobot/issues/4118) - Added documentation for troubleshooting integration test failures via VNC.
 - [#4136](https://github.com/nautobot/nautobot/issues/4136) - Added `network_driver` database field to the `Platform` model.
 - [#4136](https://github.com/nautobot/nautobot/issues/4136) - Added `network_driver_mappings` derived attribute on the `Platform` model.
 - [#4136](https://github.com/nautobot/nautobot/issues/4136) - Added `CONSTANCE_DATABASE_CACHE_BACKEND = 'default'` to `settings.py`, which should improve performance a bit.
@@ -166,6 +177,16 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#3693](https://github.com/nautobot/nautobot/issues/3693) - Increased Device model's `asset_tag` size limit to 100.
 - [#4029](https://github.com/nautobot/nautobot/issues/4029) - Changed default Python version for Docker images from 3.7 to 3.11.
 
+### Removed
+
+- [#3561](https://github.com/nautobot/nautobot/issues/3561) - Dropped support for Python 3.7. Python 3.8 is now the minimum version required by Nautobot.
+- [#3561](https://github.com/nautobot/nautobot/issues/3561) - Removed direct dependency on `importlib-metadata`.
+- [#3561](https://github.com/nautobot/nautobot/issues/3561) - Removed direct dependency on `pycryptodome` as Nautobot does not currently use this library and hasn't for some time.
+
+### Fixed
+
+- [#4178](https://github.com/nautobot/nautobot/issues/4178) - Fixed JSON serialization of overloaded/non-default FilterForm fields on Dynamic Groups.
+
 ### Dependencies
 
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `celery` dependency to `~5.3.1`.
@@ -178,7 +199,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `django-extensions` dependency to `~3.2.3`.
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `django-filter` dependency to `~23.1`.
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `django-health-check` dependency to `~3.17.0`
-- [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `django-prometheus` dependency to `~2.3.1`.`
+- [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `django-prometheus` dependency to `~2.3.1`.
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `django-redis` dependency to `~5.3.0`.
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `django-storages` optional dependency to `~1.13.2`.
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `django-tables2` dependency to `~2.6.0`.
@@ -199,12 +220,6 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated `social-auth-app-django` dependency to `~5.2.0`.
 - [#3561](https://github.com/nautobot/nautobot/issues/3561) - Updated various development-only dependencies to the latest available versions.
 
-### Fixed
+### Documentation
 
-- [#4178](https://github.com/nautobot/nautobot/issues/4178) - Fixed JSON serialization of overloaded/non-default FilterForm fields on Dynamic Groups.
-
-### Removed
-
-- [#3561](https://github.com/nautobot/nautobot/issues/3561) - Dropped support for Python 3.7. Python 3.8 is now the minimum version required by Nautobot.
-- [#3561](https://github.com/nautobot/nautobot/issues/3561) - Removed direct dependency on `importlib-metadata`.
-- [#3561](https://github.com/nautobot/nautobot/issues/3561) - Removed direct dependency on `pycryptodome` as Nautobot does not currently use this library and hasn't for some time.
+- [#4118](https://github.com/nautobot/nautobot/issues/4118) - Added documentation for troubleshooting integration test failures via VNC.
