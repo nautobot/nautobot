@@ -904,6 +904,7 @@ def check_and_call_git_repository_function(request, pk, func):
     # Allow execution only if a worker process is running.
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
+        return redirect(request.get_full_path(), permanent=False)
     else:
         repository = get_object_or_404(GitRepository, pk=pk)
         job_result = func(repository, request.user)
