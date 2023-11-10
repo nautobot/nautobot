@@ -949,7 +949,7 @@ class IPAddress(PrimaryModel, StatusModel):
         self.dns_name = self.dns_name.lower()
 
     def save(self, *args, **kwargs):
-        if not self.broadcast:
+        if self.address and not self.broadcast:
             self.broadcast = self.get_broadcast(self.address)
         super().save(*args, **kwargs)
 
