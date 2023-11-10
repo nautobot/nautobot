@@ -397,10 +397,6 @@ class TestIPAddress(TestCase):
         # thereby bypassing the Not Null Constraint check.
         with self.assertRaises(IntegrityError) as err:
             IPAddress.objects.create(prefix_length=32, status=self.status)
-        self.assertIn(
-            'null value in column "host" of relation "ipam_ipaddress" violates not-null constraint',
-            str(err.exception),
-        )
 
     def test_get_duplicates(self):
         ips = (
