@@ -25,7 +25,7 @@ class VarbinaryIPField(models.BinaryField):
 
     def get_default(self):
         value = super().get_default()
-        # Prevent None or "" values from been represented as b''
+        # Prevent None or "" values from being represented as b''
         if value in self.empty_values:
             return None
         return value
