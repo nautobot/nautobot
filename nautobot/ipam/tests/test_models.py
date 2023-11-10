@@ -395,7 +395,7 @@ class TestIPAddress(TestCase):
         # Assert that an error is triggered when the host is not provided.
         # Initially, VarbinaryIPField fields with None values are stored as the binary representation of b'',
         # thereby bypassing the Not Null Constraint check.
-        with self.assertRaises(IntegrityError) as err:
+        with self.assertRaises(IntegrityError):
             IPAddress.objects.create(prefix_length=32, status=self.status)
 
     def test_get_duplicates(self):
