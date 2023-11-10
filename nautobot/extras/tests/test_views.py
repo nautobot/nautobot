@@ -1831,7 +1831,7 @@ class JobTestCase(
         content = extract_page_body(response.content.decode(response.charset))
 
         self.assertHttpStatus(response, 200)
-        self.assertIn(f'<span id="copy_title">{instance.display}</span>', content)
+        self.assertIn(f"{instance.name} - Change Log", content)
 
 
 class JobButtonTestCase(
