@@ -249,7 +249,7 @@
             <div class="panel-heading">
                 <strong>Children</strong>
             </div>
-            {% include 'inc/table.html' with detail_view=True table=children_table %}
+            {% include 'inc/table.html' with table=children_table %}
             {% if perms.dcim.add_location %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'dcim:location_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">

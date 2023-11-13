@@ -30,7 +30,7 @@
             <div class="panel-heading">
                 <strong>Tenants</strong>
             </div>
-            {% include 'inc/table.html' with detail_view=True table=tenant_table %}
+            {% include 'inc/table.html' with table=tenant_table %}
             {% if perms.teanancy.add_tenant %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'tenancy:tenant_add' %}?group={{ object.pk }}" class="btn btn-xs btn-primary">

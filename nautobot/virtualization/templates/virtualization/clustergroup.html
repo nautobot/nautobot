@@ -26,7 +26,7 @@
             <div class="panel-heading">
                 <strong>Clusters</strong>
             </div>
-            {% include 'inc/table.html' with detail_view=True table=cluster_table %}
+            {% include 'inc/table.html' with table=cluster_table %}
             {% if perms.virtualization.add_cluster %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'virtualization:cluster_add' %}?group={{ object.pk }}" class="btn btn-xs btn-primary">

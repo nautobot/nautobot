@@ -100,7 +100,7 @@
         <div class="panel-heading">
             <strong>Child Location Type(s)</strong>
         </div>
-        {% include 'inc/table.html' with detail_view=True table=children_table %}
+        {% include 'inc/table.html' with table=children_table %}
         {% if perms.dcim.add_locationtype %}
             <div class="panel-footer text-right noprint">
                 <a href="{% url 'dcim:locationtype_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">
@@ -115,7 +115,7 @@
         <div class="panel-heading">
             <strong>Location(s) of this Type</strong>
         </div>
-        {% include 'inc/table.html' with detail_view=True table=locations_table %}
+        {% include 'inc/table.html' with table=locations_table %}
         {% if perms.dcim.add_location %}
             <div class="panel-footer text-right noprint">
                 <a href="{% url 'dcim:location_add' %}?location_type={{ object.pk }}" class="btn btn-xs btn-primary">

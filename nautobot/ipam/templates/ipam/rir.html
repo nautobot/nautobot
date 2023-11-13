@@ -30,7 +30,7 @@
             <div class="panel-heading">
                 <strong>Assigned Prefixes</strong>
             </div>
-            {% include 'inc/table.html' with detail_view=True table=assigned_prefix_table %}
+            {% include 'inc/table.html' with table=assigned_prefix_table %}
             {% if perms.ipam.add_prefix %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'ipam:prefix_add' %}?rir={{ object.pk }}" class="btn btn-xs btn-primary">

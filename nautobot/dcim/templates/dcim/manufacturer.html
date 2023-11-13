@@ -26,7 +26,7 @@
             <div class="panel-heading">
                 <strong>Devices</strong>
             </div>
-            {% include 'inc/table.html' with detail_view=True table=device_table %}
+            {% include 'inc/table.html' with table=device_table %}
             {% if perms.dcim.add_device %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'dcim:device_add' %}?manufacturer={{ object.pk }}" class="btn btn-xs btn-primary">
