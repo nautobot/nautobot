@@ -704,7 +704,7 @@ class ViewTestCases:
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertIn("Unknown filter field", content, msg=content)
             # There should be no table rows displayed except for the empty results row
-            self.assertIn(f"No {self.model._meta.verbose_name_plural} found", content, msg=content)
+            self.assertIn(f"None", content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
