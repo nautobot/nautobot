@@ -842,6 +842,9 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
+    "header_bullet": os.getenv(
+        "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
+    ),  # bullet image used for various view headers
 }
 
 # Title to use in place of "Nautobot"

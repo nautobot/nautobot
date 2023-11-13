@@ -95,6 +95,7 @@ Default:
     "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
     "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
     "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
+    "header_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None),  # bullet image used for various view headers
 }
 ```
 
@@ -109,6 +110,9 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_180`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_192`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
+
++++ 2.1.0
+    * `NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET`
 
 If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
 
