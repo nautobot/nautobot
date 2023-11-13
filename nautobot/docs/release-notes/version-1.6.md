@@ -53,7 +53,7 @@ Nautobot 1.6.0 formally adds support for installation and operation under Python
 
 ### Changed
 
-#### Additional HIDE_RESTRICTED_UI Effects for Unauthenticated Users ([#3646](https://github.com/nautobot/nautobot/issues/3646))
+#### Additional `HIDE_RESTRICTED_UI` Effects for Unauthenticated Users ([#3646](https://github.com/nautobot/nautobot/issues/3646))
 
 When `HIDE_RESTRICTED_UI` is enabled, unauthenticated users are no longer able to view the OpenAPI (Swagger) UI, the GraphiQL UI, or any configured top/bottom banners. Additionally, the page footer on the login page will not display the Nautobot server hostname in this case.
 
@@ -89,6 +89,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#4686](https://github.com/nautobot/nautobot/issues/4686) - Fixed incorrect tagging of 1.6.x Docker `nautobot-dev` images as `latest`.
 - [#4718](https://github.com/nautobot/nautobot/issues/4718) - Fixed bug in which a device's device redundancy group priority was not being set to `None` when the device redundancy group was deleted.
 - [#4728](https://github.com/nautobot/nautobot/issues/4728) - Fixed bug with JobResultFilterSet and ScheduledJobFilterSet using `django_filters.DateTimeFilter` for only exact date matches.
+- [#4733](https://github.com/nautobot/nautobot/issues/4733) - Fixed the bug that prevents retrieval of IPAddress using its address args if it was created using `host` and `prefix_length`.
 
 ### Documentation
 
