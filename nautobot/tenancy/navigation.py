@@ -5,7 +5,6 @@ from nautobot.core.apps import (
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
-    NavMenuImportButton,
     NavMenuTab,
 )
 
@@ -33,12 +32,6 @@ menu_items = (
                                     "tenancy.add_tag",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="tenancy:tenant_import",
-                                permissions=[
-                                    "tenancy.add_tenant",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -51,12 +44,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="tenancy:tenantgroup_add",
-                                permissions=[
-                                    "tenancy.add_tenantgroup",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="tenancy:tenantgroup_import",
                                 permissions=[
                                     "tenancy.add_tenantgroup",
                                 ],

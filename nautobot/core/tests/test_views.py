@@ -37,7 +37,7 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in nav
         nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">.*</form>.*</nav>'
+            '<nav.*<form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">.*</form>.*</nav>'
         )
         nav_search_bar_result = nav_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -53,8 +53,7 @@ class HomeViewTestCase(TestCase):
 
         return nav_search_bar_result, body_search_bar_result
 
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_search_bar_not_visible_if_user_not_authenticated_and_hide_restricted_ui_True(self):
+    def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
         nav_search_bar_result, body_search_bar_result = self.make_request()
@@ -62,23 +61,7 @@ class HomeViewTestCase(TestCase):
         self.assertIsNone(nav_search_bar_result)
         self.assertIsNone(body_search_bar_result)
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_search_bar_visible_if_user_authenticated_and_hide_restricted_ui_True(self):
-        nav_search_bar_result, body_search_bar_result = self.make_request()
-
-        self.assertIsNotNone(nav_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_search_bar_visible_if_hide_restricted_ui_False(self):
-        # Assert if user is authenticated
-        nav_search_bar_result, body_search_bar_result = self.make_request()
-
-        self.assertIsNotNone(nav_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
-
-        # Assert if user is logout
-        self.client.logout()
+    def test_search_bar_visible_if_user_authenticated(self):
         nav_search_bar_result, body_search_bar_result = self.make_request()
 
         self.assertIsNotNone(nav_search_bar_result)
