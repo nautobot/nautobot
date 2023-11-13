@@ -3,8 +3,7 @@
 {% load plugins %}
 
     <link rel="stylesheet" id="template-theme"
-    href="template.css"
-    onerror="window.location='{% url 'media_failure' %}?filename=template.css'">
+          href="{% url 'template_css' %}">
     <link rel="stylesheet"
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">

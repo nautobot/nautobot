@@ -49,8 +49,7 @@ urlpatterns = [
     path("files/", include("db_file_storage.urls")),
     # Templated css file
     path(
-        "template.css",
-        TemplateView.as_view(template_name="template.css", content_type="text/css"),
+        "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
     ),
 ]
 
