@@ -1,1 +1,0 @@
-Fixed the issue preventing associated Note objects from being deleted when the assigned object is deleted.

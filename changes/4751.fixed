@@ -1,1 +1,0 @@
-Fixed a bug with `BaseModel.get_absolute_url` returning an AttributeError instead of raising it.

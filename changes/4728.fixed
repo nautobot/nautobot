@@ -1,1 +1,0 @@
-Fixed bug with JobResultFilterSet and ScheduledJobFilterSet using django_filters.DateTimeFilter for only exact date matches.

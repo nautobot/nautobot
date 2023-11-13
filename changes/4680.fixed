@@ -1,1 +1,0 @@
-Fixed the bug that prevented the user from adding tags without member objects as DynamicGroup `tags` filters.
