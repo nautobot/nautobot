@@ -1,0 +1,1 @@
+Updated alpha-UI dependency `axios` to version 1.6.0 due to CVE-2023-45857.
