@@ -53,7 +53,7 @@ Nautobot 1.6.0 formally adds support for installation and operation under Python
 
 ### Changed
 
-#### Additional HIDE_RESTRICTED_UI Effects for Unauthenticated Users ([#3646](https://github.com/nautobot/nautobot/issues/3646))
+#### Additional `HIDE_RESTRICTED_UI` Effects for Unauthenticated Users ([#3646](https://github.com/nautobot/nautobot/issues/3646))
 
 When `HIDE_RESTRICTED_UI` is enabled, unauthenticated users are no longer able to view the OpenAPI (Swagger) UI, the GraphiQL UI, or any configured top/bottom banners. Additionally, the page footer on the login page will not display the Nautobot server hostname in this case.
 
@@ -72,6 +72,33 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.5 (2023-11-13)
+
+### Added
+
+- [#4649](https://github.com/nautobot/nautobot/issues/4649) - Added `device_redundancy_groups` field to `ConfigContextSerializer`.
+
+### Changed
+
+- [#4638](https://github.com/nautobot/nautobot/issues/4638) - Renamed `ltm/1.6` branch to `ltm-1.6`.
+
+### Fixed
+
+- [#4645](https://github.com/nautobot/nautobot/issues/4645) - Fixed a bug where the `failover-strategy` field was required for the device redundancy group api.
+- [#4686](https://github.com/nautobot/nautobot/issues/4686) - Fixed incorrect tagging of 1.6.x Docker `nautobot-dev` images as `latest`.
+- [#4718](https://github.com/nautobot/nautobot/issues/4718) - Fixed bug in which a device's device redundancy group priority was not being set to `None` when the device redundancy group was deleted.
+- [#4728](https://github.com/nautobot/nautobot/issues/4728) - Fixed bug with JobResultFilterSet and ScheduledJobFilterSet using `django_filters.DateTimeFilter` for only exact date matches.
+- [#4733](https://github.com/nautobot/nautobot/issues/4733) - Fixed the bug that prevents retrieval of IPAddress using its address args if it was created using `host` and `prefix_length`.
+
+### Housekeeping
+
+- [#4700](https://github.com/nautobot/nautobot/issues/4700) - Removed incorrect `NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` environment variable reference from settings documentation.
+
+### Security
+
+- [#4671](https://github.com/nautobot/nautobot/issues/4671) - Updated `urllib3` to 2.0.7 due to CVE-2023-45803. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4748](https://github.com/nautobot/nautobot/issues/4748) - Updated `Django` minimum version to 3.2.23 to protect against CVE-2023-46695.
+
 ## v1.6.4 (2023-10-17)
 
 ### Added
