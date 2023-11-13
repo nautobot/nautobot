@@ -380,8 +380,6 @@ A later release of Nautobot will address the underlying performance issues, and 
 
 Default: `0` (disabled)
 
-Environment Variable: `NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT`
-
 The number of seconds to cache the member list of dynamic groups. With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves), users will encounter a performance penalty using or accessing the membership lists. This setting allows users to accept a cached list for common use cases (particularly in the UI) that expires after the configured time. Set this to `0` to disable caching.
 
 ---
