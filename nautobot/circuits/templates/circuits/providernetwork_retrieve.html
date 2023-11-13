@@ -51,7 +51,7 @@
             <div class="panel-heading">
                 <strong>Circuits</strong>
             </div>
-            {% include 'inc/table.html' with table=circuits_table %}
+            {% include 'inc/table.html' with detail_view=True table=circuits_table %}
         </div>
         {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
 {% endblock content_full_width_page %}

@@ -1,6 +1,6 @@
 {% load django_tables2 %}
 
-<div class="panel panel-default">
+{% if not detail_view %}<div class="panel panel-default">{% endif %}
     <table{% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
         {% if table.show_header %}
             <thead>
@@ -40,4 +40,4 @@
             </tfoot>
         {% endif %}
     </table>
-</div>
+{% if not detail_view %}</div>{% endif %}

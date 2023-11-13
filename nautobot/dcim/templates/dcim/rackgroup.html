@@ -35,7 +35,7 @@
             <div class="panel-heading">
                 <strong>Racks</strong>
             </div>
-            {% include 'inc/table.html' with table=rack_table %}
+            {% include 'inc/table.html' with detail_view=True table=rack_table %}
             {% if perms.dcim.add_rack %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'dcim:rack_add' %}?rack_group={{ object.pk }}" class="btn btn-xs btn-primary">
