@@ -1,1 +1,2 @@
 Refined CSS to Nautobot Bootstrap UI.
+Added support for `BRANDING_FILEPATHS["header_bullet"]` to customize the view header appearance.
