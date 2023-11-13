@@ -166,3 +166,26 @@ html[data-theme="dark"] .filter-container .filter-selection .filter-selection-ch
   background-color: rgb(185, 185, 185);                 /* Background color of dynamic filters selected across most pages, inner selection box */
   border: 1px solid rgb(170, 170, 170);                 /* Border color of dynamic filters selected across most pages, inner selection box */
 }
+
+
+/* Buttons */
+html[data-theme="dark"] .btn-default {
+    background-color: rgba(0,0,0,0) !important;
+}
+
+
+/* List View Table and Tables in Detail Views */
+html[data-theme="dark"] .table-responsive>table>tbody>tr,
+html[data-theme="dark"] .table-headings>tbody>tr {
+    background: #dadada;
+}
+
+html[data-theme="dark"] .table-responsive>table>tbody>tr:hover,
+html[data-theme="dark"] .table-headings>tbody>tr:hover {
+    background: #d5d5d5 !important;
+}
+
+html[data-theme="dark"] .table-responsive>table>tbody>tr>td,
+html[data-theme="dark"] .table-headings>tbody>tr {
+    border-top: 1px solid #c3c3c3;
+}
