@@ -376,6 +376,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 ### Security
 
 - [#4748](https://github.com/nautobot/nautobot/issues/4748) - Updated `Django` minimum version to 3.2.23 to protect against CVE-2023-46695.
+- [#4782](https://github.com/nautobot/nautobot/issues/4782) - Updated alpha-UI dependency `axios` to version 1.6.0 due to CVE-2023-45857.
 
 ### Added
 
@@ -404,6 +405,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 - [#4726](https://github.com/nautobot/nautobot/issues/4726) - Fixed the bug caused by Tenant Edit View template accessing `group` instead of `tenant_group`.
 - [#4728](https://github.com/nautobot/nautobot/issues/4728) - Fixed bug with JobResultFilterSet and ScheduledJobFilterSet using `django_filters.DateTimeFilter` for only exact date matches.
 - [#4751](https://github.com/nautobot/nautobot/issues/4751) - Fixed a bug with `BaseModel.get_absolute_url` returning an AttributeError instead of raising it.
+- [#4779](https://github.com/nautobot/nautobot/issues/4779) - Fixed an error when syncing a git repo without a worker running.
 
 ### Documentation
 
