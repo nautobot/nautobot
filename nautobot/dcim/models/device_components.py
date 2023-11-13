@@ -437,6 +437,7 @@ class BaseInterface(RelationshipModel):
     mtu = models.PositiveIntegerField(
         blank=True,
         null=True,
+        # 3.0 TODO: 65536 != constants.INTERFACE_MTU_MAX... need to reconcile this
         validators=[MinValueValidator(1), MaxValueValidator(65536)],
         verbose_name="MTU",
     )
