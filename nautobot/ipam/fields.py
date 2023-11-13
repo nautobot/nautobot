@@ -23,6 +23,13 @@ class VarbinaryIPField(models.BinaryField):
         # Or 'varbinary' for everyone else.
         return "varbinary(16)"
 
+    def get_default(self):
+        value = super().get_default()
+        # Prevent None or "" values from being represented as b''
+        if value in self.empty_values:
+            return None
+        return value
+
     def value_to_string(self, obj):
         """IPField is serialized as str(IPAddress())"""
         value = self.value_from_object(obj)

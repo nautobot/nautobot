@@ -3,7 +3,7 @@ from unittest import skipIf
 import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import connection
+from django.db import IntegrityError, connection
 from django.test import TestCase, override_settings
 
 from nautobot.dcim.models import Device, DeviceRole, DeviceType, Interface, Location, LocationType, Manufacturer, Site
@@ -381,6 +381,23 @@ class TestPrefix(TestCase):
 
 
 class TestIPAddress(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.status = Status.objects.get_for_model(IPAddress).first()
+
+    def test_create_and_get_ipaddress_using_host_and_prefix_length(self):
+        """Assert bug https://github.com/nautobot/nautobot/issues/4733 Unable to retrieve IPAddress using `address`
+        args if it was created using host and prefix_length is resolved"""
+        ipaddress = IPAddress.objects.create(host="10.35.1.251", prefix_length=32, status=self.status)
+        self.assertTrue(IPAddress.objects.filter(address=str(ipaddress)).exists())
+
+    def test_varbinary_ip_fields_with_empty_values_do_not_violate_not_null_constrains(self):
+        # Assert that an error is triggered when the host is not provided.
+        # Initially, VarbinaryIPField fields with None values are stored as the binary representation of b'',
+        # thereby bypassing the Not Null Constraint check.
+        with self.assertRaises(IntegrityError):
+            IPAddress.objects.create(prefix_length=32, status=self.status)
+
     def test_get_duplicates(self):
         ips = (
             IPAddress.objects.create(address=netaddr.IPNetwork("192.0.2.1/24")),
