@@ -845,6 +845,7 @@ BRANDING_FILEPATHS = {
     "header_bullet": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
     ),  # bullet image used for various view headers
+    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
 }
 
 # Title to use in place of "Nautobot"

@@ -17,7 +17,7 @@
 
 {% block content %}
     {% registry %}
-    {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+    {% if request.user.is_authenticated %}
         {% include 'search_form.html' %}
     {% endif %}
     <div class="row">
