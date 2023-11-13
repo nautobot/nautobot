@@ -371,6 +371,58 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.4 (2023-11-13)
+
+### Security
+
+- [#4748](https://github.com/nautobot/nautobot/issues/4748) - Updated `Django` minimum version to 3.2.23 to protect against CVE-2023-46695.
+
+### Added
+
+- [#4349](https://github.com/nautobot/nautobot/issues/4349) - Added Note List View.
+- [#4704](https://github.com/nautobot/nautobot/issues/4704) - Added missing Rack table to Role Detail View.
+- [#4709](https://github.com/nautobot/nautobot/issues/4709) - Added form field to allow assignment of IP addresses when creating a new Interface.
+
+### Changed
+
+- [#4709](https://github.com/nautobot/nautobot/issues/4709) - Changed order of fields displayed when editing an Interface to be the same as when creating a new Interface.
+
+### Fixed
+
+- [#3990](https://github.com/nautobot/nautobot/issues/3990) - Fixed the issue preventing associated Note objects from being deleted when the assigned object is deleted.
+- [#4626](https://github.com/nautobot/nautobot/issues/4626) - Fixed incorrect "Prefixes" link from VRF detail view.
+- [#4675](https://github.com/nautobot/nautobot/issues/4675) - Fixed the issue where the 500 error page does not support dark mode.
+- [#4680](https://github.com/nautobot/nautobot/issues/4680) - Fixed the bug that prevented the user from adding tags without member objects as DynamicGroup `tags` filters.
+- [#4681](https://github.com/nautobot/nautobot/issues/4681) - Fixed NAPALM device view functions assuming 'Active' as the correct status.
+- [#4684](https://github.com/nautobot/nautobot/issues/4684) - Fixed InterfaceRedundancyGroup.status to no longer be nullable.
+- [#4684](https://github.com/nautobot/nautobot/issues/4684) - Fixed InterfaceRedundancyGroupAssociation.created to be a DateTimeField.
+- [#4685](https://github.com/nautobot/nautobot/issues/4685) - Fixed invalid link to IPAddress in Interface Detail View.
+- [#4704](https://github.com/nautobot/nautobot/issues/4704) - Fixed a display issue with table pagination controls floating over other UI elements.
+- [#4704](https://github.com/nautobot/nautobot/issues/4704) - Fixed Role detail view displaying tables for content types that aren't in the Role's allowed content types.
+- [#4709](https://github.com/nautobot/nautobot/issues/4709) - Fixed incorrect (missing) filtering of available VRFs by parent Device when editing an Interface in the UI.
+- [#4718](https://github.com/nautobot/nautobot/issues/4718) - Fixed bug in which a device's device redundancy group priority was not being set to `None` when the device redundancy group was deleted.
+- [#4726](https://github.com/nautobot/nautobot/issues/4726) - Fixed the bug caused by Tenant Edit View template accessing `group` instead of `tenant_group`.
+- [#4728](https://github.com/nautobot/nautobot/issues/4728) - Fixed bug with JobResultFilterSet and ScheduledJobFilterSet using `django_filters.DateTimeFilter` for only exact date matches.
+- [#4751](https://github.com/nautobot/nautobot/issues/4751) - Fixed a bug with `BaseModel.get_absolute_url` returning an AttributeError instead of raising it.
+
+### Documentation
+
+- [#3927](https://github.com/nautobot/nautobot/issues/3927) - Fixed documentation for creating databases on PostgreSQL version 15.
+- [#4622](https://github.com/nautobot/nautobot/issues/4622) - Fixed docs incorrectly referencing Nautobot 1.5 as the LTM release for 1.x.
+- [#4642](https://github.com/nautobot/nautobot/issues/4642) - Added `documentation` category to release-notes.
+- [#4704](https://github.com/nautobot/nautobot/issues/4704) - Fixed a broken link in CONTRIBUTING.md to point to the correct contributing guide.
+- [#4713](https://github.com/nautobot/nautobot/issues/4713) - Fixed documentation regarding API endpoint to use for running saved GraphQL queries.
+- [#4714](https://github.com/nautobot/nautobot/issues/4714) - Added documentation detailing rack power utilization calculation.
+- [#4720](https://github.com/nautobot/nautobot/issues/4720) - Added redeployment demo environment step to release-checklist.md.
+- [#4767](https://github.com/nautobot/nautobot/issues/4767) - Updated Job and App Developer docs to import from the `nautobot.apps` module throughout.
+
+### Housekeeping
+
+- [#4638](https://github.com/nautobot/nautobot/issues/4638) - Updated Apps upstream testing CI to use the correct branch pairings post-2.0.
+- [#4686](https://github.com/nautobot/nautobot/issues/4686) - Fixed incorrect tagging of 1.6.x Docker `nautobot-dev` images as `latest`.
+- [#4700](https://github.com/nautobot/nautobot/issues/4700) - Removed incorrect `NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` environment variable reference from settings documentation.
+- [#4709](https://github.com/nautobot/nautobot/issues/4709) - Replaced a number of `ModelChoiceField` in DCIM forms with more appropriate `DynamicModelChoiceField`.
+
 ## v2.0.3 (2023-10-23)
 
 ### Security

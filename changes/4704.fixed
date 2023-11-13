@@ -1,2 +1,0 @@
-Fixed a display issue with table pagination controls floating over other UI elements.
-Fixed Role detail view displaying tables for content types that aren't in the Role's allowed content types.
