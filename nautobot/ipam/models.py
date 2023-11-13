@@ -859,6 +859,10 @@ class IPAddress(PrimaryModel, StatusModel):
     def __str__(self):
         return str(self.address)
 
+    @staticmethod
+    def get_broadcast(address):
+        return address.broadcast if address.broadcast else address[-1]
+
     def _deconstruct_address(self, address):
         if address:
             if isinstance(address, str):
@@ -871,7 +875,7 @@ class IPAddress(PrimaryModel, StatusModel):
             #    We store this address as both the host and the "broadcast".
             # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
             # of addresses and prefixes, not for packet forwarding. :-)
-            broadcast = address.broadcast if address.broadcast else address[-1]
+            broadcast = self.get_broadcast(address)
             self.host = str(address.ip)
             self.broadcast = str(broadcast)
             self.prefix_length = address.prefixlen
@@ -943,6 +947,11 @@ class IPAddress(PrimaryModel, StatusModel):
 
         # Force dns_name to lowercase
         self.dns_name = self.dns_name.lower()
+
+    def save(self, *args, **kwargs):
+        if self.address and not self.broadcast:
+            self.broadcast = self.get_broadcast(self.address)
+        super().save(*args, **kwargs)
 
     def to_objectchange(self, action, related_object=None, **kwargs):
         # Annotate the assigned object, if any
