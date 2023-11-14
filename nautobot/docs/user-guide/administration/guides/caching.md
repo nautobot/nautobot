@@ -1,10 +1,10 @@
 # Caching
 
-A fundamental trade-off in dynamic websites like Nautobot is that, well, they’re dynamic. Each time a user requests a page, the Web server makes all sorts of calculations – from database queries to template rendering to business logic – to create the page that your site’s visitor sees. This is a lot more expensive, from a processing-overhead perspective, than your standard read-a-file-off-the-filesystem server arrangement.
+A fundamental trade-off in dynamic websites like Nautobot is that, well, they're dynamic. Each time a user requests a page, the Web server makes all sorts of calculations – from database queries to template rendering to business logic – to create the page that your site's visitor sees. This is a lot more expensive, from a processing-overhead perspective, than your standard read-a-file-off-the-filesystem server arrangement.
 
-That’s where caching comes in.
+That's where caching comes in.
 
-To cache something is to save the result of an expensive calculation so that you don’t have to perform the calculation next time.
+To cache something is to save the result of an expensive calculation so that you don't have to perform the calculation next time.
 
 Nautobot makes extensive use of caching; this is not a simple topic but it's a useful one for a Nautobot administrator to understand, so read on if you please.
 
