@@ -24,12 +24,12 @@ packages = [
     {include = "nautobot"}
 ]
 include = [
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "LICENSE.txt",
-    "NOTICE",
-    # Poetry by default will exclude these files as they are in .gitignore
+    # Rendered documentation - Poetry by default would exclude these files as they are in .gitignore
     "nautobot/project-static/docs/**/*",
+]
+exclude = [
+    # Source code of the documentation doesn't need to be included since we package the rendered docs
+    "nautobot/docs/**/*",
 ]
 
 [tool.poetry.dependencies]
@@ -176,7 +176,7 @@ watchdog = "~3.0.0"
 # Helper for parsing docstrings
 griffe = "~0.31.0"
 # Rendering docs to HTML
-mkdocs = "~1.4.3"
+mkdocs = "~1.5.3"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
 # Allow Markdown files to include other files
