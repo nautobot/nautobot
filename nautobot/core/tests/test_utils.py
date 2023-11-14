@@ -469,16 +469,19 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
                 self.assertIs(type(form_field), forms.DynamicModelMultipleChoiceField)
 
-        with self.subTest("Test NullBooleanField"):
             location_fields = ["has_circuit_terminations", "has_devices"]
             for field_name in location_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
-                self.assertIs(type(form_field), django_forms.NullBooleanField)
+                with self.subTest("Test NullBooleanField", model=dcim_models.Location, field_name=field_name):
+                    form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
+                    self.assertIs(type(form_field), django_forms.NullBooleanField)
+                    self.assertIs(type(form_field.widget), forms.StaticSelect2)
 
-            device_fields = ["has_console_ports", "has_interfaces"]
+            device_fields = ["has_console_ports", "has_interfaces", "local_config_context_data"]
             for field_name in device_fields:
-                form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIs(type(form_field), django_forms.NullBooleanField)
+                with self.subTest("Test NullBooleanField", model=dcim_models.Device, field_name=field_name):
+                    form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
+                    self.assertIs(type(form_field), django_forms.NullBooleanField)
+                    self.assertIs(type(form_field.widget), forms.StaticSelect2)
 
         with self.subTest("Test MultipleChoiceField"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "face")
