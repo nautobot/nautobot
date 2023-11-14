@@ -84,6 +84,8 @@ This defines custom content to be displayed on the login page above the login fo
 
 ## BRANDING_FILEPATHS
 
++++ 1.2.0
+
 Default:
 
 ```python
@@ -95,6 +97,8 @@ Default:
     "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
     "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
     "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
+    "header_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None),  # bullet image used for various view headers
+    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None)   # bullet image used for nav menu headers
 }
 ```
 
@@ -109,6 +113,12 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_180`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_192`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
+
++++ 2.1.0
+    <!-- markdownlint-disable MD037 -->
+    * `NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET`
+    * `NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET`
+    <!-- markdownlint-enable MD037 -->
 
 If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
 
@@ -128,6 +138,8 @@ Defines the prefix of the filename when exporting to CSV/YAML or export template
 
 ## BRANDING_TITLE
 
++++ 1.2.0
+
 Default: `"Nautobot"`
 
 Environment Variable: `NAUTOBOT_BRANDING_TITLE`
@@ -137,6 +149,8 @@ The defines the custom branding title that should be used in place of "Nautobot"
 ---
 
 ## BRANDING_URLS
+
++++ 1.2.0
 
 Default:
 

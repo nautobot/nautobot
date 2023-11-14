@@ -1097,12 +1097,12 @@ textarea {
   line-height: inherit;
 }
 a {
-  color: #007dff;
+  color: #005EBF;
   text-decoration: none;
 }
 a:hover,
 a:focus {
-  color: #007dff;
+  color: #005EBF;
   text-decoration: underline;
 }
 a:focus {
@@ -2361,8 +2361,8 @@ table th[class*="col-"] {
   float: none;
 }
 caption {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 7px;
+  padding-bottom: 7px;
   color: #6f6f6f;
   text-align: left;
 }
@@ -2380,7 +2380,7 @@ th {
 .table > thead > tr > td,
 .table > tbody > tr > td,
 .table > tfoot > tr > td {
-  padding: 10px;
+  padding: 7px;
   line-height: 1.71428572;
   vertical-align: top;
   border-top: 1px solid #d8d8d8;
@@ -3477,7 +3477,7 @@ fieldset[disabled] .btn-danger.focus {
 }
 .btn-link {
   font-weight: 400;
-  color: #007dff;
+  color: #005EBF;
   border-radius: 0;
 }
 .btn-link,
@@ -3497,7 +3497,7 @@ fieldset[disabled] .btn-link {
 }
 .btn-link:hover,
 .btn-link:focus {
-  color: #007dff;
+  color: #005EBF;
   text-decoration: underline;
   background-color: transparent;
 }
@@ -4079,7 +4079,7 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .nav .open > a:hover,
 .nav .open > a:focus {
   background-color: rgba(0, 125, 255, 0.1);
-  border-color: #007dff;
+  border-color: #005EBF;
 }
 .nav .nav-divider {
   height: 1px;
@@ -4995,7 +4995,7 @@ a.label:focus {
   text-align: center;
   white-space: nowrap;
   vertical-align: middle;
-  background-color: #007dff;
+  background-color: #005EBF;
   border-radius: 10px;
 }
 .badge:empty {
@@ -5019,7 +5019,7 @@ a.badge:focus {
 .list-group-item.active > .badge,
 .nav-pills > .active > a > .badge {
   color: #ffffff;
-  background-color: #007dff;
+  background-color: #005EBF;
 }
 .list-group-item > .badge {
   float: right;
@@ -5093,7 +5093,7 @@ a.badge:focus {
 a.thumbnail:hover,
 a.thumbnail:focus,
 a.thumbnail.active {
-  border-color: #007dff;
+  border-color: #005EBF;
 }
 .thumbnail .caption {
   padding: 0;
@@ -5380,17 +5380,17 @@ a.thumbnail.active {
 }
 a.list-group-item,
 button.list-group-item {
-  color: #007dff;
+  color: #005EBF;
 }
 a.list-group-item .list-group-item-heading,
 button.list-group-item .list-group-item-heading {
-  color: #007dff;
+  color: #005EBF;
 }
 a.list-group-item:hover,
 button.list-group-item:hover,
 a.list-group-item:focus,
 button.list-group-item:focus {
-  color: #007dff;
+  color: #005EBF;
   text-decoration: none;
   background-color: rgba(0, 125, 255, 0.1);
 }
