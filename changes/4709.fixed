@@ -1,1 +1,0 @@
-Fixed incorrect (missing) filtering of available VRFs by parent Device when editing an Interface in the UI.

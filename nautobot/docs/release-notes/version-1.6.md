@@ -53,7 +53,7 @@ Nautobot 1.6.0 formally adds support for installation and operation under Python
 
 ### Changed
 
-#### Additional HIDE_RESTRICTED_UI Effects for Unauthenticated Users ([#3646](https://github.com/nautobot/nautobot/issues/3646))
+#### Additional `HIDE_RESTRICTED_UI` Effects for Unauthenticated Users ([#3646](https://github.com/nautobot/nautobot/issues/3646))
 
 When `HIDE_RESTRICTED_UI` is enabled, unauthenticated users are no longer able to view the OpenAPI (Swagger) UI, the GraphiQL UI, or any configured top/bottom banners. Additionally, the page footer on the login page will not display the Nautobot server hostname in this case.
 
@@ -72,12 +72,77 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.5 (2023-11-13)
+
+### Security
+
+- [#4671](https://github.com/nautobot/nautobot/issues/4671) - Updated `urllib3` to 2.0.7 due to CVE-2023-45803. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4748](https://github.com/nautobot/nautobot/issues/4748) - Updated `Django` minimum version to 3.2.23 to protect against CVE-2023-46695.
+
+### Added
+
+- [#4649](https://github.com/nautobot/nautobot/issues/4649) - Added `device_redundancy_groups` field to `ConfigContextSerializer`.
+
+### Fixed
+
+- [#4645](https://github.com/nautobot/nautobot/issues/4645) - Fixed a bug where the `failover-strategy` field was required for the device redundancy group API.
+- [#4686](https://github.com/nautobot/nautobot/issues/4686) - Fixed incorrect tagging of 1.6.x Docker `nautobot-dev` images as `latest`.
+- [#4718](https://github.com/nautobot/nautobot/issues/4718) - Fixed bug in which a device's device redundancy group priority was not being set to `None` when the device redundancy group was deleted.
+- [#4728](https://github.com/nautobot/nautobot/issues/4728) - Fixed bug with JobResultFilterSet and ScheduledJobFilterSet using `django_filters.DateTimeFilter` for only exact date matches.
+- [#4733](https://github.com/nautobot/nautobot/issues/4733) - Fixed the bug that prevents retrieval of IPAddress using its address args if it was created using `host` and `prefix_length`.
+
+### Documentation
+
+- [#4700](https://github.com/nautobot/nautobot/issues/4700) - Removed incorrect `NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` environment variable reference from settings documentation.
+
+### Housekeeping
+
+- [#4638](https://github.com/nautobot/nautobot/issues/4638) - Renamed `ltm/1.6` branch to `ltm-1.6`.
+
+## v1.6.4 (2023-10-17)
+
+### Added
+
+- [#4361](https://github.com/nautobot/nautobot/issues/4361) - Added `SUPPORT_MESSAGE` configuration setting.
+- [#4573](https://github.com/nautobot/nautobot/issues/4573) - Added caching for `display` property of `Location` and `LocationType`, mitigating duplicated SQL queries in the related API views.
+
+### Changed
+
+- [#4313](https://github.com/nautobot/nautobot/issues/4313) - Updated device search to include manufacturer name.
+
+### Removed
+
+- [#4595](https://github.com/nautobot/nautobot/issues/4595) - Removed `stable` tagging for container builds in LTM release workflow.
+
+### Housekeeping
+
+- [#4619](https://github.com/nautobot/nautobot/issues/4619) - Fixed broken links in Nautobot README.md.
+
+## v1.6.3 (2023-10-03)
+
+### Security
+
+- [#4446](https://github.com/nautobot/nautobot/issues/4446) - Updated `GitPython` to `3.1.36` to address `CVE-2023-41040`.
+
+### Added
+
+- [#3372](https://github.com/nautobot/nautobot/issues/3372) - Added ObjectPermission constraints check to `pre_migrate` management command.
+
+### Fixed
+
+- [#4396](https://github.com/nautobot/nautobot/issues/4396) - Fixed rack form silently dropping custom field values.
+
+### Housekeeping
+
+- [#4587](https://github.com/nautobot/nautobot/issues/4587) - Fixed `release.yml` and `pre-release.yml` workflow files to target `ci_integration.yml` in its own branch.
+- [#4587](https://github.com/nautobot/nautobot/issues/4587) - Enforced changelog requirement in `ci_pullrequest.yml` for `ltm/1.6`.
+
 ## v1.6.2 (2023-09-01)
 
 ### Added
 
 - [#3913](https://github.com/nautobot/nautobot/issues/3913) - Added `url` field to GraphQL objects.
-- [#4316](https://github.com/nautobot/nautobot/issues/4316) - Added management command "nautobot-server populate_platform_network_driver" to help update the `Platform.network_driver` field in bulk.
+- [#4316](https://github.com/nautobot/nautobot/issues/4316) - Added management command `nautobot-server populate_platform_network_driver` to help update the `Platform.network_driver` field in bulk.
 
 ### Changed
 
