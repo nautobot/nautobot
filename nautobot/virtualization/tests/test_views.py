@@ -315,7 +315,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cf.content_types.set([obj_type])
 
         cls.form_data = {
-            "virtual_machine": virtualmachines[1].pk,
+            "virtual_machine": virtualmachines[0].pk,
             "name": "Interface X",
             "status": status.pk,
             "enabled": False,

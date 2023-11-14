@@ -1948,6 +1948,22 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertEqual(instance.type, InterfaceTypeChoices.TYPE_VIRTUAL)
         self.assertEqual(instance.parent_interface, self.lag_interface)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_valid_ipaddress_link_of_ipaddress_table_in_interface_detail(self):
+        """Assert bug https://github.com/nautobot/nautobot/issues/4685 Invalid link in IPAddress Table in an
+        Interface Detail View"""
+        interface = Interface.objects.first()
+        ipaddress = IPAddress.objects.first()
+        interface.ip_addresses.add(ipaddress)
+
+        self.add_permissions("dcim.view_interface", "ipam.view_ipaddress")
+        invalid_ipaddress_link = reverse("ipam:ipaddress_edit", args=(ipaddress.pk,))
+        valid_ipaddress_link = ipaddress.get_absolute_url()
+        response = self.client.get(interface.get_absolute_url() + "?tab=main")
+        response_content = response.content.decode(response.charset)
+        self.assertIn(valid_ipaddress_link, response_content)
+        self.assertNotIn(invalid_ipaddress_link, response_content)
+
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort

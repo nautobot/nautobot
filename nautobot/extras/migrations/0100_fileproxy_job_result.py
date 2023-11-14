@@ -7,7 +7,7 @@ import nautobot.extras.models.models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0098_rename_data_jobresult_result"),
+        ("extras", "0099_remove_dangling_note_objects"),
     ]
 
     operations = [

@@ -6,8 +6,7 @@ By default, for each app, Nautobot looks for an iterable named `jobs` within a `
 
 ```python
 # jobs.py
-from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 
 
 class CreateDevices(Job):

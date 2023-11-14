@@ -12,7 +12,7 @@ import uuid
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0099_fileproxy_job_result"),
+        ("extras", "0100_fileproxy_job_result"),
     ]
 
     operations = [
