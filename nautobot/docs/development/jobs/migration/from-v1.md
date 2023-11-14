@@ -83,8 +83,8 @@ Jobs no longer run in a single atomic [database transaction](https://docs.django
 !!! example
     ```py
     from django.db import transaction
+    from nautobot.apps.jobs import Job, ObjectVar
     from nautobot.dcim import models
-    from nautobot.extras.jobs import Job, ObjectVar
 
     class UpdateDeviceTypeHeightJob(Job):
         device_type = ObjectVar(model=models.DeviceType)
@@ -110,12 +110,11 @@ The `read_only` Job field no longer forces an automatic database rollback at the
 
 ### Job Registration
 
-All Jobs must be registered in the Celery task registry to be available in Nautobot. This must be accomplished by calling `nautobot.core.celery.register_jobs(*job_classes)` at the top level of a Job module so that it is registered when the module is imported. The `register_jobs` method accepts one or more job classes as arguments.
+All Jobs must be registered in the Celery task registry to be available in Nautobot. This must be accomplished by calling `nautobot.apps.jobs.register_jobs(*job_classes)` at the top level of a Job module so that it is registered when the module is imported. The `register_jobs` method accepts one or more job classes as arguments.
 
 !!! example
     ```py
-    from nautobot.core.celery import register_jobs
-    from nautobot.extras.jobs import Job
+    from nautobot.apps.jobs import Job, register_jobs
 
     class MyJob(Job):
         def run(self):

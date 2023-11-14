@@ -22,6 +22,7 @@ from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
+from nautobot.extras import querysets as extras_querysets
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -560,12 +561,29 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission(self):
             instance = self.get_deletable_object()
+            instance_note_pk_list = []
+            assigned_object_type = ContentType.objects.get_for_model(self.model)
+            if hasattr(self.model, "notes") and isinstance(instance.notes, extras_querysets.NotesQuerySet):
+                notes = (
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 1"
+                    ),
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 2"
+                    ),
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 3"
+                    ),
+                )
+                for note in notes:
+                    note.validated_save()
+                    instance_note_pk_list.append(note.pk)
 
             # Assign model-level permission
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(assigned_object_type)
 
             # Try GET with model-level permission
             self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), 200)
@@ -584,6 +602,18 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
+
+            if hasattr(self.model, "notes") and isinstance(instance.notes, extras_querysets.NotesQuerySet):
+                # Verify Notes deletion
+                with self.assertRaises(ObjectDoesNotExist):
+                    extras_models.Note.objects.get(assigned_object_id=instance.pk)
+
+                note_objectchanges = extras_models.ObjectChange.objects.filter(
+                    changed_object_id__in=instance_note_pk_list
+                )
+                self.assertEqual(note_objectchanges.count(), 3)
+                for object_change in note_objectchanges:
+                    self.assertEqual(object_change.action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission_and_xwwwformurlencoded(self):
