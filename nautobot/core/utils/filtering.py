@@ -150,11 +150,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )
     elif isinstance(field, (MultipleChoiceFilter, ChoiceFilter)) and "choices" in field.extra:
-        form_field_class = forms.ChoiceField
-        form_field_class.widget = StaticSelect2Multiple()
-        form_attr = {"choices": field.extra.get("choices")}
-
-        form_field = form_field_class(**form_attr)
+        form_field = forms.MultipleChoiceField(choices=field.extra.get("choices"), widget=StaticSelect2Multiple)
 
     form_field.required = False
     form_field.initial = None
