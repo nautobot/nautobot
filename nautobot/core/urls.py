@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls import include
 from django.urls import path
+from django.views.generic import TemplateView
 from django.views.static import serve
 
 from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, nautobot_metrics_view
@@ -46,6 +47,10 @@ urlpatterns = [
     path(r"health/", include("health_check.urls")),
     # FileProxy attachments download/get URLs used in admin views only
     path("files/", include("db_file_storage.urls")),
+    # Templated css file
+    path(
+        "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
+    ),
 ]
 
 
