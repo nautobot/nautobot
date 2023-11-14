@@ -1,0 +1,1 @@
+Reduced size of Nautobot `sdist` and `wheel` packages from 86 MB to 31 MB.
