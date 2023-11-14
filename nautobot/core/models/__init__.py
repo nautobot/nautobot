@@ -75,7 +75,7 @@ class BaseModel(models.Model):
                 except NoReverseMatch:
                     continue
 
-        return AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
+        raise AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type(cls):  # pylint: disable=no-self-argument

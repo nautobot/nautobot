@@ -22,17 +22,16 @@ Jobs may be installed in one of three ways:
 
 In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
-For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `extras.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
+For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `nautobot.apps.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
 +/- 2.0.0
-    All job classes must now be registered with `nautobot.core.celery.register_jobs` on module import. For plugins providing jobs, the `register_jobs` method must called from the plugin's `jobs.py` file/submodule at import time. The `register_jobs` method accepts one or more job classes as arguments.
+    All job classes must now be registered with `nautobot.apps.jobs.register_jobs` on module import. For plugins providing jobs, the `register_jobs` method must called from the plugin's `jobs.py` file/submodule at import time. The `register_jobs` method accepts one or more job classes as arguments.
 
 !!! warning
     Make sure you are *not* inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
 
 ```python
-from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 
 class CreateDevices(Job):
     ...
@@ -175,7 +174,7 @@ The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this
 
 ```python
 from celery.exceptions import SoftTimeLimitExceeded
-from nautobot.extras.jobs import Job
+from nautobot.apps.jobs import Job
 
 class ExampleJobWithSoftTimeLimit(Job):
     class Meta:
@@ -240,7 +239,7 @@ default [hard time limit](../../user-guide/administration/configuration/optional
 Unlike the `soft_time_limit` above, no exceptions are raised when a `time_limit` is exceeded. The task will just terminate silently:
 
 ```python
-from nautobot.extras.jobs import Job
+from nautobot.apps.jobs import Job
 
 class ExampleJobWithHardTimeLimit(Job):
     class Meta:
@@ -262,7 +261,7 @@ class ExampleJobWithHardTimeLimit(Job):
 Variables allow your job to accept user input via the Nautobot UI, but they are optional; if your job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your job, you *must* also implement the `run()` method, as it is the only entry point to your job that has visibility into the variable values provided by the user.
 
 ```python
-from nautobot.extras.jobs import Job, StringVar, IntegerVar, ObjectVar
+from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar
 
 class CreateDevices(Job):
     var1 = StringVar(...)
@@ -412,7 +411,7 @@ An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two a
 The `run()` method must be implemented. After the `self` argument, it should accept keyword arguments for any variables defined on the job:
 
 ```python
-from nautobot.extras.jobs import Job, StringVar, IntegerVar, ObjectVar
+from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar
 
 class CreateDevices(Job):
     var1 = StringVar(...)
@@ -446,9 +445,9 @@ An optional `grouping` and/or `object` may be provided in log messages by passin
 
 !!! example
     ```py
-    from nautobot.extras.jobs import BaseJob
+    from nautobot.apps.jobs import Job
 
-    class MyJob(BaseJob):
+    class MyJob(Job):
         def run(self):
             logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})
     ```
@@ -457,9 +456,9 @@ To skip writing a log entry to the database, set the `skip_db_logging` key in th
 
 !!! example
     ```py
-    from nautobot.extras.jobs import BaseJob
+    from nautobot.apps.jobs import Job
 
-    class MyJob(BaseJob):
+    class MyJob(Job):
         def run(self):
             logger.info("This job is running!", extra={"skip_db_logging": True})
     ```
@@ -499,7 +498,7 @@ To mark a job as failed, raise an exception from within the `run()` method. The 
 As an example, the following job will fail if the user does not put the word "Taco" in `var1`:
 
 ```python
-from nautobot.extras.jobs import Job, StringVar
+from nautobot.apps.jobs import Job, StringVar
 
 class MyJob(Job):
     var1 = StringVar(...)
@@ -536,23 +535,22 @@ These two methods will load data in YAML or JSON format, respectively, from file
 
 Jobs are Python code and can be tested as such, usually via [Django unit-test features](https://docs.djangoproject.com/en/stable/topics/testing/). That said, there are a few useful tricks specific to testing Jobs.
 
-While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job. Nautobot 1.3.3 introduced a few enhancements to make this simpler to do, but it's also quite possible to test in earlier releases with a bit more effort.
+While individual methods within your Job can and should be tested in isolation, you'll likely also want to test the entire execution of the Job.
 
-### Nautobot 1.3.3 and later
++++ 1.3.3
+    Entire Job execution testing was only introduced in 1.3.3 and newer.
+    However the import paths used in the examples requires 1.5.2 and newer.
 
-The simplest way to test the entire execution of Jobs from 1.3.3 on is via calling the `nautobot.core.testing.run_job_for_testing()` method, which is a helper wrapper around the `JobResult.enqueue_job` function used to execute a Job via Nautobot's Celery worker process.
+The simplest way to test the entire execution of Jobs is via calling the `nautobot.apps.testing.run_job_for_testing()` method, which is a helper wrapper around the `JobResult.enqueue_job` function used to execute a Job via Nautobot's Celery worker process.
 
-+/- 2.0.0
-    `run_job_for_testing` was moved from the `nautobot.utilities.testing` module to `nautobot.core.testing`.
-
-Because of the way `run_job_for_testing` and more specifically Celery tasks work, which is somewhat complex behind the scenes, you need to inherit from `nautobot.core.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
+Because of the way `run_job_for_testing` and more specifically Celery tasks work, which is somewhat complex behind the scenes, you need to inherit from `nautobot.apps.testing.TransactionTestCase` instead of `django.test.TestCase` (Refer to the [Django documentation](https://docs.djangoproject.com/en/stable/topics/testing/tools/#provided-test-case-classes) if you're interested in the differences between these classes - `TransactionTestCase` from Nautobot is a small wrapper around Django's `TransactionTestCase`).
 
 When using `TransactionTestCase` (whether from Django or from Nautobot) each tests runs on a completely empty database. Furthermore, Nautobot requires new jobs to be enabled before they can run. Therefore, we need to make sure the job is enabled before each run which `run_job_for_testing` handles for us.
 
-A simple example of a Job test case for 1.3.3 and forward might look like the following:
+A simple example of a Job test case might look like the following:
 
 ```python
-from nautobot.core.testing import run_job_for_testing, TransactionTestCase
+from nautobot.apps.testing import run_job_for_testing, TransactionTestCase
 from nautobot.extras.models import Job, JobLogEntry
 
 
@@ -611,9 +609,9 @@ These variables are presented as a web form to be completed by the user. Once su
 ```python
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar
 from nautobot.dcim.models import Location, LocationType, Device, Manufacturer, DeviceType
 from nautobot.extras.models import Status, Role
-from nautobot.extras.jobs import Job, StringVar, IntegerVar, ObjectVar
 
 
 class NewBranch(Job):
@@ -671,9 +669,9 @@ class NewBranch(Job):
 A job to perform various validation of Device data in Nautobot. As this job does not require any user input, it does not define any variables, nor does it implement a `run()` method.
 
 ```python
+from nautobot.apps.jobs import Job
 from nautobot.dcim.models import ConsolePort, Device, PowerPort
 from nautobot.extras.models import Status
-from nautobot.extras.jobs import Job
 
 
 class DeviceConnectionsReport(Job):
@@ -730,7 +728,7 @@ class DeviceConnectionsReport(Job):
 
 ## Job Button Receivers
 
-Job Buttons are only able to initiate a specific type of job called a **Job Button Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](#variables). Job Button Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobButtonReceiver` class only implements one method called `receive_job_button`.
+Job Buttons are only able to initiate a specific type of job called a **Job Button Receiver**. These are jobs that subclass the `nautobot.apps.jobs.JobButtonReceiver` class. Job Button Receivers are similar to normal jobs except they are hard coded to accept only `object_pk` and `object_model_name` [variables](#variables). Job Button Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobButtonReceiver` class only implements one method called `receive_job_button`.
 
 !!! note
     Job Button Receivers still need to be [enabled through the web UI](../../user-guide/platform-functionality/jobs/index.md#enabling-jobs-for-running) before they can be used just like other Jobs.
@@ -744,7 +742,7 @@ All `JobButtonReceiver` subclasses must implement a `receive_job_button()` metho
 ### Example Job Button Receiver
 
 ```py
-from nautobot.extras.jobs import JobButtonReceiver
+from nautobot.apps.jobs import JobButtonReceiver
 
 
 class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
@@ -761,8 +759,8 @@ class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
 Since Job Buttons can be associated to multiple object types, it would be trivial to create a Job that can change what it runs based on the object type.
 
 ```py
+from nautobot.apps.jobs import JobButtonReceiver
 from nautobot.dcim.models import Device, Location
-from nautobot.extras.jobs import JobButtonReceiver
 
 
 class ExampleComplexJobButtonReceiver(JobButtonReceiver):
@@ -799,7 +797,7 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
 
 ## Job Hook Receivers
 
-Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.extras.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_job_hook`.
+Job Hooks are only able to initiate a specific type of job called a **Job Hook Receiver**. These are jobs that subclass the `nautobot.apps.jobs.JobHookReceiver` class. Job hook receivers are similar to normal jobs except they are hard coded to accept only an `object_change` [variable](#variables). Job Hook Receivers are hidden from the jobs listing UI by default but otherwise function similarly to other jobs. The `JobHookReceiver` class only implements one method called `receive_job_hook`.
 
 !!! warning
     Requiring approval for execution of Job Hooks by setting the `Meta.approval_required` attribute to `True` on your `JobHookReceiver` subclass is not supported. The value of this attribute will be ignored. Support for requiring approval of Job Hooks will be added in a future release.
@@ -810,8 +808,8 @@ Job Hooks are only able to initiate a specific type of job called a **Job Hook R
 ### Example Job Hook Receiver
 
 ```py
+from nautobot.apps.jobs import JobHookReceiver
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.jobs import JobHookReceiver
 
 
 class ExampleJobHookReceiver(JobHookReceiver):

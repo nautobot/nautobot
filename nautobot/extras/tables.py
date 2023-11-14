@@ -788,6 +788,7 @@ class JobButtonTable(BaseTable):
 
 class NoteTable(BaseTable):
     actions = ButtonsColumn(Note)
+    created = tables.LinkColumn()
 
     class Meta(BaseTable.Meta):
         model = Note

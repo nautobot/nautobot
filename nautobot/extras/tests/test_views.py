@@ -53,7 +53,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import TaggableClassesQuery
+from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 
@@ -2368,8 +2368,33 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
             'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
             'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
+            'test_role5,25,ffffff,"virtualization.virtualmachine",A Role',
         )
 
         cls.bulk_edit_data = {
             "color": "000000",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_view_with_content_types(self):
+        """
+        Check that the expected panel headings are rendered and unexpected panel headings are not rendered
+        """
+        eligible_ct_model_classes = RoleModelsQuery().list_subclasses()
+        for instance in self._get_queryset().all():
+            response = self.client.get(instance.get_absolute_url())
+            response_body = extract_page_body(response.content.decode(response.charset))
+            role_content_types = instance.content_types.all()
+            for model_class in eligible_ct_model_classes:
+                verbose_name_plural = model_class._meta.verbose_name_plural
+                content_type = ContentType.objects.get_for_model(model_class)
+                result = " ".join(elem.capitalize() for elem in verbose_name_plural.split())
+                if result == "Ip Addresses":
+                    result = "IP Addresses"
+                elif result == "Vlans":
+                    result = "VLANs"
+                # Assert tables are correctly rendered
+                if content_type not in role_content_types:
+                    self.assertNotIn(f"<strong>{result}</strong>", response_body)
+                else:
+                    self.assertIn(f"<strong>{result}</strong>", response_body)
