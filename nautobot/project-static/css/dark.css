@@ -170,22 +170,22 @@ html[data-theme="dark"] .filter-container .filter-selection .filter-selection-ch
 
 /* Buttons */
 html[data-theme="dark"] .btn-default {
-    background-color: rgba(0,0,0,0) !important;
+    background-color: rgb(38, 38, 38) !important;
 }
 
 
 /* List View Table and Tables in Detail Views */
 html[data-theme="dark"] .table-responsive>table>tbody>tr,
 html[data-theme="dark"] .table-headings>tbody>tr {
-    background: #dadada;
+    background: rgb(218, 218, 218);
 }
 
 html[data-theme="dark"] .table-responsive>table>tbody>tr:hover,
 html[data-theme="dark"] .table-headings>tbody>tr:hover {
-    background: #d5d5d5 !important;
+    background: rgb(213, 213, 213) !important;
 }
 
 html[data-theme="dark"] .table-responsive>table>tbody>tr>td,
 html[data-theme="dark"] .table-headings>tbody>tr {
-    border-top: 1px solid #c3c3c3;
+    border-top: 1px solid rgb(195, 195, 195);
 }
