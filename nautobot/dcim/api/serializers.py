@@ -276,7 +276,7 @@ class RackSerializer(
         fields = "__all__"
         list_display_fields = ["name", "location", "rack_group", "status", "facility_id", "tenant", "role", "u_height"]
         # Omit the UniqueTogetherValidators that would be automatically added to validate (rack_group, facility_id) and (rack_group, name).
-        # This prevents facility_id and rack_group from being interpreted as a required field.
+        # This prevents facility_id and rack_group from being interpreted as required fields.
         detail_view_config = {
             "layout": [
                 {
