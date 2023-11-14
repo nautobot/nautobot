@@ -115,8 +115,10 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
 
 +++ 2.1.0
+    <!-- markdownlint-disable MD037 -->
     * `NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET`
     * `NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET`
+    <!-- markdownlint-enable MD037 -->
 
 If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
 
