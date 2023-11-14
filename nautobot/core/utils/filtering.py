@@ -156,8 +156,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         form_field = forms.MultipleChoiceField(choices=field.extra.get("choices"), widget=StaticSelect2Multiple)
 
     elif isinstance(field, BooleanFilter):
-        form_field_class = forms.NullBooleanField
-        form_field = form_field_class(widget=StaticSelect2(choices=BOOLEAN_CHOICES))
+        form_field = forms.ChoiceField(choices=BOOLEAN_CHOICES, widget=StaticSelect2)
 
     form_field.required = False
     form_field.initial = None
