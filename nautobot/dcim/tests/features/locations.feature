@@ -27,7 +27,7 @@ Feature: Locations
       | Geographic Region |
     When I make the following form entries:
       | name |
-      | city |
+      | City |
     And I submit the form
     Then a LocationType exists in Nautobot with the following properties:
       | name | parent              | nestable |
@@ -52,7 +52,7 @@ Feature: Locations
       | name              | parent            | nestable |
       | Geographic Region | None              | True     |
       | City              | Geographic Region | False    |
-      | Building          | Building          | False    |
+      | Building          | City              | False    |
     When I navigate to the "Add Location" view
     And I make the following form entries:
       | name          | location_type     | status |

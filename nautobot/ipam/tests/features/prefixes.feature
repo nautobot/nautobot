@@ -81,7 +81,7 @@ Feature: Prefixes
       | prefix        | namespace |
       | 10.0.96.0/22  | CORP      |
     When I make the following form entries:
-      | type         | type      | status |
+      | prefix       | type      | status |
       | 10.0.96.0/20 | Container | Active |
     And I submit the form
     Then a Prefix exists in Nautobot with the following properties:
