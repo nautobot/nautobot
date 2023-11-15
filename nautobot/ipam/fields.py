@@ -88,6 +88,10 @@ class VarbinaryIPField(models.BinaryField):
         defaults.update(kwargs)
         return super().formfield(*args, **defaults)
 
+    def get_default(self):
+        value = super().get_default()
+        # Prevent None or "" values from being represented as b''
+        return None if value in self.empty_values else value
 
 VarbinaryIPField.register_lookup(lookups.IExact)
 VarbinaryIPField.register_lookup(lookups.EndsWith)
