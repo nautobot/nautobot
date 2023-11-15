@@ -110,6 +110,11 @@ plugins:
             show_root_heading: true
             show_root_members_full_path: true
 
+not_in_nav: |
+  installation/centos.md
+  installation/ubuntu.md
+  installation/selinux-troubleshooting.md
+
 nav:
   - Overview: "index.md"
   - Documentation:
