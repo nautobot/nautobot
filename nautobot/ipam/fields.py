@@ -93,6 +93,7 @@ class VarbinaryIPField(models.BinaryField):
         # Prevent None or "" values from being represented as b''
         return None if value in self.empty_values else value
 
+
 VarbinaryIPField.register_lookup(lookups.IExact)
 VarbinaryIPField.register_lookup(lookups.EndsWith)
 VarbinaryIPField.register_lookup(lookups.IEndsWith)

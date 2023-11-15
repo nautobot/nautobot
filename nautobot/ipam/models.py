@@ -1121,7 +1121,9 @@ class IPAddress(PrimaryModel):
         if not self.dns_name.islower:
             self.dns_name = self.dns_name.lower()
 
-        self.parent = self._get_closest_parent()
+        # Host is required to get closest parent
+        if self.host:
+            self.parent = self._get_closest_parent()
         super().save(*args, **kwargs)
 
     @property
