@@ -167,13 +167,8 @@ def _handle_deleted_object(sender, instance, **kwargs):
         # Enqueue job hooks
         enqueue_job_hooks(objectchange)
 
-    # Enqueue webhooks
-    enqueue_webhooks(
-        instance,
-        change_context_state.get().get_user(),
-        change_context_state.get().change_id,
-        ObjectChangeActionChoices.ACTION_DELETE,
-    )
+        # Enqueue webhooks
+        enqueue_webhooks(objectchange)
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()

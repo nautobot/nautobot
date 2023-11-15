@@ -144,14 +144,15 @@ def web_request_context(
         request = RequestFactory().request(SERVER_NAME="web_request_context")
         request.user = user
     change_context = valid_contexts[context](request=request, context_detail=context_detail, change_id=change_id)
-    with change_logging(change_context):
-        yield request
-
-    # enqueue jobhooks and webhooks
-    for oc in (
-        ObjectChange.objects.filter(request_id=change_context.change_id)
-        .exclude(action=ObjectChangeActionChoices.ACTION_DELETE)
-        .iterator()
-    ):
-        enqueue_job_hooks(oc)
-        enqueue_webhooks(oc.changed_object, oc.user, oc.request_id, oc.action)
+    try:
+        with change_logging(change_context):
+            yield request
+    finally:
+        # enqueue jobhooks and webhooks
+        for object_change in (
+            ObjectChange.objects.filter(request_id=change_context.change_id)
+            .exclude(action=ObjectChangeActionChoices.ACTION_DELETE)
+            .iterator()
+        ):
+            enqueue_job_hooks(object_change)
+            enqueue_webhooks(object_change)

@@ -279,18 +279,18 @@ class WebhookTest(APITestCase):
             location = Location(name="Location 1", location_type=location_type, status=self.statuses[0])
             location.save()
 
-            mock_async.assert_called_once()
-            args = mock_async.call_args[1]["args"]
-            self.assertEqual(args[0], Webhook.objects.get(type_create=True).pk)
-            self.assertEqual(args[1]["name"], "Location 1")
-            self.assertEqual(args[2], "location")
-            self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_CREATE)
-            self.assertEqual(args[5], self.user.username)
-            self.assertEqual(args[6], request_id)
-            self.assertEqual(args[7]["prechange"], None)
-            self.assertEqual(args[7]["postchange"]["name"], "Location 1")
-            self.assertEqual(args[7]["differences"]["removed"], None)
-            self.assertEqual(args[7]["differences"]["added"]["name"], "Location 1")
+        mock_async.assert_called_once()
+        args = mock_async.call_args[1]["args"]
+        self.assertEqual(args[0], Webhook.objects.get(type_create=True).pk)
+        self.assertEqual(args[1]["name"], "Location 1")
+        self.assertEqual(args[2], "location")
+        self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_CREATE)
+        self.assertEqual(args[5], self.user.username)
+        self.assertEqual(args[6], request_id)
+        self.assertEqual(args[7]["prechange"], None)
+        self.assertEqual(args[7]["postchange"]["name"], "Location 1")
+        self.assertEqual(args[7]["differences"]["removed"], None)
+        self.assertEqual(args[7]["differences"]["added"]["name"], "Location 1")
 
     @patch("nautobot.extras.tasks.process_webhook.apply_async")
     def test_enqueue_webhooks_m2m_update(self, mock_async):
@@ -314,12 +314,12 @@ class WebhookTest(APITestCase):
         with web_request_context(self.user, change_id=request_id):
             location.tags.add(tag)
 
-            mock_async.assert_called_once()
-            args = mock_async.call_args[1]["args"]
-            self.assertEqual(args[0], Webhook.objects.get(type_update=True).pk)
-            self.assertEqual(args[1]["name"], "Location 1")
-            self.assertEqual(args[2], "location")
-            self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_UPDATE)
-            self.assertEqual(args[5], self.user.username)
-            self.assertEqual(args[6], request_id)
-            self.assertNotEqual(args[7], {})
+        mock_async.assert_called_once()
+        args = mock_async.call_args[1]["args"]
+        self.assertEqual(args[0], Webhook.objects.get(type_update=True).pk)
+        self.assertEqual(args[1]["name"], "Location 1")
+        self.assertEqual(args[2], "location")
+        self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(args[5], self.user.username)
+        self.assertEqual(args[6], request_id)
+        self.assertNotEqual(args[7], {})
