@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.test.client import RequestFactory
 
-from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.models import ObjectChange
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.webhooks import enqueue_webhooks
@@ -149,10 +149,6 @@ def web_request_context(
             yield request
     finally:
         # enqueue jobhooks and webhooks
-        for object_change in (
-            ObjectChange.objects.filter(request_id=change_context.change_id)
-            .exclude(action=ObjectChangeActionChoices.ACTION_DELETE)
-            .iterator()
-        ):
+        for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
             enqueue_job_hooks(object_change)
             enqueue_webhooks(object_change)

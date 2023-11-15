@@ -29,7 +29,6 @@ from nautobot.extras.models import (
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.extras.webhooks import enqueue_webhooks
 
 
 # thread safe change context state variable
@@ -138,8 +137,6 @@ def _handle_deleted_object(sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
-    from .jobs import enqueue_job_hooks  # avoid circular import
-
     if change_context_state.get() is None:
         return
 
@@ -163,12 +160,6 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
         # restore field cache
         instance._state.fields_cache = original_cache
-
-        # Enqueue job hooks
-        enqueue_job_hooks(objectchange)
-
-        # Enqueue webhooks
-        enqueue_webhooks(objectchange)
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()
