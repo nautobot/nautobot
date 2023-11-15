@@ -211,17 +211,14 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
     except TemplateDoesNotExist:
         return HttpResponseServerError("<h1>Server Error (500)</h1>", content_type="text/html")
     type_, error, _traceback = sys.exc_info()
+    context = {
+        "error": error,
+        "exception": str(type_),
+        "nautobot_version": settings.VERSION,
+        "python_version": platform.python_version(),
+    }
 
-    return HttpResponseServerError(
-        template.render(
-            {
-                "error": error,
-                "exception": str(type_),
-                "nautobot_version": settings.VERSION,
-                "python_version": platform.python_version(),
-            }
-        )
-    )
+    return HttpResponseServerError(template.render(context, request))
 
 
 def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):

@@ -123,6 +123,9 @@ App Model Serializers for any models that could have a Generic Foreign Key or a 
 
 After removing existing `NestedSerializers`, you can change the `fields` attribute in your serializers' `class Meta` to `__all__` and that will automatically include all the model's fields in the serializer, including related-model fields that would previously have required a reference to a `NestedSerializer`. If you want to exclude certain fields of the model, you can specify a list of fields you want to display in the `fields` attribute instead.
 
+!!! warning
+    Use caution around `fields = "__all__"` -- if your model has any fields that should _not_ be exposed in the REST API, you should avoid using `"__all__"` and instead use an explicit `fields` list to ensure that such fields are not exposed. In some cases, it may be appropriate to use `"__all__"` in combination with flags such as `write_only=True` on specific fields, but proceed with caution and examine the REST API data carefully to ensure that its contents are as expected.
+
 Include all model attributes:
 
 ```python

@@ -235,6 +235,20 @@ class JobTransactionTest(TransactionTestCase):
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
 
+    def test_job_fail_with_sanitization(self):
+        """
+        Job test with fail result that is sanitized.
+        """
+        module = "fail"
+        name = "TestFailWithSanitization"
+        job_result = create_job_result_and_run_job(module, name)
+        json_result = json.dumps(job_result.result)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertIn("(redacted)@github.com", json_result)
+        self.assertNotIn("abc123@github.com", json_result)
+        self.assertIn("(redacted)@github.com", job_result.traceback)
+        self.assertNotIn("abc123@github.com", job_result.traceback)
+
     def test_atomic_transaction_decorator_job_pass(self):
         """
         Job with @transaction.atomic decorator test with pass result.

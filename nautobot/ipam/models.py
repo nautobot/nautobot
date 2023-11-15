@@ -1047,6 +1047,7 @@ class IPAddress(PrimaryModel):
         # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
         if namespace is None and self.parent is not None:
             namespace = self.parent.namespace
+
         self._namespace = namespace
 
         self._deconstruct_address(address)
@@ -1065,13 +1066,17 @@ class IPAddress(PrimaryModel):
     natural_key_field_names = ["parent__namespace", "host"]
 
     def _get_closest_parent(self):
+        # TODO: Implement proper caching of `closest_parent` and ensure the cache is invalidated when
+        #  `_namespace` changes. Currently, `_get_closest_parent` is called twice, in the `clean` and `save` methods.
+        #  Caching would improve performance.
         try:
-            return (
+            closest_parent = (
                 Prefix.objects.filter(namespace=self._namespace)
                 # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
                 # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
                 .get_closest_parent(self.host, include_self=True)
             )
+            return closest_parent
         except Prefix.DoesNotExist as e:
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
 
@@ -1092,9 +1097,9 @@ class IPAddress(PrimaryModel):
         if self._namespace is None:
             raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
 
+        closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
         if self.parent:
-            closest_parent = self._get_closest_parent()
             if self.parent != closest_parent:
                 raise ValidationError(
                     {
@@ -1116,11 +1121,6 @@ class IPAddress(PrimaryModel):
         if not self.dns_name.islower:
             self.dns_name = self.dns_name.lower()
 
-        # validated_save is not always called, particularly in a test environment;
-        # If validated_save is used in creation with an invalid parent specified, the clean method will throw an Exception;
-        # however, if validated_save is not used and an invalid parent is specified, provided parent will be silently discarded.
-        # TODO(timizuo): Optimize the usage of `_get_closest_parent()` by adding a check to determine if it has already been invoked.
-        #   especially considering that it might have been called in the clean method.
         self.parent = self._get_closest_parent()
         super().save(*args, **kwargs)
 
