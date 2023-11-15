@@ -68,8 +68,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     if change_context_state.get() is None:
         return
 
-    object_m2m_changed = False
-
     # Determine the type of change being made
     if kwargs.get("created"):
         action = ObjectChangeActionChoices.ACTION_CREATE
@@ -77,7 +75,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         action = ObjectChangeActionChoices.ACTION_UPDATE
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
-        object_m2m_changed = True
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
@@ -87,27 +84,25 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
-        if object_m2m_changed:
-            related_changes = ObjectChange.objects.filter(
-                changed_object_type=ContentType.objects.get_for_model(instance),
-                changed_object_id=instance.pk,
-                request_id=change_context_state.get().change_id,
-            )
-            m2m_changes = instance.to_objectchange(action)
-            if related_changes.exists():
-                related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
-                objectchange = related_changes.first()
-            else:
-                objectchange = m2m_changes
-                objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
-                objectchange.request_id = change_context_state.get().change_id
-                objectchange.change_context = change_context_state.get().context
-                objectchange.change_context_detail = change_context_state.get().context_detail[
-                    :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-                ]
-                objectchange.save()
+
+        # if a change already exists for this change_id, user, and object, update it instead of creating a new one
+        # if the object was deleted and then recreated with the same pk (don't do this), change the action to update
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(instance),
+            changed_object_id=instance.pk,
+            user=change_context_state.get().get_user(),
+            request_id=change_context_state.get().change_id,
+        )
+        objectchange = instance.to_objectchange(action)
+        if related_changes.exists():
+            most_recent_change = related_changes.order_by("-time").first()
+            if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
+                most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
+            most_recent_change.object_data = objectchange.object_data
+            most_recent_change.object_data_v2 = objectchange.object_data_v2
+            most_recent_change.save()
+            objectchange = most_recent_change
         else:
-            objectchange = instance.to_objectchange(action)
             objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
             objectchange.request_id = change_context_state.get().change_id
             objectchange.change_context = change_context_state.get().context
@@ -149,14 +144,36 @@ def _handle_deleted_object(sender, instance, **kwargs):
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
+
+        # if a change already exists for this change_id, user, and object, update it instead of creating a new one
+        # except in the case that the object was created and deleted in the same change_id
+        # we don't want to create a delete change for an object that never existed
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(instance),
+            changed_object_id=instance.pk,
+            user=change_context_state.get().get_user(),
+            request_id=change_context_state.get().change_id,
+        )
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
-        objectchange.request_id = change_context_state.get().change_id
-        objectchange.change_context = change_context_state.get().context
-        objectchange.change_context_detail = change_context_state.get().context_detail[
-            :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-        ]
-        objectchange.save()
+        save_new_objectchange = True
+        if related_changes.exists():
+            most_recent_change = related_changes.order_by("-time").first()
+            if most_recent_change.action != ObjectChangeActionChoices.ACTION_CREATE:
+                most_recent_change.action = ObjectChangeActionChoices.ACTION_DELETE
+                most_recent_change.object_data = objectchange.object_data
+                most_recent_change.object_data_v2 = objectchange.object_data_v2
+                most_recent_change.save()
+                objectchange = most_recent_change
+                save_new_objectchange = False
+
+        if save_new_objectchange:
+            objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
+            objectchange.request_id = change_context_state.get().change_id
+            objectchange.change_context = change_context_state.get().context
+            objectchange.change_context_detail = change_context_state.get().context_detail[
+                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+            ]
+            objectchange.save()
 
         # restore field cache
         instance._state.fields_cache = original_cache
