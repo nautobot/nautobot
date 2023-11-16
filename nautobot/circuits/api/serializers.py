@@ -4,7 +4,6 @@ from nautobot.circuits.models import Provider, Circuit, CircuitTermination, Circ
 from nautobot.core.api import WritableNestedSerializer
 from nautobot.dcim.api.nested_serializers import (
     NestedCableSerializer,
-    NestedInterfaceSerializer,
     NestedLocationSerializer,
     NestedSiteSerializer,
 )
