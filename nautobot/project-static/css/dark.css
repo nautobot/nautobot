@@ -63,8 +63,12 @@ html[data-theme="dark"] .panel-heading,                   /* Panel header bars *
 html[data-theme="dark"] .panel-footer,                    /* Panel footer bars */
 html[data-theme="dark"] .modal-header,                    /* Header bar in modals */
 html[data-theme="dark"] .modal-footer,                    /* Footer bar in modals */
-html[data-theme="dark"] .table-headings th {
+html[data-theme="dark"] .table-headings th {              /* Table header bar */
   background-color: rgb(196, 204, 210) !important;
+}
+
+html[data-theme="dark"] .table-headings tr {              /* Table rows */
+  background-color: rgb(217, 217, 217) !important;
 }
 
 html[data-theme="dark"] .scheme-container {                /* Swagger docs container header bar */
