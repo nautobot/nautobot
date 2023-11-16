@@ -24,12 +24,12 @@ packages = [
     {include = "nautobot"}
 ]
 include = [
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "LICENSE.txt",
-    "NOTICE",
-    # Poetry by default will exclude these files as they are in .gitignore
+    # Rendered documentation - Poetry by default would exclude these files as they are in .gitignore
     "nautobot/project-static/docs/**/*",
+]
+exclude = [
+    # Source code of the documentation doesn't need to be included since we package the rendered docs
+    "nautobot/docs/**/*",
 ]
 
 [tool.poetry.dependencies]
@@ -119,8 +119,8 @@ Pillow = "~10.0.0"
 # Custom prometheus metrics
 prometheus-client = "~0.17.1"
 # PostgreSQL database adapter
-# NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.6"
+# NOTE: psycopg3 is available now and nominally replaces psycopg2
+psycopg2-binary = "~2.9.9"
 # A Python slugify application that handles unicode.
 python-slugify = "~8.0.1"
 # The uWSGI WSGI HTTP server as a Python module
@@ -168,7 +168,7 @@ watchdog = "~3.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.4.3"
+mkdocs = "~1.5.3"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
@@ -196,7 +196,7 @@ flake8 = {version = "~6.0.0", python = ">=3.8.1"}
 # Code style checking for python import statements
 isort = "~5.12.0"
 # Code static analysis
-pylint = "~2.17.4"
+pylint = "~2.17.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # YAML linting

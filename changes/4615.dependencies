@@ -1,0 +1,2 @@
+Updated `psycopg2-binary` dependency to version 2.9.9.
+Updated `pylint` development dependency to version 2.17.7.
