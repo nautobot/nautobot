@@ -48,6 +48,7 @@ html[data-theme="dark"] .list-group,                      /* Section panels cont
 html[data-theme="dark"] .list-group-item,                 /* Item in section panels content, like on home page */
 html[data-theme="dark"] .CodeMirror,                      /* GraphiQL page */
 html[data-theme="dark"] .search-box input,                /* GraphiQL docs tab search box */
+html[data-theme="dark"] .table-headings tr,               /* Table rows */
 html[data-theme="dark"] .modal-body {                     /* Modal background */
   background-color: rgb(222, 222, 222) !important;
 }
@@ -67,9 +68,6 @@ html[data-theme="dark"] .table-headings th {              /* Table header bar */
   background-color: rgb(196, 204, 210) !important;
 }
 
-html[data-theme="dark"] .table-headings tr {              /* Table rows */
-  background-color: rgb(217, 217, 217) !important;
-}
 
 html[data-theme="dark"] .scheme-container {                /* Swagger docs container header bar */
   background-color: rgb(217, 217, 217) !important;
