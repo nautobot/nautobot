@@ -96,6 +96,12 @@ html[data-theme="dark"] .nav-tabs>li.active>a:hover {
   background-color: rgb(217, 217, 217) !important;      /* Blends active tab with background */
 }
 
+/* Preserve matching background in iGraphQL text boxes */
+/* Also fixes bug preventing selected text from being distinguised as selected */
+html[data-theme="dark"] .CodeMirror pre {
+  background: transparent !important;
+}
+
 /* Swagger API Docs */
 /* html[data-theme="dark"] .swagger-ui select, */
 /* html[data-theme="dark"] .swagger-ui select, */
