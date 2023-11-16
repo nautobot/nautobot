@@ -112,9 +112,14 @@ html[data-theme="dark"] .swagger-ui select {
 
 html[data-theme="dark"] .swagger-ui input,                /* Swagger docs item input input box */
 html[data-theme="dark"] .swagger-ui select,               /* Swagger docs item select input box */
-html[data-theme="dark"] .swagger-ui textarea{             /* Swagger docs item text area input box */
+html[data-theme="dark"] .swagger-ui textarea {            /* Swagger docs item text area input box */
   background: transparent !important;
   border: 1px solid #888 !important;
+}
+
+/* Swagger docs table item background */
+html[data-theme="dark"] .swagger-ui table {                
+  background: transparent !important;
 }
 
 /* Section headers in swagger docs items */
