@@ -3,12 +3,14 @@ import uuid
 from copy import deepcopy
 from unittest.mock import patch
 
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from requests import Session
 
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.testing import APITestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.api.serializers import LocationSerializer
@@ -17,6 +19,7 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook, Tag
 from nautobot.extras.models.statuses import Status
+from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
 
@@ -327,3 +330,32 @@ class WebhookTest(APITestCase):
         self.assertEqual(args[5], self.user.username)
         self.assertEqual(args[6], request_id)
         self.assertNotEqual(args[7], {})
+
+    @patch("nautobot.extras.context_managers.enqueue_webhooks")
+    def test_enqueue_webhooks_create_update(self, mock_enqueue_webhooks):
+        """
+        Make sure only one webhook is enqueued if there's a create and update in the same change context.
+        """
+        location_type = LocationType.objects.get(name="Campus")
+
+        with web_request_context(self.user):
+            location = Location(name="Location 1", location_type=location_type, status=self.statuses[0])
+            location.save()
+            location.description = "changed"
+            location.save()
+
+        all_changes = get_changes_for_model(location)
+        self.assertEqual(all_changes.count(), 1)
+        mock_enqueue_webhooks.assert_called_once_with(all_changes.first())
+
+    def test_all_webhook_supported_models(self):
+        """
+        Assert that all models registered to support webhooks also support change logging
+        and have an API serializer.
+        """
+
+        for app_label, models in registry["model_features"]["webhooks"].items():
+            for model_name in models:
+                model_class = apps.get_model(app_label, model_name)
+                get_serializer_for_model(model_class)
+                self.assertTrue(hasattr(model_class, "to_objectchange"))

@@ -86,8 +86,8 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
 
-        # if a change already exists for this change_id, user, and object, update it instead of creating a new one
-        # if the object was deleted and then recreated with the same pk (don't do this), change the action to update
+        # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
+        # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
         related_changes = ObjectChange.objects.filter(
             changed_object_type=ContentType.objects.get_for_model(instance),
             changed_object_id=instance.pk,

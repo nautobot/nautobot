@@ -1,7 +1,7 @@
 from django.utils import timezone
 
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.models import ObjectChange, Webhook
+from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
 
@@ -32,11 +32,6 @@ def enqueue_webhooks(object_change):
         if serialized_data is None:
             serialized_data = object_change.object_data
 
-        most_recent_change = ObjectChange.objects.filter(
-            changed_object_type=object_change.changed_object_type, changed_object_id=object_change.changed_object_id
-        ).first()
-        snapshots = most_recent_change.get_snapshots() if most_recent_change else {}
-
         # Enqueue the webhooks
         for webhook in webhooks:
             args = [
@@ -47,6 +42,6 @@ def enqueue_webhooks(object_change):
                 str(timezone.now()),
                 object_change.user_name,
                 object_change.request_id,
-                snapshots,
+                object_change.get_snapshots(),
             ]
             process_webhook.apply_async(args=args)

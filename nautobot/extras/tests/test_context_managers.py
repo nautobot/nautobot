@@ -44,9 +44,9 @@ class WebRequestContextTestCase(TestCase):
                 pass
 
     def test_change_log_created(self):
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         with web_request_context(self.user):
-            location_type = LocationType.objects.get(name="Campus")
-            location_status = Status.objects.get_for_model(Location).first()
             location = Location(name="Test Location 1", location_type=location_type, status=location_status)
             location.save()
 
@@ -58,12 +58,11 @@ class WebRequestContextTestCase(TestCase):
 
     def test_create_then_delete(self):
         """Test that a create followed by a delete is logged as two changes"""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         with web_request_context(self.user):
-            location_type = LocationType.objects.get(name="Campus")
-            location_status = Status.objects.get_for_model(Location).first()
             location = Location(name="Test Location 1", location_type=location_type, status=location_status)
             location.save()
-        with web_request_context(self.user):
             location_pk = location.pk
             location.delete()
 
@@ -122,11 +121,7 @@ class WebRequestContextTestCase(TestCase):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         with web_request_context(self.user):
-            location = Location(
-                name="Test Location 1",
-                location_type=location_type,
-                status=location_status,
-            )
+            location = Location(name="Test Location 1", location_type=location_type, status=location_status)
             location.save()
             location_pk = location.pk
         with web_request_context(self.user):
@@ -152,9 +147,9 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(snapshots["differences"]["added"]["description"], "changed")
 
     def test_change_log_context(self):
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
         with web_request_context(self.user, context_detail="test_change_log_context"):
-            location_type = LocationType.objects.get(name="Campus")
-            location_status = Status.objects.get_for_model(Location).first()
             location = Location(name="Test Location 1", location_type=location_type, status=location_status)
             location.save()
 

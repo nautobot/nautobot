@@ -11,14 +11,14 @@ from nautobot.core.authentication import (
     assign_groups_to_user,
     assign_permissions_to_user,
 )
-from nautobot.core.views import server_error
-from nautobot.extras.choices import ObjectChangeEventContextChoices
-from nautobot.extras.context_managers import web_request_context
 from nautobot.core.settings_funcs import (
     sso_auth_enabled,
     remote_auth_enabled,
     ldap_auth_enabled,
 )
+from nautobot.core.views import server_error
+from nautobot.extras.choices import ObjectChangeEventContextChoices
+from nautobot.extras.context_managers import web_request_context
 
 
 class RemoteUserMiddleware(RemoteUserMiddleware_):
