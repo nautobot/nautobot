@@ -220,12 +220,6 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         CircuitTermination.objects.create(circuit=circuits[0], site=sites[1], term_side=SIDE_Z)
         CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side=SIDE_A)
         CircuitTermination.objects.create(circuit=circuits[1], site=sites[1], term_side=SIDE_Z)
-        CircuitTermination.objects.create(
-            circuit=circuits[2], site=sites[0], term_side=CircuitTerminationSideChoices.SIDE_A
-        )
-        CircuitTermination.objects.create(
-            circuit=circuits[2], site=sites[0], term_side=CircuitTerminationSideChoices.SIDE_Z
-        )
 
         cls.create_data = [
             {
@@ -263,6 +257,13 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         rearport1 = RearPort.objects.create(device=device, name="Rear Port 1", positions=1)
         frontport1 = FrontPort.objects.create(
             device=device, name="Front Port 1", rear_port=rearport1, rear_port_position=1
+        )
+
+        CircuitTermination.objects.create(
+            circuit=circuits[2], site=self.sites[0], term_side=CircuitTerminationSideChoices.SIDE_A
+        )
+        CircuitTermination.objects.create(
+            circuit=circuits[2], site=self.sites[0], term_side=CircuitTerminationSideChoices.SIDE_Z
         )
 
         with self.subTest("Assert CircuitTermination Cable connected to an Interface and Rear Port"):
