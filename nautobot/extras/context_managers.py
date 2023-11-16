@@ -148,7 +148,7 @@ def web_request_context(
         with change_logging(change_context):
             yield request
     finally:
-        # enqueue jobhooks and webhooks
+        # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
         for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
             enqueue_job_hooks(object_change)
             enqueue_webhooks(object_change)
