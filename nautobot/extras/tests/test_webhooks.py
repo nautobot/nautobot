@@ -100,11 +100,13 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            with web_request_context(self.user, change_id=request_id):
+            # create the object to be updated in a separate context
+            with web_request_context(self.user):
                 location_type = LocationType.objects.get(name="Campus")
                 location = Location(name="Location 1", status=self.statuses[0], location_type=location_type)
                 location.save()
 
+            with web_request_context(self.user, change_id=request_id):
                 location.name = "Location Update"
                 location.status = self.statuses[1]
                 location.save()
@@ -242,11 +244,13 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            with web_request_context(self.user, change_id=request_id):
+            # create the object to be updated in a separate context
+            with web_request_context(self.user):
                 location_type = LocationType.objects.get(name="Campus")
                 location = Location(name="Location 1", status=self.statuses[0], location_type=location_type)
                 location.save()
 
+            with web_request_context(self.user, change_id=request_id):
                 location.name = "Location Update"
                 location.status = self.statuses[1]
                 location.save()

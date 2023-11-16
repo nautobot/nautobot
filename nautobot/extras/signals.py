@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 #
 
 
-def _get_user_if_authenticated(user, objectchange):
+def _get_user_if_authenticated(user, instance):
     """Return the user object associated with the request if the user is defined.
 
     If the user is not defined, log a warning to indicate that the user couldn't be retrived from the request
@@ -51,7 +51,7 @@ def _get_user_if_authenticated(user, objectchange):
     if user.is_authenticated:
         return user
     else:
-        logger.warning(f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}")
+        logger.warning(f"Unable to retrieve the user while creating the changelog for {instance}")
         return None
 
 
@@ -81,6 +81,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
@@ -90,7 +91,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         related_changes = ObjectChange.objects.filter(
             changed_object_type=ContentType.objects.get_for_model(instance),
             changed_object_id=instance.pk,
-            user=change_context_state.get().get_user(),
+            user=user,
             request_id=change_context_state.get().change_id,
         )
         objectchange = instance.to_objectchange(action)
@@ -103,7 +104,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
             most_recent_change.save()
             objectchange = most_recent_change
         else:
-            objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
+            objectchange.user = user
             objectchange.request_id = change_context_state.get().change_id
             objectchange.change_context = change_context_state.get().context
             objectchange.change_context_detail = change_context_state.get().context_detail[
@@ -141,6 +142,8 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
+
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
@@ -151,7 +154,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
         related_changes = ObjectChange.objects.filter(
             changed_object_type=ContentType.objects.get_for_model(instance),
             changed_object_id=instance.pk,
-            user=change_context_state.get().get_user(),
+            user=user,
             request_id=change_context_state.get().change_id,
         )
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
@@ -167,7 +170,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
                 save_new_objectchange = False
 
         if save_new_objectchange:
-            objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
+            objectchange.user = user
             objectchange.request_id = change_context_state.get().change_id
             objectchange.change_context = change_context_state.get().context
             objectchange.change_context_detail = change_context_state.get().context_detail[
