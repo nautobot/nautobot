@@ -218,11 +218,11 @@ class WebhookTest(APITestCase):
                 )
 
     @patch("nautobot.core.api.utils.get_serializer_for_model")
-    def test_webhooks_snapshot_without_model_api_serializer(self, get_serializer_for_model):
+    def test_webhooks_snapshot_without_model_api_serializer(self, mock_get_serializer_for_model):
         def get_serializer(model_class):
             raise SerializerNotFound
 
-        get_serializer_for_model.side_effect = get_serializer
+        mock_get_serializer_for_model.side_effect = get_serializer
 
         request_id = uuid.uuid4()
         webhook = Webhook.objects.get(type_create=True)
