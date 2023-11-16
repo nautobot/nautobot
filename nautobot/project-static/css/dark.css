@@ -128,6 +128,18 @@ html[data-theme="dark"] .select2-dropdown {               /* Dropdown form field
   background-color: rgb(222, 222, 222) !important;
 }
 
+html[data-theme="dark"] .navbar-nav>li>a {                /* Navbar top level menu dropdown links */
+  color: rgb(100, 100, 100) !important;
+}
+
+html[data-theme="dark"] .navbar-nav>li>a:hover {          /* Navbar top level menu dropdown links on hover */
+  color: rgb(224, 120, 7) !important;
+}
+
+html[data-theme="dark"] .dropdown-menu>li>a {             /* Navbar dropdown text links */
+  color: rgb(51, 51, 51) !important;
+}
+
 /* This is already inverted as a button above, however we do not want it to be */
 html[data-theme="dark"] .accordion-toggle {               /* Accordion dropdown header, like on Jobs page */
   filter: invert(0);                                      /* Do not invert */
