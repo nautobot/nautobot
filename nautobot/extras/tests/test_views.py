@@ -26,6 +26,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
@@ -49,7 +50,6 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Webhook,
-    ComputedField,
 )
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
@@ -129,6 +129,63 @@ class ComputedFieldTestCase(
         }
 
         cls.slug_test_object = "Computed Field Five"
+
+
+class ComputedFieldRenderingTestCase(TestCase):
+    """Tests for the inclusion of ComputedFields, distinct from tests of the ComputedField views themselves."""
+
+    user_permissions = ["dcim.view_locationtype"]
+
+    def setUp(self):
+        super().setUp()
+        self.computedfield = ComputedField(
+            content_type=ContentType.objects.get_for_model(LocationType),
+            key="test",
+            label="Computed Field",
+            template="FOO {{ obj.name }} BAR",
+            fallback_value="Fallback Value",
+            weight=100,
+        )
+        self.computedfield.validated_save()
+        self.location_type = LocationType.objects.get(name="Campus")
+
+    def test_view_object_with_computed_field(self):
+        """Ensure that the computed field template is rendered."""
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"FOO {self.location_type.name} BAR", content, content)
+
+    def test_view_object_with_computed_field_fallback_value(self):
+        """Ensure that the fallback_value is rendered if the template fails to render."""
+        # Make the template invalid to demonstrate the fallback value
+        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Fallback Value", content, content)
+
+    def test_view_object_with_computed_field_unsafe_template(self):
+        """Ensure that computed field templates can't be used as an XSS vector."""
+        self.computedfield.template = '<script>alert("Hello world!"</script>'
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_view_object_with_computed_field_unsafe_fallback_value(self):
+        """Ensure that computed field fallback values can't be used as an XSS vector."""
+        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.fallback_value = '<script>alert("Hello world!"</script>'
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -433,7 +490,9 @@ class CustomFieldTestCase(
         super().test_create_object_with_constrained_permission()
 
 
-class CustomLinkTest(TestCase):
+class CustomLinkRenderingTestCase(TestCase):
+    """Tests for the inclusion of CustomLinks, distinct from tests of the CustomLink views themselves."""
+
     user_permissions = ["dcim.view_location"]
 
     def test_view_object_with_custom_link(self):
@@ -1927,6 +1986,61 @@ class JobButtonTestCase(
             "button_class": "default",
             "confirmation": False,
         }
+
+
+class JobButtonRenderingTestCase(TestCase):
+    """Tests for the rendering of JobButtons, distinct from tests of the JobButton views themselves."""
+
+    user_permissions = ["dcim.view_locationtype"]
+
+    def setUp(self):
+        super().setUp()
+        self.job_button = JobButton(
+            name="JobButton",
+            text="JobButton {{ obj.name }}",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            confirmation=False,
+        )
+        self.job_button.validated_save()
+        self.job_button.content_types.add(ContentType.objects.get_for_model(LocationType))
+        self.location_type = LocationType.objects.get(name="Campus")
+
+    def test_view_object_with_job_button(self):
+        """Ensure that the job button is rendered."""
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"JobButton {self.location_type.name}", content, content)
+
+    def test_view_object_with_unsafe_text(self):
+        """Ensure that JobButton text can't be used as a vector for XSS."""
+        self.job_button.text = '<script>alert("Hello world!")</script>'
+        self.job_button.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+        # Make sure grouped rendering is safe too
+        self.job_button.group = '<script>alert("Goodbye")</script>'
+        self.job_button.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_view_object_with_unsafe_name(self):
+        """Ensure that JobButton names can't be used as a vector for XSS."""
+        self.job_button.text = "JobButton {{ obj"
+        self.job_button.name = '<script>alert("Yo")</script>'
+        self.job_button.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
 
 
 # TODO: Convert to StandardTestCases.Views
