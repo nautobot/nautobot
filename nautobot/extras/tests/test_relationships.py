@@ -1138,13 +1138,13 @@ class RequiredRelationshipTestMixin(TestCase):
                 ],
                 "expected_errors": {
                     "api": {
-                        "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet. "
+                        "objects_nonexistent": "Circuit Types require a platform, but no platforms exist yet. "
                         "Create a platform by posting to /api/dcim/platforms/",
                         "objects_not_specified": 'You need to specify ["relationships"]["circuittype-platform-o2o"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {
-                        "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet.",
+                        "objects_nonexistent": "Circuit Types require a platform, but no platforms exist yet.",
                         "objects_not_specified": "You need to select a platform.",
                     },
                 },

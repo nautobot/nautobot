@@ -11,7 +11,16 @@ from django.utils import timezone
 from django.utils.html import format_html
 from unittest import mock
 
-from nautobot.dcim.models import ConsolePort, Device, DeviceRole, DeviceType, Interface, Manufacturer, Site
+from nautobot.dcim.models import (
+    ConsolePort,
+    Device,
+    DeviceRole,
+    DeviceType,
+    Interface,
+    LocationType,
+    Manufacturer,
+    Site,
+)
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
@@ -139,7 +148,7 @@ class ComputedFieldRenderingTestCase(TestCase):
         super().setUp()
         self.computedfield = ComputedField(
             content_type=ContentType.objects.get_for_model(LocationType),
-            key="test",
+            slug="test",
             label="Computed Field",
             template="FOO {{ obj.name }} BAR",
             fallback_value="Fallback Value",
