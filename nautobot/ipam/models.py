@@ -1069,6 +1069,11 @@ class IPAddress(PrimaryModel):
         # TODO: Implement proper caching of `closest_parent` and ensure the cache is invalidated when
         #  `_namespace` changes. Currently, `_get_closest_parent` is called twice, in the `clean` and `save` methods.
         #  Caching would improve performance.
+
+        # Host and maxlength are required to get the closest_parent
+        empty_values = [None, b'', ""]
+        if self.host in empty_values or self.mask_length in empty_values:
+            return None
         try:
             closest_parent = (
                 Prefix.objects.filter(namespace=self._namespace)
@@ -1097,22 +1102,19 @@ class IPAddress(PrimaryModel):
         if self._namespace is None:
             raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
 
-        # Host and maxlength are required to get the closest_parent
-        empty_values = [None, b'', ""]
-        if self.host not in empty_values and self.mask_length not in empty_values:
-            closest_parent = self._get_closest_parent()
-            # Validate `parent` can be used as the parent for this ipaddress
-            if self.parent:
-                if self.parent != closest_parent:
-                    raise ValidationError(
-                        {
-                            "parent": (
-                                f"{self.parent} cannot be assigned as the parent of {self}. "
-                                f" In namespace {self._namespace}, the expected parent would be {closest_parent}."
-                            )
-                        }
-                    )
-                self.parent = closest_parent
+        closest_parent = self._get_closest_parent()
+        # Validate `parent` can be used as the parent for this ipaddress
+        if self.parent and closest_parent:
+            if self.parent != closest_parent:
+                raise ValidationError(
+                    {
+                        "parent": (
+                            f"{self.parent} cannot be assigned as the parent of {self}. "
+                            f" In namespace {self._namespace}, the expected parent would be {closest_parent}."
+                        )
+                    }
+                )
+            self.parent = closest_parent
 
     def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
@@ -1124,9 +1126,10 @@ class IPAddress(PrimaryModel):
         if not self.dns_name.islower:
             self.dns_name = self.dns_name.lower()
 
-        # Host is required to get closest parent
-        if self.host:
-            self.parent = self._get_closest_parent()
+        # Host and mask_length are required to get closest parent
+        closest_parent = self._get_closest_parent()
+        if closest_parent is not None:
+            self.parent = closest_parent
         super().save(*args, **kwargs)
 
     @property
