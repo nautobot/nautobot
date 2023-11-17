@@ -3,7 +3,7 @@ import datetime
 from django.contrib import messages
 from django.core.exceptions import FieldError
 from django.db.models import ForeignKey
-from django.utils.html import escape
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 
 from rest_framework import serializers
@@ -173,21 +173,20 @@ def handle_protectederror(obj_list, request, e):
     """
     protected_objects = list(e.protected_objects)
     protected_count = len(protected_objects) if len(protected_objects) <= 50 else "More than 50"
-    err_message = (
-        f"Unable to delete <strong>{', '.join(str(obj) for obj in obj_list)}</strong>. "
-        f"{protected_count} dependent objects were found: "
+    err_message = format_html(
+        "Unable to delete <strong>{}</strong>. {} dependent objects were found: ",
+        ", ".join(str(obj) for obj in obj_list),
+        protected_count,
     )
 
     # Append dependent objects to error message
-    dependent_objects = []
-    for dependent in protected_objects[:50]:
-        if hasattr(dependent, "get_absolute_url"):
-            dependent_objects.append(f'<a href="{dependent.get_absolute_url()}">{escape(dependent)}</a>')
-        else:
-            dependent_objects.append(str(dependent))
-    err_message += ", ".join(dependent_objects)
+    err_message += format_html_join(
+        ", ",
+        '<a href="{}">{}</a>',
+        ((dependent.get_absolute_url(), dependent) for dependent in protected_objects[:50]),
+    )
 
-    messages.error(request, mark_safe(err_message))
+    messages.error(request, err_message)
 
 
 def prepare_cloned_fields(instance):
