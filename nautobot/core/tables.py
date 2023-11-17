@@ -162,7 +162,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
+        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')  # noqa: S308
 
 
 class BooleanColumn(django_tables2.Column):
