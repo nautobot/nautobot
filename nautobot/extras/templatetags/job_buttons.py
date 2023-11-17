@@ -88,7 +88,7 @@ def job_buttons(context, obj):
         "user": context["user"],  # django.contrib.auth.context_processors.auth
         "perms": context["perms"],  # django.contrib.auth.context_processors.auth
     }
-    buttons_html = forms_html = mark_safe("")
+    buttons_html = forms_html = mark_safe("")  # noqa: S308
     group_names = OrderedDict()
 
     hidden_inputs = format_html(
@@ -140,7 +140,7 @@ def job_buttons(context, obj):
     for group_name, buttons in group_names.items():
         group_button_class = buttons[0].button_class
 
-        buttons_rendered = mark_safe("")
+        buttons_rendered = mark_safe("")  # noqa: S308
 
         for jb in buttons:
             template_args = {
@@ -159,12 +159,16 @@ def job_buttons(context, obj):
                     template_args["button_text"] = text_rendered
                     if jb.confirmation:
                         buttons_rendered += (
-                            mark_safe("<li>") + format_html(CONFIRM_BUTTON, **template_args) + mark_safe("</li>")
+                            mark_safe("<li>")  # noqa: S308
+                            + format_html(CONFIRM_BUTTON, **template_args)
+                            + mark_safe("</li>")  # noqa: S308
                         )
                         forms_html += format_html(CONFIRM_MODAL, **template_args)
                     else:
                         buttons_rendered += (
-                            mark_safe("<li>") + format_html(NO_CONFIRM_BUTTON, **template_args) + mark_safe("</li>")
+                            mark_safe("<li>")  # noqa: S308
+                            + format_html(NO_CONFIRM_BUTTON, **template_args)
+                            + mark_safe("</li>")  # noqa: S308
                         )
                         forms_html += format_html(NO_CONFIRM_FORM, **template_args)
             except Exception as e:

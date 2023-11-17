@@ -41,7 +41,7 @@ def custom_links(context, obj):
         "user": context["user"],  # django.contrib.auth.context_processors.auth
         "perms": context["perms"],  # django.contrib.auth.context_processors.auth
     }
-    template_code = mark_safe("")
+    template_code = mark_safe("")  # noqa: S308
     group_names = OrderedDict()
 
     for cl in links:
@@ -71,7 +71,7 @@ def custom_links(context, obj):
 
     # Add grouped links to template
     for group, links in group_names.items():
-        links_rendered = mark_safe("")
+        links_rendered = mark_safe("")  # noqa: S308
 
         for cl in links:
             try:

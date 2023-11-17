@@ -171,7 +171,7 @@ class ToggleColumn(tables.CheckBoxColumn):
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
+        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')  # noqa: S308
 
 
 class BooleanColumn(tables.Column):

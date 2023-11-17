@@ -381,7 +381,7 @@ class SiteCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
         model = Site
         fields = Site.csv_headers
         help_texts = {
-            "time_zone": mark_safe(
+            "time_zone": mark_safe(  # noqa: S308
                 'Time zone (<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>)'
             )
         }
@@ -447,7 +447,7 @@ class LocationTypeCSVForm(CustomFieldModelCSVForm):
         feature="locations",
         required=False,
         choices_as_strings=True,
-        help_text=mark_safe(
+        help_text=mark_safe(  # noqa: S308
             "The object types to which this status applies. Multiple values "
             "must be comma-separated and wrapped in double quotes. (e.g. "
             '<code>"dcim.device,dcim.rack"</code>)'
@@ -636,7 +636,7 @@ class RackRoleCSVForm(CustomFieldModelCSVForm):
         model = RackRole
         fields = RackRole.csv_headers
         help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),  # noqa: S308
         }
 
 
@@ -1768,7 +1768,7 @@ class DeviceRoleCSVForm(CustomFieldModelCSVForm):
         model = DeviceRole
         fields = DeviceRole.csv_headers
         help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),  # noqa: S308
         }
 
 
@@ -3855,7 +3855,7 @@ class CableCSVForm(StatusModelCSVFormMixin, CustomFieldModelCSVForm):
             "length_unit",
         ]
         help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),  # noqa: S308
             "status": "Connection status",
         }
 

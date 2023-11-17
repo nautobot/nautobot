@@ -619,7 +619,7 @@ CONSTANCE_CONFIG = {
     ],
     "NETWORK_DRIVERS": [
         {},
-        mark_safe(
+        mark_safe(  # noqa: S308
             "Extend or override default Platform.network_driver translations provided by "
             '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
             "Enter a dictionary in JSON format, for example:\n"
