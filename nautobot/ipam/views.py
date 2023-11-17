@@ -635,7 +635,7 @@ class PrefixEditView(generic.ObjectEditView):
                     request,
                     format_html(
                         "{} is a Pool prefix and should not contain other prefixes. {} "
-                        'Consider either <a href="{}>changing the type of {}</a> to Container or Network, '
+                        'Consider either <a href="{}">changing the type of {}</a> to Container or Network, '
                         "or deleting {}, to resolve this issue.",
                         obj,
                         warning_msg,
@@ -797,7 +797,7 @@ class IPAddressEditView(generic.ObjectEditView):
                 "in a future release.</p>",
                 static("docs/models/ipam/ipaddress.html"),
             )
-            parent_link = format_html('<a href="{}">{parent}</a>', obj.parent.get_absolute_url(), obj.parent)
+            parent_link = format_html('<a href="{}">{}</a>', obj.parent.get_absolute_url(), obj.parent)
             if obj.parent.prefix_length < obj.mask_length:
                 create_url = (
                     reverse("ipam:prefix_add")
