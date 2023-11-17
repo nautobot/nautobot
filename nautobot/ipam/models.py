@@ -1098,7 +1098,8 @@ class IPAddress(PrimaryModel):
             raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
 
         # Host and maxlength are required to get the closest_parent
-        if self.host and self.mask_length:
+        empty_values = [None, b'', ""]
+        if self.host not in empty_values and self.mask_length not in empty_values:
             closest_parent = self._get_closest_parent()
             # Validate `parent` can be used as the parent for this ipaddress
             if self.parent:
