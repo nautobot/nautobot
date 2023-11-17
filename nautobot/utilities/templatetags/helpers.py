@@ -17,9 +17,9 @@ from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.utils import foreground_color, get_route_for_model, UtilizationData
 
-HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
-HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
-HTML_NONE = '<span class="text-muted">&mdash;</span>'
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')
+HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -92,7 +92,7 @@ def placeholder(value):
     """
     if value:
         return value
-    return mark_safe(HTML_NONE)
+    return HTML_NONE
 
 
 @library.filter()
@@ -147,10 +147,10 @@ def render_boolean(value):
         '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
     """
     if value is None:
-        return mark_safe(HTML_NONE)
+        return HTML_NONE
     if bool(value):
-        return mark_safe(HTML_TRUE)
-    return mark_safe(HTML_FALSE)
+        return HTML_TRUE
+    return HTML_FALSE
 
 
 @library.filter()

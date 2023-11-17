@@ -13,9 +13,8 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import escape
+from django.utils.html import format_html
 from django.utils.http import is_safe_url
-from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
@@ -407,10 +406,10 @@ class CustomFieldEditView(generic.ObjectEditView):
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
                 else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -645,10 +644,10 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
                 else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -1616,8 +1615,8 @@ class JobButtonRunView(ObjectPermissionRequiredMixin, View):
             request=copy_safe_request(request),
             commit=True,
         )
-        msg = f'Job enqueued. <a href="{result.get_absolute_url()}">Click here for the results.</a>'
-        messages.info(request=request, message=mark_safe(msg))
+        msg = format_html('Job enqueued. <a href="{}">Click here for the results.</a>', result.get_absolute_url())
+        messages.info(request=request, message=msg)
         return redirect(post_data["redirect_path"])
 
 
@@ -1973,10 +1972,10 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
                 else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
