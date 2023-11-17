@@ -1,56 +1,47 @@
-from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
-
-from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.utils.lookup import get_changes_for_model
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
-from .choices import ObjectChangeActionChoices
 
 
-def enqueue_webhooks(instance, user, request_id, action):
+def enqueue_webhooks(object_change):
     """
     Find Webhook(s) assigned to this instance + action and enqueue them
     to be processed
     """
     # Determine whether this type of object supports webhooks
-    app_label = instance._meta.app_label
-    model_name = instance._meta.model_name
+    app_label = object_change.changed_object_type.app_label
+    model_name = object_change.changed_object_type.model
     if model_name not in registry["model_features"]["webhooks"].get(app_label, []):
         return
 
     # Retrieve any applicable Webhooks
-    content_type = ContentType.objects.get_for_model(instance)
+    content_type = object_change.changed_object_type
     action_flag = {
         ObjectChangeActionChoices.ACTION_CREATE: "type_create",
         ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
         ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
-    }[action]
+    }[object_change.action]
     webhooks = Webhook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
     if webhooks.exists():
-        # Get the Model's API serializer class and serialize the object
-        serializer_class = get_serializer_for_model(instance.__class__)
-        serializer_context = {
-            "request": None,
-            "depth": 1,
-        }
-        serializer = serializer_class(instance, context=serializer_context)
-        most_recent_change = get_changes_for_model(instance).first()
-        snapshots = most_recent_change.get_snapshots() if most_recent_change else {}
+        # fall back to object_data if object_data_v2 is not available
+        serialized_data = object_change.object_data_v2
+        if serialized_data is None:
+            serialized_data = object_change.object_data
 
         # Enqueue the webhooks
         for webhook in webhooks:
             args = [
                 webhook.pk,
-                serializer.data,
-                instance._meta.model_name,
-                action,
+                serialized_data,
+                model_name,
+                object_change.action,
                 str(timezone.now()),
-                user.username,
-                request_id,
-                snapshots,
+                object_change.user_name,
+                object_change.request_id,
+                object_change.get_snapshots(),
             ]
             process_webhook.apply_async(args=args)
