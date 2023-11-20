@@ -132,7 +132,7 @@ class DeviceFactory(PrimaryModelFactory):
     platform = factory.Maybe("has_platfrom", random_instance(Platform))
 
     has_serial = NautobotBoolIterator()
-    serial = factory.Maybe("has_serial", factory.Faker("ean", length=10), "")
+    serial = factory.Maybe("has_serial", factory.Faker("ean", length=8), "")
 
     has_asset_tag = NautobotBoolIterator()
     asset_tag = factory.Maybe("has_asset_tag", UniqueFaker("uuid4"), None)
