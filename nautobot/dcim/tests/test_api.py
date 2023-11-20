@@ -713,6 +713,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
 
