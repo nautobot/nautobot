@@ -48,8 +48,10 @@ html[data-theme="dark"] .list-group,                      /* Section panels cont
 html[data-theme="dark"] .list-group-item,                 /* Item in section panels content, like on home page */
 html[data-theme="dark"] .CodeMirror,                      /* GraphiQL page */
 html[data-theme="dark"] .search-box input,                /* GraphiQL docs tab search box */
+html[data-theme="dark"] .table-headings tr,               /* Table rows */
 html[data-theme="dark"] .modal-body {                     /* Modal background */
   background-color: rgb(222, 222, 222) !important;
+  color: rgb(70, 70, 70) !important;                    /* Slightly darken text color */
 }
 
 /* Slightly lighter than background to standout */
@@ -63,9 +65,10 @@ html[data-theme="dark"] .panel-heading,                   /* Panel header bars *
 html[data-theme="dark"] .panel-footer,                    /* Panel footer bars */
 html[data-theme="dark"] .modal-header,                    /* Header bar in modals */
 html[data-theme="dark"] .modal-footer,                    /* Footer bar in modals */
-html[data-theme="dark"] .table-headings th {
+html[data-theme="dark"] .table-headings th {              /* Table header bar */
   background-color: rgb(196, 204, 210) !important;
 }
+
 
 html[data-theme="dark"] .scheme-container {                /* Swagger docs container header bar */
   background-color: rgb(217, 217, 217) !important;
@@ -78,9 +81,25 @@ html[data-theme="dark"] .CodeMirror-gutters {              /* GraphiQL primary b
   background-color: rgb(217, 217, 217) !important;
 }
 
-/* Preserve blue text color on selected tabs */
-html[data-theme="dark"] .nav-tabs>li.active>a {
-  color: rgb(72, 133, 204);
+/* Preserve border line across bottom of tabs row */
+html[data-theme="dark"] .nav-tabs {
+  border-bottom: 1px solid rgb(100, 100, 100);
+}
+
+/* Preserve border lines around active tab in tabs row */
+html[data-theme="dark"] .nav-tabs>li.active>a,
+html[data-theme="dark"] .nav-tabs>li.active>a:focus,
+html[data-theme="dark"] .nav-tabs>li.active>a:hover {
+  border: 1px solid rgb(100, 100, 100);                 /* Border left/top/right around active tab */
+  border-bottom-color: transparent;                       /* Hides bottom border for active tab */
+  border-radius: 6px 6px 0 0;                             /* Rounds top border corners of active tab */
+  background-color: rgb(217, 217, 217) !important;      /* Blends active tab with background */
+}
+
+/* Preserve matching background in iGraphQL text boxes */
+/* Also fixes bug preventing selected text from being distinguised as selected */
+html[data-theme="dark"] .CodeMirror pre {
+  background: transparent !important;
 }
 
 /* Swagger API Docs */
@@ -93,9 +112,14 @@ html[data-theme="dark"] .swagger-ui select {
 
 html[data-theme="dark"] .swagger-ui input,                /* Swagger docs item input input box */
 html[data-theme="dark"] .swagger-ui select,               /* Swagger docs item select input box */
-html[data-theme="dark"] .swagger-ui textarea{             /* Swagger docs item text area input box */
+html[data-theme="dark"] .swagger-ui textarea {            /* Swagger docs item text area input box */
   background: transparent !important;
   border: 1px solid #888 !important;
+}
+
+/* Swagger docs table item background */
+html[data-theme="dark"] .swagger-ui table {                
+  background: transparent !important;
 }
 
 /* Section headers in swagger docs items */
@@ -126,6 +150,18 @@ html[data-theme="dark"] .select2-search--inline,          /* Search field in fil
 html[data-theme="dark"] .select2-close-mask,              /* Close selection */
 html[data-theme="dark"] .select2-dropdown {               /* Dropdown form fields */
   background-color: rgb(222, 222, 222) !important;
+}
+
+html[data-theme="dark"] .navbar-nav>li>a {                /* Navbar top level menu dropdown links */
+  color: rgb(100, 100, 100) !important;
+}
+
+html[data-theme="dark"] .navbar-nav>li>a:hover {          /* Navbar top level menu dropdown links on hover */
+  color: rgb(224, 120, 7) !important;
+}
+
+html[data-theme="dark"] .dropdown-menu>li>a {             /* Navbar dropdown text links */
+  color: rgb(51, 51, 51) !important;
 }
 
 /* This is already inverted as a button above, however we do not want it to be */
