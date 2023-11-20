@@ -87,7 +87,7 @@ class Command(BaseCommand):
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
         if not seed:
-            seed = get_random_string(16)
+            seed = get_random_string(13)
         self.stdout.write(f'Seeding the pseudo-random number generator with seed "{seed}"...')
         factory.random.reseed_random(seed)
 
