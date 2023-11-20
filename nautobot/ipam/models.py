@@ -1071,7 +1071,7 @@ class IPAddress(PrimaryModel):
         #  Caching would improve performance.
 
         # Host and maxlength are required to get the closest_parent
-        empty_values = [None, b'', ""]
+        empty_values = [None, b"", ""]
         if self.host in empty_values or self.mask_length in empty_values:
             return None
         try:
