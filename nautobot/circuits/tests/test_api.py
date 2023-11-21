@@ -247,12 +247,12 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             )
 
             response = self.client.get(
-                f"/api{circuits[0].circuit_termination_a.get_absolute_url()}",
+                circuits[0].circuit_termination_a.get_absolute_url(api=True),
                 **self.header,
             )
             self.assertEqual(response.status_code, 200)
             response = self.client.get(
-                f"/api{circuits[0].circuit_termination_z.get_absolute_url()}",
+                circuits[0].circuit_termination_z.get_absolute_url(api=True),
                 **self.header,
             )
             self.assertEqual(response.status_code, 200)
@@ -272,12 +272,12 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             )
 
             response = self.client.get(
-                f"/api{circuits[2].circuit_termination_a.get_absolute_url()}",
+                circuits[2].circuit_termination_a.get_absolute_url(api=True),
                 **self.header,
             )
             self.assertEqual(response.status_code, 200)
             response = self.client.get(
-                f"/api{circuits[2].circuit_termination_z.get_absolute_url()}",
+                circuits[2].circuit_termination_z.get_absolute_url(api=True),
                 **self.header,
             )
             self.assertEqual(response.status_code, 200)
