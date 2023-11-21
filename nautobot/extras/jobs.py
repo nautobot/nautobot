@@ -21,7 +21,6 @@ from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
@@ -1178,12 +1177,11 @@ def enqueue_job_hooks(object_change):
         return
 
     # Determine whether this type of object supports job hooks
-    model_type = object_change.changed_object._meta.model
-    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
+    content_type = object_change.changed_object_type
+    if content_type not in ChangeLoggedModelsQuery().as_queryset():
         return
 
     # Retrieve any applicable job hooks
-    content_type = ContentType.objects.get_for_model(object_change.changed_object)
     action_flag = {
         ObjectChangeActionChoices.ACTION_CREATE: "type_create",
         ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
