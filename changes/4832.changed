@@ -1,1 +1,0 @@
-Changed the `render_jinja2()` API to no longer automatically call `mark_safe()` on the output.
