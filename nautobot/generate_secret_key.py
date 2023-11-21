@@ -7,9 +7,11 @@ import secrets
 length = 50
 alphabet = string.ascii_letters + string.digits + "!@#$%^&*(-_=+)"  # string.punctuation would be an option
 while True:
-    password = ''.join(secrets.choice(alphabet) for i in range(length))
-    if (any(c.islower() for c in password)
-            and any(c.isupper() for c in password)
-            and sum(c.isdigit() for c in password) >= 3):
+    password = "".join(secrets.choice(alphabet) for i in range(length))
+    if (
+        any(c.islower() for c in password)
+        and any(c.isupper() for c in password)
+        and sum(c.isdigit() for c in password) >= 3
+    ):
         break
 print(password)
