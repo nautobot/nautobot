@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.0.4"
+version = "2.0.5"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -24,12 +24,12 @@ packages = [
     {include = "nautobot"}
 ]
 include = [
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "LICENSE.txt",
-    "NOTICE",
-    # Poetry by default will exclude these files as they are in .gitignore
+    # Rendered documentation - Poetry by default would exclude these files as they are in .gitignore
     "nautobot/project-static/docs/**/*",
+]
+exclude = [
+    # Source code of the documentation doesn't need to be included since we package the rendered docs
+    "nautobot/docs/**/*",
 ]
 
 [tool.poetry.dependencies]
@@ -119,8 +119,8 @@ Pillow = "~10.0.0"
 # Custom prometheus metrics
 prometheus-client = "~0.17.1"
 # PostgreSQL database adapter
-# NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.6"
+# NOTE: psycopg3 is available now and nominally replaces psycopg2
+psycopg2-binary = "~2.9.9"
 # A Python slugify application that handles unicode.
 python-slugify = "~8.0.1"
 # The uWSGI WSGI HTTP server as a Python module
@@ -168,7 +168,7 @@ watchdog = "~3.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.4.3"
+mkdocs = "~1.5.3"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
@@ -196,9 +196,11 @@ flake8 = {version = "~6.0.0", python = ">=3.8.1"}
 # Code style checking for python import statements
 isort = "~5.12.0"
 # Code static analysis
-pylint = "~2.17.4"
+pylint = "~2.17.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
+# Combination linter and code formatter
+ruff = "~0.1.6"
 # YAML linting
 yamllint = "~1.30.0"
 
@@ -340,6 +342,26 @@ notes = """,
 [tool.pylint.typecheck]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators=["unittest.mock.patch"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    # "I",  # isort
+    "S308",  # flake8-bandit: suspicious-mark-safe-usage
+    "W",  # pycodestyle
+]
+ignore = [
+    "E501",  # pycodestyle: line-too-long
+]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+force-sort-within-sections = true
 
 [tool.towncrier]
 package = "nautobot"

@@ -3,12 +3,14 @@ import uuid
 from copy import deepcopy
 from unittest.mock import patch
 
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from requests import Session
 
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.testing import APITestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.api.serializers import LocationSerializer
@@ -17,6 +19,7 @@ from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Webhook, Tag
 from nautobot.extras.models.statuses import Status
+from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
 
@@ -100,11 +103,13 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            with web_request_context(self.user, change_id=request_id):
+            # create the object to be updated in a separate context
+            with web_request_context(self.user):
                 location_type = LocationType.objects.get(name="Campus")
                 location = Location(name="Location 1", status=self.statuses[0], location_type=location_type)
                 location.save()
 
+            with web_request_context(self.user, change_id=request_id):
                 location.name = "Location Update"
                 location.status = self.statuses[1]
                 location.save()
@@ -213,11 +218,11 @@ class WebhookTest(APITestCase):
                 )
 
     @patch("nautobot.core.api.utils.get_serializer_for_model")
-    def test_webhooks_snapshot_without_model_api_serializer(self, get_serializer_for_model):
+    def test_webhooks_snapshot_without_model_api_serializer(self, mock_get_serializer_for_model):
         def get_serializer(model_class):
             raise SerializerNotFound
 
-        get_serializer_for_model.side_effect = get_serializer
+        mock_get_serializer_for_model.side_effect = get_serializer
 
         request_id = uuid.uuid4()
         webhook = Webhook.objects.get(type_create=True)
@@ -242,11 +247,13 @@ class WebhookTest(APITestCase):
         with patch.object(Session, "send", mock_send):
             self.client.force_login(self.user)
 
-            with web_request_context(self.user, change_id=request_id):
+            # create the object to be updated in a separate context
+            with web_request_context(self.user):
                 location_type = LocationType.objects.get(name="Campus")
                 location = Location(name="Location 1", status=self.statuses[0], location_type=location_type)
                 location.save()
 
+            with web_request_context(self.user, change_id=request_id):
                 location.name = "Location Update"
                 location.status = self.statuses[1]
                 location.save()
@@ -279,18 +286,18 @@ class WebhookTest(APITestCase):
             location = Location(name="Location 1", location_type=location_type, status=self.statuses[0])
             location.save()
 
-            mock_async.assert_called_once()
-            args = mock_async.call_args[1]["args"]
-            self.assertEqual(args[0], Webhook.objects.get(type_create=True).pk)
-            self.assertEqual(args[1]["name"], "Location 1")
-            self.assertEqual(args[2], "location")
-            self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_CREATE)
-            self.assertEqual(args[5], self.user.username)
-            self.assertEqual(args[6], request_id)
-            self.assertEqual(args[7]["prechange"], None)
-            self.assertEqual(args[7]["postchange"]["name"], "Location 1")
-            self.assertEqual(args[7]["differences"]["removed"], None)
-            self.assertEqual(args[7]["differences"]["added"]["name"], "Location 1")
+        mock_async.assert_called_once()
+        args = mock_async.call_args[1]["args"]
+        self.assertEqual(args[0], Webhook.objects.get(type_create=True).pk)
+        self.assertEqual(args[1]["name"], "Location 1")
+        self.assertEqual(args[2], "location")
+        self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_CREATE)
+        self.assertEqual(args[5], self.user.username)
+        self.assertEqual(args[6], request_id)
+        self.assertEqual(args[7]["prechange"], None)
+        self.assertEqual(args[7]["postchange"]["name"], "Location 1")
+        self.assertEqual(args[7]["differences"]["removed"], None)
+        self.assertEqual(args[7]["differences"]["added"]["name"], "Location 1")
 
     @patch("nautobot.extras.tasks.process_webhook.apply_async")
     def test_enqueue_webhooks_m2m_update(self, mock_async):
@@ -314,12 +321,41 @@ class WebhookTest(APITestCase):
         with web_request_context(self.user, change_id=request_id):
             location.tags.add(tag)
 
-            mock_async.assert_called_once()
-            args = mock_async.call_args[1]["args"]
-            self.assertEqual(args[0], Webhook.objects.get(type_update=True).pk)
-            self.assertEqual(args[1]["name"], "Location 1")
-            self.assertEqual(args[2], "location")
-            self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_UPDATE)
-            self.assertEqual(args[5], self.user.username)
-            self.assertEqual(args[6], request_id)
-            self.assertNotEqual(args[7], {})
+        mock_async.assert_called_once()
+        args = mock_async.call_args[1]["args"]
+        self.assertEqual(args[0], Webhook.objects.get(type_update=True).pk)
+        self.assertEqual(args[1]["name"], "Location 1")
+        self.assertEqual(args[2], "location")
+        self.assertEqual(args[3], ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(args[5], self.user.username)
+        self.assertEqual(args[6], request_id)
+        self.assertNotEqual(args[7], {})
+
+    @patch("nautobot.extras.context_managers.enqueue_webhooks")
+    def test_enqueue_webhooks_create_update(self, mock_enqueue_webhooks):
+        """
+        Make sure only one webhook is enqueued if there's a create and update in the same change context.
+        """
+        location_type = LocationType.objects.get(name="Campus")
+
+        with web_request_context(self.user):
+            location = Location(name="Location 1", location_type=location_type, status=self.statuses[0])
+            location.save()
+            location.description = "changed"
+            location.save()
+
+        all_changes = get_changes_for_model(location)
+        self.assertEqual(all_changes.count(), 1)
+        mock_enqueue_webhooks.assert_called_once_with(all_changes.first())
+
+    def test_all_webhook_supported_models(self):
+        """
+        Assert that all models registered to support webhooks also support change logging
+        and have an API serializer.
+        """
+
+        for app_label, models in registry["model_features"]["webhooks"].items():
+            for model_name in models:
+                model_class = apps.get_model(app_label, model_name)
+                get_serializer_for_model(model_class)
+                self.assertTrue(hasattr(model_class, "to_objectchange"))

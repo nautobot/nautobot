@@ -11,12 +11,13 @@ theme:
     - "django"
     - "yaml"
   features:
-    - "navigation.tracking"
+    - "navigation.footer"
     - "navigation.tabs"
     - "navigation.tabs.sticky"
-    - "search.suggest"
+    - "navigation.tracking"
     - "search.highlight"
     - "search.share"
+    - "search.suggest"
   favicon: "assets/favicon.ico"
   logo: "assets/nautobot_logo.svg"
   palette:
@@ -35,6 +36,10 @@ theme:
       toggle:
         icon: "material/weather-night"
         name: "Switch to light mode"
+validation:
+  absolute_links: warn
+  omitted_files: warn
+  unrecognized_links: warn
 extra_css:
   - "assets/extra.css"
 extra:
@@ -73,3 +78,5 @@ plugins:
 
 nav:
   - Introduction: "index.md"
+  - Models:
+    - Example Model: "models/examplemodel.md"
