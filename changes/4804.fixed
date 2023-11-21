@@ -1,0 +1,1 @@
+Fixed VarbinaryIPField storing None or empty values as the binary representation of b'' thereby ignoring the non-null constraint on the field.
