@@ -19,8 +19,7 @@ from django.template.loader import select_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import is_safe_url
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.views.generic.edit import FormView
 
 from rest_framework import mixins, exceptions
@@ -622,7 +621,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if not self.filterset.is_valid():
                 messages.error(
                     self.request,
-                    mark_safe(f"Invalid filters were specified: {self.filterset.errors}"),
+                    format_html("Invalid filters were specified: {}", self.filterset.errors),
                 )
                 queryset = queryset.none()
         return queryset
@@ -748,10 +747,10 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             if hasattr(obj, "get_absolute_url"):
-                msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
             else:
-                msg = f"{msg} { escape(obj)}"
-            messages.success(request, mark_safe(msg))
+                msg = format_html("{} {}", msg, obj)
+            messages.success(request, msg)
             if "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form
                 if hasattr(obj, "clone_fields"):

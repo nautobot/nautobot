@@ -20,9 +20,9 @@ from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
 from nautobot.core.utils.navigation import is_route_new_ui_ready
 
-HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
-HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
-HTML_NONE = '<span class="text-muted">&mdash;</span>'
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
+HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -99,7 +99,7 @@ def placeholder(value):
     """
     if value:
         return value
-    return mark_safe(HTML_NONE)
+    return HTML_NONE
 
 
 @library.filter()
@@ -123,7 +123,7 @@ def add_html_id(element_str, id_str):
     match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
     if not match:
         return element_str
-    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308
 
 
 @library.filter()
@@ -154,10 +154,10 @@ def render_boolean(value):
         '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
     """
     if value is None:
-        return mark_safe(HTML_NONE)
+        return HTML_NONE
     if bool(value):
-        return mark_safe(HTML_TRUE)
-    return mark_safe(HTML_FALSE)
+        return HTML_TRUE
+    return HTML_FALSE
 
 
 @library.filter()
@@ -180,7 +180,7 @@ def render_markdown(value):
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
-    return mark_safe(html)
+    return mark_safe(html)  # noqa: S308
 
 
 @library.filter()

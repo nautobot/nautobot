@@ -13,8 +13,7 @@ from django.forms import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.functional import cached_property
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
@@ -2634,8 +2633,8 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
 
             if membership_form.is_valid():
                 membership_form.save()
-                msg = f'Added member <a href="{device.get_absolute_url()}">{escape(device)}</a>'
-                messages.success(request, mark_safe(msg))
+                msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     return redirect(request.get_full_path())
@@ -2684,8 +2683,8 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         # Protect master device from being removed
         virtual_chassis = VirtualChassis.objects.filter(master=device).first()
         if virtual_chassis is not None:
-            msg = f"Unable to remove master device {escape(device)} from the virtual chassis."
-            messages.error(request, mark_safe(msg))
+            msg = format_html("Unable to remove master device {} from the virtual chassis.", device)
+            messages.error(request, msg)
             return redirect(device.get_absolute_url())
 
         if form.is_valid():
