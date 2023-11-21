@@ -2,7 +2,8 @@ from django.urls import reverse
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
-from nautobot.dcim.models import Site
+from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.models import Cable, Device, DeviceType, DeviceRole, FrontPort, Interface, RearPort, Site
 from nautobot.extras.models import Status
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 
@@ -203,6 +204,7 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             Site.objects.first(),
             Site.objects.last(),
         )
+        cls.sites = sites
 
         provider = Provider.objects.create(name="Provider 1", slug="provider-1")
         circuit_type = CircuitType.objects.create(name="Circuit Type 1", slug="circuit-type-1")
@@ -212,6 +214,7 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
             Circuit.objects.create(cid="Circuit 2", provider=provider, type=circuit_type),
             Circuit.objects.create(cid="Circuit 3", provider=provider, type=circuit_type),
         )
+        cls.circuits = circuits
 
         CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side=SIDE_A)
         CircuitTermination.objects.create(circuit=circuits[0], site=sites[1], term_side=SIDE_Z)
@@ -234,3 +237,72 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         ]
 
         cls.bulk_update_data = {"port_speed": 123456}
+
+    def test_circuit_termination_connected_endpoint(self):
+        """Assert that API response for CircuitTermination connected cables to CircuitTermination, Interface, FortPort, or RearPort does not raise any errors"""
+        # Fix for https://github.com/nautobot/nautobot/issues/3179
+        self.add_permissions("circuits.view_circuittermination")
+
+        status = Status.objects.get_for_model(Cable).first()
+        device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+        device_role = DeviceRole.objects.first()
+        device = Device.objects.create(
+            device_type=device_type, device_role=device_role, name="Device 2", site=self.sites[0]
+        )
+        circuits = self.circuits
+
+        interface = Interface.objects.create(
+            device=device, type=InterfaceTypeChoices.TYPE_1GE_FIXED, name="Interface 001"
+        )
+        rearport1 = RearPort.objects.create(device=device, name="Rear Port 1", positions=1)
+        frontport1 = FrontPort.objects.create(
+            device=device, name="Front Port 1", rear_port=rearport1, rear_port_position=1
+        )
+
+        CircuitTermination.objects.create(
+            circuit=circuits[2], site=self.sites[0], term_side=CircuitTerminationSideChoices.SIDE_A
+        )
+        CircuitTermination.objects.create(
+            circuit=circuits[2], site=self.sites[0], term_side=CircuitTerminationSideChoices.SIDE_Z
+        )
+
+        with self.subTest("Assert CircuitTermination Cable connected to an Interface and Rear Port"):
+            Cable.objects.create(
+                termination_a=circuits[0].termination_a, termination_b=interface, label="Cable 1", status=status
+            )
+            Cable.objects.create(
+                termination_a=circuits[0].termination_z, termination_b=rearport1, label="Cable 2", status=status
+            )
+
+            response = self.client.get(
+                f"/api{circuits[0].termination_a.get_absolute_url()}",
+                **self.header,
+            )
+            self.assertEqual(response.status_code, 200)
+            response = self.client.get(
+                f"/api{circuits[0].termination_z.get_absolute_url()}",
+                **self.header,
+            )
+            self.assertEqual(response.status_code, 200)
+
+        with self.subTest("Assert CircuitTermination Cable connected to a FrontPort and CircuitTermination"):
+            Cable.objects.create(
+                termination_a=circuits[2].termination_a,
+                termination_b=circuits[1].termination_z,
+                label="Cable 3",
+                status=status,
+            )
+            Cable.objects.create(
+                termination_a=circuits[2].termination_z, termination_b=frontport1, label="Cable 4", status=status
+            )
+
+            response = self.client.get(
+                f"/api{circuits[2].termination_a.get_absolute_url()}",
+                **self.header,
+            )
+            self.assertEqual(response.status_code, 200)
+            response = self.client.get(
+                f"/api{circuits[2].termination_z.get_absolute_url()}",
+                **self.header,
+            )
+            self.assertEqual(response.status_code, 200)
