@@ -22,6 +22,6 @@ def handle_protectederror(obj_list, request, e):
             dependent_objects.append(format_html('<a href="{}">{}</a>', dependent.get_absolute_url(), dependent))
         else:
             dependent_objects.append(escape(str(dependent)))
-    err_message += mark_safe(", ".join(dependent_objects))
+    err_message += mark_safe(", ".join(dependent_objects))  # noqa: S308
 
     messages.error(request, err_message)
