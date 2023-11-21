@@ -1,5 +1,6 @@
 from django.contrib import messages
-from django.utils.html import format_html, format_html_join
+from django.utils.html import escape, format_html
+from django.utils.safestring import mark_safe
 
 
 def handle_protectederror(obj_list, request, e):
@@ -15,10 +16,12 @@ def handle_protectederror(obj_list, request, e):
     )
 
     # Append dependent objects to error message
-    err_message += format_html_join(
-        ", ",
-        '<a href="{}">{}</a>',
-        ((dependent.get_absolute_url(), dependent) for dependent in protected_objects[:50]),
-    )
+    dependent_objects = []
+    for dependent in protected_objects[:50]:
+        if hasattr(dependent, "get_absolute_url"):
+            dependent_objects.append(format_html('<a href="{}">{}</a>', dependent.get_absolute_url(), dependent))
+        else:
+            dependent_objects.append(escape(str(dependent)))
+    err_message += mark_safe(", ".join(dependent_objects))
 
     messages.error(request, err_message)
