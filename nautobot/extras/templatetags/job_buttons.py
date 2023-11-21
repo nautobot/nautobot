@@ -3,6 +3,7 @@ from collections import OrderedDict
 from django import template
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from nautobot.extras.models import JobButton
@@ -87,10 +88,11 @@ def job_buttons(context, obj):
         "user": context["user"],  # django.contrib.auth.context_processors.auth
         "perms": context["perms"],  # django.contrib.auth.context_processors.auth
     }
-    buttons_html = forms_html = ""
+    buttons_html = forms_html = mark_safe("")  # noqa: S308
     group_names = OrderedDict()
 
-    hidden_inputs = HIDDEN_INPUTS.format(
+    hidden_inputs = format_html(
+        HIDDEN_INPUTS,
         csrf_token=context["csrf_token"],
         object_pk=obj.pk,
         object_model_name=f"{content_type.app_label}.{content_type.model}",
@@ -121,22 +123,24 @@ def job_buttons(context, obj):
                 if text_rendered:
                     template_args["button_text"] = text_rendered
                     if jb.confirmation:
-                        buttons_html += CONFIRM_BUTTON.format(**template_args)
-                        forms_html += CONFIRM_MODAL.format(**template_args)
+                        buttons_html += format_html(CONFIRM_BUTTON, **template_args)
+                        forms_html += format_html(CONFIRM_MODAL, **template_args)
                     else:
-                        buttons_html += NO_CONFIRM_BUTTON.format(**template_args)
-                        forms_html += NO_CONFIRM_FORM.format(**template_args)
+                        buttons_html += format_html(NO_CONFIRM_BUTTON, **template_args)
+                        forms_html += format_html(NO_CONFIRM_FORM, **template_args)
             except Exception as e:
-                buttons_html += (
-                    f'<a class="btn btn-sm btn-default" disabled="disabled" title="{e}">'
-                    f'<i class="mdi mdi-alert"></i> {jb.name}</a>\n'
+                buttons_html += format_html(
+                    '<a class="btn btn-sm btn-default" disabled="disabled" title="{}">'
+                    '<i class="mdi mdi-alert"></i> {}</a>\n',
+                    e,
+                    jb.name,
                 )
 
     # Add grouped buttons to template
     for group_name, buttons in group_names.items():
         group_button_class = buttons[0].button_class
 
-        buttons_rendered = ""
+        buttons_rendered = mark_safe("")  # noqa: S308
 
         for jb in buttons:
             template_args = {
@@ -154,23 +158,34 @@ def job_buttons(context, obj):
                 if text_rendered:
                     template_args["button_text"] = text_rendered
                     if jb.confirmation:
-                        buttons_rendered += "<li>" + CONFIRM_BUTTON.format(**template_args) + "</li>"
-                        forms_html += CONFIRM_MODAL.format(**template_args)
+                        buttons_rendered += (
+                            mark_safe("<li>")  # noqa: S308
+                            + format_html(CONFIRM_BUTTON, **template_args)
+                            + mark_safe("</li>")  # noqa: S308
+                        )
+                        forms_html += format_html(CONFIRM_MODAL, **template_args)
                     else:
-                        buttons_rendered += "<li>" + NO_CONFIRM_BUTTON.format(**template_args) + "</li>"
-                        forms_html += NO_CONFIRM_FORM.format(**template_args)
+                        buttons_rendered += (
+                            mark_safe("<li>")  # noqa: S308
+                            + format_html(NO_CONFIRM_BUTTON, **template_args)
+                            + mark_safe("</li>")  # noqa: S308
+                        )
+                        forms_html += format_html(NO_CONFIRM_FORM, **template_args)
             except Exception as e:
-                buttons_rendered += (
-                    f'<li><a disabled="disabled" title="{e}"><span class="text-muted">'
-                    f'<i class="mdi mdi-alert"></i> {jb.name}</span></a></li>'
+                buttons_rendered += format_html(
+                    '<li><a disabled="disabled" title="{}"><span class="text-muted">'
+                    '<i class="mdi mdi-alert"></i> {}</span></a></li>',
+                    e,
+                    jb.name,
                 )
 
         if buttons_rendered:
-            buttons_html += GROUP_DROPDOWN.format(
+            buttons_html += format_html(
+                GROUP_DROPDOWN,
                 group_button_class=group_button_class,
                 group_name=group_name,
                 grouped_buttons=buttons_rendered,
             )
 
     # We want all of the buttons first and then any modals and forms so the buttons render properly
-    return mark_safe(buttons_html + forms_html)
+    return buttons_html + forms_html

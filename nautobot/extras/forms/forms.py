@@ -648,7 +648,7 @@ class GitRepositoryCSVForm(CSVModelForm):
         self.fields["provided_contents"] = CSVMultipleChoiceField(
             choices=get_git_datasource_content_choices(),
             required=False,
-            help_text=mark_safe(
+            help_text=mark_safe(  # noqa: S308
                 "The data types this repository provides. Multiple values must be comma-separated and wrapped in "
                 'double quotes (e.g. <code>"extras.job,extras.configcontext"</code>).'
             ),
@@ -1352,7 +1352,7 @@ class StatusCSVForm(CustomFieldModelCSVForm):
     content_types = CSVMultipleContentTypeField(
         feature="statuses",
         choices_as_strings=True,
-        help_text=mark_safe(
+        help_text=mark_safe(  # noqa: S308
             "The object types to which this status applies. Multiple values "
             "must be comma-separated and wrapped in double quotes. (e.g. "
             '<code>"dcim.device,dcim.rack"</code>)'
@@ -1364,7 +1364,7 @@ class StatusCSVForm(CustomFieldModelCSVForm):
         model = Status
         fields = Status.csv_headers
         help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),  # noqa: S308
         }
 
 
@@ -1427,7 +1427,7 @@ class TagCSVForm(CustomFieldModelCSVForm):
         model = Tag
         fields = Tag.csv_headers
         help_texts = {
-            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),
+            "color": mark_safe("RGB color in hexadecimal (e.g. <code>00ff00</code>)"),  # noqa: S308
         }
 
 

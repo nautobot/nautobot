@@ -12,7 +12,7 @@ from django.core.validators import RegexValidator, ValidationError
 from django.db import models
 from django.forms.widgets import TextInput
 from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
@@ -546,7 +546,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 field.validators = [
                     RegexValidator(
                         regex=self.validation_regex,
-                        message=mark_safe(f"Values must match this regex: <code>{self.validation_regex}</code>"),
+                        message=format_html("Values must match this regex: <code>{}</code>", self.validation_regex),
                     )
                 ]
 
