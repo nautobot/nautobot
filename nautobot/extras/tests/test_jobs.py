@@ -483,6 +483,20 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
 
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
+    def test_job_fires_webhooks(self, mock_enqueue_webhooks):
+        module = "atomic_transaction"
+        name = "TestAtomicDecorator"
+
+        status_ct = ContentType.objects.get_for_model(models.Status)
+        webhook = models.Webhook.objects.create(name="Test Webhook", type_create=True, payload_url="http://localhost/")
+        webhook.content_types.set([status_ct])
+
+        job_result = create_job_result_and_run_job(module, name)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+        mock_enqueue_webhooks.assert_called_once()
+
 
 class JobFileUploadTest(TransactionTestCase):
     """Test a job that uploads/deletes files."""
