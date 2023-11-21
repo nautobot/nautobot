@@ -1,1 +1,0 @@
-Fixed the error that occurred when fetching the API response for CircuitTermination with a cable connected to CircuitTermination, FrontPort, or RearPort.
