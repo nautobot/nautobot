@@ -2119,7 +2119,7 @@ class CustomFieldTableTest(TestCase):
             "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
             "choice_field": '<span class="label label-default">Bar</span>',
             "multi_choice_field": (
-                '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span> '
+                '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span>'
             ),
         }
 

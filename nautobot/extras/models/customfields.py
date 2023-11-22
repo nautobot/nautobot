@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.forms.widgets import TextInput
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from nautobot.core.forms import (
     add_blank_choice,
@@ -517,7 +517,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 field.validators = [
                     RegexValidator(
                         regex=self.validation_regex,
-                        message=mark_safe(f"Values must match this regex: <code>{self.validation_regex}</code>"),
+                        message=format_html("Values must match this regex: <code>{}</code>", self.validation_regex),
                     )
                 ]
 

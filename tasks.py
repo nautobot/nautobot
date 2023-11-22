@@ -612,6 +612,13 @@ def pylint(context, target=None, recursive=False):
 
 
 @task
+def ruff(context, output_format="text"):
+    """Run ruff to perform static analysis and linting."""
+    command = f"ruff --output-format {output_format} development/ examples/ nautobot/ tasks.py"
+    run_command(context, command)
+
+
+@task
 def yamllint(context):
     """Run yamllint to validate formatting applies to YAML standards."""
     # TODO: enable for directories other than nautobot/docs and fix all warnings
@@ -998,6 +1005,7 @@ def tests(context, lint_only=False, keepdb=False):
     hadolint(context)
     markdownlint(context)
     yamllint(context)
+    ruff(context)
     pylint(context)
     check_migrations(context)
     check_schema(context)

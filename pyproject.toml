@@ -199,6 +199,8 @@ isort = "~5.12.0"
 pylint = "~2.17.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
+# Combination linter and code formatter
+ruff = "~0.1.6"
 # YAML linting
 yamllint = "~1.30.0"
 
@@ -340,6 +342,26 @@ notes = """,
 [tool.pylint.typecheck]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators=["unittest.mock.patch"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    # "I",  # isort
+    "S308",  # flake8-bandit: suspicious-mark-safe-usage
+    "W",  # pycodestyle
+]
+ignore = [
+    "E501",  # pycodestyle: line-too-long
+]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+force-sort-within-sections = true
 
 [tool.towncrier]
 package = "nautobot"
