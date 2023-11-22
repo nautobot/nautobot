@@ -1388,7 +1388,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_interfaces(self):
-        device = Device.objects.first()
+        device = Device.objects.filter(interfaces__isnull=False).first()
         self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
 
         url = reverse("dcim:device_interfaces", kwargs={"pk": device.pk})
