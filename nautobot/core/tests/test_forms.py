@@ -805,9 +805,9 @@ class DynamicFilterFormTest(TestCase):
                 },
             )
 
-        with self.subTest("Test for lookup_value with a NullBooleanField and StaticSelect2 widget"):
+        with self.subTest("Test for lookup_value with a ChoiceField and StaticSelect2 widget"):
             # If `lookup_field` value is a boolean filter and `lookup_type` lookup expr is `exact`, then
-            # `lookup_value` field should be a NullBooleanField with StaticSelect2 widget
+            # `lookup_value` field should be a ChoiceField with StaticSelect2 widget
             form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-2")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
@@ -819,7 +819,7 @@ class DynamicFilterFormTest(TestCase):
                     "placeholder": None,
                 },
             )
-            self.assertIsInstance(form.fields["lookup_value"], django_forms.NullBooleanField)
+            self.assertIsInstance(form.fields["lookup_value"], django_forms.ChoiceField)
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
                 {"class": "form-control nautobot-select2-static lookup_value-input form-control"},

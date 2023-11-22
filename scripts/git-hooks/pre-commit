@@ -45,6 +45,9 @@ else
     invoke markdownlint || EXIT=1
 fi
 
+echo "Check static analysis via ruff..."
+invoke ruff || EXIT=1
+
 echo "Check static analysis via pylint..."
 invoke pylint || EXIT=1
 
