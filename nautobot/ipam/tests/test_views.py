@@ -50,12 +50,14 @@ class NamespaceTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkImportObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Namespace
 
     @classmethod
     def setUpTestData(cls):
-        locations = Location.objects.all()[:4]
+        locations = Location.objects.get_for_model(Namespace)
 
         cls.form_data = {"name": "Namespace X", "location": locations[0].pk, "description": "A new Namespace"}
 
@@ -65,6 +67,11 @@ class NamespaceTestCase(
             f"Namespace 5,{locations[2].pk}",
             "Namespace 6,",
         )
+
+        cls.bulk_edit_data = {
+            "description": "New description",
+            "location": locations[1].pk,
+        }
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
