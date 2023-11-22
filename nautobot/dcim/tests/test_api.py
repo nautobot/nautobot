@@ -1546,7 +1546,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
             ),
         )
 
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status, vlan_group=vlan_group),
