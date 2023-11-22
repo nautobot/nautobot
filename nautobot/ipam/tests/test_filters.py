@@ -928,7 +928,10 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(ipam_vlan_related__isnull=False).distinct())[:2]
         params = {"status": [statuses[0].slug, statuses[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses))
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(status__in=statuses).distinct(),
+        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
