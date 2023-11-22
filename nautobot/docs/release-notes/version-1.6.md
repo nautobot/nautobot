@@ -72,6 +72,30 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.6 (2023-11-21)
+
+### Security
+
+- [#4833](https://github.com/nautobot/nautobot/issues/4833) - Fixed cross-site-scripting (XSS) potential with maliciously crafted Custom Links, Computed Fields, and Job Buttons (GHSA-cf9f-wmhp-v4pr).
+
+### Changed
+
+- [#4833](https://github.com/nautobot/nautobot/issues/4833) - Changed the `render_jinja2()` API to no longer automatically call `mark_safe()` on the output.
+
+### Fixed
+
+- [#3179](https://github.com/nautobot/nautobot/issues/3179) - Fixed the error that occurred when fetching the API response for CircuitTermination with a cable connected to CircuitTermination, FrontPort, or RearPort.
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Reduced size of Nautobot `sdist` and `wheel` packages from 69 MB to 29 MB.
+
+### Dependencies
+
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Updated `mkdocs` development dependency to `1.5.3`.
+
+### Housekeeping
+
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Updated docs configuration for `examples/example_plugin`.
+- [#4833](https://github.com/nautobot/nautobot/issues/4833) - Added `ruff` to invoke tasks and CI.
+
 ## v1.6.5 (2023-11-13)
 
 ### Added

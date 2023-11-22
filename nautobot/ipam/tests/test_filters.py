@@ -906,9 +906,15 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     def test_site(self):
         sites = list(self.sites[:2])
         params = {"site_id": [sites[0].pk, sites[1].pk]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(site__in=sites).distinct(),
+        )
         params = {"site": [sites[0].slug, sites[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(site__in=sites))
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(site__in=sites).distinct(),
+        )
 
     def test_group(self):
         groups = list(VLANGroup.objects.filter(vlans__isnull=False).distinct())[:2]
@@ -928,7 +934,10 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(ipam_vlan_related__isnull=False).distinct())[:2]
         params = {"status": [statuses[0].slug, statuses[1].slug]}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses))
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(status__in=statuses).distinct(),
+        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
