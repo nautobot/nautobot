@@ -49,6 +49,7 @@ from nautobot.tenancy.models import Tenant
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
         cls.lt = LocationType.objects.get(name="Campus")
