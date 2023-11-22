@@ -172,6 +172,8 @@ class Command(BaseCommand):
             has_description=True,
             using=db_name,
         )
+        self.stdout.write("Creating Tenants without Circuits, Locations, IPAddresses, or Prefixes...")
+        TenantFactory.create_batch(10, using=db_name)
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
         # UserFactory.create_batch(10)
         # RackFactory.create_batch(10)

@@ -1,2 +1,0 @@
-Fixed multiple jobhooks and/or webhooks triggered by a single change.
-Fixed change logging behavior to properly combine multiple changes to an object in the same request.
