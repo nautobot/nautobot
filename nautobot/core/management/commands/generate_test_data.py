@@ -118,6 +118,8 @@ class Command(BaseCommand):
         AggregateFactory.create_batch(5, has_tenant_group=True, using=db_name)
         AggregateFactory.create_batch(5, has_tenant_group=False, has_tenant=True, using=db_name)
         AggregateFactory.create_batch(10, using=db_name)
+        self.stdout.write("Creating Sites without Prefixes, VLANs or VLANGroups...")
+        SiteFactory.create_batch(5, has_region=False, has_tenant=False, using=db_name)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(14, using=db_name)  # All 14 hard-coded Manufacturers for now.
         self.stdout.write("Creating Platforms (with manufacturers)...")
