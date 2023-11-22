@@ -103,20 +103,21 @@ def get_serializer_for_model(model, prefix=""):
     Raises:
         SerializerNotFound: if the requested serializer cannot be located.
     """
-    app_name, model_name = model._meta.label.split(".")
-    if app_name == "contenttypes" and model_name == "ContentType":
-        app_name = "extras"
-    # Serializers for Django's auth models are in the users app
-    if app_name == "auth":
-        app_name = "users"
-    serializer_name = f"{app_name}.api.serializers.{prefix}{model_name}Serializer"
-    if app_name not in settings.PLUGINS:
-        serializer_name = f"nautobot.{serializer_name}"
+    module_parts = model.__module__.split(".")
+    name = ""
+    while name != "models":
+        name = module_parts.pop()
+    # There could be double models in the module path, so we need to pop again
+    while module_parts[-1] == "models":
+        module_parts.pop()
+
+    serializer_name = f"{'.'.join(module_parts)}.api.serializers.{prefix}{model.__name__}Serializer"
+
     try:
         return dynamic_import(serializer_name)
     except AttributeError as exc:
         raise exceptions.SerializerNotFound(
-            f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'"
+            f"Could not determine serializer for {model} with prefix '{prefix}'. Expecting: {serializer_name}"
         ) from exc
 
 
