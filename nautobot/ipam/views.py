@@ -73,10 +73,13 @@ class NamespaceUIViewSet(
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectChangeLogViewMixin,
     view_mixins.ObjectBulkCreateViewMixin,
+    view_mixins.ObjectBulkDestroyViewMixin,
+    view_mixins.ObjectBulkUpdateViewMixin,
     view_mixins.ObjectNotesViewMixin,
 ):
     lookup_field = "pk"
     form_class = forms.NamespaceForm
+    bulk_update_form_class = forms.NamespaceBulkEditForm
     filterset_class = filters.NamespaceFilterSet
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
