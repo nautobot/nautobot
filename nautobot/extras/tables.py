@@ -1,7 +1,6 @@
 import django_tables2 as tables
 from django.conf import settings
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
@@ -236,7 +235,7 @@ class CustomFieldTable(BaseTable):
 
     def render_description(self, record):
         if record.description:
-            return mark_safe(render_markdown(record.description))
+            return render_markdown(record.description)
         return self.default
 
 

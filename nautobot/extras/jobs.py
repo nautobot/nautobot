@@ -40,7 +40,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.context_managers import change_logging, JobChangeContext, JobHookChangeContext
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
@@ -120,10 +120,12 @@ class BaseJob(Task):
             deserialized_kwargs = self.deserialize_data(kwargs)
         except Exception as err:
             raise RunJobTaskFailed("Error initializing job") from err
-        context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
-        change_context = context_class(user=self.user, context_detail=self.class_path)
+        if isinstance(self, JobHookReceiver):
+            change_context = ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK
+        else:
+            change_context = ObjectChangeEventContextChoices.CONTEXT_JOB
 
-        with change_logging(change_context):
+        with web_request_context(user=self.user, context_detail=self.class_path, context=change_context):
             if self.celery_kwargs.get("nautobot_job_profile", False) is True:
                 import cProfile
 
