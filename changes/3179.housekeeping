@@ -1,1 +1,0 @@
-Added unittest for CircuitTermination with a cable connected to CircuitTermination, FrontPort, or RearPort fix in #4815.
