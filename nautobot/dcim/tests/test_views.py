@@ -633,6 +633,7 @@ class DeviceTypeTestCase(
     # factories.
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_bulk_edit_objects_with_constrained_permission(self):
+        Device.objects.all().delete()
         DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
         super().test_bulk_edit_objects_with_constrained_permission()
 
@@ -642,6 +643,7 @@ class DeviceTypeTestCase(
     # factories.
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_bulk_edit_objects_with_permission(self):
+        Device.objects.all().delete()
         DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
         super().test_bulk_edit_objects_with_permission()
 
@@ -1181,6 +1183,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1")
@@ -1540,8 +1543,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.change_device")
 
         # Create an interface and assign an IP to it.
-        device = Device.objects.first()
-        interface = Interface.objects.first()
+        device = Device.objects.filter(interfaces__isnull=False).first()
+        interface = device.interfaces.first()
         namespace = Namespace.objects.first()
         Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace, status=self.prefix_status)
         ip_address = IPAddress.objects.create(address="1.2.3.4/32", namespace=namespace, status=self.ipaddr_status)
