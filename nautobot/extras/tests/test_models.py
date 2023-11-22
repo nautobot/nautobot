@@ -193,7 +193,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         cls.tenant = Tenant.objects.first()
         cls.tenantgroup = cls.tenant.tenant_group
         cls.child_tenant = (
-            Tenant.objects.filter(tenant_group__isnull=False).filter(tenant_group__parent__isnull=False).first()
+            Tenant.objects.filter(tenant_group__isnull=False, tenant_group__parent__isnull=False).first()
         )
         cls.parent_tenantgroup = cls.child_tenant.tenant_group.parent
         cls.child_tenantgroup = cls.child_tenant.tenant_group
