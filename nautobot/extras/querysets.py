@@ -29,8 +29,17 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         device_redundancy_group = getattr(obj, "device_redundancy_group", None)
 
         # Get the group of the assigned tenant, if any
-        tenant_group = obj.tenant.tenant_group if obj.tenant else None
+        if obj._meta.model_name == "device":
+            tenant_group = obj.tenant.tenant_group if obj.tenant else None
+            tenant = obj.tenant if obj.tenant else None
+        else:
+            tenant_group = obj.cluster.tenant.tenant_group if obj.cluster.tenant else None
+            tenant = obj.cluster.tenant if obj.cluster.tenant else None
 
+        if tenant_group:
+            tenant_groups = tenant_group.ancestors(include_self=True)
+        else:
+            tenant_groups = []
         # Match against the directly assigned location as well as any parent locations
         location = getattr(obj, "location", None)
         if location:
@@ -46,8 +55,8 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
             Q(clusters=cluster) | Q(clusters=None),
             Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
-            Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
-            Q(tenants=obj.tenant) | Q(tenants=None),
+            Q(tenant_groups__in=tenant_groups) | Q(tenant_groups=None),
+            Q(tenants=tenant) | Q(tenants=None),
             Q(tags__name__in=obj.tags.names()) | Q(tags=None),
         ]
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
@@ -138,10 +147,12 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             # This is necessary to prevent location related config context to be applied now.
             # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
             base_query.add((Q(locations=None)), Q.AND)
+            base_query.add((Q(tenant_groups=None)), Q.AND)
         elif self.model._meta.model_name == "virtualmachine":
             # This is necessary to prevent location related config context to be applied now.
             # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
             base_query.add((Q(locations=None)), Q.AND)
+            base_query.add((Q(tenant_groups=None)), Q.AND)
 
         return base_query
 
