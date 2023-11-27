@@ -299,6 +299,12 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
         for key in ["location", "platform", "tenant_group", "tenant", "tag", "dynamic_group"]:
             self.assertIn(key, device_context)
+        # Add a device type constraint that does not match the device in question to the location config context
+        # And make sure that location_context is not applied to it anymore.
+        no_match_device_type = DeviceType.objects.exclude(pk=self.devicetype.pk).first()
+        location_context.device_types.add(no_match_device_type)
+        device_context = device.get_config_context()
+        self.assertNotIn("location", device_context)
 
     def test_annotation_same_as_get_for_object_device_relations_in_child_locations(self):
         location_context = ConfigContext.objects.create(name="root-location", weight=100, data={"location-1": 1})
@@ -398,6 +404,12 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             "vm_dynamic_group",
         ]:
             self.assertIn(key, vm_context)
+        # Add a platform constraint that does not match the device in question to the location config context
+        # And make sure that location_context is not applied to it anymore.
+        no_match_platform = Platform.objects.exclude(pk=self.platform.pk).first()
+        location_context.platforms.add(no_match_platform)
+        device_context = virtual_machine.get_config_context()
+        self.assertNotIn("location", device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations_in_child_locations(self):
         location_context = ConfigContext.objects.create(name="root-location", weight=100, data={"location-1": 1})
