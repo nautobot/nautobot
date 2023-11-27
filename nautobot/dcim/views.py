@@ -11,7 +11,6 @@ from django.forms import (
     MultipleHiddenInput,
     modelformset_factory,
 )
-from django.utils.http import is_safe_url
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.functional import cached_property
 from django.utils.html import escape
