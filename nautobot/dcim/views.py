@@ -2911,15 +2911,3 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
     lookup_field = "pk"
-
-    def get_return_url(self, request, obj=None):
-        # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
-        # considered safe.
-        query_param = request.GET.get("return_url") or request.POST.get("return_url")
-        if query_param and is_safe_url(url=query_param, allowed_hosts=request.get_host()):
-            return query_param
-
-        if obj is not None and obj.present_in_database and obj.pk:
-            return obj.interface_redundancy_group.get_absolute_url()
-
-        return super().get_return_url(request, obj=obj)
