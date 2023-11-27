@@ -84,7 +84,7 @@ class ObjectChange(BaseModel):
     user_name = models.CharField(max_length=150, editable=False)
     request_id = models.UUIDField(editable=False, db_index=True)
     action = models.CharField(max_length=50, choices=ObjectChangeActionChoices)
-    changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.PROTECT, related_name="+")
+    changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.SET_NULL, null=True, related_name="+")
     changed_object_id = models.UUIDField(db_index=True)
     changed_object = GenericForeignKey(ct_field="changed_object_type", fk_field="changed_object_id")
     change_context = models.CharField(
@@ -96,7 +96,7 @@ class ObjectChange(BaseModel):
     change_context_detail = models.CharField(max_length=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, blank=True, editable=False)
     related_object_type = models.ForeignKey(
         to=ContentType,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="+",
         blank=True,
         null=True,
