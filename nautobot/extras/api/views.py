@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
-from django.http import Http404
+from django.http import Http404, FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -43,6 +43,7 @@ from nautobot.extras.models import (
     CustomLink,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -331,6 +332,30 @@ class ExternalIntegrationViewSet(NautobotModelViewSet):
     queryset = ExternalIntegration.objects.select_related("secrets_group")
     serializer_class = serializers.ExternalIntegrationSerializer
     filterset_class = filters.ExternalIntegrationFilterSet
+
+
+#
+# File proxies
+#
+
+
+class FileProxyViewSet(ReadOnlyModelViewSet):
+    queryset = FileProxy.objects.select_related("job_result")
+    serializer_class = serializers.FileProxySerializer
+    filterset_class = filters.FileProxyFilterSet
+
+    @extend_schema(
+        methods=["get"],
+        responses=OpenApiTypes.BINARY,
+    )
+    @action(
+        detail=True,
+        methods=["get"],
+    )
+    def download(self, request, *args, **kwargs):
+        """Download the specified FileProxy."""
+        file_proxy = self.get_object()
+        return FileResponse(file_proxy.file.open("rb"), as_attachment=True)
 
 
 #

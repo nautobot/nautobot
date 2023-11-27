@@ -52,6 +52,7 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -306,6 +307,17 @@ class ExternalIntegrationSerializer(NautobotModelSerializer):
 
 
 #
+# File proxies
+#
+
+
+class FileProxySerializer(BaseModelSerializer):
+    class Meta:
+        model = FileProxy
+        exclude = ["file"]
+
+
+#
 # Git repositories
 #
 
@@ -456,6 +468,15 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     class Meta:
         model = JobResult
         fields = "__all__"
+        extra_kwargs = {
+            "files": {"read_only": True},
+        }
+
+    def get_field_names(self, declared_fields, info):
+        """Add reverse relation to related FileProxy objects."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "files")
+        return fields
 
 
 class JobRunResponseSerializer(serializers.Serializer):
