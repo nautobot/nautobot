@@ -849,7 +849,9 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
         )
         return instance.delete()
 
-
+@extras_features(
+    "graphql"
+)
 class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
     """Intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
 

@@ -415,7 +415,10 @@ class CustomFieldEditView(generic.ObjectEditView):
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    try:
+                        msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    except AttributeError:
+                        msg = f"{msg} { escape(obj)}"
                 else:
                     msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
@@ -653,7 +656,10 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    try:
+                        msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    except AttributeError:
+                        msg = f"{msg} { escape(obj)}"
                 else:
                     msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
@@ -2052,7 +2058,10 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
                 if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    try:
+                        msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+                    except AttributeError:
+                        msg = f"{msg} { escape(obj)}"
                 else:
                     msg = f"{msg} {escape(obj)}"
                 messages.success(request, mark_safe(msg))
