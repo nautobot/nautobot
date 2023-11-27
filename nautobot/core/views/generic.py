@@ -402,10 +402,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         msg = f"{verb} {self.queryset.model._meta.verbose_name}"
         logger.info(f"{msg} {obj} (PK: {obj.pk})")
         if hasattr(obj, "get_absolute_url"):
-            try:
-                msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-            except AttributeError:
-                msg = f"{msg} { escape(obj)}"
+            msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
         else:
             msg = f"{msg} {escape(obj)}"
         messages.success(request, mark_safe(msg))
