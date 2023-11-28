@@ -2948,8 +2948,8 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         deviceroles = Role.objects.get_for_model(Device)[:2]
 
-        statuses = Status.objects.get_for_model(Device)
-        status_active = statuses[0]
+        device_statuses = Status.objects.get_for_model(Device)
+        status_active = device_statuses[0]
         device = Device.objects.create(
             name="Device 1",
             location=locations[0],
