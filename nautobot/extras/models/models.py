@@ -212,8 +212,21 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
                         locations__in=self.cluster.location.ancestors(include_self=True)
                     ).distinct()
 
+            tenant_group_config_context_queryset = ConfigContext.objects.none()
+            if self._meta.model_name == "device" and self.tenant and self.tenant.tenant_group:
+                tenant_group_config_context_queryset = ConfigContext.objects.filter(
+                    tenant_groups__in=self.tenant.tenant_group.ancestors(include_self=True)
+                ).distinct()
+            else:
+                if self.cluster and self.cluster.tenant and self.cluster.tenant.tenant_group:
+                    tenant_group_config_context_queryset = ConfigContext.objects.filter(
+                        tenant_groups__in=self.cluster.tenant.tenant_group.ancestors(include_self=True)
+                    ).distinct()
+
             # Annotation has keys "weight" and "name" (used for ordering) and "data" (the actual config context data)
             for cc in location_config_context_queryset:
+                config_context_data.append({"data": cc.data, "name": cc.name, "weight": cc.weight})
+            for cc in tenant_group_config_context_queryset:
                 config_context_data.append({"data": cc.data, "name": cc.name, "weight": cc.weight})
             config_context_data = [
                 c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))

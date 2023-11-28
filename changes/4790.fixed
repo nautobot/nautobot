@@ -1,1 +1,0 @@
-Fixed REST API error that interpreted `rack_group` as a required field when creating a rack.
