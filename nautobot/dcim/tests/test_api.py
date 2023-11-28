@@ -506,6 +506,13 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
+            # Make sure rack_group is not interpreted as a required field
+            {
+                "name": "Test Rack 7",
+                "location": locations[1].pk,
+                "role": rack_roles[1].pk,
+                "status": statuses[1].pk,
+            },
         ]
         cls.bulk_update_data = {
             "status": statuses[1].pk,
@@ -1539,7 +1546,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
             ),
         )
 
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status, vlan_group=vlan_group),

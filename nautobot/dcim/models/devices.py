@@ -8,10 +8,9 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, ProtectedError, Q
-from django.utils.functional import cached_property
 from django.urls import reverse
-from django.utils.functional import classproperty
-from django.utils.safestring import mark_safe
+from django.utils.functional import cached_property, classproperty
+from django.utils.html import format_html
 
 from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import NaturalOrderingField
@@ -257,9 +256,11 @@ class DeviceType(PrimaryModel):
                 url = f"{reverse('dcim:device_list')}?manufacturer={self.manufacturer_id}&device_type={self.pk}"
                 raise ValidationError(
                     {
-                        "u_height": mark_safe(
-                            f'Unable to set 0U height: Found <a href="{url}">{racked_instance_count} instances</a> already '
-                            f"mounted within racks."
+                        "u_height": format_html(
+                            "Unable to set 0U height: "
+                            'Found <a href="{}">{} instances</a> already mounted within racks.',
+                            url,
+                            racked_instance_count,
                         )
                     }
                 )

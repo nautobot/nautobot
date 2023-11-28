@@ -100,7 +100,11 @@ def render_jinja2(template_code, context):
     """
     rendering_engine = engines["jinja"]
     template = rendering_engine.from_string(template_code)
-    return template.render(context=context)
+    # For reasons unknown to me, django-jinja2 `template.render()` implicitly calls `mark_safe()` on the rendered text.
+    # This is a security risk in general, especially so in our case because we're often using this function to render
+    # a user-provided template and don't want to open ourselves up to script injection or similar issues.
+    # There's no `mark_unsafe()` function, but concatenating a SafeString to an ordinary string (even "") suffices.
+    return "" + template.render(context=context)
 
 
 def shallow_compare_dict(source_dict, destination_dict, exclude=None):

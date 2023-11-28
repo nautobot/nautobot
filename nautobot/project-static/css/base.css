@@ -318,6 +318,9 @@ ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
 }
+.label a {
+    color: inherit;
+}
 
 /* Filters */
 .filter-container {
