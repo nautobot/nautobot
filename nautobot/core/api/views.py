@@ -494,7 +494,7 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+        if not request.user.is_authenticated:
             doc_url = reverse("api_docs")
             login_url = reverse(settings.LOGIN_URL)
             return redirect(f"{login_url}?next={doc_url}")
@@ -721,14 +721,13 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def format_and_remove_hidden_menu(self, request, data, hide_restricted_ui):
+    def format_and_remove_hidden_menu(self, request, data, hide_restricted_ui=False):
         """
         Formats the menu data and removes hidden menu items based on user permissions.
 
         Args:
             request (HttpRequest): The request object.
             data (Union[dict, str]): The menu data to format and filter. Can be either a dictionary or a string.
-            hide_restricted_ui (bool): Flag indicating whether to hide restricted menu items.
 
         Returns:
             (Union[dict, str]): The formatted menu data without hidden items. Returns a dict if `data` is a
@@ -747,15 +746,18 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
             Output:
             {"Devices": "data value"}
         """
-        if isinstance(data, dict):
-            return_value = {}
-            for name, value in data.items():
-                if not hide_restricted_ui or any(
-                    request.user.has_perm(permission) for permission in value["permissions"]
-                ):
-                    return_value[name] = self.format_and_remove_hidden_menu(request, value["data"], hide_restricted_ui)
-            return return_value
-        return data
+        return_value = {}
+        for name, value in data.items():
+            if "permissions" in value:
+                permissions = value["permissions"]
+                user_has_permission = any(request.user.has_perm(permission) for permission in permissions)
+                if user_has_permission:
+                    return_value[name] = value["data"]
+            else:
+                return_data = self.format_and_remove_hidden_menu(request, value["data"])
+                if return_data:
+                    return_value[name] = return_data
+        return return_value
 
     @extend_schema(exclude=True)
     def get(self, request):
@@ -796,8 +798,7 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         }
         """
         base_menu = registry["new_ui_nav_menu"]
-        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
-        formatted_data = self.format_and_remove_hidden_menu(request, base_menu, HIDE_RESTRICTED_UI)
+        formatted_data = self.format_and_remove_hidden_menu(request, base_menu)
         return Response(formatted_data)
 
 
@@ -838,13 +839,12 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
                 {"model": "extras.role"},
             ],
         }
-        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
 
         for entry in itertools.chain(*object_counts.values()):
             app_label, model_name = entry["model"].split(".")
             model = apps.get_model(app_label, model_name)
             permission = get_permission_for_model(model, "view")
-            if HIDE_RESTRICTED_UI and not request.user.has_perm(permission):
+            if not request.user.has_perm(permission):
                 continue
             data = {"name": model._meta.verbose_name_plural}
             try:

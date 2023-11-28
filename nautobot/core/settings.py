@@ -614,12 +614,6 @@ CONSTANCE_CONFIG = {
         help_text="Whether to show the Feedback button in the new UI sidebar.",
         field_type=bool,
     ),
-    "HIDE_RESTRICTED_UI": ConstanceConfigItem(
-        default=False,
-        help_text="If set to True, users with limited permissions will not be shown menu items and home-page elements that "
-        "they do not have permission to access.",
-        field_type=bool,
-    ),
     "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
         default=False,
         help_text="Location names are not guaranteed globally-unique by Nautobot but in practice they often are. "
@@ -703,7 +697,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["HIDE_RESTRICTED_UI", "FEEDBACK_BUTTON_ENABLED", "SUPPORT_MESSAGE"],
+    "User Interface": ["FEEDBACK_BUTTON_ENABLED", "SUPPORT_MESSAGE"],
 }
 
 #

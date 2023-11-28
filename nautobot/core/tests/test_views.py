@@ -212,9 +212,8 @@ class NavRestrictedUI(TestCase):
         response = self.client.get(reverse("home"))
         return response.content.decode(response.charset)
 
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_apps_visible_to_staff_with_hide_restricted_ui_true(self):
-        """The "Installed Apps" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
+    def test_installed_apps_visible_to_staff(self):
+        """The "Installed Apps" menu item should be available to is_staff user."""
         # Make user admin
         self.user.is_staff = True
         self.user.save()
@@ -230,47 +229,11 @@ class NavRestrictedUI(TestCase):
             response_content,
         )
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_apps_visible_to_staff_with_hide_restricted_ui_false(self):
-        """The "Installed Apps" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
-        # Make user admin
-        self.user.is_staff = True
-        self.user.save()
-
-        response_content = self.make_request()
-        self.assertInHTML(
-            f"""
-            <a href="{self.url}"
-                data-item-weight="{self.item_weight}">
-                Installed Plugins
-            </a>
-            """,
-            response_content,
-        )
-
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_apps_not_visible_to_non_staff_user_with_hide_restricted_ui_true(self):
-        """The "Installed Apps" menu item should be hidden from a non-staff user when HIDE_RESTRICTED_UI=True."""
+    def test_installed_apps_not_visible_to_non_staff_user_without_permission(self):
+        """The "Installed Apps" menu item should be hidden from a non-staff user without permission."""
         response_content = self.make_request()
 
         self.assertNotRegex(response_content, r"Installed\s+Apps")
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_apps_disabled_to_non_staff_user_with_hide_restricted_ui_false(self):
-        """The "Installed Apps" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
-        response_content = self.make_request()
-
-        # print(response_content)
-
-        self.assertInHTML(
-            f"""
-            <a href="{self.url}"
-                data-item-weight="{self.item_weight}">
-                Installed Plugins
-            </a>
-            """,
-            response_content,
-        )
 
 
 class LoginUI(TestCase):
@@ -308,46 +271,6 @@ class LoginUI(TestCase):
         self.client.logout()
         sso_login_search_result = self.make_request()
         self.assertIsNotNone(sso_login_search_result)
-
-    @override_settings(HIDE_RESTRICTED_UI=True, BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
-    def test_routes_redirect_back_to_login_if_hide_restricted_ui_true(self):
-        """Assert that api docs and graphql redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=True."""
-        self.client.logout()
-        headers = {"HTTP_ACCEPT": "text/html"}
-        urls = [reverse("api_docs"), reverse("graphql")]
-        for url in urls:
-            response = self.client.get(url, follow=True, **headers)
-            self.assertHttpStatus(response, 200)
-            redirect_chain = [(f"/login/?next={url}", 302)]
-            self.assertEqual(response.redirect_chain, redirect_chain)
-            response_content = response.content.decode(response.charset).replace("\n", "")
-            # Assert Footer items(`self.footer_elements`), Banner and Banner Top is hidden
-            for footer_text in self.footer_elements:
-                self.assertNotIn(footer_text, response_content)
-            # Only API Docs implements BANNERS
-            if url == urls[0]:
-                self.assertNotIn("Hello, Banner Top", response_content)
-                self.assertNotIn("Hello, Banner Bottom", response_content)
-
-    @override_settings(HIDE_RESTRICTED_UI=False, BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
-    def test_routes_no_redirect_back_to_login_if_hide_restricted_ui_false(self):
-        """Assert that api docs and graphql do not redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=False."""
-        self.client.logout()
-        headers = {"HTTP_ACCEPT": "text/html"}
-        urls = [reverse("api_docs"), reverse("graphql")]
-        for url in urls:
-            response = self.client.get(url, **headers)
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.request["PATH_INFO"], url)
-            response_content = response.content.decode(response.charset).replace("\n", "")
-            # Assert Footer items(`self.footer_elements`), Banner and Banner Top is not hidden
-            for footer_text in self.footer_elements:
-                self.assertInHTML(footer_text, response_content)
-
-            # Only API Docs implements BANNERS
-            if url == urls[0]:
-                self.assertInHTML("Hello, Banner Top", response_content)
-                self.assertInHTML("Hello, Banner Bottom", response_content)
 
 
 class MetricsViewTestCase(TestCase):

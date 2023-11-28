@@ -810,6 +810,9 @@ class APIOrderingTestCase(testing.APITestCase):
 class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
     def test_get_menu(self):
         """Asset response from new ui nav menu api returns a well formatted registry["new_ui_nav_menu"] expected by nautobot-ui."""
+        self.user.is_superuser = True
+        self.user.save()
+
         url = reverse("ui-api:get-menu")
         response = self.client.get(url, **self.header)
         expected_response = {
@@ -912,6 +915,8 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
                 },
             },
         }
+
+        print(response.data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_response)
 

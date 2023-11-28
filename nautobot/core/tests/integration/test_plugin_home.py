@@ -1,4 +1,3 @@
-from django.test.utils import override_settings
 from django.conf import settings
 from unittest import skipIf
 
@@ -89,11 +88,11 @@ class PluginHomeTestCase(SeleniumTestCase):
                 counter_html = int(item_html.find_by_xpath("./../../span")["innerHTML"])
                 self.assertEqual(counter, counter_html)
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_no_permissions(self):
         """
         Render homepage with no permissions.
         """
+        # TODO: timizuo revisit this test case, Homepage should not render or should render with lockscreen
         self.browser.visit(self.live_server_url)
 
         columns_html = self.browser.find_by_css("div[class='homepage_column']")
@@ -103,22 +102,6 @@ class PluginHomeTestCase(SeleniumTestCase):
                 item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
                 self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"])
 
-    def test_examplemodel_custom_panel(self):
-        """
-        Render custom panel.
-        """
-        self.user.is_superuser = True
-        self.user.save()
-
-        self.browser.visit(self.live_server_url)
-
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
-        columns_html.first.find_by_xpath(f".//strong[text()='{self.custom_panel_examplemodel['name']}']")
-
-        for item_name in self.custom_panel_examplemodel["items"]:
-            columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_limit_permissions(self):
         """
         Render homepage with limited permissions.
@@ -143,3 +126,18 @@ class PluginHomeTestCase(SeleniumTestCase):
                 else:
                     item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
                     self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"])
+
+    def test_examplemodel_custom_panel(self):
+        """
+        Render custom panel.
+        """
+        self.user.is_superuser = True
+        self.user.save()
+
+        self.browser.visit(self.live_server_url)
+
+        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html.first.find_by_xpath(f".//strong[text()='{self.custom_panel_examplemodel['name']}']")
+
+        for item_name in self.custom_panel_examplemodel["items"]:
+            columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
