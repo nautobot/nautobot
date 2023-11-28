@@ -371,6 +371,42 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.5 (2023-11-21)
+
+### Security
+
+- [#4832](https://github.com/nautobot/nautobot/issues/4832) - Fixed cross-site-scripting (XSS) potential with maliciously crafted Custom Links, Computed Fields, and Job Buttons (GHSA-cf9f-wmhp-v4pr).
+
+### Changed
+
+- [#4832](https://github.com/nautobot/nautobot/issues/4832) - Changed the `render_jinja2()` API to no longer automatically call `mark_safe()` on the output.
+
+### Fixed
+
+- [#3015](https://github.com/nautobot/nautobot/issues/3015) - Fixed multiple jobhooks and/or webhooks triggered by a single change.
+- [#3015](https://github.com/nautobot/nautobot/issues/3015) - Fixed change logging behavior to properly combine multiple changes to an object in the same request.
+- [#4280](https://github.com/nautobot/nautobot/issues/4280) - Fixed text color of linked labels to use the same color as the text color of the non-linked labels.
+- [#4790](https://github.com/nautobot/nautobot/issues/4790) - Fixed REST API error that interpreted `rack_group` as a required field when creating a rack.
+- [#4791](https://github.com/nautobot/nautobot/issues/4791) - Fixed a bug where some form fields may change unexpectedly.
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Reduced size of Nautobot `sdist` and `wheel` packages from 86 MB to 31 MB.
+- [#4804](https://github.com/nautobot/nautobot/issues/4804) - Fixed VarbinaryIPField storing None or empty values as the binary representation of b'' thereby ignoring the non-null constraint on the field.
+
+### Dependencies
+
+- [#4615](https://github.com/nautobot/nautobot/issues/4615) - Updated `psycopg2-binary` dependency to version 2.9.9.
+- [#4615](https://github.com/nautobot/nautobot/issues/4615) - Updated `pylint` development dependency to version 2.17.7.
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Updated `mkdocs` development dependency to `1.5.3`.
+
+### Documentation
+
+- [#4008](https://github.com/nautobot/nautobot/issues/4008) - Removed CacheOps reference from application stack diagram.
+
+### Housekeeping
+
+- [#3179](https://github.com/nautobot/nautobot/issues/3179) - Added unittest for CircuitTermination with a cable connected to CircuitTermination, FrontPort, or RearPort fix in #4815.
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Updated docs configuration for `examples/example_plugin`.
+- [#4832](https://github.com/nautobot/nautobot/issues/4832) - Added `ruff` to invoke tasks and CI.
+
 ## v2.0.4 (2023-11-13)
 
 ### Security
