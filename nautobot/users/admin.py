@@ -8,8 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
 from django.db import models
 from django.urls import reverse
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.html import escape, format_html
 
 from nautobot.core.admin import NautobotModelAdmin
 from nautobot.extras.admin import order_content_types
@@ -107,9 +106,9 @@ class LogEntryAdmin(NautobotModelAdmin):
         else:
             ct = obj.content_type
             change_link = reverse(f"admin:{ct.app_label}_{ct.model}_change", args=[obj.object_id])
-            object_repr = escape(obj.object_repr)
-            link = f'<a href="{change_link}">{object_repr}</a>'
-        return mark_safe(link)
+            object_repr = obj.object_repr
+            link = format_html('<a href="{}">{}</a>', change_link, object_repr)
+        return link
 
     object_link.admin_order_field = "object_repr"
     object_link.short_description = "object"

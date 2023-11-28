@@ -983,6 +983,13 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             ip.validated_save()
         self.assertEqual(err.exception.message_dict["parent"][0], "Either a parent or a namespace must be provided.")
 
+    def test_varbinary_ip_fields_with_empty_values_do_not_violate_not_null_constrains(self):
+        # Assert that an error is triggered when the host is not provided.
+        # Initially, VarbinaryIPField fields with None values are stored as the binary representation of b'',
+        # thereby bypassing the Not Null Constraint check.
+        with self.assertRaises(IntegrityError):
+            IPAddress.objects.create(mask_length=32, status=self.status)
+
 
 class TestRIR(ModelTestCases.BaseModelTestCase):
     model = RIR

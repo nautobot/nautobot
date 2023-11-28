@@ -16,9 +16,8 @@ from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.html import escape
+from django.utils.html import format_html
 from django.utils.http import is_safe_url
-from django.utils.safestring import mark_safe
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.exceptions import ParseError
@@ -214,7 +213,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             if not filterset.is_valid():
                 messages.error(
                     request,
-                    mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+                    format_html("Invalid filters were specified: {}", filterset.errors),
                 )
                 self.queryset = self.queryset.none()
 
@@ -402,10 +401,10 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         msg = f"{verb} {self.queryset.model._meta.verbose_name}"
         logger.info(f"{msg} {obj} (PK: {obj.pk})")
         if hasattr(obj, "get_absolute_url"):
-            msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
+            msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
         else:
-            msg = f"{msg} {escape(obj)}"
-        messages.success(request, mark_safe(msg))
+            msg = format_html("{} {}", msg, obj)
+        messages.success(request, msg)
 
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectEditView")
@@ -757,7 +756,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 logger.info(f"Import object {obj} (PK: {obj.pk})")
                 messages.success(
                     request,
-                    mark_safe(f'Imported object: <a href="{obj.get_absolute_url()}">{obj}</a>'),
+                    format_html('Imported object: <a href="{}">{}</a>', obj.get_absolute_url(), obj),
                 )
 
                 if "_addanother" in request.POST:
