@@ -1,22 +1,22 @@
 from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
-from django.http import Http404, FileResponse
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from graphene_django.views import GraphQLView
 from graphql import GraphQLError
-from rest_framework import status
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
-from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.utils import get_serializer_for_model
@@ -38,9 +38,11 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    CustomField,
+    CustomFieldChoice,
+    CustomLink,
     DynamicGroup,
     DynamicGroupMembership,
-    CustomLink,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -66,9 +68,9 @@ from nautobot.extras.models import (
     TaggedItem,
     Webhook,
 )
-from nautobot.extras.models import CustomField, CustomFieldChoice
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.extras.utils import get_worker_count
+
 from . import serializers
 
 
