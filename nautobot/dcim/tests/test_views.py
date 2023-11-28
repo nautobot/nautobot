@@ -3015,4 +3015,4 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.interface_add_form_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(initial_count + 1, InterfaceRedundancyGroupAssociation.objects.all().count())
+        self.assertEqual(initial_count + 2, InterfaceRedundancyGroupAssociation.objects.all().count())
