@@ -1,1 +1,1 @@
-Removed support for `HIDE_RESTRICTED_UI` config.
+Removed support for `HIDE_RESTRICTED_UI`, resulting in the inability of unauthorized users to view UI elements requiring specific permissions. Additionally, users not logged in will now be automatically redirected to the login page.
