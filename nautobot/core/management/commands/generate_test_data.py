@@ -175,8 +175,8 @@ class Command(BaseCommand):
         self.stdout.write("Creating ExternalIntegrations...")
         ExternalIntegrationFactory.create_batch(20, using=db_name)
         # make sure we have some tenants that have null relationships to make filter tests happy
-        self.stdout.write("Creating Tenants with null ForeignKeys/GenericRelations...")
-        TenantFactory.create_batch(2, has_tenant_group=False, using=db_name)
+        self.stdout.write("Creating Tenants without Circuits, Locations, IPAddresses, or Prefixes...")
+        TenantFactory.create_batch(10, using=db_name)
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
         # UserFactory.create_batch(10)
         # RackFactory.create_batch(10)

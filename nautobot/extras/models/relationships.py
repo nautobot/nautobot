@@ -9,7 +9,7 @@ from django.db import models
 from django.db.models import Q
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -19,6 +19,7 @@ from nautobot.core.forms import (
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
 from nautobot.extras.utils import FeatureQuery, check_if_key_is_graphql_safe, extras_features
@@ -275,9 +276,10 @@ class RelationshipModel(models.Model):
                 if output_for == "ui":
                     try:
                         add_url = reverse(get_route_for_model(required_model_class, "add"))
-                        hint = (
-                            f"<a target='_blank' href='{add_url}'>Click here</a> to create "
-                            f"a {required_model_meta.verbose_name}."
+                        hint = format_html(
+                            '<a target="_blank" href="{}">Click here</a> to create a {}.',
+                            add_url,
+                            required_model_meta.verbose_name,
                         )
                     except NoReverseMatch:
                         pass
@@ -289,11 +291,14 @@ class RelationshipModel(models.Model):
                     except NoReverseMatch:
                         pass
 
-                error_message = mark_safe(
-                    f"{name_plural[0].upper()}{name_plural[1:]} require "
-                    f"{num_required_verbose} {required_model_meta.verbose_name}, but no "
-                    f"{required_model_meta.verbose_name_plural} exist yet. {hint}"
+                error_message = format_html(
+                    "{} require {} {}, but no {} exist yet. ",
+                    bettertitle(name_plural),
+                    num_required_verbose,
+                    required_model_meta.verbose_name,
+                    required_model_meta.verbose_name_plural,
                 )
+                error_message += hint
                 field_errors[field_key].append(error_message)
 
             if initial_data is not None:

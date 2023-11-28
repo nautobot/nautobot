@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django import template
 from django.contrib.contenttypes.models import ContentType
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from nautobot.core.utils.data import render_jinja2
@@ -40,7 +41,7 @@ def custom_links(context, obj):
         "user": context["user"],  # django.contrib.auth.context_processors.auth
         "perms": context["perms"],  # django.contrib.auth.context_processors.auth
     }
-    template_code = ""
+    template_code = mark_safe("")  # noqa: S308
     group_names = OrderedDict()
 
     for cl in links:
@@ -57,16 +58,20 @@ def custom_links(context, obj):
                 if text_rendered:
                     link_rendered = render_jinja2(cl.target_url, link_context)
                     link_target = ' target="_blank"' if cl.new_window else ""
-                    template_code += LINK_BUTTON.format(link_rendered, link_target, cl.button_class, text_rendered)
+                    template_code += format_html(
+                        LINK_BUTTON, link_rendered, link_target, cl.button_class, text_rendered
+                    )
             except Exception as e:
-                template_code += (
-                    f'<a class="btn btn-sm btn-default" disabled="disabled" title="{e}">'
-                    f'<i class="mdi mdi-alert"></i> {cl.name}</a>\n'
+                template_code += format_html(
+                    '<a class="btn btn-sm btn-default" disabled="disabled" title="{}">'
+                    '<i class="mdi mdi-alert"></i> {}</a>\n',
+                    e,
+                    cl.name,
                 )
 
     # Add grouped links to template
     for group, links in group_names.items():
-        links_rendered = []
+        links_rendered = mark_safe("")  # noqa: S308
 
         for cl in links:
             try:
@@ -74,14 +79,16 @@ def custom_links(context, obj):
                 if text_rendered:
                     link_target = ' target="_blank"' if cl.new_window else ""
                     link_rendered = render_jinja2(cl.target_url, link_context)
-                    links_rendered.append(GROUP_LINK.format(link_rendered, link_target, text_rendered))
+                    links_rendered += format_html(GROUP_LINK, link_rendered, link_target, text_rendered)
             except Exception as e:
-                links_rendered.append(
-                    f'<li><a disabled="disabled" title="{e}"><span class="text-muted">'
-                    f'<i class="mdi mdi-alert"></i> {cl.name}</span></a></li>'
+                links_rendered += format_html(
+                    '<li><a disabled="disabled" title="{}"><span class="text-muted">'
+                    '<i class="mdi mdi-alert"></i> {}</span></a></li>',
+                    e,
+                    cl.name,
                 )
 
         if links_rendered:
-            template_code += GROUP_BUTTON.format(links[0].button_class, group, "".join(links_rendered))
+            template_code += format_html(GROUP_BUTTON, links[0].button_class, group, links_rendered)
 
-    return mark_safe(template_code)
+    return template_code
