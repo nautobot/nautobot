@@ -710,6 +710,16 @@ class JobResult(BaseModel, CustomFieldModel):
                 if hasattr(obj, "get_absolute_url")
                 else "",
             )
+        except AttributeError:
+            log = JobLogEntry(
+                job_result=self,
+                log_level=level_choice,
+                grouping=grouping[:JOB_LOG_MAX_GROUPING_LENGTH],
+                message=message,
+                created=timezone.now().isoformat(),
+                log_object=str(obj)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH] if obj else "",
+                absolute_url="",
+            )
         except NotImplementedError:
             log = JobLogEntry(
                 job_result=self,
