@@ -1,0 +1,1 @@
+Added try/except block to handle the `AttributeError` raised by `get_absolute_url()` when a valid absolute url cannot be found.
