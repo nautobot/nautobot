@@ -324,8 +324,6 @@ nav:
       - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
       - GraphQL: "user-guide/feature-guides/graphql.md"
       - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
-      - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
-      - GraphQL: "user-guide/feature-guides/graphql.md"
       - Relationships: "user-guide/feature-guides/relationships.md"
     - Core Data Model:
       - Circuits:
