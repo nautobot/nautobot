@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import RelatedField
 from django.urls import reverse
-from django.utils.html import escape, format_html
+from django.utils.html import escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 import django_tables2
@@ -162,7 +162,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
+        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')  # noqa: S308
 
 
 class BooleanColumn(django_tables2.Column):
@@ -259,7 +259,7 @@ class ChoiceFieldColumn(django_tables2.Column):
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
             label = getattr(record, f"get_{name}_display")()
-            return mark_safe(f'<span class="label label-{css_class}">{label}</span>')
+            return format_html('<span class="label label-{}">{}</span>', css_class, label)
         return self.default
 
 
@@ -269,7 +269,7 @@ class ColorColumn(django_tables2.Column):
     """
 
     def render(self, value):
-        return mark_safe(f'<span class="label color-block" style="background-color: #{value}">&nbsp;</span>')
+        return format_html('<span class="label color-block" style="background-color: #{}">&nbsp;</span>', value)
 
 
 class ColoredLabelColumn(django_tables2.TemplateColumn):
@@ -306,7 +306,7 @@ class LinkedCountColumn(django_tables2.Column):
             url = reverse(self.viewname, kwargs=self.view_kwargs)
             if self.url_params:
                 url += "?" + "&".join([f"{k}={getattr(record, v)}" for k, v in self.url_params.items()])
-            return mark_safe(f'<a href="{url}">{value}</a>')
+            return format_html('<a href="{}">{}</a>', url, value)
         return value
 
 
@@ -393,12 +393,10 @@ class CustomFieldColumn(django_tables2.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
-        template = ""
         if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = helpers.render_boolean(value)
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-            for v in value:
-                template += format_html('<span class="label label-default">{}</span> ', v)
+            template = format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
             template = format_html('<span class="label label-default">{}</span>', value)
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
@@ -406,7 +404,7 @@ class CustomFieldColumn(django_tables2.Column):
         else:
             template = escape(value)
 
-        return mark_safe(template)
+        return template
 
 
 class RelationshipColumn(django_tables2.Column):
@@ -435,30 +433,27 @@ class RelationshipColumn(django_tables2.Column):
             else:
                 value = [v for v in value if v.destination_id == record.id]
 
-        template = ""
         # Handle Symmetric Relationships
         # List `value` could be empty here [] after the filtering from above
         if len(value) < 1:
             return "—"
-        else:
-            # Handle Relationships on the many side.
-            if self.relationship.has_many(self.peer_side):
-                v = value[0]
-                meta = type(v.get_peer(record))._meta
-                name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
-                template += format_html(
-                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
-                    reverse("extras:relationshipassociation_list"),
-                    self.relationship.key,
-                    self.side,
-                    record.id,
-                    len(value),
-                    name,
-                )
-            # Handle Relationships on the one side.
-            else:
-                v = value[0]
-                peer = v.get_peer(record)
-                template += format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
 
-        return mark_safe(template)
+        # Handle Relationships on the many side.
+        if self.relationship.has_many(self.peer_side):
+            v = value[0]
+            meta = type(v.get_peer(record))._meta
+            name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            return format_html(
+                '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                reverse("extras:relationshipassociation_list"),
+                self.relationship.key,
+                self.side,
+                record.id,
+                len(value),
+                name,
+            )
+        # Handle Relationships on the one side.
+        else:
+            v = value[0]
+            peer = v.get_peer(record)
+            return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)

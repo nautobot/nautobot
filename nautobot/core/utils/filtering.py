@@ -2,6 +2,7 @@ import re
 
 from django import forms
 from django_filters import (
+    BooleanFilter,
     ChoiceFilter,
     ModelMultipleChoiceFilter,
     MultipleChoiceFilter,
@@ -93,8 +94,10 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
     from nautobot.core.forms import (
+        BOOLEAN_CHOICES,
         DynamicModelMultipleChoiceField,
         MultipleContentTypeField,
+        StaticSelect2,
         StaticSelect2Multiple,
     )
     from nautobot.virtualization.models import VirtualMachine
@@ -150,11 +153,10 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )
     elif isinstance(field, (MultipleChoiceFilter, ChoiceFilter)) and "choices" in field.extra:
-        form_field_class = forms.ChoiceField
-        form_field_class.widget = StaticSelect2Multiple()
-        form_attr = {"choices": field.extra.get("choices")}
+        form_field = forms.MultipleChoiceField(choices=field.extra.get("choices"), widget=StaticSelect2Multiple)
 
-        form_field = form_field_class(**form_attr)
+    elif isinstance(field, BooleanFilter):
+        form_field = forms.ChoiceField(choices=BOOLEAN_CHOICES, widget=StaticSelect2)
 
     form_field.required = False
     form_field.initial = None

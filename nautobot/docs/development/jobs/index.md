@@ -489,7 +489,7 @@ class MyJob(Job):
         self.create_file("farewell.txt", b"Goodbye for now!")  # content can be a str or bytes
 ```
 
-The above Job when run will create two files, "greeting.txt" and "farewell.txt", that will be made available for download from the JobResult detail view's "Additional Data" tab. These files will persist indefinitely, but can automatically be deleted if the JobResult itself is deleted; they can also be deleted manually by an administrator via the "File Proxies" link in the Admin UI.
+The above Job when run will create two files, "greeting.txt" and "farewell.txt", that will be made available for download from the JobResult detail view's "Additional Data" tab and via the REST API. These files will persist indefinitely, but can automatically be deleted if the JobResult itself is deleted; they can also be deleted manually by an administrator via the "File Proxies" link in the Admin UI.
 
 ### Marking a Job as Failed
 

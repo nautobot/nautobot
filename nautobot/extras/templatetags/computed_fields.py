@@ -1,7 +1,6 @@
 from django import template
 from django.contrib.contenttypes.models import ContentType
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html_join
 
 from nautobot.extras.models import ComputedField
 
@@ -27,14 +26,8 @@ def computed_fields(context, obj, advanced_ui=None):
     if not computed_fields:
         return ""
 
-    template_code = ""
-
-    for label, value in fields.items():
-        escaped_label = escape(label)
-        template_code += f"""
-            <tr>
-                <td><span title="{escaped_label}">{escaped_label}</span></td>
-                <td>{escape(value)}</td>
-            <tr>
-            """
-    return mark_safe(template_code)
+    return format_html_join(
+        "\n",
+        '<tr><td><span title="{}">{}</span></td><td>{}</td></tr>',
+        ((label, label, value) for label, value in fields.items()),
+    )
