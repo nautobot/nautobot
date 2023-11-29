@@ -26,4 +26,10 @@ The data export functionality in all object list views (allowing export of all o
 !!! tip
     Users now must have `run_job` permission for the `nautobot.core.jobs.ExportObjectList` Job in order to export objects, in addition to the normal `view_<object_type>` permissions for the objects being exported.
 
+### Removed
+
+#### Remove HIDE_RESTRICTED_UI toggle ([#4787](https://github.com/nautobot/nautobot/issues/4787))
+
+Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
+
 <!-- towncrier release notes start -->
