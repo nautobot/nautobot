@@ -106,10 +106,10 @@ def get_serializer_for_model(model, prefix=""):
     """
     app_label, model_name = model._meta.label.split(".")
     if app_label == "contenttypes" and model_name == "ContentType":
-        app_path = "extras"
+        app_path = "nautobot.extras"
     # Serializers for Django's auth models are in the users app
     elif app_label == "auth":
-        app_path = "users"
+        app_path = "nautobot.users"
     else:
         app_path = apps.get_app_config(app_label).name
     serializer_name = f"{app_path}.api.serializers.{prefix}{model_name}Serializer"
