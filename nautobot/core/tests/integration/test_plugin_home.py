@@ -142,6 +142,3 @@ class PluginHomeTestCase(SeleniumTestCase):
                     item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
                     # Assert Layout items without permission is not visible in DOM
                     self.assertFalse(item_html)
-
-
-# secret
