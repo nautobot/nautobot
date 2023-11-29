@@ -895,7 +895,6 @@ class InterfaceRedundancyGroup(StatusModel, PrimaryModel):  # pylint: disable=to
 
 @extras_features(
     "relationships",
-    "custom_fields",
 )
 class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
     """Intermediary model for associating Interface(s) to InterfaceRedundancyGroup(s)."""
