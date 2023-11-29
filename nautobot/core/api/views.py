@@ -727,11 +727,10 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
 
         Args:
             request (HttpRequest): The request object.
-            data (Union[dict, str]): The menu data to format and filter. Can be either a dictionary or a string.
+            data (dict): The menu data to format and filter.
 
         Returns:
-            (Union[dict, str]): The formatted menu data without hidden items. Returns a dict if `data` is a
-                `dict`, otherwise returns a string.
+            (dict): The formatted menu data without hidden items.
 
         Example:
             Input:
