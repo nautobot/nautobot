@@ -923,7 +923,6 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
             },
         }
 
-        print(response.data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_response)
 
