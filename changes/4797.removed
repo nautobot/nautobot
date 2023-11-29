@@ -1,1 +1,1 @@
-Removed `custom_fields` from InterfaceRedundancyGroupAssociation.invoke start
+Removed erroneous `custom_fields` decorator from InterfaceRedundancyGroupAssociation as it's not a supported feature for this model.
