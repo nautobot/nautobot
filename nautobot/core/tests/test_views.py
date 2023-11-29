@@ -233,7 +233,7 @@ class NavRestrictedUI(TestCase):
         """The "Installed Apps" menu item should be hidden from a non-staff user without permission."""
         response_content = self.make_request()
 
-        self.assertNotRegex(response_content, r"Installed\s+Apps")
+        self.assertNotRegex(response_content, r"Installed\s+Plugins")
 
 
 class LoginUI(TestCase):
