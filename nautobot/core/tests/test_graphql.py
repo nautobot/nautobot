@@ -654,9 +654,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertIsInstance(response.data["data"]["locations"], list)
         location_names = [item["name"] for item in response.data["data"]["locations"]]
         location_list = list(Location.objects.values_list("name", flat=True))
-        # The GraphQL query response is in tree traversal order,
-        # while with django-tree-queries 0.16.0, `values_list()` returns in sorted order.
-        self.assertEqual(sorted(location_names), sorted(location_list))
+        self.assertEqual(location_names, location_list)
 
 
 class GraphQLQueryTest(TestCase):
