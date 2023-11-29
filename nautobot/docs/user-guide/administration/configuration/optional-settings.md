@@ -14,7 +14,6 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [DEVICE_NAME_AS_NATURAL_KEY](#device_name_as_natural_key)
 * [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
 * [FEEDBACK_BUTTON_ENABLED](#feedback_button_enabled)
-* [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 * [LOCATION_NAME_AS_NATURAL_KEY](#location_name_as_natural_key)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [NETWORK_DRIVERS](#network_drivers)
@@ -531,20 +530,6 @@ By default, all custom fields in GraphQL will be prefixed with `cf`. A custom fi
 Default: `"rel"`
 
 By default, all relationship associations in GraphQL will be prefixed with `rel`. A relationship named `my_relationship` will appear in GraphQL as `rel_my_relationship` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_RELATIONSHIP_PREFIX`.
-
----
-
-## HIDE_RESTRICTED_UI
-
-Default: `False`
-
-When set to `True`, users with limited permissions will only be able to see items in the UI they have access to.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
-+++ 1.3.10
-    When this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
 
 ---
 
