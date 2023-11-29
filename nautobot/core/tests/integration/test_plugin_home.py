@@ -92,7 +92,6 @@ class PluginHomeTestCase(SeleniumTestCase):
         """
         Render homepage with no permissions.
         """
-        # TODO: timizuo revisit this test case, Homepage should not render or should render with lockscreen
         self.browser.visit(self.live_server_url)
 
         columns_html = self.browser.find_by_css("div[class='homepage_column']")
@@ -102,6 +101,21 @@ class PluginHomeTestCase(SeleniumTestCase):
                 item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
                 # Assert Panel items without permissions are not shown in DOM
                 self.assertFalse(item_html)
+
+    def test_examplemodel_custom_panel(self):
+        """
+        Render custom panel.
+        """
+        self.user.is_superuser = True
+        self.user.save()
+
+        self.browser.visit(self.live_server_url)
+
+        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html.first.find_by_xpath(f".//strong[text()='{self.custom_panel_examplemodel['name']}']")
+
+        for item_name in self.custom_panel_examplemodel["items"]:
+            columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
     def test_homepage_render_limit_permissions(self):
         """
@@ -128,21 +142,6 @@ class PluginHomeTestCase(SeleniumTestCase):
                     item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
                     # Assert Layout items without permission is not visible in DOM
                     self.assertFalse(item_html)
-
-    def test_examplemodel_custom_panel(self):
-        """
-        Render custom panel.
-        """
-        self.user.is_superuser = True
-        self.user.save()
-
-        self.browser.visit(self.live_server_url)
-
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
-        columns_html.first.find_by_xpath(f".//strong[text()='{self.custom_panel_examplemodel['name']}']")
-
-        for item_name in self.custom_panel_examplemodel["items"]:
-            columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
 
 # secret
