@@ -721,7 +721,7 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def format_and_remove_hidden_menu(self, request, data, hide_restricted_ui=False):
+    def format_and_remove_hidden_menu(self, request, data):
         """
         Formats the menu data and removes hidden menu items based on user permissions.
 
