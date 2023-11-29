@@ -412,12 +412,9 @@ class CustomFieldEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    try:
-                        msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                    except AttributeError:
-                        msg = format_html("{} {}", msg, obj)
-                else:
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
                     msg = format_html("{} {}", msg, obj)
                 messages.success(request, msg)
 
@@ -653,12 +650,9 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    try:
-                        msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                    except AttributeError:
-                        msg = format_html("{} {}", msg, obj)
-                else:
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
                     msg = format_html("{} {}", msg, obj)
                 messages.success(request, msg)
 
@@ -2041,12 +2035,9 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    try:
-                        msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                    except AttributeError:
-                        msg = format_html("{} {}", msg, obj)
-                else:
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
                     msg = format_html("{} {}", msg, obj)
                 messages.success(request, msg)
 
