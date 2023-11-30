@@ -78,6 +78,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#4786](https://github.com/nautobot/nautobot/issues/4786) - Fixed default button background color in dark mode.
 - [#4818](https://github.com/nautobot/nautobot/issues/4818) - Fixed various inconsistencies with UI reskin in dark mode.
 - [#4862](https://github.com/nautobot/nautobot/issues/4862) - Fixes issues with uninstalled apps & lingering contenttypes referenced in changelog.
+- [#4882](https://github.com/nautobot/nautobot/issues/4882) - Fixed a regression in the rendering of the Jobs table view.
 
 ### Housekeeping
 
