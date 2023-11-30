@@ -36,7 +36,7 @@ The data export functionality in all object list views (allowing export of all o
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
-## v2.1.0b1 (2023-11-30)
+## v2.1.0-beta.1 (2023-11-30)
 
 ### Added
 
