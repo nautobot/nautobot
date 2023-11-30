@@ -257,6 +257,7 @@ class VRF(PrimaryModel):
         return instance.delete()
 
 
+@extras_features("graphql")
 class VRFDeviceAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="device_assignments")
     device = models.ForeignKey(
@@ -306,6 +307,7 @@ class VRFDeviceAssignment(BaseModel):
             raise ValidationError("A VRF must be associated with either a device or a virtual machine.")
 
 
+@extras_features("graphql")
 class VRFPrefixAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="vrf_assignments")
@@ -1189,6 +1191,7 @@ class IPAddress(PrimaryModel):
             return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
 
 
+@extras_features("graphql")
 class IPAddressToInterface(BaseModel):
     ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
     interface = models.ForeignKey(
