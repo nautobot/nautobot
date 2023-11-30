@@ -1,1 +1,0 @@
-Fixed a bug in `ObjectPermission` where `users.user` permissions could not be created.
