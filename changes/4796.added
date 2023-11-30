@@ -1,0 +1,4 @@
+Added InterfaceRedundancyGroupAssociation to GraphQL.
+Added IPAddressToInterface to GraphQL.
+Added VRFDeviceAssignment to GraphQL.
+Added VRFPrefixAssignment to GraphQL.
