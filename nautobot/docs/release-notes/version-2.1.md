@@ -31,6 +31,10 @@ The data export functionality in all object list views (allowing export of all o
 !!! tip
     Users now must have the `run` action permission for `extras > job` (specifically the `nautobot.core.jobs.ExportObjectList` Job) in order to export objects, in addition to the normal `view` permissions for the objects being exported.
 
+#### Nautobot UI Reskin ([#4677](https://github.com/nautobot/nautobot/issues/4677), [#4765](https://github.com/nautobot/nautobot/issues/4765))
+
+Nautobot UI is updated with customized Nautobot Bootstrap theme. In addition, Nautobot's navigation bar is moved from the top to the left. Please checkout https://next.demo.nautobot.com/ for the new look UI.
+
 ### Removed
 
 #### Remove HIDE_RESTRICTED_UI toggle ([#4787](https://github.com/nautobot/nautobot/issues/4787))
