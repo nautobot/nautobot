@@ -33,7 +33,7 @@ The data export functionality in all object list views (allowing export of all o
 
 #### Nautobot UI Reskin ([#4677](https://github.com/nautobot/nautobot/issues/4677), [#4765](https://github.com/nautobot/nautobot/issues/4765))
 
-Nautobot UI is updated with customized Nautobot Bootstrap theme. In addition, Nautobot's navigation bar is moved from the top to the left. Please checkout https://next.demo.nautobot.com/ for the new look UI.
+Nautobot UI is updated with customized Nautobot Bootstrap theme, giving it a brand new look. In addition, Nautobot's navigation bar is moved from the top to the left. Please checkout https://next.demo.nautobot.com/ for the updated UI.
 
 ### Removed
 
