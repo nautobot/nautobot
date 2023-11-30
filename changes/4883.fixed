@@ -1,0 +1,1 @@
+Fixed `IPAddress` default namespace, when no namespace is provided.
