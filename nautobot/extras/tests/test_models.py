@@ -320,7 +320,11 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             status=self.device_status,
             device_type=self.devicetype,
         )
+
         device_context = device.get_config_context()
+        annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
+        self.assertEqual(device_context, annotated_queryset[0].get_config_context())
+
         for key in ["location-1", "location-2", "location-3"]:
             self.assertIn(key, device_context)
 
@@ -343,7 +347,11 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             device_type=self.devicetype,
             tenant=self.child_tenant,
         )
+
         device_context = device.get_config_context()
+        annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
+        self.assertEqual(device_context, annotated_queryset[0].get_config_context())
+
         for key in ["parent-group-1", "child-group-1", "child-tenant-1"]:
             self.assertIn(key, device_context)
 
@@ -433,7 +441,12 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             role=self.devicerole,
             status=vm_status,
         )
+
+        annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
         vm_context = virtual_machine.get_config_context()
+
+        self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
+
         for key in [
             "location-1",
             "location-2",
@@ -460,15 +473,20 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             cluster_group=cluster_group,
             cluster_type=cluster_type,
             location=self.location,
-            tenant=self.child_tenant,
         )
         virtual_machine = VirtualMachine.objects.create(
-            name="Child Location VM",
+            name="Child Tenant VM",
             cluster=cluster,
             role=self.devicerole,
             status=vm_status,
+            tenant=self.child_tenant,
         )
+
+        annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
         vm_context = virtual_machine.get_config_context()
+
+        self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
+
         for key in [
             "parent-group-1",
             "child-group-1",

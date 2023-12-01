@@ -190,8 +190,14 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         """
         Return the rendered configuration context for a device or VM.
         """
-        config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
-
+        if not hasattr(self, "config_context_data"):
+            # Annotation not available, so fall back to manually querying for the config context
+            config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
+        else:
+            config_context_data = self.config_context_data or []
+            config_context_data = [
+                c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))
+            ]
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
         for context in config_context_data:
