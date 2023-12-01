@@ -36,9 +36,11 @@ html[data-theme="dark"] .container-fluid.wrapper {
 
 /* Lighter than the background */
 html[data-theme="dark"] .navbar,                          /* Top menu navbar */
+html[data-theme="dark"] .navbar-nav > li > a:hover,
+html[data-theme="dark"] .navbar-nav > li > a:focus,
 html[data-theme="dark"] .footer,                          /* Bottom footer bar */
 html[data-theme="dark"] .footer .row {                    /* Bottom footer bar */
-  background-color: rgb(209, 216, 221) !important;
+  background-color: rgb(222, 222, 222) !important;
 }
 
 html[data-theme="dark"] .panel,                           /* Section panels, like on home page */
@@ -152,10 +154,6 @@ html[data-theme="dark"] .select2-dropdown {               /* Dropdown form field
   background-color: rgb(222, 222, 222) !important;
 }
 
-html[data-theme="dark"] .navbar-nav>li>a {                /* Navbar top level menu dropdown links */
-  color: rgb(100, 100, 100) !important;
-}
-
 html[data-theme="dark"] .navbar-nav>li>a:hover {          /* Navbar top level menu dropdown links on hover */
   color: rgb(224, 120, 7) !important;
 }
@@ -186,11 +184,6 @@ html[data-theme="dark"] .breadcrumb>li+li:before {
   color: rgb(142, 142, 142);
 }
 
-/* Code */
-html[data-theme="dark"] code {
-  color: rgb(0, 255, 0);
-}
-
 /* Dynamic filter selection outside box */
 html[data-theme="dark"] .filter-container .filter-selection {
   background-color: rgb(201, 201, 201);                 /* Background color of dynamic filters selected across most pages, outer box */
@@ -202,13 +195,6 @@ html[data-theme="dark"] .filter-container .filter-selection .filter-selection-ch
   background-color: rgb(185, 185, 185);                 /* Background color of dynamic filters selected across most pages, inner selection box */
   border: 1px solid rgb(170, 170, 170);                 /* Border color of dynamic filters selected across most pages, inner selection box */
 }
-
-
-/* Buttons */
-html[data-theme="dark"] .btn-default {
-    background-color: rgb(38, 38, 38) !important;
-}
-
 
 /* List View Table and Tables in Detail Views */
 html[data-theme="dark"] .table-responsive>table>tbody>tr,

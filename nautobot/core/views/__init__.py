@@ -6,7 +6,7 @@ import time
 from django.apps import apps
 import prometheus_client
 from django.conf import settings
-from django.contrib.auth.mixins import AccessMixin
+from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import redirect, render
 from django.template import loader, RequestContext, Template
@@ -107,6 +107,10 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class ThemePreviewView(LoginRequiredMixin, TemplateView):
+    template_name = "utilities/theme_preview.html"
 
 
 class SearchView(AccessMixin, View):
