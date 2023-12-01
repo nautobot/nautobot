@@ -5,7 +5,12 @@ from django.views.generic import TemplateView
 from django.views.static import serve
 
 from nautobot.core.views import (
-    CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, ThemePreviewView, nautobot_metrics_view
+    CustomGraphQLView,
+    HomeView,
+    StaticMediaFailureView,
+    SearchView,
+    ThemePreviewView,
+    nautobot_metrics_view,
 )
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
