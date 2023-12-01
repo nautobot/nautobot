@@ -725,6 +725,17 @@ def support_message():
     return render_markdown(message)
 
 
+@register.simple_tag
+def versioned_static(file_path):
+    """Returns a versioned static file URL with a query parameter containing the version number."""
+    static_file_path = static(file_path)
+    if '?' in static_file_path:
+        return f"{static_file_path}&v{settings.VERSION}"
+    else:
+        return f"{static_file_path}?v{settings.VERSION}"
+
+
+
 @library.filter()
 @register.filter()
 def hyperlinked_object_with_color(obj):
