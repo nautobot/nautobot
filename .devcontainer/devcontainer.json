@@ -1,19 +1,79 @@
 {
-    "dockerComposeFile": ["../development/docker-compose.yml", "../development/docker-compose.debug.yml"],
+    "name": "Nautobot Dev Container",
+    "dockerComposeFile": [
+        "../development/docker-compose.yml",
+        "../development/docker-compose.postgres.yml",
+        "../development/docker-compose.dev.yml",
+        "../development/docker-compose.override.yml"
+    ],
+    "features": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    },
     "service": "nautobot",
-	"workspaceFolder": "/source/",
-	"extensions": [
-		"ms-python.vscode-pylance",
-		"streetsidesoftware.code-spell-checker",
-		"eamodio.gitlens",
-		"oderwat.indent-rainbow",
-		"ms-python.python",
-		"ms-vsliveshare.vsliveshare"
-	],
-	"settings": {
-		"python.pythonPath": "/usr/local/bin/python",
-		"python.analysis.extraPaths": ["/source"],
-		"python.linting.pylintEnabled": true,
-		"python.linting.enabled": true
-	}
+    "shutdownAction": "stopCompose",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "DavidAnson.vscode-markdownlint",
+                "dbaeumer.vscode-eslint",
+                "eamodio.gitlens",
+                "EditorConfig.EditorConfig",
+                "esbenp.prettier-vscode",
+                "GitHub.vscode-pull-request-github",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.black-formatter",
+                "ms-python.flake8",
+                "ms-python.isort",
+                "ms-python.pylint",
+                "samuelcolvin.jinjahtml",
+                "tamasfe.even-better-toml"
+            ],
+            "settings": {
+                // Global editor settings
+                "editor.codeActionsOnSave": {
+                    "source.fixAll.eslint": true,
+                    "source.fixAll.markdownlint": true
+                },
+                "editor.formatOnPaste": true,
+                "editor.formatOnSave": true,
+                // Python settings
+                "[python]": {
+                    "editor.codeActionsOnSave": {
+                        // "source.organizeImports": "explicit"
+                    },
+                    // When rebuilding the devcontainer, `Developer: Reload Window` must be
+                    // executed for the Black formatter to be recognized by the settings.
+                    // See: https://github.com/microsoft/vscode/issues/189839
+                    "editor.defaultFormatter": "ms-python.black-formatter"
+                },
+                "python.analysis.extraPaths": [
+                    "${workspaceFolder}"
+                ],
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.pythonPath": "/usr/local/bin/python",
+                // Formatters and linters settings
+                "black-formatter.args": [
+                    "--config=${workspaceFolder}/pyproject.toml"
+                ],
+                "black-formatter.importStrategy": "fromEnvironment",
+                "flake8.args": [
+                    "--config=${workspaceFolder}/.flake8"
+                ],
+                "flake8.importStrategy": "fromEnvironment",
+                "isort.args": [
+                    "--settings-file",
+                    "${workspaceFolder}/pyproject.toml"
+                ],
+                "isort.importStrategy": "fromEnvironment",
+                "pylint.args": [
+                    "--rcfile=${workspaceFolder}/pyproject.toml",
+                    "--disable=django-not-configured"
+                ],
+                "pylint.importStrategy": "fromEnvironment"
+            }
+        }
+    },
+    "workspaceFolder": "/source",
+    "postCreateCommand": "bash .devcontainer/postCreateCommand.sh"
 }
