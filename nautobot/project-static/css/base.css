@@ -709,6 +709,10 @@ td span.hover_copy:hover .hover_copy_button {
     cursor: pointer !important;
 }
 
+#draggable-homepage-panels {
+    display: none;
+}
+
 #draggable-homepage-panels .panel-heading {
     cursor: move;
 }

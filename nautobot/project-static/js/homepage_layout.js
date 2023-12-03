@@ -1,3 +1,4 @@
+// Enables panels on homepage to be collapsed and expanded
 $(document).ready(function() {
     // Function to toggle and save state for a specific collapsible element
     function toggleAndSaveState(elementId) {
@@ -28,6 +29,7 @@ $(document).ready(function() {
     });
 });
 
+// Enables panels on homepage to be rearranged via drag and drop
 $(document).ready(function() {
     // Initialize draggable and sortable
     $("#draggable-homepage-panels").sortable({
@@ -41,7 +43,6 @@ $(document).ready(function() {
 
     // Function to save the order of panels in localStorage
     function savePanelOrder() {
-        // WORKS
         var panelOrder = $("#draggable-homepage-panels").sortable("toArray");
         localStorage.setItem("homepage-panels-order", JSON.stringify(panelOrder));
     }
@@ -54,11 +55,11 @@ $(document).ready(function() {
         if (savedOrder) {
             savedOrder = JSON.parse(savedOrder);
             console.log(savedOrder);
-            // $("#draggable-homepage-panels").html("");
             
             for (var i = 0; i < savedOrder.length; i++) {
                 $("#" + savedOrder[i]).appendTo("#draggable-homepage-panels");
             }
+            $("#draggable-homepage-panels").fadeIn("slow");
         }
     }
 });
