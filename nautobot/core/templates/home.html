@@ -27,14 +27,16 @@
                     {% if request.user|has_one_or_more_perms:panel_details.permissions %}
                         <div class="panel panel-default" id="draggable" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
                             <div class="panel-heading">
-                                <strong>{{ panel_name }}</strong><span id="toggle-homepanel-{{ panel_name.split|join:'-' }}" class="glyphicon glyphicon-chevron-down collapse-icon" type="button" data-toggle="collapse" data-target="#homepanel-{{ panel_name.split|join:'-' }}" aria-expanded="false" aria-controls="homepanel-{{ panel_name.split|join:'-' }}"></span>
+                                <strong>{{ panel_name }}</strong><span id="toggle-homepanel-{{ panel_name|slugify }}" class="glyphicon glyphicon-chevron-down collapse-icon" type="button" data-toggle="collapse" data-target="#homepanel-{{ panel_name|slugify }}" aria-expanded="false" aria-controls="homepanel-{{ panel_name|slugify }}"></span>
                             </div>
-                            <div class="list-group collapse in collapsible-div" id="homepanel-{{ panel_name.split|join:'-' }}" >
+                            {% with cookie_key='homepanel-'|add:panel_name|slugify %}
+                                <div class="list-group collapse{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %} in{% endif %} collapsible-div" id="homepanel-{{ panel_name|slugify }}" >
+                            {% endwith %}
                                 {% if panel_details.rendered_html %}
                                     {% autoescape off %}{{ panel_details.rendered_html }}{% endautoescape %}
                                 {% elif panel_details.items %}
                                     {% for item_name, item_details in panel_details.items.items %}
-                                        {% if  item_details.rendered_html %}
+                                        {% if item_details.rendered_html %}
                                             <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
                                                 {% if request.user|has_one_or_more_perms:item_details.permissions %}
                                                     {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
