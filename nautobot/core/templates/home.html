@@ -25,12 +25,12 @@
             <div class="homepage_column" style="columns: 4 360px">
                 {% for panel_name, panel_details in registry.homepage_layout.panels.items %}
                     {% if request.user|has_one_or_more_perms:panel_details.permissions %}
-                        <div class="panel panel-default" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
+                        <div class="panel panel-default" id="draggable" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
                             <div class="panel-heading">
-                                <strong>{{ panel_name }}</strong>
+                                <strong>{{ panel_name }}</strong><span id="toggle-homepanel-{{ panel_name.split|join:'-' }}" class="glyphicon glyphicon-chevron-down collapse-icon" type="button" data-toggle="collapse" data-target="#homepanel-{{ panel_name.split|join:'-' }}" aria-expanded="false" aria-controls="homepanel-{{ panel_name.split|join:'-' }}"></span>
                             </div>
-                            <div class="list-group">
-                                {% if  panel_details.rendered_html %}
+                            <div class="list-group collapse in collapsible-div" id="homepanel-{{ panel_name.split|join:'-' }}" >
+                                {% if panel_details.rendered_html %}
                                     {% autoescape off %}{{ panel_details.rendered_html }}{% endautoescape %}
                                 {% elif panel_details.items %}
                                     {% for item_name, item_details in panel_details.items.items %}

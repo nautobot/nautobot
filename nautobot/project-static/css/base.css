@@ -703,3 +703,7 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a:hover {
     color: #ffffff;
 }
+
+.collapse-icon {
+    float: right;
+}
