@@ -59,7 +59,7 @@ $(document).ready(function() {
             for (var i = 0; i < savedOrder.length; i++) {
                 $("#" + savedOrder[i]).appendTo("#draggable-homepage-panels");
             }
-            $("#draggable-homepage-panels").fadeIn("slow");
         }
+        $("#draggable-homepage-panels").fadeIn("slow");
     }
 });
