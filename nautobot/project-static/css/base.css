@@ -716,15 +716,3 @@ td span.hover_copy:hover .hover_copy_button {
 #draggable-homepage-panels .panel-heading {
     cursor: move;
 }
-
-.nav {
-    display: flex;
-    flex-wrap: wrap;
-    padding-left: 0;
-    margin-bottom: 0;
-    list-style: none
-}
-
-.nav-link-text {
-    transition: all .3s ease-in-out
-}

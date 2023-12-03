@@ -17,7 +17,6 @@ $(document).ready(function() {
             document.cookie = elementId + "=True; path=/";
         }
         else {
-            console.log("isNotCollapsed");
             document.cookie = elementId + "=False; path=/";
         }
     }
@@ -50,11 +49,9 @@ $(document).ready(function() {
     // Function to load the saved order of panels from localStorage
     function loadSavedPanelOrder() {
         var savedOrder = localStorage.getItem("homepage-panels-order");
-        console.log(savedOrder);
 
         if (savedOrder) {
             savedOrder = JSON.parse(savedOrder);
-            console.log(savedOrder);
             
             for (var i = 0; i < savedOrder.length; i++) {
                 $("#" + savedOrder[i]).appendTo("#draggable-homepage-panels");
