@@ -67,7 +67,7 @@ if settings.DEBUG:
 
         urlpatterns += [
             path("__debug__/", include(debug_toolbar.urls)),
-            path("theme_preview/", ThemePreviewView.as_view(), name="theme_preview"),
+            path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview"),
         ]
     except ImportError:
         pass
